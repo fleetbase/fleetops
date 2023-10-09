@@ -23,8 +23,10 @@ jobs:
         extensions: mbstring, xml, gd, zip, pdo_mysql, sockets, intl, bcmath, gmp 
         coverage: xdebug
 
-    - name: Install additional packages
-      run: sudo apt-get update && sudo apt-get install -y libzip-dev libgd-dev libfreetype6-dev libjpeg62-turbo-dev libpng-dev imagemagick libmagickwand-dev libmemcached-dev libgeos-dev libgmp-dev default-mysql-client libicu-dev
+    - name: Update and Install additional packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libzip-dev libgd-dev libfreetype6-dev libjpeg-dev libpng-dev imagemagick libmagickwand-dev libmemcached-dev libgeos-dev libgmp-dev default-mysql-client libicu-dev
 
     - name: Install PECL extensions
       run: sudo apt-get install -y php-pear && sudo pecl install imagick redis memcached
