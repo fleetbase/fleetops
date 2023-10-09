@@ -37,9 +37,10 @@
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.34.1",
-        "pestphp/pest": "^0.3.8",
-        "phpstan/phpstan": "^0.12.48",
-        "symfony/var-dumper": "^5.2.0"
+        "nunomaduro/collision": "^5.11.0|^6.4.0",
+        "pestphp/pest": "^1.22.6",
+        "phpstan/phpstan": "^1.10.38",
+        "symfony/var-dumper": "^5.4.29"
     },
     "autoload": {
         "psr-4": {
@@ -62,7 +63,7 @@
         }
     },
     "config": {
-        "vendor-dir": "./server/vendor",
+        "vendor-dir": "./server_vendor",
         "sort-packages": true,
         "preferred-install": "dist",
         "allow-plugins": {
@@ -73,7 +74,7 @@
     "scripts": {
         "lint": "php-cs-fixer fix -v",
         "test:lint": "php-cs-fixer fix -v --dry-run",
-        "test:types": "phpstan analyse --ansi --memory-limit=0",
+        "test:types": "phpstan analyse --ansi --memory-limit=4G",
         "test:unit": "pest --colors=always",
         "test": [
             "@test:lint",

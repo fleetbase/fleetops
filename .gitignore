@@ -35,9 +35,11 @@
 .idea/*
 .idea/codeStyleSettings.xml
 composer.lock
+/server_vendor
 /server/vendor/
 .phpunit.result.cache
 .php_cs.cache
+.php-cs-fixer.cache
 *.swp
 *.swo
 .DS_Store

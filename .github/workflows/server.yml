@@ -28,9 +28,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libzip-dev libgd-dev libfreetype6-dev libjpeg-dev libpng-dev imagemagick libmagickwand-dev libmemcached-dev libgeos-dev libgmp-dev default-mysql-client libicu-dev
 
-    - name: Install PECL extensions
-      run: sudo apt-get install -y php-pear && sudo pecl install imagick redis memcached
-
     - name: Validate composer.json and composer.lock
       run: composer validate
 
@@ -40,5 +37,5 @@ jobs:
     - name: Run Lint
       run: composer lint
 
-    - name: Run Tests
-      run: composer test
+    # - name: Run Tests -- Will add tests back after phppest issue https://github.com/pestphp/pest/issues/920 is fixed
+    #   run: composer test:unit
