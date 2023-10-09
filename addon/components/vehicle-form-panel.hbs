@@ -1,0 +1,131 @@
+<Overlay @position="right" @noBackdrop={{true}} @fullHeight={{true}} @width="700">
+    <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
+        <div class="flex flex-row items-center justify-between w-full mb-4">
+            <div class="flex flex-1 space-x-2">
+                {{#if @vehicle.id}}
+                    <Button @type="default" @icon="car" @helpText="View vehicle details" @onClick={{this.viewDetails}} />
+                {{/if}}
+            </div>
+            <div class="flex flex-1 justify-end">
+                <div class="mr-2">
+                    <Button @icon={{if @vehicle.id "save" "check"}} @type="primary" @text={{if @vehicle.id "Save Vehicle" "Create Vehicle"}} @onClick={{this.save}} />
+                </div>
+                <Button @type="default" @icon="times" @helpText={{if @vehicle.id "Cancel edit vehicle" "Cancel new vehicle"}} @onClick={{@onPressCancel}} />
+            </div>
+        </div>
+        <div class="flex flex-row justify-between w-full">
+            <div class="flex flex-col flex-1 w-3/4">
+                <div class="flex flex-row">
+                    <div class="w-14 flex items-center justify-center">
+                        <Image src={{@vehicle.photo_url}} @fallbackSrc={{config "defaultValues.vehicleImage"}} alt={{@vehicle.name}} height="48" width="48" class="h-12 w-12" />
+                        <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
+                            <InputInfo @text={{@vehicle.public_id}} />
+                        </Attach::Tooltip>
+                    </div>
+                    <div class="flex flex-col">
+                        <h1 class="text-gray-900 dark:text-white text-2xl">
+                            {{#if @vehicle.id}}
+                                {{@vehicle.displayName}}
+                            {{else}}
+                                {{#if @vehicle.displayName}}
+                                    {{@vehicle.displayName}}
+                                {{else}}
+                                    <span>New Vehicle</span>
+                                {{/if}}
+                            {{/if}}
+                        </h1>
+                        <div class="-mt-1">
+                            {{#if @vehicle.driver}}
+                                <div class="flex flex-row items-center">
+                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{@vehicle.driver.name}}</span>
+                                </div>
+                            {{else}}
+                                <div class="flex flex-row items-center">
+                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">No driver assigned</span>
+                                </div>
+                            {{/if}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end w-1/4">
+                <Badge @status={{@vehicle.status}} />
+            </div>
+        </div>
+    </Overlay::Header>
+
+    <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
+        <div class="flex-1 space-y-4">
+            <ContentPanel @title="Details" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
+                    <div class="input-group mb-2">
+                        <label>
+                            Internal ID
+                        </label>
+                        <Input @value={{@vehicle.internal_id}} @type="text" class="w-full form-input" placeholder="Internal ID" />
+                    </div>
+
+                    <div class="input-group mb-2">
+                        <label>
+                            Plate Number
+                        </label>
+                        <Input @value={{@vehicle.plate_number}} @type="text" class="w-full form-input" placeholder="Plate Number" />
+                    </div>
+
+                    <div class="input-group mb-2">
+                        <label>
+                            VIN Number
+                        </label>
+                        <Input @value={{@vehicle.vin}} @type="text" class="w-full form-input" placeholder="VIN Number" />
+                    </div>
+
+                    <div class="input-group mb-2">
+                        <label>
+                            Make
+                        </label>
+                        <Input @value={{@vehicle.make}} @type="text" class="w-full form-input" placeholder="Vehicle Make" />
+                    </div>
+
+                    <div class="input-group mb-2">
+                        <label>
+                            Model
+                        </label>
+                        <Input @value={{@vehicle.model}} @type="text" class="w-full form-input" placeholder="Vehicle Model" />
+                    </div>
+
+                    <div class="input-group mb-2">
+                        <label>
+                            Year
+                        </label>
+                        <Input @value={{@vehicle.year}} @type="text" class="w-full form-input" placeholder="Vehicle Year" />
+                    </div>
+
+                    <div class="input-group mb-2">
+                        <label>
+                            Driver Assigned
+                        </label>
+                        <ModelSelect @modelName="driver" @selectedModel={{@vehicle.driver}} @placeholder="Select Driver" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut
+                                @vehicle.driver)}} as |model|>
+                            {{model.name}}
+                        </ModelSelect>
+                    </div>
+                </div>
+            </ContentPanel>
+
+            <ContentPanel @title="Avatar" @open={{false}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
+                    <div class="input-group mb-2">
+                        <InputLabel @labelText="Select map avatar" @helpText="Select an avatar to be used for rendering on maps when using geolocation tracking features." />
+                        <FetchSelect class="w-60" @placeholder="Select avatar" @path="vehicles/avatars" @value={{@vehicle.avatar_url}} @onSelect={{fn (mut
+                                @vehicle.avatar_url)}} as |option key|>
+                            {{titleize (humanize key)}}
+                        </FetchSelect>
+                    </div>
+                    <div>
+                        <img alt={{@vehicle.public_id}} src={{@vehicle.avatar_url}} class="w-24 h-24" />
+                    </div>
+                </div>
+            </ContentPanel>
+        </div>
+    </Overlay::Body>
+</Overlay>

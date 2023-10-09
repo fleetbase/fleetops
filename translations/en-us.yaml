@@ -1,0 +1,9 @@
+fleet-ops:
+  extension-name: Fleet-Ops
+  management:
+    drivers:
+      index:
+        title: Drivers
+        fields:
+          search: 
+            placeholder: Search Drivers

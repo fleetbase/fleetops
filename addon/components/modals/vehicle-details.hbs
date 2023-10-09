@@ -1,0 +1,227 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="flex flex-col md:flex-row">
+            <div class="lg:flex-none lg:w-40 mb-4 md:mb-0">
+                <div class="w-32">
+                    <Image src={{@options.vehicle.photo_url}} @fallbackSrc={{@options.vehicle.avatar_url}} alt={{@options.vehicle.name}} height="128" width="128" class="h-32 w-32" />
+                </div>
+            </div>
+            <div class="flex-1 space-y-4">
+                <ContentPanel @title="Details" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <div class="grid grid-cols-2 gap-2 text-xs md:mb-6 dark:text-gray-100">
+                        <div class="field-info-container">
+                            <div class="field-name">Name</div>
+                            <div class="field-value">{{n-a @options.vehicle.name}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Vehicle</div>
+                            <div class="field-value">{{n-a @options.vehicle.internal_id}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Plate Number</div>
+                            <div class="field-value">{{n-a @options.vehicle.plate_number}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">VIN Number</div>
+                            <div class="field-value">{{n-a @options.vehicle.vin}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Make</div>
+                            <div class="field-value">{{n-a @options.vehicle.name}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Model</div>
+                            <div class="field-value">{{n-a @options.vehicle.model}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Year</div>
+                            <div class="field-value">{{n-a @options.vehicle.year}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Status</div>
+                            <Badge @status={{@options.vehicle.status}} />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2 mb-2 mt-2">
+                        <div class="col-span-2">
+                            <div class="field-info-container">
+                                <div class="field-name">Driver Assigned</div>
+                                <div class="field-value">
+                                    {{#if @options.vehicle.driver}}
+                                        <DriverCard class="dark:bg-gray-800 rounded-md px-3 py-2" @driver={{@options.vehicle.driver}} @onClick={{@options.viewDriver}} />
+                                    {{else}}
+                                        <span>No driver assigned</span>
+                                    {{/if}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </ContentPanel>
+
+                <ContentPanel @title="Avatar" @open={{false}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <div class="grid grid-cols-1 gap-2 text-xs dark:text-gray-100">
+                        <div>
+                            <Image alt={{@options.vehicle.public_id}} src={{@options.vehicle.avatar_url}} class="w-24 h-24" />
+                        </div>
+                    </div>
+                </ContentPanel>
+
+                <ContentPanel @title="Model Information" @open={{false}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
+                        <div class="field-info-container">
+                            <div class="field-name">0 to 100 Kph</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_0_to_100_kph}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Body</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_body}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Doors</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_doors}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Drive</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_drive}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Length (mm)</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_length_mm}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Seats</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_seats}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Top Speed (kph)</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_top_speed_kph}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Transmission Type</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_transmission_type}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Weight (kg)</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_weight_kg}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Wheelbase (mm)</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_wheelbase_mm}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Width (mm)</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_width_mm}}</div>
+                        </div>
+                    </div>
+                </ContentPanel>
+
+                <ContentPanel @title="Engine Information" @open={{false}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
+                        <div class="field-info-container">
+                            <div class="field-name">Engine Bore (mm)</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_engine_bore_mm}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">CC</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_engine_cc}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Compression</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_engine_compression}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Cylinders</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_engine_cyl}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Position</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_engine_position}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Power (ps)</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_engine_power_ps}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Power (rpm)</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_engine_power_rpm}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Stroke (mm))</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_engine_stroke_mm}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Torque (nm)</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_engine_torque_nm}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Torque (rpm)</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_engine_torque_rpm}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Valves Per Cylinder</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_valves_per_cyl}}</div>
+                        </div>
+                    </div>
+                </ContentPanel>
+
+                <ContentPanel @title="Fuel Information" @open={{false}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
+                        <div class="field-info-container">
+                            <div class="field-name">Fuel</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_engine_fuel}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Fuel Cap (l)</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_fuel_cap_l}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Liters Per km City</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_lkm_city}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Liters Per km Highway)</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_lkm_hwy}}</div>
+                        </div>
+
+                        <div class="field-info-container">
+                            <div class="field-name">Liters Per km Mixed</div>
+                            <div class="field-value">{{n-a @options.vehicle.model_lkm_mixed}}</div>
+                        </div>
+                    </div>
+                </ContentPanel>
+            </div>
+        </div>
+    </div>
+    {{yield}}
+</Modal::Default>

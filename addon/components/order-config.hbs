@@ -1,0 +1,66 @@
+<div class="order-config" {{did-insert this.setupComponent}} ...attributes>
+    <div class="space-y-1">
+        <div class="px-5 mt-6 flex">
+            <div class="flex-1">
+                <InfoBlock class="px-3 py-2">Select an order configuration to modify, or click "New Config" to create a new order configuration.</InfoBlock>
+            </div>
+            <div>
+                <Button class="ml-6" @icon="plus" @iconPrefix="fas" @text="New Config" @size="md" @onClick={{this.createNewOrderConfig}} />
+            </div>
+        </div>
+        <div class="flex items-center justify-between p-4">
+            {{#if this.isLoading}}
+                <div class="flex text-center items-center justify-center p-4">
+                    <Spinner class="mr-2 dark:text-gray-100" />
+                    <span class="dark:text-gray-100">Loading your order configurations...</span>
+                </div>
+            {{else}}
+                <Select class="w-full flex-1" @value={{this.selected}} @options={{this.configurations}} @optionLabel="name" @optionValue="namespace" @placeholder="Select order configuration" @onSelect={{this.selectConfig}} />
+                {{#if this.selected}}
+                    <div class="pl-6">
+                        <Button @type="primary" @icon="save" @text="Save Changes" @size="md" @isLoading={{this.isSaving}} @onClick={{this.saveConfig}} />
+                    </div>
+                {{/if}}
+            {{/if}}
+        </div>
+
+        <div class="w-full h-screen-70">
+            {{#if this.orderConfig}}
+                <div class="ui-tabs mb-4">
+                    <nav>
+                        <a href="javascript:;" class="ui-tab {{if (eq this.activeTab 'details') 'active'}}" {{on "click" (fn
+                            (mut this.activeTab) "details" )}}>
+                            Details
+                        </a>
+                        <a href="javascript:;" class="ui-tab  {{if (eq this.activeTab 'meta') 'active'}}" {{on "click" (fn
+                            (mut this.activeTab) "meta" )}}>
+                            Custom Fields
+                        </a>
+                        <a href="javascript:;" class="ui-tab  {{if (eq this.activeTab 'activity') 'active'}}" {{on "click"
+                            (fn (mut this.activeTab) "activity" )}}>
+                            Activity Flow
+                        </a>
+                        <a href="javascript:;" class="ui-tab  {{if (eq this.activeTab 'entities') 'active'}}" {{on "click"
+                            (fn (mut this.activeTab) "entities" )}}>
+                            Entities
+                        </a>
+                    </nav>
+                </div>
+            {{/if}}
+
+            <div class="p-4 mb-20">
+                {{#if this.orderConfig}}
+                    {{#if this.isDetailsTab}}
+                        <OrderConfig::DetailsEditor @orderConfig={{this.orderConfig}} @onUninstall={{this.uninstallConfiguration}} @onDelete={{this.deleteExtension}} @onClone={{this.cloneConfiguration}} />
+                    {{else if (eq this.activeTab "meta")}}
+                        <OrderConfig::FieldsEditor @orderConfig={{this.orderConfig}} @onFieldsChanged={{this.setMetaFields}} />
+                    {{else if (eq this.activeTab "activity")}}
+                        <OrderConfig::ActivityFlowEditor @orderConfig={{this.orderConfig}} @onFlowChanged={{this.setFlow}} />
+                    {{else if (eq this.activeTab "entities")}}
+                        <OrderConfig::EntitiesEditor @orderConfig={{this.orderConfig}} @onEntitiesChanged={{this.setEntities}} />
+                    {{/if}}
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</div>

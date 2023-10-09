@@ -1,0 +1,26 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="grid grid-cols-1 text-xs dark:text-gray-100">
+            <InputGroup @name="Driver">
+                <ModelSelect @modelName="driver" @selectedModel={{@options.fuelReport.driver}} @placeholder="Select Driver" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut @options.fuelReport.driver)}} @onChangeId={{fn (mut @options.fuelReport.driver_uuid)}} as |model|>
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+            <InputGroup @name="Vehicle">
+                <ModelSelect @modelName="vehicle" @selectedModel={{@options.fuelReport.vehicle}} @placeholder="Select Vehicle" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut @options.fuelReport.vehicle)}} @onChangeId={{fn (mut @options.fuelReport.vehicle_uuid)}} as |model|>
+                    {{model.display_name}}
+                </ModelSelect>
+            </InputGroup>
+            <InputGroup @name="Odometer" @type="number" @value={{@options.fuelReport.odometer}} />
+            <InputGroup @name="Cost">
+                <MoneyInput class="w-full" @value={{@options.fuelReport.amount}} @currency={{@options.fuelReport.currency}} @canSelectCurrency={{true}} @onCurrencyChange={{fn (mut @options.fuelReport.currency)}} />
+            </InputGroup>
+            <InputGroup @name="Volume" @helpText="Select the metric unit and volume of fuel to report." @wrapperClass="w-full">
+                <UnitInput class="w-full" @measurement="volume" @value={{@options.fuelReport.volume}} @unit={{@options.fuelReport.metric_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut @options.fuelReport.metric_unit)}} />
+            </InputGroup>
+            <InputGroup @name="Coordinates">
+                <CoordinatesInput @value={{@options.fuelReport.location}} @onChange={{fn (mut @options.fuelReport.location)}} />
+            </InputGroup>
+        </div>
+    </div>
+</Modal::Default>

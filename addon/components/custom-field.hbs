@@ -1,0 +1,42 @@
+<div class="custom-meta-field" ...attributes>
+    {{#if this.isTextInput}}
+        <Input @type="text" class="form-input w-full {{@inputClass}}" @value={{@value}} placeholder={{@placeholder}} />
+    {{/if}}
+
+    {{#if this.isSelectInput}}
+        <Select class="{{@inputClass}} w-full" @options={{@metaField.options}} @optionLabel="label" @optionValue="value" @value={{@value}} @placeholder={{@placeholder}} @humanize={{@metaField.humanizeOptions}} @onSelect={{@onChange}} />
+    {{/if}}
+
+    {{#if this.isDateTimeInput}}
+        <DateTimeInput class="form-input {{@inputClass}}" @value={{@value}} @onUpdate={{this.setDateValue}} />
+    {{/if}}
+
+    {{#if this.isPortInput}}
+        <ModelSelect @modelName="port" @selectedModel={{this.selectedPort}} @placeholder="Select Port" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @onChange={{this.selectPort}} as |port|>
+            <div class="flex items-center">
+                <span class="uppercase">
+                    {{port.name}} - {{port.portcode}}
+                </span>
+            </div>
+        </ModelSelect>
+    {{/if}}
+
+    {{#if this.isVesselInput}}
+        <ModelSelect @modelName="vessel" @selectedModel={{this.selectedVessel}} @placeholder="Select Vessel" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @onChange={{this.selectVessel}} as |vessel|>
+            <div class="flex items-center">
+                <div class="w-7">
+                    <FaIcon @icon="ship" />
+                </div>
+                <span class="uppercase">
+                    {{vessel.name}} - {{vessel.imo}}
+                </span>
+            </div>
+        </ModelSelect>
+    {{/if}}
+
+    {{#if this.isBooleanInput}}
+        <Toggle @label={{@metaField.label}} @wrapperClass="justify-start-i" @isToggled={{@value}} @onToggle={{this.onToggle}} @helpText={{@metaField.helpText}} />
+    {{/if}}
+
+    {{yield}}
+</div>

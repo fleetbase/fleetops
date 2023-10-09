@@ -1,0 +1,59 @@
+<div class="shadow-sm content-panel">
+    <div class="content-panel-header">
+        <h3 class="text-sm font-bold dark:text-gray-100">
+            {{this.title}}
+        </h3>
+    </div>
+    <div class="text-sm content-panel-body no-padding dark:text-gray-100">
+        <div class="grid grid-cols-8">
+            <div class="col-span-5 border-r border-gray-900">
+                <LiveMap @mapClass="z-0 shadow-md rounded-bl h-screen-40 w-full" @onReady={{fn (mut this.isLoading) false}} @onRoutesLoaded={{fn (mut this.routes)}} />
+            </div>
+
+            <div class="col-span-3">
+                <div class="dark:border-gray-900 bg-gray-100 dark:bg-gray-800 shadow-sm">
+                    {{#if this.isLoading}}
+                        <div class="flex text-center items-center justify-center p-4">
+                            <Spinner class="mr-2" />
+                            <span>Loading orders in progress...</span>
+                        </div>
+                    {{else}}
+                        {{#each this.routes as |route|}}
+                            <div class="border-b border-gray-900 px-3 py-2">
+                                <div class="flex justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex justify-between border border-gray-900 bg-gray-900 shadow-sm rounded-md px-3 py-2 mb-6">
+                                            <div>
+                                                <h4 class="font-semibold mb-2">{{route.order_public_id}}</h4>
+                                                <Badge @status={{route.order_status}} @helpText={{concat "Dispatched at " route.order_dispatched_at}} />
+                                            </div>
+                                            <div>
+                                                <div>
+                                                    <div class="mb-1 text-xs text-gray-100">Driver Assigned</div>
+                                                    <DriverCardMini @driver={{route.driver}} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <HorizontalRoute @payload={{route.payload}} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {{else}}
+                            <div class="h-70 p-3 flex flex-col items-center justify-center">
+                                <div class="mb-4">
+                                    <FaIcon @icon="satellite-dish" @size="3x" />
+                                </div>
+                                <div class="dark:text-gray-100 text-center">
+                                    <div class="font-semibold text-lg mb-2">No orders in progress</div>
+                                    <p class="">When orders are in progress they will display in this widget and show real time activity.</p>
+                                </div>
+                            </div>
+                        {{/each}}
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

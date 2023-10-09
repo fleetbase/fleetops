@@ -1,0 +1,21 @@
+<div class="{{@wrapperClass}}">
+    <a href="javascript:;" class="order-listings-row flex flex-col {{if @isSelected 'selected'}}" {{on "click" (fn @onClick @order)}} {{on "dblclick" (fn @onDoubleClick @order)}} ...attributes>
+        <div class="flex flex-row items-center">
+            <div class="mr-4 text-gray-600 {{if @isSelected 'text-blue-900'}}">
+                {{@index}}
+            </div>
+            <div>
+                <FaIcon @icon="map-marker" class="mr-3" />
+            </div>
+            <div class="truncate text-sm">
+                <div class="flex flex-row items-center justify-between mb-1.5 order-listing-row-header">
+                    <div class="truncate text-gray-900 dark:text-white font-semibold">{{@order.public_id}}</div>
+                    <Badge @status={{@order.status}} />
+                </div>
+                <div class="whitespace-pre-wrap mb-1">{{@order.payload.nextStop.address}}</div>
+                <div class="truncate">{{n-a @order.customer.name "No Customer"}}</div>
+            </div>
+        </div>
+    </a>
+    {{yield @isSelected}}
+</div>

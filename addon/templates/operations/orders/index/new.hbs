@@ -1,0 +1,506 @@
+<Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @isMaximizable={{true}} @isMinimizable={{true}} @width="700px" @fullHeight={{true}} @onLoad={{this.setupInterface}} as |overlay|>
+    <Overlay::Header @overlay={{overlay}} @title="New Order" @onPressCancel={{this.transitionBack}}>
+        <DropdownButton @icon="ellipsis-h" @size="sm" @iconPrefix="fas" @triggerClass="mr-2 hidden md:flex" as |dd|>
+            <div class="next-dd-menu mt-1 mx-0" aria-orientation="vertical" aria-labelledby="user-menu">
+                <div class="p-1">
+                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newCustomer)}}>
+                        <div class="w-6">
+                            <FaIcon @icon="user-plus" />
+                        </div>
+                        <span>Create new customer</span>
+                    </a>
+                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newFacilitator)}}>
+                        <div class="w-6">
+                            <FaIcon @icon="truck" />
+                        </div>
+                        <span>Create new facilitator</span>
+                    </a>
+                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newPlace)}}>
+                        <div class="w-6">
+                            <FaIcon @icon="map-pin" />
+                        </div>
+                        <span>Create new place</span>
+                    </a>
+                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.addEntity)}}>
+                        <div class="w-6">
+                            <FaIcon @icon="box" />
+                        </div>
+                        <span>Add entity to order</span>
+                    </a>
+                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.editMetaData)}}>
+                        <div class="w-6">
+                            <FaIcon @icon="table" />
+                        </div>
+                        <span>Edit order metadata</span>
+                    </a>
+                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.addCustomField)}}>
+                        <div class="w-6">
+                            <FaIcon @icon="edit" />
+                        </div>
+                        <span>Add custom field</span>
+                    </a>
+                </div>
+            </div>
+        </DropdownButton>
+        <Button @icon="upload" @type="magic" @text={{if (media 'isMobile') "" "Import"}} @onClick={{this.importOrder}} @disabled={{this.isCreatingOrder}} class="mr-2" />
+        <Button @icon="check" @type="primary" @text={{if (media 'isMobile') "" "Submit"}} @onClick={{this.createOrder}} @isLoading={{this.isCreatingOrder}} @disabled={{not this.isValid}} />
+    </Overlay::Header>
+
+    <Overlay::Body @wrapperClass="new-order-overlay-body" @increaseInnerBodyHeightBy={{1000}}>
+        <ContentPanel @title="Details" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
+                <div class="input-group">
+                    <InputLabel @labelText="Order Type" @helpText="Selecting the order type will tell fleetbase what order configurations to use." />
+                    <Select class="w-full" @options={{this.types}} @value={{this.order.type}} @optionLabel="name" @optionValue="key" @onSelect={{this.setConfig}} @placeholder="Select Order Type" />
+                </div>
+
+                <InputGroup @name="Internal ID" @value={{this.order.internal_id}} @helpText="Use this field to optionally set a custom identifier or internal identifier for the order." />
+
+                <InputGroup>
+                    <InputLabel @labelText="Schedule" @helpText="The date and time the order will be dispatched. If no driver is assigned at time of dispatch, the dispatch will fail. If the order is Ad-Hoc the order will be pinged to drivers in vicinity of pickup." />
+                    <DateTimeInput class="form-input" @value={{this.order.scheduled_at}} @minDate={{format-date (now) "yyyy-MM-dd" }} @minTime={{format-date (now) "HH:mm" }} @onUpdate={{this.scheduleOrder}} @disabled={{this.order.dispatched}} />
+                </InputGroup>
+
+                <InputGroup @name="Customer" @helpText="Optionally assign the customer of this order. If it's a new customer, use the 'New Customer' button above.">
+                    <ModelSelect @modelName="customer" @selectedModel={{this.order.customer}} @placeholder="Select Customer" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @onChange={{this.setOrderCustomer}} as |model|>
+                        <div class="flex items-center">
+                            <div class="w-7">
+                                <FaIcon @icon={{if model.isVendor "warehouse" "user" }} />
+                            </div>
+                            <span class="uppercase">
+                                {{model.name}}
+                            </span>
+                        </div>
+                    </ModelSelect>
+                </InputGroup>
+
+                <InputGroup @name="Facilitator" @helpText="Optionally assign a facilitator for this order, a facilitator can be a 3rd party subcontractor or service that will facilitate the transport of this order.">
+                    <ModelSelect @modelName="facilitator" @selectedModel={{this.order.facilitator}} @placeholder="Select Facilitator" @triggerClass="form-select form-input" @allowClear={{true}} @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{this.setOrderFacilitator}} as |model|>
+                        <div class="flex items-center">
+                            <div class="w-7">
+                                {{#if model.isIntegratedVendor}}
+                                    <Image src={{model.photo_url}} alt={{model.name}} class="w-4 h-4" width="16" height="16" />
+                                {{else}}
+                                    <FaIcon @icon={{if model.isVendor "warehouse" "user" }} />
+                                {{/if}}
+                            </div>
+                            <span class="uppercase">
+                                {{model.name}}
+                            </span>
+                        </div>
+                    </ModelSelect>
+                </InputGroup>
+
+                {{#if (and this.order.facilitator.isIntegratedVendor this.order.facilitator.service_types.length)}}
+                    <InputGroup @name="Service Type" @helpText={{concat "Select the service type you wish to use for " this.order.facilitator.name "."}}>
+                        <Select class="w-full" @options={{this.order.facilitator.service_types}} @value={{this.integratedVendorServiceType}} @optionLabel="description" @optionValue="key" @onSelect={{this.selectIntegratedServiceType}} @placeholder="Select Service Type" />
+                    </InputGroup>
+                {{/if}}
+
+                <InputGroup @name="Assign Driver" @helpText="Assign the driver this order will be dispatched to.">
+                    <ModelSelect @modelName="driver" @selectedModel={{this.order.driver_assigned}} @query={{@options.driversQuery}} @placeholder="Select Driver" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @disabled={{this.isUsingIntegratedVendor}} @onChange={{fn (mut this.order.driver_assigned)}} as |model|>
+                        <div class="flex items-center">
+                            <div class="w-7">
+                                <FaIcon @icon="id-card-alt" />
+                            </div>
+                            <div class="flex-1 flex flex-row truncate">
+                                <span class="uppercase mr-2">{{model.name}}</span>
+                                <span class="uppercase">{{model.phone}}</span>
+                            </div>
+                            {{#if this.order.facilitator}}
+                                <div class="px-1 ml-2 leading-5 bg-green-400 rounded shadow">
+                                    <span class="text-xs text-green-900">
+                                        {{this.order.facilitator.name}}
+                                    </span>
+                                </div>
+                            {{/if}}
+                        </div>
+                    </ModelSelect>
+                </InputGroup>
+
+                {{#if (and this.order.pod_required (not this.isUsingIntegratedVendor))}}
+                    <InputGroup>
+                        <InputLabel @labelText="Proof of Delivery" @helpText="Select the type of proof of delivery to require. This can either be QR code scan or Signature method." />
+                        <Select class="w-full" @options={{this.podOptions}} @value={{this.order.pod_method}} @onSelect={{fn (mut this.order.pod_method)}} @placeholder="Select Proof of Delivery Method" />
+                    </InputGroup>
+                {{/if}}
+
+                {{#if this.order.adhoc}}
+                    <div>
+                        <InputGroup @name="Adhoc Ping Distance" @type="number" @value={{this.order.adhoc_distance}} @wrapperClass="mb-0" @helpText="This setting determines the adhoc distance to ping for this order, if unset it will fallback to the default setting." />
+                        <div class="mt-2 px-3 py-1 rounded-lg border border-blue-600 bg-blue-100 flex items-center">
+                            <FaIcon @icon="triangle-exclamation" class="text-blue-900 mr-1.5" />
+                            <span class="text-blue-900 text-xs">Distance must be in meters</span>
+                        </div>
+                    </div>
+                {{/if}}
+
+                <div class="lg:col-span-2">
+                    <InputGroup @wrapperClass="pt-2">
+                        <Toggle @label="Ad-Hoc" @wrapperClass="justify-start-i" @isToggled={{this.order.adhoc}} @onToggle={{this.toggleAdhoc}} @disabled={{this.isUsingIntegratedVendor}} @helpText="Toggling Ad-Hoc will enable the order to intelligently ping drivers within the order pickup vicinity about the order allowing the first available driver to accept the order. This is an alternative to manually assigning the driver for real-time orders." />
+                    </InputGroup>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <InputGroup @wrapperClass="pt-1">
+                        <Toggle @label="Dispatch Immediately" @wrapperClass="justify-start-i" @isToggled={{this.order.dispatched}} @onToggle={{fn (mut this.order.dispatched)}} @disabled={{this.isUsingIntegratedVendor}} @helpText="Toggling dispatch will dispatch this order immediatley following creation." />
+                    </InputGroup>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <InputGroup @wrapperClass="pt-1">
+                        <Toggle @label="Require Proof of Delivery" @wrapperClass="justify-start-i" @isToggled={{this.order.pod_required}} @onToggle={{this.toggleProofOfDelivery}} @helpText="Toggling this will require driver to complete a proof of delivery." />
+                    </InputGroup>
+                </div>
+            </div>
+        </ContentPanel>
+
+        {{#if this.typeConfig}}
+            {{#each this.groupedMetaFields as |group|}}
+                <ContentPanel @title={{if group.value (humanize group.value) "Additional Details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
+                        {{#each group.items as |metaField|}}
+                            <div class="input-group {{if (eq metaField.type "boolean") "col-span-2 items-center" ""}}">
+                                <div class="flex items-center justify-between">
+                                    {{#if (not (eq metaField.type "boolean"))}}
+                                        <InputLabel @labelText={{metaField.label}} @required={{metaField.required}} />
+                                    {{/if}}
+
+                                    {{#if metaField.removable}}
+                                        <div class="flex items-center pr-1">
+                                            <a href="javascript:;" {{on "click" (fn this.removeMeta metaField)}}>
+                                                Remove
+                                            </a>
+                                        </div>
+                                    {{/if}}
+                                </div>
+
+                                <CustomField @metaField={{metaField}} @value={{metaField.value}} @placeholder={{metaField.label}} @onChange={{fn (mut metaField.value)}} class="{{if (eq metaField.type "boolean") "h-10 flex flex-row items-center" ""}}" />
+                            </div>
+                        {{/each}}
+                    </div>
+                </ContentPanel>
+            {{/each}}
+        {{/if}}
+
+        <ContentPanel @title="Metadata" @open={{this.order.meta.length}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.metadataButtons}}>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
+                {{#each this.order.meta as |metaField index|}}
+                    <InputGroup>
+                        <div class="flex justify-between items-center mb-0.5">
+                            <label>{{metaField.label}}</label>
+                            <a href="javascript:;" class="text-xs" {{on "click" (fn this.editCustomField index)}}>
+                                <FaIcon @icon="edit" @size="sm" class="mr-1" /> Edit
+                            </a>
+                        </div>
+                        <Input class="w-full form-input" @value={{metaField.value}} placeholder={{metaField.label}} />
+                    </InputGroup>
+                {{/each}}
+            </div>
+        </ContentPanel>
+
+        <ContentPanel @title="Route" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <div class="flex flex-row justify-between mb-4">
+                <div class="flex">
+                    <Toggle @isToggled={{this.isMultipleDropoffOrder}} @onToggle={{this.toggleMultiDropOrder}} @label="Multiple Dropoff's" />
+                </div>
+                <div class="flex flex-1 justify-end space-x-2">
+                    {{#if this.isMultipleDropoffOrder}}
+                        <Button @type="magic" @icon="magic" @text="Optimize Route" @size="sm" @onClick={{this.optimizeRoute}} @helpText="Fleetbase will automatically optimize the route." @disabled={{lt this.waypoints.length 3}} @isLoading={{this.isOptimizingRoute}} />
+                        <Button @icon="map-marked-alt" @text="Add Waypoint" @size="sm" @onClick={{this.addWaypoint}} @helpText="Use the `Add Waypoint` button to add more stops for this order. The Fleetbase routing engine will automatically optimize the route as each stop is added or removed." />
+                    {{/if}}
+                </div>
+            </div>
+
+            {{#if this.isMultipleDropoffOrder}}
+                <DragSortList class="overflow-visible" @items={{this.waypoints}} @dragEndAction={{this.sortWaypoints}} as |waypoint index|>
+                    <div id={{concat "waypoint_" (add index 1)}} class="border rounded-md px-3 py-2 shadow-sm border-gray-300 dark:border-gray-900 mb-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center justify-between cursor-move">
+                                <FaIcon @icon="grip-lines" @prefix="fas" class="mr-3 text-gray-100" />
+                                <label class="waypoint-label dark:text-gray-100 text-sm">
+                                    {{waypoint-label (add index 1)}}
+                                </label>
+                            </div>
+
+                            <div class="flex-1 px-4">
+                                <ModelSelect @modelName="place" @selectedModel={{waypoint.place}} @placeholder={{concat "Select Waypoint " (add index 1)}} @triggerClass="form-select form-input truncate" @wrapperClass="w-96" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}} @renderInPlace={{true}} @onChange={{fn this.setWaypointPlace index}} as |model|>
+                                    {{model.address}}
+                                </ModelSelect>
+
+                                {{#if (and this.isUsingIntegratedVendor (is-not-facilitator-supported-place this.order.facilitator waypoint.place))}}
+                                    <InfoBlock class="my-2 px-4 py-1.5 danger" @blockClass="flex flex-row items-center" @text={{concat this.order.facilitator.name " is not able to support this location."}} />
+                                {{/if}}
+
+                                {{#if waypoint.place.hasInvalidCoordinates}}
+                                    <div class="leading-5 text-sm text-red-400 mt-2">
+                                        <FaIcon @icon="exclamation-triangle" class="mr-1" /> Invalid coordinates!
+                                    </div>
+                                {{/if}}
+                            </div>
+
+                            <div class="flex items-center">
+                                {{#if waypoint.place}}
+                                    <Button class="mr-2" @icon="edit" @size="sm" @onClick={{fn this.placesController.editPlace waypoint.place}} />
+                                {{/if}}
+                                <Button @type="danger" @icon="trash" @size="sm" @onClick={{fn this.removeWaypoint waypoint}} />
+                            </div>
+                        </div>
+                    </div>
+                </DragSortList>
+            {{else}}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2 text-xs dark:text-gray-100">
+                    <InputGroup>
+                        <div class="flex items-center justify-between">
+                            <label>Pickup</label>
+
+                            <div class="flex-row space-x-2 pr-0.5">
+                                {{#if this.payload.pickup}}
+                                    <a href="javascript:;" {{on "click" (fn this.placesController.editPlace this.payload.pickup)}}>
+                                        <FaIcon @icon="edit" />
+                                    </a>
+                                    <a href="javascript:;" {{on "click" (fn this.setPayloadPlace "pickup" null)}}>
+                                        <FaIcon @icon="trash" />
+                                    </a>
+                                {{/if}}
+                            </div>
+                        </div>
+
+                        <ModelSelect @modelName="place" @selectedModel={{this.payload.pickup}} @placeholder="Select Pickup" @triggerClass="form-select form-input" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}} @renderInPlace={{true}} @onChange={{fn this.setPayloadPlace "pickup" }} as |model|>
+                            {{model.address}}
+                        </ModelSelect>
+
+                        {{#if (and this.isUsingIntegratedVendor (is-not-facilitator-supported-place this.order.facilitator this.payload.pickup))}}
+                            <InfoBlock class="my-2 px-4 py-1.5 danger" @blockClass="flex flex-row items-center" @text={{concat this.order.facilitator.name " is not able to support this location."}} />
+                        {{/if}}
+
+                        {{#if this.payload.pickup.hasInvalidCoordinates}}
+                            <div class="leading-5 text-sm text-red-400 mt-2">
+                                <FaIcon @icon="exclamation-triangle" class="mr-1" /> Invalid coordinates!
+                            </div>
+                        {{/if}}
+                    </InputGroup>
+
+                    <InputGroup>
+                        <div class="flex items-center justify-between">
+                            <label>Dropoff</label>
+
+                            <div class="flex-row space-x-2 pr-0.5">
+                                {{#if this.payload.dropoff}}
+                                    <a href="javascript:;" {{on "click" (fn this.placesController.editPlace this.payload.dropoff)}}>
+                                        <FaIcon @icon="edit" />
+                                    </a>
+                                    <a href="javascript:;" {{on "click" (fn this.setPayloadPlace "dropoff" null)}}>
+                                        <FaIcon @icon="trash" />
+                                    </a>
+                                {{/if}}
+                            </div>
+                        </div>
+
+                        <ModelSelect @modelName="place" @selectedModel={{this.payload.dropoff}} @placeholder="Select Dropoff" @triggerClass="form-select form-input" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}} @renderInPlace={{true}} @onChange={{fn this.setPayloadPlace "dropoff" }} as |model|>
+                            {{model.address}}
+                        </ModelSelect>
+
+                        {{#if (and this.isUsingIntegratedVendor (is-not-facilitator-supported-place this.order.facilitator this.payload.dropoff))}}
+                            <InfoBlock class="my-2 px-4 py-1.5 danger" @blockClass="flex flex-row items-center" @text={{concat this.order.facilitator.name " is not able to support this location."}} />
+                        {{/if}}
+
+                        {{#if this.payload.dropoff.hasInvalidCoordinates}}
+                            <div class="leading-5 text-sm text-red-400 mt-2">
+                                <FaIcon @icon="exclamation-triangle" class="mr-1" /> Invalid coordinates!
+                            </div>
+                        {{/if}}
+                    </InputGroup>
+
+                    <InputGroup>
+                        <div class="flex items-center justify-between">
+                            <label>Return</label>
+
+                            {{#if this.payload.return}}
+                                <a href="javascript:;" {{on "click" (fn this.placesController.editPlace this.payload.return)}}>Edit Address</a>
+                            {{/if}}
+                        </div>
+
+                        <ModelSelect @modelName="place" @selectedModel={{this.payload.return}} @placeholder="Select Return" @triggerClass="form-select form-input" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}} @renderInPlace={{true}} @onChange={{fn this.setPayloadPlace "return" }} as |model|>
+                            {{model.address}}
+                        </ModelSelect>
+
+                        {{#if (and this.isUsingIntegratedVendor (is-not-facilitator-supported-place this.order.facilitator this.payload.return))}}
+                            <InfoBlock class="my-2 px-4 py-1.5 danger" @blockClass="flex flex-row items-center" @text={{concat this.order.facilitator.name " is not able to support this location."}} />
+                        {{/if}}
+
+                        {{#if this.payload.return.hasInvalidCoordinates}}
+                            <div class="leading-5 text-sm text-red-400 mt-2">
+                                <FaIcon @icon="exclamation-triangle" class="mr-1" /> Invalid coordinates!
+                            </div>
+                        {{/if}}
+                    </InputGroup>
+                </div>
+            {{/if}}
+        </ContentPanel>
+
+        <ContentPanel @title="Payload / Entities" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            {{#if this.isNotCsvImportedOrder}}
+                <Button @wrapperClass="mb-4" @icon="plus" @iconPrefix="fas" @text="Add Item to Order" @size="sm" @onClick={{this.addEntity}} />
+            {{/if}}
+            {{#if this.isCsvImportedOrder}}
+                <div class="space-y-2">
+                    {{#each this.entitiesByImportId as |group|}}
+                        <div class="rounded-md border border-gray-200 dark:border-gray-900 p-3">
+                            <div class="mb-3 flex justify-between">
+                                <div class="w-3/4">
+                                    <div class="dark:text-gray-100 text-sm">Items drop at</div>
+                                    <h4 class="font-bold dark:text-gray-100">{{group.waypoint.place.address}}</h4>
+                                </div>
+                                <div>
+                                    <Button @icon="plus" @iconPrefix="fas" @text="Add Item" @size="sm" @onClick={{fn this.addEntity group.importId}} />
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-2">
+                                {{#each group.entities as |entity index|}}
+                                    <div class="col-3">
+                                        <div class="w-full rounded-md bg-gray-100 dark:bg-gray-900 shadow-sm p-3 relative">
+                                            <div class="flex items-center justify-center mb-3">
+                                                <img src={{entity.photo_url}} class="w-12 h-12" alt={{or entity.name entity.public_id}} />
+                                            </div>
+                                            <div class="space-y-2">
+                                                <div>
+                                                    <Input @value={{entity.name}}  @type="text" class="w-full form-input form-input-sm" placeholder="Name" />
+                                                </div>
+                                                <div>
+                                                    <Input @value={{entity.sku}}  @type="text" class="w-full form-input form-input-sm" placeholder="SKU" />
+                                                </div>
+                                                <Button @icon="pencil" @text="Edit Item" @size="sm" @onClick={{fn this.editEntity entity}} />
+                                            </div>
+                                            <div class="absolute top-0 right-0 p-2">
+                                                <Button @icon="times" @iconPrefix="fas" @type="danger" @size="xs" @onClick={{fn this.removeEntity entity}} @wrapperClass={{if (eq index 0) "invisible"}} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                {{/each}}
+                            </div>
+                        </div>
+                    {{/each}}
+                </div>
+            {{else}}
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-2">
+                    {{#each this.entities as |entity index|}}
+                        <div>
+                            <div class="w-full rounded-md bg-gray-100 dark:bg-gray-900 shadow-sm p-3 relative">
+                                <div class="flex items-center justify-center mb-3">
+                                    <img src={{entity.photo_url}} class="w-12 h-12" alt={{or entity.name entity.public_id}} />
+                                </div>
+                                <div class="space-y-2">
+                                    <div>
+                                        <Input @value={{entity.name}}  @type="text" class="w-full form-input form-input-sm" placeholder="Name" />
+                                    </div>
+                                    <div>
+                                        <Input @value={{entity.sku}}  @type="text" class="w-full form-input form-input-sm" placeholder="SKU" />
+                                    </div>
+                                    {{#if this.waypoints.length}}
+                                        <select class="form-select w-full form-input-sm" {{on "change" (fn
+                                                                this.setEntityDestionation index)}}>
+                                            <option selected disabled>
+                                                Select Desintation
+                                            </option>
+                                            {{#each this.waypoints as |waypoint|}}
+                                                {{#if waypoint.place}}
+                                                    <option value={{waypoint.place.id}} selected={{eq entity.destionation_uuid
+                                                                            waypoint.place.id}}>
+                                                        {{waypoint.place.address}}
+                                                    </option>
+                                                {{/if}}
+                                            {{/each}}
+                                        </select>
+                                    {{/if}}
+                                    <Button @icon="pencil" @text="Edit Item" @size="sm" @onClick={{fn this.editEntity entity}} />
+                                </div>
+                                <div class="absolute top-0 right-0 p-2">
+                                    <Button @icon="times" @iconPrefix="fas" @type="danger" @size="xs" @onClick={{fn this.removeEntity entity}} @wrapperClass={{if (eq index 0) "invisible"}} />
+                                </div>
+                            </div>
+                        </div>
+                    {{/each}}
+                </div>
+            {{/if}}
+        </ContentPanel>
+
+        <ContentPanel @title="Service" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <Toggle @label="Apply service rate" @wrapperClass="justify-start-i mb-4" @isToggled={{this.servicable}} @onToggle={{this.checkServiceRates}} @disabled={{this.isNotServicable}} @helpText="Select a defined service rate to generate real time service quotations to apply to this order." />
+
+            {{#if this.servicable}}
+                <ContentPanel @title="Service Quotes" @open={{true}} @pad={{true}} @wrapperClass="mt-6" @panelBodyClass="bg-white dark:bg-gray-800">
+                    {{#unless this.isUsingIntegratedVendor}}
+                        <div class="input-group mb-2i">
+                            <InputLabel @labelText="Select Service Rate" @helpText="Select which service rate to fetch quotes for." />
+
+                            <Select class="w-full" @options={{this.serviceRates}} @value={{this.selectedServiceRate}} @optionLabel="service_name" @optionValue="uuid" @onSelect={{this.getQuotes}} @placeholder="Select Service Rate" />
+                        </div>
+                    {{/unless}}
+
+                    <div class="flex flex-row justify-end">
+                        <Button @icon="retweet" @text="Refresh" @disabled={{this.isFetchingQuotes}} @onClick={{this.getQuotes}} />
+                    </div>
+
+                    {{#if this.isFetchingQuotes}}
+                        <div class="flex items-center justify-center py-5">
+                            <Spinner class="text-sm dark:text-gray-100 flex flex-row items-center" @iconClass="mr-2" @loadingMessage="Loading service quotes..." />
+                        </div>
+                    {{else}}
+                        <InfoBlock class="my-3" @text="Select a real time service quote to apply to this order. Once a quote is applied to the order, it will become a purchased rate. Transactions will be tracked within the Fleetbase ledger." />
+
+                        <div class="radio-group-condensed -space-y-px">
+                            {{#each this.serviceQuotes as |serviceQuote index|}}
+                                <div class="radio-group-item shadow-sm flex-col pl-0i pr-0i {{if (eq @options.selected index) 'is-checked'}}">
+                                    <div class="flex flex-row items-center mb-2.5 px-4">
+                                        <RadioButton @radioClass="focus:ring-blue-500 h-auto-i w-auto-i" @radioId={{serviceQuote.uuid}} @value={{serviceQuote.uuid}} @groupValue={{this.selectedServiceQuote}} @name="serviceQuote" @changed={{fn (mut this.selectedServiceQuote)}} />
+                                        <label for={{serviceQuote.uuid}} class="ml-3 flex-1">{{serviceQuote.public_id}}</label>
+                                        <Badge @hideStatusDot={{true}} @status="info">
+                                            {{serviceQuote.request_id}}
+                                        </Badge>
+                                    </div>
+                                    <div class="next-table-wrapper h-auto table-fluid rounded-none">
+                                        <table class="table table-fixed flex-1">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-left">Breakdown</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {{#each serviceQuote.items as |item|}}
+                                                    <tr>
+                                                        <td>
+                                                            <span class="font-semibold">{{smart-humanize item.details}}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span>{{format-currency item.amount serviceQuote.currency}}</span>
+                                                        </td>
+                                                    </tr>
+                                                {{/each}}
+                                                <tr class="border-b-0">
+                                                    <td class="border-b-0">
+                                                        <span class="font-semibold">Total</span>
+                                                    </td>
+                                                    <td class="border-b-0">
+                                                        <span>{{format-currency serviceQuote.amount serviceQuote.currency}}</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            {{else}}
+                                <InfoBlock class="my-2 px-4 py-1.5 warning" @blockClass="flex flex-row items-center" @text={{if this.payloadCoordinates.length "No service quotes." "Input order route to view service quotes."}} />
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                </ContentPanel>
+            {{/if}}
+        </ContentPanel>
+
+        <ContentPanel @title="Notes" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <Textarea @value={{this.order.notes}} class="form-input w-full" placeholder="Enter order notes here...." rows={{4}} />
+        </ContentPanel>
+    </Overlay::Body>
+</Overlay>

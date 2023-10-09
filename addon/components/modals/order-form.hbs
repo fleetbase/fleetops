@@ -1,0 +1,63 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="grid grid-cols-2 gap-3 text-xs dark:text-gray-100">
+            <InputGroup @name="Internal ID" @value={{@options.order.internal_id}} @helpText="Use this field to optionally set a custom identifier or internal identifier for the order." />
+
+            <div class="input-group">
+                <InputLabel @labelText="Schedule" @helpText="The date and time the order will be dispatched. If no driver is assigned at time of dispatch, the dispatch will fail. If the order is Ad-Hoc the order will be pinged to drivers in vicinity of pickup." />
+                <DateTimeInput class="form-input" @value={{@options.order.scheduled_at}} @minDate={{format-date (now) "yyyy-MM-d"}} @minTime={{format-date (now) "HH:mm"}} @onUpdate={{@options.scheduleOrder}} @disabled={{@options.order.isIntegratedVendorOrder}} />
+            </div>
+
+            <InputGroup @name="Customer" @helpText="Optionally assign the customer of this order. If it's a new customer, use the 'New Customer' button above.">
+                <ModelSelect @modelName="customer" @selectedModel={{@options.order.customer}} @placeholder="Select Customer" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @onChange={{@options.setOrderCustomer}} as |model|>
+                    <div class="flex items-center">
+                        <div class="w-7">
+                            <FaIcon @icon={{if model.isVendor "warehouse" "user" }} />
+                        </div>
+                        <span class="uppercase">
+                            {{model.name}}
+                        </span>
+                    </div>
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name="Facilitator" @helpText="Optionally assign a facilitator for this order, a facilitator can be a 3rd party subcontractor or service that will facilitate the transport of this order.">
+                <ModelSelect @modelName="facilitator" @selectedModel={{@options.order.facilitator}} @placeholder="Select Facilitator" @triggerClass="form-select form-input" @allowClear={{true}} @infiniteScroll={{false}} @renderInPlace={{true}} @disabled={{@options.order.isIntegratedVendorOrder}} @onChange={{@options.setOrderFacilitator}} as |model|>
+                    <div class="flex items-center">
+                        <div class="w-7">
+                            {{#if model.isIntegratedVendor}}
+                                <Image src={{model.photo_url}} alt={{model.name}} class="w-4 h-4" width="16" height="16" />
+                            {{else}}
+                                <FaIcon @icon={{if model.isVendor "warehouse" "user" }} />
+                            {{/if}}
+                        </div>
+                        <span class="uppercase">
+                            {{model.name}}
+                        </span>
+                    </div>
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name="Assign Driver" @helpText="Assign the driver this order will be dispatched to.">
+                <ModelSelect @modelName="driver" @selectedModel={{@options.order.driver_assigned}} @query={{this.driversQuery}} @placeholder="Select Driver" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @disabled={{@options.order.isIntegratedVendorOrder}} @allowClear={{true}} @onChange={{@options.setDriver}} as |model|>
+                    <div class="flex items-center">
+                        <div class="w-7">
+                            <FaIcon @icon="id-card-alt" />
+                        </div>
+                        <div class="flex-1 flex flex-row truncate">
+                            <span class="uppercase mr-2">{{model.name}}</span>
+                            <span class="uppercase">{{model.phone}}</span>
+                        </div>
+                        {{#if this.order.facilitator}}
+                            <div class="px-1 ml-2 leading-5 bg-green-400 rounded shadow">
+                                <span class="text-xs text-green-900">
+                                    {{this.order.facilitator.name}}
+                                </span>
+                            </div>
+                        {{/if}}
+                    </div>
+                </ModelSelect>
+            </InputGroup>
+        </div>
+    </div>
+</Modal::Default>

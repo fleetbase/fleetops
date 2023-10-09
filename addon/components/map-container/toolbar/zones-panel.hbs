@@ -1,0 +1,41 @@
+<div class="next-dd-menu overflow-visible" {{did-insert this.setupZonesPanel}}>
+    <div class="px-1">
+        <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1 text-gray-800 dark:text-gray-300">
+            Service Areas
+        </div>
+    </div>
+    <div class="next-dd-menu-seperator"></div>
+    <div class="px-1">
+        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.serviceAreaAction "createServiceArea" @dd)}}>Create new service area...</a>
+        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.liveMapAction "focusAllServiceAreas" @dd)}}>Show all service areas</a>
+        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.liveMapAction "blurAllServiceAreas" @dd)}}>Hide all service areas</a>
+        {{#each this.serviceAreaRecords as |serviceArea|}}
+            <BasicDropdownHover @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
+                <dd.Trigger class="next-dd-item {{if dd.isOpen 'active'}}">
+                    <FaIcon @icon="drafting-compass" class="mr-2" />
+                    <span>{{serviceArea.name}}</span>
+                </dd.Trigger>
+                <dd.Content>
+                    <div class="next-dd-menu">
+                        <div class="px-1">
+                            <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1 text-gray-800 dark:text-gray-300 truncate">
+                                <FaIcon @icon="drafting-compass" class="mr-2" />
+                                <span>{{serviceArea.name}} Actions...</span>
+                            </div>
+                        </div>
+                        <div class="next-dd-menu-seperator"></div>
+                        <div class="px-1">
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.liveMapAction "focusServiceArea" dd serviceArea)}}>Focus {{serviceArea.name}}...</a>
+                            {{#if (eq serviceArea this.activeServiceArea)}}
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.liveMapAction "blurServiceArea" dd serviceArea)}}>Blur service area...</a>
+                            {{/if}}
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.serviceAreaAction "createZone" dd serviceArea)}}>Create zone inside...</a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.serviceAreaAction "editServiceAreaDetails" dd serviceArea)}}>Edit {{serviceArea.name}}...</a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.serviceAreaAction "deleteServiceArea" dd serviceArea)}}>Delete {{serviceArea.name}}...</a>
+                        </div>
+                    </div>
+                </dd.Content>
+            </BasicDropdownHover>
+        {{/each}}
+    </div>
+</div>

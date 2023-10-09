@@ -1,0 +1,22 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}} as |options|>
+    <div class="modal-body-container" ...attributes>
+        <div class="input-group">
+            <label>
+                Policy Name
+            </label>
+            <Input @value={{@options.policy.name}}  @type="text" class="w-full form-input" placeholder="Enter a name for your policy" />
+        </div>
+        <div class="input-group">
+            <label>
+                Policy Description
+            </label>
+            <Input @value={{@options.policy.description}}  @type="text" class="w-full form-input" placeholder="Enter a description for your policy" />
+        </div>
+        <div class="input-group">
+            <label>
+               Select Permissions
+            </label>
+            <PermissionPicker @selected={{@options.policy.permissions}} @onChange={{fn (mut @options.policy.permissions)}} />
+        </div>
+    </div>
+</Modal::Default>

@@ -1,0 +1,62 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <p class="mb-5 dark:text-gray-100">Select an activity status to update order tracking activity, or input a custom activity.</p>
+
+        {{#if @options.order.activityHasEnded}}
+            <InfoBlock class="warning mt-2" @icon="exclamation-triangle">
+                This order is currently {{@options.order.status}}, additional activity will overwrite this status. 
+                Fleetbase does not recommend this unless you absolutely know what you're doing.
+            </InfoBlock>
+        {{/if}}
+
+        <fieldset class="my-5">
+            <legend class="sr-only">
+                Activity Options
+            </legend>
+        
+            <div class="radio-group-condensed -space-y-px">
+                {{#each @options.activityOptions as |activity index|}}
+                    <div class="radio-group-item shadow-sm {{if (eq @options.selected index) 'is-checked'}}">
+                        <div class="flex items-center h-5">
+                            <RadioButton @radioClass="focus:ring-blue-500" @radioId={{concat "activity_" index}} @value={{index}} @groupValue={{@options.selected}} @name="activity" @changed={{fn (mut @options.selected)}} />
+                        </div>
+                        <label for={{concat "activity_" index}} class="ml-3 flex flex-col cursor-pointer w-full">
+                            <span class="block text-sm font-semibold">
+                                {{activity.status}}
+                            </span>
+                            <span class="block text-sm">
+                                {{activity.details}}
+
+                                {{#if (eq activity.code "dispatched")}}
+                                    <InfoBlock class="warning xs mt-2" @icon="exclamation-triangle" @text="This will trigger the order to dispatch." />
+                                {{/if}}
+                            </span>
+                        </label>
+                        <div>
+                            <Badge @status="default" class="uppercase">{{activity.code}}</Badge>
+                        </div>
+                    </div>
+                {{/each}}
+
+                <div class="radio-group-item shadow-sm {{if (eq @options.selected 'custom') 'is-checked'}}">
+                    <div class="flex items-center h-5">
+                        <RadioButton @radioClass="focus:ring-blue-500" @radioId="activity_custom" @value="custom" @groupValue={{@options.selected}} @name="activity"
+                            @changed={{fn (mut @options.selected)}} />
+                    </div>
+                    <label for="activity_custom" class="ml-3 flex flex-col cursor-pointer w-full pr-5">
+                        <span class="block text-sm font-medium">
+                            <Input @type="text" class="form-input form-input-sm w-full rounded-b-none" placeholder="Custom activity status" />
+                        </span>
+                        <span class="block text-sm">
+                            <Input @type="text" class="form-input form-input-sm w-full rounded-t-none" placeholder="Custom activity details" />
+                        </span>
+                    </label>
+                    <div>
+                        <Input @type="text" class="form-input form-input-sm" placeholder="Custom activity code" />
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+
+    </div>
+</Modal::Default>

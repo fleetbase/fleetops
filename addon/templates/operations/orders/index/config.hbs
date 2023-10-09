@@ -1,0 +1,24 @@
+<Overlay @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{true}} @isMaximizable={{true}} @isMinimizable={{true}} as |overlay|>
+    <Overlay::Header @overlay={{overlay}} @title="Orders Configuration" @onPressCancel={{this.transitionBack}} />
+
+    <Overlay::Body @wrapperClass="py-5">
+        <div class="px-4 mb-4">
+            <p class="dark:text-gray-50">
+                Order configurations allow you to define dynamic configurations which will tell Fleetbase
+                how different types of orders should be executed.
+            </p>
+        </div>
+
+        <div class="ui-tabs ui-tabs-parent">
+            <nav>
+                <LinkTo @route="operations.orders.index.config.types" class="ui-tab">
+                    Configuration
+                </LinkTo>
+            </nav>
+        </div>
+
+        <div>
+            {{outlet}}
+        </div>
+    </Overlay::Body>
+</Overlay>

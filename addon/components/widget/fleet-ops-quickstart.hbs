@@ -1,0 +1,40 @@
+<div class="quickstart-widget {{if this.isHidden 'hidden'}}" {{did-insert this.getTasks}} ...attributes>
+    <div class="shadow-sm content-panel">
+        <div class="content-panel-header">
+            <h3 class="text-sm font-bold dark:text-gray-100">
+                {{this.title}}
+            </h3>
+        </div>
+        <div class="text-sm content-panel-body no-padding dark:text-gray-100">
+            <div class="p-3">
+                {{#if this.isLoading}}
+                    <div class="flex text-center items-center justify-center p-4">
+                        <Spinner class="mr-2" />
+                        <span>Let's see what you can do to jumpstart operations...</span>
+                    </div>
+                {{else}}
+                    <div class="space-y-3">
+                        {{#each-in this.tasks as |action task|}}
+                            <div
+                                class="rounded-md bg-gray-900 px-3 py-2 flex items-center justify-between space-x-2">
+                                <div class="flex items-center">
+                                    <div class="mr-4">
+                                        <div class="text-center flex items-center justify-center w-6">
+                                            <FaIcon @icon={{if task.should "lightbulb-exclamation" "check-circle"}} class={{if task.should "text-yellow-400" "text-green-500"}} @size="lg" />
+                                        </div>
+                                    </div>
+                                    <div class="text-gray-100">{{task.description}}</div>
+                                </div>
+                                <div>
+                                    {{#if task.should}}
+                                        <a href="javascript:;" class="text-yellow-700 dark:text-yellow-700 hover:text-yellow-700 font-semibold underline" {{on "click" (fn this.startTask action)}}>Start Task</a>
+                                    {{/if}}
+                                </div>
+                            </div>
+                        {{/each-in}}
+                    </div>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</div>

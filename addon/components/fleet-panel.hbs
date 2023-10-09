@@ -1,0 +1,70 @@
+<Overlay @position="right" @noBackdrop={{true}} @fullHeight={{true}} @width="700">
+    <Overlay::Header @title="Vehicle Details" @status={{@fleet.public_id}} @hideStatusDot={{true}}
+        @createdAt={{@fleet.createdAt}} @onPressCancel={{@onPressCancel}}>
+    </Overlay::Header>
+
+    <Overlay::Body class="no-padding" @increaseInnerBodyHeightBy={{1000}}>
+        <div class="section-header-actions w-full overflow-x-scroll lg:overflow-x-auto">
+            <div class="ui-tabs mt-4">
+                <nav>
+                    <a href="javascript:;" class="ui-tab {{if (eq this.currentTab "details") 'active' }}" {{on "click" (fn this.changeTab "details" )}}>
+                        <FaIcon @icon="circle-info" class="mr-1" />
+                        <span>Details</span>
+                    </a>
+                    <a href="javascript:;" class="ui-tab {{if (eq this.currentTab "vehicles") 'active' }}" {{on "click" (fn this.changeTab "vehicles" )}}>
+                        <FaIcon @icon="satellite-dish" class="mr-1" />
+                        <span>Vehicles</span>
+                    </a>
+                    <a href="javascript:;" class="ui-tab {{if (eq this.currentTab "drivers") 'active' }}" {{on "click" (fn this.changeTab "drivers" )}}>
+                        <FaIcon @icon="hard-drive" class="mr-1" />
+                        <span>Drivers</span>
+                    </a>
+                </nav>
+            </div>
+        </div>
+        <div class="tab-content tab-{{this.currentTab}}">
+            <div class="p-4">
+                {{#if (eq this.currentTab "details")}}
+                    <div class="modal-body-container">
+                        <div class="grid grid-cols-2 flex-col md:flex-row gap-2 mb-6">
+                            <div class="field-info-container">
+                                <div class="field-name">Name</div>
+                                <div class="field-value">{{n-a @fleet.name}}</div>
+                            </div>
+                            <div class="field-info-container">
+                                <div class="field-name">Service Area</div>
+                                <div class="field-value">{{n-a @fleet.serviceArea.name}}</div>
+                            </div>
+                            <div class="field-info-container">
+                                <div class="field-name">Zone</div>
+                                <div class="field-value">{{n-a @fleet.zone.name}}</div>
+                            </div>
+                            <div class="field-info-container">
+                                <div class="field-name">Task</div>
+                                <div class="field-value">{{n-a @fleet.task}}</div>
+                            </div>
+                            <div class="field-info-container">
+                                <div class="field-name">Active Manpower</div>
+                                <div class="field-value">{{@fleet.drivers_online_count}} of {{@fleet.drivers_count}} Online</div>
+                            </div>
+                            <div class="field-info-container">
+                                <div class="field-name">Date Created</div>
+                                <div class="field-value">{{@fleet.createdAtShort}}</div>
+                            </div>
+                        </div>
+                    </div>
+                {{/if}}
+                {{#if (eq this.currentTab "vehicles")}}
+                    <div class="modal-body-container">
+                        <FleetVehicleListing @fleet={{@fleet}} @onAddVehicle={{this.addVehicle}} @onRemoveVehicle={{this.removeVehicle}} />
+                    </div>
+                {{/if}}
+                {{#if (eq this.currentTab "drivers")}}
+                    <div class="modal-body-container">
+                        <FleetDriverListing @fleet={{@fleet}} @onAddDriver={{this.addDriver}} @onRemoveDriver={{this.removeDriver}} />
+                    </div>
+                {{/if}}
+            </div>
+        </div>
+    </Overlay::Body>
+</Overlay>

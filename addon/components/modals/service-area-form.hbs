@@ -1,0 +1,31 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <InputGroup @value={{@options.serviceArea.name}} @name="Service Area Name" @helpText="Set a display name for the service area." @required={{true}} />
+        <InputGroup @name="Service Area Type" @helpText="Select the type definition for this service area .">
+            <Select
+                @options={{@options.serviceAreaTypes}}
+                @value={{@options.serviceArea.type}}
+                @onSelect={{fn (mut @options.serviceArea.type)}}
+                @placeholder="Select service area type..."
+                class="w-full"
+            />
+        </InputGroup>
+        <InputGroup
+            @type="color"
+            @value={{@options.serviceArea.stroke_color}}
+            @name="Service Area Border Color"
+            @helpText="Customize the border color for this service area."
+            class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none"
+        />
+        <InputGroup
+            @type="color"
+            @value={{@options.serviceArea.color}}
+            @name="Service Area Color"
+            @helpText="Customize the fill color for this service area."
+            class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none"
+        />
+        <InputGroup @name="Service Area Country" @helpText="Optionally set the country in which this service area is located or based in.">
+            <CountrySelect class="w-full form-input" @value={{@options.serviceArea.country}} @onChange={{fn (mut @options.serviceArea.country)}} />
+        </InputGroup>
+    </div>
+</Modal::Default>

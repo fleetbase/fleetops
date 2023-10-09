@@ -1,0 +1,308 @@
+<Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @fullHeight={{true}} @width="800px">
+    <Overlay::Header @title={{if this.serviceRate.id this.serviceRate.service_name "New service rate"}} @status={{this.serviceRate.public_id}} @hideStatusDot={{true}} @createdAt={{this.serviceRate.createdAt}} @onPressCancel={{this.transitionBack}}>
+        {{#if this.serviceRate.id}}
+            <Button @icon="save" @type="primary" @text="Save Service Rate" @onClick={{this.updateServiceRate}} @isLoading={{this.isUpdatingServiceRate}} />
+        {{else}}
+            <Button @icon="check" @type="primary" @text="Create Service Rate" @onClick={{this.createServiceRate}} @isLoading={{this.isCreatingServiceRate}} />
+        {{/if}}
+    </Overlay::Header>
+
+    <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
+        <div>
+            <div class="grid grid-cols-2 gap-2">
+                <div class="input-group">
+                    <InputLabel @labelText="Service Name" @helpText="Display name for this service." @required={{true}} />
+                    <Input @type="text" @value={{this.serviceRate.service_name}} placeholder="Service Name" class="form-input w-full" />
+                </div>
+
+                <div class="input-group">
+                    <InputLabel @labelText="Service Order Type" @helpText="Restrict this service rate to an explicit `order type`." />
+                    <Select class="w-full" @options={{this.serviceTypes}} @value={{this.serviceRate.service_type}} @optionLabel="name" @optionValue="key" @onSelect={{fn (mut this.serviceRate.service_type)}} @placeholder="Select order type to restrict service to" />
+                </div>
+
+                <div class="input-group">
+                    <InputLabel @labelText="Base Fee" @helpText="Set a base fee which represents the minimum cost for this serice." @required={{true}} />
+                    <MoneyInput class="w-full" @value={{this.serviceRate.base_fee}} @currency={{this.serviceRate.currency}} @canSelectCurrency={{true}} @onCurrencyChange={{fn (mut this.serviceRate.currency)}} />
+                </div>
+
+                <div class="input-group">
+                    <InputLabel @labelText="Rate Calculation Method" @helpText="The method this service will use to calculate rates when queried." @required={{true}} />
+                    <Select class="w-full" @options={{this.calculationMethods}} @value={{this.serviceRate.rate_calculation_method}} @optionLabel="name" @optionValue="key" @onSelect={{fn (mut this.serviceRate.rate_calculation_method)}} @placeholder="Select rate calculation method" />
+                </div>
+            </div>
+        </div>
+
+        {{#if this.serviceRate.isParcelService}}
+            <div class="input-group">
+                <InputLabel @labelText="Estimated Delivery Days" @helpText="The estimated number of days this service will take. For a same-day service use `0`." @required={{true}} />
+
+                <Input @type="number" @value={{this.serviceRate.estimated_days}} placeholder="Estimated Delivery Days" class="form-input w-full" />
+            </div>
+        {{/if}}
+
+        <div class="input-group col-span-2">
+            <InputLabel @labelText="Duration Terms" @helpText="Add additional terms of service regarding duration for this serice rate." />
+
+            <Input @type="text" @value={{this.serviceRate.duration_terms}} placeholder="Duration terms if applicable" class="form-input w-full" />
+        </div>
+
+        {{#if this.serviceRate.isFixedMeter}}
+            <ContentPanel @title="Fixed Meter Options" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <InfoBlock class="mb-5" @text="This option defines a fixed fee per kilometer." @exampleText="For example: Every 1 kilometer a fixed fee is defined. If the distance traveled by the order is 3,300 meters the fixed fee for the 3rd kilometer will be added to the sum of the base fee." />
+
+                <div class="input-group">
+                    <InputLabel @labelText="Maximum Distance" @helpText="The maximum distance servicable." @required={{true}} />
+                    <Input @type="number" @value={{this.fixedMeterMaxDistance}} placeholder="Maximum Distance" class="form-input w-full" />
+                </div>
+
+                <div class="table-scrolling-height overflow-y-scroll">
+                    <div class="next-table-wrapper h-auto table-fluid rounded-none">
+                        <table class="table table-fixed">
+                            <thead>
+                                <tr>
+                                    <th>Distance</th>
+                                    <th>Fee</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{#each this.rateFees as |rateFee|}}
+                                    <tr>
+                                        <td>{{rateFee.distance}}-{{add rateFee.distance 1}} {{this.fixedMeterUnit}}
+                                        </td>
+                                        <td>
+                                            <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{rateFee.fee}} />
+                                        </td>
+                                    </tr>
+                                {{/each}}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </ContentPanel>
+        {{else if this.serviceRate.isPerDrop}}
+            <ContentPanel @title="Per Drop-off Options" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <InfoBlock class="mb-5" @text="This option defines a fixed fee per drop-offs." @exampleText="For example: 1-5 dropoffs in the order will cost $x amount, 5-10 dropoffs per order will cost $x amount. This will be added to the sum of the base fee." />
+
+                <div class="input-group">
+                    <Button @text="Add drop-off range" @icon="plus" @iconPrefix="fas" @onClick={{this.addPerDropoffRateFee}} />
+                </div>
+
+                <div class="table-wrapper table-fluid rounded-none">
+                    <table class="table table-fixed">
+                        <thead>
+                            <tr>
+                                <th>Min Drop</th>
+                                <th>Max Drop</th>
+                                <th>Fee</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each this.perDropRateFees as |rateFee index|}}
+                                <tr>
+                                    <td>
+                                        <Input @type="number" @value={{rateFee.min}} placeholder="Min" class="form-input w-16" />
+                                    </td>
+                                    <td>
+                                        <Input @type="number" @value={{rateFee.max}} placeholder="Max" class="form-input w-16" />
+                                    </td>
+                                    <td>
+                                        <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{rateFee.fee}} />
+                                    </td>
+                                    <td>
+                                        <a href="javascript:;" class="text-danger text-red-500 font-semibold" {{on "click" (fn this.removePerDropoffRateFee index)}}>Remove</a>
+                                    </td>
+                                </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+            </ContentPanel>
+        {{else if this.serviceRate.isPerMeter}}
+            <ContentPanel @title="Per Meter" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <InfoBlock class="mb-5" @text="This option allows the service to be calculated per kilometer or meter, that means you define a flat fee which is then multiplied by the distance which can be either meter or kilometer." @exampleText="For example: {fee} * {distance} + {baseFee}" />
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="input-group">
+                        <InputLabel @labelText="Per Meter Flat Rate Fee" @helpText="The single flat fee which will be multipled by the distance." @required={{true}} />
+                        <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{this.serviceRate.per_meter_flat_rate_fee}} />
+                    </div>
+
+                    <div class="input-group">
+                        <InputLabel @labelText="Distance Unit" @helpText="The unit of distance can be either per kilometer or meter." @required={{true}} />
+                        <Select class="w-full" @options={{this.distanceUnits}} @value={{this.serviceRate.per_meter_unit}} @optionLabel="name" @optionValue="key" @onSelect={{fn (mut this.serviceRate.per_meter_unit)}} placeholder="Select distance unit." />
+                    </div>
+
+                    <div class="col-span-2">
+                        <InputInfo>
+                            <code class="dark:text-gray-100">( {{this.serviceRate.per_meter_flat_rate_fee}} * {distance} {{this.serviceRate.per_meter_unit}} ) + {{this.serviceRate.base_fee}}</code>
+                        </InputInfo>
+                    </div>
+                </div>
+            </ContentPanel>
+        {{else if this.serviceRate.isAlgorithm}}
+            <ContentPanel @title="Custom Algorithm" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <InfoBlock class="mb-5">
+                    This option is to define a custom calculation for this service's fee with variables.
+                    Note that variables must be wrapped in a single curly brace.
+
+                    <div class="block my-4 break-text">
+                        <ul class="list-disc space-y-2 pl-16">
+                            <li class="leading-5"><i>distance</i> - the distance in meters from the order
+                                route.</li>
+                            <li class="leading-5"><i>time</i> - the route ETA in seconds.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 class="mb-1 text-sm font-semibold">Example</h4>
+                        <div class="mb-3 text-inherit">
+                            If the order request is a distance of 2,200 meters with an ETA of 30 minutes.
+                            Then the following formula will calculate a service fee of $2.50, which will be
+                            added to the base fee.
+                        </div>
+                        <code class="text-xs font-mono">(( {distance} / 50 ) * .05 ) + (( {time} / 60 ) * .01)</code>
+                    </div>
+                </InfoBlock>
+
+                <div class="input-group">
+                    <InputLabel @labelText="Algorithm" @helpText="Define a formula to be evaluated for this service rate calculation." @required={{true}} />
+                    <Input @type="tel" @value={{this.serviceRate.algorithm}} placeholder="(( {distance} / 50 ) * .05 ) + (( {time} / 60 ) * .01)" class="form-input w-full" />
+                </div>
+            </ContentPanel>
+        {{/if}}
+
+        {{#if this.serviceRate.isParcelService}}
+            <ContentPanel @title="Parcel Fee's" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <div class="space-y-2">
+                    {{#each this.parcelFees as |parcelFee|}}
+                        <div class="dark:text-gray-100">
+                            <div class="grid grid-cols-7">
+                                <div class="flex flex-col items-start justify-start pt-3">
+                                    <img src="/engines-dist/images/boxes/{{parcelFee.size}}.png" alt="parcel size {{parcelFee.size}}" width="44" class="w-11">
+                                    <label class="mt-2">{{humanize parcelFee.size}}</label>
+                                </div>
+                                <div class="col-span-6 dimensions-box">
+                                    <div class="grid grid-cols-4 gap-2 px-2 mb-2">
+                                        <div class="input-group">
+                                            <InputLabel @labelText="Length" />
+                                            <Input @type="tel" @value={{parcelFee.length}} placeholder="Length in {{parcelFee.dimension_unit}}" class="form-input w-4/5" />
+                                        </div>
+
+                                        <div class="input-group">
+                                            <InputLabel @labelText="Width" />
+                                            <Input @type="tel" @value={{parcelFee.width}} placeholder="Width in {{parcelFee.dimension_unit}}" class="form-input w-4/5" />
+                                        </div>
+
+                                        <div class="input-group">
+                                            <InputLabel @labelText="Height" />
+                                            <Input @type="tel" @value={{parcelFee.height}} placeholder="Height in {{parcelFee.dimension_unit}}" class="form-input w-4/5" />
+                                        </div>
+
+                                        <div class="input-group">
+                                            <InputLabel @labelText="Weight" />
+                                            <Input @type="tel" @value={{parcelFee.weight}} placeholder="Weight in {{parcelFee.weight_unit}}" class="form-input w-4/5" />
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2 px-2">
+                                        <div class="input-group">
+                                            <InputLabel @labelText="Dimensions Unit" />
+                                            <Select class="w-full" @options={{this.dimensionUnits}} @value={{parcelFee.dimension_unit}} placeholder="Select unit" />
+                                        </div>
+
+                                        <div class="input-group">
+                                            <InputLabel @labelText="Weight Unit" />
+                                            <Select class="w-full" @options={{this.weightUnits}} @value={{parcelFee.weight_unit}} placeholder="Select unit" />
+                                        </div>
+
+                                        <div class="input-group">
+                                            <InputLabel @labelText="Additional Fee" />
+                                            <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{parcelFee.fee}} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {{/each}}
+                </div>
+            </ContentPanel>
+        {{/if}}
+
+        <ContentPanel @title="Cash on Delivery" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <Toggle @wrapperClass="justify-start-i mb-5" @label="Enable additional fee for `cash on delivery` orders?" @isToggled={{this.serviceRate.has_cod_fee}} @onToggle={{fn (mut this.serviceRate.has_cod_fee)}} />
+
+            {{#if this.serviceRate.has_cod_fee}}
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="input-group">
+                        <InputLabel @labelText="Cash on Delivery Fee Calculation Method" @helpText="Method used to calculate the COD fee." @required={{true}} />
+                        <Select class="w-full" @options={{this.codCalculationMethods}} @optionLabel="name" @optionValue="key" @value={{this.serviceRate.cod_calculation_method}} @onSelect={{fn (mut
+                                                            this.serviceRate.cod_calculation_method)}} @placeholder="Select COD fee calculation method" />
+                    </div>
+
+                    {{#if this.serviceRate.hasCodFlatFee}}
+                        <div class="input-group">
+                            <InputLabel @labelText="Cash on Delivery Flat Fee" @helpText="Defines a flat fee to be added during peak hours." @required={{true}} />
+                            <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{this.serviceRate.cod_flat_fee}} />
+                        </div>
+                    {{else if  this.serviceRate.hasCodPercentageFee}}
+                        <div class="input-group">
+                            <InputLabel @labelText="Cash on Delivery Fee Percentage" @helpText="Defines a percentage based fee from the service rate subtotal to be added as the COD fee." @required={{true}} />
+                            <Input @type="number" min="0" max="100" @value={{this.serviceRate.cod_percent}} placeholder="Percentage" class="form-input w-full" />
+                        </div>
+                    {{/if}}
+                </div>
+            {{/if}}
+        </ContentPanel>
+
+        <ContentPanel @title="Peak Hours" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <Toggle @wrapperClass="justify-start-i mb-5" @label="Enable additional fee for order made during service defined `peak hours`?" @isToggled={{this.serviceRate.has_peak_hours_fee}} @onToggle={{fn (mut this.serviceRate.has_peak_hours_fee)}} />
+
+            {{#if this.serviceRate.has_peak_hours_fee}}
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="input-group">
+                        <InputLabel @labelText="Peak Hours Start" @helpText="Defines the what time the peak hour fee starts." @required={{true}} />
+
+                        <Input @type="time" @value={{this.serviceRate.peak_hours_start}} class="form-input w-full" />
+                    </div>
+
+                    <div class="input-group">
+                        <InputLabel @labelText="Peak Hours End" @helpText="Defines the what time the peak hour fee ends." @required={{true}} />
+
+                        <Input @type="time" @value={{this.serviceRate.peak_hours_end}} class="form-input w-full" />
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <InputLabel @labelText="Peak Hours Fee Calculation Method" @helpText="Method used to calculate the peak hours fee." @required={{true}} />
+                    <Select class="w-full" @options={{this.peakHourCalculationMethods}} @optionLabel="name" @optionValue="key" @value={{this.serviceRate.peak_hours_calculation_method}} @onSelect={{fn (mut this.serviceRate.peak_hours_calculation_method)}} @placeholder="Select peak hours fee calculation method" />
+                </div>
+
+                {{#if this.serviceRate.hasPeakHoursFlatFee}}
+                    <div class="input-group">
+                        <InputLabel @labelText="Peak Hours Flat Fee" @helpText="Defines a flat fee to be added during peak hours." @required={{true}} />
+                        <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{this.serviceRate.peak_hours_flat_fee}} />
+                    </div>
+                {{else if this.serviceRate.hasPeakHoursPercentageFee}}
+                    <div class="input-group">
+                        <InputLabel @labelText="Peak Hours Fee Percentage" @helpText="Defines a percentage based fee from the service rate subtotal to be added during peak hours." @required={{true}} />
+                        <Input @type="number" min="0" max="100" @value={{this.serviceRate.peak_hours_percent}} placeholder="Percentage" class="form-input w-full" />
+                    </div>
+                {{/if}}
+            {{/if}}
+        </ContentPanel>
+
+        <ContentPanel @title="Restrict Service" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <div class="input-group">
+                <InputLabel @labelText="Service Area" @helpText="Restrict this service to order request originating from a service area." />
+                <Select class="w-full" @options={{this.serviceAreas}} @optionLabel="name" @optionValue="id" @value={{this.serviceRate.service_area_uuid}} @onSelect={{this.selectServiceArea}} @placeholder="Restrict to service area" @disabled={{not this.serviceAreas.length}} />
+            </div>
+
+            {{#if this.serviceRate.service_area_uuid}}
+                <div class="input-group">
+                    <InputLabel @labelText="Zone" @helpText="Restrict this service to order request originating from a specific zone." />
+                    <Select class="w-full" @options={{this.zones}} @optionLabel="name" @optionValue="id" @value={{this.serviceRate.zone_uuid}} @onSelect={{fn (mut this.serviceRate.zone_uuid)}} @placeholder="Restrict to zone" @disabled={{not this.zones.length}} />
+                </div>
+            {{/if}}
+        </ContentPanel>
+    </Overlay::Body>
+</Overlay>

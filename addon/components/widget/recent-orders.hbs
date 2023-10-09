@@ -1,0 +1,35 @@
+<div class="recent-orders-widget" {{did-insert this.getRecentOrders}} ...attributes>
+    <div class="shadow-sm content-panel">
+        <div class="content-panel-header">
+            <h3 class="text-sm font-bold dark:text-gray-100">
+                Recent Orders
+            </h3>
+        </div>
+        <div class="text-sm content-panel-body no-padding dark:text-gray-100">
+            {{#if this.isLoading}}
+                <div class="flex text-center items-center justify-center p-4">
+                    Loading recent orders...
+                </div>
+            {{else}}
+                {{#each this.recentOrders as |order|}}
+                    <div class="p-4 border-b border-gray-900 flex justify-between items-center">
+                        <div>{{order.public_id}}</div>
+                        <div>
+                            <Badge @status={{order.status}} />
+                        </div>
+                    </div>
+                {{else}}
+                    <div class="h-64 p-8 flex flex-col items-center justify-center">
+                        <div class="mb-4">
+                            <FaIcon @icon="calendar-exclamation" @size="3x" />
+                        </div>
+                        <div class="dark:text-gray-100 text-center">
+                            <div class="font-semibold text-lg mb-2">No orders for this week</div>
+                            <p class="">There hasn't been any orders this week, get movement going by <LinkTo @route="operations.orders.index.new">creating a new order</LinkTo> or allow your customers to submit orders via API.</p>
+                        </div>
+                    </div>
+                {{/each}}
+            {{/if}}
+        </div>
+    </div>
+</div>

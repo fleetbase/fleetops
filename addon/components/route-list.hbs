@@ -1,0 +1,47 @@
+<div class="order-route-list" ...attributes>
+    {{#if @order.payload.firstWaypoint}}
+        <div class="order-route-stop {{@routeStopClass}}">
+            <div class="order-route-stop-index {{@routeStopIndexClass}}">
+                <div class="index-count">1</div>
+            </div>
+            <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
+                <DisplayPlace @place={{@order.payload.firstWaypoint}} />
+            </div>
+        </div>
+    {{/if}}
+
+    {{#if (gt @order.payload.waypoints.length 2)}}
+        <Button class="border-0 m-0 p-0 shadow-none w-full mb-3" @wrapperClass="w-full" @onClick={{this.toggleWaypointsCollapse}}>
+            <div class="px-3 py-2 w-full bg-yellow-200 text-yellow-900 rounded shadow-sm flex flex-col justify-center items-start">
+                <div class="flex flex-row items-center">
+                    <FaIcon @icon="eye" class="mr-2 text-yellow-900" />
+                    <span class="font-bold">{{if this.isWaypointsCollapsed "Tap to expand" "Tap to collapse"}}</span>
+                </div>
+                <div>{{@order.payload.middleWaypoints.length}} more waypoints</div>
+            </div>
+        </Button>
+        {{#unless this.isWaypointsCollapsed}}
+            {{#each @order.payload.middleWaypoints as |waypoint index|}}
+                <div class="order-route-stop {{@routeStopClass}}">
+                    <div class="order-route-stop-index {{@routeStopIndexClass}}">
+                        <div class="index-count">{{add index 2}}</div>
+                    </div>
+                    <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
+                        <DisplayPlace @place={{waypoint}} />
+                    </div>
+                </div>
+            {{/each}}
+        {{/unless}}
+    {{/if}}
+
+    {{#if @order.payload.lastWaypoint}}
+        <div class="order-route-stop {{@routeStopClass}}">
+            <div class="order-route-stop-index {{@routeStopIndexClass}}">
+                <div class="index-count">{{add @order.payload.middleWaypoints.length 2}}</div>
+            </div>
+            <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
+                <DisplayPlace @place={{@order.payload.lastWaypoint}} />
+            </div>
+        </div>
+    {{/if}}
+</div>

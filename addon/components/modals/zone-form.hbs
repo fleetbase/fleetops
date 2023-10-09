@@ -1,0 +1,16 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="input-group">
+            <InputLabel @labelText="Zone Name" @helpText="Set a display name for the zone." @required={{true}} />
+            <Input @value={{@options.zone.name}}  @type="text" class="w-full form-input" placeholder="Zone Name" />
+        </div>
+
+        <InputGroup @type="color" @value={{@options.zone.stroke_color}} @name="Zone Border Color" @helpText="Customize the border color for this zone." class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none" />
+        <InputGroup @type="color" @value={{@options.zone.color}} @name="Zone Color" @helpText="Customize the fill color for this zone." class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none" />
+
+        <div class="input-group">
+            <InputLabel @labelText="Zone Name" @helpText="Optionally give the zone a description." />
+            <Textarea @value={{@options.zone.description}} rows={{3}} type="text" class="w-full form-input" placeholder="Description of Zone" />
+        </div>
+    </div>
+</Modal::Default>

@@ -1,0 +1,60 @@
+<Overlay @position="right" @noBackdrop={{true}} @fullHeight={{true}} @width="700">
+     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
+        <div class="flex flex-row items-center justify-between w-full mb-4">
+            <div class="flex flex-1 space-x-2">
+                {{!-- <Button @type="default" @icon="location-arrow" @helpText="Locate driver" @onClick={{@onPressCancel}} /> --}}
+                <Button @type="default" @icon="pen" @helpText="Edit driver" @onClick={{this.editDriver}} />
+            </div>
+            <div class="flex flex-1 justify-end">
+                <Button @type="default" @icon="times" @helpText="Close driver details" @onClick={{@onPressCancel}} />
+            </div>
+        </div>
+        <div class="flex flex-row justify-between w-full">
+            <div class="flex flex-col flex-1 w-3/4">
+                <div class="flex flex-row">
+                    <div class="w-14 flex items-center justify-start">
+                        <Image src={{@driver.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{@driver.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                        <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
+                            <InputInfo @text={{@driver.public_id}} />
+                        </Attach::Tooltip>
+                    </div>
+                    <div class="flex flex-col">
+                        <h1 class="text-gray-900 dark:text-white text-2xl">{{@driver.name}}</h1>
+                        <div class="-mt-1">
+                            {{#if @driver.vehicle}}
+                                <div class="flex flex-row items-center">
+                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{@driver.vehicle.displayName}}</span>
+                                </div>
+                            {{else}}
+                                <div class="flex flex-row items-center">
+                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">No vehicle assigned</span>
+                                    {{!-- <Button @icon="plus" @size="xs" @helpText="Assign a vehicle to driver" /> --}}
+                                </div>
+                            {{/if}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end w-1/4">
+                <Badge @status={{@driver.status}} />
+            </div>
+        </div>
+    </Overlay::Header>
+    <Overlay::Body class="no-padding" @increaseInnerBodyHeightBy={{1000}}>
+        <div class="section-header-actions w-full overflow-x-scroll lg:overflow-x-auto">
+            <div class="ui-tabs mt-4">
+                <nav>
+                    {{#each this.tabs as |tab|}}
+                        <a href="javascript:;" class="ui-tab {{if (eq this.currentTab tab.slug) 'active' }}" {{on "click" (fn this.changeTab tab.slug)}}>
+                            <FaIcon @icon={{tab.icon}} class="mr-1" />
+                            <span>{{tab.title}}</span>
+                        </a>
+                    {{/each}}
+                </nav>
+            </div>
+        </div>
+        <div class="tab-content tab-{{this.currentTab}}">
+            {{component this.tab.component driver=@driver tabOptions=this.tab params=this.tab.componentParams}}
+        </div>
+    </Overlay::Body>
+</Overlay>

@@ -1,0 +1,36 @@
+<div class="recent-orders-widget" {{did-insert this.getRecentTransactions}} ...attributes>
+    <div class="shadow-sm content-panel">
+        <div class="content-panel-header">
+            <h3 class="text-sm font-bold dark:text-gray-100">
+                Recent Transactions
+            </h3>
+        </div>
+        <div class="text-sm content-panel-body no-padding dark:text-gray-100">
+            {{#if this.isLoading}}
+                <div class="flex text-center items-center justify-center p-4">
+                    <Spinner class="mr-2" />
+                    <span>Loading recent transactions...</span>
+                </div>
+            {{else}}
+                {{#each this.recentTransactions as |transaction|}}
+                    <div class="p-4 border-b border-gray-900 flex justify-between items-center">
+                        <div>{{transaction.public_id}}</div>
+                        <div>
+                            <Badge @status={{transaction.status}} />
+                        </div>
+                    </div>
+                {{else}}
+                    <div class="h-64 p-8 flex flex-col items-center justify-center">
+                        <div class="mb-4">
+                            <FaIcon @icon="funnel-dollar" @size="3x" />
+                        </div>
+                        <div class="dark:text-gray-100 text-center">
+                            <div class="font-semibold text-lg mb-2">No transactions this week</div>
+                            <p class="">When orders are going through with service rates, Fleetbase tracks transactions automatically.</p>
+                        </div>
+                    </div>
+                {{/each}}
+            {{/if}}
+        </div>
+    </div>
+</div>

@@ -1,0 +1,121 @@
+<div class="key-metrics-widget" {{did-insert this.getMetrics}} ...attributes>
+    <div class="flex items-center">
+        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 mr-2">
+            {{this.title}}
+        </h3>
+        {{#if this.isLoading}}
+            <div>
+                <Spinner class="text-sky-400" />
+            </div>
+        {{/if}}
+    </div>
+    <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-4">
+        <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
+                Earnings
+            </dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                {{format-currency this.metrics.earnings}}
+            </dd>
+        </div>
+
+        <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
+                Fuel Expenses
+            </dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                {{format-currency this.metrics.fuel_cost}}
+            </dd>
+        </div>
+
+        <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
+                Distance Traveled
+            </dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                {{format-meters this.metrics.distance_traveled}}
+            </dd>
+        </div>
+
+        <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
+                Total Time
+            </dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                {{format-duration this.metrics.total_time_traveled}}
+            </dd>
+        </div>
+
+        <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
+                Orders Scheduled
+            </dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                {{this.metrics.orders_scheduled}}
+            </dd>
+        </div>
+
+        <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
+                Orders Completed
+            </dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                {{this.metrics.orders_completed}}
+            </dd>
+        </div>
+
+        <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
+                Orders In Progress
+            </dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                {{this.metrics.orders_in_progress}}
+            </dd>
+        </div>
+
+        <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
+                Orders Canceled
+            </dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                {{this.metrics.orders_canceled}}
+            </dd>
+        </div>
+
+        <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
+                Drivers Online
+            </dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                {{this.metrics.drivers_online}}
+            </dd>
+        </div>
+
+        <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
+                Customers
+            </dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                {{this.metrics.customers}}
+            </dd>
+        </div>
+
+        <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
+                Open Issue
+            </dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                {{this.metrics.open_issues}}
+            </dd>
+        </div>
+
+        <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
+                Closed Issues
+            </dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                {{this.metrics.resolved_issues}}
+            </dd>
+        </div>
+    </dl>
+</div>

@@ -1,0 +1,26 @@
+<div class="mb-2">
+    <Button @text="Create new order" @type="primary" @size="xs" @icon="paper-plane" @iconPrefix="fas" @iconSize="sm" @wrapperClass="w-full" class="w-full" @onClick={{this.onClickCreateOrder}} />
+</div>
+{{#each this.universeMenuItems as |menuItem|}}
+    {{#if menuItem.renderComponentInPlace}}
+        {{component menuItem.component}}
+    {{else}}
+        <Layout::Sidebar::Item @onClick={{fn this.universe.transitionMenuItem (concat this.routePrefix "virtual") menuItem}} @item={{menuItem}} @icon={{menuItem.icon}}>{{menuItem.title}}</Layout::Sidebar::Item>
+    {{/if}}
+{{/each}}
+{{#each this.menuPanels as |menuPanel|}}
+    <Layout::Sidebar::Panel @open={{menuPanel.open}} @title={{menuPanel.title}}>
+        {{#each menuPanel.items as |item|}}
+            <Layout::Sidebar::Item @route={{concat this.routePrefix item.route}} @icon={{item.icon}}>{{item.title}}</Layout::Sidebar::Item>
+        {{/each}}
+    </Layout::Sidebar::Panel>
+{{/each}}
+{{#each this.universeMenuPanels as |menuPanel|}}
+    <Layout::Sidebar::Panel @open={{menuPanel.open}} @title={{menuPanel.title}}>
+        {{#each menuPanel.items as |menuItem|}}
+            <Layout::Sidebar::Item @onClick={{fn this.universe.transitionMenuItem (concat this.routePrefix "virtual") menuItem}} @item={{menuItem}} @icon={{menuItem.icon}}>{{menuItem.title}}</Layout::Sidebar::Item>
+        {{/each}}
+    </Layout::Sidebar::Panel>
+{{/each}}
+<Layout::Sidebar::Item @onClick={{this.onClickSettings}} @icon="cogs">Settings</Layout::Sidebar::Item>
+{{yield}}

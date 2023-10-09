@@ -1,0 +1,120 @@
+<Overlay class="orders-panel" @position="right" @noBackdrop={{@noBackdrop}} @fullHeight={{@fullHeight}} @outView={{@outView}} @width={{@width}}>
+    <Overlay::Header @hideLeftSection={{true}} @onPressCancel={{@onPressCancel}} @actionsWrapperClass="h-full" @cancelButtonHeight="1.5rem" class="pl-0i" {{set-height "2.75rem"}}>
+        <div class="h-full flex-1 pl-11 relative">
+            <div class="absolute h-full left-0 top-0 bottom-0 pl-4 flex items-center justify-center">
+                <FaIcon @icon="search" />
+            </div>
+            <Input @value={{this.query}} @type="text" placeholder="Search orders..." class="w-full p-0 m-0 h-full bg-transparent order-list-overlay-search" />
+        </div>
+        {{#if this.selectedOrders.length}}
+            <BasicDropdown class="mr-2" @renderInPlace={{true}} as |dd|>
+                <dd.Trigger>
+                    <div class="next-org-button-trigger has-selections {{if dd.isOpen 'is-open'}}">
+                        <FaIcon @icon="ellipsis-h" @prefix="fas" class="text-gray-800 dark:text-white" />
+                    </div>
+                </dd.Trigger>
+                <dd.Content>
+                    <div class="next-dd-menu">
+                        <div class="px-1">
+                            <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1">
+                                Selected {{pluralize this.selectedOrders.length "Order"}}
+                            </div>
+                        </div>
+                        <div class="next-dd-menu-seperator"></div>
+                        <div class="px-1">
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.onDropdownAction dd "onPressAssignOrders")}}>Assign to driver...</a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.onDropdownAction dd "onPressCancelOrders" this.selectedOrders)}}>Cancel orders...</a>
+                            <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (fn this.onDropdownAction dd "onPressDeleteOrders" this.selectedOrders)}}>Delete orders...</a>
+                        </div>
+                    </div>
+                </dd.Content>
+            </BasicDropdown>
+        {{/if}}
+        <BasicDropdown @renderInPlace={{true}} as |dd|>
+            <dd.Trigger>
+                <div class="next-org-button-trigger {{if dd.isOpen 'is-open'}}">
+                    <FaIcon @icon="ellipsis-h" @prefix="fas" class="text-gray-900 dark:text-gray-500" />
+                </div>
+            </dd.Trigger>
+            <dd.Content>
+                <div class="next-dd-menu">
+                    <div class="px-1">
+                        <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1">
+                            Actions
+                        </div>
+                    </div>
+                    <div class="next-dd-menu-seperator"></div>
+                    <div class="px-1">
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.onDropdownAction dd "onPressCreateOrder")}}>Create new order...</a>
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.onDropdownAction dd "onPressCreateFleet")}}>Create new fleet...</a>
+                    </div>
+                </div>
+            </dd.Content>
+        </BasicDropdown>
+    </Overlay::Header>
+
+    <Overlay::Body>
+        {{#if this.isLoading}}
+            <div class="flex items-center p-4">
+                <Spinner class="mr-2" />
+                <span>Loading...</span>
+            </div>
+        {{/if}}
+
+        <div class="space-y-4 orders-panel-fleets">
+            <div class="next-content-panel-wrapper mb-2">
+                <ContentPanel @title="Active orders" @subtitle={{pluralize this.activeOrders.length "Order"}} @open={{this.activeOrders.length}} @pad={{true}} @panelSubtitleInlineClass="text-xs" @panelBodyClass="order-listings bg-white dark:bg-gray-800">
+                    {{#each this.activeOrders as |order index|}}
+                        <OrderListOverlay::Order @order={{order}} @index={{add index 1}} @isSelected={{includes order this.selectedOrders}} @onClick={{this.selectOrder}} @onDoubleClick={{fn this.onAction "onPressViewOrder"}} as |isSelected|>
+                            {{#if isSelected}}
+                                <div class="order-listings-row selected px-4 py-2">
+                                    <div class="flex flex-row items-center space-x-2">
+                                        {{!-- <Button @type="default" @icon="map" @text="Map" @size="xs" class="btn-transparent-border" /> --}}
+                                        <Button @type="default" @icon="file-invoice" @text="Details" @size="xs" class="btn-transparent-border" @onClick={{fn this.onAction "onPressViewOrder" order}} />
+                                    </div>
+                                </div>
+                            {{/if}}
+                        </OrderListOverlay::Order>
+                    {{/each}}
+                </ContentPanel>
+                <ContentPanel @title="Unassigned orders" @subtitle={{pluralize this.unassignedOrders.length "Order"}} @open={{this.unassignedOrders.length}} @pad={{true}} @panelSubtitleInlineClass="text-xs" @panelBodyClass="order-listings bg-white dark:bg-gray-800">
+                    {{#each this.unassignedOrders as |order index|}}
+                        <OrderListOverlay::Order @order={{order}} @index={{add index 1}} @isSelected={{includes order this.selectedOrders}} @onClick={{this.selectOrder}} @onDoubleClick={{fn this.onAction "onPressViewOrder"}} as |isSelected|>
+                            {{#if isSelected}}
+                                <div class="order-listings-row selected px-4 py-2">
+                                    <div class="flex flex-row items-center space-x-2">
+                                        {{!-- <Button @type="default" @icon="map" @text="Map" @size="xs" class="btn-transparent-border" /> --}}
+                                        <Button @type="default" @icon="file-invoice" @text="Details" @size="xs" class="btn-transparent-border" @onClick={{fn this.onAction "onPressViewOrder" order}} />
+                                    </div>
+                                </div>
+                            {{/if}}
+                        </OrderListOverlay::Order>
+                    {{/each}}
+                </ContentPanel>
+            </div>
+        </div>
+
+        <div class="space-y-4 orders-panel-fleets">
+            {{#each this.fleets as |fleet|}}
+                <ContentPanel @title={{fleet.name}} @titleIcon="users" @titleIconWrapperClass="flex-inline mr-3" @subtitle={{concat fleet.drivers_online_count " of " fleet.drivers_count " Online"}} @open={{fleet.drivers.length}} @actionButtons={{array (hash type="default" icon="cog" size="xs" onClick=(fn this.onAction "onPressManageFleet" fleet))}} @panelSubtitleInlineClass="dark:text-gray-100 text-xs" @panelHeaderClass="flex" @panelBodyClass="bg-white dark:bg-gray-800">
+                    {{#each fleet.drivers as |driver|}}
+                        <ContentPanel @titleComponent="order-list-overlay/driver-panel-title" @titleComponentContext={{driver}} @open={{true}} @panelBodyClass="order-listings bg-white dark:bg-gray-800" @panelHeaderClass="next-orders-driver-header" @containerClass="mt-0i">
+                            {{#each driver.activeJobs as |order index|}}
+                                <OrderListOverlay::Order @order={{order}} @index={{add index 1}} @isSelected={{includes order this.selectedOrders}} @onClick={{this.selectOrder}} @onDoubleClick={{fn this.onAction "onPressViewOrder"}} as |isSelected|>
+                                    {{#if isSelected}}
+                                        <div class="order-listings-row selected px-4 py-2">
+                                            <div class="flex flex-row items-center space-x-2">
+                                                {{!-- <Button @type="default" @icon="map" @text="Map" @size="xs" class="btn-transparent-border" /> --}}
+                                                <Button @type="default" @icon="file-invoice" @text="Details" @size="xs" class="btn-transparent-border" @onClick={{fn this.onAction "onPressViewOrder" order}} />
+                                            </div>
+                                        </div>
+                                    {{/if}}
+                                </OrderListOverlay::Order>
+                            {{/each}}
+                        </ContentPanel>
+                    {{/each}}
+                </ContentPanel>
+            {{/each}}
+        </div>
+    </Overlay::Body>
+</Overlay>

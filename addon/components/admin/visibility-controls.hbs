@@ -1,0 +1,12 @@
+<ContentPanel @title="Visibility Controls" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+    <p class="mb-4 dark:text-white text-gray-800">Visibility controls allow you to disable sections of Fleet-Ops. Toggle the checkbox to enable or disable sections to hide in Fleet-ops.</p>
+    {{#each this.visibilitySettings as |visibilityControl|}}
+        <InputGroup @wrapperClass="mb-1i">
+            <Checkbox @value={{visibilityControl.visible}} @label={{concat visibilityControl.name " Visible"}} @onToggle={{fn (mut visibilityControl.visible)}} @helpText="Enable or disable visibility for this section in Fleet-Ops." />
+        </InputGroup>
+    {{/each}}
+</ContentPanel>
+
+<div class="mt-3 flex items-center justify-end">
+    <Button @type="primary" @size="lg" @icon="save" @text="Save Changes" @onClick={{this.saveVisibilitySettings}} @disabled={{this.isLoading}} @isLoading={{this.isLoading}} />
+</div>

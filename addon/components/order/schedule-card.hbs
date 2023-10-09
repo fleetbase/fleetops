@@ -1,0 +1,35 @@
+<div class="order-schedule-card border border-gray-200 dark:border-gray-700" {{did-insert this.setupComponent}} ...attributes>
+    <a href="javascript:;" class="{{@titleClass}} card-title border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900" {{on "click" (fn this.onTitleClick @order)}}>
+        <span>{{@order.public_id}}</span>
+        <div>
+            <Badge @status={{@order.status}} />
+        </div>
+    </a>
+    <div class="{{@contentClass}} card-content bg-white dark:bg-gray-900 text-sm space-y-2">
+        <div class="flex items-center justify-between">
+            <div>
+                <FaIcon @icon="calendar" class="mr-2" />
+                <span class="font-semibold">Date scheduled</span>
+            </div>
+            <span>{{@order.scheduledAt}}</span>
+        </div>
+        <div class="flex items-center justify-between">
+            <div>
+                <FaIcon @icon="calendar" class="mr-2" />
+                <span class="font-semibold">Date created</span>
+            </div>
+            <span>{{@order.createdAtWithTime}}</span>
+        </div>
+        <div class="flex items-center justify-between">
+            <div>
+                <FaIcon @icon="calendar" class="mr-2" />
+                <span class="font-semibold">Driver Assigned</span>
+            </div>
+            <span>{{@order.driver_assigned.name "None"}}</span>
+        </div>
+        <div class="z-20 relative">
+            <RouteList @order={{@order}} />
+        </div>
+    </div>
+    {{yield}}
+</div>

@@ -1,0 +1,34 @@
+<Layout::Section::Header @title="Places" @searchQuery={{this.query}} @onSearch={{perform this.search}}>
+    <FiltersPicker @columns={{this.columns}} @onApply={{fn this.filters.apply this}} @onClear={{fn this.filters.reset this}} @onFilterClear={{this.filters.clear}} @onChange={{this.filters.set}} @buttonWrapperClass="mr-2" />
+    <VisibleColumnPicker @columns={{this.columns}} @onChange={{fn (mut this.columns)}} class="mr-2" />
+    {{#if (safe-has this.table "selectedRows")}}
+        <DropdownButton @icon="layer-group" @text="Bulk Action" @type="magic" @size="sm" @buttonWrapperClass="mr-2" @contentClass="dropdown-menu" as |dd|>
+            <div class="next-dd-menu mt-2 mx-0">
+                <div class="px-1">
+                    <a href="#" class="text-red-500 next-dd-item" {{on "click" (dropdown-fn dd this.bulkDeletePlaces)}}>
+                        Delete Places
+                    </a>
+                </div>
+            </div>
+        </DropdownButton>
+    {{/if}}
+    <Button @icon="plus" @iconPrefix="fas" @type="primary" @text="New" class="mr-2" @onClick={{this.createPlace}} />
+    <Button @icon="long-arrow-up" @iconClass="rotate-icon-45" @text="Export" @onClick={{this.exportPlaces}} />
+</Layout::Section::Header>
+
+<Layout::Section::Body>
+    <Table
+        @rows={{@model}}
+        @columns={{this.columns}}
+        @selectable={{true}}
+        @canSelectAll={{true}}
+        @onSetup={{fn (mut this.table)}}
+        @pagination={{true}}
+        @paginationMeta={{@model.meta}}
+        @page={{this.page}}
+        @onPageChange={{fn (mut this.page)}}
+        @tfootVerticalOffset="53"
+        @tfootVerticalOffsetElements=".next-view-section-subheader"
+    />
+</Layout::Section::Body>
+{{outlet}}

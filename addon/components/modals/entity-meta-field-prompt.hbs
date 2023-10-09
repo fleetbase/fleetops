@@ -1,0 +1,6 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <KeyInput @name="Meta Field Key" @value={{@options.keyName}} @onChange={{fn (mut @options.keyName)}} />
+    </div>
+    {{yield}}
+</Modal::Default>

@@ -1,0 +1,76 @@
+<div class="live-map-component {{@wrapperClass}}" {{did-insert this.setupLiveMap}}>
+    <LeafletMap id={{this.mapId}} class={{@mapClass}} @lat={{this.latitude}} @lng={{this.longitude}} @zoom={{this.zoom}} @zoomControl={{@zoomControl}} @contextmenu={{true}} @contextmenuWidth={{140}} @contextmenuItems={{this.contextMenuItems}} @onLoad={{this.setMapReference}} {{will-destroy this.closeChannels}} ...attributes as |layers|>
+        <layers.tile @url={{this.tileSourceUrl}} />
+
+        {{#if this.isDriversVisible}}
+            {{#each this.drivers as |driver|}}
+                <layers.drift-marker @rotationAngle={{driver.heading}} @duration={{300}} @icon={{icon iconUrl=driver.vehicle_avatar iconSize=(array 24 24)}} @location={{point-to-coordinates driver.location}} @publicId={{driver.public_id}} @onAdd={{fn this.onAction "onDriverAdded" driver}} as |marker|>
+                    <marker.popup @maxWidth="500" @minWidth="225">
+                        <DriverCard @driver={{driver}} @showCoordinates={{true}} @textClass="text-gray-900 dark:text-gray-100" />
+                    </marker.popup>
+                    <marker.tooltip @permanent={{false}} @sticky={{true}}>{{driver.name}}</marker.tooltip>
+                </layers.drift-marker>
+            {{/each}}
+        {{/if}}
+
+        {{#if this.isPlacesVisible}}
+            {{#each this.places as |place|}}
+                <layers.marker @icon={{icon iconUrl="/engines-dist/images/building-marker.png" iconSize=(array 16 16)}} @location={{point-to-coordinates place.location}} @riseOnHover={{true}} @title={{place.address}} @alt={{place.address}} as |marker|>
+                    <marker.popup>
+                        <div>{{place.address}}</div>
+                        <div>{{format-point place.location}}</div>
+                    </marker.popup>
+                    <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="bottom">{{place.name}}</marker.tooltip>
+                </layers.marker>
+            {{/each}}
+        {{/if}}
+
+        {{!-- {{#if this.isRoutesVisible}}
+            {{#each this.routes as |route|}}
+                <layers.polyline @locations={{route.details.coordinates}} />
+
+                {{#if route.payload.pickup}}
+                    <layers.marker @location={{point-to-coordinates route.payload.pickup.location}} as |marker|>
+                        <marker.popup>
+                            <div>{{route.payload.pickup.address}}</div>
+                            <div>{{format-point route.payload.pickup.location}}</div>
+                        </marker.popup>
+                    </layers.marker>
+                {{/if}}
+                {{#each route.payload.waypoints as |waypoint|}}
+                    <layers.marker @location={{point-to-coordinates waypoint.location}} as |marker|>
+                        <marker.popup>
+                            <div>{{waypoint.address}}</div>
+                            <div>{{format-point waypoint.location}}</div>
+                        </marker.popup>
+                    </layers.marker>
+                {{/each}}
+
+                {{#if route.payload.dropoff}}
+                    <layers.marker @location={{point-to-coordinates route.payload.dropoff.location}} as |marker|>
+                        <marker.popup>
+                            <div>{{route.payload.dropoff.address}}</div>
+                            <div>{{format-point route.payload.dropoff.location}}</div>
+                        </marker.popup>
+                    </layers.marker>
+                {{/if}}
+            {{/each}}
+        {{/if}} --}}
+
+        <layers.draw-control @position="topright" @draw={{hash marker=false circlemarker=false circle=false polyline=false}} @onDrawDrawstop={{fn this.onAction "onDrawDrawstop"}} @onDrawDeleted={{fn this.onAction "onDrawDeleted"}} @onDrawEdited={{fn this.onAction "onDrawEdited"}} @onDrawDeletestart={{fn this.onAction "onDrawDeletestart"}} @onDrawEditstop={{fn this.onAction "onDrawEditstop"}} @onDrawControlCreated={{fn this.onAction "onDrawControlCreated"}} @onDrawFeatureGroupCreated={{fn this.onAction "onDrawFeatureGroupCreated"}} />
+
+        {{#each this.activeServiceAreas as |serviceArea|}}
+            <layers.polygon @id={{serviceArea.id}} @record={{serviceArea}} @locations={{serviceArea.bounds}} @fillColor={{serviceArea.color}} @color={{serviceArea.stroke_color}} @onAdd={{fn this.onAction "onServiceAreaLayerAdded" serviceArea}} as |polygon|>
+                <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{serviceArea.name}} Service Area</polygon.tooltip>
+            </layers.polygon>
+
+            {{#each serviceArea.zones as |zone|}}
+                <layers.polygon @id={{zone.id}} @record={{zone}} @locations={{zone.locations}} @fillColor={{zone.color}} @color={{zone.stroke_color}} @onAdd={{fn this.onAction "onZoneLayerAdd" zone}} as |polygon|>
+                    <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{zone.name}} Zone</polygon.tooltip>
+                </layers.polygon>
+            {{/each}}
+        {{/each}}
+
+        {{yield layers}}
+    </LeafletMap>
+</div>

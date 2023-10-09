@@ -1,0 +1,26 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="col-span-2">
+                <InputGroup @name="Fleet Name" @value={{@options.fleet.name}} />
+            </div>
+            <InputGroup @name="Assign to Service Area" @value={{@options.fleet.service_area}}>
+                <ModelSelect @modelName="service-area" @selectedModel={{@options.fleet.service_area}} @placeholder="Select service area to assign fleet to" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut @options.fleet.service_area)}} as |model|>
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+            {{#if @options.fleet.service_area}}
+                <InputGroup @name="Assign to Zone" @value={{@options.fleet.zone}}>
+                    <ModelSelect @modelName="zone" @selectedModel={{@options.fleet.zone}} @query={{hash service_area_uuid=@options.fleet.service_area.id}} @placeholder="Select zone to assign fleet to" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut @options.fleet.zone)}} as |model|>
+                        {{model.name}}
+                    </ModelSelect>
+                </InputGroup>
+            {{/if}}
+            <InputGroup @name="Task/ Mission" @helpText="Give a description of this fleet's primary task or mission if applicable." @value={{@options.fleet.task}} />
+            <InputGroup @name="Status" @helpText="Select the status of the fleet.">
+                <Select @options={{@options.statusOptions}} @value={{@options.fleet.status}} @onSelect={{fn (mut @options.fleet.status)}} @placeholder="Select status" class="w-full" />
+            </InputGroup>
+        </div>
+    </div>
+    {{yield}}
+</Modal::Default>

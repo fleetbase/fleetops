@@ -1,0 +1,15 @@
+<Overlay @onLoad={{this.onLoad}} @isOpen={{@isOpen}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{true}} @isMaximizable={{true}} @isMinimizable={{true}} as |overlay|>
+    <Overlay::Header @overlay={{overlay}} @title="FleetOps Settings" @onPressCancel={{@onPressCancel}}>
+        <Button @icon="save" @type="primary" @text={{if (media 'isMobile') "" "Save Changes"}} @onClick={{this.saveSettings}} @isLoading={{this.isSaving}} @disabled={{or this.isLoading this.isSaving}} />
+    </Overlay::Header>
+
+    <Overlay::Body>
+        <div class="px-5 py-4">
+            <InputGroup @name="Default Adhoc Ping Distance" @type="number" @value={{this.company.options.fleetops.adhoc_distance}} @wrapperClass="mb-0" @helpText="This setting determines the default distance in meters adhoc orders should ping drivers within vicinity of the order pickup point." />
+            <div class="mt-2 px-3 py-1 rounded-lg border border-blue-600 bg-blue-100 flex items-center">
+                <FaIcon @icon="triangle-exclamation" class="text-blue-900 mr-1.5" />
+                <span class="text-blue-900 text-xs">Distance must be in meters</span>
+            </div>
+        </div>
+    </Overlay::Body>
+</Overlay>

@@ -1,0 +1,57 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="flex">
+            <div class="w-32 mb-6 mr-6 flex flex-col items-center">
+                <Image src={{@options.entity.photo_url}} alt={{@options.entity.name}} height="128" width="128" class="h-32 w-32 rounded-md" />
+                <UploadButton @name="photos" @accept="image/*" @onFileAdded={{@options.uploadNewPhoto}} class="w-32" />
+            </div>
+            <div class="flex-1 space-y-4">
+                <ContentPanel @title="Details" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
+                        <InputGroup @name="Name" @value={{@options.entity.name}} @helpText="Name of item or entity." @wrapperClass="mb-2" />
+                        <InputGroup @name="Internal ID" @value={{@options.entity.internal_id}} @helpText="Use this field to optionally set a custom identifier or internal identifier for the entity." @wrapperClass="mb-2" />
+                        <InputGroup @name="SKU" @value={{@options.entity.sku}} @helpText="Stock keeping unit number if applicable." @wrapperClass="mb-2" />
+                        <div></div>
+                        <InputGroup @name="Description" @helpText="Additional description text of entity." @wrapperClass="col-span-2 mb-2">
+                            <Textarea @value={{@options.entity.description}} type="text" class="w-full form-input" placeholder="Description" />
+                        </InputGroup>
+                    </div>
+                </ContentPanel>
+
+                <ContentPanel @title="Pricing & Value" @open={{false}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
+                        <InputGroup @name="Price" @helpText="Price of entity." @wrapperClass="mb-2">
+                            <MoneyInput class="w-full" @value={{@options.entity.price}} @currency={{@options.entity.currency}} @canSelectCurrency={{true}} @onCurrencyChange={{fn (mut @options.entity.currency)}} />
+                        </InputGroup>
+                        <InputGroup @name="Sale Price" @helpText="Sale price or discounted price of entity." @wrapperClass="mb-2">
+                            <MoneyInput class="w-full" @value={{@options.entity.sale_price}} @currency={{@options.entity.currency}} @canSelectCurrency={{true}} @onCurrencyChange={{fn (mut @options.entity.currency)}} />
+                        </InputGroup>
+                        <InputGroup @name="Declared Value" @helpText="Declared value of entity, useful is insurable." @wrapperClass="mb-2">
+                            <MoneyInput class="w-full" @value={{@options.entity.declared_value}} @currency={{@options.entity.currency}} @canSelectCurrency={{true}} @onCurrencyChange={{fn (mut @options.entity.currency)}} />
+                        </InputGroup>
+                    </div>
+                </ContentPanel>
+
+                <ContentPanel @title="Measurements & Weight" @open={{false}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <div class="grid grid-cols-3 gap-1">
+                        <InputGroup @name="Length" @helpText="The length of the entity." @wrapperClass="mb-2">
+                            <UnitInput class="w-full" @value={{@options.entity.length}} @unit={{@options.entity.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut @options.entity.dimensions_unit)}} />
+                        </InputGroup>
+                        <InputGroup @name="Width" @helpText="The width of the entity." @wrapperClass="mb-2">
+                            <UnitInput class="w-full" @value={{@options.entity.width}} @unit={{@options.entity.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut @options.entity.dimensions_unit)}} />
+                        </InputGroup>
+                        <InputGroup @name="Height" @helpText="The height of the entity." @wrapperClass="mb-2">
+                            <UnitInput class="w-full" @value={{@options.entity.height}} @unit={{@options.entity.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut @options.entity.dimensions_unit)}} />
+                        </InputGroup>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1">
+                        <InputGroup @name="Weight" @helpText="The weight of the entity." @wrapperClass="mb-2">
+                            <UnitInput class="w-full" @value={{@options.entity.weight}} @measurement="weight" @unit={{@options.entity.weight_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut
+                                                            @options.entity.weight_unit)}} />
+                        </InputGroup>
+                    </div>
+                </ContentPanel>
+            </div>
+        </div>
+    </div>
+</Modal::Default>

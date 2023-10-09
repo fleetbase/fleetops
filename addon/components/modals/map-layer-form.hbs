@@ -1,0 +1,29 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="mb-4 border border-gray-700 shadow-sm rounded-md pt-2 px-4">
+            <InputGroup @name="Layer Type" @helpText="Select the type of layer you wish to create.">
+                <Select @options={{@options.layerTypes}} @value={{@options.selectedLayerType}} @onSelect={{fn (mut @options.selectedLayerType)}} @placeholder="Select layer type..." class="w-full" />
+            </InputGroup>
+        </div>
+        {{#if (eq @options.selectedLayerType "Zone")}}
+            <InputGroup @name="Service Area" @helpText="Select the Service Area to attribute this Zone to.">
+                <ModelSelect @modelName="service-area" @selectedModel={{@options.layerOptions.service_area}} @placeholder="Select service area to assign fleet to" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut @options.layerOptions.service_area)}} as |model|>
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+        {{/if}}
+        <InputGroup @value={{@options.layerOptions.name}} @name="{{@options.selectedLayerType}} Name" @helpText="Set a display name for the {{@options.selectedLayerType}}." @required={{true}} />
+        {{#if (eq @options.selectedLayerType "Service Area")}}
+            <InputGroup @name="Service Area Type" @helpText="Select the type definition for this service area .">
+                <Select @options={{@options.serviceAreaTypes}} @value={{@options.layerOptions.type}} @onSelect={{fn (mut @options.layerOptions.type)}} @placeholder="Select service area type..." class="w-full" />
+            </InputGroup>
+        {{/if}}
+        <InputGroup @type="color" @value={{@options.layerOptions.stroke_color}} @name="{{@options.selectedLayerType}} Border Color" @helpText="Customize the border color for this {{@options.selectedLayerType}}." class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none" />
+        <InputGroup @type="color" @value={{@options.layerOptions.color}} @name="{{@options.selectedLayerType}} Color" @helpText="Customize the fill color for this {{@options.selectedLayerType}}." class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none" />
+        {{#if (eq @options.selectedLayerType "Service Area")}}
+            <InputGroup @name="Service Area Country" @helpText="Optionally set the country in which this Service Area is located or based in.">
+                <CountrySelect class="w-full form-input" @value={{@options.layerOptions.country}} @onChange={{fn (mut @options.layerOptions.country)}} />
+            </InputGroup>
+        {{/if}}
+    </div>
+</Modal::Default>

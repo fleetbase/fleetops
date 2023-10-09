@@ -1,0 +1,57 @@
+<MapContainer::ToolbarContainer ...attributes>
+    <div class="next-map-container-toolbar next-map-container-toolbar-zoom-control">
+        <div>
+            <button type="button" class="toolbar-button" {{on "click" (fn this.onAction "onZoomIn")}}>
+                <FaIcon @icon="plus" @prefix="fas" class="text-gray-100" />
+            </button>
+        </div>
+        <div>
+            <button type="button" class="toolbar-button" {{on "click" (fn this.onAction "onZoomOut")}}>
+                <FaIcon @icon="minus" @prefix="fas" class="text-gray-100" />
+            </button>
+        </div>
+    </div>
+    <div class="next-map-container-toolbar-panel next-map-container-toolbar-actions">
+        <button type="button" class="toolbar-button is-action" {{on "click" (fn this.onAction "onPressCreateOrder")}}>
+            <FaIcon @icon="paper-plane" />
+            <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                <InputInfo @text="Create Order" @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+            </Attach::Tooltip>
+        </button>
+        <button type="button" class="toolbar-button" {{on "click" (fn this.onAction "onPressSearch")}}>
+            <FaIcon @icon="search" />
+            <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                <InputInfo @text="Search" @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+            </Attach::Tooltip>
+        </button>
+        <button type="button" class="toolbar-button relative" {{on "click" (fn this.onAction "onPressViewOrders")}}>
+            <div class="active-orders-count absolute top-0 right-0 -mr-2.5 -mt-1">
+                <div class="relative flex w-5 h-5 rounded-full">
+                    <div class="absolute inset-0 rounded-full w-5 h-5 text-xs bg-blue-500 opacity-75 {{if @activeOrdersCount 'animate-ping'}}"></div>
+                    <div class="relative inline-flex items-center justify-center rounded-full w-5 h-5 text-xs bg-blue-500 text-white z-10">{{@activeOrdersCount}}</div>
+                </div>
+            </div>
+            <FaIcon @icon="layer-group" />
+            <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                <InputInfo @text="View Orders" @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+            </Attach::Tooltip>
+        </button>
+        <BasicDropdown @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
+            <dd.Trigger class="toolbar-button">
+                <FaIcon @icon="map-marked-alt" />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                    <InputInfo @text="Service Areas" @iconClass="hidden" class="{{if dd.isOpen 'hidden'}} py-1 px-2 bg-gray-900 -mt-1" />
+                </Attach::Tooltip>
+            </dd.Trigger>
+            <dd.Content>
+                <MapContainer::Toolbar::ZonesPanel @dd={{dd}} @map={{@map}} @onPressCreateServiceArea={{@onPressCreateServiceArea}} />
+            </dd.Content>
+        </BasicDropdown>
+        <button type="button" class="toolbar-button relative" {{on "click" (fn this.onAction "onPressDisplayPlaces")}}>
+            <FaIcon @icon="city" />
+            <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                <InputInfo @text="Toggle Places" @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+            </Attach::Tooltip>
+        </button>
+    </div>
+</MapContainer::ToolbarContainer>

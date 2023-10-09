@@ -1,0 +1,72 @@
+<div class="relative shadow-inner h-full" {{did-resize (fn this.handleMapResize (hash verticalTopPadding=65))}}>
+    <LeafletMap {{set-container-dimensions (hash verticalTopPadding=65)}} class="z-0 zones-leaflet" @lat={{this.userLatitude}} @lng={{this.userLongitude}} @zoom={{14}} @onLoad={{this.setMapReference}} as |layers|>
+        <layers.tile @url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png" />
+
+        {{#each @model as |serviceArea|}}
+            {{#each serviceArea.zones as |zone|}}
+                <layers.polygon @id={{zone.id}} @locations={{zone.locations}} @color={{or zone.stroke_color "#48BB78"}} @onAdd={{fn
+                    this.makeZoneEditable zone}} />
+            {{/each}}
+        {{/each}}
+
+        {{#if this.showDrawControl}}
+            <LeafletDrawControl @draw={{hash marker=false circlemarker=false circle=false polyline=false}} @onDrawDrawstop={{this.createZoneFromLayer}} @onDrawDeleted={{this.deleteZoneBorders}} @onDrawEditstop={{this.saveZoneCoordinateChanges}} @onDrawFeatureGroupCreated={{this.setFeatureGroup}} />
+        {{/if}}
+
+        {{#if this.activeServiceArea}}
+            <layers.polygon @locations={{this.activeServiceArea.bounds}} @color="#48BB78" />
+        {{/if}}
+    </LeafletMap>
+
+    <div class="z-20 absolute right-0 top-0">
+        <div class="zones-panel">
+            <div class="content-panel">
+                <div class="content-panel-header items-center flex">
+                    <h3 class="text-lg font-semibold dark:text-gray-100">
+                        Zones
+                    </h3>
+
+                    <div class="flex items-center">
+                        <Button @size="sm" @icon="crosshairs" @onClick={{this.moveToCurrentLocation}} class="mr-2" />
+                        <Button @type="primary" @size="sm" @text="New Service Area" @onClick={{this.createServiceArea}} />
+                    </div>
+                </div>
+                <div class="content-panel-body no-padding sidebar-panels not-service-nav w-full">
+                    <ContentPanel @title={{this.activeServiceArea.name}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                        <div class="px-2 mb-2">
+                            <div class="flex items-center justify-end">
+                                <Button class="mr-2" @icon="eye" @type="magic" @text="Focus" @onClick={{fn this.startZoneEditing this.activeServiceArea}} @helpText="Moves map focus to {{this.activeServiceArea.name}}. Once focused you will then be able to edit, delete, and define zone bounds for the service area." />
+                                <DropdownButton @icon="cog" @contentClass="dropdown-menu" @size="xs" @horizontalPosition="right" @helpText="Service Area options.">
+                                    <div class="dropdown-menu-content context-menu">
+                                        <a href="javascript:;" class="dropdown-menu-item" {{on "click" (fn this.renameServiceArea this.activeServiceArea)}}>Rename Service Area</a>
+                                        <a href="javascript:;" class="dropdown-menu-item" {{on "click" (fn this.deleteServiceArea this.activeServiceArea)}}>Delete Service Area</a>
+                                    </div>
+                                </DropdownButton>
+                            </div>
+                        </div>
+                        <div class="px-0 py-1">
+                            {{#each this.activeServiceArea.zones as |zone|}}
+                                <div class="flex items-center justify-between border-t w-full border-gray-900 py-3 px-5 dark:text-gray-100">
+                                    <div>
+                                        <div class="font-semibold mb-1">
+                                            <FaIcon @icon="map-marker" class="mr-1" />
+                                            {{zone.name}}
+                                        </div>
+                                        <div>Created At: {{zone.createdAt}}</div>
+                                    </div>
+
+                                    <div>
+                                        <Button @icon="edit" @size="xs" @helpText="Edit the zone boundary." />
+                                        <Button @icon="drafting-compass" @size="xs" @helpText="View zone details." @onClick={{fn this.editZone zone}} />
+                                        <Button @icon="trash" @size="xs" @helpText="Delete this zone." @onClick={{fn this.deleteZone zone}} />
+                                    </div>
+                                </div>
+                            {{/each}}
+                        </div>
+                    </ContentPanel>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{outlet}}

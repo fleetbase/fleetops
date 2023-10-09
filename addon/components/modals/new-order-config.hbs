@@ -1,0 +1,11 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <InputGroup @name="Config Name" @value={{@options.name}} />
+        <InputGroup @name="Config Description" @value={{@options.description}} />
+        <InputGroup @name="Config Tags">
+            <TagInput class="form-input" @placeholder="Add tags" @allowSpacesInTags={{true}} @tags={{@options.tags}} @addTag={{@options.addTag}} @removeTagAtIndex={{@options.removeTag}} as |tag|>
+                {{tag}}
+            </TagInput>
+        </InputGroup>
+    </div>
+</Modal::Default>
