@@ -27,19 +27,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y libzip-dev libgd-dev libfreetype6-dev libjpeg-dev libpng-dev imagemagick libmagickwand-dev libmemcached-dev libgeos-dev libgmp-dev default-mysql-client libicu-dev
-  
-    - name: Install PECL extensions
-      run: |
-        sudo apt-get install -y php-pear
-        sudo pecl install imagick
-        sudo pecl install redis
-        sudo pecl install memcached
-  
-    - name: Add extensions to php.ini
-      run: |
-        echo "extension=imagick.so" | sudo tee -a /etc/php/7.4/cli/php.ini
-        echo "extension=redis.so" | sudo tee -a /etc/php/7.4/cli/php.ini
-        echo "extension=memcached.so" | sudo tee -a /etc/php/7.4/cli/php.ini
 
     - name: Validate composer.json and composer.lock
       run: composer validate
