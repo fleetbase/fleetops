@@ -5,9 +5,7 @@ namespace Fleetbase\FleetOps\Integrations\Lalamove;
 class LalamoveServiceType
 {
     /**
-     * Available Service types for Lalamove
-     *
-     * @var array
+     * Available Service types for Lalamove.
      */
     private static array $serviceTypes = [
         // [
@@ -21,21 +19,21 @@ class LalamoveServiceType
         //     ],
         // ],
         [
-            'key' => 'MOTORCYCLE',
-            'description' => 'Motorcycle',
+            'key'          => 'MOTORCYCLE',
+            'description'  => 'Motorcycle',
             'restrictions' => [
                 'length' => '40cm',
-                'width' => '40cm',
+                'width'  => '40cm',
                 'height' => '40cm',
                 'weight' => '10kg',
             ],
         ],
         [
-            'key' => 'CAR',
-            'description' => 'Car',
+            'key'          => 'CAR',
+            'description'  => 'Car',
             'restrictions' => [
                 'length' => '70cm',
-                'width' => '50cm',
+                'width'  => '50cm',
                 'height' => '50cm',
                 'weight' => '20kg',
             ],
@@ -51,21 +49,21 @@ class LalamoveServiceType
         //     ],
         // ],
         [
-            'key' => 'VAN',
-            'description' => 'Van',
+            'key'          => 'VAN',
+            'description'  => 'Van',
             'restrictions' => [
                 'length' => '182cm',
-                'width' => '121cm',
+                'width'  => '121cm',
                 'height' => '121cm',
                 'weight' => '800kg',
             ],
         ],
         [
-            'key' => 'SUV',
-            'description' => 'SUV',
+            'key'          => 'SUV',
+            'description'  => 'SUV',
             'restrictions' => [
                 'length' => '182cm',
-                'width' => '121cm',
+                'width'  => '121cm',
                 'height' => '121cm',
                 'weight' => '800kg',
             ],
@@ -81,21 +79,21 @@ class LalamoveServiceType
         //     ],
         // ],
         [
-            'key' => 'TRUCK330',
-            'description' => '1-Ton Lorry / Lori 1-Tan',
+            'key'          => 'TRUCK330',
+            'description'  => '1-Ton Lorry / Lori 1-Tan',
             'restrictions' => [
                 'length' => '275cm',
-                'width' => '152cm',
+                'width'  => '152cm',
                 'height' => '152cm',
                 'weight' => '1000kg',
             ],
         ],
         [
-            'key' => 'TRUCK550',
-            'description' => '5.5 Ton',
+            'key'          => 'TRUCK550',
+            'description'  => '5.5 Ton',
             'restrictions' => [
                 'length' => '450cm',
-                'width' => '195cm',
+                'width'  => '195cm',
                 'height' => '195cm',
                 'weight' => '1200kg',
             ],
@@ -112,7 +110,7 @@ class LalamoveServiceType
     public function __get(string $key)
     {
         $restrictions = ['length', 'width', 'height', 'weight'];
-        $key = strtolower($key);
+        $key          = strtolower($key);
 
         if (isset($this->{$key})) {
             return $this->{$key};

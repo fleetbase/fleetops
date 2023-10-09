@@ -2,8 +2,8 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Geocoder\Laravel\Facades\Geocoder;
 use Illuminate\Http\Request;
@@ -13,12 +13,13 @@ class GeocoderController extends Controller
     /**
      * Reverse geocodes the given coordinates and returns the results as JSON.
      *
-     * @param \Illuminate\Http\Request $request The HTTP request object.
-     * @return \Illuminate\Http\Response The JSON response with the geocoded results.
+     * @param \Illuminate\Http\Request $request the HTTP request object
+     *
+     * @return \Illuminate\Http\Response the JSON response with the geocoded results
      */
     public function reverse(Request $request)
     {
-        $query = $request->or(['coordinates', 'query']);
+        $query  = $request->or(['coordinates', 'query']);
         $single = $request->boolean('single');
 
         /** @var \Grimzy\LaravelMysqlSpatial\Types\Point $coordinates */
@@ -56,12 +57,13 @@ class GeocoderController extends Controller
     /**
      * Geocodes the given query and returns the results as JSON.
      *
-     * @param \Illuminate\Http\Request $request The HTTP request object.
-     * @return \Illuminate\Http\Response The JSON response with the geocoded results.
+     * @param \Illuminate\Http\Request $request the HTTP request object
+     *
+     * @return \Illuminate\Http\Response the JSON response with the geocoded results
      */
     public function geocode(Request $request)
     {
-        $query = $request->input('query');
+        $query  = $request->input('query');
         $single = $request->boolean('single');
 
         if (is_array($query)) {

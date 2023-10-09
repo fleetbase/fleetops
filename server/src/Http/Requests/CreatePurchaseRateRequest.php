@@ -26,8 +26,8 @@ class CreatePurchaseRateRequest extends FleetbaseRequest
     {
         return [
             'service_quote' => 'required|exists:service_quotes,public_id',
-            'order' => 'nullable|exists:orders,public_id',
-            'customer' => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
+            'order'         => 'nullable|exists:orders,public_id',
+            'customer'      => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
         ];
     }
 }

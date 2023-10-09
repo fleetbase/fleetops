@@ -11,20 +11,21 @@ use Illuminate\Queue\InteractsWithQueue;
 class HandleOrderCanceled implements ShouldQueue
 {
     use InteractsWithQueue;
-    
+
     /**
      * Handle the event.
      *
-     * @param  object  $event
+     * @param object $event
+     *
      * @return void
      */
     public function handle(OrderCanceled $event)
     {
         /** @var \Fleetbase\FleetOps\Models\Order $order */
-        $order = $event->getModelRecord();
+        $order    = $event->getModelRecord();
         $location = $order->getLastLocation();
 
-        // update order activity 
+        // update order activity
         $order->setStatus('canceled');
         $order->createActivity('Order canceled', 'Order was canceled', $location, $order->status);
 

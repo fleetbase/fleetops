@@ -48,7 +48,7 @@ class DispatchAdhocOrders extends Command
         // Iterate for each order
         $orders->each(
             function ($order) {
-                $pickup = $order->getPickupLocation();
+                $pickup   = $order->getPickupLocation();
                 $distance = $order->getAdhocPingDistance();
 
                 if (!Utils::isPoint($pickup)) {
@@ -72,12 +72,10 @@ class DispatchAdhocOrders extends Command
 
     /**
      * Fetches dispatchable orders based on certain criteria.
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
      */
     public function getDispatchableOrders(): \Illuminate\Database\Eloquent\Collection
     {
-        $sandbox = Utils::castBoolean($this->option('sandbox'));
+        $sandbox  = Utils::castBoolean($this->option('sandbox'));
         $interval = 4;
 
         return Order::on($sandbox ? 'sandbox' : 'mysql')
@@ -102,11 +100,6 @@ class DispatchAdhocOrders extends Command
 
     /**
      * Fetches nearby drivers for a given order based on the pickup location and distance.
-     *
-     * @param Order $order
-     * @param Point $pickup
-     * @param int $distance
-     * @return \Illuminate\Database\Eloquent\Collection
      */
     public function getNearbyDriversForOrder(Order $order, Point $pickup, int $distance): \Illuminate\Database\Eloquent\Collection
     {

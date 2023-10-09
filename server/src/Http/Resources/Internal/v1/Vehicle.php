@@ -10,7 +10,8 @@ class Vehicle extends VehicleWithoutDriver
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param \Illuminate\Http\Request $request
+     *
      * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
      */
     public function toArray($request)
@@ -19,10 +20,10 @@ class Vehicle extends VehicleWithoutDriver
         $vehicle = Arr::insertAfterKey(
             $vehicle,
             [
-                'uuid' => $this->uuid,
-                'public_id' => $this->public_id,
+                'uuid'         => $this->uuid,
+                'public_id'    => $this->public_id,
                 'display_name' => $this->display_name,
-                'driver_name' => $this->driver_name
+                'driver_name'  => $this->driver_name,
             ],
             'id'
         );

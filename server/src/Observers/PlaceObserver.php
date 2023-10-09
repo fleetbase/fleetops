@@ -9,7 +9,6 @@ class PlaceObserver
     /**
      * Handle the Place "creating" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\Place  $place
      * @return void
      */
     public function creating(Place $place)
@@ -18,8 +17,8 @@ class PlaceObserver
         $toUppercase = ['name', 'street1', 'street2', 'city', 'province', 'postal_code', 'neighborhood', 'district', 'building', 'country'];
 
         // uppercase all attributes above
-        foreach($toUppercase as $attribute) {
-            if(isset($place->{$attribute}) && is_string($place->{$attribute})) {
+        foreach ($toUppercase as $attribute) {
+            if (isset($place->{$attribute}) && is_string($place->{$attribute})) {
                 $place->{$attribute} = strtoupper($place->{$attribute});
             }
         }

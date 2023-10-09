@@ -2,104 +2,81 @@
 
 namespace Fleetbase\FleetOps\Integrations\Lalamove;
 
-use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Exceptions\IntegratedVendorException;
+use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
+use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceQuoteItem;
-use Fleetbase\FleetOps\Models\IntegratedVendor;
-use Fleetbase\FleetOps\Models\Contact;
-use Fleetbase\FleetOps\Exceptions\IntegratedVendorException;
 use Fleetbase\FleetOps\Support\ParsePhone;
-use Fleetbase\Support\Auth;
 use Fleetbase\FleetOps\Support\Utils;
-use Illuminate\Support\Str;
+use Fleetbase\Support\Auth;
+use GuzzleHttp\Client;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
-use Illuminate\Http\Request;
-use GuzzleHttp\Client;
+use Illuminate\Support\Str;
 
 class Lalamove
 {
     /**
-     * API Host URL
-     *
-     * @var string
+     * API Host URL.
      */
     private string $host = 'https://rest.lalamove.com/';
 
     /**
-     * API Sandbox Host URL
-     *
-     * @var string
+     * API Sandbox Host URL.
      */
     private string $sandboxHost = 'https://rest.sandbox.lalamove.com/';
 
     /**
-     * API Namespace
-     *
-     * @var string
+     * API Namespace.
      */
     private string $namespace = 'v3';
 
     /**
      * Determines if instance is sandbox instance.
-     *
-     * @var boolean
      */
     private bool $isSandbox = false;
 
     /**
-     * API Key
-     *
-     * @var string
+     * API Key.
      */
     private string $apiKey;
 
     /**
-     * API Secret
-     *
-     * @var string
+     * API Secret.
      */
     private string $apiSecret;
 
     /**
-     * Applicable request ID
-     *
-     * @var string
+     * Applicable request ID.
      */
     private string $requestId;
 
-
     /**
-     * Applicable options
-     *
-     * @var array
+     * Applicable options.
      */
     private array $options = [];
 
     /**
-     * HTTP Client Instance
-     *
-     * @var Client
+     * HTTP Client Instance.
      */
     private Client $client;
 
     /**
-     * The current Lalamove Market
-     *
-     * @var LalamoveMarket
+     * The current Lalamove Market.
      */
     private LalamoveMarket $market;
 
     /**
-     * The current integrated vendor accessing instance
-     *
-     * @var IntegratedVendor
+     * The current integrated vendor accessing instance.
      */
     private ?IntegratedVendor $integratedVendor = null;
 
-    public function __construct(?string $apiKey = null, ?string $apiSecret = null, bool $sandbox = false, $market = null)
+    public function __construct(string $apiKey = null, string $apiSecret = null, bool $sandbox = false, $market = null)
     {
         if ($apiKey === null) {
             $apiKey = config('services.lalamove.key');
@@ -121,7 +98,7 @@ class Lalamove
         }
 
         $this->isSandbox = $sandbox;
-        $this->apiKey = $apiKey;
+        $this->apiKey    = $apiKey;
         $this->apiSecret = $apiSecret;
         $this->setMarket($market);
 
@@ -132,7 +109,7 @@ class Lalamove
         );
     }
 
-    public static function instance(?string $apiKey = null, ?string $apiSecret = null, bool $sandbox = false, $market = null): Lalamove
+    public static function instance(string $apiKey = null, string $apiSecret = null, bool $sandbox = false, $market = null): Lalamove
     {
         return new static($apiKey, $apiSecret, $market, $sandbox);
     }
@@ -146,7 +123,7 @@ class Lalamove
         $sandbox = false;
 
         if (Str::contains($name, 'FromSandbox')) {
-            $name = lcfirst(Str::replaceLast('FromSandbox', '', $name));
+            $name    = lcfirst(Str::replaceLast('FromSandbox', '', $name));
             $sandbox = true;
         } else {
             $name = Str::replaceFirst('fromHost', '', $name);
@@ -192,7 +169,7 @@ class Lalamove
         return $this;
     }
 
-    public static function createServiceQuoteFromQuotation($quotation, $requestId = null, $integratedVendor = null, ?Payload $payload = null): ServiceQuote
+    public static function createServiceQuoteFromQuotation($quotation, $requestId = null, $integratedVendor = null, Payload $payload = null): ServiceQuote
     {
         $serviceQuote = static::serviceQuoteFromQuotation($quotation, $requestId, $integratedVendor, $payload);
         $serviceQuote->save();
@@ -205,7 +182,7 @@ class Lalamove
         return $serviceQuote->load(['items']);
     }
 
-    public static function serviceQuoteFromQuotation($quotation = null, $requestId = null, $integratedVendor = null, ?Payload $payload = null): ServiceQuote
+    public static function serviceQuoteFromQuotation($quotation = null, $requestId = null, $integratedVendor = null, Payload $payload = null): ServiceQuote
     {
         if (!$quotation) {
             return null;
@@ -215,21 +192,21 @@ class Lalamove
             return static::serviceQuoteFromQuotation($quotation->data, $requestId, $integratedVendor, $payload);
         }
 
-        $id = ServiceQuote::generateUuid();
+        $id       = ServiceQuote::generateUuid();
         $currency = $quotation->priceBreakdown->currency;
 
         $serviceQuote = new ServiceQuote(
             [
-                'uuid' => $id,
-                'request_id' => $requestId,
+                'uuid'         => $id,
+                'request_id'   => $requestId,
                 'company_uuid' => session('company'),
                 'payload_uuid' => $payload instanceof Payload ? $payload->uuid : null,
-                'amount' => static::asCents($quotation->priceBreakdown->total),
-                'currency' => $currency,
-                'meta' => [
+                'amount'       => static::asCents($quotation->priceBreakdown->total),
+                'currency'     => $currency,
+                'meta'         => [
                     'provider' => 'lalamove',
-                    'data' => $quotation
-                ]
+                    'data'     => $quotation,
+                ],
             ]
         );
 
@@ -241,7 +218,7 @@ class Lalamove
 
         // create service quote items
         $serviceQuoteItemKeys = ['base', 'extraMileage', 'vat'];
-        $items = [];
+        $items                = [];
 
         foreach ($serviceQuoteItemKeys as $itemKey) {
             if (empty($quotation->priceBreakdown->{$itemKey})) {
@@ -251,15 +228,16 @@ class Lalamove
             $items[] = new ServiceQuoteItem(
                 [
                     'service_quote_uuid' => $id,
-                    'amount' => static::asCents($quotation->priceBreakdown->{$itemKey}),
-                    'currency' => $currency,
-                    'details' => Utils::humanize($itemKey) . ' fee',
-                    'code' => strtoupper(Str::snake($itemKey . 'Fee'))
+                    'amount'             => static::asCents($quotation->priceBreakdown->{$itemKey}),
+                    'currency'           => $currency,
+                    'details'            => Utils::humanize($itemKey) . ' fee',
+                    'code'               => strtoupper(Str::snake($itemKey . 'Fee')),
                 ]
             );
         }
 
         $serviceQuote->setRelation('items', $items);
+
         return $serviceQuote;
     }
 
@@ -297,8 +275,8 @@ class Lalamove
     private static function sign($timestamp, string $apiSecret, string $requestMethod, string $requestPath, string $requestBody)
     {
         $requestMethod = strtoupper($requestMethod);
-        $rawSignature =  "$timestamp\r\n$requestMethod\r\n$requestPath\r\n\r\n$requestBody";
-        $signature = hash_hmac('sha256', $rawSignature, $apiSecret);
+        $rawSignature  =  "$timestamp\r\n$requestMethod\r\n$requestPath\r\n\r\n$requestBody";
+        $signature     = hash_hmac('sha256', $rawSignature, $apiSecret);
 
         return $signature;
     }
@@ -306,14 +284,14 @@ class Lalamove
     private function createSignature($timestamp, string $requestMethod, string $requestPath, string $requestBody)
     {
         $requestPath = '/' . $this->namespace . '/' . $requestPath;
-        $apiSecret = $this->apiSecret;
+        $apiSecret   = $this->apiSecret;
 
         return static::sign($timestamp, $apiSecret, $requestMethod, $requestPath, $requestBody);
     }
 
     private function getAuthorizationKey(string $method, string $path, string $body)
     {
-        $key = $this->apiKey;
+        $key       = $this->apiKey;
         $timestamp = floor(microtime(true) * 1000);
         $signature = $this->createSignature($timestamp, $method, $path, $body);
 
@@ -344,7 +322,7 @@ class Lalamove
     private function buildRequestUrl(string $path = ''): string
     {
         $host = $this->isSandbox ? $this->sandboxHost : $this->host;
-        $url = trim($host . $this->namespace . '/' . $path);
+        $url  = trim($host . $this->namespace . '/' . $path);
 
         return $url;
     }
@@ -352,16 +330,16 @@ class Lalamove
     private function request(string $method, string $path, array $options = [])
     {
         $options['headers'] = [
-            'Content-Type' => 'application/json',
+            'Content-Type'  => 'application/json',
             'Authorization' => 'hmac ' . $this->getAuthorizationKey($method, $path, isset($options['json']) ? json_encode($options['json']) : ''),
-            'Market' => $this->market->getCode(),
-            'Request-ID' => (string) Str::uuid()
+            'Market'        => $this->market->getCode(),
+            'Request-ID'    => (string) Str::uuid(),
         ];
 
         $response = $this->client->request($method, $path, $options);
-        $body = $response->getBody();
+        $body     = $response->getBody();
         $contents = $body->getContents();
-        $json = json_decode($contents);
+        $json     = json_decode($contents);
 
         return $json;
     }
@@ -369,7 +347,7 @@ class Lalamove
     private function post(string $path, array $options = [])
     {
         $options = array_merge($options, [
-            'http_errors' => false
+            'http_errors' => false,
         ]);
 
         return $this->request('POST', $path, $options);
@@ -378,7 +356,7 @@ class Lalamove
     private function patch(string $path, array $options = [])
     {
         $options = array_merge($options, [
-            'http_errors' => false
+            'http_errors' => false,
         ]);
 
         return $this->request('PATCH', $path, $options);
@@ -387,7 +365,7 @@ class Lalamove
     private function delete(string $path, array $options = [])
     {
         $options = array_merge($options, [
-            'http_errors' => false
+            'http_errors' => false,
         ]);
 
         return $this->request('DELETE', $path, $options);
@@ -396,7 +374,7 @@ class Lalamove
     public function getQuotations($serviceType, $stops = [], $scheduleAt = null, array $specialRequests = [], $isRouteOptimized = true, $item = [], array $cashOnDelivery = [])
     {
         $serviceType = static::getServiceType($serviceType);
-        $stops = collect($stops)
+        $stops       = collect($stops)
             ->mapInto(LalamoveDeliveryStop::class)->map(
                 function ($stop) {
                     return $stop->toArray();
@@ -410,13 +388,13 @@ class Lalamove
         $options = [
             'json' => [
                 'data' => [
-                    'serviceType' => $serviceType->getKey(),
-                    'stops' => $stops,
-                    'language' => $language,
+                    'serviceType'      => $serviceType->getKey(),
+                    'stops'            => $stops,
+                    'language'         => $language,
                     'isRouteOptimized' => $isRouteOptimized,
-                    'specialRequests' => $specialRequests
-                ]
-            ]
+                    'specialRequests'  => $specialRequests,
+                ],
+            ],
         ];
 
         if (!empty($item)) {
@@ -444,8 +422,8 @@ class Lalamove
 
     public function getQuoteFromPayload(Payload $payload, $serviceType = null, $scheduledAt = null, $isRouteOptimized = true, ?array $specialRequests = []): ServiceQuote
     {
-        $market = $payload->getCountryCode();
-        $stops = $payload->getAllStops()->toArray();
+        $market      = $payload->getCountryCode();
+        $stops       = $payload->getAllStops()->toArray();
         $serviceType = $serviceType ?? 'MOTORCYCLE';
 
         $response = $this->setMarket($market)->getQuotations($serviceType, $stops, $scheduledAt, $specialRequests, $isRouteOptimized);
@@ -459,9 +437,9 @@ class Lalamove
 
     public function getQuoteFromPreliminaryPayload($stops, $entities, $serviceType, $scheduledAt, $isRouteOptimized = true, ?array $specialRequests = []): ServiceQuote
     {
-        $firstStop = Arr::first($stops);
-        $lastStop = Arr::last($stops);
-        $market = $firstStop->country ?? $lastStop->country ?? data_get(request()->user(), 'company.country');
+        $firstStop   = Arr::first($stops);
+        $lastStop    = Arr::last($stops);
+        $market      = $firstStop->country ?? $lastStop->country ?? data_get(request()->user(), 'company.country');
         $serviceType = $serviceType ?? 'MOTORCYCLE';
 
         $response = $this->setMarket($market)->getQuotations($serviceType, $stops, $scheduledAt, $specialRequests, $isRouteOptimized);
@@ -502,7 +480,7 @@ class Lalamove
     {
         if ($sender instanceof Contact) {
             $sender = [
-                'name' => $sender->name,
+                'name'  => $sender->name,
                 'phone' => $sender->phone,
             ];
         }
@@ -510,14 +488,14 @@ class Lalamove
         $options = [
             'json' => [
                 'data' => [
-                    'quotationId' => $quotationId,
-                    'sender' => $sender,
-                    'recipients' => $recipients,
+                    'quotationId'           => $quotationId,
+                    'sender'                => $sender,
+                    'recipients'            => $recipients,
                     'isRecipientSMSEnabled' => $isRecipientSMSEnabled,
-                    'isPODEnabled' => $isPODEnabled,
-                    'metadata' => $metadata
-                ]
-            ]
+                    'isPODEnabled'          => $isPODEnabled,
+                    'metadata'              => $metadata,
+                ],
+            ],
         ];
 
         $response = $this->post('orders', $options);
@@ -536,8 +514,8 @@ class Lalamove
     public function createOrderFromServiceQuote(ServiceQuote $serviceQuote, Request $request)
     {
         // get quotation id from service quote
-        $quotationId = $serviceQuote->getMeta('data.quotationId');
-        $stops = $serviceQuote->getMeta('data.stops');
+        $quotationId  = $serviceQuote->getMeta('data.quotationId');
+        $stops        = $serviceQuote->getMeta('data.stops');
         $companyPhone = ParsePhone::fromCompany($serviceQuote->company);
 
         // hack use test phone phone
@@ -545,25 +523,25 @@ class Lalamove
             $companyPhone = '+18004444444';
         }
 
-        // create sender from request 
+        // create sender from request
         // sender will always be the org
         $sender = [
             'stopId' => data_get(Arr::first($stops), 'stopId'),
-            'name' => $serviceQuote->company->name,
-            'phone' => $companyPhone
+            'name'   => $serviceQuote->company->name,
+            'phone'  => $companyPhone,
         ];
 
-        $pickup = null;
-        $dropoff = null;
-        $waypoints = [];
+        $pickup       = null;
+        $dropoff      = null;
+        $waypoints    = [];
         $phoneOptions = [];
 
         // recipient will be the customer if applicable
         // if no customer, then use the destination dropoff values
         // if no dropoff create multiple recipients from waypoint data
         if ($request->hasAny(['order.payload', 'payload', 'pickup', 'waypoints'])) {
-            $pickup = $request->or(['order.payload.pickup', 'payload.pickup', 'pickup']);
-            $dropoff = $request->or(['order.payload.dropoff', 'payload.dropoff', 'dropoff']);
+            $pickup    = $request->or(['order.payload.pickup', 'payload.pickup', 'pickup']);
+            $dropoff   = $request->or(['order.payload.dropoff', 'payload.dropoff', 'dropoff']);
             $waypoints = $request->or(['order.payload.waypoints', 'payload.waypoints', 'waypoints']);
         }
 
@@ -571,9 +549,9 @@ class Lalamove
         // use preliminary data to fill route variables
         if ($serviceQuote->hasMeta('preliminary_data')) {
             $preliminaryData = $serviceQuote->getMeta('preliminary_data');
-            $pickup = data_get($preliminaryData, 'pickup');
-            $dropoff = data_get($preliminaryData, 'dropoff');
-            $waypoints = data_get($preliminaryData, 'waypoints', []);
+            $pickup          = data_get($preliminaryData, 'pickup');
+            $dropoff         = data_get($preliminaryData, 'dropoff');
+            $waypoints       = data_get($preliminaryData, 'waypoints', []);
         }
 
         // create phone lookup options from service quote
@@ -584,7 +562,7 @@ class Lalamove
         // Check if ServiceQuote has an origin and destination
         // If from network cart origin will be an array of storeLocations[]
         if ($serviceQuote->hasMeta('origin') && $serviceQuote->hasMeta('destination')) {
-            $origin = $serviceQuote->getMeta('origin');
+            $origin      = $serviceQuote->getMeta('origin');
             $destination = $serviceQuote->getMeta('destination');
 
             if (is_array($origin)) {
@@ -599,8 +577,8 @@ class Lalamove
         // If service quote is created with payload, then use payload to
         // fill route variables
         if ($serviceQuote->payload instanceof Payload) {
-            $pickup = $serviceQuote->payload->pickup;
-            $dropoff = $serviceQuote->payload->dropoff;
+            $pickup    = $serviceQuote->payload->pickup;
+            $dropoff   = $serviceQuote->payload->dropoff;
             $waypoints = $serviceQuote->payload->waypoints;
         }
 
@@ -622,9 +600,9 @@ class Lalamove
         $senderWaypoint = $allWaypoints->first();
 
         // update sender phone number
-        $senderName = $senderWaypoint instanceof Place ? Utils::or($senderWaypoint, ['name', 'street1']) : null;
-        $sender['name'] = $senderName ?? $sender['name'];
-        $senderPhone = $senderWaypoint instanceof Place ? ParsePhone::fromPlace($senderWaypoint, $phoneOptions) : null;
+        $senderName      = $senderWaypoint instanceof Place ? Utils::or($senderWaypoint, ['name', 'street1']) : null;
+        $sender['name']  = $senderName ?? $sender['name'];
+        $senderPhone     = $senderWaypoint instanceof Place ? ParsePhone::fromPlace($senderWaypoint, $phoneOptions) : null;
         $sender['phone'] = $senderPhone ?? $sender['phone'];
 
         // get market from integrated vendor option, otherwise fallback to waypoint
@@ -648,10 +626,10 @@ class Lalamove
             ->map(
                 function ($waypoint, $index) use ($stops, $companyPhone, $phoneOptions) {
                     return [
-                        'stopId' => data_get($stops[$index], 'stopId'),
-                        'name' => Utils::or($waypoint, ['name', 'street1']),
-                        'phone' =>  ParsePhone::fromPlace($waypoint, $phoneOptions) ?? $companyPhone,
-                        'remarks' => $waypoint->remarks ?? ''
+                        'stopId'  => data_get($stops[$index], 'stopId'),
+                        'name'    => Utils::or($waypoint, ['name', 'street1']),
+                        'phone'   => ParsePhone::fromPlace($waypoint, $phoneOptions) ?? $companyPhone,
+                        'remarks' => $waypoint->remarks ?? '',
                     ];
                 }
             )
@@ -664,16 +642,16 @@ class Lalamove
         // set metadata from the service quote
         // metadata[] should inclue 'company public id', 'service quote public id'
         $metadata = [
-            'company' => $serviceQuote->company->public_id,
-            'service_quote' => $serviceQuote->public_id,
+            'company'           => $serviceQuote->company->public_id,
+            'service_quote'     => $serviceQuote->public_id,
             'integrated_vendor' => data_get($this->integratedVendor, 'public_id'),
-            'platform' => 'fleetbase'
+            'platform'          => 'fleetbase',
         ];
 
         return $this->createOrder($quotationId, $sender, $recipients, false, $isPODEnabled, $metadata);
     }
 
-    public function setWebhook(?string $webhookUrl = null)
+    public function setWebhook(string $webhookUrl = null)
     {
         if (!is_string($webhookUrl)) {
             return;
@@ -681,8 +659,8 @@ class Lalamove
 
         $options['json'] = [
             'data' => [
-                'url' => $webhookUrl
-            ]
+                'url' => $webhookUrl,
+            ],
         ];
 
         $response = $this->patch('webhook', $options);

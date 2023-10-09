@@ -3,9 +3,9 @@
 namespace Fleetbase\FleetOps\Casts;
 
 use Fleetbase\FleetOps\Support\Utils;
-use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
-use Grimzy\LaravelMysqlSpatial\Types\GeometryInterface;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialExpression;
+use Grimzy\LaravelMysqlSpatial\Types\GeometryInterface;
+use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Query\Expression;
 
 /**
@@ -17,11 +17,9 @@ class Point implements CastsAttributes
     /**
      * Cast the given value.
      *
-     * @param  \Illuminate\Database\Eloquent\Model  $model
-     * @param  string  $key
-     * @param  mixed  $value
-     * @param  array  $attributes
-     * @return mixed
+     * @param \Illuminate\Database\Eloquent\Model $model
+     * @param string                              $key
+     * @param array                               $attributes
      */
     public function get($model, $key, $value, $attributes)
     {
@@ -35,11 +33,9 @@ class Point implements CastsAttributes
     /**
      * Prepare the given value for storage.
      *
-     * @param  \Illuminate\Database\Eloquent\Model  $model
-     * @param  string  $key
-     * @param  mixed  $value
-     * @param  array  $attributes
-     * @return mixed
+     * @param \Illuminate\Database\Eloquent\Model $model
+     * @param string                              $key
+     * @param array                               $attributes
      */
     public function set($model, $key, $value, $attributes)
     {
@@ -69,7 +65,6 @@ class Point implements CastsAttributes
     /**
      * Convert coordinates and bounding box values to float.
      *
-     * @param array $geometry
      * @return array
      */
     public static function coordinatesBboxToFloat(array $geometry)
@@ -88,7 +83,6 @@ class Point implements CastsAttributes
     /**
      * Check if the given data is a raw Point object.
      *
-     * @param mixed $data
      * @return bool
      */
     public static function isRawPoint($data)
@@ -100,12 +94,16 @@ class Point implements CastsAttributes
      * Convert a hexadecimal string to a regular string.
      *
      * @param string $hex
+     *
      * @return string
      */
     public static function hex2str($hex)
     {
         $str = '';
-        for ($i = 0; $i < strlen($hex); $i += 2) $str .= chr(hexdec(substr($hex, $i, 2)));
+        for ($i = 0; $i < strlen($hex); $i += 2) {
+            $str .= chr(hexdec(substr($hex, $i, 2)));
+        }
+
         return $str;
     }
 }

@@ -4,18 +4,14 @@ namespace Fleetbase\FleetOps\Exports;
 
 use Fleetbase\FleetOps\Models\Place;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithColumnFormatting;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
 {
-
-    /**
-     * @return array
-     */
     public function map($place): array
     {
         return [
@@ -28,9 +24,6 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
         ];
     }
 
-    /**
-     * @return array
-     */
     public function headings(): array
     {
         return [
@@ -43,9 +36,6 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
         ];
     }
 
-    /**
-     * @return array
-     */
     public function columnFormats(): array
     {
         return [

@@ -7,7 +7,7 @@ use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 class FuelReportController extends FleetOpsController
 {
     /**
-     * The resource to query
+     * The resource to query.
      *
      * @var string
      */

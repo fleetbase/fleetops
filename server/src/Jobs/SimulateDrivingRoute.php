@@ -2,7 +2,6 @@
 
 namespace Fleetbase\FleetOps\Jobs;
 
-use Fleetbase\FleetOps\Events\DriverSimulatedLocationChanged;
 use Fleetbase\FleetOps\Models\Driver;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -17,15 +16,18 @@ use Illuminate\Support\Arr;
  */
 class SimulateDrivingRoute implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     /**
-     * @var Driver The driver for whom the route is being simulated.
+     * @var Driver the driver for whom the route is being simulated
      */
     public Driver $driver;
 
     /**
-     * @var array The waypoints that make up the route.
+     * @var array the waypoints that make up the route
      */
     public array $waypoints = [];
 
@@ -46,12 +48,12 @@ class SimulateDrivingRoute implements ShouldQueue
     /**
      * Create a new job instance.
      *
-     * @param \Fleetbase\FleetOps\Models\Driver $driver The driver for whom the route is being simulated.
-     * @param array $waypoints The waypoints that make up the route.
+     * @param \Fleetbase\FleetOps\Models\Driver $driver    the driver for whom the route is being simulated
+     * @param array                             $waypoints the waypoints that make up the route
      */
     public function __construct(Driver $driver, array $waypoints = [])
     {
-        $this->driver = $driver->withoutRelations();
+        $this->driver    = $driver->withoutRelations();
         $this->waypoints = $waypoints;
     }
 
@@ -64,7 +66,7 @@ class SimulateDrivingRoute implements ShouldQueue
         ini_set('memory_limit', '-1');
         ini_set('max_execution_time', 0);
 
-        $firstWaypoint = reset($this->waypoints);
+        $firstWaypoint      = reset($this->waypoints);
         $remainingWaypoints = array_slice($this->waypoints, 1, null, true);
 
         SimulateWaypointReached::withChain(

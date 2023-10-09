@@ -16,12 +16,12 @@ use Illuminate\Support\Carbon;
  *
  * This event is broadcasted to multiple channels and includes details
  * about the driver's location, speed, heading, and other attributes.
- *
- * @package Fleetbase\FleetOps\Events
  */
 class DriverSimulatedLocationChanged implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
     /**
      * The event id.
@@ -31,75 +31,74 @@ class DriverSimulatedLocationChanged implements ShouldBroadcast
     public $eventId;
 
     /**
-     * The datetime instance the broadcast ws triggered
+     * The datetime instance the broadcast ws triggered.
      *
      * @var string
      */
     public $sentAt;
 
     /**
-     * The uuid of the driver
+     * The uuid of the driver.
      *
      * @var string
      */
     public $driverUuid;
 
     /**
-     * The public id of the driver
+     * The public id of the driver.
      *
      * @var string
      */
     public $driverId;
 
     /**
-     * The internal id of the driver
+     * The internal id of the driver.
      *
      * @var string
      */
     public $driverInternalId;
 
     /**
-     * The name of the driver
+     * The name of the driver.
      *
      * @var string
      */
     public $driverName;
 
     /**
-     * The phone of the driver
+     * The phone of the driver.
      *
      * @var string
      */
     public $driverPhone;
 
     /**
-     * The new driver location
+     * The new driver location.
      *
      * @var string
      */
     public $location;
 
     /**
-     * The driver altitude
+     * The driver altitude.
      *
      * @var string
      */
     public $altitude;
 
     /**
-     * The ndriver heading
+     * The ndriver heading.
      *
      * @var string
      */
     public $heading;
 
     /**
-     * The driver speed
+     * The driver speed.
      *
      * @var string
      */
     public $speed;
-
 
     /**
      * Optional, additional data.
@@ -115,19 +114,19 @@ class DriverSimulatedLocationChanged implements ShouldBroadcast
      */
     public function __construct(Driver $driver, Point $location, array $additionalData = [])
     {
-        $this->eventId = uniqid('event_');
-        $this->sentAt = Carbon::now()->toDateTimeString();
-        $this->driverUuid = $driver->uuid;
-        $this->driverId = $driver->public_id;
+        $this->eventId          = uniqid('event_');
+        $this->sentAt           = Carbon::now()->toDateTimeString();
+        $this->driverUuid       = $driver->uuid;
+        $this->driverId         = $driver->public_id;
         $this->driverInternalId = $driver->internal_id;
-        $this->driverName = $driver->name;
-        $this->driverPhone = $driver->phone;
-        $this->altitude = $driver->altitude;
+        $this->driverName       = $driver->name;
+        $this->driverPhone      = $driver->phone;
+        $this->altitude         = $driver->altitude;
 
         // can be set in simulation
-        $this->heading = data_get($additionalData, 'heading', $driver->heading);
-        $this->speed = data_get($additionalData, 'speed', $driver->speed);
-        $this->location = $location;
+        $this->heading        = data_get($additionalData, 'heading', $driver->heading);
+        $this->speed          = data_get($additionalData, 'speed', $driver->speed);
+        $this->location       = $location;
         $this->additionalData = $additionalData;
     }
 
@@ -164,20 +163,20 @@ class DriverSimulatedLocationChanged implements ShouldBroadcast
     public function broadcastWith()
     {
         return [
-            'id' => $this->eventId,
+            'id'          => $this->eventId,
             'api_version' => config('api.version'),
-            'event' => $this->broadcastAs(),
-            'created_at' => $this->sentAt,
-            'data' => [
-                'id' => $this->driverId,
-                'internal_id' => $this->driverInternalId,
-                'name' => $this->driverName,
-                'phone' => $this->driverPhone,
-                'location' => $this->location,
-                'altitude' => $this->altitude,
-                'heading' => $this->heading,
-                'speed' => $this->speed,
-                'additionalData' => $this->additionalData
+            'event'       => $this->broadcastAs(),
+            'created_at'  => $this->sentAt,
+            'data'        => [
+                'id'             => $this->driverId,
+                'internal_id'    => $this->driverInternalId,
+                'name'           => $this->driverName,
+                'phone'          => $this->driverPhone,
+                'location'       => $this->location,
+                'altitude'       => $this->altitude,
+                'heading'        => $this->heading,
+                'speed'          => $this->speed,
+                'additionalData' => $this->additionalData,
             ],
         ];
     }

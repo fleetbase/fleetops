@@ -2,8 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Http\Request;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Http\Requests\CreateServiceRateRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateServiceRateRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
@@ -11,13 +9,16 @@ use Fleetbase\FleetOps\Http\Resources\v1\ServiceRate as ServiceRateResource;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\ServiceRateFee;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class ServiceRateController extends Controller
 {
     /**
      * Creates a new Fleetbase ServiceRate resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreateServiceRateRequest  $request
+     * @param \Fleetbase\Http\Requests\CreateServiceRateRequest $request
+     *
      * @return \Fleetbase\Http\Resources\ServiceRate
      */
     public function create(CreateServiceRateRequest $request)
@@ -54,7 +55,7 @@ class ServiceRateController extends Controller
         // service area assignment
         if ($request->has('service_area')) {
             $input['service_area_uuid'] = Utils::getUuid('service_areas', [
-                'public_id' => $request->input('service_area'),
+                'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -62,7 +63,7 @@ class ServiceRateController extends Controller
         // zone assignment
         if ($request->has('zone')) {
             $input['zone_uuid'] = Utils::getUuid('zones', [
-                'public_id' => $request->input('zone'),
+                'public_id'    => $request->input('zone'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -75,10 +76,10 @@ class ServiceRateController extends Controller
             foreach ($request->input('meter_fees') as $meterFee) {
                 ServiceRateFee::create([
                     'service_rate_uuid' => $serviceRate->uuid,
-                    'distance' => Utils::get($meterFee, 'distance'),
-                    'distance_unit' => 'm',
-                    'fee' => Utils::get($meterFee, 'fee'),
-                    'currency' => $serviceRate->currency,
+                    'distance'          => Utils::get($meterFee, 'distance'),
+                    'distance_unit'     => 'm',
+                    'fee'               => Utils::get($meterFee, 'fee'),
+                    'currency'          => $serviceRate->currency,
                 ]);
             }
             $serviceRate->makeVisible('meter_fees');
@@ -91,8 +92,9 @@ class ServiceRateController extends Controller
     /**
      * Updates a Fleetbase ServiceRate resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdateServiceRateRequest  $request
+     * @param string                                            $id
+     * @param \Fleetbase\Http\Requests\UpdateServiceRateRequest $request
+     *
      * @return \Fleetbase\Http\Resources\ServiceRate
      */
     public function update($id, UpdateServiceRateRequest $request)
@@ -138,7 +140,7 @@ class ServiceRateController extends Controller
         // service area assignment
         if ($request->has('service_area')) {
             $input['service_area_uuid'] = Utils::getUuid('service_areas', [
-                'public_id' => $request->input('service_area'),
+                'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -146,7 +148,7 @@ class ServiceRateController extends Controller
         // zone assignment
         if ($request->has('zone')) {
             $input['zone_uuid'] = Utils::getUuid('zones', [
-                'public_id' => $request->input('zone'),
+                'public_id'    => $request->input('zone'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -161,7 +163,6 @@ class ServiceRateController extends Controller
     /**
      * Query for Fleetbase ServiceRate resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\ServiceRateCollection
      */
     public function query(Request $request)
@@ -174,7 +175,6 @@ class ServiceRateController extends Controller
     /**
      * Finds a single Fleetbase ServiceRate resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\ServiceRateCollection
      */
     public function find($id)
@@ -198,7 +198,6 @@ class ServiceRateController extends Controller
     /**
      * Deletes a Fleetbase ServiceRate resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\ServiceRateCollection
      */
     public function delete($id)

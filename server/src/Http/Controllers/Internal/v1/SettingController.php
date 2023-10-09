@@ -7,9 +7,7 @@ use Fleetbase\Models\Setting;
 use Illuminate\Http\Request;
 
 /**
- * Class SettingController
- *
- * @package Fleetbase\FleetOps\Http\Controllers\Internal\v1
+ * Class SettingController.
  */
 class SettingController extends Controller
 {

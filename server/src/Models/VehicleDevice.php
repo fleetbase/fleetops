@@ -2,20 +2,17 @@
 
 namespace Fleetbase\FleetOps\Models;
 
+use Fleetbase\Casts\Json;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasUuid;
-use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\FleetOps\Casts\Polygon;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
-use Fleetbase\Casts\Json;
 
 class VehicleDevice extends Model
 {
-    use HasUuid,
-        TracksApiCredential,
-        HasApiModelBehavior;
+    use HasUuid;
+    use TracksApiCredential;
+    use HasApiModelBehavior;
 
     /**
      * The database table used by the model.
@@ -25,7 +22,7 @@ class VehicleDevice extends Model
     protected $table = 'vehicle_devices';
 
     /**
-     * Attributes that is filterable on this model
+     * Attributes that is filterable on this model.
      *
      * @var array
      */
@@ -58,7 +55,7 @@ class VehicleDevice extends Model
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */

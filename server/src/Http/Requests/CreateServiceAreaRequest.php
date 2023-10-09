@@ -27,9 +27,9 @@ class CreateServiceAreaRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'name' => [Rule::requiredIf($this->isMethod('POST')), 'string'],
+            'name'    => [Rule::requiredIf($this->isMethod('POST')), 'string'],
             'country' => 'required',
-            'status' => 'in:active,inactive',
+            'status'  => 'in:active,inactive',
         ];
     }
 }

@@ -2,21 +2,22 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Http\Request;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Http\Requests\CreateFleetRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateFleetRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Fleet as FleetResource;
 use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class FleetController extends Controller
 {
     /**
      * Creates a new Fleetbase Fleet resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreateFleetRequest  $request
+     * @param \Fleetbase\Http\Requests\CreateFleetRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Fleet
      */
     public function create(CreateFleetRequest $request)
@@ -30,7 +31,7 @@ class FleetController extends Controller
         // service area assignment
         if ($request->has('service_area')) {
             $input['service_area_uuid'] = Utils::getUuid('service_areas', [
-                'public_id' => $request->input('service_area'),
+                'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -45,8 +46,9 @@ class FleetController extends Controller
     /**
      * Updates a Fleetbase Fleet resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdateFleetRequest  $request
+     * @param string                                      $id
+     * @param \Fleetbase\Http\Requests\UpdateFleetRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Fleet
      */
     public function update($id, UpdateFleetRequest $request)
@@ -69,7 +71,7 @@ class FleetController extends Controller
         // service area assignment
         if ($request->has('service_area')) {
             $input['service_area_uuid'] = Utils::getUuid('service_areas', [
-                'public_id' => $request->input('service_area'),
+                'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -84,7 +86,6 @@ class FleetController extends Controller
     /**
      * Query for Fleetbase Fleet resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\FleetCollection
      */
     public function query(Request $request)
@@ -97,7 +98,6 @@ class FleetController extends Controller
     /**
      * Finds a single Fleetbase Fleet resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\FleetCollection
      */
     public function find($id, Request $request)
@@ -121,7 +121,6 @@ class FleetController extends Controller
     /**
      * Deletes a Fleetbase Fleet resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\FleetCollection
      */
     public function delete($id, Request $request)

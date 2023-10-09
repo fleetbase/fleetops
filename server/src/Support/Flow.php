@@ -8,7 +8,6 @@ use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\Extension;
 use Fleetbase\Models\ExtensionInstall;
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\User;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -19,10 +18,8 @@ class Flow
 {
     /**
      * Returns all the order type configurations for the current users session.
-     *
-     * @return \Illuminate\Support\Collection
      */
-    public static function queryOrderConfigurations($queryCallback = null): ?\Illuminate\Support\Collection
+    public static function queryOrderConfigurations($queryCallback = null): ?Collection
     {
         $installedExtensions = [];
 
@@ -62,10 +59,8 @@ class Flow
 
     /**
      * Returns all the order type configurations for the current users session.
-     *
-     * @return \Illuminate\Support\Collection
      */
-    public static function getOrderConfigsForSession(): ?\Illuminate\Support\Collection
+    public static function getOrderConfigsForSession(): ?Collection
     {
         $installedExtensions = [];
 
@@ -96,10 +91,8 @@ class Flow
 
     /**
      * Returns all the order type configurations for the current users session.
-     *
-     * @return \Illuminate\Support\Collection
      */
-    public static function getOrderConfigs(Order $order): \Illuminate\Support\Collection
+    public static function getOrderConfigs(Order $order): Collection
     {
         $installedExtensions = [];
 
@@ -130,8 +123,6 @@ class Flow
 
     /**
      * Returns a order type configuration by key.
-     *
-     * @return \Fleetbase\Models\Extension
      */
     public static function getOrderConfig(Order $order): ?Extension
     {
@@ -144,6 +135,7 @@ class Flow
         }
 
         $configs = static::getOrderConfigs($order);
+
         return $configs->firstWhere('key', $order->type);
     }
 
@@ -169,7 +161,7 @@ class Flow
         }
 
         $configs = static::getOrderConfigs($order);
-        $config = $configs->firstWhere('key', $order->type);
+        $config  = $configs->firstWhere('key', $order->type);
 
         if ($config) {
             return data_get($config, 'meta.flow');
@@ -180,14 +172,12 @@ class Flow
 
     /**
      * Returns a order type configuration by key.
-     *
-     * @return array
      */
     public static function getOrderFlow(Order $order): ?array
     {
         $config = static::getOrderConfig($order);
-        $vars = static::getOrderFlowVars($order);
-        $code = strtolower($order->status);
+        $vars   = static::getOrderFlowVars($order);
+        $code   = strtolower($order->status);
         $status = data_get($config, 'meta.flow.' . $code . '.events');
 
         $flow = static::bindVariablesToFlow($status, $vars);
@@ -199,8 +189,6 @@ class Flow
 
     /**
      * Get an order activity from an order configuration provided by the index.
-     *
-     * @return array
      */
     public static function getActivity(Order $order, $index): ?array
     {
@@ -211,12 +199,10 @@ class Flow
 
     /**
      * Get an order activity from an order configuration provided by the index.
-     *
-     * @return array
      */
     public static function getActivityByIndex(Order $order, int $index): ?array
     {
-        $flow = array_values(static::getOrderConfigFlow($order));
+        $flow   = array_values(static::getOrderConfigFlow($order));
         $config = $flow[$index] ?? null;
 
         return Arr::first(data_get($config, 'events', []));
@@ -224,25 +210,21 @@ class Flow
 
     /**
      * Get an order activity from an order configuration provided by the index.
-     *
-     * @return array
      */
     public static function getAfterNextActivity(Order $order): ?array
     {
-        $current = strtolower($order->status);
-        $flow = static::getOrderConfigFlow($order);
-        $keys = array_keys($flow);
+        $current    = strtolower($order->status);
+        $flow       = static::getOrderConfigFlow($order);
+        $keys       = array_keys($flow);
         $activities = array_values($flow);
-        $index = array_search($current, $keys) + 1;
-        $config = $activities[$index] ?? null;
+        $index      = array_search($current, $keys) + 1;
+        $config     = $activities[$index] ?? null;
 
         return Arr::first(data_get($config, 'events', []));
     }
 
     /**
      * Get the next sequential activity from an order configuration.
-     *
-     * @return array
      */
     public static function getNextActivity(Order $order): ?array
     {
@@ -253,8 +235,6 @@ class Flow
 
     /**
      * Returns a order type configuration by key.
-     *
-     * @return array
      */
     public static function getDispatchActivity(Order $order): ?array
     {
@@ -267,10 +247,8 @@ class Flow
 
     /**
      * Returns a order flow status for the waypoint only.
-     *
-     * @return array
      */
-    public static function getOrderWaypointFlow(Order $order, ?Waypoint $waypoint = null): ?array
+    public static function getOrderWaypointFlow(Order $order, Waypoint $waypoint = null): ?array
     {
         if ($waypoint === null) {
             /** @var \Fleetbase\Models\Waypoint $waypoint */
@@ -280,8 +258,8 @@ class Flow
         }
 
         $config = static::getOrderConfig($order);
-        $vars = static::getOrderFlowVars($order, $waypoint);
-        $code = strtolower($waypoint->status_code);
+        $vars   = static::getOrderFlowVars($order, $waypoint);
+        $code   = strtolower($waypoint->status_code);
 
         // if code is completed return empty array
         if ($code === 'completed' || $code === 'canceled') {
@@ -303,12 +281,10 @@ class Flow
 
     /**
      * Returns a order flow status for the waypoint only.
-     *
-     * @return array
      */
-    public static function getOrderFlowVars(Order $order, ?Waypoint $currentWaypoint = null): ?array
+    public static function getOrderFlowVars(Order $order, Waypoint $currentWaypoint = null): ?array
     {
-        $vars = [];
+        $vars         = [];
         $allWaypoints = $order->payload->waypoints ?? collect();
 
         // set order vars
@@ -335,7 +311,7 @@ class Flow
             // set waypoint vars
             $vars['waypoint'] = $currentWaypoint->place->toArray();
             // set waypoint index vars
-            $vars['waypoint']['index'] = $currentWaypointIndex;
+            $vars['waypoint']['index']        = $currentWaypointIndex;
             $vars['waypoint']['ordinalIndex'] = Utils::ordinalNumber($currentWaypointIndex);
         }
 
@@ -365,16 +341,16 @@ class Flow
     public static function bindPodFlagsToFlow($config, array $flows = [], ?Order $order)
     {
         $podRequired = (bool) data_get($config, 'meta.require_pod', $order->pod_required);
-        $podMethod = data_get($config, 'meta.pod_method', $order->pod_method);
+        $podMethod   = data_get($config, 'meta.pod_method', $order->pod_method);
 
         if ($order->type === 'storefront') {
             $podRequired = $order->getMeta('require_pod');
-            $podMethod = $order->getMeta('pod_method');
+            $podMethod   = $order->getMeta('pod_method');
         }
 
         if ($order->pod_required === true) {
             $podRequired = true;
-            $podMethod = $order->pod_method ?? 'scan';
+            $podMethod   = $order->pod_method ?? 'scan';
         }
 
         if ($podRequired && !$podMethod) {
@@ -384,7 +360,7 @@ class Flow
         foreach ($flows as $index => $status) {
             if (isset($status['code']) && $status['code'] === 'completed') {
                 $status['require_pod'] = $podRequired;
-                $status['pod_method'] = $podMethod;
+                $status['pod_method']  = $podMethod;
             }
 
             $flows[$index] = $status;
@@ -430,11 +406,10 @@ class Flow
         foreach ($flows as $status) {
             if (isset($status['if']) && count($status['if'])) {
                 foreach ($status['if'] as $logic) {
-
                     list($prop, $operator, $rightSideValue) = $logic;
 
                     $leftSideValue = data_get($order, $prop);
-                    $passed = false;
+                    $passed        = false;
 
                     if ($operator === '=') {
                         $passed = $leftSideValue === $rightSideValue;
@@ -528,7 +503,7 @@ class Flow
     public static function hasInstalledOrAuthoredOrderConfigs()
     {
         $installed = static::getInstalledOrderConfigsCount();
-        $authored = static::getAuthoredOrderConfigsCount();
+        $authored  = static::getAuthoredOrderConfigsCount();
 
         return ($installed + $authored) > 0;
     }
@@ -573,34 +548,34 @@ class Flow
 
     public static function getDefaultOrderConfig(): Extension
     {
-        $name = 'Default';
+        $name        = 'Default';
         $description = 'Operational flow for standard A to B transport.';
-        $company = static::getCompanySession();
+        $company     = static::getCompanySession();
 
         return new Extension([
-            'id' => -1,
-            'uuid' => Str::uuid(),
-            'author_uuid' => $company->uuid,
-            'name' => $name,
-            'description' => $description,
+            'id'           => -1,
+            'uuid'         => Str::uuid(),
+            'author_uuid'  => $company->uuid,
+            'name'         => $name,
+            'description'  => $description,
             'display_name' => $name,
-            'key' => Str::slug($name),
-            'namespace' => Extension::createNamespace($company->slug, 'order-config', $name),
-            'version' => '0.0.1',
+            'key'          => Str::slug($name),
+            'namespace'    => Extension::createNamespace($company->slug, 'order-config', $name),
+            'version'      => '0.0.1',
             'core_service' => 0,
-            'meta' => ['flow' => static::getDefaultOrderFlow()],
-            'meta_type' => 'order_config',
-            'config' => [],
-            'status' => 'private'
+            'meta'         => ['flow' => static::getDefaultOrderFlow()],
+            'meta_type'    => 'order_config',
+            'config'       => [],
+            'status'       => 'private',
         ]);
     }
 
-    public static function getAllDefaultOrderConfigs(): \Illuminate\Support\Collection
+    public static function getAllDefaultOrderConfigs(): Collection
     {
         /** @var \Illuminate\Support\Collection $extensions */
-        $extensions = collect();
-        $company = static::getCompanySession();
-        $orderConfigs = config('api.types.order', []);
+        $extensions             = collect();
+        $company                = static::getCompanySession();
+        $orderConfigs           = config('api.types.order', []);
         $thirdPartyOrderConfigs = Utils::fromFleetbaseExtensions('order-config');
 
         // make sure order configs is array
@@ -623,20 +598,20 @@ class Flow
             $extensions->push(
                 new Extension(
                     [
-                        'id' => $index,
-                        'uuid' => Str::uuid(),
-                        'author_uuid' => $company->uuid,
-                        'name' => data_get($orderConfig, 'name'),
-                        'description' => data_get($orderConfig, 'description'),
+                        'id'           => $index,
+                        'uuid'         => Str::uuid(),
+                        'author_uuid'  => $company->uuid,
+                        'name'         => data_get($orderConfig, 'name'),
+                        'description'  => data_get($orderConfig, 'description'),
                         'display_name' => data_get($orderConfig, 'name'),
-                        'key' => data_get($orderConfig, 'key'),
-                        'namespace' => Extension::createNamespace($company->slug, 'order-config', data_get($orderConfig, 'name')),
-                        'version' => '0.0.1',
+                        'key'          => data_get($orderConfig, 'key'),
+                        'namespace'    => Extension::createNamespace($company->slug, 'order-config', data_get($orderConfig, 'name')),
+                        'version'      => '0.0.1',
                         'core_service' => 0,
-                        'meta' => data_get($orderConfig, 'meta'),
-                        'meta_type' => 'order_config',
-                        'config' => [],
-                        'status' => 'private'
+                        'meta'         => data_get($orderConfig, 'meta'),
+                        'meta_type'    => 'order_config',
+                        'config'       => [],
+                        'status'       => 'private',
                     ]
                 )
             );

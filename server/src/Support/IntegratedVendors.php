@@ -3,10 +3,9 @@
 namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Integrations\Lalamove\Lalamove;
-use Fleetbase\FleetOps\Integrations\Lalamove\LalamoveServiceType;
 use Fleetbase\FleetOps\Integrations\Lalamove\LalamoveMarket;
+use Fleetbase\FleetOps\Integrations\Lalamove\LalamoveServiceType;
 use Fleetbase\FleetOps\Models\IntegratedVendor;
-use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Support\Str;
 
 class ResolvedIntegratedVendor
@@ -47,6 +46,7 @@ class ResolvedIntegratedVendor
             $property = strtolower(Str::replaceFirst('set', '', $key));
 
             $this->{$property} = $arguments[0];
+
             return $this;
         }
 
@@ -72,7 +72,7 @@ class ResolvedIntegratedVendor
 
     public function resolveBridgeParams()
     {
-        $bridgeParams = $this->getBridgeParams();
+        $bridgeParams   = $this->getBridgeParams();
         $resolvedParams = $this->resolveIntegratedVendorParams($bridgeParams);
 
         return $resolvedParams;
@@ -153,14 +153,14 @@ class ResolvedIntegratedVendor
     public function toArray()
     {
         return [
-            'name' => $this->name,
-            'code' => $this->code,
-            'logo' => $this->getLogo(),
-            'host' => $this->host,
-            'sandbox' => $this->sandbox,
-            'namespace' => $this->namespace,
+            'name'              => $this->name,
+            'code'              => $this->code,
+            'logo'              => $this->getLogo(),
+            'host'              => $this->host,
+            'sandbox'           => $this->sandbox,
+            'namespace'         => $this->namespace,
             'credential_params' => $this->credentialParams,
-            'option_params' => $this->optionParams
+            'option_params'     => $this->optionParams,
         ];
     }
 
@@ -169,14 +169,14 @@ class ResolvedIntegratedVendor
         return json_encode($this->toArray());
     }
 
-    public function callback(?string $callback = null, ...$callbackParams)
+    public function callback(string $callback = null, ...$callbackParams)
     {
         if (!is_string($callback)) {
             return;
         }
 
         $callbacks = data_get($this->callbacks, $callback, []);
-        $api = $this->getBridgeInstance();
+        $api       = $this->getBridgeInstance();
 
         if (is_array($callbacks)) {
             foreach ($callbacks as $callback => $params) {
@@ -195,42 +195,42 @@ class IntegratedVendors
 {
     public static array $supported = [
         [
-            'name' => 'Lalamove',
-            'code' => 'lalamove',
-            'host' => 'https://rest.lalamove.com/',
-            'sandbox' => 'https://rest.sandbox.lalamove.com/',
-            'namespace' => 'v3',
-            'bridge' => Lalamove::class,
-            'svc_bridge' => LalamoveServiceType::class,
-            'iso2cc_bridge' => LalamoveMarket::class,
+            'name'             => 'Lalamove',
+            'code'             => 'lalamove',
+            'host'             => 'https://rest.lalamove.com/',
+            'sandbox'          => 'https://rest.sandbox.lalamove.com/',
+            'namespace'        => 'v3',
+            'bridge'           => Lalamove::class,
+            'svc_bridge'       => LalamoveServiceType::class,
+            'iso2cc_bridge'    => LalamoveMarket::class,
             'credentialParams' => [
                 ['key' => 'api_key'],
-                ['key' => 'api_secret']
+                ['key' => 'api_secret'],
             ],
             'optionParams' => [
-                ['key' => 'market', 'options' => LalamoveMarket::markets, 'optionValue' => 'code', 'optionLabel' => 'key']
+                ['key' => 'market', 'options' => LalamoveMarket::markets, 'optionValue' => 'code', 'optionLabel' => 'key'],
             ],
             'bridgeParams' => [
-                'apiKey' => 'credentials.api_key',
+                'apiKey'    => 'credentials.api_key',
                 'apiSecret' => 'credentials.api_secret',
-                'sandbox' => 'sandbox',
-                'market' => 'options.market'
+                'sandbox'   => 'sandbox',
+                'market'    => 'options.market',
             ],
             'callbacks' => [
                 'onCreated' => [
-                    'setWebhook' => ['webhook_url']
+                    'setWebhook' => ['webhook_url'],
                 ],
                 'onUpdated' => [
-                    'setWebhook' => ['webhook_url']
+                    'setWebhook' => ['webhook_url'],
                 ],
                 'onDeleted' => [
-                    'cancelFromFleetbaseOrder' => []
+                    'cancelFromFleetbaseOrder' => [],
                 ],
                 'onCanceled' => [
-                    'cancelFromFleetbaseOrder' => []
-                ]
-            ]
-        ]
+                    'cancelFromFleetbaseOrder' => [],
+                ],
+            ],
+        ],
     ];
 
     public static function all()
@@ -263,7 +263,7 @@ class IntegratedVendors
     public static function bridgeFromIntegratedVendor(IntegratedVendor $vendor)
     {
         $resolver = static::resolverFromIntegratedVendor($vendor);
-        $params = $resolver->resolveBridgeParams();
+        $params   = $resolver->resolveBridgeParams();
 
         $api = app($resolver->bridge, $params);
 

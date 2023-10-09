@@ -2,15 +2,14 @@
 
 namespace Fleetbase\FleetOps\Observers;
 
-use Fleetbase\Models\User;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\Models\User;
 
 class UserObserver
 {
     /**
      * Handle the User "deleted" event.
      *
-     * @param  \Fleetbase\Models\User  $user
      * @return void
      */
     public function deleted(User $user)

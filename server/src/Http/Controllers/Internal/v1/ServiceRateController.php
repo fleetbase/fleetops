@@ -2,24 +2,23 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Brick\Geo\Point;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Illuminate\Http\Request;
-use Brick\Geo\Point;
 
 class ServiceRateController extends FleetOpsController
 {
     /**
-     * The resource to query
+     * The resource to query.
      *
      * @var string
      */
     public $resource = 'service_rate';
 
     /**
-     * Creates a record with request payload
+     * Creates a record with request payload.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function getServicesForRoute(Request $request)
@@ -29,7 +28,7 @@ class ServiceRateController extends FleetOpsController
         // convert coordinates to points
         $waypoints = collect($coordinates)->map(
             function ($coord) {
-                $coord = explode(',', $coord);
+                $coord                  = explode(',', $coord);
                 [$latitude, $longitude] = $coord;
 
                 return Point::fromText("POINT($longitude $latitude)", 4326);

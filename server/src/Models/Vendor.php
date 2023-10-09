@@ -2,22 +2,30 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
-use Illuminate\Notifications\Notifiable;
 use Fleetbase\Casts\Json;
-use Fleetbase\Traits\HasUuid;
-use Fleetbase\Traits\HasPublicId;
-use Fleetbase\Traits\TracksApiCredential;
+use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
-use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Sluggable\SlugOptions;
-use Spatie\Sluggable\HasSlug;
+use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
+use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Notifications\Notifiable;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Sluggable\HasSlug;
+use Spatie\Sluggable\SlugOptions;
 
 class Vendor extends Model
 {
-    use HasUuid, HasPublicId, HasApiModelBehavior, HasInternalId, TracksApiCredential, Searchable, HasSlug, LogsActivity, Notifiable;
+    use HasUuid;
+    use HasPublicId;
+    use HasApiModelBehavior;
+    use HasInternalId;
+    use TracksApiCredential;
+    use Searchable;
+    use HasSlug;
+    use LogsActivity;
+    use Notifiable;
 
     /**
      * The database table used by the model.
@@ -27,7 +35,7 @@ class Vendor extends Model
     protected $table = 'vendors';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
@@ -60,14 +68,14 @@ class Vendor extends Model
     ];
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
     protected $searchableColumns = ['name', 'email', 'business_id', 'company.name'];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -87,39 +95,39 @@ class Vendor extends Model
      */
     protected $casts = [
         'callbacks' => Json::class,
-        'meta' => Json::class
+        'meta'      => Json::class,
     ];
 
     /**
-     * Relationships to auto load with driver
+     * Relationships to auto load with driver.
      *
      * @var array
      */
     protected $with = ['place'];
 
     /**
-     * Properties which activity needs to be logged
+     * Properties which activity needs to be logged.
      *
      * @var array
      */
     protected static $logAttributes = ['name', 'email', 'website_url', 'phone', 'country', 'status', 'type', 'logo_uuid', 'company_uuid'];
 
     /**
-     * Do not log empty changed
+     * Do not log empty changed.
      *
-     * @var boolean
+     * @var bool
      */
     protected static $submitEmptyLogs = false;
 
     /**
-     * We only want to log changed attributes
+     * We only want to log changed attributes.
      *
-     * @var boolean
+     * @var bool
      */
     protected static $logOnlyDirty = true;
 
     /**
-     * The name of the subject to log
+     * The name of the subject to log.
      *
      * @var string
      */
@@ -176,7 +184,7 @@ class Vendor extends Model
 
     /**
      * Get the vendor logo url.
-     * 
+     *
      * @return string
      */
     public function getLogoUrlAttribute()
@@ -185,8 +193,8 @@ class Vendor extends Model
     }
 
     /**
-     * Returns the vendors place address
-     * 
+     * Returns the vendors place address.
+     *
      * @return string
      */
     public function getAddressAttribute()
@@ -195,8 +203,8 @@ class Vendor extends Model
     }
 
     /**
-     * Returns the vendors place address
-     * 
+     * Returns the vendors place address.
+     *
      * @return string
      */
     public function getAddressStreetAttribute()
@@ -215,9 +223,8 @@ class Vendor extends Model
     }
 
     /**
-     * Set the vendor type or default to `vendor`
+     * Set the vendor type or default to `vendor`.
      *
-     * @param string|null $type
      * @return void
      */
     public function setTypeAttribute(?string $type)
@@ -226,9 +233,8 @@ class Vendor extends Model
     }
 
     /**
-     * Set the vendor default status
+     * Set the vendor default status.
      *
-     * @param string|null $status
      * @return void
      */
     public function setStatusAttribute(?string $status = 'active')

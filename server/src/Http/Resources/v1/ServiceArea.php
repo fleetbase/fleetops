@@ -10,7 +10,8 @@ class ServiceArea extends FleetbaseResource
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param \Illuminate\Http\Request $request
+     *
      * @return array
      */
     public function toArray($request)
@@ -18,15 +19,15 @@ class ServiceArea extends FleetbaseResource
         return array_merge(
             $this->getInternalIds(),
             [
-                'id' => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-                'uuid' => $this->when(Http::isInternalRequest(), $this->uuid),
-                'public_id' => $this->when(Http::isInternalRequest(), $this->public_id),
-                'name' => $this->name,
-                'type' => $this->type,
-                'location' => $this->location,
-                'border' => $this->border,
-                'zones' => $this->whenLoaded('zones', Zone::collection($this->zones)),
-                'status' => $this->status,
+                'id'         => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+                'uuid'       => $this->when(Http::isInternalRequest(), $this->uuid),
+                'public_id'  => $this->when(Http::isInternalRequest(), $this->public_id),
+                'name'       => $this->name,
+                'type'       => $this->type,
+                'location'   => $this->location,
+                'border'     => $this->border,
+                'zones'      => $this->whenLoaded('zones', Zone::collection($this->zones)),
+                'status'     => $this->status,
                 'updated_at' => $this->updated_at,
                 'created_at' => $this->created_at,
             ]
@@ -41,12 +42,12 @@ class ServiceArea extends FleetbaseResource
     public function toWebhookPayload()
     {
         return [
-            'id' => $this->public_id,
-            'name' => $this->name,
-            'type' => $this->type,
-            'location' => $this->location,
-            'border' => $this->border,
-            'status' => $this->status,
+            'id'         => $this->public_id,
+            'name'       => $this->name,
+            'type'       => $this->type,
+            'location'   => $this->location,
+            'border'     => $this->border,
+            'status'     => $this->status,
             'updated_at' => $this->updated_at,
             'created_at' => $this->created_at,
         ];

@@ -2,30 +2,40 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
-use Fleetbase\Traits\HasApiModelBehavior;
-use Fleetbase\Traits\HasUuid;
-use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\Traits\HasInternalId;
-use Fleetbase\Traits\HasPublicId;
-use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\FleetOps\Scopes\DriverScope;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Support\Utils as FleetOpsUtils;
-use Fleetbase\FleetOps\Scopes\DriverScope;
-use Fleetbase\FleetOps\Casts\Point;
-use Illuminate\Notifications\Notifiable;
-use Illuminate\Broadcasting\Channel;
-use Illuminate\Support\Facades\DB;
+use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasInternalId;
+use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
+use Fleetbase\Traits\SendsWebhooks;
+use Fleetbase\Traits\TracksApiCredential;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Sluggable\SlugOptions;
 use Spatie\Sluggable\HasSlug;
+use Spatie\Sluggable\SlugOptions;
 
 class Driver extends Model
 {
-    use HasUuid, HasPublicId, HasInternalId, TracksApiCredential, HasApiModelBehavior, Notifiable, SendsWebhooks, SpatialTrait, HasSlug, LogsActivity, CausesActivity;
+    use HasUuid;
+    use HasPublicId;
+    use HasInternalId;
+    use TracksApiCredential;
+    use HasApiModelBehavior;
+    use Notifiable;
+    use SendsWebhooks;
+    use SpatialTrait;
+    use HasSlug;
+    use LogsActivity;
+    use CausesActivity;
 
     /**
      * The database table used by the model.
@@ -35,14 +45,14 @@ class Driver extends Model
     protected $table = 'drivers';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'driver';
 
     /**
-     * The attributes that can be queried
+     * The attributes that can be queried.
      *
      * @var array
      */
@@ -91,20 +101,20 @@ class Driver extends Model
      * @var array
      */
     protected $casts = [
-        'meta' => Json::class,
+        'meta'     => Json::class,
         'location' => Point::class,
-        'online' => 'boolean',
+        'online'   => 'boolean',
     ];
 
     /**
-     * Relationships to auto load with driver
+     * Relationships to auto load with driver.
      *
      * @var array
      */
     protected $with = [];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -130,28 +140,28 @@ class Driver extends Model
     protected $hidden = ['currentJob', 'vendor', 'vehicle', 'user', 'latitude', 'longitude', 'auth_token'];
 
     /**
-     * Attributes that is filterable on this model
+     * Attributes that is filterable on this model.
      *
      * @var array
      */
     protected $filterParams = ['vendor', 'facilitator', 'customer', 'fleet'];
 
     /**
-     * Properties which activity needs to be logged
+     * Properties which activity needs to be logged.
      *
      * @var array
      */
     protected static $logAttributes = '*';
 
     /**
-     * Do not log empty changed
+     * Do not log empty changed.
      *
-     * @var boolean
+     * @var bool
      */
     protected static $submitEmptyLogs = false;
 
     /**
-     * The name of the subject to log
+     * The name of the subject to log.
      *
      * @var string
      */
@@ -211,7 +221,7 @@ class Driver extends Model
             'meta',
             'trim',
             'plate_number',
-            DB::raw("CONCAT(vehicles.year, ' ', vehicles.make, ' ', vehicles.model, ' ', vehicles.trim, ' ', vehicles.plate_number) AS display_name")
+            DB::raw("CONCAT(vehicles.year, ' ', vehicles.make, ' ', vehicles.model, ' ', vehicles.trim, ' ', vehicles.plate_number) AS display_name"),
         ]);
     }
 
@@ -288,7 +298,7 @@ class Driver extends Model
     }
 
     /**
-     * Specifies the user's FCM tokens
+     * Specifies the user's FCM tokens.
      *
      * @return array
      */
@@ -304,7 +314,7 @@ class Driver extends Model
     }
 
     /**
-     * Specifies the user's APNS tokens
+     * Specifies the user's APNS tokens.
      *
      * @return array
      */
@@ -322,6 +332,7 @@ class Driver extends Model
      * The channels the driver receives notification broadcasts on.
      *
      * @param \Illuminate\Notifications\Notification $notification
+     *
      * @return array
      */
     public function receivesBroadcastNotificationsOn($notification)
@@ -406,7 +417,7 @@ class Driver extends Model
     }
 
     /**
-     * Get drivers name
+     * Get drivers name.
      */
     public function getNameAttribute()
     {
@@ -414,7 +425,7 @@ class Driver extends Model
     }
 
     /**
-     * Get drivers phone number
+     * Get drivers phone number.
      */
     public function getPhoneAttribute()
     {
@@ -422,7 +433,7 @@ class Driver extends Model
     }
 
     /**
-     * Get drivers email
+     * Get drivers email.
      */
     public function getEmailAttribute()
     {
@@ -438,6 +449,7 @@ class Driver extends Model
     {
         if (!empty($this->driver_assigned_uuid)) {
             $this->driver_assigned_uuid = null;
+
             return $this->save();
         }
 
@@ -447,7 +459,6 @@ class Driver extends Model
     /**
      * Assign a vehicle to driver.
      *
-     * @param \Fleetbase\FleetOps\Models\Vehicle $vehicle
      * @return void
      */
     public function assignVehicle(Vehicle $vehicle)
@@ -488,25 +499,26 @@ class Driver extends Model
      * the driver has moved more than 100 meters or if it's their first recorded position.
      *
      * @param Order|null $order The order to consider when updating the position (default: null)
+     *
      * @return \Fleetbase\FleetOps\Models\Position|null The created Position object, or null if no new position was created
      */
-    public function updatePosition(?Order $order = null): ?Position
+    public function updatePosition(Order $order = null): ?Position
     {
-        $position = null;
+        $position     = null;
         $lastPosition = $this->positions()->whereCompanyUuid(session('company'))->latest()->first();
 
         // get the drivers current order
         $currentOrder = $order ?? $this->currentOrder()->with(['payload'])->first();
-        $destination = $currentOrder ? $currentOrder->payload->getPickupOrCurrentWaypoint() : null;
+        $destination  = $currentOrder ? $currentOrder->payload->getPickupOrCurrentWaypoint() : null;
 
         $positionData = [
             'company_uuid' => session('company', $this->company_uuid),
             'subject_uuid' => $this->uuid,
             'subject_type' => Utils::getMutationType($this),
-            'coordinates' => $this->location,
-            'altitude' => $this->altitude,
-            'heading' => $this->heading,
-            'speed' => $this->speed
+            'coordinates'  => $this->location,
+            'altitude'     => $this->altitude,
+            'heading'      => $this->heading,
+            'speed'        => $this->speed,
         ];
 
         if ($currentOrder) {
@@ -518,8 +530,8 @@ class Driver extends Model
         }
 
         $isFirstPosition = !$lastPosition;
-        $isPast50Meters = $lastPosition && FleetOpsUtils::vincentyGreatCircleDistance($this->location, $lastPosition->coordinates) > 50;
-        $position = null;
+        $isPast50Meters  = $lastPosition && FleetOpsUtils::vincentyGreatCircleDistance($this->location, $lastPosition->coordinates) > 50;
+        $position        = null;
 
         // create the first position
         if ($isFirstPosition || $isPast50Meters) {

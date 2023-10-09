@@ -2,21 +2,27 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
-use Illuminate\Support\Carbon;
 use Fleetbase\Casts\Json;
-use Fleetbase\Traits\HasMetaAttributes;
+use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
-use Fleetbase\Traits\HasUuid;
+use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class TrackingStatus extends Model
 {
-    use HasUuid, HasPublicId, HasApiModelBehavior, HasMetaAttributes, SendsWebhooks, TracksApiCredential, SpatialTrait;
+    use HasUuid;
+    use HasPublicId;
+    use HasApiModelBehavior;
+    use HasMetaAttributes;
+    use SendsWebhooks;
+    use TracksApiCredential;
+    use SpatialTrait;
 
     /**
      * The database table used by the model.
@@ -26,14 +32,14 @@ class TrackingStatus extends Model
     protected $table = 'tracking_statuses';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'status';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -56,16 +62,16 @@ class TrackingStatus extends Model
         'province',
         'postal_code',
         'country',
-        'location'
+        'location',
     ];
 
     /**
      * The attributes that are spatial columns.
-     * 
+     *
      * @var array
      */
     protected $spatialFields = [
-        'location'
+        'location',
     ];
 
     /**
@@ -79,17 +85,17 @@ class TrackingStatus extends Model
     ];
 
     /**
-     * Attributes that is filterable on this model
+     * Attributes that is filterable on this model.
      *
      * @var array
      */
     protected $filterParams = [
         'order',
-        'entity'
+        'entity',
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -103,7 +109,7 @@ class TrackingStatus extends Model
     protected $hidden = [];
 
     /**
-     * The tracking number
+     * The tracking number.
      *
      * @var Model
      */
@@ -136,10 +142,10 @@ class TrackingStatus extends Model
         return $string;
     }
 
-    public static function insertGetUuid($values = [], ?TrackingNumber $trackingNumber = null)
+    public static function insertGetUuid($values = [], TrackingNumber $trackingNumber = null)
     {
-        $instance = new static();
-        $fillable = $instance->getFillable();
+        $instance   = new static();
+        $fillable   = $instance->getFillable();
         $insertKeys = array_keys($values);
         // clean insert data
         foreach ($insertKeys as $key) {
@@ -148,16 +154,16 @@ class TrackingStatus extends Model
             }
         }
 
-        $values['uuid'] = $uuid = (string) Str::uuid();
-        $values['public_id'] = static::generatePublicId('status');
-        $values['_key'] = session('api_key') ?? 'console';
-        $values['created_at'] = Carbon::now()->toDateTimeString();
+        $values['uuid']         = $uuid = (string) Str::uuid();
+        $values['public_id']    = static::generatePublicId('status');
+        $values['_key']         = session('api_key') ?? 'console';
+        $values['created_at']   = Carbon::now()->toDateTimeString();
         $values['company_uuid'] = session('company');
 
         if ($trackingNumber) {
             $values['tracking_number_uuid'] = $trackingNumber->uuid;
-            $values['status'] = Str::title($trackingNumber->type . ' created');
-            $values['details'] = 'New ' . Str::lower($trackingNumber->type) . ' created.';
+            $values['status']               = Str::title($trackingNumber->type . ' created');
+            $values['details']              = 'New ' . Str::lower($trackingNumber->type) . ' created.';
         }
 
         if (isset($values['meta']) && (is_object($values['meta']) || is_array($values['meta']))) {

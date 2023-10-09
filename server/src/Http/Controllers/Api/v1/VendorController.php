@@ -2,21 +2,22 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Http\Request;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Http\Requests\CreateVendorRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateVendorRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Vendor as VendorResource;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class VendorController extends Controller
 {
     /**
      * Creates a new Fleetbase Vendor resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreateVendorRequest  $request
+     * @param \Fleetbase\Http\Requests\CreateVendorRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Vendor
      */
     public function create(CreateVendorRequest $request)
@@ -32,7 +33,7 @@ class VendorController extends Controller
             $input['place_uuid'] = Utils::getUuid(
                 'places',
                 [
-                    'public_id' => $request->input('address'),
+                    'public_id'    => $request->input('address'),
                     'company_uuid' => session('company'),
                 ]
             );
@@ -42,7 +43,7 @@ class VendorController extends Controller
         $vendor = Vendor::updateOrCreate(
             [
                 'company_uuid' => session('company'),
-                'name' => strtoupper($input['name']),
+                'name'         => strtoupper($input['name']),
             ],
             $input
         );
@@ -54,8 +55,9 @@ class VendorController extends Controller
     /**
      * Updates a Fleetbase Vendor resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdateVendorRequest  $request
+     * @param string                                       $id
+     * @param \Fleetbase\Http\Requests\UpdateVendorRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Vendor
      */
     public function update($id, UpdateVendorRequest $request)
@@ -80,7 +82,7 @@ class VendorController extends Controller
             $input['place_uuid'] = Utils::getUuid(
                 'places',
                 [
-                    'public_id' => $request->input('address'),
+                    'public_id'    => $request->input('address'),
                     'company_uuid' => session('company'),
                 ]
             );
@@ -97,7 +99,6 @@ class VendorController extends Controller
     /**
      * Query for Fleetbase Vendor resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\VendorCollection
      */
     public function query(Request $request)
@@ -110,7 +111,6 @@ class VendorController extends Controller
     /**
      * Finds a single Fleetbase Vendor resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\VendorCollection
      */
     public function find($id, Request $request)
@@ -134,7 +134,6 @@ class VendorController extends Controller
     /**
      * Deletes a Fleetbase Vendor resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\VendorCollection
      */
     public function delete($id, Request $request)

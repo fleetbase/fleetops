@@ -326,7 +326,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                         $router->group(
                             ['prefix' => 'fleet-ops'],
                             function ($router) {
-                                /** Dashboard Build */
+                                /* Dashboard Build */
                                 $router->get('dashboard', 'MetricsController@dashboard');
 
                                 $router->group(

@@ -2,19 +2,24 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
-use Fleetbase\Traits\HasUuid;
-use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\Traits\HasPublicId;
-use Fleetbase\Traits\SendsWebhooks;
-use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\FleetOps\Casts\MultiPolygon;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
+use Fleetbase\Traits\SendsWebhooks;
+use Fleetbase\Traits\TracksApiCredential;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 
 class ServiceArea extends Model
 {
-    use HasUuid, HasPublicId, SendsWebhooks, TracksApiCredential, SpatialTrait, HasApiModelBehavior;
+    use HasUuid;
+    use HasPublicId;
+    use SendsWebhooks;
+    use TracksApiCredential;
+    use SpatialTrait;
+    use HasApiModelBehavior;
 
     /**
      * The database table used by the model.
@@ -24,14 +29,14 @@ class ServiceArea extends Model
     protected $table = 'service_areas';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'sa';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -59,7 +64,7 @@ class ServiceArea extends Model
     protected $with = ['zones'];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -92,7 +97,8 @@ class ServiceArea extends Model
     /**
      * Sets the status attribute for the model.
      *
-     * @param string|null $status The status value, defaults to 'active' if not provided.
+     * @param string|null $status the status value, defaults to 'active' if not provided
+     *
      * @return void
      */
     public function setStatusAttribute(?string $status = 'active')
@@ -103,7 +109,8 @@ class ServiceArea extends Model
     /**
      * Sets the type attribute for the model.
      *
-     * @param string|null $type The type value, defaults to 'country' if not provided.
+     * @param string|null $type the type value, defaults to 'country' if not provided
+     *
      * @return void
      */
     public function setTypeAttribute(?string $type = 'country')
@@ -112,7 +119,7 @@ class ServiceArea extends Model
     }
 
     /**
-     * Creates a 100m polygon from the coorddinates
+     * Creates a 100m polygon from the coorddinates.
      *
      * @var Polygon
      */
@@ -122,11 +129,12 @@ class ServiceArea extends Model
     }
 
     /**
-     * Determines if coordinates fall within zone
+     * Determines if coordinates fall within zone.
      *
-     * @param integer $latitude
-     * @param integer $longitude
-     * @return boolean
+     * @param int $latitude
+     * @param int $longitude
+     *
+     * @return bool
      */
     public function inZone($latitude, $longitude)
     {
@@ -134,10 +142,11 @@ class ServiceArea extends Model
     }
 
     /**
-     * Determines if multiple coordinates fall within zone
+     * Determines if multiple coordinates fall within zone.
      *
      * @param array $coords
-     * @return boolean
+     *
+     * @return bool
      */
     public function pointsInZone($coords)
     {
@@ -146,6 +155,7 @@ class ServiceArea extends Model
                 return false;
             }
         }
+
         return true;
     }
 }

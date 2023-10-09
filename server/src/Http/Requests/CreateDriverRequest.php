@@ -14,7 +14,6 @@ class CreateDriverRequest extends FleetbaseRequest
      */
     public function authorize()
     {
-
         return request()->is('navigator/v1/*') || request()->session()->has('api_credential');
     }
 
@@ -28,16 +27,16 @@ class CreateDriverRequest extends FleetbaseRequest
         $isCreating = $this->isMethod('POST');
 
         return [
-            'name' => [Rule::requiredIf($isCreating)],
-            'email' => [Rule::requiredIf($isCreating), Rule::when($this->filled('email'), ['email']), Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])],
-            'phone' => [Rule::requiredIf($isCreating), Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])],
+            'name'     => [Rule::requiredIf($isCreating)],
+            'email'    => [Rule::requiredIf($isCreating), Rule::when($this->filled('email'), ['email']), Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])],
+            'phone'    => [Rule::requiredIf($isCreating), Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])],
             'password' => 'nullable|string',
-            'country' => 'nullable|size:2',
-            'city' => 'nullable|string',
-            'vehicle' => 'nullable|string|starts_with:vehicle_|exists:drivers,public_id',
-            'status' => 'nullable|string|in:active,inactive',
-            'vendor' => 'nullable|exists:vendors,public_id',
-            'job' => 'nullable|exists:orders,public_id',
+            'country'  => 'nullable|size:2',
+            'city'     => 'nullable|string',
+            'vehicle'  => 'nullable|string|starts_with:vehicle_|exists:drivers,public_id',
+            'status'   => 'nullable|string|in:active,inactive',
+            'vendor'   => 'nullable|exists:vendors,public_id',
+            'job'      => 'nullable|exists:orders,public_id',
         ];
     }
 

@@ -4,17 +4,19 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\Traits\HasPublicId;
-use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\Traits\HasApiModelBehavior;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
-use Grimzy\LaravelMysqlSpatial\Types\Geometry;
 
 class Issue extends Model
 {
-    use HasUuid, HasPublicId, TracksApiCredential, SpatialTrait, HasApiModelBehavior;
+    use HasUuid;
+    use HasPublicId;
+    use TracksApiCredential;
+    use SpatialTrait;
+    use HasApiModelBehavior;
 
     /**
      * The database table used by the model.
@@ -24,14 +26,14 @@ class Issue extends Model
     protected $table = 'issues';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'issue';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -62,15 +64,15 @@ class Issue extends Model
 
     /**
      * The attributes that are spatial columns.
-     * 
+     *
      * @var array
      */
     protected $spatialFields = [
-        'location' => Point::class
+        'location' => Point::class,
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */

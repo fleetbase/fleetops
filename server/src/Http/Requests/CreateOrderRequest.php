@@ -25,30 +25,30 @@ class CreateOrderRequest extends FleetbaseRequest
     public function rules()
     {
         $validations = [
-            'adhoc' => 'in:true,false,1,0',
-            'dispatch' => 'boolean',
+            'adhoc'          => 'in:true,false,1,0',
+            'dispatch'       => 'boolean',
             'adhoc_distance' => 'numeric',
-            'pod_required' => 'in:true,false,1,0',
-            'pod_method' => 'in:' . config('api.pod_methods'),
-            'scheduled_at' => 'date',
-            'driver' => 'nullable|exists:drivers,public_id',
-            'service_quote' => 'nullable|exists:service_quotes,public_id',
-            'purchase_rate' => 'nullable|exists:purchase_rates,public_id',
-            'facilitator' => ['nullable', new ExistsInAny(['vendors', 'contacts', 'integrated_vendors'], ['public_id', 'provider'])],
-            'customer' => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
-            'status' => 'string',
-            'type' => 'string',
+            'pod_required'   => 'in:true,false,1,0',
+            'pod_method'     => 'in:' . config('api.pod_methods'),
+            'scheduled_at'   => 'date',
+            'driver'         => 'nullable|exists:drivers,public_id',
+            'service_quote'  => 'nullable|exists:service_quotes,public_id',
+            'purchase_rate'  => 'nullable|exists:purchase_rates,public_id',
+            'facilitator'    => ['nullable', new ExistsInAny(['vendors', 'contacts', 'integrated_vendors'], ['public_id', 'provider'])],
+            'customer'       => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
+            'status'         => 'string',
+            'type'           => 'string',
         ];
 
         if ($this->has('payload')) {
-            $validations['payload.entities'] = 'array';
+            $validations['payload.entities']  = 'array';
             $validations['payload.waypoints'] = 'array';
 
             if ($this->isArray('payload')) {
-                $validations['payload'] = 'required';
-                $validations['payload.pickup'] = 'required';
+                $validations['payload']         = 'required';
+                $validations['payload.pickup']  = 'required';
                 $validations['payload.dropoff'] = 'required';
-                $validations['payload.return'] = 'nullable';
+                $validations['payload.return']  = 'nullable';
             }
 
             if ($this->isString('payload')) {
@@ -57,7 +57,7 @@ class CreateOrderRequest extends FleetbaseRequest
         }
 
         if ($this->missing('payload') && $this->isMethod('POST')) {
-            $validations['pickup'] = 'required';
+            $validations['pickup']  = 'required';
             $validations['dropoff'] = 'required';
         }
 

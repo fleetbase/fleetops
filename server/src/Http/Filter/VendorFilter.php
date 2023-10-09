@@ -2,8 +2,8 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
-use Fleetbase\Http\Filter\Filter;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Filter\Filter;
 
 class VendorFilter extends Filter
 {
@@ -11,7 +11,7 @@ class VendorFilter extends Filter
     {
         $this->builder->where('company_uuid', $this->session->get('company'));
     }
-    
+
     public function query(?string $searchQuery)
     {
         $this->builder->where(function ($query) use ($searchQuery) {
@@ -59,7 +59,7 @@ class VendorFilter extends Filter
         $this->builder->searchWhere('status', $status);
     }
 
-    public function createdAt($createdAt) 
+    public function createdAt($createdAt)
     {
         $createdAt = Utils::dateRange($createdAt);
 
@@ -70,7 +70,7 @@ class VendorFilter extends Filter
         }
     }
 
-    public function updatedAt($updatedAt) 
+    public function updatedAt($updatedAt)
     {
         $updatedAt = Utils::dateRange($updatedAt);
 

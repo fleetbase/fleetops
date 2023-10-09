@@ -2,8 +2,8 @@
 
 namespace Fleetbase\FleetOps\Events;
 
-use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\Events\ResourceLifecycleEvent;
+use Fleetbase\FleetOps\Models\Order;
 
 class OrderDispatchFailed extends ResourceLifecycleEvent
 {
@@ -34,10 +34,8 @@ class OrderDispatchFailed extends ResourceLifecycleEvent
 
     /**
      * Returns the reason the dispatch failed.
-     * 
-     * @return string
      */
-    public function getReason() : string
+    public function getReason(): string
     {
         return $this->reason;
     }

@@ -2,19 +2,19 @@
 
 namespace Fleetbase\FleetOps\Notifications;
 
-use Fleetbase\FleetOps\Models\Order;
-use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Events\ResourceLifecycleEvent;
+use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
+use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\Fcm\FcmChannel;
-use NotificationChannels\Fcm\FcmMessage;
 use NotificationChannels\Apn\ApnChannel;
 use NotificationChannels\Apn\ApnMessage;
+use NotificationChannels\Fcm\FcmChannel;
+use NotificationChannels\Fcm\FcmMessage;
 use NotificationChannels\Fcm\Resources\AndroidConfig;
 use NotificationChannels\Fcm\Resources\AndroidFcmOptions;
 use NotificationChannels\Fcm\Resources\AndroidNotification;
@@ -27,8 +27,6 @@ class OrderPing extends Notification implements ShouldQueue
 
     /**
      * The order instance this notification is for.
-     *
-     * @var \Fleetbase\FleetOps\Models\Order
      */
     public Order $order;
 
@@ -46,14 +44,13 @@ class OrderPing extends Notification implements ShouldQueue
      */
     public function __construct(Order $order, $distance = null)
     {
-        $this->order = $order->setRelations([]);
+        $this->order    = $order->setRelations([]);
         $this->distance = $distance;
     }
 
     /**
      * Get the notification's delivery channels.
      *
-     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -71,7 +68,7 @@ class OrderPing extends Notification implements ShouldQueue
         return 'order.ping';
     }
 
-     /**
+    /**
      * Get the channels the event should broadcast on.
      *
      * @return \Illuminate\Broadcasting\Channel|array
@@ -83,26 +80,25 @@ class OrderPing extends Notification implements ShouldQueue
             new Channel('company.' . data_get($this->order, 'company.public_id')),
             new Channel('api.' . session('api_credential')),
             new Channel('order.' . $this->order->uuid),
-            new Channel('order.' . $this->order->public_id)
+            new Channel('order.' . $this->order->public_id),
         ];
     }
 
     /**
      * Get the broadcastable representation of the notification.
      *
-     * @param  mixed  $notifiable
      * @return BroadcastMessage
      */
     public function toBroadcast($notifiable)
     {
-        $model = $this->order;
-        $resource = new OrderResource($model);
+        $model        = $this->order;
+        $resource     = new OrderResource($model);
         $resourceData = [];
 
         if ($resource) {
             if (method_exists($resource, 'toWebhookPayload')) {
                 $resourceData = $resource->toWebhookPayload();
-            } else if (method_exists($resource, 'toArray')) {
+            } elseif (method_exists($resource, 'toArray')) {
                 $resourceData = $resource->toArray(request());
             }
         }
@@ -110,11 +106,11 @@ class OrderPing extends Notification implements ShouldQueue
         $resourceData = ResourceLifecycleEvent::transformResourceChildrenToId($resourceData);
 
         $data = [
-            'id' => uniqid('event_'),
+            'id'          => uniqid('event_'),
             'api_version' => config('api.version'),
-            'event' => 'order.ping',
-            'created_at' => now()->toDateTimeString(),
-            'data' => $resourceData,
+            'event'       => 'order.ping',
+            'created_at'  => now()->toDateTimeString(),
+            'data'        => $resourceData,
         ];
 
         return new BroadcastMessage($data);
@@ -123,7 +119,6 @@ class OrderPing extends Notification implements ShouldQueue
     /**
      * Get the firebase cloud message representation of the notification.
      *
-     * @param  mixed  $notifiable
      * @return array
      */
     public function toFcm($notifiable)
@@ -150,7 +145,6 @@ class OrderPing extends Notification implements ShouldQueue
     /**
      * Get the apns message representation of the notification.
      *
-     * @param  mixed  $notifiable
      * @return array
      */
     public function toApn($notifiable)

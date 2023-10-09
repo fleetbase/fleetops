@@ -2,19 +2,19 @@
 
 namespace Fleetbase\FleetOps\Support;
 
-use Fleetbase\Models\Company;
-use Fleetbase\Models\Transaction;
-use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
-use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\Issue;
+use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\Models\Company;
+use Fleetbase\Models\Transaction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
  * Metrics service to pull analyitcs and metrics from FleetOps.
- * 
+ *
  * Ex:
  * $metrics = Metrics::new($company)->withEarnings()->withFuelCosts()->get();
  */
@@ -25,15 +25,15 @@ class Metrics
     protected Company $company;
     protected array $metrics = [];
 
-    public static function new(Company $company, ?\DateTime $start = null, ?\DateTime $end = null): Metrics
+    public static function new(Company $company, \DateTime $start = null, \DateTime $end = null): Metrics
     {
         $start = $start === null ? Carbon::create(1900)->toDateTime() : $start;
-        $end = $end === null ? Carbon::tomorrow()->toDateTime() : $end;
+        $end   = $end === null ? Carbon::tomorrow()->toDateTime() : $end;
 
         return (new static())->setCompany($company)->between($start, $end);
     }
 
-    public static function forCompany(Company $company, ?\DateTime $start = null, ?\DateTime $end = null): Metrics
+    public static function forCompany(Company $company, \DateTime $start = null, \DateTime $end = null): Metrics
     {
         return static::new($company, $start, $end);
     }
@@ -106,7 +106,7 @@ class Metrics
         return $this;
     }
 
-    public function earnings(?callable $callback = null): Metrics
+    public function earnings(callable $callback = null): Metrics
     {
         $query = Transaction::where('company_uuid', $this->company->uuid)->whereBetween('created_at', [$this->start, $this->end]);
 
@@ -119,7 +119,7 @@ class Metrics
         return $this->set('earnings', (int) $data);
     }
 
-    public function fuelCosts(?callable $callback = null): Metrics
+    public function fuelCosts(callable $callback = null): Metrics
     {
         $query = FuelReport::where('company_uuid', $this->company->uuid)->whereBetween('created_at', [$this->start, $this->end]);
 
@@ -132,12 +132,12 @@ class Metrics
         return $this->set('fuel_costs', (int) $data);
     }
 
-    public function totalDistanceTraveled(?callable $callback = null): Metrics
+    public function totalDistanceTraveled(callable $callback = null): Metrics
     {
         $query = Order::where(
             [
                 'company_uuid' => $this->company->uuid,
-                'status' => 'completed'
+                'status'       => 'completed',
             ]
         )
             ->whereBetween('created_at', [$this->start, $this->end]);
@@ -151,12 +151,12 @@ class Metrics
         return $this->set('total_distance_traveled', (int) $data);
     }
 
-    public function totalTimeTraveled(?callable $callback = null): Metrics
+    public function totalTimeTraveled(callable $callback = null): Metrics
     {
         $query = Order::where(
             [
                 'company_uuid' => $this->company->uuid,
-                'status' => 'completed'
+                'status'       => 'completed',
             ]
         )
             ->whereBetween('created_at', [$this->start, $this->end]);
@@ -170,7 +170,7 @@ class Metrics
         return $this->set('total_distance_traveled', (int) $data);
     }
 
-    public function ordersCanceled(?callable $callback = null): Metrics
+    public function ordersCanceled(callable $callback = null): Metrics
     {
         $query = Order::where('company_uuid', $this->company->uuid)
             ->whereBetween('created_at', [$this->start, $this->end])
@@ -185,7 +185,7 @@ class Metrics
         return $this->set('orders_canceled', $data);
     }
 
-    public function ordersCompleted(?callable $callback = null): Metrics
+    public function ordersCompleted(callable $callback = null): Metrics
     {
         $query = Order::where('company_uuid', $this->company->uuid)
             ->whereBetween('created_at', [$this->start, $this->end])
@@ -200,7 +200,7 @@ class Metrics
         return $this->set('orders_completed', $data);
     }
 
-    public function ordersInProgress(?callable $callback = null): Metrics
+    public function ordersInProgress(callable $callback = null): Metrics
     {
         $query = Order::where('company_uuid', $this->company->uuid)
             ->whereBetween('created_at', [$this->start, $this->end])
@@ -215,7 +215,7 @@ class Metrics
         return $this->set('orders_in_progress', $data);
     }
 
-    public function ordersScheduled(?callable $callback = null): Metrics
+    public function ordersScheduled(callable $callback = null): Metrics
     {
         $query = Order::where('company_uuid', $this->company->uuid)
             ->whereBetween('created_at', [$this->start, $this->end])
@@ -231,7 +231,7 @@ class Metrics
         return $this->set('orders_scheduled', $data);
     }
 
-    public function driversOnline(?callable $callback = null): Metrics
+    public function driversOnline(callable $callback = null): Metrics
     {
         $query = Driver::where('company_uuid', $this->company->uuid)
             ->where('online', true)
@@ -246,7 +246,7 @@ class Metrics
         return $this->set('drivers_online', $data);
     }
 
-    public function totalDrivers(?callable $callback = null): Metrics
+    public function totalDrivers(callable $callback = null): Metrics
     {
         $query = Driver::where('company_uuid', $this->company->uuid);
 
@@ -259,7 +259,7 @@ class Metrics
         return $this->set('total_drivers', $data);
     }
 
-    public function totalCustomers(?callable $callback = null): Metrics
+    public function totalCustomers(callable $callback = null): Metrics
     {
         $query = Contact::where('company_uuid', $this->company->uuid)
             ->where('type', 'customer');
@@ -273,7 +273,7 @@ class Metrics
         return $this->set('total_customers', $data);
     }
 
-    public function openIssues(?callable $callback = null): Metrics
+    public function openIssues(callable $callback = null): Metrics
     {
         $query = Issue::where('company_uuid', session('company'))
             ->whereBetween('created_at', [$this->start, $this->end])
@@ -288,7 +288,7 @@ class Metrics
         return $this->set('open_issues', $data);
     }
 
-    public function resolvedIssues(?callable $callback = null): Metrics
+    public function resolvedIssues(callable $callback = null): Metrics
     {
         $query = Issue::where('company_uuid', session('company'))
             ->whereBetween('created_at', [$this->start, $this->end])

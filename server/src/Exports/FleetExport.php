@@ -4,32 +4,25 @@ namespace Fleetbase\FleetOps\Exports;
 
 use Fleetbase\FleetOps\Models\Fleet;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithColumnFormatting;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
 {
-
-    /**
-     * @return array
-     */
     public function map($fleet): array
     {
         return [
             $fleet->public_id,
             $fleet->internal_id,
-            $fleet-> name,
+            $fleet->name,
             $fleet->zone_uuid,
             Date::dateTimeToExcel($fleet->created_at),
         ];
     }
 
-    /**
-     * @return array
-     */
     public function headings(): array
     {
         return [
@@ -41,9 +34,6 @@ class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColu
         ];
     }
 
-    /**
-     * @return array
-     */
     public function columnFormats(): array
     {
         return [

@@ -2,11 +2,11 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Models\Contact;
-use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\IntegratedVendor;
+use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -15,14 +15,13 @@ class MorphController extends Controller
     /**
      * Search facilitators or customers which is a comibined query on contacts or vendor resources.
      *
-     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
     public function queryCustomersOrFacilitators(Request $request)
     {
-        $query = $request->input('query');
-        $limit = $request->input('limit', 12);
-        $type = Str::lower($request->segment(4));
+        $query        = $request->input('query');
+        $limit        = $request->input('limit', 12);
+        $type         = Str::lower($request->segment(4));
         $resourceType = Str::lower(Utils::singularize($type));
 
         $contacts = Contact::searchWhere('name', $query)
@@ -67,6 +66,7 @@ class MorphController extends Controller
         $results = array_map(
             function ($attributes) use ($resourceType) {
                 $attributes['type'] = $resourceType;
+
                 return $attributes;
             },
             $results

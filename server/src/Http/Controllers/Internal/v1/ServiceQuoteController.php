@@ -4,12 +4,12 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Entity;
+use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceQuoteItem;
 use Fleetbase\FleetOps\Models\ServiceRate;
-use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
 class ServiceQuoteController extends FleetOpsController
 {
     /**
-     * The resource to query
+     * The resource to query.
      *
      * @var string
      */
@@ -27,18 +27,17 @@ class ServiceQuoteController extends FleetOpsController
     /**
      * Query service quotes based on payload from order.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function queryRecord(Request $request)
     {
-        $payload = $request->input('payload');
-        $currency = $request->input('currency');
-        $facilitator = $request->input('facilitator');
-        $scheduledAt = $request->input('scheduled_at');
-        $service = $request->input('service', 'all'); // the specific service rate to query - defaults to `all`
-        $serviceType = $request->input('service_type'); // the specific type of service rate to query
-        $single = $request->boolean('single');
+        $payload          = $request->input('payload');
+        $currency         = $request->input('currency');
+        $facilitator      = $request->input('facilitator');
+        $scheduledAt      = $request->input('scheduled_at');
+        $service          = $request->input('service', 'all'); // the specific service rate to query - defaults to `all`
+        $serviceType      = $request->input('service_type'); // the specific type of service rate to query
+        $single           = $request->boolean('single');
         $isRouteOptimized = $request->boolean('is_route_optimized', true);
 
         $requestId = ServiceQuote::generatePublicId('request');
@@ -57,14 +56,14 @@ class ServiceQuoteController extends FleetOpsController
         // if facilitator is an integrated partner resolve service quotes from bridge
         if ($facilitator && Str::startsWith($facilitator, 'integrated_vendor')) {
             $integratedVendor = IntegratedVendor::where('public_id', $facilitator)->first();
-            $serviceQuotes = [];
+            $serviceQuotes    = [];
 
             if ($integratedVendor) {
                 try {
                     $serviceQuotes = $integratedVendor->api()->setRequestId($requestId)->getQuoteFromPayload($payload, $serviceType, $scheduledAt, $isRouteOptimized);
                 } catch (\Exception $e) {
                     return response()->json([
-                        'errors' => [$e->getMessage()]
+                        'errors' => [$e->getMessage()],
                     ], 400);
                 }
             }
@@ -88,7 +87,7 @@ class ServiceQuoteController extends FleetOpsController
         if ($service && $service !== 'all') {
             $serviceRate = ServiceRate::where('uuid', $service)->where(function ($q) use ($currency) {
                 if ($currency) {
-                    $q->where(DB::raw("lower(currency)"), strtolower($currency));
+                    $q->where(DB::raw('lower(currency)'), strtolower($currency));
                 }
             })->first();
             $serviceQuotes = [];
@@ -97,20 +96,20 @@ class ServiceQuoteController extends FleetOpsController
                 [$subTotal, $lines] = $serviceRate->quote($payload);
 
                 $quote = ServiceQuote::create([
-                    'request_id' => $requestId,
-                    'company_uuid' => $serviceRate->company_uuid,
+                    'request_id'        => $requestId,
+                    'company_uuid'      => $serviceRate->company_uuid,
                     'service_rate_uuid' => $serviceRate->uuid,
-                    'amount' => $subTotal,
-                    'currency' => $serviceRate->currency,
+                    'amount'            => $subTotal,
+                    'currency'          => $serviceRate->currency,
                 ]);
 
                 $items = $lines->map(function ($line) use ($quote) {
                     return ServiceQuoteItem::create([
                         'service_quote_uuid' => $quote->uuid,
-                        'amount' => $line['amount'],
-                        'currency' => $line['currency'],
-                        'details' => $line['details'],
-                        'code' => $line['code'],
+                        'amount'             => $line['amount'],
+                        'currency'           => $line['currency'],
+                        'details'            => $line['details'],
+                        'code'               => $line['code'],
                     ]);
                 });
 
@@ -143,20 +142,20 @@ class ServiceQuoteController extends FleetOpsController
             [$subTotal, $lines] = $serviceRate->quote($payload);
 
             $quote = ServiceQuote::create([
-                'request_id' => $requestId,
-                'company_uuid' => $serviceRate->company_uuid,
+                'request_id'        => $requestId,
+                'company_uuid'      => $serviceRate->company_uuid,
                 'service_rate_uuid' => $serviceRate->uuid,
-                'amount' => $subTotal,
-                'currency' => $serviceRate->currency,
+                'amount'            => $subTotal,
+                'currency'          => $serviceRate->currency,
             ]);
 
             $items = $lines->map(function ($line) use ($quote) {
                 return ServiceQuoteItem::create([
                     'service_quote_uuid' => $quote->uuid,
-                    'amount' => $line['amount'],
-                    'currency' => $line['currency'],
-                    'details' => $line['details'],
-                    'code' => $line['code'],
+                    'amount'             => $line['amount'],
+                    'currency'           => $line['currency'],
+                    'details'            => $line['details'],
+                    'code'               => $line['code'],
                 ]);
             });
 
@@ -178,27 +177,26 @@ class ServiceQuoteController extends FleetOpsController
     /**
      * Query service quotes based on preliminary payload from order.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function preliminaryQuery(Request $request)
     {
-        $facilitator = $request->input('facilitator');
-        $scheduledAt = $request->input('scheduled_at');
-        $service = $request->input('service', 'all'); // the specific service rate to query - defaults to `all`
-        $serviceType = $request->input('service_type'); // the specific type of service rate to query
+        $facilitator      = $request->input('facilitator');
+        $scheduledAt      = $request->input('scheduled_at');
+        $service          = $request->input('service', 'all'); // the specific service rate to query - defaults to `all`
+        $serviceType      = $request->input('service_type'); // the specific type of service rate to query
         $isCashOnDelivery = $request->has('cod');
-        $currency = $request->has('currency');
-        $totalDistance = $request->input('distance');
-        $totalTime = $request->input('time');
-        $pickup = $request->or(['payload.pickup', 'payload.pickup_uuid', 'pickup']);
-        $dropoff = $request->or(['payload.dropoff', 'payload.dropoff_uuid', 'dropoff']);
-        $waypoints = $request->or(['payload.waypoints', 'waypoints'], []);
-        $entities = $request->or(['payload.entities', 'entities']);
-        $single = $request->boolean('single');
+        $currency         = $request->has('currency');
+        $totalDistance    = $request->input('distance');
+        $totalTime        = $request->input('time');
+        $pickup           = $request->or(['payload.pickup', 'payload.pickup_uuid', 'pickup']);
+        $dropoff          = $request->or(['payload.dropoff', 'payload.dropoff_uuid', 'dropoff']);
+        $waypoints        = $request->or(['payload.waypoints', 'waypoints'], []);
+        $entities         = $request->or(['payload.entities', 'entities']);
+        $single           = $request->boolean('single');
         $isRouteOptimized = $request->boolean('is_route_optimized', true);
 
-        $requestId = ServiceQuote::generatePublicId('request');
+        $requestId     = ServiceQuote::generatePublicId('request');
         $serviceQuotes = [];
 
         if (Utils::isNotScalar($pickup)) {
@@ -219,7 +217,7 @@ class ServiceQuoteController extends FleetOpsController
 
         // convert waypoints to place instances
         $waypoints = collect($waypoints)->mapInto(Place::class);
-        $entities = collect($entities)->mapInto(Entity::class);
+        $entities  = collect($entities)->mapInto(Entity::class);
 
         // should all be Place like
         $waypoints = collect([$pickup, ...$waypoints, $dropoff])->filter();
@@ -233,7 +231,7 @@ class ServiceQuoteController extends FleetOpsController
                     $serviceQuotes = $integratedVendor->api()->setRequestId($requestId)->getQuoteFromPreliminaryPayload($waypoints, $entities, $serviceType, $scheduledAt, $isRouteOptimized);
                 } catch (\Exception $e) {
                     return response()->json([
-                        'errors' => [$e->getMessage()]
+                        'errors' => [$e->getMessage()],
                     ], 400);
                 }
             }
@@ -256,32 +254,32 @@ class ServiceQuoteController extends FleetOpsController
 
             // set totalDistance and totalTime
             $totalDistance = $matrix->distance ?? 0;
-            $totalTime = $matrix->time ?? 0;
+            $totalTime     = $matrix->time ?? 0;
         }
 
         // if quote for single service
         if ($service && $service !== 'all') {
-            $serviceRate = ServiceRate::where('uuid', $service)->first();
+            $serviceRate   = ServiceRate::where('uuid', $service)->first();
             $serviceQuotes = collect();
 
             if ($serviceRate) {
                 [$subTotal, $lines] = $serviceRate->quoteFromPreliminaryData($entities, $waypoints, $totalDistance, $totalTime, $isCashOnDelivery);
 
                 $quote = ServiceQuote::create([
-                    'request_id' => $requestId,
-                    'company_uuid' => $serviceRate->company_uuid,
+                    'request_id'        => $requestId,
+                    'company_uuid'      => $serviceRate->company_uuid,
                     'service_rate_uuid' => $serviceRate->uuid,
-                    'amount' => $subTotal,
-                    'currency' => $serviceRate->currency,
+                    'amount'            => $subTotal,
+                    'currency'          => $serviceRate->currency,
                 ]);
 
                 $items = $lines->map(function ($line) use ($quote) {
                     return ServiceQuoteItem::create([
                         'service_quote_uuid' => $quote->uuid,
-                        'amount' => $line['amount'],
-                        'currency' => $line['currency'],
-                        'details' => $line['details'],
-                        'code' => $line['code'],
+                        'amount'             => $line['amount'],
+                        'currency'           => $line['currency'],
+                        'details'            => $line['details'],
+                        'code'               => $line['code'],
                     ]);
                 });
 
@@ -313,20 +311,20 @@ class ServiceQuoteController extends FleetOpsController
             [$subTotal, $lines] = $serviceRate->quoteFromPreliminaryData($entities, $waypoints, $totalDistance, $totalTime, $isCashOnDelivery);
 
             $quote = ServiceQuote::create([
-                'request_id' => $requestId,
-                'company_uuid' => $serviceRate->company_uuid,
+                'request_id'        => $requestId,
+                'company_uuid'      => $serviceRate->company_uuid,
                 'service_rate_uuid' => $serviceRate->uuid,
-                'amount' => $subTotal,
-                'currency' => $serviceRate->currency,
+                'amount'            => $subTotal,
+                'currency'          => $serviceRate->currency,
             ]);
 
             $items = $lines->map(function ($line) use ($quote) {
                 return ServiceQuoteItem::create([
                     'service_quote_uuid' => $quote->uuid,
-                    'amount' => $line['amount'],
-                    'currency' => $line['currency'],
-                    'details' => $line['details'],
-                    'code' => $line['code'],
+                    'amount'             => $line['amount'],
+                    'currency'           => $line['currency'],
+                    'details'            => $line['details'],
+                    'code'               => $line['code'],
                 ]);
             });
 

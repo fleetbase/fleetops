@@ -26,17 +26,17 @@ class CreateTrackingStatusRequest extends FleetbaseRequest
     {
         return [
             'tracking_number' => [
-                'required', 
+                'required',
                 Rule::exists('tracking_numbers')->where(function ($query) {
                     $query->where('public_id', $this->input('tracking_number'));
-                    $query->whereDoesntHave('status', function($q) {
+                    $query->whereDoesntHave('status', function ($q) {
                         $q->where('code', $this->input('code'));
                     });
-                })
+                }),
             ],
-            'status' => 'required|string',
+            'status'  => 'required|string',
             'details' => 'required|string',
-            'code' => 'required|string'
+            'code'    => 'required|string',
         ];
     }
 }

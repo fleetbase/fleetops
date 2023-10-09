@@ -24,9 +24,9 @@ class UpdateTrackingStatusRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'status' => 'required|string',
+            'status'  => 'required|string',
             'details' => 'required|string',
-            'code' => 'nullable|string'
+            'code'    => 'nullable|string',
         ];
     }
 }

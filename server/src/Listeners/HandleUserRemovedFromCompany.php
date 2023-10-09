@@ -14,7 +14,8 @@ class HandleUserRemovedFromCompany implements ShouldQueue
     /**
      * Handle the event.
      *
-     * @param  object  $event
+     * @param object $event
+     *
      * @return void
      */
     public function handle(UserRemovedFromCompany $event)
@@ -23,7 +24,7 @@ class HandleUserRemovedFromCompany implements ShouldQueue
         Driver::where(
             [
                 'company_uuid' => $event->company->uuid,
-                'user_uuid' => $event->user->uuid
+                'user_uuid'    => $event->user->uuid,
             ]
         )->delete();
     }

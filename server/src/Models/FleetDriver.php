@@ -24,21 +24,21 @@ class FleetDriver extends Model
     protected $fillable = ['fleet_uuid', 'driver_uuid'];
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
     protected $searchableColumns = [];
 
     /**
-     * also search joined properties
+     * also search joined properties.
      *
      * @var array
      */
     protected $alsoSearch = [['driver' => ['user' => 'name']]];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -52,7 +52,7 @@ class FleetDriver extends Model
     protected $hidden = [];
 
     /**
-     * The group of the membership
+     * The group of the membership.
      *
      * @var Model
      */

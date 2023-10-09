@@ -3,7 +3,7 @@
 namespace Fleetbase\FleetOps\Support\Encoding;
 
 /**
- * Polyline
+ * Polyline.
  *
  * PHP Version 5.3
  *
@@ -23,25 +23,28 @@ namespace Fleetbase\FleetOps\Support\Encoding;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * @category  Mapping
- * @package   Polyline
+ *
  * @author    E. McConville <emcconville@emcconville.com>
  * @copyright 2009-2015 E. McConville
  * @license   http://www.gnu.org/licenses/lgpl.html LGPL v3
+ *
  * @version   GIT: $Id$
- * @link      https://github.com/emcconville/google-map-polyline-encoding-tool
+ *
+ * @see      https://github.com/emcconville/google-map-polyline-encoding-tool
  */
 
 /**
- * Polyline encoding & decoding class
+ * Polyline encoding & decoding class.
  *
  * Convert list of points to encoded string following Google's Polyline
  * Algorithm.
  *
  * @category Mapping
- * @package  Polyline
+ *
  * @author   E. McConville <emcconville@emcconville.com>
  * @license  http://www.gnu.org/licenses/lgpl.html LGPL v3
- * @link     https://github.com/emcconville/google-map-polyline-encoding-tool
+ *
+ * @see     https://github.com/emcconville/google-map-polyline-encoding-tool
  */
 class Polyline
 {
@@ -55,7 +58,7 @@ class Polyline
      * 2) Float point arithmetic IS NOT real number arithmetic. PHP's internal
      *    float precision may contribute to undesired rounding.
      *
-     * @var int $precision
+     * @var int
      */
     protected static $precision = 5;
 
@@ -69,58 +72,59 @@ class Polyline
      */
     final public static function encode($points)
     {
-        $points = self::flatten($points);
+        $points        = self::flatten($points);
         $encodedString = '';
-        $index = 0;
-        $previous = array(0, 0);
+        $index         = 0;
+        $previous      = [0, 0];
         foreach ($points as $number) {
-            $number = (float)($number);
-            $number = (int)round($number * pow(10, static::$precision));
-            $diff = $number - $previous[$index % 2];
+            $number               = (float) $number;
+            $number               = (int) round($number * pow(10, static::$precision));
+            $diff                 = $number - $previous[$index % 2];
             $previous[$index % 2] = $number;
-            $number = $diff;
+            $number               = $diff;
             $index++;
             $number = ($number < 0) ? ~($number << 1) : ($number << 1);
-            $chunk = '';
+            $chunk  = '';
             while ($number >= 0x20) {
-                $chunk .= chr((0x20 | ($number & 0x1f)) + 63);
+                $chunk .= chr((0x20 | ($number & 0x1F)) + 63);
                 $number >>= 5;
             }
             $chunk .= chr($number + 63);
             $encodedString .= $chunk;
         }
+
         return $encodedString;
     }
 
     /**
      * Reverse Google Polyline algorithm on encoded string.
      *
-     * @param string $string Encoded string to extract points from.
+     * @param string $string encoded string to extract points from
      *
      * @return array points
      */
     public static function decode(string $string): array
     {
-        $points = [];
-        $index = $i = 0;
+        $points   = [];
+        $index    = $i = 0;
         $previous = [0, 0];
-        $lat = $lng = 0;
+        $lat      = $lng = 0;
         while ($i < strlen($string)) {
             $shift = $result = 0x00;
             do {
                 $bit = ord($string[$i++] ?? '') - 63; // Using nullsafe operator
-                $result |= ($bit & 0x1f) << $shift;
+                $result |= ($bit & 0x1F) << $shift;
                 $shift += 5;
             } while ($bit >= 0x20);
 
-            $diff = ($result & 1) ? ~($result >> 1) : ($result >> 1);
-            $number = $previous[$index % 2] + $diff;
+            $diff                 = ($result & 1) ? ~($result >> 1) : ($result >> 1);
+            $number               = $previous[$index % 2] + $diff;
             $previous[$index % 2] = $number;
 
             if ($index % 2 == 0) {
                 $lng = $number * 1 / (10 ** static::$precision); // Using ** operator for pow
             } else {
-                $lat = $number * 1 / (10 ** static::$precision);
+                $lat      = $number * 1 / (10 ** static::$precision);
                 $points[] = new \Grimzy\LaravelMysqlSpatial\Types\Point($lat, $lng); // Create Point object and add to the array
             }
 
@@ -131,33 +135,34 @@ class Polyline
     }
 
     /**
-     * Reduce multi-dimensional to single list
+     * Reduce multi-dimensional to single list.
      *
-     * @param array $array Subject array to flatten.
+     * @param array $array subject array to flatten
      *
      * @return array flattened
      */
     final public static function flatten($array)
     {
-        $flatten = array();
+        $flatten = [];
         array_walk_recursive(
             $array, // @codeCoverageIgnore
             function ($current) use (&$flatten) {
                 $flatten[] = $current;
             }
         );
+
         return $flatten;
     }
 
     /**
-     * Concat list into pairs of points
+     * Concat list into pairs of points.
      *
-     * @param array $list One-dimensional array to segment into list of tuples.
+     * @param array $list one-dimensional array to segment into list of tuples
      *
      * @return array pairs
      */
     final public static function pair($list)
     {
-        return is_array($list) ? array_chunk($list, 2) : array();
+        return is_array($list) ? array_chunk($list, 2) : [];
     }
 }

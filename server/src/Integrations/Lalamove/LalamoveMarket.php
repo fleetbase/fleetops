@@ -7,60 +7,60 @@ use Fleetbase\FleetOps\Support\Utils;
 class LalamoveMarket
 {
     /**
-     * Available Markets for Lalamove
+     * Available Markets for Lalamove.
      *
      * @var array
      */
     public const markets = [
         [
-            'key' => 'brazil',
-            'code' => 'BR',
-            'languages' => ['en_BR', 'pr_BR']
+            'key'       => 'brazil',
+            'code'      => 'BR',
+            'languages' => ['en_BR', 'pr_BR'],
         ],
         [
-            'key' => 'hong_kong',
-            'code' => 'HK',
-            'languages' => ['en_HK', 'zh_HK']
+            'key'       => 'hong_kong',
+            'code'      => 'HK',
+            'languages' => ['en_HK', 'zh_HK'],
         ],
         [
-            'key' => 'indonesia',
-            'code' => 'ID',
-            'languages' => ['en_ID', 'id_ID']
+            'key'       => 'indonesia',
+            'code'      => 'ID',
+            'languages' => ['en_ID', 'id_ID'],
         ],
         [
-            'key' => 'malaysia',
-            'code' => 'MY',
-            'languages' => ['en_MY', 'ms_MY']
+            'key'       => 'malaysia',
+            'code'      => 'MY',
+            'languages' => ['en_MY', 'ms_MY'],
         ],
         [
-            'key' => 'mexico',
-            'code' => 'MX',
-            'languages' => ['en_MX', 'es_MX']
+            'key'       => 'mexico',
+            'code'      => 'MX',
+            'languages' => ['en_MX', 'es_MX'],
         ],
         [
-            'key' => 'philippines',
-            'code' => 'PH',
-            'languages' => ['en_PH']
+            'key'       => 'philippines',
+            'code'      => 'PH',
+            'languages' => ['en_PH'],
         ],
         [
-            'key' => 'singapore',
-            'code' => 'SG',
-            'languages' => ['en_SG']
+            'key'       => 'singapore',
+            'code'      => 'SG',
+            'languages' => ['en_SG'],
         ],
         [
-            'key' => 'taiwan',
-            'code' => 'TW',
-            'languages' => ['zh_TW']
+            'key'       => 'taiwan',
+            'code'      => 'TW',
+            'languages' => ['zh_TW'],
         ],
         [
-            'key' => 'thailand',
-            'code' => 'TH',
-            'languages' => ['th_TH', 'en_TH']
+            'key'       => 'thailand',
+            'code'      => 'TH',
+            'languages' => ['th_TH', 'en_TH'],
         ],
         [
-            'key' => 'vietnam',
-            'code' => 'VN',
-            'languages' => ['en_VN', 'vi_VN']
+            'key'       => 'vietnam',
+            'code'      => 'VN',
+            'languages' => ['en_VN', 'vi_VN'],
         ],
     ];
 

@@ -24,7 +24,6 @@ class CreateServiceQuoteRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            //
         ];
     }
 }

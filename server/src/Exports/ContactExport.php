@@ -4,18 +4,14 @@ namespace Fleetbase\FleetOps\Exports;
 
 use Fleetbase\FleetOps\Models\Contact;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithColumnFormatting;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class ContactExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
 {
-
-    /**
-     * @return array
-     */
     public function map($contact): array
     {
         return [
@@ -28,9 +24,6 @@ class ContactExport implements FromCollection, WithHeadings, WithMapping, WithCo
         ];
     }
 
-    /**
-     * @return array
-     */
     public function headings(): array
     {
         return [
@@ -44,9 +37,6 @@ class ContactExport implements FromCollection, WithHeadings, WithMapping, WithCo
         ];
     }
 
-    /**
-     * @return array
-     */
     public function columnFormats(): array
     {
         return [

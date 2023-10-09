@@ -2,21 +2,25 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
+use Brick\Geo\IO\GeoJSONReader;
 use Fleetbase\Casts\Money;
-use Fleetbase\Traits\HasApiModelBehavior;
-use Fleetbase\Traits\HasUuid;
-use Fleetbase\Traits\HasPublicId;
-use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\FleetOps\Support\Algo;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
+use Fleetbase\Traits\SendsWebhooks;
+use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Support\Facades\DB;
-use Brick\Geo\IO\GeoJSONReader;
 
 class ServiceRate extends Model
 {
-    use HasUuid, HasPublicId, TracksApiCredential, SendsWebhooks, HasApiModelBehavior;
+    use HasUuid;
+    use HasPublicId;
+    use TracksApiCredential;
+    use SendsWebhooks;
+    use HasApiModelBehavior;
 
     /**
      * The database table used by the model.
@@ -26,14 +30,14 @@ class ServiceRate extends Model
     protected $table = 'service_rates';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'service';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -77,14 +81,14 @@ class ServiceRate extends Model
      * @var array
      */
     protected $casts = [
-        'base_fee' => Money::class . ':currency',
+        'base_fee'                => Money::class . ':currency',
         'per_meter_flat_rate_fee' => Money::class . ':currency',
-        'cod_flat_fee' => Money::class . ':currency',
-        'peak_hours_flat_fee' => Money::class . ':currency',
+        'cod_flat_fee'            => Money::class . ':currency',
+        'peak_hours_flat_fee'     => Money::class . ':currency',
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -98,7 +102,7 @@ class ServiceRate extends Model
     protected $hidden = ['serviceArea', 'zone'];
 
     /**
-     * Attributes that is filterable on this model
+     * Attributes that is filterable on this model.
      *
      * @var array
      */
@@ -138,8 +142,6 @@ class ServiceRate extends Model
 
     /**
      * Get the service area name attribute.
-     *
-     * @return string|null
      */
     public function getServiceAreaNameAttribute(): ?string
     {
@@ -148,8 +150,6 @@ class ServiceRate extends Model
 
     /**
      * Get the zone name attribute.
-     *
-     * @return string|null
      */
     public function getZoneNameAttribute(): ?string
     {
@@ -157,9 +157,10 @@ class ServiceRate extends Model
     }
 
     /**
-     * Set the number of estimated days for the service to complete
+     * Set the number of estimated days for the service to complete.
      *
-     * @param integer $estimatedDays
+     * @param int $estimatedDays
+     *
      * @return void
      */
     public function setEstimatedDaysAttribute($estimatedDays = 0)
@@ -171,7 +172,6 @@ class ServiceRate extends Model
      * Check if the rate calculation method matches the given method.
      *
      * @param string $method
-     * @return bool
      */
     public function isRateCalculationMethod($method): bool
     {
@@ -180,8 +180,6 @@ class ServiceRate extends Model
 
     /**
      * Check if the rate calculation method is "fixed_meter".
-     *
-     * @return bool
      */
     public function isFixedMeter(): bool
     {
@@ -190,8 +188,6 @@ class ServiceRate extends Model
 
     /**
      * Check if the rate calculation method is "per_meter".
-     *
-     * @return bool
      */
     public function isPerMeter(): bool
     {
@@ -200,8 +196,6 @@ class ServiceRate extends Model
 
     /**
      * Check if the rate calculation method is "per_drop".
-     *
-     * @return bool
      */
     public function isPerDrop(): bool
     {
@@ -210,8 +204,6 @@ class ServiceRate extends Model
 
     /**
      * Check if the rate calculation method is "algo".
-     *
-     * @return bool
      */
     public function isAlgorithm(): bool
     {
@@ -220,8 +212,6 @@ class ServiceRate extends Model
 
     /**
      * Check if the service type is "parcel".
-     *
-     * @return bool
      */
     public function isParcelService(): bool
     {
@@ -230,8 +220,6 @@ class ServiceRate extends Model
 
     /**
      * Check if the object has a peak hours fee.
-     *
-     * @return bool
      */
     public function hasPeakHoursFee(): bool
     {
@@ -240,22 +228,18 @@ class ServiceRate extends Model
 
     /**
      * Check if the current time is within peak hours.
-     *
-     * @return bool
      */
     public function isWithinPeakHours(): bool
     {
         $currentTime = strtotime(date('H:i'));
-        $startTime = strtotime($this->peak_hours_start);
-        $endTime = strtotime($this->peak_hours_end);
+        $startTime   = strtotime($this->peak_hours_start);
+        $endTime     = strtotime($this->peak_hours_end);
 
         return $currentTime >= $startTime && $currentTime <= $endTime;
     }
 
     /**
      * Check if the peak hours calculation method is "flat".
-     *
-     * @return bool
      */
     public function hasPeakHoursFlatFee(): bool
     {
@@ -264,8 +248,6 @@ class ServiceRate extends Model
 
     /**
      * Check if the peak hours calculation method is "percentage".
-     *
-     * @return bool
      */
     public function hasPeakHoursPercentageFee(): bool
     {
@@ -274,8 +256,6 @@ class ServiceRate extends Model
 
     /**
      * Check if the object has a COD fee.
-     *
-     * @return bool
      */
     public function hasCodFee(): bool
     {
@@ -284,8 +264,6 @@ class ServiceRate extends Model
 
     /**
      * Check if the COD calculation method is "flat".
-     *
-     * @return bool
      */
     public function hasCodFlatFee(): bool
     {
@@ -294,8 +272,6 @@ class ServiceRate extends Model
 
     /**
      * Check if the COD calculation method is "percentage".
-     *
-     * @return bool
      */
     public function hasCodPercentageFee(): bool
     {
@@ -304,8 +280,6 @@ class ServiceRate extends Model
 
     /**
      * Check if the object has a related zone.
-     *
-     * @return bool
      */
     public function hasZone(): bool
     {
@@ -314,8 +288,6 @@ class ServiceRate extends Model
 
     /**
      * Check if the object has a related service area.
-     *
-     * @return bool
      */
     public function hasServiceArea(): bool
     {
@@ -325,7 +297,8 @@ class ServiceRate extends Model
     /**
      * Set the service rate fees for the current object.
      *
-     * @param array|null $serviceRateFees An optional array of service rate fees.
+     * @param array|null $serviceRateFees an optional array of service rate fees
+     *
      * @return $this
      */
     public function setServiceRateFees(?array $serviceRateFees = [])
@@ -339,7 +312,7 @@ class ServiceRate extends Model
         for ($i = 0; $i < $iterate; $i++) {
             // if already has uuid then we just update the record and remove from insert array
             if (!empty($serviceRateFees[$i]['uuid'])) {
-                $id = $serviceRateFees[$i]['uuid'];
+                $id                   = $serviceRateFees[$i]['uuid'];
                 $updateableAttributes = collect($serviceRateFees[$i])->except(['uuid', 'created_at', 'updated_at'])->toArray();
 
                 if ($updateableAttributes) {
@@ -362,7 +335,8 @@ class ServiceRate extends Model
     /**
      * Set the service rate parcel fees for the current object.
      *
-     * @param array|null $serviceRateParcelFees An optional array of service rate parcel fees.
+     * @param array|null $serviceRateParcelFees an optional array of service rate parcel fees
+     *
      * @return $this
      */
     public function setServiceRateParcelFees(?array $serviceRateParcelFees = [])
@@ -376,7 +350,7 @@ class ServiceRate extends Model
         for ($i = 0; $i < $iterate; $i++) {
             // if already has uuid then we just update the record and remove from insert array
             if (isset($serviceRateParcelFees[$i]['uuid'])) {
-                $id = $serviceRateParcelFees[$i]['uuid'];
+                $id                   = $serviceRateParcelFees[$i]['uuid'];
                 $updateableAttributes = collect($serviceRateParcelFees[$i])->except(['uuid', 'created_at', 'updated_at'])->toArray();
 
                 if ($updateableAttributes) {
@@ -399,15 +373,16 @@ class ServiceRate extends Model
     /**
      * Get the service rates applicable for the given waypoints.
      *
-     * @param array $waypoints An array of waypoints to check against service areas and zones.
-     * @param \Closure|null $queryCallback An optional closure to modify the service rates query.
-     * @return array An array of applicable service rates.
+     * @param array         $waypoints     an array of waypoints to check against service areas and zones
+     * @param \Closure|null $queryCallback an optional closure to modify the service rates query
+     *
+     * @return array an array of applicable service rates
      */
-    public static function getServicableForWaypoints($waypoints = [], ?\Closure $queryCallback = null): array
+    public static function getServicableForWaypoints($waypoints = [], \Closure $queryCallback = null): array
     {
-        $reader = new GeoJSONReader();
+        $reader                 = new GeoJSONReader();
         $applicableServiceRates = [];
-        $serviceRatesQuery = static::with(['zone', 'serviceArea']);
+        $serviceRatesQuery      = static::with(['zone', 'serviceArea']);
 
         if (is_callable($queryCallback)) {
             $queryCallback($serviceRatesQuery);
@@ -458,20 +433,21 @@ class ServiceRate extends Model
     /**
      * Get the service rates applicable for the given places based on service type and currency.
      *
-     * @param array $places An array of places to check against service areas and zones.
-     * @param string|null $service An optional service type to filter service rates.
-     * @param string|null $currency An optional currency to filter service rates.
-     * @param \Closure|null $queryCallback An optional closure to modify the service rates query.
-     * @return array An array of applicable service rates.
+     * @param array         $places        an array of places to check against service areas and zones
+     * @param string|null   $service       an optional service type to filter service rates
+     * @param string|null   $currency      an optional currency to filter service rates
+     * @param \Closure|null $queryCallback an optional closure to modify the service rates query
+     *
+     * @return array an array of applicable service rates
      */
-    public static function getServicableForPlaces($places = [], $service = null, $currency = null, ?\Closure $queryCallback = null): array
+    public static function getServicableForPlaces($places = [], $service = null, $currency = null, \Closure $queryCallback = null): array
     {
-        $reader = new GeoJSONReader();
+        $reader                 = new GeoJSONReader();
         $applicableServiceRates = [];
-        $serviceRatesQuery = static::with(['zone', 'serviceArea', 'rateFees', 'parcelFees']);
+        $serviceRatesQuery      = static::with(['zone', 'serviceArea', 'rateFees', 'parcelFees']);
 
         if ($currency) {
-            $serviceRatesQuery->where(DB::raw("lower(currency)"), strtolower($currency));
+            $serviceRatesQuery->where(DB::raw('lower(currency)'), strtolower($currency));
         }
 
         if ($service) {
@@ -526,16 +502,17 @@ class ServiceRate extends Model
     /**
      * Generate a quote for a given pickup and dropoff point and entities.
      *
-     * @param string $pickupPoint The coordinates of the pickup point.
-     * @param string $dropoffPoint The coordinates of the dropoff point.
-     * @param array $entities An array of entities to be considered for the quote.
-     * @return mixed The calculated quote based on the preliminary data.
+     * @param string $pickupPoint  the coordinates of the pickup point
+     * @param string $dropoffPoint the coordinates of the dropoff point
+     * @param array  $entities     an array of entities to be considered for the quote
+     *
+     * @return mixed the calculated quote based on the preliminary data
      */
     public function pointQuote($pickupPoint, $dropoffPoint, $entities = [])
     {
-        $payload = new Payload();
+        $payload           = new Payload();
         $payload->entities = $entities;
-        $payload->pickup = $pickup = new Place([
+        $payload->pickup   = $pickup = new Place([
             'location' => Utils::getPointFromCoordinates($pickupPoint),
         ]);
         $payload->dropoff = $dropoff = new Place([
@@ -551,25 +528,26 @@ class ServiceRate extends Model
     /**
      * Generate a quote based on the preliminary data provided.
      *
-     * @param array $entities An array of entities to be considered for the quote.
-     * @param array $waypoints An array of waypoints to be considered for the quote.
-     * @param int|null $totalDistance The total distance for the service in meters.
-     * @param int|null $totalTime The total time for the service in seconds.
-     * @param bool|null $isCashOnDelivery Flag indicating if the payment method is Cash on Delivery.
-     * @return array An array containing the calculated quote and line items.
+     * @param array     $entities         an array of entities to be considered for the quote
+     * @param array     $waypoints        an array of waypoints to be considered for the quote
+     * @param int|null  $totalDistance    the total distance for the service in meters
+     * @param int|null  $totalTime        the total time for the service in seconds
+     * @param bool|null $isCashOnDelivery flag indicating if the payment method is Cash on Delivery
+     *
+     * @return array an array containing the calculated quote and line items
      */
     public function quoteFromPreliminaryData($entities = [], $waypoints = [], ?int $totalDistance = 0, ?int $totalTime = 0, ?bool $isCashOnDelivery = false)
     {
-        $lines = collect();
+        $lines    = collect();
         $subTotal = data_get($this, 'base_fee', 0);
 
         $lines->push([
-            'details' => 'Base Fee',
-            'raw_amount' => $subTotal,
-            'amount' => Utils::numbersOnly($subTotal),
+            'details'          => 'Base Fee',
+            'raw_amount'       => $subTotal,
+            'amount'           => Utils::numbersOnly($subTotal),
             'formatted_amount' => Utils::moneyFormat($subTotal, $this->currency),
-            'currency' => $this->currency,
-            'code' => 'BASE_FEE',
+            'currency'         => $this->currency,
+            'code'             => 'BASE_FEE',
         ]);
 
         if ($this->isFixedMeter()) {
@@ -579,12 +557,12 @@ class ServiceRate extends Model
                 $subTotal += Utils::numbersOnly($distanceFee->fee);
 
                 $lines->push([
-                    'details' => 'Service Fee',
-                    'raw_amount' => $distanceFee->fee,
-                    'amount' => Utils::numbersOnly($distanceFee->fee),
+                    'details'          => 'Service Fee',
+                    'raw_amount'       => $distanceFee->fee,
+                    'amount'           => Utils::numbersOnly($distanceFee->fee),
                     'formatted_amount' => Utils::moneyFormat($distanceFee->fee, $this->currency),
-                    'currency' => $this->currency,
-                    'code' => 'BASE_FEE',
+                    'currency'         => $this->currency,
+                    'code'             => 'BASE_FEE',
                 ]);
             }
         }
@@ -596,26 +574,26 @@ class ServiceRate extends Model
                 $subTotal += Utils::numbersOnly($rateFee->fee);
 
                 $lines->push([
-                    'details' => 'Service Fee',
-                    'amount' => Utils::numbersOnly($rateFee->fee),
+                    'details'          => 'Service Fee',
+                    'amount'           => Utils::numbersOnly($rateFee->fee),
                     'formatted_amount' => Utils::moneyFormat($rateFee->fee, $this->currency),
-                    'currency' => $this->currency,
-                    'code' => 'BASE_FEE',
+                    'currency'         => $this->currency,
+                    'code'             => 'BASE_FEE',
                 ]);
             }
         }
 
         if ($this->isPerMeter()) {
             $perMeterDistance = $this->per_meter_unit === 'km' ? round($totalDistance / 1000) : $totalDistance;
-            $rateFee = $perMeterDistance * $this->per_meter_flat_rate_fee;
+            $rateFee          = $perMeterDistance * $this->per_meter_flat_rate_fee;
             $subTotal += $rateFee;
 
             $lines->push([
-                'details' => 'Service Fee',
-                'amount' => Utils::numbersOnly($rateFee),
+                'details'          => 'Service Fee',
+                'amount'           => Utils::numbersOnly($rateFee),
                 'formatted_amount' => Utils::moneyFormat($rateFee, $this->currency),
-                'currency' => $this->currency,
-                'code' => 'BASE_FEE',
+                'currency'         => $this->currency,
+                'code'             => 'BASE_FEE',
             ]);
         }
 
@@ -624,7 +602,7 @@ class ServiceRate extends Model
                 $this->algorithm,
                 [
                     'distance' => $totalDistance,
-                    'time' => $totalTime,
+                    'time'     => $totalTime,
                 ],
                 true
             );
@@ -632,11 +610,11 @@ class ServiceRate extends Model
             $subTotal += Utils::numbersOnly($rateFee);
 
             $lines->push([
-                'details' => 'Service Fee',
-                'amount' => Utils::numbersOnly($rateFee),
+                'details'          => 'Service Fee',
+                'amount'           => Utils::numbersOnly($rateFee),
                 'formatted_amount' => Utils::moneyFormat($rateFee, $this->currency),
-                'currency' => $this->currency,
-                'code' => 'BASE_FEE',
+                'currency'         => $this->currency,
+                'code'             => 'BASE_FEE',
             ]);
         }
 
@@ -646,16 +624,16 @@ class ServiceRate extends Model
 
             foreach ($parcels as $parcel) {
                 // convert all length units to cm and weight units to grams
-                $length = $parcel->length_unit->toUnit('cm');
-                $width = $parcel->width_unit->toUnit('cm');
-                $height = $parcel->height_unit->toUnit('cm');
-                $weight = $parcel->mass_unit->toUnit('g');
+                $length           = $parcel->length_unit->toUnit('cm');
+                $width            = $parcel->width_unit->toUnit('cm');
+                $height           = $parcel->height_unit->toUnit('cm');
+                $weight           = $parcel->mass_unit->toUnit('g');
                 $serviceParcelFee = null;
 
                 // iterate through parcel fees to find where it fits
                 foreach ($this->parcelFees as $parcelFee) {
                     $feeLength = $parcelFee->length_unit->toUnit('cm');
-                    $feeWidth = $parcelFee->width_unit->toUnit('cm');
+                    $feeWidth  = $parcelFee->width_unit->toUnit('cm');
                     $feeHeight = $parcelFee->height_unit->toUnit('cm');
                     $feeWeight = $parcelFee->mass_unit->toUnit('g');
 
@@ -678,11 +656,11 @@ class ServiceRate extends Model
                 $subTotal += $serviceParcelFee->fee;
 
                 $lines->push([
-                    'details' => $serviceParcelFee->name . ' parcel fee',
-                    'amount' => Utils::numbersOnly($serviceParcelFee->fee),
+                    'details'          => $serviceParcelFee->name . ' parcel fee',
+                    'amount'           => Utils::numbersOnly($serviceParcelFee->fee),
                     'formatted_amount' => Utils::moneyFormat($serviceParcelFee->fee, $this->currency),
-                    'currency' => $this->currency,
-                    'code' => 'PARCEL_FEE',
+                    'currency'         => $this->currency,
+                    'code'             => 'PARCEL_FEE',
                 ]);
             }
         }
@@ -699,11 +677,11 @@ class ServiceRate extends Model
             }
 
             $lines->push([
-                'details' => 'Cash on delivery fee',
-                'amount' => Utils::numbersOnly($codFee),
+                'details'          => 'Cash on delivery fee',
+                'amount'           => Utils::numbersOnly($codFee),
                 'formatted_amount' => Utils::moneyFormat($codFee, $this->currency),
-                'currency' => $this->currency,
-                'code' => 'COD_FEE',
+                'currency'         => $this->currency,
+                'code'             => 'COD_FEE',
             ]);
         }
 
@@ -716,11 +694,11 @@ class ServiceRate extends Model
             }
 
             $lines->push([
-                'details' => 'Peak hours fee',
-                'amount' => Utils::numbersOnly($peakHoursFee),
+                'details'          => 'Peak hours fee',
+                'amount'           => Utils::numbersOnly($peakHoursFee),
                 'formatted_amount' => Utils::moneyFormat($peakHoursFee, $this->currency),
-                'currency' => $this->currency,
-                'code' => 'PEAK_HOUR_FEE',
+                'currency'         => $this->currency,
+                'code'             => 'PEAK_HOUR_FEE',
             ]);
         }
 
@@ -730,31 +708,32 @@ class ServiceRate extends Model
     /**
      * Generate a quote based on the payload provided.
      *
-     * @param Payload $payload An instance of the Payload class containing all necessary data for the quote calculation.
-     * @return array An array containing the calculated quote and line items.
+     * @param Payload $payload an instance of the Payload class containing all necessary data for the quote calculation
+     *
+     * @return array an array containing the calculated quote and line items
      */
     public function quote(Payload $payload)
     {
-        $lines = collect();
+        $lines    = collect();
         $subTotal = $this->base_fee ?? 0;
 
         $lines->push([
-            'details' => 'Base Fee',
-            'amount' => Utils::numbersOnly($subTotal),
+            'details'          => 'Base Fee',
+            'amount'           => Utils::numbersOnly($subTotal),
             'formatted_amount' => Utils::moneyFormat($subTotal, $this->currency),
-            'currency' => $this->currency,
-            'code' => 'BASE_FEE',
+            'currency'         => $this->currency,
+            'code'             => 'BASE_FEE',
         ]);
 
         // Prepare all waypoints and origin and destination
-        $waypoints = $payload->getAllStops()->mapInto(Place::class);
-        $origin = $waypoints->first();
+        $waypoints    = $payload->getAllStops()->mapInto(Place::class);
+        $origin       = $waypoints->first();
         $destinations = $waypoints->skip(1)->toArray();
 
         // Lookup distance matrix for total distance and time
         $distanceMatrix = Utils::distanceMatrix([$origin], $destinations);
-        $totalDistance = $distanceMatrix->distance;
-        $totalTime = $distanceMatrix->time;
+        $totalDistance  = $distanceMatrix->distance;
+        $totalTime      = $distanceMatrix->time;
 
         if ($this->isFixedMeter()) {
             $distanceFee = $this->findServiceRateFeeByDistance($totalDistance);
@@ -763,11 +742,11 @@ class ServiceRate extends Model
                 $subTotal += Utils::numbersOnly($distanceFee->fee);
 
                 $lines->push([
-                    'details' => 'Service Fee',
-                    'amount' => Utils::numbersOnly($distanceFee->fee),
+                    'details'          => 'Service Fee',
+                    'amount'           => Utils::numbersOnly($distanceFee->fee),
                     'formatted_amount' => Utils::moneyFormat($distanceFee->fee, $this->currency),
-                    'currency' => $this->currency,
-                    'code' => 'BASE_FEE',
+                    'currency'         => $this->currency,
+                    'code'             => 'BASE_FEE',
                 ]);
             }
         }
@@ -779,26 +758,26 @@ class ServiceRate extends Model
                 $subTotal += Utils::numbersOnly($rateFee->fee);
 
                 $lines->push([
-                    'details' => 'Service Fee',
-                    'amount' => Utils::numbersOnly($rateFee->fee),
+                    'details'          => 'Service Fee',
+                    'amount'           => Utils::numbersOnly($rateFee->fee),
                     'formatted_amount' => Utils::moneyFormat($rateFee->fee, $this->currency),
-                    'currency' => $this->currency,
-                    'code' => 'BASE_FEE',
+                    'currency'         => $this->currency,
+                    'code'             => 'BASE_FEE',
                 ]);
             }
         }
 
         if ($this->isPerMeter()) {
             $perMeterDistance = $this->per_meter_unit === 'km' ? round($totalDistance / 1000) : $totalDistance;
-            $rateFee = $perMeterDistance * $this->per_meter_flat_rate_fee;
+            $rateFee          = $perMeterDistance * $this->per_meter_flat_rate_fee;
             $subTotal += $rateFee;
 
             $lines->push([
-                'details' => 'Service Fee',
-                'amount' => Utils::numbersOnly($rateFee),
+                'details'          => 'Service Fee',
+                'amount'           => Utils::numbersOnly($rateFee),
                 'formatted_amount' => Utils::moneyFormat($rateFee, $this->currency),
-                'currency' => $this->currency,
-                'code' => 'BASE_FEE',
+                'currency'         => $this->currency,
+                'code'             => 'BASE_FEE',
             ]);
         }
 
@@ -807,7 +786,7 @@ class ServiceRate extends Model
                 $this->algorithm,
                 [
                     'distance' => $totalDistance,
-                    'time' => $totalTime,
+                    'time'     => $totalTime,
                 ],
                 true
             );
@@ -815,11 +794,11 @@ class ServiceRate extends Model
             $subTotal += Utils::numbersOnly($rateFee);
 
             $lines->push([
-                'details' => 'Service Fee',
-                'amount' => Utils::numbersOnly($rateFee),
+                'details'          => 'Service Fee',
+                'amount'           => Utils::numbersOnly($rateFee),
                 'formatted_amount' => Utils::moneyFormat($rateFee, $this->currency),
-                'currency' => $this->currency,
-                'code' => 'BASE_FEE',
+                'currency'         => $this->currency,
+                'code'             => 'BASE_FEE',
             ]);
         }
 
@@ -829,16 +808,16 @@ class ServiceRate extends Model
 
             foreach ($parcels as $parcel) {
                 // convert all length units to cm and weight units to grams
-                $length = $parcel->length_unit->toUnit('cm');
-                $width = $parcel->width_unit->toUnit('cm');
-                $height = $parcel->height_unit->toUnit('cm');
-                $weight = $parcel->mass_unit->toUnit('g');
+                $length           = $parcel->length_unit->toUnit('cm');
+                $width            = $parcel->width_unit->toUnit('cm');
+                $height           = $parcel->height_unit->toUnit('cm');
+                $weight           = $parcel->mass_unit->toUnit('g');
                 $serviceParcelFee = null;
 
                 // iterate through parcel fees to find where it fits
                 foreach ($this->parcelFees as $parcelFee) {
                     $feeLength = $parcelFee->length_unit->toUnit('cm');
-                    $feeWidth = $parcelFee->width_unit->toUnit('cm');
+                    $feeWidth  = $parcelFee->width_unit->toUnit('cm');
                     $feeHeight = $parcelFee->height_unit->toUnit('cm');
                     $feeWeight = $parcelFee->mass_unit->toUnit('g');
 
@@ -861,11 +840,11 @@ class ServiceRate extends Model
                 $subTotal += $serviceParcelFee->fee;
 
                 $lines->push([
-                    'details' => $serviceParcelFee->name . ' parcel fee',
-                    'amount' => Utils::numbersOnly($serviceParcelFee->fee),
+                    'details'          => $serviceParcelFee->name . ' parcel fee',
+                    'amount'           => Utils::numbersOnly($serviceParcelFee->fee),
                     'formatted_amount' => Utils::moneyFormat($serviceParcelFee->fee, $this->currency),
-                    'currency' => $this->currency,
-                    'code' => 'PARCEL_FEE',
+                    'currency'         => $this->currency,
+                    'code'             => 'PARCEL_FEE',
                 ]);
             }
         }
@@ -882,11 +861,11 @@ class ServiceRate extends Model
             }
 
             $lines->push([
-                'details' => 'Cash on delivery fee',
-                'amount' => Utils::numbersOnly($codFee),
+                'details'          => 'Cash on delivery fee',
+                'amount'           => Utils::numbersOnly($codFee),
                 'formatted_amount' => Utils::moneyFormat($codFee, $this->currency),
-                'currency' => $this->currency,
-                'code' => 'COD_FEE',
+                'currency'         => $this->currency,
+                'code'             => 'COD_FEE',
             ]);
         }
 
@@ -899,11 +878,11 @@ class ServiceRate extends Model
             }
 
             $lines->push([
-                'details' => 'Peak hours fee',
-                'amount' => Utils::numbersOnly($peakHoursFee),
+                'details'          => 'Peak hours fee',
+                'amount'           => Utils::numbersOnly($peakHoursFee),
                 'formatted_amount' => Utils::moneyFormat($peakHoursFee, $this->currency),
-                'currency' => $this->currency,
-                'code' => 'PEAK_HOUR_FEE',
+                'currency'         => $this->currency,
+                'code'             => 'PEAK_HOUR_FEE',
             ]);
         }
 
@@ -913,16 +892,16 @@ class ServiceRate extends Model
     /**
      * Find the ServiceRateFee based on the total distance.
      *
-     * @param int $totalDistance The total distance in meters.
-     * @return ServiceRateFee|null The ServiceRateFee instance if found, otherwise null.
+     * @param int $totalDistance the total distance in meters
+     *
+     * @return ServiceRateFee|null the ServiceRateFee instance if found, otherwise null
      */
-
     public function findServiceRateFeeByDistance(int $totalDistance): ?ServiceRateFee
     {
         $this->load('rateFees');
 
         $distanceInKms = round($totalDistance / 1000);
-        $distanceFee = null;
+        $distanceFee   = null;
 
         foreach ($this->rateFees as $rateFee) {
             $previousRateFee = $rateFee;
@@ -947,8 +926,9 @@ class ServiceRate extends Model
     /**
      * Find the ServiceRateFee based on the given number within the min and max range.
      *
-     * @param int $number The number to check within the ServiceRateFee's min and max range.
-     * @return ServiceRateFee|null The ServiceRateFee instance if found, otherwise null.
+     * @param int $number the number to check within the ServiceRateFee's min and max range
+     *
+     * @return ServiceRateFee|null the ServiceRateFee instance if found, otherwise null
      */
     public function findServiceRateFeeByMinMax(int $number): ?ServiceRateFee
     {

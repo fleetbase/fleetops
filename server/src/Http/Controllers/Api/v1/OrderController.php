@@ -2,12 +2,12 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Fleetbase\FleetOps\Events\OrderReady;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
+use Fleetbase\FleetOps\Events\OrderReady;
 use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateOrderRequest;
+use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
 use Fleetbase\FleetOps\Models\Driver;
@@ -16,24 +16,25 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
-use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Models\ServiceQuote;
+use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Flow;
 use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
-use Fleetbase\Models\File;
+use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Company;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
+use Fleetbase\Models\File;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
     /**
      * Creates a new Fleetbase Order resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreateOrderRequest  $request
+     * @param \Fleetbase\Http\Requests\CreateOrderRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Order
      */
     public function create(CreateOrderRequest $request)
@@ -45,7 +46,7 @@ class OrderController extends Controller
         $input['company_uuid'] = session('company');
 
         // resolve service quote if applicable
-        $serviceQuote = ServiceQuote::resolveFromRequest($request);
+        $serviceQuote          = ServiceQuote::resolveFromRequest($request);
         $integratedVendorOrder = null;
 
         // if service quote is applied, resolve it
@@ -61,7 +62,7 @@ class OrderController extends Controller
         // create payload
         if ($request->has('payload') && $request->isArray('payload')) {
             $payloadInput = $request->input('payload');
-            $payload = new Payload();
+            $payload      = new Payload();
 
             $payload->setPickup($payloadInput['pickup']);
             $payload->setDropoff($payloadInput['dropoff']);
@@ -73,9 +74,9 @@ class OrderController extends Controller
             $payload->save();
 
             $input['payload_uuid'] = $payload->uuid;
-        } else if ($request->isString('payload')) {
+        } elseif ($request->isString('payload')) {
             $input['payload_uuid'] = Utils::getUuid('payloads', [
-                'public_id' => $request->input('payload'),
+                'public_id'    => $request->input('payload'),
                 'company_uuid' => session('company'),
             ]);
             unset($input['payload']);
@@ -84,7 +85,7 @@ class OrderController extends Controller
         // create a payload if missing payload[] but has pickup/dropoff/etc
         if ($request->missing('payload')) {
             $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
-            $payload = new Payload();
+            $payload      = new Payload();
 
             $payload->setPickup($payloadInput['pickup']);
             $payload->setDropoff($payloadInput['dropoff']);
@@ -101,7 +102,7 @@ class OrderController extends Controller
         // driver assignment
         if ($request->has('driver') && $integratedVendorOrder === null) {
             $input['driver_assigned_uuid'] = Utils::getUuid('drivers', [
-                'public_id' => $request->input('driver'),
+                'public_id'    => $request->input('driver'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -111,7 +112,7 @@ class OrderController extends Controller
             $facilitator = Utils::getUuid(
                 ['contacts', 'vendors', 'integrated_vendors'],
                 [
-                    'public_id' => $request->input('facilitator'),
+                    'public_id'    => $request->input('facilitator'),
                     'company_uuid' => session('company'),
                 ]
             );
@@ -120,7 +121,7 @@ class OrderController extends Controller
                 $input['facilitator_uuid'] = Utils::get($facilitator, 'uuid');
                 $input['facilitator_type'] = Utils::getModelClassName(Utils::get($facilitator, 'table'));
             }
-        } else if ($integratedVendorOrder) {
+        } elseif ($integratedVendorOrder) {
             $input['facilitator_uuid'] = $serviceQuote->integratedVendor->uuid;
             $input['facilitator_type'] = Utils::getModelClassName('integrated_vendors');
         }
@@ -130,7 +131,7 @@ class OrderController extends Controller
             $customer = Utils::getUuid(
                 ['contacts', 'vendors'],
                 [
-                    'public_id' => $request->input('customer'),
+                    'public_id'    => $request->input('customer'),
                     'company_uuid' => session('company'),
                 ]
             );
@@ -170,8 +171,8 @@ class OrderController extends Controller
         // if it's integrated vendor order apply to meta
         if ($integratedVendorOrder) {
             $order->updateMeta([
-                'integrated_vendor' => $serviceQuote->integratedVendor->public_id,
-                'integrated_vendor_order' => $integratedVendorOrder
+                'integrated_vendor'       => $serviceQuote->integratedVendor->public_id,
+                'integrated_vendor_order' => $integratedVendorOrder,
             ]);
         }
 
@@ -193,8 +194,9 @@ class OrderController extends Controller
     /**
      * Updates a Fleetbase Order resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdateOrderRequest  $request
+     * @param string                                      $id
+     * @param \Fleetbase\Http\Requests\UpdateOrderRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Order
      */
     public function update($id, UpdateOrderRequest $request)
@@ -217,7 +219,7 @@ class OrderController extends Controller
         // update payload if new input or change payload by id
         if ($request->isArray('payload')) {
             $payloadInput = $request->input('payload');
-            $payload = new Payload();
+            $payload      = new Payload();
 
             $payload->setPickup($payloadInput['pickup']);
             $payload->setDropoff($payloadInput['dropoff']);
@@ -229,9 +231,9 @@ class OrderController extends Controller
             $payload->save();
 
             $input['payload_uuid'] = $payload->uuid;
-        } else if ($request->has('payload')) {
+        } elseif ($request->has('payload')) {
             $input['payload_uuid'] = Utils::getUuid('payloads', [
-                'public_id' => $request->input('payload'),
+                'public_id'    => $request->input('payload'),
                 'company_uuid' => session('company'),
             ]);
             unset($input['payload']);
@@ -270,7 +272,7 @@ class OrderController extends Controller
         // driver assignment
         if ($request->has('driver')) {
             $input['driver_assigned_uuid'] = Utils::getUuid('drivers', [
-                'public_id' => $request->input('driver'),
+                'public_id'    => $request->input('driver'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -280,7 +282,7 @@ class OrderController extends Controller
             $facilitator = Utils::getUuid(
                 ['contacts', 'vendors'],
                 [
-                    'public_id' => $request->input('facilitator'),
+                    'public_id'    => $request->input('facilitator'),
                     'company_uuid' => session('company'),
                 ]
             );
@@ -296,7 +298,7 @@ class OrderController extends Controller
             $customer = Utils::getUuid(
                 ['contacts', 'vendors'],
                 [
-                    'public_id' => $request->input('customer'),
+                    'public_id'    => $request->input('customer'),
                     'company_uuid' => session('company'),
                 ]
             );
@@ -323,7 +325,6 @@ class OrderController extends Controller
     /**
      * Query for Fleetbase Order resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\OrderCollection
      */
     public function query(Request $request)
@@ -408,9 +409,9 @@ class OrderController extends Controller
             }
 
             if ($request->has('nearby')) {
-                $nearby = $request->input('nearby');
-                $distance = 6000; // default in meters
-                $company = Company::currentSession();
+                $nearby           = $request->input('nearby');
+                $distance         = 6000; // default in meters
+                $company          = Company::currentSession();
                 $addedNearbyQuery = false;
 
                 if ($company) {
@@ -483,7 +484,6 @@ class OrderController extends Controller
     /**
      * Finds a single Fleetbase Order resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\OrderCollection
      */
     public function find($id, Request $request)
@@ -507,7 +507,6 @@ class OrderController extends Controller
     /**
      * Deletes a Fleetbase Order resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\OrderCollection
      */
     public function delete($id, Request $request)
@@ -534,7 +533,6 @@ class OrderController extends Controller
     /**
      * Returns current distance and time matrix for an order.
      *
-     * @param  string $id
      * @return \Illuminate\Http\Response $response
      */
     public function getDistanceMatrix(string $id)
@@ -553,7 +551,7 @@ class OrderController extends Controller
 
         $order->load(['payload', 'payload.waypoints', 'payload.pickup', 'payload.dropoff']);
 
-        $origin = $order->payload->pickup ?? $order->payload->waypoints->first();
+        $origin      = $order->payload->pickup ?? $order->payload->waypoints->first();
         $destination = $order->payload->dropoff ?? $order->payload->waypoints->firstWhere('current_waypoint_uuid', $order->current_waypoint_uuid);
 
         $matrix = Utils::getDrivingDistanceAndTime($origin, $destination);
@@ -567,7 +565,6 @@ class OrderController extends Controller
     /**
      * Dispatches an order.
      *
-     * @param  string $id
      * @return \Fleetbase\Http\Resources\v1\Order
      */
     public function dispatchOrder(string $id)
@@ -600,12 +597,11 @@ class OrderController extends Controller
      * Request to start order, this assumes order is dispatched.
      * Unless there is a param to skip dispatch throw a order not dispatched error.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\v1\Order
      */
     public function startOrder(string $id, Request $request)
     {
-        $skipDispatch = $request->or(['skip_dispatch', 'skipDispatch'], false);
+        $skipDispatch      = $request->or(['skip_dispatch', 'skipDispatch'], false);
         $assignAdhocDriver = $request->input('assign');
 
         try {
@@ -648,7 +644,7 @@ class OrderController extends Controller
         // order is not dispatched if next activity code is dispatch or order is not flagged as dispatched
         $isNotDispatched = $activity['code'] === 'dispatched' || $order->isNotDispatched;
 
-        // if order is not dispatched yet $activity['code'] === 'dispatched' || $order->dispatched === true 
+        // if order is not dispatched yet $activity['code'] === 'dispatched' || $order->dispatched === true
         // and not skipping throw order not dispatched error
         if ($isNotDispatched && !$skipDispatch) {
             return response()->error('Order has not been dispatched yet and cannot be started.');
@@ -660,7 +656,7 @@ class OrderController extends Controller
         }
 
         // set order to started
-        $order->started = true;
+        $order->started    = true;
         $order->started_at = now();
         $order->save();
 
@@ -688,14 +684,14 @@ class OrderController extends Controller
     /**
      * Update an order activity.
      *
-     * @param  \Fleetbase\Models\Order|string  $order
-     * @param  \Illuminate\Http\Request  $request
+     * @param \Fleetbase\Models\Order|string $order
+     *
      * @return \Fleetbase\Http\Resources\v1\Order
      */
     public function updateActivity($order, Request $request)
     {
         $skipDispatch = $request->or(['skip_dispatch', 'skipDispatch'], false);
-        $proof = $request->input('proof', null);
+        $proof        = $request->input('proof', null);
 
         /** @var \Fleetbase\FleetOps\Models\Order $order */
         $order = ($order instanceof Order) ? $order : Order::withoutGlobalScopes()
@@ -710,7 +706,7 @@ class OrderController extends Controller
 
         // if orser is created trigger started flag
         if ($order->status === 'created') {
-            $order->started = true;
+            $order->started    = true;
             $order->started_at = now();
         }
 
@@ -755,7 +751,7 @@ class OrderController extends Controller
                 $order->payload->setNextWaypointDestination();
                 $order->payload->refresh();
 
-                // recheck if order is completed 
+                // recheck if order is completed
                 $isFullyCompleted = $order->payload->waypointMarkers->every(function ($waypoint) {
                     return $waypoint->status_code === 'COMPLETED';
                 });
@@ -791,8 +787,6 @@ class OrderController extends Controller
     /**
      * Retrieve the next activity for the order flow.
      *
-     * @param  string  $id
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function getNextActivity(string $id, Request $request)
@@ -821,6 +815,7 @@ class OrderController extends Controller
             })->withoutGlobalScopes()->first();
 
             $activity = Flow::getOrderWaypointFlow($order, $waypoint);
+
             return response()->json($activity);
         }
 
@@ -832,7 +827,6 @@ class OrderController extends Controller
     /**
      * Confirms and completes an order.
      *
-     * @param  string $id
      * @return \Fleetbase\Http\Resources\v1\Order
      */
     public function completeOrder(string $id)
@@ -859,9 +853,9 @@ class OrderController extends Controller
         }
 
         $activity = [
-            'status' => 'Order completed',
+            'status'  => 'Order completed',
             'details' => 'Driver has completed order for all waypoints',
-            'code' => 'completed'
+            'code'    => 'completed',
         ];
 
         if ($order->driverAssigned) {
@@ -883,7 +877,6 @@ class OrderController extends Controller
     /**
      * Updates a order to canceled and updates order activity.
      *
-     * @param  string $id
      * @return \Fleetbase\Http\Resources\v1\Order
      */
     public function cancelOrder(string $id)
@@ -905,10 +898,8 @@ class OrderController extends Controller
     }
 
     /**
-     * Updates the order payload destination with a valid place
+     * Updates the order payload destination with a valid place.
      *
-     * @param  string $id
-     * @param  string $placeId
      * @return \Fleetbase\Http\Resources\v1\Order
      */
     public function setDestination(string $id, string $placeId)
@@ -939,7 +930,6 @@ class OrderController extends Controller
     /**
      * Sends request for route optimization and re-sorts waypoints.
      *
-     * @param  string $id
      * @return \Fleetbase\Http\Resources\v1\Order
      */
     public function optimize(string $id)
@@ -961,19 +951,16 @@ class OrderController extends Controller
     }
 
     /**
-     * Verify & Capture QR Code Scan
+     * Verify & Capture QR Code Scan.
      *
-     * @param string $id
-     * @param string|null $subjectId
-     * @param Request $request
      * @return void
      */
-    public function captureQrScan(string $id, ?string $subjectId = null, Request $request)
+    public function captureQrScan(string $id, string $subjectId = null, Request $request)
     {
-        $code = $request->input('code');
-        $data = $request->input('data', []);
+        $code    = $request->input('code');
+        $data    = $request->input('data', []);
         $rawData = $request->input('raw_data', []);
-        $type = $subjectId ? strtok($subjectId, '_') : null;
+        $type    = $subjectId ? strtok($subjectId, '_') : null;
 
         try {
             $order = Order::findRecordOrFail($id);
@@ -1020,12 +1007,12 @@ class OrderController extends Controller
             // create verification proof
             $proof = Proof::create([
                 'company_uuid' => session('company'),
-                'order_uuid' => $order->uuid,
+                'order_uuid'   => $order->uuid,
                 'subject_uuid' => $subject->uuid,
                 'subject_type' => Utils::getModelClassName($subject),
-                'remarks' => 'Verified by QR Code Scan',
-                'raw_data' => $rawData,
-                'data' => $data
+                'remarks'      => 'Verified by QR Code Scan',
+                'raw_data'     => $rawData,
+                'data'         => $data,
             ]);
 
             return new ProofResource($proof);
@@ -1035,20 +1022,17 @@ class OrderController extends Controller
     }
 
     /**
-     * Validate a QR code
+     * Validate a QR code.
      *
-     * @param string $id
-     * @param string|null $subjectId
-     * @param Request $request
      * @return void
      */
-    public function captureSignature(string $id, ?string $subjectId = null, Request $request)
+    public function captureSignature(string $id, string $subjectId = null, Request $request)
     {
-        $disk = $request->input('disk', config('filesystems.default'));
-        $bucket = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
+        $disk      = $request->input('disk', config('filesystems.default'));
+        $bucket    = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
         $signature = $request->input('signature');
-        $data = $request->input('data', []);
-        $type = $subjectId ? strtok($subjectId, '_') : null;
+        $data      = $request->input('data', []);
+        $type      = $subjectId ? strtok($subjectId, '_') : null;
 
         try {
             $order = Order::findRecordOrFail($id);
@@ -1093,12 +1077,12 @@ class OrderController extends Controller
         // create proof instance
         $proof = Proof::create([
             'company_uuid' => session('company'),
-            'order_uuid' => $order->uuid,
+            'order_uuid'   => $order->uuid,
             'subject_uuid' => $subject->uuid,
             'subject_type' => Utils::getModelClassName($subject),
-            'remarks' => 'Verified by Signature',
-            'raw_data' => $signature,
-            'data' => $data
+            'remarks'      => 'Verified by Signature',
+            'raw_data'     => $signature,
+            'data'         => $data,
         ]);
 
         // set the signature storage path
@@ -1109,16 +1093,16 @@ class OrderController extends Controller
 
         // create file record for upload
         $file = File::create([
-            'company_uuid' => session('company'),
-            'uploader_uuid' => session('user'),
-            'name' => basename($path),
+            'company_uuid'      => session('company'),
+            'uploader_uuid'     => session('user'),
+            'name'              => basename($path),
             'original_filename' => basename($path),
-            'extension' => 'png',
-            'content_type' => 'image/png',
-            'path' => $path,
-            'bucket' => $bucket,
-            'type' => 'signature',
-            'size' => Utils::getBase64ImageSize($signature)
+            'extension'         => 'png',
+            'content_type'      => 'image/png',
+            'path'              => $path,
+            'bucket'            => $bucket,
+            'type'              => 'signature',
+            'size'              => Utils::getBase64ImageSize($signature),
         ])->setKey($proof);
 
         // set file to proof

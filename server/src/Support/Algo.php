@@ -7,13 +7,13 @@ use Webit\Util\EvalMath\EvalMath;
 class Algo
 {
     /**
-     * Execute an algorithm strig
+     * Execute an algorithm strig.
      *
-     * @return integer
+     * @return int
      */
     public static function exec($algorithm, $variables = [], $round = false)
     {
-        $m = new EvalMath();
+        $m                  = new EvalMath();
         $m->suppress_errors = true;
 
         foreach ($variables as $key => $value) {
@@ -30,7 +30,7 @@ class Algo
     }
 
     /**
-     * Calculates driving distance and time using Google distance matric
+     * Calculates driving distance and time using Google distance matric.
      *
      * @return array
      */
@@ -47,8 +47,8 @@ class Algo
         $response = curl_exec($ch);
         curl_close($ch);
         $response_a = json_decode($response, true);
-        $dist = $response_a['rows'][0]['elements'][0]['distance']['value'];
-        $time = $response_a['rows'][0]['elements'][0]['duration']['value'];
+        $dist       = $response_a['rows'][0]['elements'][0]['distance']['value'];
+        $time       = $response_a['rows'][0]['elements'][0]['duration']['value'];
 
         return ['distance' => $dist, 'time' => $time];
     }

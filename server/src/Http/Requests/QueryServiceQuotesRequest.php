@@ -25,17 +25,17 @@ class QueryServiceQuotesRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'payload' => 'nullable|exists:payloads,public_id',
+            'payload'      => 'nullable|exists:payloads,public_id',
             'service_type' => 'nullable|exists:service_rates,service_type',
-            'pickup' => 'nullable|required_without:payload,waypoints',
-            'dropoff' => 'nullable|required_without:payload,waypoints',
-            'waypoints' => 'nullable|array',
-            'facilitator' => ['nullable', new ExistsInAny(['vendors', 'integrated_vendors', 'contacts'], ['public_id', 'provider'])],
+            'pickup'       => 'nullable|required_without:payload,waypoints',
+            'dropoff'      => 'nullable|required_without:payload,waypoints',
+            'waypoints'    => 'nullable|array',
+            'facilitator'  => ['nullable', new ExistsInAny(['vendors', 'integrated_vendors', 'contacts'], ['public_id', 'provider'])],
             'scheduled_at' => 'nullable|date',
-            'cod' => 'nullable',
-            'currency' => 'nullable',
-            'distance' => 'nullable',
-            'time' => 'nullable',
+            'cod'          => 'nullable',
+            'currency'     => 'nullable',
+            'distance'     => 'nullable',
+            'time'         => 'nullable',
         ];
     }
 }

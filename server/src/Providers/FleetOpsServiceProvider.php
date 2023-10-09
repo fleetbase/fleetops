@@ -2,9 +2,9 @@
 
 namespace Fleetbase\FleetOps\Providers;
 
-use Fleetbase\Providers\CoreServiceProvider;
 use Brick\Geo\Engine\GeometryEngineRegistry;
 use Brick\Geo\Engine\GEOSEngine;
+use Fleetbase\Providers\CoreServiceProvider;
 
 if (!class_exists(CoreServiceProvider::class)) {
     throw new \Exception('FleetOps cannot be loaded without `fleetbase/core-api` installed!');
@@ -12,8 +12,6 @@ if (!class_exists(CoreServiceProvider::class)) {
 
 /**
  * FleetOps service provider.
- *
- * @package \Fleetbase\FleetOps\Providers
  */
 class FleetOpsServiceProvider extends CoreServiceProvider
 {
@@ -23,16 +21,16 @@ class FleetOpsServiceProvider extends CoreServiceProvider
      * @var array
      */
     public $observers = [
-        \Fleetbase\FleetOps\Models\Order::class => \Fleetbase\FleetOps\Observers\OrderObserver::class,
-        \Fleetbase\FleetOps\Models\Payload::class => \Fleetbase\FleetOps\Observers\PayloadObserver::class,
-        \Fleetbase\FleetOps\Models\Place::class => \Fleetbase\FleetOps\Observers\PlaceObserver::class,
-        \Fleetbase\FleetOps\Models\ServiceRate::class => \Fleetbase\FleetOps\Observers\ServiceRateObserver::class,
-        \Fleetbase\FleetOps\Models\PurchaseRate::class => \Fleetbase\FleetOps\Observers\PurchaseRateObserver::class,
-        \Fleetbase\FleetOps\Models\ServiceArea::class => \Fleetbase\FleetOps\Observers\ServiceAreaObserver::class,
+        \Fleetbase\FleetOps\Models\Order::class          => \Fleetbase\FleetOps\Observers\OrderObserver::class,
+        \Fleetbase\FleetOps\Models\Payload::class        => \Fleetbase\FleetOps\Observers\PayloadObserver::class,
+        \Fleetbase\FleetOps\Models\Place::class          => \Fleetbase\FleetOps\Observers\PlaceObserver::class,
+        \Fleetbase\FleetOps\Models\ServiceRate::class    => \Fleetbase\FleetOps\Observers\ServiceRateObserver::class,
+        \Fleetbase\FleetOps\Models\PurchaseRate::class   => \Fleetbase\FleetOps\Observers\PurchaseRateObserver::class,
+        \Fleetbase\FleetOps\Models\ServiceArea::class    => \Fleetbase\FleetOps\Observers\ServiceAreaObserver::class,
         \Fleetbase\FleetOps\Models\TrackingNumber::class => \Fleetbase\FleetOps\Observers\TrackingNumberObserver::class,
-        \Fleetbase\FleetOps\Models\Driver::class => \Fleetbase\FleetOps\Observers\DriverObserver::class,
-        \Fleetbase\FleetOps\Models\Vehicle::class => \Fleetbase\FleetOps\Observers\VehicleObserver::class,
-        \Fleetbase\Models\User::class => \Fleetbase\FleetOps\Observers\UserObserver::class,
+        \Fleetbase\FleetOps\Models\Driver::class         => \Fleetbase\FleetOps\Observers\DriverObserver::class,
+        \Fleetbase\FleetOps\Models\Vehicle::class        => \Fleetbase\FleetOps\Observers\VehicleObserver::class,
+        \Fleetbase\Models\User::class                    => \Fleetbase\FleetOps\Observers\UserObserver::class,
     ];
 
     /**
@@ -49,9 +47,9 @@ class FleetOpsServiceProvider extends CoreServiceProvider
     /**
      * Register any application services.
      *
-     * Within the register method, you should only bind things into the 
-     * service container. You should never attempt to register any event 
-     * listeners, routes, or any other piece of functionality within the 
+     * Within the register method, you should only bind things into the
+     * service container. You should never attempt to register any event
+     * listeners, routes, or any other piece of functionality within the
      * register method.
      *
      * More information on this can be found in the Laravel documentation:
@@ -69,7 +67,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
      *
      * @return void
      *
-     * @throws \Exception If the `fleetbase/core-api` package is not installed.
+     * @throws \Exception if the `fleetbase/core-api` package is not installed
      */
     public function boot()
     {

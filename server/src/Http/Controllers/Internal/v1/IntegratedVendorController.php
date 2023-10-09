@@ -11,16 +11,15 @@ use Illuminate\Http\Request;
 class IntegratedVendorController extends FleetOpsController
 {
     /**
-     * The resource to query
+     * The resource to query.
      *
      * @var string
      */
     public $resource = 'integrated_vendor';
 
     /**
-     * Get available integrated vendors
-     * 
-     * @param \Illuminate\Http\Request $request
+     * Get available integrated vendors.
+     *
      * @return \Illuminate\Http\Response
      */
     public function getSupported(Request $request)
@@ -35,7 +34,6 @@ class IntegratedVendorController extends FleetOpsController
     /**
      * Bulk delete resources.
      *
-     * @param  \Fleetbase\Http\Requests\Internal\BulkDeleteRequest  $request
      * @return \Illuminate\Http\Response
      */
     public function bulkDelete(BulkDeleteRequest $request)
@@ -47,7 +45,7 @@ class IntegratedVendorController extends FleetOpsController
         }
 
         /** @var \Fleetbase\Models\IntegratedVendor */
-        $count = IntegratedVendor::whereIn('uuid', $ids)->count();
+        $count   = IntegratedVendor::whereIn('uuid', $ids)->count();
         $deleted = IntegratedVendor::whereIn('uuid', $ids)->delete();
 
         if (!$deleted) {
@@ -56,7 +54,7 @@ class IntegratedVendorController extends FleetOpsController
 
         return response()->json(
             [
-                'status' => 'OK',
+                'status'  => 'OK',
                 'message' => 'Deleted ' . $count . ' integrated vendors',
             ],
             200

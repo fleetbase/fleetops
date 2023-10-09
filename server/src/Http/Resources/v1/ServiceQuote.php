@@ -10,7 +10,8 @@ class ServiceQuote extends FleetbaseResource
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param \Illuminate\Http\Request $request
+     *
      * @return array
      */
     public function toArray($request)
@@ -18,19 +19,19 @@ class ServiceQuote extends FleetbaseResource
         return array_merge(
             $this->getInternalIds(),
             [
-                'id' => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-                'uuid' => $this->when(Http::isInternalRequest(), $this->uuid),
-                'public_id' => $this->when(Http::isInternalRequest(), $this->public_id),
+                'id'                => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+                'uuid'              => $this->when(Http::isInternalRequest(), $this->uuid),
+                'public_id'         => $this->when(Http::isInternalRequest(), $this->public_id),
                 'service_rate_uuid' => $this->when(Http::isInternalRequest(), $this->service_rate_uuid),
-                'payload_uuid' => $this->when(Http::isInternalRequest(), $this->payload_uuid),
+                'payload_uuid'      => $this->when(Http::isInternalRequest(), $this->payload_uuid),
                 'service_rate_name' => $this->when(Http::isInternalRequest(), data_get($this, 'serviceRate.name')),
-                'service_rate' => $this->when(Http::isPublicRequest(), data_get($this, 'serviceRate.public_id')),
-                'facilitator' => $this->when(Http::isPublicRequest(), data_get($this, 'integratedVendor.public_id')),
-                'request_id' => $this->request_id,
-                'amount' => $this->amount,
-                'currency' => $this->currency,
-                'updated_at' => $this->updated_at,
-                'created_at' => $this->created_at,
+                'service_rate'      => $this->when(Http::isPublicRequest(), data_get($this, 'serviceRate.public_id')),
+                'facilitator'       => $this->when(Http::isPublicRequest(), data_get($this, 'integratedVendor.public_id')),
+                'request_id'        => $this->request_id,
+                'amount'            => $this->amount,
+                'currency'          => $this->currency,
+                'updated_at'        => $this->updated_at,
+                'created_at'        => $this->created_at,
             ]
         );
     }
@@ -43,14 +44,14 @@ class ServiceQuote extends FleetbaseResource
     public function toWebhookPayload()
     {
         return [
-            'id' => $this->public_id,
+            'id'           => $this->public_id,
             'service_rate' => data_get($this, 'serviceRate.public_id'),
-            'facilitator' => data_get($this, 'integratedVendor.public_id'),
-            'request_id' => $this->request_id,
-            'amount' => $this->amount,
-            'currency' => $this->currency,
-            'updated_at' => $this->updated_at,
-            'created_at' => $this->created_at,
+            'facilitator'  => data_get($this, 'integratedVendor.public_id'),
+            'request_id'   => $this->request_id,
+            'amount'       => $this->amount,
+            'currency'     => $this->currency,
+            'updated_at'   => $this->updated_at,
+            'created_at'   => $this->created_at,
         ];
     }
 }

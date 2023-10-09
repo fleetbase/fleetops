@@ -26,10 +26,10 @@ class CreateZoneRequest extends FleetbaseRequest
     {
         return [
             'name' => [Rule::requiredIf($this->isMethod('POST')), 'string'],
-            // @todo properly validate boundary param 
-            'boundary' => 'required|array',
+            // @todo properly validate boundary param
+            'boundary'     => 'required|array',
             'service_area' => 'required|exists:service_areas,public_id',
-            'status' => 'nullable|in:active,inactive',
+            'status'       => 'nullable|in:active,inactive',
         ];
     }
 }

@@ -4,15 +4,15 @@ namespace Fleetbase\FleetOps\Notifications;
 
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
-use Illuminate\Bus\Queueable;
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\Fcm\FcmChannel;
-use NotificationChannels\Fcm\FcmMessage;
 use NotificationChannels\Apn\ApnChannel;
 use NotificationChannels\Apn\ApnMessage;
+use NotificationChannels\Fcm\FcmChannel;
+use NotificationChannels\Fcm\FcmMessage;
 use NotificationChannels\Fcm\Resources\AndroidConfig;
 use NotificationChannels\Fcm\Resources\AndroidFcmOptions;
 use NotificationChannels\Fcm\Resources\AndroidNotification;
@@ -43,7 +43,6 @@ class OrderCanceled extends Notification implements ShouldQueue
     /**
      * Get the notification's delivery channels.
      *
-     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -51,7 +50,7 @@ class OrderCanceled extends Notification implements ShouldQueue
         return ['broadcast', 'mail', FcmChannel::class, ApnChannel::class];
     }
 
-     /**
+    /**
      * Get the channels the event should broadcast on.
      *
      * @return \Illuminate\Broadcasting\Channel|array
@@ -63,19 +62,18 @@ class OrderCanceled extends Notification implements ShouldQueue
             new Channel('company.' . data_get($this->order, 'company.public_id')),
             new Channel('api.' . session('api_credential')),
             new Channel('order.' . $this->order->uuid),
-            new Channel('order.' . $this->order->public_id)
+            new Channel('order.' . $this->order->public_id),
         ];
     }
 
     /**
      * Get the mail representation of the notification.
      *
-     * @param  mixed  $notifiable
      * @return \Illuminate\Notifications\Messages\MailMessage
      */
     public function toMail($notifiable)
     {
-        $message = (new MailMessage)
+        $message = (new MailMessage())
             ->subject('Order ' . $this->order->public_id . ' was canceled')
             ->line('Order ' . $this->order->public_id . ' has been canceled.')
             ->line('No further action is necessary.');
@@ -88,7 +86,6 @@ class OrderCanceled extends Notification implements ShouldQueue
     /**
      * Get the firebase cloud message representation of the notification.
      *
-     * @param  mixed  $notifiable
      * @return array
      */
     public function toFcm($notifiable)
@@ -115,7 +112,6 @@ class OrderCanceled extends Notification implements ShouldQueue
     /**
      * Get the apns message representation of the notification.
      *
-     * @param  mixed  $notifiable
      * @return array
      */
     public function toApn($notifiable)

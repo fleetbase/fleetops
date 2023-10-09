@@ -2,4 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
-class UpdateTrackingNumberRequest extends CreateTrackingNumberRequest {}
+class UpdateTrackingNumberRequest extends CreateTrackingNumberRequest
+{
+}

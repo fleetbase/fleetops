@@ -25,11 +25,11 @@ class CreateVendorRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'name' => [Rule::requiredIf($this->isMethod('POST')), 'string'],
-            'type' => [Rule::requiredIf($this->isMethod('POST')), 'string'],
-            'email' => 'nullable|email',
-            'phone' => 'nullable',
-            'address' => 'nullable|exists:places,public_id'
+            'name'    => [Rule::requiredIf($this->isMethod('POST')), 'string'],
+            'type'    => [Rule::requiredIf($this->isMethod('POST')), 'string'],
+            'email'   => 'nullable|email',
+            'phone'   => 'nullable',
+            'address' => 'nullable|exists:places,public_id',
         ];
     }
 }

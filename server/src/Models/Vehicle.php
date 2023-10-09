@@ -2,24 +2,31 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
-use Fleetbase\Traits\HasUuid;
-use Fleetbase\Traits\HasPublicId;
-use Fleetbase\Traits\HasApiModelBehavior;
-use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\Traits\Searchable;
-use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
+use Fleetbase\Traits\Searchable;
+use Fleetbase\Traits\TracksApiCredential;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
-use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Sluggable\SlugOptions;
-use Spatie\Sluggable\HasSlug;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Sluggable\HasSlug;
+use Spatie\Sluggable\SlugOptions;
 
 class Vehicle extends Model
 {
-    use HasUuid, HasPublicId, TracksApiCredential, HasApiModelBehavior, SpatialTrait, Searchable, HasSlug, LogsActivity;
+    use HasUuid;
+    use HasPublicId;
+    use TracksApiCredential;
+    use HasApiModelBehavior;
+    use SpatialTrait;
+    use Searchable;
+    use HasSlug;
+    use LogsActivity;
 
     /**
      * The database table used by the model.
@@ -29,49 +36,49 @@ class Vehicle extends Model
     protected $table = 'vehicles';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'vehicle';
 
     /**
-     * The attributes that can be queried
+     * The attributes that can be queried.
      *
      * @var array
      */
     protected $searchableColumns = ['make', 'model', 'year', 'plate_number', 'internal_id', 'vin', 'public_id'];
 
     /**
-     * Attributes that is filterable on this model
+     * Attributes that is filterable on this model.
      *
      * @var array
      */
     protected $filterParams = ['vendor'];
 
     /**
-     * Relationships to auto load with driver
+     * Relationships to auto load with driver.
      *
      * @var array
      */
     protected $with = [];
 
     /**
-     * Properties which activity needs to be logged
+     * Properties which activity needs to be logged.
      *
      * @var array
      */
     protected static $logAttributes = '*';
 
     /**
-     * Do not log empty changed
+     * Do not log empty changed.
      *
-     * @var boolean
+     * @var bool
      */
     protected static $submitEmptyLogs = false;
 
     /**
-     * The name of the subject to log
+     * The name of the subject to log.
      *
      * @var string
      */
@@ -79,8 +86,6 @@ class Vehicle extends Model
 
     /**
      * Get the options for generating the slug.
-     * 
-     * @return \Spatie\Sluggable\SlugOptions
      */
     public function getSlugOptions(): SlugOptions
     {
@@ -119,16 +124,16 @@ class Vehicle extends Model
     ];
 
     /**
-     * Set attributes and defaults
+     * Set attributes and defaults.
      *
      * @var array
      */
     protected $attributes = [
-        'avatar_url' => 'https://flb-assets.s3-ap-southeast-1.amazonaws.com/static/vehicle-icons/mini_bus.svg'
+        'avatar_url' => 'https://flb-assets.s3-ap-southeast-1.amazonaws.com/static/vehicle-icons/mini_bus.svg',
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -141,7 +146,7 @@ class Vehicle extends Model
      */
     protected $hidden = [
         'driver',
-        'vendor'
+        'vendor',
     ];
 
     /**
@@ -157,12 +162,12 @@ class Vehicle extends Model
      * @var array
      */
     protected $casts = [
-        'location' => Point::class,
-        'meta' => Json::class,
+        'location'   => Point::class,
+        'meta'       => Json::class,
         'telematics' => Json::class,
-        'model' => Json::class,
-        'vin_data' => Json::class,
-        'online' => 'boolean',
+        'model'      => Json::class,
+        'vin_data'   => Json::class,
+        'online'     => 'boolean',
     ];
 
     /**
@@ -207,7 +212,7 @@ class Vehicle extends Model
 
     /**
      * Get avatar URL attribute.
-     * 
+     *
      * @return string
      */
     public function getPhotoUrlAttribute()
@@ -216,7 +221,7 @@ class Vehicle extends Model
     }
 
     /**
-     * The name generated from make model and year
+     * The name generated from make model and year.
      *
      * @return string
      */
@@ -243,8 +248,8 @@ class Vehicle extends Model
     }
 
     /**
-     * Get avatar url
-     * 
+     * Get avatar url.
+     *
      * @return string|null
      */
     public function getAvatarUrlAttribute($value)
@@ -257,8 +262,8 @@ class Vehicle extends Model
     }
 
     /**
-     * Get the driver's name assigned to vehicle
-     * 
+     * Get the driver's name assigned to vehicle.
+     *
      * @return string|null
      */
     public function getDriverNameAttribute()
@@ -267,8 +272,8 @@ class Vehicle extends Model
     }
 
     /**
-     * Get the driver's public id assigned to vehicle
-     * 
+     * Get the driver's public id assigned to vehicle.
+     *
      * @return string|null
      */
     public function getDriverIdAttribute()
@@ -277,8 +282,8 @@ class Vehicle extends Model
     }
 
     /**
-     * Get the driver's uuid assigned to vehicle
-     * 
+     * Get the driver's uuid assigned to vehicle.
+     *
      * @return string|null
      */
     public function getDriverUuidAttribute()
@@ -288,7 +293,7 @@ class Vehicle extends Model
 
     /**
      * Get drivers vendor ID.
-     * 
+     *
      * @return string|null
      */
     public function getVendorIdAttribute()
@@ -298,7 +303,7 @@ class Vehicle extends Model
 
     /**
      * Get drivers vendor name.
-     * 
+     *
      * @return string|null
      */
     public function getVendorNameAttribute()
@@ -307,24 +312,26 @@ class Vehicle extends Model
     }
 
     /**
-     * Get the vehicles model data attributes
+     * Get the vehicles model data attributes.
      */
     public function getModelDataAttribute()
     {
-        $attributes = $this->getFillable();
+        $attributes      = $this->getFillable();
         $modelAttributes = [];
         foreach ($attributes as $attr) {
             if (Str::startsWith($attr, 'model_')) {
                 $modelAttributes[str_replace('model_', '', $attr)] = $this->{$attr};
             }
         }
+
         return $modelAttributes;
     }
 
     /**
-     * Get an avatar url by key
-     * 
+     * Get an avatar url by key.
+     *
      * @param string $key
+     *
      * @return string
      */
     public static function getAvatar($key = 'mini_bus')
@@ -334,7 +341,7 @@ class Vehicle extends Model
 
     /**
      * Get all avatar options for a vehicle.
-     * 
+     *
      * @return \Illuminate\Support\Collection
      */
     public static function getAvatarOptions()
@@ -382,7 +389,6 @@ class Vehicle extends Model
     /**
      * Assign a driver to this vehicle.
      *
-     * @param \Fleetbase\FleetOps\Models\Driver $driver
      * @return void
      */
     public function assignDriver(Driver $driver)
@@ -397,11 +403,12 @@ class Vehicle extends Model
      * the driver has moved more than 100 meters or if it's their first recorded position.
      *
      * @param \Fleetbase\FleetOps\Models\Order|null $order The order to consider when updating the position (default: null)
+     *
      * @return \Fleetbase\FleetOps\Models\Position|null The created Position object, or null if no new position was created
      */
-    public function updatePositionWithOrderContext(?Order $order = null): ?Position
+    public function updatePositionWithOrderContext(Order $order = null): ?Position
     {
-        $position = null;
+        $position     = null;
         $lastPosition = $this->positions()->whereCompanyUuid(session('company'))->latest()->first();
 
         // get driver if applicable
@@ -420,7 +427,7 @@ class Vehicle extends Model
             'company_uuid' => session('company', $this->company_uuid),
             'subject_uuid' => $this->uuid,
             'subject_type' => Utils::getMutationType($this),
-            'coordinates' => $this->location,
+            'coordinates'  => $this->location,
         ];
 
         if ($currentOrder) {
@@ -432,8 +439,8 @@ class Vehicle extends Model
         }
 
         $isFirstPosition = !$lastPosition;
-        $isPast50Meters = $lastPosition && Utils::vincentyGreatCircleDistance($this->location, $lastPosition->coordinates) > 50;
-        $position = null;
+        $isPast50Meters  = $lastPosition && Utils::vincentyGreatCircleDistance($this->location, $lastPosition->coordinates) > 50;
+        $position        = null;
 
         // create the first position
         if ($isFirstPosition || $isPast50Meters) {

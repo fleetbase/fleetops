@@ -2,28 +2,29 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Http\Requests\CreatePlaceRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdatePlaceRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\Utils;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Http\Controllers\Controller;
 use Geocoder\Laravel\Facades\Geocoder;
 use Geocoder\Provider\GoogleMapsPlaces\GoogleMapsPlaces;
 use Geocoder\Query\GeocodeQuery;
+use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Http\Adapter\Guzzle7\Client;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PlaceController extends Controller
 {
     /**
      * Creates a new Fleetbase Place resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreatePlaceRequest  $request
+     * @param \Fleetbase\Http\Requests\CreatePlaceRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Place
      */
     public function create(CreatePlaceRequest $request)
@@ -85,7 +86,7 @@ class PlaceController extends Controller
             $owner = Utils::getUuid(
                 ['contacts', 'vendors'],
                 [
-                    'public_id' => $id,
+                    'public_id'    => $id,
                     'company_uuid' => session('company'),
                 ]
             );
@@ -99,8 +100,8 @@ class PlaceController extends Controller
         /** @var \Fleetbase\Models\Place */
         $place = Place::firstOrNew([
             'company_uuid' => session('company'),
-            'name' => strtoupper(Utils::or($input, ['name', 'street1'])),
-            'street1' => strtoupper($input['street1']),
+            'name'         => strtoupper(Utils::or($input, ['name', 'street1'])),
+            'street1'      => strtoupper($input['street1']),
         ]);
 
         // check if missing location
@@ -117,7 +118,7 @@ class PlaceController extends Controller
 
             if ($geocoded) {
                 $place->fillWithGoogleAddress($geocoded);
-            } else if (isset($place->location)) {
+            } elseif (isset($place->location)) {
                 $place->location = new Point(0, 0);
             }
         }
@@ -130,8 +131,9 @@ class PlaceController extends Controller
     /**
      * Updates a Fleetbase Place resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdatePlaceRequest  $request
+     * @param string                                      $id
+     * @param \Fleetbase\Http\Requests\UpdatePlaceRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Place
      */
     public function update($id, UpdatePlaceRequest $request)
@@ -168,7 +170,6 @@ class PlaceController extends Controller
 
         // owner assignment
         if ($request->has('owner')) {
-
             $id = $request->input('owner');
 
             // check if customer_ based contact
@@ -179,7 +180,7 @@ class PlaceController extends Controller
             $owner = Utils::getUuid(
                 ['contacts', 'vendors'],
                 [
-                    'public_id' => $id,
+                    'public_id'    => $id,
                     'company_uuid' => session('company'),
                 ]
             );
@@ -193,7 +194,7 @@ class PlaceController extends Controller
         // vendor assignment
         if ($request->has('vendor')) {
             $input['vendor_uuid'] = Utils::getUuid('vendors', [
-                'public_id' => $request->input('vendor'),
+                'public_id'    => $request->input('vendor'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -208,7 +209,6 @@ class PlaceController extends Controller
     /**
      * Query for Fleetbase Place resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\PlaceCollection
      */
     public function query(Request $request)
@@ -229,16 +229,15 @@ class PlaceController extends Controller
     /**
      * Search for Fleetbase Place resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\PlaceCollection
      */
     public function search(Request $request)
     {
         $searchQuery = strtolower($request->input('query'));
-        $limit = $request->input('limit', 10);
-        $geo = $request->input('geo', false);
-        $latitude = $request->input('latitude', false);
-        $longitude = $request->input('longitude', false);
+        $limit       = $request->input('limit', 10);
+        $geo         = $request->input('geo', false);
+        $latitude    = $request->input('latitude', false);
+        $longitude   = $request->input('longitude', false);
 
         $results = DB::table('places')
             ->where('company_uuid', session('company'))
@@ -254,10 +253,10 @@ class PlaceController extends Controller
             ->orderBy('name', 'desc')
             ->get()
             ->map(function ($place) {
-                $place = (array) $place;
+                $place             = (array) $place;
                 $place['location'] = Utils::mysqlPointAsGeometry($place['location']);
-                $place = new Place($place);
-                $place->address = $place->toAddressString();
+                $place             = new Place($place);
+                $place->address    = $place->toAddressString();
 
                 return $place;
             })
@@ -265,8 +264,8 @@ class PlaceController extends Controller
 
         if ($geo && Utils::notEmpty($searchQuery)) {
             $httpClient = new Client();
-            $provider = new \Geocoder\Provider\GoogleMaps\GoogleMaps($httpClient, null, env('GOOGLE_MAPS_API_KEY'));
-            $geocoder = new \Geocoder\StatefulGeocoder($provider, 'en');
+            $provider   = new \Geocoder\Provider\GoogleMaps\GoogleMaps($httpClient, null, env('GOOGLE_MAPS_API_KEY'));
+            $geocoder   = new \Geocoder\StatefulGeocoder($provider, 'en');
 
             if ($latitude && $longitude) {
                 $geoResults = $geocoder->geocodeQuery(
@@ -300,7 +299,6 @@ class PlaceController extends Controller
     /**
      * Finds a single Fleetbase Place resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\Place
      */
     public function find($id, Request $request)
@@ -318,7 +316,6 @@ class PlaceController extends Controller
     /**
      * Deletes a Fleetbase Place resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\Place
      */
     public function delete($id, Request $request)

@@ -13,7 +13,6 @@ class HandleOrderCreated implements ShouldQueue
     /**
      * Handle the event.
      *
-     * @param  object  $event
      * @return void
      */
     public function handle(Order $order)

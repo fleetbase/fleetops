@@ -2,14 +2,14 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
-use Fleetbase\Http\Controllers\Controller;
-use Fleetbase\Models\Extension;
-use Fleetbase\Models\ExtensionInstall;
-use Fleetbase\Models\Category;
-use Fleetbase\Models\Type;
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Flow;
+use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Controllers\Controller;
+use Fleetbase\Models\Category;
+use Fleetbase\Models\Extension;
+use Fleetbase\Models\ExtensionInstall;
+use Fleetbase\Models\Type;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -18,14 +18,13 @@ class OrderConfigController extends Controller
     /**
      * Retrieve all installed or created order configurations.
      *
-     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
     public function getInstalled(Request $request)
     {
-        $key = $request->input('key');
-        $namespace = $request->input('namespace');
-        $single = $request->input('single', false);
+        $key                 = $request->input('key');
+        $namespace           = $request->input('namespace');
+        $single              = $request->input('single', false);
         $installedExtensions = [];
 
         // get all installed order configs
@@ -74,12 +73,11 @@ class OrderConfigController extends Controller
     /**
      * Save an order extension, whether installed or authored.
      *
-     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
     public function save(Request $request)
     {
-        $data = $request->input('data', []);
+        $data        = $request->input('data', []);
         $isInstalled = isset($data['installed']) && Utils::isTrue($data['installed']);
 
         // if the extension is from installed
@@ -88,13 +86,13 @@ class OrderConfigController extends Controller
             $install = ExtensionInstall::where('uuid', $data['install_uuid'])->first();
 
             // update install record
-            $overwrite = $install->overwrite ?? [];
-            $overwrite['name'] = $data['name'];
+            $overwrite                = $install->overwrite ?? [];
+            $overwrite['name']        = $data['name'];
             $overwrite['description'] = $data['description'];
 
             // update json fields
             $install->overwrite = $overwrite;
-            $install->meta = $data['meta'];
+            $install->meta      = $data['meta'];
 
             // save changes
             $install->save();
@@ -106,9 +104,9 @@ class OrderConfigController extends Controller
         $extension = Extension::where('uuid', $data['uuid'])->first();
 
         // update extension record
-        $extension->name = $data['name'];
+        $extension->name        = $data['name'];
         $extension->description = $data['description'];
-        $extension->meta = $data['meta'];
+        $extension->meta        = $data['meta'];
 
         // save
         $extension->save();
@@ -119,36 +117,35 @@ class OrderConfigController extends Controller
     /**
      * Creates a new empty order configuration.
      *
-     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
     public function new(Request $request)
     {
-        $name = $request->input('name');
+        $name        = $request->input('name');
         $description = $request->input('description');
-        $tags = $request->input('tags', []);
+        $tags        = $request->input('tags', []);
 
-        $company = Flow::getCompanySession();
+        $company  = Flow::getCompanySession();
         $category = Category::where(['for' => 'extension', 'name' => 'Logistics'])->first();
-        $type = Type::where(['for' => 'extension', 'key' => 'config'])->first();
+        $type     = Type::where(['for' => 'extension', 'key' => 'config'])->first();
 
         $orderConfig = Extension::create(
             [
-                'author_uuid' => session('company'),
+                'author_uuid'   => session('company'),
                 'category_uuid' => $category->uuid,
-                'type_uuid' => $type->uuid,
-                'name' => $name,
-                'description' => $description,
-                'display_name' => $name,
-                'key' => Str::slug($name),
-                'tags' => $tags,
-                'namespace' => Extension::createNamespace($company->slug, 'order-config', $name),
-                'version' => '0.0.1',
-                'core_service' => 0,
-                'meta' => ['flow' => Flow::getDefaultOrderFlow()],
-                'meta_type' => 'order_config',
-                'config' => [],
-                'status' => 'private'
+                'type_uuid'     => $type->uuid,
+                'name'          => $name,
+                'description'   => $description,
+                'display_name'  => $name,
+                'key'           => Str::slug($name),
+                'tags'          => $tags,
+                'namespace'     => Extension::createNamespace($company->slug, 'order-config', $name),
+                'version'       => '0.0.1',
+                'core_service'  => 0,
+                'meta'          => ['flow' => Flow::getDefaultOrderFlow()],
+                'meta_type'     => 'order_config',
+                'config'        => [],
+                'status'        => 'private',
             ]
         );
 
@@ -158,21 +155,20 @@ class OrderConfigController extends Controller
     /**
      * Clones an order configuration into a new configuration.
      *
-     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
     public function clone(Request $request)
     {
-        $name = $request->input('name');
+        $name        = $request->input('name');
         $description = $request->input('description');
-        $id = $request->input('id');
-        $installed = $request->input('installed', false);
-        $company = Flow::getCompanySession();
+        $id          = $request->input('id');
+        $installed   = $request->input('installed', false);
+        $company     = Flow::getCompanySession();
 
         if (!$id) {
             return response()->json(
                 [
-                    'errors' => ['Extension attempted to clone not found']
+                    'errors' => ['Extension attempted to clone not found'],
                 ],
                 400
             );
@@ -184,15 +180,15 @@ class OrderConfigController extends Controller
             $install = ExtensionInstall::where('uuid', $id)->first();
 
             // replicate the install
-            $clonedInstall = $install->replicate();
-            $clonedInstall->id = null;
-            $clonedInstall->uuid = Extension::generateUuid();
+            $clonedInstall            = $install->replicate();
+            $clonedInstall->id        = null;
+            $clonedInstall->uuid      = Extension::generateUuid();
             $clonedInstall->overwrite = [
-                'name' => $name,
+                'name'         => $name,
                 'display_name' => $name,
-                'description' => $description,
-                'key' => Str::slug($name),
-                'namespace' => Extension::createNamespace($company->slug, 'order-config', $name, Str::random(5))
+                'description'  => $description,
+                'key'          => Str::slug($name),
+                'namespace'    => Extension::createNamespace($company->slug, 'order-config', $name, Str::random(5)),
             ];
 
             // save clone
@@ -205,16 +201,16 @@ class OrderConfigController extends Controller
         $extension = Extension::where('uuid', $id)->first();
 
         // replicate the extension record
-        $clonedExtension = $extension->replicate();
-        $clonedExtension->id = null;
-        $clonedExtension->uuid = Extension::generateUuid();
-        $clonedExtension->public_id = Extension::generatePublicId('ext');
-        $clonedExtension->name = $name;
+        $clonedExtension               = $extension->replicate();
+        $clonedExtension->id           = null;
+        $clonedExtension->uuid         = Extension::generateUuid();
+        $clonedExtension->public_id    = Extension::generatePublicId('ext');
+        $clonedExtension->name         = $name;
         $clonedExtension->display_name = $name;
-        $clonedExtension->description = $description;
-        $clonedExtension->key = Str::slug($name);
-        $clonedExtension->namespace = Extension::createNamespace($company->slug, 'order-config', $name, Str::random(5));
-        $clonedExtension->status = 'private';
+        $clonedExtension->description  = $description;
+        $clonedExtension->key          = Str::slug($name);
+        $clonedExtension->namespace    = Extension::createNamespace($company->slug, 'order-config', $name, Str::random(5));
+        $clonedExtension->status       = 'private';
 
         // save clone
         $clonedExtension->save();
@@ -223,15 +219,14 @@ class OrderConfigController extends Controller
     }
 
     /**
-     * Pull all dynamically created meta fields throughout orders of a specific type
+     * Pull all dynamically created meta fields throughout orders of a specific type.
      *
-     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
     public function getDynamicMetaFields(Request $request)
     {
-        $type = $request->input('type', 'transport');
-        $orders = Order::select('meta')->where('type', $type)->whereNull('deleted_at')->get();
+        $type          = $request->input('type', 'transport');
+        $orders        = Order::select('meta')->where('type', $type)->whereNull('deleted_at')->get();
         $dynamicFields = collect();
 
         foreach ($orders as $order) {
@@ -242,9 +237,8 @@ class OrderConfigController extends Controller
     }
 
     /**
-     * Pull all dynamically created meta fields throughout orders of a specific type
+     * Pull all dynamically created meta fields throughout orders of a specific type.
      *
-     * @param string $id
      * @return \Illuminate\Http\Response
      */
     public function delete(string $id)
@@ -267,7 +261,7 @@ class OrderConfigController extends Controller
 
         return response()->json(
             [
-                'errors' => 'Unable to uninstall order configuration'
+                'errors' => 'Unable to uninstall order configuration',
             ],
             400
         );

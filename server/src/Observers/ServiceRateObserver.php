@@ -10,7 +10,6 @@ class ServiceRateObserver
     /**
      * Handle the ServiceRate "creating" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\ServiceRate  $serviceRate
      * @return void
      */
     public function creating(ServiceRate $serviceRate)
@@ -29,12 +28,11 @@ class ServiceRateObserver
     /**
      * Handle the ServiceRate "created" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\ServiceRate  $serviceRate
      * @return void
      */
     public function created(ServiceRate $serviceRate)
     {
-        $serviceRateFees = request()->input('serviceRate.rate_fees');
+        $serviceRateFees       = request()->input('serviceRate.rate_fees');
         $serviceRateParcelFees = request()->input('serviceRate.parcel_fees');
 
         if ($serviceRate->isFixedMeter() || $serviceRate->isPerDrop()) {
@@ -49,12 +47,11 @@ class ServiceRateObserver
     /**
      * Handle the ServiceRate "updated" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\ServiceRate  $serviceRate
      * @return void
      */
     public function updated(ServiceRate $serviceRate)
     {
-        $serviceRateFees = request()->input('serviceRate.rate_fees');
+        $serviceRateFees       = request()->input('serviceRate.rate_fees');
         $serviceRateParcelFees = request()->input('serviceRate.parcel_fees');
 
         if ($serviceRate->isFixedMeter() || $serviceRate->isPerDrop()) {
@@ -69,7 +66,6 @@ class ServiceRateObserver
     /**
      * Handle the ServiceRate "creating" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\ServiceRate  $serviceRate
      * @return void
      */
     public function deleted(ServiceRate $serviceRate)

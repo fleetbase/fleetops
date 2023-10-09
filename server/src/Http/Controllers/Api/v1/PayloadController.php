@@ -2,9 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Http\Request;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Http\Requests\CreatePayloadRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdatePayloadRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
@@ -12,6 +9,9 @@ use Fleetbase\FleetOps\Http\Resources\v1\Payload as PayloadResource;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+
 // use Fleetbase\FleetOps\Support\Utils;
 
 class PayloadController extends Controller
@@ -19,7 +19,8 @@ class PayloadController extends Controller
     /**
      * Creates a new Fleetbase Payload resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreatePayloadRequest  $request
+     * @param \Fleetbase\Http\Requests\CreatePayloadRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Payload
      */
     public function create(CreatePayloadRequest $request)
@@ -53,9 +54,9 @@ class PayloadController extends Controller
 
                 // create waypoint
                 Waypoint::create([
-                    'place_uuid' => $id,
+                    'place_uuid'   => $id,
                     'payload_uuid' => $payload->uuid,
-                    'order' => $index,
+                    'order'        => $index,
                 ]);
             }
         }
@@ -67,8 +68,9 @@ class PayloadController extends Controller
     /**
      * Updates a Fleetbase Payload resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdatePayloadRequest  $request
+     * @param string                                        $id
+     * @param \Fleetbase\Http\Requests\UpdatePayloadRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Payload
      */
     public function update($id, UpdatePayloadRequest $request)
@@ -113,9 +115,9 @@ class PayloadController extends Controller
 
                 // create waypoint
                 Waypoint::create([
-                    'place_uuid' => $id,
+                    'place_uuid'   => $id,
                     'payload_uuid' => $payload->uuid,
-                    'order' => $index + $waypointCount,
+                    'order'        => $index + $waypointCount,
                 ]);
             }
         }
@@ -133,7 +135,6 @@ class PayloadController extends Controller
     /**
      * Query for Fleetbase Payload resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\PayloadCollection
      */
     public function query(Request $request)
@@ -146,7 +147,6 @@ class PayloadController extends Controller
     /**
      * Finds a single Fleetbase Payload resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\Payload
      */
     public function find($id, Request $request)
@@ -170,7 +170,6 @@ class PayloadController extends Controller
     /**
      * Deletes a Fleetbase Payload resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\Payload
      */
     public function delete($id, Request $request)

@@ -10,7 +10,10 @@ use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 
 class Position extends Model
 {
-    use HasUuid, TracksApiCredential, HasApiModelBehavior, SpatialTrait;
+    use HasUuid;
+    use TracksApiCredential;
+    use HasApiModelBehavior;
+    use SpatialTrait;
 
     /**
      * The database connection to use.
@@ -48,35 +51,35 @@ class Position extends Model
     protected $appends = [];
 
     /**
-     * Get filter parameters for this model
+     * Get filter parameters for this model.
      *
      * @var array
      */
     protected $filterParams = [];
 
     /**
-     * Properties which activity needs to be logged
+     * Properties which activity needs to be logged.
      *
      * @var array
      */
     protected static $logAttributes = ['coordinates', 'heading', 'bearing', 'speed', 'altitude'];
 
     /**
-     * We only want to log changed attributes
+     * We only want to log changed attributes.
      *
-     * @var boolean
+     * @var bool
      */
     protected static $logOnlyDirty = true;
 
     /**
-     * Do not log empty changed
+     * Do not log empty changed.
      *
-     * @var boolean
+     * @var bool
      */
     protected static $submitEmptyLogs = false;
 
     /**
-     * The name of the subject to log
+     * The name of the subject to log.
      *
      * @var string
      */

@@ -2,21 +2,22 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Http\Request;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Http\Requests\CreateTrackingNumberRequest;
 use Fleetbase\FleetOps\Http\Requests\DecodeTrackingNumberQR;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\TrackingNumber as TrackingNumberResource;
 use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class TrackingNumberController extends Controller
 {
     /**
      * Creates a new Fleetbase TrackingNumber resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreateTrackingNumberRequest  $request
+     * @param \Fleetbase\Http\Requests\CreateTrackingNumberRequest $request
+     *
      * @return \Fleetbase\Http\Resources\TrackingNumber
      */
     public function create(CreateTrackingNumberRequest $request)
@@ -32,14 +33,14 @@ class TrackingNumberController extends Controller
             $owner = Utils::getUuid(
                 ['orders', 'entities'],
                 [
-                    'public_id' => $request->input('owner'),
+                    'public_id'    => $request->input('owner'),
                     'company_uuid' => session('company'),
                 ]
             );
 
             if (is_array($owner)) {
                 $input['owner_uuid'] = Utils::get($owner, 'uuid');
-                $input['type'] = Utils::getModelClassName(Utils::get($owner, 'table'));
+                $input['type']       = Utils::getModelClassName(Utils::get($owner, 'table'));
             }
         }
 
@@ -53,7 +54,6 @@ class TrackingNumberController extends Controller
     /**
      * Query for Fleetbase TrackingNumber resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\TrackingNumberCollection
      */
     public function query(Request $request)
@@ -66,7 +66,6 @@ class TrackingNumberController extends Controller
     /**
      * Finds a single Fleetbase TrackingNumber resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\TrackingNumberCollection
      */
     public function find($id)
@@ -90,7 +89,6 @@ class TrackingNumberController extends Controller
     /**
      * Deletes a Fleetbase TrackingNumber resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\TrackingNumberCollection
      */
     public function delete($id, Request $request)
@@ -115,9 +113,10 @@ class TrackingNumberController extends Controller
     }
 
     /**
-     * Take the uuid value of an entity QR code and return the object
+     * Take the uuid value of an entity QR code and return the object.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param \Illuminate\Http\Request $request
+     *
      * @return \Illuminate\Http\Response
      */
     public function fromQR(DecodeTrackingNumberQR $request)
@@ -139,8 +138,8 @@ class TrackingNumberController extends Controller
         }
 
         // get the model class name
-        $modelType = class_basename($model);
-        $resourceNamespace = "\\Fleetbase\\Http\\Resources\\v1\\" . $modelType;
+        $modelType         = class_basename($model);
+        $resourceNamespace = '\\Fleetbase\\Http\\Resources\\v1\\' . $modelType;
 
         return new $resourceNamespace($model);
     }

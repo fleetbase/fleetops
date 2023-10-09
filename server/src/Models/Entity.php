@@ -2,28 +2,35 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
-use Fleetbase\FleetOps\Traits\HasTrackingNumber;
-use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\Traits\HasApiModelBehavior;
-use Fleetbase\Traits\HasInternalId;
-use Fleetbase\Traits\HasUuid;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Fleetbase\Casts\Json;
 use Fleetbase\Casts\PolymorphicType;
+use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\FleetOps\Traits\HasTrackingNumber;
+use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Milon\Barcode\Facades\DNS2DFacade as DNS2D;
 use PhpUnitsOfMeasure\PhysicalQuantity\Length;
 use PhpUnitsOfMeasure\PhysicalQuantity\Mass;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Milon\Barcode\Facades\DNS2DFacade as DNS2D;
 
 class Entity extends Model
 {
-    use HasUuid, HasPublicId, HasInternalId, TracksApiCredential, SendsWebhooks, HasTrackingNumber, HasApiModelBehavior, HasMetaAttributes;
+    use HasUuid;
+    use HasPublicId;
+    use HasInternalId;
+    use TracksApiCredential;
+    use SendsWebhooks;
+    use HasTrackingNumber;
+    use HasApiModelBehavior;
+    use HasMetaAttributes;
 
     /**
      * The database table used by the model.
@@ -33,14 +40,14 @@ class Entity extends Model
     protected $table = 'entities';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'entity';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -85,7 +92,7 @@ class Entity extends Model
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -104,8 +111,8 @@ class Entity extends Model
      * @var array
      */
     protected $casts = [
-        'meta' => Json::class,
-        'customer_type' => PolymorphicType::class
+        'meta'          => Json::class,
+        'customer_type' => PolymorphicType::class,
     ];
 
     /**
@@ -123,7 +130,7 @@ class Entity extends Model
     }
 
     /**
-     * The pdf source stream for label
+     * The pdf source stream for label.
      */
     public function pdfLabel()
     {
@@ -131,7 +138,7 @@ class Entity extends Model
     }
 
     /**
-     * The pdf source stream for label
+     * The pdf source stream for label.
      */
     public function pdfLabelStream()
     {
@@ -139,21 +146,21 @@ class Entity extends Model
     }
 
     /**
-     * The html for the shipment label
+     * The html for the shipment label.
      */
     public function label()
     {
         $this->load(['trackingNumber', 'company', 'destination']);
 
         return view('labels/default', [
-            'dropoff' => $this->destination,
+            'dropoff'        => $this->destination,
             'trackingNumber' => $this->trackingNumber,
-            'company' => $this->company,
+            'company'        => $this->company,
         ])->render();
     }
 
     /**
-     * Photo of entity belongs to
+     * Photo of entity belongs to.
      *
      * @var Model
      */
@@ -181,7 +188,7 @@ class Entity extends Model
     }
 
     /**
-     * The entity destination
+     * The entity destination.
      *
      * @var Model
      */
@@ -191,7 +198,7 @@ class Entity extends Model
     }
 
     /**
-     * Payload entity belongs to
+     * Payload entity belongs to.
      *
      * @var Model
      */
@@ -201,7 +208,7 @@ class Entity extends Model
     }
 
     /**
-     * Driver assigned to order
+     * Driver assigned to order.
      *
      * @var Model
      */
@@ -211,7 +218,7 @@ class Entity extends Model
     }
 
     /**
-     * The company who manages this order
+     * The company who manages this order.
      *
      * @var Model
      */
@@ -221,7 +228,7 @@ class Entity extends Model
     }
 
     /**
-     * The tracking number assosicated to the entity
+     * The tracking number assosicated to the entity.
      */
     public function trackingNumber()
     {
@@ -229,7 +236,7 @@ class Entity extends Model
     }
 
     /**
-     * The customer of this order
+     * The customer of this order.
      *
      * @var Model
      */
@@ -249,9 +256,9 @@ class Entity extends Model
     }
 
     /**
-     * True of the customer is a vendor `customer_is_vendor`
+     * True of the customer is a vendor `customer_is_vendor`.
      *
-     * @var boolean
+     * @var bool
      */
     public function getCustomerIsVendorAttribute()
     {
@@ -259,9 +266,9 @@ class Entity extends Model
     }
 
     /**
-     * True of the customer is a contact `customer_is_contact`
+     * True of the customer is a contact `customer_is_contact`.
      *
-     * @var boolean
+     * @var bool
      */
     public function getCustomerIsContactAttribute()
     {
@@ -269,7 +276,7 @@ class Entity extends Model
     }
 
     /**
-     * The length the entity belongs to
+     * The length the entity belongs to.
      *
      * @var PhpUnitsOfMeasure\PhysicalQuantity\Length
      */
@@ -279,7 +286,7 @@ class Entity extends Model
     }
 
     /**
-     * The width the entity belongs to
+     * The width the entity belongs to.
      *
      * @var PhpUnitsOfMeasure\PhysicalQuantity\Length
      */
@@ -289,7 +296,7 @@ class Entity extends Model
     }
 
     /**
-     * The height the entity belongs to
+     * The height the entity belongs to.
      *
      * @var PhpUnitsOfMeasure\PhysicalQuantity\Length
      */
@@ -299,7 +306,7 @@ class Entity extends Model
     }
 
     /**
-     * The weight the entity belongs to
+     * The weight the entity belongs to.
      *
      * @var PhpUnitsOfMeasure\PhysicalQuantity\Mass
      */
@@ -309,7 +316,7 @@ class Entity extends Model
     }
 
     /**
-     * Always convert price to integer
+     * Always convert price to integer.
      */
     public function setPriceAttribute($value)
     {
@@ -317,7 +324,7 @@ class Entity extends Model
     }
 
     /**
-     * Always convert sale price to integer
+     * Always convert sale price to integer.
      */
     public function setSalePriceAttribute($value)
     {
@@ -325,7 +332,7 @@ class Entity extends Model
     }
 
     /**
-     * Always convert declared value to integer
+     * Always convert declared value to integer.
      */
     public function setDeclaredValueAttribute($value)
     {
@@ -333,7 +340,7 @@ class Entity extends Model
     }
 
     /**
-     * The tracking number for the entity
+     * The tracking number for the entity.
      */
     public function getTrackingAttribute()
     {
@@ -341,25 +348,25 @@ class Entity extends Model
     }
 
     /**
-     * The latest tracking status for entity
+     * The latest tracking status for entity.
      */
     public function getStatusAttribute()
     {
         return data_get($this, 'trackingNumber.last_status');
     }
 
-    public static function insertGetUuid($values = [], ?Payload $payload = null)
+    public static function insertGetUuid($values = [], Payload $payload = null)
     {
         if (is_array($values) && isset($values['uuid'])) {
             Entity::where('uuid', $values['uuid'])->update([
-                'payload_uuid' => $payload->uuid
+                'payload_uuid' => $payload->uuid,
             ]);
 
             return $values['uuid'];
         }
 
-        $instance = new static();
-        $fillable = $instance->getFillable();
+        $instance   = new static();
+        $fillable   = $instance->getFillable();
         $insertKeys = array_keys($values);
         // clean insert data
         foreach ($insertKeys as $key) {
@@ -368,11 +375,11 @@ class Entity extends Model
             }
         }
 
-        $values['uuid'] = $uuid = static::generateUuid();
-        $values['public_id'] = static::generatePublicId('entity');
-        $values['internal_id'] = static::generateInternalId();
-        $values['_key'] = session('api_key', 'console');
-        $values['created_at'] = Carbon::now()->toDateTimeString();
+        $values['uuid']         = $uuid = static::generateUuid();
+        $values['public_id']    = static::generatePublicId('entity');
+        $values['internal_id']  = static::generateInternalId();
+        $values['_key']         = session('api_key', 'console');
+        $values['created_at']   = Carbon::now()->toDateTimeString();
         $values['company_uuid'] = session('company');
 
         if ($payload) {
@@ -390,8 +397,8 @@ class Entity extends Model
             $trackingNumberId = TrackingNumber::insertGetUuid([
                 'owner_uuid' => $uuid,
                 'owner_type' => Utils::getModelClassName('entity'),
-                'region' => $payload->getPickupRegion(),
-                'location' => Utils::parsePointToWkt($payload->getPickupLocation())
+                'region'     => $payload->getPickupRegion(),
+                'location'   => Utils::parsePointToWkt($payload->getPickupLocation()),
             ]);
 
             // set tracking number

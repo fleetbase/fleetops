@@ -3,12 +3,12 @@
 namespace Fleetbase\FleetOps\Traits;
 
 use Fleetbase\FleetOps\Models\Proof;
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
+use Fleetbase\FleetOps\Support\Utils;
+use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 
 trait HasTrackingNumber
 {
@@ -17,10 +17,10 @@ trait HasTrackingNumber
         static::created(function (Model $model): void {
             $trackingNumberId = TrackingNumber::insertGetUuid([
                 'company_uuid' => data_get($model, 'company_uuid', session('company')),
-                'owner_uuid' => $model->uuid,
-                'owner_type' => Utils::getModelClassName($model),
-                'region' => $model->getPickupRegion(),
-                'location' => $model->getPickupLocation()
+                'owner_uuid'   => $model->uuid,
+                'owner_type'   => Utils::getModelClassName($model),
+                'region'       => $model->getPickupRegion(),
+                'location'     => $model->getPickupLocation(),
             ], $model);
 
             DB::table($model->getTable())->where('uuid', $model->uuid)->update(['tracking_number_uuid' => $trackingNumberId]);
@@ -47,24 +47,25 @@ trait HasTrackingNumber
     /**
      * Creates activity for this resource tracking number.
      *
-     * @param string $status the short status update
-     * @param string $details the detailed update
-     * @param array|Point $location the location of the update, can be either [lat, lng] or a \Grimzy\LaravelMysqlSpatial\Types\Point instance
-     * @param string $code the onew word status code
-     * @param \Fleetbase\Models\Proof|string|null $proof resolvable proof of delivery/activity
+     * @param string                              $status   the short status update
+     * @param string                              $details  the detailed update
+     * @param array|Point                         $location the location of the update, can be either [lat, lng] or a \Grimzy\LaravelMysqlSpatial\Types\Point instance
+     * @param string                              $code     the onew word status code
+     * @param \Fleetbase\Models\Proof|string|null $proof    resolvable proof of delivery/activity
+     *
      * @return \Fleetbase\Models\TrackingStatus
      */
     public function createActivity(string $status, string $details = '', $location = [], string $code = '', $proof = null): TrackingStatus
     {
-        $proof = static::resolveProof($proof);
+        $proof    = static::resolveProof($proof);
         $activity = TrackingStatus::create([
-            'company_uuid' => data_get($this, 'company_uuid', session('company')),
+            'company_uuid'         => data_get($this, 'company_uuid', session('company')),
             'tracking_number_uuid' => $this->tracking_number_uuid,
-            'proof_uuid' => data_get($proof, 'uuid'),
-            'status' => $status,
-            'details' => $details,
-            'location' => $this->getLocationAsPoint($location),
-            'code' => TrackingStatus::prepareCode($code)
+            'proof_uuid'           => data_get($proof, 'uuid'),
+            'status'               => $status,
+            'details'              => $details,
+            'location'             => $this->getLocationAsPoint($location),
+            'code'                 => TrackingStatus::prepareCode($code),
         ]);
 
         if (isset($this->trackingNumber)) {
@@ -81,25 +82,23 @@ trait HasTrackingNumber
     /**
      * Inserts activity for this resource tracking number.
      *
-     * @param string $status the short status update
-     * @param string $details the detailed update
-     * @param array|Point $location the location of the update, can be either [lat, lng] or a \Grimzy\LaravelMysqlSpatial\Types\Point instance
-     * @param \Fleetbase\Models\Proof|string|null $proof resolvable proof of delivery/activity
-     * @param string $code the onew word status code
-     * 
-     * @return string
+     * @param string                              $status   the short status update
+     * @param string                              $details  the detailed update
+     * @param array|Point                         $location the location of the update, can be either [lat, lng] or a \Grimzy\LaravelMysqlSpatial\Types\Point instance
+     * @param \Fleetbase\Models\Proof|string|null $proof    resolvable proof of delivery/activity
+     * @param string                              $code     the onew word status code
      */
     public function insertActivity(string $status, string $details = '', $location = [], string $code = '', $proof = null): string
     {
-        $proof = static::resolveProof($proof);
+        $proof      = static::resolveProof($proof);
         $activityId = TrackingStatus::insertGetUuid([
-            'company_uuid' => data_get($this, 'company_uuid', session('company')),
+            'company_uuid'         => data_get($this, 'company_uuid', session('company')),
             'tracking_number_uuid' => $this->tracking_number_uuid,
-            'proof_uuid' => data_get($proof, 'uuid'),
-            'status' => $status,
-            'details' => $details,
-            'location' => $this->getLocationAsPoint($location),
-            'code' => TrackingStatus::prepareCode($code)
+            'proof_uuid'           => data_get($proof, 'uuid'),
+            'status'               => $status,
+            'details'              => $details,
+            'location'             => $this->getLocationAsPoint($location),
+            'code'                 => TrackingStatus::prepareCode($code),
         ]);
 
         if (isset($this->trackingNumber)) {
@@ -169,7 +168,6 @@ trait HasTrackingNumber
     /**
      * Resolves proof to model instance.
      *
-     * @param \Fleetbase\Models\Proof|string|null $code the onew word status code
      * @return \Fleetbase\Models\Proof|null
      */
     public static function resolveProof($proof)

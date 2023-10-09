@@ -3,21 +3,19 @@
 namespace Fleetbase\FleetOps\Casts;
 
 use Fleetbase\FleetOps\Support\Utils;
-use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
-use Grimzy\LaravelMysqlSpatial\Types\Polygon as PolygonType;
-use Grimzy\LaravelMysqlSpatial\Types\GeometryInterface;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialExpression;
+use Grimzy\LaravelMysqlSpatial\Types\GeometryInterface;
+use Grimzy\LaravelMysqlSpatial\Types\Polygon as PolygonType;
+use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 
 class Polygon implements CastsAttributes
 {
     /**
      * Cast the given value.
      *
-     * @param  \Illuminate\Database\Eloquent\Model  $model
-     * @param  string  $key
-     * @param  mixed  $value
-     * @param  array  $attributes
-     * @return mixed
+     * @param \Illuminate\Database\Eloquent\Model $model
+     * @param string                              $key
+     * @param array                               $attributes
      */
     public function get($model, $key, $value, $attributes)
     {
@@ -27,11 +25,9 @@ class Polygon implements CastsAttributes
     /**
      * Prepare the given value for storage.
      *
-     * @param  \Illuminate\Database\Eloquent\Model  $model
-     * @param  string  $key
-     * @param  mixed  $value
-     * @param  array  $attributes
-     * @return mixed
+     * @param \Illuminate\Database\Eloquent\Model $model
+     * @param string                              $key
+     * @param array                               $attributes
      */
     public function set($model, $key, $value, $attributes)
     {

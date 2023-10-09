@@ -2,8 +2,8 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
-use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Exports\VehicleExport;
+use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\Http\Requests\ExportRequest;
 use Illuminate\Support\Facades\DB;
@@ -13,14 +13,14 @@ use Maatwebsite\Excel\Facades\Excel;
 class VehicleController extends FleetOpsController
 {
     /**
-     * The resource to query
+     * The resource to query.
      *
      * @var string
      */
     public $resource = 'vehicle';
 
     /**
-     * Get all status options for an vehicle
+     * Get all status options for an vehicle.
      *
      * @return \Illuminate\Http\Response
      */
@@ -39,7 +39,7 @@ class VehicleController extends FleetOpsController
     }
 
     /**
-     * Get all avatar options for an vehicle
+     * Get all avatar options for an vehicle.
      *
      * @return \Illuminate\Http\Response
      */
@@ -51,14 +51,13 @@ class VehicleController extends FleetOpsController
     }
 
     /**
-     * Export the vehicles to excel or csv
+     * Export the vehicles to excel or csv.
      *
-     * @param  \Illuminate\Http\Request  $query
      * @return \Illuminate\Http\Response
      */
     public static function export(ExportRequest $request)
     {
-        $format = $request->input('format', 'xlsx');
+        $format   = $request->input('format', 'xlsx');
         $fileName = trim(Str::slug('vehicles-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new VehicleExport(), $fileName);

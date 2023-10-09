@@ -3,9 +3,9 @@
 namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Support\Encoding\Polyline;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Cache;
 use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 /**
  * Class OSRM
@@ -18,10 +18,11 @@ class OSRM
     /**
      * Get the route between two points.
      *
-     * @param Point $start Starting point.
-     * @param Point $end Ending point.
-     * @param array $queryParameters Additional query parameters.
-     * @return array Response from the OSRM API.
+     * @param Point $start           starting point
+     * @param Point $end             ending point
+     * @param array $queryParameters additional query parameters
+     *
+     * @return array response from the OSRM API
      */
     public static function getRoute(Point $start, Point $end, array $queryParameters = [])
     {
@@ -34,9 +35,9 @@ class OSRM
         }
 
         $coordinates = "{$start->getLng()},{$start->getLat()};{$end->getLng()},{$end->getLat()}";
-        $url = self::$baseUrl . "/route/v1/driving/{$coordinates}";
-        $response = Http::get($url, $queryParameters);
-        $data = $response->json();
+        $url         = self::$baseUrl . "/route/v1/driving/{$coordinates}";
+        $response    = Http::get($url, $queryParameters);
+        $data        = $response->json();
 
         // Check for the presence of the encoded polyline in each route and decode it if found
         if (isset($data['routes']) && is_array($data['routes'])) {
@@ -56,9 +57,10 @@ class OSRM
     /**
      * Get the nearest point on a road to a given location.
      *
-     * @param Point $location Location point.
-     * @param array $queryParameters Additional query parameters.
-     * @return array Response from the OSRM API.
+     * @param Point $location        location point
+     * @param array $queryParameters additional query parameters
+     *
+     * @return array response from the OSRM API
      */
     public static function getNearest(Point $location, array $queryParameters = [])
     {
@@ -69,22 +71,22 @@ class OSRM
         }
 
         $coordinates = "{$location->getLng()},{$location->getLat()}";
-        $url = self::$baseUrl . "/nearest/v1/driving/{$coordinates}";
-        $response = Http::get($url, $queryParameters);
-        $result = $response->json();
+        $url         = self::$baseUrl . "/nearest/v1/driving/{$coordinates}";
+        $response    = Http::get($url, $queryParameters);
+        $result      = $response->json();
 
         Cache::put($cacheKey, $result, 60 * 60);
 
         return $result;
     }
 
-
     /**
      * Get a table of travel times or distances between multiple points.
      *
-     * @param array $points Array of Point objects.
-     * @param array $queryParameters Additional query parameters.
-     * @return array Response from the OSRM API.
+     * @param array $points          array of Point objects
+     * @param array $queryParameters additional query parameters
+     *
+     * @return array response from the OSRM API
      */
     public static function getTable(array $points, array $queryParameters = [])
     {
@@ -98,9 +100,9 @@ class OSRM
             return "{$point->getLng()},{$point->getLat()}";
         }, $points));
 
-        $url = self::$baseUrl . "/table/v1/driving/{$coordinates}";
+        $url      = self::$baseUrl . "/table/v1/driving/{$coordinates}";
         $response = Http::get($url, $queryParameters);
-        $result = $response->json();
+        $result   = $response->json();
 
         Cache::put($cacheKey, $result, 60 * 60);
 
@@ -110,9 +112,10 @@ class OSRM
     /**
      * Get a trip between multiple points.
      *
-     * @param array $points Array of Point objects.
-     * @param array $queryParameters Additional query parameters.
-     * @return array Response from the OSRM API.
+     * @param array $points          array of Point objects
+     * @param array $queryParameters additional query parameters
+     *
+     * @return array response from the OSRM API
      */
     public static function getTrip(array $points, array $queryParameters = [])
     {
@@ -126,9 +129,9 @@ class OSRM
             return "{$point->getLng()},{$point->getLat()}";
         }, $points));
 
-        $url = self::$baseUrl . "/trip/v1/driving/{$coordinates}";
+        $url      = self::$baseUrl . "/trip/v1/driving/{$coordinates}";
         $response = Http::get($url, $queryParameters);
-        $data = $response->json();
+        $data     = $response->json();
 
         Cache::put($cacheKey, $data, 60 * 60);
 
@@ -138,9 +141,10 @@ class OSRM
     /**
      * Get a match between GPS points and roads.
      *
-     * @param array $points Array of Point objects.
-     * @param array $queryParameters Additional query parameters.
-     * @return array Response from the OSRM API.
+     * @param array $points          array of Point objects
+     * @param array $queryParameters additional query parameters
+     *
+     * @return array response from the OSRM API
      */
     public static function getMatch(array $points, array $queryParameters = [])
     {
@@ -157,11 +161,12 @@ class OSRM
     /**
      * Get a tile for a specific zoom level and coordinates.
      *
-     * @param int $z Zoom level.
-     * @param int $x X coordinate.
-     * @param int $y Y coordinate.
-     * @param array $queryParameters Additional query parameters.
-     * @return string Response from the OSRM API.
+     * @param int   $z               zoom level
+     * @param int   $x               x coordinate
+     * @param int   $y               y coordinate
+     * @param array $queryParameters additional query parameters
+     *
+     * @return string response from the OSRM API
      */
     public static function getTile(int $z, int $x, int $y, array $queryParameters = [])
     {
@@ -175,8 +180,9 @@ class OSRM
     /**
      * Decodes an encoded polyline string into an array of coordinates.
      *
-     * @param string $polyline The encoded polyline string.
-     * @return array An array of Point's.
+     * @param string $polyline the encoded polyline string
+     *
+     * @return array an array of Point's
      */
     public static function decodePolyline($polyline)
     {

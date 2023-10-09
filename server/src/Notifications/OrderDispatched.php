@@ -2,20 +2,20 @@
 
 namespace Fleetbase\FleetOps\Notifications;
 
-use Fleetbase\FleetOps\Models\Order;
-use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Events\ResourceLifecycleEvent;
-use Illuminate\Bus\Queueable;
+use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
+use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Messages\BroadcastMessage;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\Fcm\FcmChannel;
-use NotificationChannels\Fcm\FcmMessage;
 use NotificationChannels\Apn\ApnChannel;
 use NotificationChannels\Apn\ApnMessage;
+use NotificationChannels\Fcm\FcmChannel;
+use NotificationChannels\Fcm\FcmMessage;
 use NotificationChannels\Fcm\Resources\AndroidConfig;
 use NotificationChannels\Fcm\Resources\AndroidFcmOptions;
 use NotificationChannels\Fcm\Resources\AndroidNotification;
@@ -46,7 +46,6 @@ class OrderDispatched extends Notification implements ShouldQueue
     /**
      * Get the notification's delivery channels.
      *
-     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -76,26 +75,25 @@ class OrderDispatched extends Notification implements ShouldQueue
             new Channel('company.' . data_get($this->order, 'company.public_id')),
             new Channel('api.' . session('api_credential')),
             new Channel('order.' . $this->order->uuid),
-            new Channel('order.' . $this->order->public_id)
+            new Channel('order.' . $this->order->public_id),
         ];
     }
 
     /**
      * Get the broadcastable representation of the notification.
      *
-     * @param  mixed  $notifiable
      * @return BroadcastMessage
      */
     public function toBroadcast($notifiable)
     {
-        $model = $this->order;
-        $resource = new OrderResource($model);
+        $model        = $this->order;
+        $resource     = new OrderResource($model);
         $resourceData = [];
 
         if ($resource) {
             if (method_exists($resource, 'toWebhookPayload')) {
                 $resourceData = $resource->toWebhookPayload();
-            } else if (method_exists($resource, 'toArray')) {
+            } elseif (method_exists($resource, 'toArray')) {
                 $resourceData = $resource->toArray(request());
             }
         }
@@ -103,11 +101,11 @@ class OrderDispatched extends Notification implements ShouldQueue
         $resourceData = ResourceLifecycleEvent::transformResourceChildrenToId($resourceData);
 
         $data = [
-            'id' => uniqid('event_'),
+            'id'          => uniqid('event_'),
             'api_version' => config('api.version'),
-            'event' => 'order.dispatched',
-            'created_at' => now()->toDateTimeString(),
-            'data' => $resourceData,
+            'event'       => 'order.dispatched',
+            'created_at'  => now()->toDateTimeString(),
+            'data'        => $resourceData,
         ];
 
         return new BroadcastMessage($data);
@@ -116,15 +114,13 @@ class OrderDispatched extends Notification implements ShouldQueue
     /**
      * Get the mail representation of the notification.
      *
-     * @param  mixed  $notifiable
      * @return \Illuminate\Notifications\Messages\MailMessage
      */
     public function toMail($notifiable)
     {
-        $message = (new MailMessage)
+        $message = (new MailMessage())
             ->subject('Order ' . $this->order->public_id . ' has been dispatched!')
             ->line('Order ' . $this->order->public_id . ' has been dispatched to you.');
-
 
         $message->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
 
@@ -134,7 +130,6 @@ class OrderDispatched extends Notification implements ShouldQueue
     /**
      * Get the firebase cloud message representation of the notification.
      *
-     * @param  mixed  $notifiable
      * @return array
      */
     public function toFcm($notifiable)
@@ -161,7 +156,6 @@ class OrderDispatched extends Notification implements ShouldQueue
     /**
      * Get the apns message representation of the notification.
      *
-     * @param  mixed  $notifiable
      * @return array
      */
     public function toApn($notifiable)

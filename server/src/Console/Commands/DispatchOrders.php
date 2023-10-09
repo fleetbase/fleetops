@@ -4,8 +4,8 @@ namespace Fleetbase\FleetOps\Console\Commands;
 
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
-use Illuminate\Support\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
 
 class DispatchOrders extends Command
 {
@@ -55,12 +55,11 @@ class DispatchOrders extends Command
 
     /**
      * Fetches scheduled dispatchable orders based on certain criteria.
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
      */
     public function getScheduledOrders(): \Illuminate\Database\Eloquent\Collection
     {
         $sandbox = Utils::castBoolean($this->option('sandbox'));
+
         return Order::on($sandbox ? 'sandbox' : 'mysql')
             ->withoutGlobalScopes()
             ->where('dispatched', 0)

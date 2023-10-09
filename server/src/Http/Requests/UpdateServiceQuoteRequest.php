@@ -24,7 +24,6 @@ class UpdateServiceQuoteRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            //
         ];
     }
 }

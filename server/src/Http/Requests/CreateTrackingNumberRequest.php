@@ -26,8 +26,8 @@ class CreateTrackingNumberRequest extends FleetbaseRequest
     {
         return [
             'region' => 'required|string',
-            'owner' => ['required', new ExistsInAny(['orders', 'entities'], 'public_id')],
-            'type' => 'nullable|in:city,province,country',
+            'owner'  => ['required', new ExistsInAny(['orders', 'entities'], 'public_id')],
+            'type'   => 'nullable|in:city,province,country',
             'status' => 'nullable|in:active,inactive',
         ];
     }

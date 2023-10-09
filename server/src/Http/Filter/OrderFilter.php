@@ -31,7 +31,7 @@ class OrderFilter extends Filter
                 [
                     'payload',
                     'trackingNumber',
-                    'trackingStatuses'
+                    'trackingStatuses',
                 ]
             );
     }
@@ -78,7 +78,7 @@ class OrderFilter extends Filter
             $this->builder->whereNotIn('status', ['completed', 'expired', 'canceled']);
             // remove the searchBuilder where clause
             $this->builder->removeWhereFromQuery('status', 'active');
-        } else if (is_string($status)) {
+        } elseif (is_string($status)) {
             $this->builder->where('status', $status);
         }
 

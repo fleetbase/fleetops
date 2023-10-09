@@ -3,8 +3,8 @@
 namespace Fleetbase\FleetOps\Console\Commands;
 
 use Fleetbase\FleetOps\Models\Order;
-use Illuminate\Support\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
 
 class TrackOrderDistanceAndTime extends Command
 {
@@ -21,6 +21,7 @@ class TrackOrderDistanceAndTime extends Command
      * @var string
      */
     protected $description = 'Track and update order distance and time estimations';
+
     /**
      * Execute the console command.
      *
@@ -33,7 +34,7 @@ class TrackOrderDistanceAndTime extends Command
 
         // Get all active/ready order
         $orders = $this->getActiveOrders();
-        
+
         // Track updated orders
         $updated = [];
 
@@ -53,8 +54,6 @@ class TrackOrderDistanceAndTime extends Command
 
     /**
      * Fetches active orders.
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
      */
     public function getActiveOrders(): \Illuminate\Database\Eloquent\Collection
     {

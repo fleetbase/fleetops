@@ -4,18 +4,25 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
-use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\HasPublicId;
-use Fleetbase\Traits\TracksApiCredential;
-use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Sluggable\SlugOptions;
-use Spatie\Sluggable\HasSlug;
+use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\SendsWebhooks;
+use Fleetbase\Traits\TracksApiCredential;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Sluggable\HasSlug;
+use Spatie\Sluggable\SlugOptions;
 
 class Fleet extends Model
 {
-    use HasUuid, HasPublicId, HasApiModelBehavior, TracksApiCredential, SendsWebhooks, Searchable, HasSlug, LogsActivity;
+    use HasUuid;
+    use HasPublicId;
+    use HasApiModelBehavior;
+    use TracksApiCredential;
+    use SendsWebhooks;
+    use Searchable;
+    use HasSlug;
+    use LogsActivity;
 
     /**
      * The database table used by the model.
@@ -25,50 +32,47 @@ class Fleet extends Model
     protected $table = 'fleets';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'fleet';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
     protected $searchableColumns = ['name'];
 
     /**
-     * Properties which activity needs to be logged
+     * Properties which activity needs to be logged.
      *
      * @var array
      */
     protected static $logAttributes = ['name', 'task', 'service_area_uuid', 'zone_uuid'];
 
     /**
-     * Do not log empty changed
+     * Do not log empty changed.
      *
-     * @var boolean
+     * @var bool
      */
     protected static $submitEmptyLogs = false;
 
     /**
-     * We only want to log changed attributes
+     * We only want to log changed attributes.
      *
-     * @var boolean
+     * @var bool
      */
     protected static $logOnlyDirty = true;
 
     /**
-     * The name of the subject to log
+     * The name of the subject to log.
      *
      * @var string
      */
     protected static $logName = 'fleet';
 
-    /**
-     * @return \Spatie\Sluggable\SlugOptions
-     */
     public function getSlugOptions(): SlugOptions
     {
         return SlugOptions::create()
@@ -94,11 +98,11 @@ class Fleet extends Model
         'color',
         'task',
         'status',
-        'slug'
+        'slug',
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -134,7 +138,7 @@ class Fleet extends Model
     {
         return $this->belongsTo(Zone::class)->select(['uuid', 'public_id', 'name', 'border']);
     }
-    
+
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
@@ -169,7 +173,7 @@ class Fleet extends Model
 
     /**
      * Get avatar URL attribute.
-     * 
+     *
      * @return string
      */
     public function getPhotoUrlAttribute()
@@ -179,8 +183,8 @@ class Fleet extends Model
 
     /**
      * Get the number of drivers in fleet.
-     * 
-     * @return integer
+     *
+     * @return int
      */
     public function getDriversCountAttribute()
     {
@@ -189,8 +193,8 @@ class Fleet extends Model
 
     /**
      * Get the number of drivers in fleet.
-     * 
-     * @return integer
+     *
+     * @return int
      */
     public function getDriversOnlineCountAttribute()
     {

@@ -3,17 +3,21 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\FleetOps\Casts\Point;
-use Fleetbase\Models\Model;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\Traits\HasPublicId;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 
 class FuelReport extends Model
 {
-    use HasUuid, TracksApiCredential, HasPublicId, HasApiModelBehavior, SpatialTrait;
+    use HasUuid;
+    use TracksApiCredential;
+    use HasPublicId;
+    use HasApiModelBehavior;
+    use SpatialTrait;
 
     /**
      * The database table used by the model.
@@ -23,14 +27,14 @@ class FuelReport extends Model
     protected $table = 'fuel_reports';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'fuel_report';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -45,7 +49,7 @@ class FuelReport extends Model
 
     /**
      * The attributes that are spatial columns.
-     * 
+     *
      * @var array
      */
     protected $spatialFields = ['location'];
@@ -60,7 +64,7 @@ class FuelReport extends Model
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -74,7 +78,7 @@ class FuelReport extends Model
     protected $hidden = ['driver', 'vehicle'];
 
     /**
-     * Set the parcel fee as only numbers
+     * Set the parcel fee as only numbers.
      *
      * @void
      */
@@ -100,7 +104,7 @@ class FuelReport extends Model
     }
 
     /**
-     * Get the driver's name assigned to vehicle
+     * Get the driver's name assigned to vehicle.
      *
      * @var Model
      */
@@ -110,7 +114,7 @@ class FuelReport extends Model
     }
 
     /**
-     * Get the vehicless name
+     * Get the vehicless name.
      *
      * @var Model
      */

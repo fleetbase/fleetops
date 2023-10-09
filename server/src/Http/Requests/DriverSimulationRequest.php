@@ -30,17 +30,17 @@ class DriverSimulationRequest extends FleetbaseRequest
                 function () {
                     return $this->missing('order');
                 }
-            ), new ResolvablePoint],
+            ), new ResolvablePoint()],
             'end' => [Rule::requiredIf(
                 function () {
                     return $this->missing('order');
                 }
-            ), new ResolvablePoint],
+            ), new ResolvablePoint()],
             'order' => [Rule::requiredIf(
                 function () {
                     return $this->input('action', 'drive') === 'order';
                 }
-            ), 'string', 'exists:orders,public_id']
+            ), 'string', 'exists:orders,public_id'],
         ];
     }
 }

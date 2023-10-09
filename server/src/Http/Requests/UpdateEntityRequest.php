@@ -2,4 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
-class UpdateEntityRequest extends CreateEntityRequest {}
+class UpdateEntityRequest extends CreateEntityRequest
+{
+}

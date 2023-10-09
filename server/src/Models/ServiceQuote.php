@@ -2,25 +2,30 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
 use Fleetbase\Casts\Json;
-use Fleetbase\Traits\Expirable;
-use Fleetbase\Traits\HasMetaAttributes;
-use Fleetbase\Traits\HasUuid;
-use Fleetbase\Traits\HasPublicId;
-use Fleetbase\Traits\SendsWebhooks;
-use Fleetbase\Traits\TracksApiCredential;
 use Fleetbase\FleetOps\Integrations\Lalamove\Lalamove;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\Model;
+use Fleetbase\Traits\Expirable;
+use Fleetbase\Traits\HasMetaAttributes;
+use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
+use Fleetbase\Traits\SendsWebhooks;
+use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class ServiceQuote extends Model
 {
-    use HasUuid, HasPublicId, SendsWebhooks, TracksApiCredential, Expirable, HasMetaAttributes;
+    use HasUuid;
+    use HasPublicId;
+    use SendsWebhooks;
+    use TracksApiCredential;
+    use Expirable;
+    use HasMetaAttributes;
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
@@ -34,12 +39,11 @@ class ServiceQuote extends Model
     protected $table = 'service_quotes';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
     protected $searchableColumns = [];
-
 
     /**
      * The expiry datetime column.
@@ -56,7 +60,7 @@ class ServiceQuote extends Model
     protected $fillable = ['_key', 'request_id', 'company_uuid', 'service_rate_uuid', 'payload_uuid', 'amount', 'currency', 'meta', 'expired_at'];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -68,10 +72,9 @@ class ServiceQuote extends Model
      * @var array
      */
     protected $casts = [
-        'meta' => Json::class,
-        'expired_at' => 'datetime'
+        'meta'       => Json::class,
+        'expired_at' => 'datetime',
     ];
-
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -81,7 +84,7 @@ class ServiceQuote extends Model
     protected $hidden = ['serviceRate'];
 
     /**
-     * Attributes that is filterable on this model
+     * Attributes that is filterable on this model.
      *
      * @var array
      */
@@ -128,7 +131,7 @@ class ServiceQuote extends Model
     }
 
     /**
-     * The service rate name for this quote
+     * The service rate name for this quote.
      *
      * @var string
      */
@@ -147,10 +150,6 @@ class ServiceQuote extends Model
         return Lalamove::serviceQuoteFromQuotation($quotation);
     }
 
-    /**
-     * @param \Illuminate\Http\Request $request
-     * @return \Fleetbase\FleetOps\Models\ServiceQuote|null
-     */
     public static function resolveFromRequest(Request $request): ?ServiceQuote
     {
         $serviceQuote = $request->or(['order.service_quote_uuid', 'service_quote', 'service_quote_id', 'order.service_quote']);
@@ -173,7 +172,7 @@ class ServiceQuote extends Model
     /**
      * Get the plural name of this model, either from the `pluralName` property or by inflecting the table name.
      *
-     * @return string The plural name of this model.
+     * @return string the plural name of this model
      */
     public function getPluralName(): string
     {
@@ -191,7 +190,7 @@ class ServiceQuote extends Model
     /**
      * Get the singular name of this model, either from the `singularName` property or by inflecting the table name.
      *
-     * @return string The singular name of this model.
+     * @return string the singular name of this model
      */
     public function getSingularName(): string
     {

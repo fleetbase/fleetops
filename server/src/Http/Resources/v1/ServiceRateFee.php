@@ -10,7 +10,8 @@ class ServiceRateFee extends FleetbaseResource
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param \Illuminate\Http\Request $request
+     *
      * @return array
      */
     public function toArray($request)
@@ -18,18 +19,18 @@ class ServiceRateFee extends FleetbaseResource
         return array_merge(
             $this->getInternalIds(),
             [
-                'id' => $this->when(Http::isInternalRequest(), $this->id),
-                'uuid' => $this->when(Http::isInternalRequest(), $this->uuid),
-                'fee' => $this->fee,
-                'currency' => $this->currency,
-                'size' => $this->size,
-                'length' => $this->length,
-                'height' => $this->height,
+                'id'              => $this->when(Http::isInternalRequest(), $this->id),
+                'uuid'            => $this->when(Http::isInternalRequest(), $this->uuid),
+                'fee'             => $this->fee,
+                'currency'        => $this->currency,
+                'size'            => $this->size,
+                'length'          => $this->length,
+                'height'          => $this->height,
                 'dimensions_unit' => $this->dimensions_unit,
-                'weight' => $this->weight,
-                'weight_unit' => $this->weight_unit,
-                'updated_at' => $this->updated_at,
-                'created_at' => $this->created_at,
+                'weight'          => $this->weight,
+                'weight_unit'     => $this->weight_unit,
+                'updated_at'      => $this->updated_at,
+                'created_at'      => $this->created_at,
             ]
         );
     }
@@ -42,16 +43,16 @@ class ServiceRateFee extends FleetbaseResource
     public function toWebhookPayload()
     {
         return [
-            'fee' => $this->fee,
-            'currency' => $this->currency,
-            'size' => $this->size,
-            'length' => $this->length,
-            'height' => $this->height,
+            'fee'             => $this->fee,
+            'currency'        => $this->currency,
+            'size'            => $this->size,
+            'length'          => $this->length,
+            'height'          => $this->height,
             'dimensions_unit' => $this->dimensions_unit,
-            'weight' => $this->weight,
-            'weight_unit' => $this->weight_unit,
-            'updated_at' => $this->updated_at,
-            'created_at' => $this->created_at,
+            'weight'          => $this->weight,
+            'weight_unit'     => $this->weight_unit,
+            'updated_at'      => $this->updated_at,
+            'created_at'      => $this->created_at,
         ];
     }
 }

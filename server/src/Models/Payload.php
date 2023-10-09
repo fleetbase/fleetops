@@ -2,21 +2,25 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
+use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Resources\Internal\v1\Payload as PayloadResource;
+use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasMetaAttributes;
+use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\Traits\HasPublicId;
-use Fleetbase\Traits\HasApiModelBehavior;
-use Fleetbase\Casts\Json;
-use Fleetbase\Http\Resources\Internal\v1\Payload as PayloadResource;
-use Fleetbase\Traits\HasMetaAttributes;
 use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Str;
 
 class Payload extends Model
 {
-    use HasUuid, HasPublicId, HasApiModelBehavior, TracksApiCredential, HasMetaAttributes;
+    use HasUuid;
+    use HasPublicId;
+    use HasApiModelBehavior;
+    use TracksApiCredential;
+    use HasMetaAttributes;
 
     /**
      * The database table used by the model.
@@ -26,7 +30,7 @@ class Payload extends Model
     protected $table = 'payloads';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
@@ -40,7 +44,7 @@ class Payload extends Model
     protected $httpResource = PayloadResource::class;
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -63,14 +67,14 @@ class Payload extends Model
     ];
 
     /**
-     * Relations to load with the model
+     * Relations to load with the model.
      *
      * @var array
      */
     protected $with = ['entities', 'waypoints']; // 'pickup', 'dropoff', 'return',
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -84,7 +88,7 @@ class Payload extends Model
     protected $hidden = [];
 
     /**
-     * Address/name of the dropoff location
+     * Address/name of the dropoff location.
      */
     public function getDropoffNameAttribute()
     {
@@ -94,7 +98,7 @@ class Payload extends Model
     }
 
     /**
-     * Address/name of the pickup location
+     * Address/name of the pickup location.
      */
     public function getPickupNameAttribute()
     {
@@ -104,7 +108,7 @@ class Payload extends Model
     }
 
     /**
-     * Entities in the payload
+     * Entities in the payload.
      */
     public function entities()
     {
@@ -112,7 +116,7 @@ class Payload extends Model
     }
 
     /**
-     * Waypoint records in the payload
+     * Waypoint records in the payload.
      */
     public function waypointMarkers()
     {
@@ -130,7 +134,7 @@ class Payload extends Model
     }
 
     /**
-     * The order the payload belongs to
+     * The order the payload belongs to.
      */
     public function order()
     {
@@ -138,7 +142,7 @@ class Payload extends Model
     }
 
     /**
-     * The address the shipment will be delivered to
+     * The address the shipment will be delivered to.
      */
     public function dropoff()
     {
@@ -146,7 +150,7 @@ class Payload extends Model
     }
 
     /**
-     * The address the shipment will be delivered from
+     * The address the shipment will be delivered from.
      */
     public function pickup()
     {
@@ -154,7 +158,7 @@ class Payload extends Model
     }
 
     /**
-     * The address the shipment will be sent to upon failed delivery
+     * The address the shipment will be sent to upon failed delivery.
      */
     public function return()
     {
@@ -190,7 +194,7 @@ class Payload extends Model
     }
 
     /**
-     * Always convert fee and rate to integer before insert
+     * Always convert fee and rate to integer before insert.
      */
     public function setCodAmountAttribute($value)
     {
@@ -204,7 +208,6 @@ class Payload extends Model
         }
 
         foreach ($entities as $attributes) {
-
             if (isset($attributes['_import_id'])) {
                 $waypoint = $this->waypoints->firstWhere('_import_id', $attributes['_import_id']);
 
@@ -242,7 +245,6 @@ class Payload extends Model
         $this->load(['waypoints']);
 
         foreach ($entities as $attributes) {
-
             if (isset($attributes['_import_id']) && !isset($attributes['destination_uuid'])) {
                 $waypoint = $this->waypoints->firstWhere('_import_id', $attributes['_import_id']);
 
@@ -286,9 +288,9 @@ class Payload extends Model
 
             if (is_array($attributes) && array_key_exists('place_uuid', $attributes) && Place::where('uuid', $attributes['place_uuid'])->exists()) {
                 $waypoint = [
-                    'place_uuid' => $attributes['place_uuid'],
+                    'place_uuid'   => $attributes['place_uuid'],
                     'payload_uuid' => $attributes['payload_uuid'] ?? null,
-                    'order' => $index
+                    'order'        => $index,
                 ];
             } else {
                 $place = Place::createFromMixed($attributes);
@@ -303,7 +305,7 @@ class Payload extends Model
 
             // set payload
             $waypoint['payload_uuid'] = $this->uuid;
-            $waypointRecord = Waypoint::updateOrCreate($waypoint);
+            $waypointRecord           = Waypoint::updateOrCreate($waypoint);
 
             $this->waypointMarkers->push($waypointRecord);
         }
@@ -326,9 +328,9 @@ class Payload extends Model
 
             if (is_array($attributes) && array_key_exists('place_uuid', $attributes) && Place::where('uuid', $attributes['place_uuid'])->exists()) {
                 $waypoint = [
-                    'place_uuid' => $attributes['place_uuid'],
+                    'place_uuid'   => $attributes['place_uuid'],
                     'payload_uuid' => $attributes['payload_uuid'] ?? null,
-                    'order' => $index
+                    'order'        => $index,
                 ];
             } else {
                 $placeUuid = Place::insertFromMixed($attributes);
@@ -368,7 +370,7 @@ class Payload extends Model
             if (is_array($attributes) && array_key_exists('place_uuid', $attributes)) {
                 $placeIds[] = $attributes['place_uuid'];
             } else {
-                $placeUuid = Place::insertFromMixed($attributes);
+                $placeUuid  = Place::insertFromMixed($attributes);
                 $placeIds[] = $placeUuid;
             }
         }
@@ -390,11 +392,11 @@ class Payload extends Model
             Waypoint::updateOrCreate(
                 [
                     'payload_uuid' => $this->uuid,
-                    'place_uuid' => $placeId
+                    'place_uuid'   => $placeId,
                 ],
                 [
                     'payload_uuid' => $this->uuid,
-                    'place_uuid' => $placeId
+                    'place_uuid'   => $placeId,
                 ]
             );
         }
@@ -538,6 +540,7 @@ class Payload extends Model
         }
 
         $this->load('order');
+
         return $this->order;
     }
 
@@ -547,13 +550,13 @@ class Payload extends Model
             return;
         }
 
-        $attr = $property . '_uuid';
+        $attr     = $property . '_uuid';
         $instance = Place::createFromMixed($place);
 
         if ($instance) {
             if (Str::isUuid($instance)) {
                 $this->setAttribute($attr, $instance);
-            } else if ($instance instanceof Model) {
+            } elseif ($instance instanceof Model) {
                 $this->setAttribute($attr, $instance->uuid);
             } else {
                 $this->setAttribute($attr, $instance);
@@ -572,6 +575,7 @@ class Payload extends Model
         // if using the special [driver] value, set the meta `pickup_is_driver_location`
         if ($place === '[driver]') {
             $this->setMeta('pickup_is_driver_location', true);
+
             return;
         }
 
@@ -596,8 +600,9 @@ class Payload extends Model
     /**
      * Set the first waypoint and update activity.
      *
-     * @param array $activity
+     * @param array                                   $activity
      * @param \Grimzy\LaravelMysqlSpatial\Types\Point $location
+     *
      * @return void
      */
     public function setFirstWaypoint($activity = null, $location = null)
@@ -622,11 +627,12 @@ class Payload extends Model
     }
 
     /**
-     * Update the current waypoint activity and it's entities
+     * Update the current waypoint activity and it's entities.
      *
-     * @param array $activity
+     * @param array                                   $activity
      * @param \Grimzy\LaravelMysqlSpatial\Types\Point $location
-     * @param \Fleetbase\Models\Proof|string|null $proof resolvable proof of delivery/activity
+     * @param \Fleetbase\Models\Proof|string|null     $proof    resolvable proof of delivery/activity
+     *
      * @return $this
      */
     public function updateWaypointActivity($activity = null, $location = null, $proof = null)

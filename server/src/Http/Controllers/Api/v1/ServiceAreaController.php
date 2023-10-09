@@ -2,20 +2,21 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Http\Request;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Http\Requests\CreateServiceAreaRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateServiceAreaRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\ServiceArea as ServiceAreaResource;
 use Fleetbase\FleetOps\Models\ServiceArea;
+use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class ServiceAreaController extends Controller
 {
     /**
      * Creates a new Fleetbase ServiceArea resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreateServiceAreaRequest  $request
+     * @param \Fleetbase\Http\Requests\CreateServiceAreaRequest $request
+     *
      * @return \Fleetbase\Http\Resources\ServiceArea
      */
     public function create(CreateServiceAreaRequest $request)
@@ -38,8 +39,9 @@ class ServiceAreaController extends Controller
     /**
      * Updates a Fleetbase ServiceArea resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdateServiceAreaRequest  $request
+     * @param string                                            $id
+     * @param \Fleetbase\Http\Requests\UpdateServiceAreaRequest $request
+     *
      * @return \Fleetbase\Http\Resources\ServiceArea
      */
     public function update($id, UpdateServiceAreaRequest $request)
@@ -71,7 +73,6 @@ class ServiceAreaController extends Controller
     /**
      * Query for Fleetbase ServiceArea resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\ServiceAreaCollection
      */
     public function query(Request $request)
@@ -84,7 +85,6 @@ class ServiceAreaController extends Controller
     /**
      * Finds a single Fleetbase ServiceArea resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\ServiceAreaCollection
      */
     public function find($id, Request $request)
@@ -108,7 +108,6 @@ class ServiceAreaController extends Controller
     /**
      * Deletes a Fleetbase ServiceArea resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\ServiceAreaCollection
      */
     public function delete($id, Request $request)

@@ -2,18 +2,20 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Casts\Json;
-use Fleetbase\Traits\HasUuid;
-use Fleetbase\Traits\HasPublicId;
-use Fleetbase\Traits\HasApiModelBehavior;
-use Fleetbase\FleetOps\Support\IntegratedVendors;
 use Fleetbase\FleetOps\Exceptions\IntegratedVendorException;
+use Fleetbase\FleetOps\Support\IntegratedVendors;
+use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
 
 class IntegratedVendor extends Model
 {
-    use HasUuid, HasPublicId, HasApiModelBehavior;
+    use HasUuid;
+    use HasPublicId;
+    use HasApiModelBehavior;
 
     /**
      * The database table used by the model.
@@ -23,7 +25,7 @@ class IntegratedVendor extends Model
     protected $table = 'integrated_vendors';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
@@ -37,7 +39,7 @@ class IntegratedVendor extends Model
     protected $connection = 'mysql';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -59,11 +61,11 @@ class IntegratedVendor extends Model
         'provider',
         'sandbox',
         'options',
-        'credentials'
+        'credentials',
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -83,12 +85,12 @@ class IntegratedVendor extends Model
      */
     protected $casts = [
         'credentials' => Json::class,
-        'options' => Json::class,
+        'options'     => Json::class,
     ];
 
     /**
-     * Lifecycle actions to run integrated vendor callbacks if applicable
-     * 
+     * Lifecycle actions to run integrated vendor callbacks if applicable.
+     *
      * @return void
      */
     public static function boot()

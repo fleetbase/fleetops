@@ -24,7 +24,6 @@ class UpdateServiceAreaRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            //
         ];
     }
 }

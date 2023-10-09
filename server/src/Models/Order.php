@@ -2,46 +2,45 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
-use Fleetbase\FleetOps\Traits\HasTrackingNumber;
-use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\FleetOps\Support\Flow;
-use Fleetbase\FleetOps\Events\OrderCompleted;
-use Fleetbase\FleetOps\Events\OrderDriverAssigned;
-use Fleetbase\FleetOps\Events\OrderCanceled;
-use Fleetbase\FleetOps\Events\OrderDispatched;
-use Fleetbase\Traits\HasUuid;
-use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\Traits\HasPublicId;
-use Fleetbase\Traits\HasApiModelBehavior;
-use Fleetbase\Traits\HasInternalId;
-use Fleetbase\Traits\Searchable;
-use Fleetbase\Traits\HasOptionsAttributes;
-use Fleetbase\Traits\HasMetaAttributes;
-use Fleetbase\Traits\SendsWebhooks;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Fleetbase\Casts\Json;
 use Fleetbase\Casts\PolymorphicType;
+use Fleetbase\FleetOps\Events\OrderCanceled;
+use Fleetbase\FleetOps\Events\OrderCompleted;
+use Fleetbase\FleetOps\Events\OrderDispatched;
+use Fleetbase\FleetOps\Events\OrderDriverAssigned;
+use Fleetbase\FleetOps\Support\Flow;
+use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\FleetOps\Traits\HasTrackingNumber;
+use Fleetbase\Models\Model;
+use Fleetbase\Models\Transaction;
+use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasInternalId;
+use Fleetbase\Traits\HasMetaAttributes;
+use Fleetbase\Traits\HasOptionsAttributes;
+use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
+use Fleetbase\Traits\Searchable;
+use Fleetbase\Traits\SendsWebhooks;
+use Fleetbase\Traits\TracksApiCredential;
+use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Fleetbase\Models\Transaction;
 
 class Order extends Model
 {
-    use
-        HasUuid,
-        HasPublicId,
-        HasInternalId,
-        SendsWebhooks,
-        HasApiModelBehavior,
-        HasOptionsAttributes,
-        HasMetaAttributes,
-        TracksApiCredential,
-        Searchable,
-        LogsActivity,
-        HasTrackingNumber;
+    use HasUuid;
+    use HasPublicId;
+    use HasInternalId;
+    use SendsWebhooks;
+    use HasApiModelBehavior;
+    use HasOptionsAttributes;
+    use HasMetaAttributes;
+    use TracksApiCredential;
+    use Searchable;
+    use LogsActivity;
+    use HasTrackingNumber;
 
     /**
      * The database table used by the model.
@@ -51,14 +50,14 @@ class Order extends Model
     protected $table = 'orders';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'order';
 
     /**
-     * The attributes that can be queried
+     * The attributes that can be queried.
      *
      * @var array
      */
@@ -109,7 +108,7 @@ class Order extends Model
     ];
 
     /**
-     * Attributes that is filterable on this model
+     * Attributes that is filterable on this model.
      *
      * @var array
      */
@@ -134,11 +133,11 @@ class Order extends Model
         'entity_status',
         'created_by',
         'updated_by',
-        'layout'
+        'layout',
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -166,7 +165,7 @@ class Order extends Model
     ];
 
     /**
-     * Relationships to always append to model
+     * Relationships to always append to model.
      *
      * @var array
      */
@@ -178,17 +177,17 @@ class Order extends Model
      * @var array
      */
     protected $casts = [
-        'meta' => Json::class,
-        'options' => Json::class,
-        'customer_type' => PolymorphicType::class,
+        'meta'             => Json::class,
+        'options'          => Json::class,
+        'customer_type'    => PolymorphicType::class,
         'facilitator_type' => PolymorphicType::class,
-        'dispatched' => 'boolean',
-        'adhoc' => 'boolean',
-        'started' => 'boolean',
-        'pod_required' => 'boolean',
-        'scheduled_at' => 'datetime',
-        'dispatched_at' => 'datetime',
-        'started_at' => 'datetime',
+        'dispatched'       => 'boolean',
+        'adhoc'            => 'boolean',
+        'started'          => 'boolean',
+        'pod_required'     => 'boolean',
+        'scheduled_at'     => 'datetime',
+        'dispatched_at'    => 'datetime',
+        'started_at'       => 'datetime',
     ];
 
     /**
@@ -202,21 +201,21 @@ class Order extends Model
     ];
 
     /**
-     * Properties which activity needs to be logged
+     * Properties which activity needs to be logged.
      *
      * @var array
      */
     protected static $logAttributes = '*';
 
     /**
-     * Do not log empty changed
+     * Do not log empty changed.
      *
-     * @var boolean
+     * @var bool
      */
     protected static $submitEmptyLogs = false;
 
     /**
-     * The name of the subject to log
+     * The name of the subject to log.
      *
      * @var string
      */
@@ -246,9 +245,9 @@ class Order extends Model
         $this->load(['trackingNumber', 'company']);
 
         return view('fleetops::labels/default', [
-            'order' => $this,
+            'order'          => $this,
             'trackingNumber' => $this->trackingNumber,
-            'company' => $this->company,
+            'company'        => $this->company,
         ])->render();
     }
 
@@ -382,7 +381,7 @@ class Order extends Model
 
     /**
      * Get the adhoc distance for this order, or fallback to settings or default value which is 6km.
-     * 
+     *
      * @return int
      */
     public function getAdhocDistance()
@@ -391,8 +390,8 @@ class Order extends Model
     }
 
     /**
-     * The assigned drivers full name
-     * 
+     * The assigned drivers full name.
+     *
      * @return string
      */
     public function getDriverNameAttribute()
@@ -401,8 +400,8 @@ class Order extends Model
     }
 
     /**
-     * The tracking number for the order
-     * 
+     * The tracking number for the order.
+     *
      * @return string
      */
     public function getTrackingAttribute()
@@ -411,8 +410,8 @@ class Order extends Model
     }
 
     /**
-     * The number of items for this order
-     * 
+     * The number of items for this order.
+     *
      * @return string
      */
     public function getTotalEntitiesAttribute()
@@ -421,8 +420,8 @@ class Order extends Model
     }
 
     /**
-     * The transaction amount for the order
-     * 
+     * The transaction amount for the order.
+     *
      * @return string
      */
     public function getTransactionAmountAttribute()
@@ -431,8 +430,8 @@ class Order extends Model
     }
 
     /**
-     * The customer name for the order
-     * 
+     * The customer name for the order.
+     *
      * @return string
      */
     public function getCustomerNameAttribute()
@@ -441,8 +440,8 @@ class Order extends Model
     }
 
     /**
-     * The customer phone for the order
-     * 
+     * The customer phone for the order.
+     *
      * @return string
      */
     public function getCustomerPhoneAttribute()
@@ -451,8 +450,8 @@ class Order extends Model
     }
 
     /**
-     * The facilitator name for the order
-     * 
+     * The facilitator name for the order.
+     *
      * @return string
      */
     public function getFacilitatorNameAttribute()
@@ -461,20 +460,19 @@ class Order extends Model
     }
 
     /**
-     * True of the facilitator is a vendor `facilitator_is_vendor`
+     * True of the facilitator is a vendor `facilitator_is_vendor`.
      *
-     * @return boolean
+     * @return bool
      */
     public function getFacilitatorIsVendorAttribute()
     {
         return $this->facilitator_type === 'Fleetbase\\FleetOps\\Models\\Vendor';
     }
 
-
     /**
-     * True of the facilitator is a integrated vendor `facilitator_is_integrated_vendor`
+     * True of the facilitator is a integrated vendor `facilitator_is_integrated_vendor`.
      *
-     * @return boolean
+     * @return bool
      */
     public function getFacilitatorIsIntegratedVendorAttribute()
     {
@@ -482,9 +480,9 @@ class Order extends Model
     }
 
     /**
-     * True of the facilitator is a contact `facilitator_is_contact`
+     * True of the facilitator is a contact `facilitator_is_contact`.
      *
-     * @return boolean
+     * @return bool
      */
     public function getFacilitatorIsContactAttribute()
     {
@@ -492,9 +490,9 @@ class Order extends Model
     }
 
     /**
-     * True of the customer is a vendor `customer_is_vendor`
+     * True of the customer is a vendor `customer_is_vendor`.
      *
-     * @return boolean
+     * @return bool
      */
     public function getCustomerIsVendorAttribute()
     {
@@ -502,9 +500,9 @@ class Order extends Model
     }
 
     /**
-     * True of the customer is a contact `customer_is_contact`
+     * True of the customer is a contact `customer_is_contact`.
      *
-     * @return boolean
+     * @return bool
      */
     public function getCustomerIsContactAttribute()
     {
@@ -512,7 +510,7 @@ class Order extends Model
     }
 
     /**
-     * The pickup location name
+     * The pickup location name.
      */
     public function getPickupNameAttribute()
     {
@@ -520,7 +518,7 @@ class Order extends Model
     }
 
     /**
-     * The dropoff location name
+     * The dropoff location name.
      */
     public function getDropoffNameAttribute()
     {
@@ -528,7 +526,7 @@ class Order extends Model
     }
 
     /**
-     * The purchase rate public id
+     * The purchase rate public id.
      */
     public function getPurchaseRateIdAttribute()
     {
@@ -536,7 +534,7 @@ class Order extends Model
     }
 
     /**
-     * The payload public id
+     * The payload public id.
      */
     public function getPayloadIdAttribute()
     {
@@ -544,8 +542,8 @@ class Order extends Model
     }
 
     /**
-     * The payload public id
-     * 
+     * The payload public id.
+     *
      * @return string
      */
     public function getQrCodeAttribute()
@@ -554,8 +552,8 @@ class Order extends Model
     }
 
     /**
-     * The name of the user who created the order
-     * 
+     * The name of the user who created the order.
+     *
      * @return string
      */
     public function getCreatedByNameAttribute()
@@ -564,8 +562,8 @@ class Order extends Model
     }
 
     /**
-     * The name of the user who last updated
-     * 
+     * The name of the user who last updated.
+     *
      * @return string
      */
     public function getUpdatedByNameAttribute()
@@ -574,23 +572,17 @@ class Order extends Model
     }
 
     /**
-     * Set the order type attribute, which defaults to `default`
-     *
-     * @param string $type
-     * @return void
+     * Set the order type attribute, which defaults to `default`.
      */
-    public function setTypeAttribute(?string $type = null): void
+    public function setTypeAttribute(string $type = null): void
     {
         $this->attributes['type'] = is_string($type) ? Str::slug($type) : 'default';
     }
 
     /**
-     * Set the order status attribute, which defaults to `created`
-     *
-     * @param string $status
-     * @return void
+     * Set the order status attribute, which defaults to `created`.
      */
-    public function setStatusAttribute(?string $status = null): void
+    public function setStatusAttribute(string $status = null): void
     {
         $this->attributes['status'] = is_string($status) ? Str::snake($status) : 'created';
     }
@@ -699,7 +691,7 @@ class Order extends Model
             $attributes['return_uuid'] = $returnId;
         }
 
-        $fillable = $this->getFillable();
+        $fillable   = $this->getFillable();
         $insertKeys = array_keys($attributes);
         // clean insert data
         foreach ($insertKeys as $key) {
@@ -708,10 +700,10 @@ class Order extends Model
             }
         }
 
-        $attributes['uuid'] = $uuid = (string) Str::uuid();
-        $attributes['public_id'] = static::generatePublicId('payload');
-        $attributes['_key'] = session('api_key', 'console');
-        $attributes['created_at'] = Carbon::now()->toDateTimeString();
+        $attributes['uuid']         = $uuid = (string) Str::uuid();
+        $attributes['public_id']    = static::generatePublicId('payload');
+        $attributes['_key']         = session('api_key', 'console');
+        $attributes['created_at']   = Carbon::now()->toDateTimeString();
         $attributes['company_uuid'] = session('company');
 
         $result = Payload::insert($attributes);
@@ -740,6 +732,7 @@ class Order extends Model
         }
 
         $this->load('payload');
+
         return $this->payload;
     }
 
@@ -761,7 +754,7 @@ class Order extends Model
             unset($attributes['payload']);
         }
 
-        $attributes['order_uuid'] = $this->uuid;
+        $attributes['order_uuid']   = $this->uuid;
         $attributes['company_uuid'] = $this->company_uuid ?? session('company');
 
         $route = new Route($attributes);
@@ -815,13 +808,13 @@ class Order extends Model
         // $serviceQuote = ServiceQuote::where('uuid', $serviceQuoteId)->first();
         // create purchase rate for order
         $purchasedRate = PurchaseRate::create([
-            'customer_uuid' => $this->customer_uuid,
-            'customer_type' => $this->customer_type,
-            'company_uuid' => session('company'),
+            'customer_uuid'      => $this->customer_uuid,
+            'customer_type'      => $this->customer_type,
+            'company_uuid'       => session('company'),
             'service_quote_uuid' => $serviceQuoteId,
-            'payload_uuid' => $this->payload_uuid,
-            'status' => 'created',
-            'meta' => $meta
+            'payload_uuid'       => $this->payload_uuid,
+            'status'             => 'created',
+            'meta'               => $meta,
         ]);
 
         $this->purchase_rate_uuid = $purchasedRate->uuid;
@@ -834,6 +827,7 @@ class Order extends Model
         if (!$serviceQuote) {
             // create transaction for order
             $this->createOrderTransactionWithoutServiceQuote();
+
             return $this;
         }
 
@@ -847,17 +841,17 @@ class Order extends Model
 
         if ($serviceQuote instanceof ServiceQuote) {
             $purchasedRate = PurchaseRate::create([
-                'customer_uuid' => $this->customer_uuid,
-                'customer_type' => $this->customer_type,
-                'company_uuid' => $this->company_uuid ?? session('company'),
+                'customer_uuid'      => $this->customer_uuid,
+                'customer_type'      => $this->customer_type,
+                'company_uuid'       => $this->company_uuid ?? session('company'),
                 'service_quote_uuid' => $serviceQuote->uuid,
-                'payload_uuid' => $this->payload_uuid,
-                'status' => 'created',
-                'meta' => $meta
+                'payload_uuid'       => $this->payload_uuid,
+                'status'             => 'created',
+                'meta'               => $meta,
             ]);
 
             return $this->update([
-                'purchase_rate_uuid' => $purchasedRate->uuid
+                'purchase_rate_uuid' => $purchasedRate->uuid,
             ]);
         }
 
@@ -871,16 +865,16 @@ class Order extends Model
         try {
             // create transaction and transaction items
             $transaction = Transaction::create([
-                'company_uuid' => session('company', $this->company_uuid),
-                'customer_uuid' => $this->customer_uuid,
-                'customer_type' => $this->customer_type,
+                'company_uuid'           => session('company', $this->company_uuid),
+                'customer_uuid'          => $this->customer_uuid,
+                'customer_type'          => $this->customer_type,
                 'gateway_transaction_id' => Transaction::generateNumber(),
-                'gateway' => 'internal',
-                'amount' => 0,
-                'currency' => data_get($this->company, 'country') ? Utils::getCurrenyFromCountryCode(data_get($this->company, 'country')) : 'SGD',
-                'description' => 'Dispatch order',
-                'type' => 'dispatch',
-                'status' => 'success',
+                'gateway'                => 'internal',
+                'amount'                 => 0,
+                'currency'               => data_get($this->company, 'country') ? Utils::getCurrenyFromCountryCode(data_get($this->company, 'country')) : 'SGD',
+                'description'            => 'Dispatch order',
+                'type'                   => 'dispatch',
+                'status'                 => 'success',
             ]);
 
             // set transaction to order
@@ -902,7 +896,7 @@ class Order extends Model
 
     public function dispatch($save = false)
     {
-        $this->dispatched = true;
+        $this->dispatched    = true;
         $this->dispatched_at = now();
 
         if ($save === true) {
@@ -988,7 +982,7 @@ class Order extends Model
             });
         }
 
-        $flow = Flow::getOrderFlow($this);
+        $flow     = Flow::getOrderFlow($this);
         $activity = null;
 
         if (count($flow) === 1 && $code === null) {
@@ -1064,6 +1058,7 @@ class Order extends Model
         }
 
         $this->save();
+
         return $this;
     }
 
@@ -1095,7 +1090,7 @@ class Order extends Model
 
     public function setPreliminaryDistanceAndTime()
     {
-        $origin = $this->getCurrentOriginPosition();
+        $origin      = $this->getCurrentOriginPosition();
         $destination = $this->getDestinationPosition();
 
         if ($origin === null || $destination === null) {
@@ -1105,12 +1100,13 @@ class Order extends Model
         $matrix = Utils::getPreliminaryDistanceMatrix($origin, $destination);
 
         $this->update(['distance' => $matrix->distance, 'time' => $matrix->time]);
+
         return $this;
     }
 
     public function setDistanceAndTime(): Order
     {
-        $origin = $this->getCurrentOriginPosition();
+        $origin      = $this->getCurrentOriginPosition();
         $destination = $this->getDestinationPosition();
 
         $matrix = Utils::getDrivingDistanceAndTime($origin, $destination);
@@ -1120,6 +1116,7 @@ class Order extends Model
         }
 
         $this->update(['distance' => $matrix->distance, 'time' => $matrix->time]);
+
         return $this;
     }
 

@@ -2,4 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
-class UpdatePlaceRequest extends CreatePlaceRequest {}
+class UpdatePlaceRequest extends CreatePlaceRequest
+{
+}

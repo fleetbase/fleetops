@@ -11,7 +11,6 @@ class DriverObserver
     /**
      * Handle the Driver "creating" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\Driver  $driver
      * @return void
      */
     public function creating(Driver $driver)
@@ -25,7 +24,6 @@ class DriverObserver
     /**
      * Handle the Driver "deleted" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\Driver  $driver
      * @return void
      */
     public function deleted(Driver $driver)

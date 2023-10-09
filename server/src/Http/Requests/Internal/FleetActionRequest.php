@@ -24,8 +24,8 @@ class FleetActionRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'fleet' => 'string|exists:fleets,uuid',
-            'driver' => 'nullable|string|exists:drivers,uuid',
+            'fleet'   => 'string|exists:fleets,uuid',
+            'driver'  => 'nullable|string|exists:drivers,uuid',
             'vehicle' => 'nullable|string|exists:vehicles,uuid',
         ];
     }

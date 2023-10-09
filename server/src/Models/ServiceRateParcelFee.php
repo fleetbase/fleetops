@@ -2,9 +2,9 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
 use Fleetbase\Casts\Money;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasUuid;
 use PhpUnitsOfMeasure\PhysicalQuantity\Length;
 use PhpUnitsOfMeasure\PhysicalQuantity\Mass;
@@ -21,7 +21,7 @@ class ServiceRateParcelFee extends Model
     protected $table = 'service_rate_parcel_fees';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -44,7 +44,7 @@ class ServiceRateParcelFee extends Model
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -65,7 +65,7 @@ class ServiceRateParcelFee extends Model
     }
 
     /**
-     * Set the fee as only numbers
+     * Set the fee as only numbers.
      *
      * @void
      */
@@ -75,7 +75,7 @@ class ServiceRateParcelFee extends Model
     }
 
     /**
-     * The length the entity belongs to
+     * The length the entity belongs to.
      *
      * @var PhpUnitsOfMeasure\PhysicalQuantity\Length
      */
@@ -85,7 +85,7 @@ class ServiceRateParcelFee extends Model
     }
 
     /**
-     * The width the entity belongs to
+     * The width the entity belongs to.
      *
      * @var PhpUnitsOfMeasure\PhysicalQuantity\Length
      */
@@ -95,7 +95,7 @@ class ServiceRateParcelFee extends Model
     }
 
     /**
-     * The height the entity belongs to
+     * The height the entity belongs to.
      *
      * @var PhpUnitsOfMeasure\PhysicalQuantity\Length
      */
@@ -105,7 +105,7 @@ class ServiceRateParcelFee extends Model
     }
 
     /**
-     * The weight the entity belongs to
+     * The weight the entity belongs to.
      *
      * @var PhpUnitsOfMeasure\PhysicalQuantity\Mass
      */

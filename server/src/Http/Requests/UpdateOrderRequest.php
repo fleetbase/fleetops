@@ -2,4 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
-class UpdateOrderRequest extends CreateOrderRequest {}
+class UpdateOrderRequest extends CreateOrderRequest
+{
+}

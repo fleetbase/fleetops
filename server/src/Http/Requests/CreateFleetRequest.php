@@ -25,7 +25,7 @@ class CreateFleetRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'name' => [Rule::requiredIf($this->isMethod('POST'))],
+            'name'         => [Rule::requiredIf($this->isMethod('POST'))],
             'service_area' => 'exists:service_areas,public_id',
         ];
     }

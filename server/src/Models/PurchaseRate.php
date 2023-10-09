@@ -2,21 +2,26 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
-use Fleetbase\Traits\HasUuid;
-use Fleetbase\Traits\HasPublicId;
-use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\Traits\SendsWebhooks;
-use Fleetbase\Traits\HasMetaAttributes;
-use Fleetbase\Traits\HasApiModelBehavior;
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Casts\Json;
-use Illuminate\Support\Str;
+use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasMetaAttributes;
+use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
+use Fleetbase\Traits\SendsWebhooks;
+use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class PurchaseRate extends Model
 {
-    use HasUuid, HasPublicId, SendsWebhooks, TracksApiCredential, HasMetaAttributes, HasApiModelBehavior;
+    use HasUuid;
+    use HasPublicId;
+    use SendsWebhooks;
+    use TracksApiCredential;
+    use HasMetaAttributes;
+    use HasApiModelBehavior;
 
     /**
      * The database table used by the model.
@@ -26,14 +31,14 @@ class PurchaseRate extends Model
     protected $table = 'purchase_rates';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'rate';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -56,7 +61,7 @@ class PurchaseRate extends Model
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -70,7 +75,7 @@ class PurchaseRate extends Model
     protected $hidden = [];
 
     /**
-     * Order rate was purchased for
+     * Order rate was purchased for.
      *
      * @var Model
      */
@@ -120,7 +125,7 @@ class PurchaseRate extends Model
     }
 
     /**
-     * The customer if any for this place
+     * The customer if any for this place.
      *
      * @var Model
      */
@@ -130,9 +135,9 @@ class PurchaseRate extends Model
     }
 
     /**
-     * True of the customer is a vendor `customer_is_vendor`
+     * True of the customer is a vendor `customer_is_vendor`.
      *
-     * @var boolean
+     * @var bool
      */
     public function getCustomerIsVendorAttribute()
     {
@@ -140,9 +145,9 @@ class PurchaseRate extends Model
     }
 
     /**
-     * True of the customer is a contact `customer_is_contact`
+     * True of the customer is a contact `customer_is_contact`.
      *
-     * @var boolean
+     * @var bool
      */
     public function getCustomerIsContactAttribute()
     {
@@ -180,7 +185,6 @@ class PurchaseRate extends Model
     }
 
     /**
-     * @param \Illuminate\Http\Request $request
      * @return \Fleetbase\Models\PurchaseRate|null
      */
     public static function resolveFromRequest(Request $request): ?PurchaseRate

@@ -7,7 +7,6 @@ use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
 use Grimzy\LaravelMysqlSpatial\Types\Geometry;
-use Illuminate\Support\Facades\DB;
 
 class PlaceFilter extends Filter
 {
@@ -60,7 +59,7 @@ class PlaceFilter extends Filter
         // Create a query to find places within the circle
         $this->builder->whereRaw('ST_Within(location, ST_Buffer(ST_GeomFromText(?), ?))', [
             $center->toWKT(),
-            $radiusInDegrees
+            $radiusInDegrees,
         ]);
     }
 
@@ -78,7 +77,7 @@ class PlaceFilter extends Filter
         // Create a query to find places within the circle
         $this->builder->whereRaw('ST_Within(location, ST_Buffer(ST_GeomFromText(?), ?))', [
             $center->toWKT(),
-            $radiusInDegrees
+            $radiusInDegrees,
         ]);
     }
 

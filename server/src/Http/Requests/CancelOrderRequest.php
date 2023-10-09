@@ -2,8 +2,8 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
-use Fleetbase\Http\Requests\FleetbaseRequest;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Requests\FleetbaseRequest;
 
 class CancelOrderRequest extends FleetbaseRequest
 {

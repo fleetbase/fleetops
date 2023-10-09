@@ -9,7 +9,6 @@ class OrderObserver
     /**
      * Handle the Order "updated" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\Order  $order
      * @return void
      */
     public function updated(Order $order)
@@ -24,7 +23,6 @@ class OrderObserver
     /**
      * Handle the Order "deleted" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\Order  $order
      * @return void
      */
     public function deleted(Order $order)

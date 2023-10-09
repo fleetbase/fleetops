@@ -2,4 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
-class UpdateZoneRequest extends CreateZoneRequest {}
+class UpdateZoneRequest extends CreateZoneRequest
+{
+}

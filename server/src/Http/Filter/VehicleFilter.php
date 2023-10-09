@@ -2,8 +2,8 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
-use Fleetbase\Http\Filter\Filter;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Filter\Filter;
 
 class VehicleFilter extends Filter
 {
@@ -57,7 +57,7 @@ class VehicleFilter extends Filter
         );
     }
 
-    public function createdAt($createdAt) 
+    public function createdAt($createdAt)
     {
         $createdAt = Utils::dateRange($createdAt);
 
@@ -68,7 +68,7 @@ class VehicleFilter extends Filter
         }
     }
 
-    public function updatedAt($updatedAt) 
+    public function updatedAt($updatedAt)
     {
         $updatedAt = Utils::dateRange($updatedAt);
 
@@ -78,7 +78,7 @@ class VehicleFilter extends Filter
             $this->builder->whereDate('updated_at', $updatedAt);
         }
     }
-    
+
     public function fleet(string $fleet)
     {
         $this->builder->whereHas(

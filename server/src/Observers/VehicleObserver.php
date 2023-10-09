@@ -2,15 +2,14 @@
 
 namespace Fleetbase\FleetOps\Observers;
 
-use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Vehicle;
 
 class VehicleObserver
 {
     /**
      * Handle the Vehicle "created" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\Vehicle  $vehicle
      * @return void
      */
     public function created(Vehicle $vehicle)
@@ -34,7 +33,6 @@ class VehicleObserver
     /**
      * Handle the Vehicle "updated" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\Vehicle  $vehicle
      * @return void
      */
     public function updated(Vehicle $vehicle)
@@ -48,7 +46,7 @@ class VehicleObserver
             if ($driver) {
                 // assign this vehicle to driver
                 $driver->assignVehicle($vehicle);
-                
+
                 // set driver to vehicle
                 $vehicle->setRelation('driver', $driver);
             }
@@ -58,7 +56,6 @@ class VehicleObserver
     /**
      * Handle the Vehicle "deleted" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\Vehicle  $vehicle
      * @return void
      */
     public function deleted(Vehicle $vehicle)

@@ -24,7 +24,6 @@ class UpdateServiceRateRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            //
         ];
     }
 }

@@ -17,7 +17,7 @@ class ServiceQuoteItem extends Model
     protected $table = 'service_quote_items';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -31,7 +31,7 @@ class ServiceQuoteItem extends Model
     protected $fillable = ['_key', 'service_quote_uuid', 'amount', 'currency', 'details', 'code'];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */

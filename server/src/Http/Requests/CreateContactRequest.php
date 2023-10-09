@@ -24,10 +24,10 @@ class CreateContactRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'name' => 'required',
-            'type' => 'required',
+            'name'  => 'required',
+            'type'  => 'required',
             'email' => 'nullable|email',
-            'phone' => 'nullable'
+            'phone' => 'nullable',
         ];
     }
 }

@@ -3,15 +3,14 @@
 namespace Fleetbase\FleetOps\Observers;
 
 use Fleetbase\FleetOps\Models\ServiceArea;
-use Fleetbase\FleetOps\Support\Utils as FleetOpsUtils;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\FleetOps\Support\Utils as FleetOpsUtils;
 
 class ServiceAreaObserver
 {
     /**
      * Handle the ServiceArea "creating" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\ServiceArea  $serviceArea
      * @return void
      */
     public function creating(ServiceArea $serviceArea)
@@ -25,7 +24,6 @@ class ServiceAreaObserver
     /**
      * Handle the ServiceArea "deleted" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\ServiceArea  $serviceArea
      * @return void
      */
     public function deleted(ServiceArea $serviceArea)

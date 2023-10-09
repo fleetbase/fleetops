@@ -10,7 +10,8 @@ class ServiceRateParcelFee extends FleetbaseResource
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param \Illuminate\Http\Request $request
+     *
      * @return array
      */
     public function toArray($request)
@@ -18,11 +19,11 @@ class ServiceRateParcelFee extends FleetbaseResource
         return array_merge(
             $this->getInternalIds(),
             [
-                'id' => $this->when(Http::isInternalRequest(), $this->id),
-                'uuid' => $this->when(Http::isInternalRequest(), $this->uuid),
-                'fee' => $this->fee,
-                'currency' => $this->currency,
-                'distance' => $this->distance,
+                'id'         => $this->when(Http::isInternalRequest(), $this->id),
+                'uuid'       => $this->when(Http::isInternalRequest(), $this->uuid),
+                'fee'        => $this->fee,
+                'currency'   => $this->currency,
+                'distance'   => $this->distance,
                 'updated_at' => $this->updated_at,
                 'created_at' => $this->created_at,
             ]
@@ -37,9 +38,9 @@ class ServiceRateParcelFee extends FleetbaseResource
     public function toWebhookPayload()
     {
         return [
-            'fee' => $this->fee,
-            'currency' => $this->currency,
-            'distance' => $this->distance,
+            'fee'        => $this->fee,
+            'currency'   => $this->currency,
+            'distance'   => $this->distance,
             'updated_at' => $this->updated_at,
             'created_at' => $this->created_at,
         ];

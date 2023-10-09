@@ -24,7 +24,7 @@ class AssignOrderRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'order' => ['required', 'exists:orders,public_id'],
+            'order'  => ['required', 'exists:orders,public_id'],
             'driver' => ['required', 'exists:drivers,public_id'],
         ];
     }

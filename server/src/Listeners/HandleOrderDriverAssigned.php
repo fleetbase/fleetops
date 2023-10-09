@@ -16,7 +16,8 @@ class HandleOrderDriverAssigned implements ShouldQueue
     /**
      * Handle the event.
      *
-     * @param  object  $event
+     * @param object $event
+     *
      * @return void
      */
     public function handle(OrderDriverAssigned $event)

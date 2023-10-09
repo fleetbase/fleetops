@@ -2,16 +2,19 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
 use Fleetbase\Casts\Json;
+use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
-use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
 
 class Proof extends Model
 {
-    use HasUuid, HasPublicId, HasApiModelBehavior, TracksApiCredential;
+    use HasUuid;
+    use HasPublicId;
+    use HasApiModelBehavior;
+    use TracksApiCredential;
 
     /**
      * The database table used by the model.
@@ -21,7 +24,7 @@ class Proof extends Model
     protected $table = 'proofs';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
@@ -44,7 +47,7 @@ class Proof extends Model
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */

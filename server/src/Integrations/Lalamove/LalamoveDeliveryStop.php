@@ -2,10 +2,10 @@
 
 namespace Fleetbase\FleetOps\Integrations\Lalamove;
 
-use Illuminate\Support\Str;
 use Fleetbase\FleetOps\Models\Place;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialExpression;
 use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Illuminate\Support\Str;
 
 class LalamoveDeliveryStop
 {
@@ -24,25 +24,25 @@ class LalamoveDeliveryStop
             $this->address = $place->address;
 
             if ($place->location instanceof SpatialExpression) {
-                $wkt = $place->location->getSpatialValue();
+                $wkt   = $place->location->getSpatialValue();
                 $point = Point::fromWKT($wkt);
 
-                $this->latitude = $point->getLat();
+                $this->latitude  = $point->getLat();
                 $this->longitude = $point->getLng();
             } else {
-                $this->latitude = $place->location->getLat();
+                $this->latitude  = $place->location->getLat();
                 $this->longitude = $place->location->getLng();
             }
-        } else if ($latitude instanceof Point) {
+        } elseif ($latitude instanceof Point) {
             $point = $latitude;
 
-            $this->latitude = $point->getLat();
+            $this->latitude  = $point->getLat();
             $this->longitude = $point->getLng();
-            $this->address = $address ?? '';
+            $this->address   = $address ?? '';
         } else {
-            $this->latitude = $latitude;
+            $this->latitude  = $latitude;
             $this->longitude = $longitude;
-            $this->address = $address;
+            $this->address   = $address;
         }
     }
 
@@ -59,16 +59,16 @@ class LalamoveDeliveryStop
 
     public static function createFromPlace(Place $place)
     {
-        $latitude = $place->location->getLat();
+        $latitude  = $place->location->getLat();
         $longitude = $place->location->getLng();
-        $address = $place->address;
+        $address   = $place->address;
 
         return new static($latitude, $longitude, $address);
     }
 
     public static function createFromPoint(Point $point, string $address = '')
     {
-        $latitude = $point->getLat();
+        $latitude  = $point->getLat();
         $longitude = $point->getLng();
 
         return new static($latitude, $longitude, $address);
@@ -91,7 +91,7 @@ class LalamoveDeliveryStop
                 'lat' => (string) $this->latitude,
                 'lng' => (string) $this->longitude,
             ],
-            'address' => $this->address
+            'address' => $this->address,
         ];
     }
 }

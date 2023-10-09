@@ -2,11 +2,11 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
-use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Exports\VendorExport;
+use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Vendor;
-use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\Http\Requests\ExportRequest;
+use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -14,14 +14,14 @@ use Maatwebsite\Excel\Facades\Excel;
 class VendorController extends FleetOpsController
 {
     /**
-     * The resource to query
+     * The resource to query.
      *
      * @var string
      */
     public $resource = 'vendor';
 
     /**
-     * Returns the vendor as a `facilitator-vendor`
+     * Returns the vendor as a `facilitator-vendor`.
      *
      * @var string id
      */
@@ -39,7 +39,7 @@ class VendorController extends FleetOpsController
     }
 
     /**
-     * Returns the vendor as a `customer-vendor`
+     * Returns the vendor as a `customer-vendor`.
      *
      * @var string id
      */
@@ -57,14 +57,13 @@ class VendorController extends FleetOpsController
     }
 
     /**
-     * Export the vendors to excel or csv
+     * Export the vendors to excel or csv.
      *
-     * @param  \Illuminate\Http\Request  $query
      * @return \Illuminate\Http\Response
      */
     public static function export(ExportRequest $request)
     {
-        $format = $request->input('format', 'xlsx');
+        $format   = $request->input('format', 'xlsx');
         $fileName = trim(Str::slug('vendors-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new VendorExport(), $fileName);
@@ -73,7 +72,6 @@ class VendorController extends FleetOpsController
     /**
      * Bulk delete resources.
      *
-     * @param  \Fleetbase\Http\Requests\Internal\BulkDeleteRequest $request
      * @return \Illuminate\Http\Response
      */
     public function bulkDelete(BulkDeleteRequest $request)
@@ -85,7 +83,7 @@ class VendorController extends FleetOpsController
         }
 
         /** @var \Fleetbase\Models\Vendor */
-        $count = Vendor::whereIn('uuid', $ids)->count();
+        $count   = Vendor::whereIn('uuid', $ids)->count();
         $deleted = Vendor::whereIn('uuid', $ids)->delete();
 
         if (!$deleted) {
@@ -94,7 +92,7 @@ class VendorController extends FleetOpsController
 
         return response()->json(
             [
-                'status' => 'OK',
+                'status'  => 'OK',
                 'message' => 'Deleted ' . $count . ' vendors',
             ],
             200
@@ -102,7 +100,7 @@ class VendorController extends FleetOpsController
     }
 
     /**
-     * Get all status options for an vehicle
+     * Get all status options for an vehicle.
      *
      * @return \Illuminate\Http\Response
      */

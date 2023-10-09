@@ -2,7 +2,6 @@
 
 namespace Fleetbase\FleetOps\Listeners;
 
-use Illuminate\Support\Carbon;
 use Fleetbase\FleetOps\Events\OrderDispatched;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Models\Driver;
@@ -12,6 +11,7 @@ use Fleetbase\FleetOps\Support\Flow;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Carbon;
 
 class HandleOrderDispatched implements ShouldQueue
 {
@@ -20,7 +20,8 @@ class HandleOrderDispatched implements ShouldQueue
     /**
      * Handle the event.
      *
-     * @param  object  $event
+     * @param object $event
+     *
      * @return void
      */
     public function handle(OrderDispatched $event)
@@ -30,10 +31,10 @@ class HandleOrderDispatched implements ShouldQueue
 
         // set company session
         session([
-            'company' => $order->company_uuid
+            'company' => $order->company_uuid,
         ]);
 
-        /** make sure driver is assigned if not trigger failed dispatch */
+        /* make sure driver is assigned if not trigger failed dispatch */
         if (!$order->hasDriverAssigned && !$order->adhoc) {
             return event(new OrderDispatchFailed($order, 'No driver assigned for order to dispatch to.'));
         }
@@ -49,17 +50,17 @@ class HandleOrderDispatched implements ShouldQueue
             $order->createActivity($activity['status'], $activity['details'], $location, $activity['code']);
         }
 
-        /** update dispatch attributes */
-        $order->dispatched = true;
+        /* update dispatch attributes */
+        $order->dispatched    = true;
         $order->dispatched_at = Carbon::now();
         $order->save();
         $order->flushAttributesCache();
 
-        /** if order is adhoc ping drivers within radius of pickup to accept order **/
+        /* if order is adhoc ping drivers within radius of pickup to accept order * */
         if ($order->adhoc) {
             $order->load(['company']);
 
-            $pickup = $order->getPickupLocation();
+            $pickup   = $order->getPickupLocation();
             $distance = $order->getAdhocDistance();
 
             if (!Utils::isPoint($pickup)) {
@@ -93,7 +94,7 @@ class HandleOrderDispatched implements ShouldQueue
         /** @var \Fleetbase\Models\Driver */
         $driver = Driver::where('uuid', $order->driver_assigned_uuid)->withoutGlobalScopes()->first();
 
-        /** notify driver order has dispatched */
+        /* notify driver order has dispatched */
         if (!$driver) {
             return event(new OrderDispatchFailed($order, 'Order was dispatched, but driver was unable to be notified.'));
         }

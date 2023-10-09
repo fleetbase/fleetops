@@ -1,9 +1,9 @@
 <?php
 
 $finder = PhpCsFixer\Finder::create()
-    ->in(__DIR__  . DIRECTORY_SEPARATOR . 'server' . DIRECTORY_SEPARATOR . 'tests')
     ->in(__DIR__ . DIRECTORY_SEPARATOR . 'server' . DIRECTORY_SEPARATOR . 'tests')
-    ->append(['.php_cs']);
+    ->in(__DIR__ . DIRECTORY_SEPARATOR . 'server' . DIRECTORY_SEPARATOR . 'src')
+    ->append(['.php-cs-fixer.php']);
 
 $rules = [
     '@Symfony'               => true,
@@ -18,11 +18,12 @@ $rules = [
     ],
     'concat_space'            => ['spacing' => 'one'],
     'not_operator_with_space' => false,
+    'increment_style'         => ['style' => 'post'],
+    'indentation_type'        => true,
+    'single_quote'            => true,
 ];
 
-$rules['increment_style'] = ['style' => 'post'];
-
-return PhpCsFixer\Config::create()
+return (new PhpCsFixer\Config())
     ->setUsingCache(true)
     ->setRules($rules)
     ->setFinder($finder);

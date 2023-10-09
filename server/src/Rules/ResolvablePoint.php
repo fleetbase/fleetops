@@ -10,14 +10,15 @@ class ResolvablePoint implements Rule
     /**
      * Determine if the validation rule passes.
      *
-     * @param  string  $attribute
-     * @param  mixed  $value
+     * @param string $attribute
+     *
      * @return bool
      */
     public function passes($attribute, $value)
     {
         try {
             $point = Utils::getPointFromMixed($value);
+
             return $point instanceof \Grimzy\LaravelMysqlSpatial\Types\Point;
         } catch (\Exception $e) {
             return false;

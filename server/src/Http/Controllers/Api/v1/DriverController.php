@@ -2,19 +2,19 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Events\DriverLocationChanged;
 use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest;
+use Fleetbase\FleetOps\Http\Requests\DriverSimulationRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateDriverRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Driver as DriverResource;
-use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\FleetOps\Support\Flow;
-use Fleetbase\FleetOps\Models\Driver;
-use Fleetbase\FleetOps\Http\Requests\DriverSimulationRequest;
 use Fleetbase\FleetOps\Jobs\SimulateDrivingRoute;
+use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\Flow;
 use Fleetbase\FleetOps\Support\OSRM;
+use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Requests\SwitchOrganizationRequest;
 use Fleetbase\Http\Resources\Organization;
 use Fleetbase\Models\Company;
@@ -23,20 +23,21 @@ use Fleetbase\Models\User;
 use Fleetbase\Models\UserDevice;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Support\Auth;
+use Geocoder\Laravel\Facades\Geocoder;
+use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Illuminate\Support\Carbon;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
-use Geocoder\Laravel\Facades\Geocoder;
-use Illuminate\Support\Arr;
 
 class DriverController extends Controller
 {
     /**
      * Creates a new Fleetbase Driver resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreateDriverRequest  $request
+     * @param \Fleetbase\Http\Requests\CreateDriverRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Driver
      */
     public function create(CreateDriverRequest $request)
@@ -45,20 +46,20 @@ class DriverController extends Controller
         $input = $request->except(['name', 'password', 'email', 'phone', 'location', 'meta']);
 
         // get user details for driver
-        $userDetails = $request->only(['name', 'password', 'email', 'phone']);
+        $userDetails                 = $request->only(['name', 'password', 'email', 'phone']);
         $userDetails['company_uuid'] = session('company');
 
         // create user account for driver
         $user = User::create($userDetails);
 
         // set user id
-        $input['user_uuid'] = $user->uuid;
+        $input['user_uuid']    = $user->uuid;
         $input['company_uuid'] = session('company');
 
         // vehicle assignment public_id -> uuid
         if ($request->has('vehicle')) {
             $input['vehicle_uuid'] = Utils::getUuid('vehicles', [
-                'public_id' => $request->input('vehicle'),
+                'public_id'    => $request->input('vehicle'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -66,7 +67,7 @@ class DriverController extends Controller
         // vendor assignment public_id -> uuid
         if ($request->has('vendor')) {
             $input['vendor_uuid'] = Utils::getUuid('vendors', [
-                'public_id' => $request->input('vendor'),
+                'public_id'    => $request->input('vendor'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -74,7 +75,7 @@ class DriverController extends Controller
         // order|alias:job assignment public_id -> uuid
         if ($request->has('job')) {
             $input['current_job_uuid'] = Utils::getUuid('orders', [
-                'public_id' => $request->input('job'),
+                'public_id'    => $request->input('job'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -97,8 +98,9 @@ class DriverController extends Controller
     /**
      * Updates a Fleetbase Driver resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdateDriverRequest  $request
+     * @param string                                       $id
+     * @param \Fleetbase\Http\Requests\UpdateDriverRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Driver
      */
     public function update($id, UpdateDriverRequest $request)
@@ -127,7 +129,7 @@ class DriverController extends Controller
         // vehicle assignment public_id -> uuid
         if ($request->has('vehicle')) {
             $input['vehicle_uuid'] = Utils::getUuid('vehicles', [
-                'public_id' => $request->input('vehicle'),
+                'public_id'    => $request->input('vehicle'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -135,7 +137,7 @@ class DriverController extends Controller
         // vendor assignment public_id -> uuid
         if ($request->has('vendor')) {
             $input['vendor_uuid'] = Utils::getUuid('vendors', [
-                'public_id' => $request->input('vendor'),
+                'public_id'    => $request->input('vendor'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -143,7 +145,7 @@ class DriverController extends Controller
         // order|alias:job assignment public_id -> uuid
         if ($request->has('job')) {
             $input['current_job_uuid'] = Utils::getUuid('orders', [
-                'public_id' => $request->input('job'),
+                'public_id'    => $request->input('job'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -162,7 +164,6 @@ class DriverController extends Controller
     /**
      * Query for Fleetbase Driver resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\DriverCollection
      */
     public function query(Request $request)
@@ -184,8 +185,8 @@ class DriverController extends Controller
     /**
      * Finds a single Fleetbase Driver resources.
      *
-     * @param  string  $id
-     * @param  \Illuminate\Http\Request  $request
+     * @param string $id
+     *
      * @return \Fleetbase\Http\Resources\DriverCollection
      */
     public function find($id)
@@ -209,8 +210,8 @@ class DriverController extends Controller
     /**
      * Deletes a Fleetbase Driver resources.
      *
-     * @param  string  $id
-     * @param  \Illuminate\Http\Request  $request
+     * @param string $id
+     *
      * @return \Fleetbase\Http\Resources\DriverCollection
      */
     public function delete($id, Request $request)
@@ -237,17 +238,15 @@ class DriverController extends Controller
     /**
      * Update drivers geolocation data.
      *
-     * @param  string  $id
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function track(string $id, Request $request)
     {
-        $latitude = $request->input('latitude');
+        $latitude  = $request->input('latitude');
         $longitude = $request->input('longitude');
-        $altitude = $request->input('altitude');
-        $heading = $request->input('heading');
-        $speed = $request->input('speed');
+        $altitude  = $request->input('altitude');
+        $heading   = $request->input('heading');
+        $speed     = $request->input('speed');
 
         try {
             $driver = Driver::findRecordOrFail($id);
@@ -266,8 +265,8 @@ class DriverController extends Controller
         $driver->update([
             'location' => new Point($latitude, $longitude),
             'altitude' => $altitude,
-            'heading' => $heading,
-            'speed' => $speed
+            'heading'  => $heading,
+            'speed'    => $speed,
         ]);
 
         if ($isGeocodable) {
@@ -276,8 +275,8 @@ class DriverController extends Controller
 
             if ($geocoded) {
                 $driver->update([
-                    'city' => $geocoded->getLocality(),
-                    'country' => $geocoded->getCountry()->getCode()
+                    'city'    => $geocoded->getLocality(),
+                    'country' => $geocoded->getCountry()->getCode(),
                 ]);
             }
         }
@@ -293,8 +292,6 @@ class DriverController extends Controller
     /**
      * Register device to the driver.
      *
-     * @param  string  $id
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function registerDevice(string $id, Request $request)
@@ -310,7 +307,7 @@ class DriverController extends Controller
             );
         }
 
-        $token = $request->input('token');
+        $token    = $request->input('token');
         $platform = $request->or(['platform', 'os']);
 
         if (!$token) {
@@ -323,33 +320,32 @@ class DriverController extends Controller
 
         $device = UserDevice::firstOrCreate(
             [
-                'token' => $token,
+                'token'    => $token,
                 'platform' => $platform,
             ],
             [
                 'user_uuid' => $driver->user_uuid,
-                'platform' => $platform,
-                'token' => $token,
-                'status' => 'active'
+                'platform'  => $platform,
+                'token'     => $token,
+                'status'    => 'active',
             ]
         );
 
         return response()->json([
-            'device' => $device->public_id
+            'device' => $device->public_id,
         ]);
     }
 
     /**
      * Authenticates customer using login credentials and returns with auth token.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\FleetOps\Http\Resources\v1\Driver
      */
     public function login(Request $request)
     {
         $identity = $request->input('identity');
         $password = $request->input('password');
-        $attrs = $request->input(['name', 'phone', 'email']);
+        $attrs    = $request->input(['name', 'phone', 'email']);
 
         $user = User::where('email', $identity)->orWhere('phone', static::phone($identity))->first();
 
@@ -363,15 +359,15 @@ class DriverController extends Controller
         // get driver record
         $driver = Driver::firstOrCreate(
             [
-                'user_uuid' => $user->uuid,
+                'user_uuid'    => $user->uuid,
                 'company_uuid' => $company->uuid,
             ],
             [
-                'user_uuid' => $user->uuid,
+                'user_uuid'    => $user->uuid,
                 'company_uuid' => $company->uuid,
-                'name' => $attrs['name'] ?? $user->name,
-                'phone' => $attrs['phone'] ?? $user->phone,
-                'email' => $attrs['email'] ?? $user->email,
+                'name'         => $attrs['name'] ?? $user->name,
+                'phone'        => $attrs['phone'] ?? $user->phone,
+                'email'        => $attrs['email'] ?? $user->email,
             ]
         );
 
@@ -388,9 +384,8 @@ class DriverController extends Controller
     }
 
     /**
-     * Attempts authentication with phone number via SMS verification
+     * Attempts authentication with phone number via SMS verification.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function loginWithPhone()
@@ -422,15 +417,14 @@ class DriverController extends Controller
     /**
      * Verifys SMS code and sends auth token with customer resource.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\FleetOps\Http\Resources\v1\Driver
      */
     public function verifyCode(Request $request)
     {
         $identity = Utils::isEmail($request->identity) ? $request->identity : static::phone($request->identity);
-        $code = $request->input('code');
-        $for = $request->input('for', 'driver_login');
-        $attrs = $request->input(['name', 'phone', 'email']);
+        $code     = $request->input('code');
+        $for      = $request->input('for', 'driver_login');
+        $attrs    = $request->input(['name', 'phone', 'email']);
 
         if ($for === 'create_driver') {
             return $this->create($request);
@@ -456,16 +450,16 @@ class DriverController extends Controller
         // get driver record
         $driver = Driver::firstOrCreate(
             [
-                'user_uuid' => $user->uuid,
-                'company_uuid' => $company->uuid
+                'user_uuid'    => $user->uuid,
+                'company_uuid' => $company->uuid,
             ],
             [
-                'user_uuid' => $user->uuid,
+                'user_uuid'    => $user->uuid,
                 'company_uuid' => $company->uuid,
-                'name' => $attrs['name'] ?? $user->name,
-                'phone' => $attrs['phone'] ?? $user->phone,
-                'email' => $attrs['email'] ?? $user->email,
-                'location' => new Point(0, 0)
+                'name'         => $attrs['name'] ?? $user->name,
+                'phone'        => $attrs['phone'] ?? $user->phone,
+                'email'        => $attrs['email'] ?? $user->email,
+                'location'     => new Point(0, 0),
             ]
         );
 
@@ -484,11 +478,8 @@ class DriverController extends Controller
 
     /**
      * Patches phone number with international code.
-     *
-     * @param string|null $phone
-     * @return string
      */
-    public static function phone(?string $phone = null): string
+    public static function phone(string $phone = null): string
     {
         if ($phone === null) {
             $phone = request()->input('phone');
@@ -504,8 +495,6 @@ class DriverController extends Controller
     /**
      * List organizations that driver is apart of.
      *
-     * @param  string  $id
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\Organization
      */
     public function listOrganizations(string $id, Request $request)
@@ -531,8 +520,6 @@ class DriverController extends Controller
     /**
      * Allow driver to switch organization.
      *
-     * @param  string  $id
-     * @param \Fleetbase\Http\Requests\SwitchOrganizationRequest $request
      * @return \Fleetbase\Http\Resources\Organization
      */
     public function switchOrganization(string $id, SwitchOrganizationRequest $request)
@@ -555,13 +542,13 @@ class DriverController extends Controller
 
         if ($company->uuid === $driver->user->company_uuid) {
             return response()->json([
-                'error' => 'Driver is already on this organizations session'
+                'error' => 'Driver is already on this organizations session',
             ]);
         }
 
         if (!CompanyUser::where(['user_uuid' => $driver->user_uuid, 'company_uuid' => $company->uuid])->exists()) {
             return response()->json([
-                'errors' => ['You do not belong to this organization']
+                'errors' => ['You do not belong to this organization'],
             ]);
         }
 
@@ -575,16 +562,16 @@ class DriverController extends Controller
      * This route can help to simulate certain actions for a driver.
      *      Actions:
      *          - Drive
-     *          - Order
+     *          - Order.
      *
-     * @param  string  $id
      * @param \Fleetbase\Http\Requests\DriverSimulationRequest $request
+     *
      * @return \Illuminate\Http\Response
      */
     public function simulate(string $id, DriverSimulationRequest $request)
     {
         $start = $request->input('start');
-        $end = $request->input('end');
+        $end   = $request->input('end');
         $order = $request->input('order');
 
         try {
@@ -621,18 +608,19 @@ class DriverController extends Controller
     /**
      * Simulates a driving route for a given driver between a start and end point.
      *
-     * @param Driver $driver The driver for whom the route is being simulated.
-     * @param mixed $start The starting point of the route, can be a Point object or other representation.
-     * @param mixed $end The ending point of the route, can be a Point object or other representation.
-     * @return \Illuminate\Http\JsonResponse The response containing the route information.
+     * @param Driver $driver the driver for whom the route is being simulated
+     * @param mixed  $start  the starting point of the route, can be a Point object or other representation
+     * @param mixed  $end    the ending point of the route, can be a Point object or other representation
      *
-     * @throws \Exception If there is an error in resolving the points or interacting with the OSRM API.
+     * @return \Illuminate\Http\JsonResponse the response containing the route information
+     *
+     * @throws \Exception if there is an error in resolving the points or interacting with the OSRM API
      */
     public function simulateDrivingForRoute(Driver $driver, $start, $end)
     {
         // Resolve Point's from start/end
         $start = Utils::getPointFromMixed($start);
-        $end = Utils::getPointFromMixed($end);
+        $end   = Utils::getPointFromMixed($end);
 
         // Send points to OSRM
         $route = OSRM::getRoute($start, $end);
@@ -655,21 +643,22 @@ class DriverController extends Controller
     /**
      * Simulates a driving route for a given driver based on an order's pickup and dropoff waypoints.
      *
-     * @param Driver $driver The driver for whom the route is being simulated.
-     * @param Order $order The order containing the pickup and dropoff waypoints.
-     * @return \Illuminate\Http\JsonResponse The response containing the route information.
+     * @param Driver $driver the driver for whom the route is being simulated
+     * @param Order  $order  the order containing the pickup and dropoff waypoints
      *
-     * @throws \Exception If there is an error in resolving the points, validating the waypoints, or interacting with the OSRM API.
+     * @return \Illuminate\Http\JsonResponse the response containing the route information
+     *
+     * @throws \Exception if there is an error in resolving the points, validating the waypoints, or interacting with the OSRM API
      */
     public function simulateDrivingForOrder(Driver $driver, Order $order)
     {
         // Get the order Pickup and Dropoff Waypoints
-        $pickup = $order->payload->getPickupOrFirstWaypoint();
+        $pickup  = $order->payload->getPickupOrFirstWaypoint();
         $dropoff = $order->payload->getDropoffOrLastWaypoint();
 
         // Convert order Pickup/Dropoff Place Waypoint's to Point's
         $start = Utils::getPointFromMixed($pickup);
-        $end = Utils::getPointFromMixed($dropoff);
+        $end   = Utils::getPointFromMixed($dropoff);
 
         // Send points to OSRM
         $route = OSRM::getRoute($start, $end);

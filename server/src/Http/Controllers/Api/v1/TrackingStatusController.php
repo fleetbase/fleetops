@@ -2,21 +2,22 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Http\Request;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Http\Requests\CreateTrackingStatusRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateTrackingStatusRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\TrackingStatus as TrackingStatusResource;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class TrackingStatusController extends Controller
 {
     /**
      * Creates a new Fleetbase TrackingStatus resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreateTrackingStatusRequest  $request
+     * @param \Fleetbase\Http\Requests\CreateTrackingStatusRequest $request
+     *
      * @return \Fleetbase\Http\Resources\TrackingStatus
      */
     public function create(CreateTrackingStatusRequest $request)
@@ -30,7 +31,7 @@ class TrackingStatusController extends Controller
         // tracking number assignment
         if ($request->has('tracking_number')) {
             $input['tracking_number_uuid'] = Utils::getUuid('tracking_numbers', [
-                'public_id' => $request->input('tracking_number'),
+                'public_id'    => $request->input('tracking_number'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -45,8 +46,9 @@ class TrackingStatusController extends Controller
     /**
      * Updates a Fleetbase TrackingStatus resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdateTrackingStatusRequest  $request
+     * @param string                                               $id
+     * @param \Fleetbase\Http\Requests\UpdateTrackingStatusRequest $request
+     *
      * @return \Fleetbase\Http\Resources\TrackingStatus
      */
     public function update($id, UpdateTrackingStatusRequest $request)
@@ -76,7 +78,6 @@ class TrackingStatusController extends Controller
     /**
      * Query for Fleetbase TrackingStatus resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\TrackingStatusCollection
      */
     public function query(Request $request)
@@ -89,7 +90,6 @@ class TrackingStatusController extends Controller
     /**
      * Finds a single Fleetbase TrackingStatus resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\TrackingStatusCollection
      */
     public function find($id)
@@ -113,7 +113,6 @@ class TrackingStatusController extends Controller
     /**
      * Deletes a Fleetbase TrackingStatus resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\TrackingStatusCollection
      */
     public function delete($id)

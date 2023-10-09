@@ -2,4 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
-class UpdateDriverRequest extends CreateDriverRequest {}
+class UpdateDriverRequest extends CreateDriverRequest
+{
+}

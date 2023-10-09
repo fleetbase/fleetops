@@ -15,17 +15,15 @@ use Illuminate\Support\Facades\Storage;
 class ProofController extends FleetOpsController
 {
     /**
-     * The resource to query
+     * The resource to query.
      *
      * @var string
      */
     public $resource = 'proof';
 
     /**
-     * Verify a QR code
+     * Verify a QR code.
      *
-     * @param string $publicId
-     * @param Request $request
      * @return void
      */
     public function verifyQrCode(string $publicId, Request $request)
@@ -53,20 +51,19 @@ class ProofController extends FleetOpsController
 
         // validate
         if ($publicId === $subject->public_id) {
-
             // create verification proof
             $proof = Proof::create([
                 'company_uuid' => session('company'),
                 'subject_uuid' => $subject->uuid,
                 'subject_type' => Utils::getModelClassName($subject),
-                'remarks' => 'Verified by QR Code Scan',
-                'raw_data' => $request->input('raw_data'),
-                'data' => $request->input('data')
+                'remarks'      => 'Verified by QR Code Scan',
+                'raw_data'     => $request->input('raw_data'),
+                'data'         => $request->input('data'),
             ]);
 
             return response()->json([
                 'status' => 'success',
-                'proof' => $proof->public_id
+                'proof'  => $proof->public_id,
             ]);
         }
 
@@ -74,16 +71,14 @@ class ProofController extends FleetOpsController
     }
 
     /**
-     * Validate a QR code
+     * Validate a QR code.
      *
-     * @param string $publicId
-     * @param Request $request
      * @return void
      */
     public function captureSignature(string $publicId, Request $request)
     {
         $signature = $request->input('signature');
-        $type = $request->input('type', strtok($publicId, '_'));
+        $type      = $request->input('type', strtok($publicId, '_'));
 
         switch ($type) {
             case 'order':
@@ -108,8 +103,8 @@ class ProofController extends FleetOpsController
             'company_uuid' => session('company'),
             'subject_uuid' => $subject->uuid,
             'subject_type' => Utils::getModelClassName($subject),
-            'remarks' => 'Verified by Signature',
-            'raw_data' => $request->input('signature')
+            'remarks'      => 'Verified by Signature',
+            'raw_data'     => $request->input('signature'),
         ]);
 
         // set the signature storage path
@@ -120,16 +115,16 @@ class ProofController extends FleetOpsController
 
         // create file record for upload
         $file = File::create([
-            'company_uuid' => session('company'),
-            'uploader_uuid' => session('user'),
-            'name' => basename($path),
+            'company_uuid'      => session('company'),
+            'uploader_uuid'     => session('user'),
+            'name'              => basename($path),
             'original_filename' => basename($path),
-            'extension' => 'png',
-            'content_type' => 'image/png',
-            'path' => $path,
-            'bucket' => config('filesystems.disks.s3.bucket'),
-            'type' => 'signature',
-            'size' => Utils::getBase64ImageSize($signature)
+            'extension'         => 'png',
+            'content_type'      => 'image/png',
+            'path'              => $path,
+            'bucket'            => config('filesystems.disks.s3.bucket'),
+            'type'              => 'signature',
+            'size'              => Utils::getBase64ImageSize($signature),
         ])->setKey($proof);
 
         // set file to proof
@@ -138,7 +133,7 @@ class ProofController extends FleetOpsController
 
         return response()->json([
             'status' => 'success',
-            'proof' => $proof->public_id
+            'proof'  => $proof->public_id,
         ]);
     }
 }

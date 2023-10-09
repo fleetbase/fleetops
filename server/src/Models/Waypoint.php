@@ -2,18 +2,21 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
-use Fleetbase\Traits\HasUuid;
+use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Support\Carbon;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class Waypoint extends Model
 {
-    use HasUuid, HasPublicId, TracksApiCredential, HasTrackingNumber;
+    use HasUuid;
+    use HasPublicId;
+    use TracksApiCredential;
+    use HasTrackingNumber;
 
     /**
      * The database table used by the model.
@@ -23,14 +26,14 @@ class Waypoint extends Model
     protected $table = 'waypoints';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'waypoint';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -44,14 +47,14 @@ class Waypoint extends Model
     protected $fillable = ['_key', 'company_uuid', 'place_uuid', 'tracking_number_uuid', '_import_id', 'payload_uuid', 'type', 'order'];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
     protected $appends = ['status', 'status_code', 'tracking'];
 
     /**
-     * Relationships to always append to model
+     * Relationships to always append to model.
      *
      * @var array
      */
@@ -65,7 +68,7 @@ class Waypoint extends Model
     protected $hidden = [];
 
     /**
-     * The pdf source stream for label
+     * The pdf source stream for label.
      */
     public function pdfLabel()
     {
@@ -73,7 +76,7 @@ class Waypoint extends Model
     }
 
     /**
-     * The pdf source stream for label
+     * The pdf source stream for label.
      */
     public function pdfLabelStream()
     {
@@ -81,22 +84,22 @@ class Waypoint extends Model
     }
 
     /**
-     * The html for the shipment label
+     * The html for the shipment label.
      */
     public function label()
     {
         $this->load(['trackingNumber', 'company', 'place']);
 
         return view('labels/default', [
-            'order' => $this,
-            'dropoff' => $this->place,
+            'order'          => $this,
+            'dropoff'        => $this->place,
             'trackingNumber' => $this->trackingNumber,
-            'company' => $this->company,
+            'company'        => $this->company,
         ])->render();
     }
 
     /**
-     * Place assosciated to order
+     * Place assosciated to order.
      *
      * @var Model
      */
@@ -106,7 +109,7 @@ class Waypoint extends Model
     }
 
     /**
-     * Tracking Number assosciated to waypoint
+     * Tracking Number assosciated to waypoint.
      *
      * @var Model
      */
@@ -124,7 +127,7 @@ class Waypoint extends Model
     }
 
     /**
-     * Payload assosciated to waypoint
+     * Payload assosciated to waypoint.
      *
      * @var Model
      */
@@ -134,7 +137,7 @@ class Waypoint extends Model
     }
 
     /**
-     * The company who manages this waypoint
+     * The company who manages this waypoint.
      *
      * @var Model
      */
@@ -144,7 +147,7 @@ class Waypoint extends Model
     }
 
     /**
-     * Waypoint has completed instance
+     * Waypoint has completed instance.
      *
      * @var Model
      */
@@ -162,7 +165,7 @@ class Waypoint extends Model
     }
 
     /**
-     * The latest tracking status for waypoint
+     * The latest tracking status for waypoint.
      */
     public function getStatusAttribute()
     {
@@ -170,17 +173,17 @@ class Waypoint extends Model
     }
 
     /**
-     * The latest tracking status code for waypoint
+     * The latest tracking status code for waypoint.
      */
     public function getStatusCodeAttribute()
     {
         return data_get($this, 'trackingNumber.last_status_code');
     }
 
-    public static function insertGetUuid($values = [], ?Payload $payload = null)
+    public static function insertGetUuid($values = [], Payload $payload = null)
     {
-        $instance = new static();
-        $fillable = $instance->getFillable();
+        $instance   = new static();
+        $fillable   = $instance->getFillable();
         $insertKeys = array_keys($values);
         // clean insert data
         foreach ($insertKeys as $key) {
@@ -189,10 +192,10 @@ class Waypoint extends Model
             }
         }
 
-        $values['uuid'] = $uuid = static::generateUuid();
-        $values['public_id'] = static::generatePublicId('waypoint');
-        $values['_key'] = session('api_key') ?? 'console';
-        $values['created_at'] = Carbon::now()->toDateTimeString();
+        $values['uuid']         = $uuid = static::generateUuid();
+        $values['public_id']    = static::generatePublicId('waypoint');
+        $values['_key']         = session('api_key') ?? 'console';
+        $values['created_at']   = Carbon::now()->toDateTimeString();
         $values['company_uuid'] = session('company');
 
         if ($payload) {
@@ -210,8 +213,8 @@ class Waypoint extends Model
             $trackingNumberId = TrackingNumber::insertGetUuid([
                 'owner_uuid' => $uuid,
                 'owner_type' => Utils::getModelClassName('waypoint'),
-                'region' => $payload->getPickupRegion(),
-                'location' => Utils::parsePointToWkt($payload->getPickupLocation())
+                'region'     => $payload->getPickupRegion(),
+                'location'   => Utils::parsePointToWkt($payload->getPickupLocation()),
             ]);
 
             // set tracking number

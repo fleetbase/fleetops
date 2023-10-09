@@ -2,44 +2,45 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Exceptions\FleetbaseRequestValidationException;
+use Fleetbase\FleetOps\Events\OrderDispatchFailed;
+use Fleetbase\FleetOps\Events\OrderReady;
+use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
-use Fleetbase\FleetOps\Models\Order;
-use Fleetbase\FleetOps\Models\TrackingStatus;
-use Fleetbase\FleetOps\Events\OrderDispatchFailed;
+use Fleetbase\FleetOps\Imports\OrdersImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
-use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Models\ServiceQuote;
-use Fleetbase\FleetOps\Imports\OrdersImport;
+use Fleetbase\FleetOps\Models\TrackingStatus;
+use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Flow;
 use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
-use Fleetbase\Exceptions\FleetbaseRequestValidationException;
-use Fleetbase\FleetOps\Events\OrderReady;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class OrderController extends FleetOpsController
 {
     /**
-     * The resource to query
+     * The resource to query.
      *
      * @var string
      */
     public $resource = 'order';
 
     /**
-     * Creates a record with request payload
+     * Creates a record with request payload.
      *
-     * @param  Illuminate\Http\Request $request
+     * @param Illuminate\Http\Request $request
+     *
      * @return \Illuminate\Http\Response
      */
     public function createRecord(Request $request)
@@ -65,14 +66,14 @@ class OrderController extends FleetOpsController
                     }
                 },
                 function (&$request, Order &$order, &$requestInput) {
-                    $input = $request->input('order');
+                    $input                   = $request->input('order');
                     $isIntegratedVendorOrder = isset($requestInput['integrated_vendor_order']);
-                    $serviceQuote = ServiceQuote::resolveFromRequest($request);
+                    $serviceQuote            = ServiceQuote::resolveFromRequest($request);
 
-                    $route = Utils::get($input, 'route');
-                    $payload = Utils::get($input, 'payload');
+                    $route     = Utils::get($input, 'route');
+                    $payload   = Utils::get($input, 'payload');
                     $waypoints = Utils::get($input, 'payload.waypoints');
-                    $entities = Utils::get($input, 'payload.entities');
+                    $entities  = Utils::get($input, 'payload.entities');
 
                     // save order route & payload with request input
                     $order
@@ -86,8 +87,8 @@ class OrderController extends FleetOpsController
                     if ($isIntegratedVendorOrder) {
                         $order->updateMeta(
                             [
-                                'integrated_vendor' => Utils::get($requestInput['integrated_vendor_order'], 'metadata.integrated_vendor'),
-                                'integrated_vendor_order' => $requestInput['integrated_vendor_order']
+                                'integrated_vendor'       => Utils::get($requestInput['integrated_vendor_order'], 'metadata.integrated_vendor'),
+                                'integrated_vendor_order' => $requestInput['integrated_vendor_order'],
                             ]
                         );
                     }
@@ -125,18 +126,17 @@ class OrderController extends FleetOpsController
     /**
      * Process import files (excel,csv) into Fleetbase order data.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function importFromFiles(Request $request)
     {
-        $info = Utils::lookupIp();
-        $files = $request->input('files');
-        $files = File::whereIn('uuid', $files)->get();
+        $info    = Utils::lookupIp();
+        $files   = $request->input('files');
+        $files   = File::whereIn('uuid', $files)->get();
         $country = $request->input('country', Utils::or($info, ['country_name', 'region'], 'Singapore'));
 
         $validFileTypes = ['csv', 'tsv', 'xls', 'xlsx'];
-        $imports = collect();
+        $imports        = collect();
 
         foreach ($files as $file) {
             // validate file type
@@ -153,7 +153,7 @@ class OrderController extends FleetOpsController
             $imports = $imports->concat($data);
         }
 
-        $places = collect();
+        $places   = collect();
         $entities = collect();
 
         foreach ($imports as $rows) {
@@ -163,7 +163,7 @@ class OrderController extends FleetOpsController
                 }
 
                 $importId = (string) Str::uuid();
-                $place = Place::createFromImportRow($row, $importId, $country);
+                $place    = Place::createFromImportRow($row, $importId, $country);
 
                 if (!$place) {
                     continue;
@@ -171,9 +171,9 @@ class OrderController extends FleetOpsController
 
                 $places[] = $place;
 
-                $items = Utils::or($row, ['items', 'entities', 'packages', 'passengers', 'products', 'services']);
+                $items          = Utils::or($row, ['items', 'entities', 'packages', 'passengers', 'products', 'services']);
                 $itemsDelimiter = Utils::findDelimiterFromString($items, '|');
-                $items = is_string($items) ? explode($itemsDelimiter, $items) : [];
+                $items          = is_string($items) ? explode($itemsDelimiter, $items) : [];
 
                 foreach ($items as $itemName) {
                     $entity = new Entity(['name' => $itemName]);
@@ -188,7 +188,7 @@ class OrderController extends FleetOpsController
         return response()->json(
             [
                 'entities' => $entities,
-                'places' => $places,
+                'places'   => $places,
             ]
         );
     }
@@ -196,7 +196,6 @@ class OrderController extends FleetOpsController
     /**
      * Updates a order to canceled and updates order activity.
      *
-     * @param  \Fleetbase\Http\Requests\Internal\BulkDeleteRequest  $request
      * @return \Illuminate\Http\Response
      */
     public function bulkDelete(BulkDeleteRequest $request)
@@ -208,7 +207,7 @@ class OrderController extends FleetOpsController
         }
 
         /** @var \Fleetbase\Models\Order */
-        $count = Order::whereIn('uuid', $ids)->count();
+        $count   = Order::whereIn('uuid', $ids)->count();
         $deleted = Order::whereIn('uuid', $ids)->delete();
 
         if (!$deleted) {
@@ -217,7 +216,7 @@ class OrderController extends FleetOpsController
 
         return response()->json(
             [
-                'status' => 'OK',
+                'status'  => 'OK',
                 'message' => 'Deleted ' . $count . ' orders',
             ],
             200
@@ -227,7 +226,6 @@ class OrderController extends FleetOpsController
     /**
      * Updates a order to canceled and updates order activity.
      *
-     * @param  \Fleetbase\Http\Requests\Internal\BulkDeleteRequest  $request
      * @return \Illuminate\Http\Response
      */
     public function bulkCancel(BulkDeleteRequest $request)
@@ -253,7 +251,7 @@ class OrderController extends FleetOpsController
 
         return response()->json(
             [
-                'status' => 'OK',
+                'status'  => 'OK',
                 'message' => 'Canceled ' . $count . ' orders',
             ]
         );
@@ -262,7 +260,8 @@ class OrderController extends FleetOpsController
     /**
      * Updates a order to canceled and updates order activity.
      *
-     * @param  \Fleetbase\Http\Requests\CancelOrderRequest  $request
+     * @param \Fleetbase\Http\Requests\CancelOrderRequest $request
+     *
      * @return \Illuminate\Http\Response
      */
     public function cancel(CancelOrderRequest $request)
@@ -274,9 +273,9 @@ class OrderController extends FleetOpsController
 
         return response()->json(
             [
-                'status' => 'OK',
+                'status'  => 'OK',
                 'message' => 'Order was canceled',
-                'order' => $order->uuid,
+                'order'   => $order->uuid,
             ]
         );
     }
@@ -284,13 +283,12 @@ class OrderController extends FleetOpsController
     /**
      * Dispatches an order.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function dispatchOrder(Request $request)
     {
-        /** 
-         * @var \Fleetbase\Models\Order 
+        /**
+         * @var \Fleetbase\Models\Order
          */
         $order = Order::select(['uuid', 'driver_assigned_uuid', 'adhoc', 'dispatched', 'dispatched_at'])->where('uuid', $request->input('order'))->withoutGlobalScopes()->first();
 
@@ -306,23 +304,22 @@ class OrderController extends FleetOpsController
 
         return response()->json(
             [
-                'status' => 'OK',
+                'status'  => 'OK',
                 'message' => 'Order was dispatched',
-                'order' => $order->uuid,
+                'order'   => $order->uuid,
             ]
         );
     }
 
     /**
-     * Internal request for driver to start order
+     * Internal request for driver to start order.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function start(Request $request)
     {
-        /** 
-         * @var \Fleetbase\Models\Order 
+        /**
+         * @var \Fleetbase\Models\Order
          */
         $order = Order::where('uuid', $request->input('order'))->withoutGlobalScopes()->first();
 
@@ -334,13 +331,13 @@ class OrderController extends FleetOpsController
             return response()->error('Order has already been started.');
         }
 
-        /** 
-         * @var \Fleetbase\FleetOps\Models\Driver 
+        /**
+         * @var \Fleetbase\FleetOps\Models\Driver
          */
         $driver = Driver::where('uuid', $order->driver_assigned_uuid)->withoutGlobalScopes()->first();
 
-        /** 
-         * @var \Fleetbase\FleetOps\Models\Payload 
+        /**
+         * @var \Fleetbase\FleetOps\Models\Payload
          */
         $payload = Payload::where('uuid', $order->payload_uuid)->withoutGlobalScopes()->with(['waypoints', 'waypointMarkers', 'entities'])->first();
 
@@ -349,7 +346,7 @@ class OrderController extends FleetOpsController
         }
 
         // set order to started
-        $order->started = true;
+        $order->started    = true;
         $order->started_at = now();
         $order->save();
 
@@ -363,8 +360,8 @@ class OrderController extends FleetOpsController
         // get the next order activity
         $flow = $activity = Flow::getNextActivity($order);
 
-        /** 
-         * @var \Grimzy\LaravelMysqlSpatial\Types\Point 
+        /**
+         * @var \Grimzy\LaravelMysqlSpatial\Types\Point
          */
         $location = $order->getLastLocation();
 
@@ -397,7 +394,6 @@ class OrderController extends FleetOpsController
     /**
      * Update an order activity.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function updateActivity(string $id, Request $request)
@@ -436,8 +432,8 @@ class OrderController extends FleetOpsController
             $order->notifyCompleted();
         }
 
-        /** 
-         * @var \Grimzy\LaravelMysqlSpatial\Types\Point 
+        /**
+         * @var \Grimzy\LaravelMysqlSpatial\Types\Point
          */
         $location = $order->getLastLocation();
 
@@ -455,11 +451,9 @@ class OrderController extends FleetOpsController
         return response()->json(['status' => 'ok']);
     }
 
-
     /**
      * Finds and responds with the orders next activity update based on the orders configuration.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function nextActivity(string $id, Request $request)
@@ -479,7 +473,7 @@ class OrderController extends FleetOpsController
     }
 
     /**
-     * Get all status options for an order
+     * Get all status options for an order.
      *
      * @return \Illuminate\Http\Response
      */
@@ -497,7 +491,7 @@ class OrderController extends FleetOpsController
     }
 
     /**
-     * Get all order type options
+     * Get all order type options.
      *
      * @return \Illuminate\Http\Response
      */
@@ -520,14 +514,12 @@ class OrderController extends FleetOpsController
     /**
      * Sends back the PDF stream for an order label file.
      *
-     * @param string $publicId
-     * @param Request $request
      * @return void
      */
     public function label(string $publicId, Request $request)
     {
-        $format = $request->input('format', 'stream');
-        $type = $request->input('type', strtok($publicId, '_'));
+        $format  = $request->input('format', 'stream');
+        $type    = $request->input('type', strtok($publicId, '_'));
         $subject = null;
 
         switch ($type) {
@@ -553,14 +545,17 @@ class OrderController extends FleetOpsController
             case 'stream':
             default:
                 $stream = $subject->pdfLabelStream();
+
                 return $stream;
 
             case 'text':
                 $text = $subject->pdfLabel()->output();
+
                 return response()->make($text);
 
             case 'base64':
                 $base64 = base64_encode($subject->pdfLabel()->output());
+
                 return response()->json(['data' => mb_convert_encoding($base64, 'UTF-8', 'UTF-8')]);
         }
 

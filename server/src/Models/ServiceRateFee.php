@@ -2,14 +2,15 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
 use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\Traits\TracksApiCredential;
+use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasUuid;
+use Fleetbase\Traits\TracksApiCredential;
 
 class ServiceRateFee extends Model
 {
-    use HasUuid, TracksApiCredential;
+    use HasUuid;
+    use TracksApiCredential;
 
     /**
      * The database table used by the model.
@@ -19,7 +20,7 @@ class ServiceRateFee extends Model
     protected $table = 'service_rate_fees';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -38,14 +39,14 @@ class ServiceRateFee extends Model
      * @var array
      */
     protected $casts = [
-        'min' => 'integer',
-        'max' => 'integer',
-        'fee' => 'integer',
+        'min'      => 'integer',
+        'max'      => 'integer',
+        'fee'      => 'integer',
         'distance' => 'integer',
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -60,16 +61,16 @@ class ServiceRateFee extends Model
 
     public static function onRowInsert($row)
     {
-        $row['fee'] = Utils::numbersOnly($row['fee'] ?? null);
+        $row['fee']      = Utils::numbersOnly($row['fee'] ?? null);
         $row['distance'] = Utils::numbersOnly($row['distance'] ?? null);
-        $row['min'] = Utils::numbersOnly($row['min'] ?? null);
-        $row['max'] = Utils::numbersOnly($row['max'] ?? null);
+        $row['min']      = Utils::numbersOnly($row['min'] ?? null);
+        $row['max']      = Utils::numbersOnly($row['max'] ?? null);
 
         return $row;
     }
 
     /**
-     * Set the fee as only numbers
+     * Set the fee as only numbers.
      *
      * @void
      */
@@ -79,7 +80,7 @@ class ServiceRateFee extends Model
     }
 
     /**
-     * Set the distance as numbers only
+     * Set the distance as numbers only.
      *
      * @void
      */

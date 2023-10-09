@@ -2,14 +2,15 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\Models\Model;
 use Fleetbase\Casts\Json;
+use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
 
 class Route extends Model
 {
-    use HasUuid, TracksApiCredential;
+    use HasUuid;
+    use TracksApiCredential;
 
     /**
      * The database table used by the model.
@@ -19,7 +20,7 @@ class Route extends Model
     protected $table = 'routes';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -42,7 +43,7 @@ class Route extends Model
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */

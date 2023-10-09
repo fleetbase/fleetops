@@ -2,36 +2,36 @@
 
 namespace Fleetbase\FleetOps\Models;
 
+use Fleetbase\Casts\Json;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
-use Fleetbase\Traits\HasUuid;
-use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\Traits\HasPublicId;
-use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\HasMetaAttributes;
+use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
-use Fleetbase\Casts\Json;
+use Fleetbase\Traits\SendsWebhooks;
+use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Sluggable\SlugOptions;
 use Spatie\Sluggable\HasSlug;
+use Spatie\Sluggable\SlugOptions;
 
 class Contact extends Model
 {
-    use HasUuid,
-        HasPublicId,
-        HasApiModelBehavior,
-        HasMetaAttributes,
-        HasInternalId,
-        TracksApiCredential,
-        Searchable,
-        SendsWebhooks,
-        HasSlug,
-        LogsActivity,
-        CausesActivity,
-        Notifiable;
+    use HasUuid;
+    use HasPublicId;
+    use HasApiModelBehavior;
+    use HasMetaAttributes;
+    use HasInternalId;
+    use TracksApiCredential;
+    use Searchable;
+    use SendsWebhooks;
+    use HasSlug;
+    use LogsActivity;
+    use CausesActivity;
+    use Notifiable;
 
     /**
      * The database table used by the model.
@@ -41,14 +41,14 @@ class Contact extends Model
     protected $table = 'contacts';
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
     protected $publicIdType = 'contact';
 
     /**
-     * The attributes that can be queried
+     * The attributes that can be queried.
      *
      * @var array
      */
@@ -61,7 +61,6 @@ class Contact extends Model
      */
     protected $fillable = ['_key', 'public_id', 'internal_id', 'company_uuid', 'user_uuid', 'photo_uuid', 'name', 'title', 'email', 'phone', 'type', 'meta', 'slug'];
 
-
     /**
      * The attributes that should be cast to native types.
      *
@@ -72,7 +71,7 @@ class Contact extends Model
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
@@ -86,21 +85,21 @@ class Contact extends Model
     protected $hidden = ['photo'];
 
     /**
-     * Properties which activity needs to be logged
+     * Properties which activity needs to be logged.
      *
      * @var array
      */
     protected static $logAttributes = '*';
 
     /**
-     * Do not log empty changed
+     * Do not log empty changed.
      *
-     * @var boolean
+     * @var bool
      */
     protected static $submitEmptyLogs = false;
 
     /**
-     * The name of the subject to log
+     * The name of the subject to log.
      *
      * @var string
      */
@@ -165,7 +164,7 @@ class Contact extends Model
     }
 
     /**
-     * Specifies the user's FCM tokens
+     * Specifies the user's FCM tokens.
      *
      * @return string|array
      */
@@ -181,7 +180,7 @@ class Contact extends Model
     }
 
     /**
-     * Specifies the user's APNS tokens
+     * Specifies the user's APNS tokens.
      *
      * @return string|array
      */
@@ -201,7 +200,7 @@ class Contact extends Model
      */
     public function getPhotoUrlAttribute()
     {
-        return data_get($this, 'photo.url',  'https://s3.ap-southeast-1.amazonaws.com/flb-assets/static/no-avatar.png');
+        return data_get($this, 'photo.url', 'https://s3.ap-southeast-1.amazonaws.com/flb-assets/static/no-avatar.png');
     }
 
     /**
@@ -222,7 +221,7 @@ class Contact extends Model
 
     /**
      * The number of orders by this user.
-     * 
+     *
      * @return int
      */
     public function getCustomerOrdersCountAttribute()
@@ -232,8 +231,6 @@ class Contact extends Model
 
     /**
      * The attribute to route notifications to.
-     *
-     * @return string|null
      */
     public function routeNotificationForTwilio(): ?string
     {

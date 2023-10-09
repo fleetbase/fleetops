@@ -2,21 +2,22 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Http\Request;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Http\Requests\CreateZoneRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateZoneRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Zone as ZoneResource;
 use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class ZoneController extends Controller
 {
     /**
      * Creates a new Fleetbase Zone resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreateZoneRequest  $request
+     * @param \Fleetbase\Http\Requests\CreateZoneRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Zone
      */
     public function create(CreateZoneRequest $request)
@@ -30,7 +31,7 @@ class ZoneController extends Controller
         // service area assignment
         if ($request->has('service_area')) {
             $input['service_area_uuid'] = Utils::getUuid('service_areas', [
-                'public_id' => $request->input('service_area'),
+                'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -45,8 +46,9 @@ class ZoneController extends Controller
     /**
      * Updates a Fleetbase Zone resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdateZoneRequest  $request
+     * @param string                                     $id
+     * @param \Fleetbase\Http\Requests\UpdateZoneRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Zone
      */
     public function update($id, UpdateZoneRequest $request)
@@ -69,7 +71,7 @@ class ZoneController extends Controller
         // service area assignment
         if ($request->has('service_area')) {
             $input['service_area_uuid'] = Utils::getUuid('service_areas', [
-                'public_id' => $request->input('service_area'),
+                'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -84,7 +86,6 @@ class ZoneController extends Controller
     /**
      * Query for Fleetbase Zone resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\ZoneCollection
      */
     public function query(Request $request)
@@ -97,7 +98,6 @@ class ZoneController extends Controller
     /**
      * Finds a single Fleetbase Zone resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\ZoneCollection
      */
     public function find($id)
@@ -121,7 +121,6 @@ class ZoneController extends Controller
     /**
      * Deletes a Fleetbase Zone resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\ZoneCollection
      */
     public function delete($id)

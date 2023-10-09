@@ -2,9 +2,9 @@
 
 namespace Fleetbase\FleetOps\Support;
 
-use Fleetbase\Support\ParsePhone as ParsePhoneUtil;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\Support\ParsePhone as ParsePhoneUtil;
 use libphonenumber\PhoneNumberFormat;
 
 class ParsePhone extends ParsePhoneUtil

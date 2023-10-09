@@ -3,42 +3,42 @@
 namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Models\Place;
-use Geocoder\StatefulGeocoder;
-use Geocoder\Query\GeocodeQuery;
 use Geocoder\Provider\GoogleMaps\GoogleMaps;
 use Geocoder\Provider\GoogleMapsPlaces\GoogleMapsPlaces;
+use Geocoder\Query\GeocodeQuery;
 use Geocoder\Query\ReverseQuery;
+use Geocoder\StatefulGeocoder;
 use GuzzleHttp\Client;
 use Illuminate\Support\Collection;
 
 /**
- * Class Geocoding
+ * Class Geocoding.
  *
  * Provides geocoding functionalities using Google Maps API.
- *
- * @package Fleetbase\FleetOps\Support
  */
 class Geocoding
 {
     /**
      * Search radius in meters.
      */
-    const SEARCH_RADIUS = 2000;
+    public const SEARCH_RADIUS = 2000;
 
     /**
      * Geocode a search query to get places.
      *
-     * @param string $searchQuery The query to search for.
-     * @param float|null $latitude Optional latitude for location-based search.
-     * @param float|null $longitude Optional longitude for location-based search.
-     * @return Collection A collection of places.
+     * @param string     $searchQuery the query to search for
+     * @param float|null $latitude    optional latitude for location-based search
+     * @param float|null $longitude   optional longitude for location-based search
+     *
+     * @return Collection a collection of places
+     *
      * @throws \Exception
      */
     public static function geocode(string $searchQuery, $latitude = null, $longitude = null): Collection
     {
         $httpClient = new Client();
-        $provider = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
-        $geocoder = new StatefulGeocoder($provider, 'en');
+        $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
+        $geocoder   = new StatefulGeocoder($provider, 'en');
 
         try {
             if ($latitude && $longitude) {
@@ -71,17 +71,19 @@ class Geocoding
     /**
      * Perform a reverse geocoding query based on a search query and coordinates.
      *
-     * @param string $searchQuery The query to search for.
-     * @param float $latitude Latitude of the location.
-     * @param float $longitude Longitude of the location.
-     * @return Collection A collection of places.
+     * @param string $searchQuery the query to search for
+     * @param float  $latitude    latitude of the location
+     * @param float  $longitude   longitude of the location
+     *
+     * @return Collection a collection of places
+     *
      * @throws \Exception
      */
     public static function reverseFromQuery(string $searchQuery, $latitude, $longitude): Collection
     {
         $httpClient = new Client();
-        $provider = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
-        $geocoder = new StatefulGeocoder($provider, 'en');
+        $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
+        $geocoder   = new StatefulGeocoder($provider, 'en');
 
         if (empty($searchQuery)) {
             return collect();
@@ -115,17 +117,19 @@ class Geocoding
     /**
      * Perform a reverse geocoding query based on coordinates.
      *
-     * @param float $latitude Latitude of the location.
-     * @param float $longitude Longitude of the location.
-     * @param string|null $searchQuery Optional query to refine the search.
-     * @return Collection A collection of places.
+     * @param float       $latitude    latitude of the location
+     * @param float       $longitude   longitude of the location
+     * @param string|null $searchQuery optional query to refine the search
+     *
+     * @return Collection a collection of places
+     *
      * @throws \Exception
      */
-    public static function reverseFromCoordinates($latitude, $longitude, ?string $searchQuery = null): Collection
+    public static function reverseFromCoordinates($latitude, $longitude, string $searchQuery = null): Collection
     {
         $httpClient = new Client();
-        $provider = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
-        $geocoder = new StatefulGeocoder($provider, 'en');
+        $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
+        $geocoder   = new StatefulGeocoder($provider, 'en');
 
         if (empty($latitude) && empty($longitude)) {
             return collect();
@@ -163,10 +167,12 @@ class Geocoding
     /**
      * Locate places based on a search query and coordinates.
      *
-     * @param string $searchQuery The query to search for.
-     * @param float $latitude Latitude of the location.
-     * @param float $longitude Longitude of the location.
-     * @return Collection A unique collection of places.
+     * @param string $searchQuery the query to search for
+     * @param float  $latitude    latitude of the location
+     * @param float  $longitude   longitude of the location
+     *
+     * @return Collection a unique collection of places
+     *
      * @throws \Exception
      */
     public static function locate(string $searchQuery, $latitude, $longitude): Collection
@@ -185,10 +191,12 @@ class Geocoding
     /**
      * Query places based on a search query and coordinates.
      *
-     * @param string $searchQuery The query to search for.
-     * @param float $latitude Latitude of the location.
-     * @param float $longitude Longitude of the location.
+     * @param string $searchQuery the query to search for
+     * @param float  $latitude    latitude of the location
+     * @param float  $longitude   longitude of the location
+     *
      * @return Collection A unique collection
+     *
      * @throws \Exception
      */
     public static function query(string $searchQuery, $latitude, $longitude): Collection

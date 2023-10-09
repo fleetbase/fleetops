@@ -2,20 +2,21 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Http\Request;
-use Fleetbase\Http\Controllers\Controller;
-use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Http\Requests\CreateContactRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateContactRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
+use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class ContactController extends Controller
 {
     /**
      * Creates a new Fleetbase Contact resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreateContactRequest  $request
+     * @param \Fleetbase\Http\Requests\CreateContactRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Contact
      */
     public function create(CreateContactRequest $request)
@@ -27,7 +28,7 @@ class ContactController extends Controller
         $contact = Contact::updateOrCreate(
             [
                 'company_uuid' => session('company'),
-                'name' => strtoupper($input['name']),
+                'name'         => strtoupper($input['name']),
             ],
             $input
         );
@@ -39,8 +40,9 @@ class ContactController extends Controller
     /**
      * Updates a Fleetbase Contact resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdateContactRequest  $request
+     * @param string                                        $id
+     * @param \Fleetbase\Http\Requests\UpdateContactRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Contact
      */
     public function update($id, UpdateContactRequest $request)
@@ -71,7 +73,6 @@ class ContactController extends Controller
     /**
      * Query for Fleetbase Contact resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\ContactCollection
      */
     public function query(Request $request)
@@ -84,7 +85,6 @@ class ContactController extends Controller
     /**
      * Finds a single Fleetbase Contact resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\ContactCollection
      */
     public function find($id)
@@ -108,7 +108,6 @@ class ContactController extends Controller
     /**
      * Deletes a Fleetbase Contact resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\ContactCollection
      */
     public function delete($id)

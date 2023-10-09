@@ -2,30 +2,31 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Http\Request;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Http\Requests\CreatePurchaseRateRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\PurchaseRate as PurchaseRateResource;
+use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceRate;
-use Fleetbase\FleetOps\Models\Order;
-use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class PurchaseRateController extends Controller
 {
     /**
      * Creates a new Fleetbase PurchaseRate resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreatePurchaseRateRequest  $request
+     * @param \Fleetbase\Http\Requests\CreatePurchaseRateRequest $request
+     *
      * @return \Fleetbase\Http\Resources\PurchaseRate
      */
     public function create(CreatePurchaseRateRequest $request)
     {
-        $input = $request->only(['meta']);
+        $input       = $request->only(['meta']);
         $createOrder = $request->boolean('create_order', false);
-        $order = null;
+        $order       = null;
 
         // make sure company is set
         $input['company_uuid'] = session('company');
@@ -33,7 +34,7 @@ class PurchaseRateController extends Controller
         // service_quote assignment
         if ($request->has('service_quote')) {
             $input['service_quote_uuid'] = Utils::getUuid('service_quotes', [
-                'public_id' => $request->input('service_quote'),
+                'public_id'    => $request->input('service_quote'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -41,13 +42,13 @@ class PurchaseRateController extends Controller
         // order assignment
         if ($request->has('order')) {
             $input['order_uuid'] = Utils::getUuid('orders', [
-                'public_id' => $request->input('order'),
+                'public_id'    => $request->input('order'),
                 'company_uuid' => session('company'),
             ]);
-        } else if ($createOrder) {
+        } elseif ($createOrder) {
             // create order from service quote
             $serviceQuote = ServiceQuote::where('uuid', $input['service_quote_uuid'])->orWhere('public_id', $request->input('service_quote'))->first();
-            $order = $this->createOrderFromServiceQuote($serviceQuote, $request);
+            $order        = $this->createOrderFromServiceQuote($serviceQuote, $request);
         }
 
         // customer assignment
@@ -55,7 +56,7 @@ class PurchaseRateController extends Controller
             $customer = Utils::getUuid(
                 ['contacts', 'vendors'],
                 [
-                    'public_id' => $request->input('customer'),
+                    'public_id'    => $request->input('customer'),
                     'company_uuid' => session('company'),
                 ]
             );
@@ -81,8 +82,9 @@ class PurchaseRateController extends Controller
     /**
      * Create an Order from Service Quote.
      *
-     * @param  \Fleetbase\Models\ServiceQuote $serviceQuote
-     * @param  \Fleetbase\Http\Requests\CreatePurchaseRateRequest  $request
+     * @param \Fleetbase\Models\ServiceQuote                     $serviceQuote
+     * @param \Fleetbase\Http\Requests\CreatePurchaseRateRequest $request
+     *
      * @return \Fleetbase\Models\Order|null
      */
     private function createOrderFromServiceQuote(?ServiceQuote $serviceQuote, CreatePurchaseRateRequest $request): ?Order
@@ -99,17 +101,17 @@ class PurchaseRateController extends Controller
             }
         }
 
-        // create order input 
+        // create order input
         $input = [];
 
         // create order using preliminary data of service quote
         if ($serviceQuote->hasMeta('preliminary_data')) {
             $preliminaryData = $serviceQuote->getMeta('preliminary_data');
-            $pickup = Utils::get($preliminaryData, 'pickup');
-            $dropoff = Utils::get($preliminaryData, 'dropoff');
-            $return = Utils::get($preliminaryData, 'return');
-            $entities = Utils::get($preliminaryData, 'entities');
-            $waypoints = Utils::get($preliminaryData, 'waypoints', []);
+            $pickup          = Utils::get($preliminaryData, 'pickup');
+            $dropoff         = Utils::get($preliminaryData, 'dropoff');
+            $return          = Utils::get($preliminaryData, 'return');
+            $entities        = Utils::get($preliminaryData, 'entities');
+            $waypoints       = Utils::get($preliminaryData, 'waypoints', []);
 
             // create payload from preliminary data
             $payload = new Payload();
@@ -149,8 +151,8 @@ class PurchaseRateController extends Controller
             // if it's integrated vendor order apply to meta
             if ($integratedVendorOrder) {
                 $order->updateMeta([
-                    'integrated_vendor' => $serviceQuote->integratedVendor->public_id,
-                    'integrated_vendor_order' => $integratedVendorOrder
+                    'integrated_vendor'       => $serviceQuote->integratedVendor->public_id,
+                    'integrated_vendor_order' => $integratedVendorOrder,
                 ]);
             }
 
@@ -163,7 +165,6 @@ class PurchaseRateController extends Controller
     /**
      * Query for Fleetbase PurchaseRate resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\PurchaseRateCollection
      */
     public function query(Request $request)
@@ -176,7 +177,6 @@ class PurchaseRateController extends Controller
     /**
      * Finds a single Fleetbase PurchaseRate resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\PurchaseRateCollection
      */
     public function find($id, Request $request)

@@ -2,22 +2,23 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Http\Request;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Http\Requests\CreateVehicleRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateVehicleRequest;
-use Fleetbase\FleetOps\Http\Resources\v1\Vehicle as VehicleResource;
-use Fleetbase\FleetOps\Models\Vehicle;
-use Fleetbase\FleetOps\Models\Driver;
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Vehicle as VehicleResource;
+use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class VehicleController extends Controller
 {
     /**
      * Creates a new Fleetbase Vehicle resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreateVehicleRequest  $request
+     * @param \Fleetbase\Http\Requests\CreateVehicleRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Vehicle
      */
     public function create(CreateVehicleRequest $request)
@@ -33,7 +34,7 @@ class VehicleController extends Controller
         // vendor assignment
         if ($request->has('vendor')) {
             $input['vendor_uuid'] = Utils::getUuid('vendors', [
-                'public_id' => $request->input('vendor'),
+                'public_id'    => $request->input('vendor'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -69,8 +70,9 @@ class VehicleController extends Controller
     /**
      * Updates a Fleetbase Vehicle resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdateVehicleRequest  $request
+     * @param string                                        $id
+     * @param \Fleetbase\Http\Requests\UpdateVehicleRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Vehicle
      */
     public function update($id, UpdateVehicleRequest $request)
@@ -93,7 +95,7 @@ class VehicleController extends Controller
         // vendor assignment
         if ($request->has('vendor')) {
             $input['vendor_uuid'] = Utils::getUuid('vendors', [
-                'public_id' => $request->input('vendor'),
+                'public_id'    => $request->input('vendor'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -119,7 +121,6 @@ class VehicleController extends Controller
     /**
      * Query for Fleetbase Vehicle resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\VehicleCollection
      */
     public function query(Request $request)
@@ -138,7 +139,8 @@ class VehicleController extends Controller
     /**
      * Finds a single Fleetbase Vehicle resources.
      *
-     * @param  string  $id
+     * @param string $id
+     *
      * @return \Fleetbase\Http\Resources\VehicleCollection
      */
     public function find($id)
@@ -162,7 +164,8 @@ class VehicleController extends Controller
     /**
      * Deletes a Fleetbase Vehicle resources.
      *
-     * @param  string  $id
+     * @param string $id
+     *
      * @return \Fleetbase\Http\Resources\VehicleCollection
      */
     public function delete($id)

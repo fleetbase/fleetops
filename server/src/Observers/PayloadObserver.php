@@ -9,7 +9,6 @@ class PayloadObserver
     /**
      * Handle the Payload "creating" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\Payload  $payload
      * @return void
      */
     public function created(Payload $payload)
@@ -17,10 +16,10 @@ class PayloadObserver
         // load the order
         $payload->updateOrderDistanceAndTime();
     }
+
     /**
      * Handle the Payload "updating" event.
      *
-     * @param  \Fleetbase\FleetOps\Models\Payload  $payload
      * @return void
      */
     public function updating(Payload $payload)

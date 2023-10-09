@@ -2,4 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
-class UpdatePayloadRequest extends CreatePayloadRequest {}
+class UpdatePayloadRequest extends CreatePayloadRequest
+{
+}

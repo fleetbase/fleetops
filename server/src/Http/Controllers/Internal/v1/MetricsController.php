@@ -10,8 +10,8 @@ class MetricsController extends Controller
 {
     public function all(Request $request)
     {
-        $start = $request->date('start');
-        $end = $request->date('end');
+        $start    = $request->date('start');
+        $end      = $request->date('end');
         $discover = $request->array('discover', []);
 
         try {
@@ -25,10 +25,10 @@ class MetricsController extends Controller
 
     public function dashboard(Request $request)
     {
-        $start = $request->date('start');
-        $end = $request->date('end');
+        $start    = $request->date('start');
+        $end      = $request->date('end');
         $discover = $request->array('discover', []);
-        $metrics = [];
+        $metrics  = [];
 
         try {
             $metrics = Metrics::forCompany($request->user()->company, $start, $end)->with($discover)->get();
@@ -38,36 +38,36 @@ class MetricsController extends Controller
 
         // metrics format map
         $metricsFormats = [
-            'earnings' => 'money',
-            'fuel_costs' => 'money',
+            'earnings'                => 'money',
+            'fuel_costs'              => 'money',
             'total_distance_traveled' => 'meters',
         ];
 
         // dashboard config
         $dashboardConfig = [
             [
-                'size' => 12,
-                'title' => 'Fleet-Ops Metrics',
-                'classList' => [],
-                'component' => null,
+                'size'        => 12,
+                'title'       => 'Fleet-Ops Metrics',
+                'classList'   => [],
+                'component'   => null,
                 'queryParams' => [
                     'start' => ['component' => 'date-picker'],
-                    'end' => ['component' => 'date-picker'],
+                    'end'   => ['component' => 'date-picker'],
                 ],
                 'widgets' => collect($metrics)
                     ->map(function ($value, $key) use ($metricsFormats) {
                         return [
                             'component' => 'count',
-                            'options' => [
+                            'options'   => [
                                 'format' => $metricsFormats[$key] ?? null,
-                                'title' => str_replace('_', ' ', \Illuminate\Support\Str::title($key)),
-                                'value' => $value
-                            ]
+                                'title'  => str_replace('_', ' ', \Illuminate\Support\Str::title($key)),
+                                'value'  => $value,
+                            ],
                         ];
                     })
                     ->values()
-                    ->toArray()
-            ]
+                    ->toArray(),
+            ],
         ];
 
         return response()->json(array_values($dashboardConfig));

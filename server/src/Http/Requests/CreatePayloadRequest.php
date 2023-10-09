@@ -25,12 +25,12 @@ class CreatePayloadRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'pickup' => 'required',
-            'dropoff' => 'required',
-            'return' => 'nullable',
-            'waypoints' => 'nullable|array',
-            'type' => 'required',
-            'cod_currency' => [Rule::requiredIf($this->has(['cod_amount'])), 'size:3'],
+            'pickup'             => 'required',
+            'dropoff'            => 'required',
+            'return'             => 'nullable',
+            'waypoints'          => 'nullable|array',
+            'type'               => 'required',
+            'cod_currency'       => [Rule::requiredIf($this->has(['cod_amount'])), 'size:3'],
             'cod_payment_method' => [Rule::requiredIf($this->has(['cod_amount'])), 'in:card,check,cash,bank_transfer'],
         ];
     }

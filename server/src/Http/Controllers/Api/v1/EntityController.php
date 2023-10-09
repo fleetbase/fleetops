@@ -2,21 +2,22 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Http\Request;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\FleetOps\Http\Requests\CreateEntityRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateEntityRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Entity as EntityResource;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class EntityController extends Controller
 {
     /**
      * Creates a new Fleetbase Entity resource.
      *
-     * @param  \Fleetbase\Http\Requests\CreateEntityRequest  $request
+     * @param \Fleetbase\Http\Requests\CreateEntityRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Entity
      */
     public function create(CreateEntityRequest $request)
@@ -45,7 +46,7 @@ class EntityController extends Controller
         // payload assignment
         if ($request->has('payload')) {
             $input['payload_uuid'] = Utils::getUuid('payloads', [
-                'public_id' => $request->input('payload'),
+                'public_id'    => $request->input('payload'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -55,7 +56,7 @@ class EntityController extends Controller
             $customer = Utils::getUuid(
                 ['contacts', 'vendors'],
                 [
-                    'public_id' => $request->input('customer'),
+                    'public_id'    => $request->input('customer'),
                     'company_uuid' => session('company'),
                 ]
             );
@@ -69,7 +70,7 @@ class EntityController extends Controller
         // driver assignment
         if ($request->has('driver')) {
             $input['driver_uuid'] = Utils::getUuid('drivers', [
-                'public_id' => $request->input('driver'),
+                'public_id'    => $request->input('driver'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -87,8 +88,9 @@ class EntityController extends Controller
     /**
      * Updates a Fleetbase Entity resource.
      *
-     * @param  string  $id
-     * @param  \Fleetbase\Http\Requests\UpdateEntityRequest  $request
+     * @param string                                       $id
+     * @param \Fleetbase\Http\Requests\UpdateEntityRequest $request
+     *
      * @return \Fleetbase\Http\Resources\Entity
      */
     public function update($id, UpdateEntityRequest $request)
@@ -129,7 +131,7 @@ class EntityController extends Controller
         // payload assignment
         if ($request->has('payload')) {
             $input['payload_uuid'] = Utils::getUuid('payloads', [
-                'public_id' => $request->input('payload'),
+                'public_id'    => $request->input('payload'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -139,12 +141,12 @@ class EntityController extends Controller
             $customer = Utils::getUuid(
                 ['contacts', 'vendors'],
                 [
-                    'public_id' => $request->input('payload'),
+                    'public_id'    => $request->input('payload'),
                     'company_uuid' => session('company'),
                 ]
             );
             if (is_array($customer)) {
-                $input['customer_uuid'] = Utils::get($customer, 'uuid');
+                $input['customer_uuid']   = Utils::get($customer, 'uuid');
                 $input['customer_object'] = Utils::singularize(Utils::get($customer, 'table'));
             }
         }
@@ -152,7 +154,7 @@ class EntityController extends Controller
         // driver assignment
         if ($request->has('driver')) {
             $input['driver_uuid'] = Utils::getUuid('drivers', [
-                'public_id' => $request->input('driver'),
+                'public_id'    => $request->input('driver'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -168,7 +170,6 @@ class EntityController extends Controller
     /**
      * Query for Fleetbase Entity resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\EntityCollection
      */
     public function query(Request $request)
@@ -181,7 +182,6 @@ class EntityController extends Controller
     /**
      * Finds a single Fleetbase Entity resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\EntityCollection
      */
     public function find($id, Request $request)
@@ -205,7 +205,6 @@ class EntityController extends Controller
     /**
      * Deletes a Fleetbase Entity resources.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Fleetbase\Http\Resources\EntityCollection
      */
     public function delete($id, Request $request)

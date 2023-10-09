@@ -2,26 +2,26 @@
 
 namespace Fleetbase\FleetOps\Models;
 
+use Fleetbase\FleetOps\Casts\Polygon;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
-use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\HasPublicId;
+use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\FleetOps\Casts\Polygon;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 
 class Zone extends Model
 {
-    use HasUuid,
-        HasPublicId,
-        SendsWebhooks,
-        TracksApiCredential,
-        SpatialTrait,
-        HasApiModelBehavior;
+    use HasUuid;
+    use HasPublicId;
+    use SendsWebhooks;
+    use TracksApiCredential;
+    use SpatialTrait;
+    use HasApiModelBehavior;
 
     /**
-     * The type of public Id to generate
+     * The type of public Id to generate.
      *
      * @var string
      */
@@ -35,7 +35,7 @@ class Zone extends Model
     protected $table = 'zones';
 
     /**
-     * These attributes that can be queried
+     * These attributes that can be queried.
      *
      * @var array
      */
@@ -65,7 +65,7 @@ class Zone extends Model
     ];
 
     /**
-     * Dynamic attributes that are appended to object
+     * Dynamic attributes that are appended to object.
      *
      * @var array
      */
