@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/split-grid';
+export { default } from '@fleetbase/fleetops-engine/components/split-grid';

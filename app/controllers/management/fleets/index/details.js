@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/controllers/management/fleets/index/details';
+export { default } from '@fleetbase/fleetops-engine/controllers/management/fleets/index/details';

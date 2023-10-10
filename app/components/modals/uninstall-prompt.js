@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/modals/uninstall-prompt';
+export { default } from '@fleetbase/fleetops-engine/components/modals/uninstall-prompt';

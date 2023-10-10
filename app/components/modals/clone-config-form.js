@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/modals/clone-config-form';
+export { default } from '@fleetbase/fleetops-engine/components/modals/clone-config-form';

@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/leaflet-rotated-marker';
+export { default } from '@fleetbase/fleetops-engine/components/leaflet-rotated-marker';

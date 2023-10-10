@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/modals/install-prompt';
+export { default } from '@fleetbase/fleetops-engine/components/modals/install-prompt';

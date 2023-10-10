@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/templates/operations/service-rates/index/new';
+export { default } from '@fleetbase/fleetops-engine/templates/operations/service-rates/index/new';

@@ -1,1 +1,1 @@
-export { default, serviceName } from '@fleetbase/fleetops/helpers/service-name';
+export { default, serviceName } from '@fleetbase/fleetops-engine/helpers/service-name';

@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/modals/assign-driver';
+export { default } from '@fleetbase/fleetops-engine/components/modals/assign-driver';

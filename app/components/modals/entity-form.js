@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/modals/entity-form';
+export { default } from '@fleetbase/fleetops-engine/components/modals/entity-form';

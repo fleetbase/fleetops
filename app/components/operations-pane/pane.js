@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/operations-pane/pane';
+export { default } from '@fleetbase/fleetops-engine/components/operations-pane/pane';

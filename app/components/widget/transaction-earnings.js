@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/widget/transaction-earnings';
+export { default } from '@fleetbase/fleetops-engine/components/widget/transaction-earnings';

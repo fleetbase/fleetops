@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/modals/group-details';
+export { default } from '@fleetbase/fleetops-engine/components/modals/group-details';

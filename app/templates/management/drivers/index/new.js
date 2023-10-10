@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/templates/management/drivers/index/new';
+export { default } from '@fleetbase/fleetops-engine/templates/management/drivers/index/new';

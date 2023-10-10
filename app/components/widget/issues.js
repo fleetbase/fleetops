@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/widget/issues';
+export { default } from '@fleetbase/fleetops-engine/components/widget/issues';

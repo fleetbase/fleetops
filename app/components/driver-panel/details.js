@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/driver-panel/details';
+export { default } from '@fleetbase/fleetops-engine/components/driver-panel/details';

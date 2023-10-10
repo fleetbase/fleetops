@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/order-config/entities-editor';
+export { default } from '@fleetbase/fleetops-engine/components/order-config/entities-editor';

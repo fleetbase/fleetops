@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/file-icon';
+export { default } from '@fleetbase/fleetops-engine/components/file-icon';

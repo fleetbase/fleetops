@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/layout/fleet-ops-sidebar';
+export { default } from '@fleetbase/fleetops-engine/components/layout/fleet-ops-sidebar';

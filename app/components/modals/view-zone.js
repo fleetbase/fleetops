@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/modals/view-zone';
+export { default } from '@fleetbase/fleetops-engine/components/modals/view-zone';

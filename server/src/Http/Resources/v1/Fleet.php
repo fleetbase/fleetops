@@ -30,7 +30,7 @@ class Fleet extends FleetbaseResource
                 'service_area'         => $this->whenLoaded('serviceArea', new ServiceArea($this->serviceArea)),
                 'zone'                 => $this->whenLoaded('zone', new Zone($this->zone)),
                 'vendor'               => $this->whenLoaded('vendor', new Vendor($this->vendor)),
-                'parent_fleet'         => $this->whenLoaded('parent_fleet', new self($this->parent_fleet)),
+                'parentFleet'          => $this->whenLoaded('parent_fleet', new self($this->parent_fleet)),
                 'drivers'              => $this->whenLoaded('drivers', Driver::collection($this->drivers()->without(['driverAssigned'])->with(Http::isInternalRequest() ? ['jobs'] : [])->get())),
                 'vehicles'             => $this->whenLoaded('vehicles', Vehicle::collection($this->vehicles)),
                 'updated_at'           => $this->updated_at,

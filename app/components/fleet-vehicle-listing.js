@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/fleetops/components/fleet-vehicle-listing';
+export { default } from '@fleetbase/fleetops-engine/components/fleet-vehicle-listing';
