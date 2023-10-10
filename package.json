@@ -1,7 +1,7 @@
 {
     "name": "@fleetbase/fleetops-engine",
     "version": "0.2.6",
-    "description": "leet & Transport Management Extension for Fleetbase",
+    "description": "Fleet & Transport Management Extension for Fleetbase",
     "fleetbase": {
         "route": "fleet-ops",
         "dashboard": "int/v1/fleet-ops/dashboard"
