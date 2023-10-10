@@ -1,0 +1,10 @@
+{
+    "name": "Fleet-Ops",
+    "version": "0.2.6",
+    "description": "leet & Transport Management Extension for Fleetbase",
+    "repository": "https://github.com/fleetbase/fleetops",
+    "license": "MIT",
+    "author": "Fleetbase Pte Ltd <hello@fleetbase.io>",
+    "engine": "package.json",
+    "api": "composer.json"
+}

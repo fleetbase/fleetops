@@ -1,7 +1,7 @@
 {
-    "name": "fleetbase/fleetops",
-    "version": "0.0.1",
-    "description": "FleetOps TMS and Last-Mile Operations System",
+    "name": "fleetbase/fleetops-api",
+    "version": "0.2.6",
+    "description": "leet & Transport Management Extension for Fleetbase",
     "keywords": [
         "fleetbase-extension",
         "fleetops",

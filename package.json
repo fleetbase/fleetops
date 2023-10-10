@@ -1,7 +1,7 @@
 {
-    "name": "@fleetbase/fleetops",
-    "version": "0.0.1",
-    "description": "Fleetbase Fleet-Ops extension provides a fleet management and last mile delivery operations system module.",
+    "name": "@fleetbase/fleetops-engine",
+    "version": "0.2.6",
+    "description": "leet & Transport Management Extension for Fleetbase",
     "fleetbase": {
         "route": "fleet-ops",
         "dashboard": "int/v1/fleet-ops/dashboard"
