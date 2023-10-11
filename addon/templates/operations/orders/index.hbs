@@ -15,7 +15,7 @@
         <GlobalSearch @visible={{this.isSearchVisible}} @onPressOrder={{this.viewOrder}} />
         <MapContainer::Toolbar @activeOrdersCount={{this.activeOrdersCount}} @map={{this.leafletMap}} @onPressDisplayPlaces={{this.viewPlacesOnMap}} @onPressViewOrders={{this.toggleOrdersPanel}} @onPressSearch={{this.toggleSearch}} @onPressCreateOrder={{this.createOrder}} @onPressCreateDriver={{this.driversController.createDriver}} @onPressDriverProfile={{this.driversController.viewDriver}} />
         <OrderListOverlay @noBackdrop={{true}} @fullHeight={{true}} @outView={{not this.isOrdersPanelVisible}} @width={{if (media 'isMobile') "100%" "338px"}} @onPressCancel={{this.hideOrdersPanel}} @onPressCreateOrder={{this.createOrder}} @onPressViewOrder={{this.viewOrder}} @onPressCreateFleet={{this.fleetController.createFleet}} @onPressManageFleet={{this.fleetController.viewFleet}} @onPressCancelOrders={{this.bulkCancelOrders}} @onPressDeleteOrders={{this.bulkDeleteOrders}} />
-        <LiveMap id="leafletMap" class="next-leaflet-container-map" @lat={{1.3521}} @lng={{103.8198}} @zoom={{12}} @zoomControl={{false}} @onLoad={{this.setMapReference}} {{set-container-dimensions}} />
+        <LiveMap id="leafletMap" class="next-leaflet-container-map" @lat={{1.3521}} @lng={{103.8198}} @zoom={{12}} @zoomControl={{false}} @onLoad={{this.setMapReference}} @onVehicleClicked={{this.onVehicleClicked}} @onDriverClicked={{this.onDriverClicked}} {{set-container-dimensions}} />
     </MapContainer>
 {{/if}}
 
@@ -56,6 +56,14 @@
     <Layout::Section::Body>
         <OrderBoard @type={{this.type}} />
     </Layout::Section::Body>
+{{/if}}
+
+{{#if this.focusedDriver}}
+    <DriverPanel @driver={{this.focusedDriver}} @onPressCancel={{this.unfocusDriver}} />
+{{/if}}
+
+{{#if this.focusedVehicle}}
+    <VehiclePanel @vehicle={{this.focusedVehicle}} @onPressCancel={{this.unfocusVehicle}} />
 {{/if}}
 
 {{outlet}}

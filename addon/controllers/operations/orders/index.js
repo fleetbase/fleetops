@@ -1,7 +1,7 @@
 import Controller, { inject as controller } from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
+import { action, get } from '@ember/object';
 import { equal } from '@ember/object/computed';
 import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';
@@ -112,6 +112,20 @@ export default class OperationsOrdersIndexController extends Controller {
         'type',
         'layout',
     ];
+
+    /**
+     * The current driver being focused.
+     *
+     * @var {DriverModel|null}
+     */
+    @tracked focusedDriver;
+
+    /**
+     * The current vehicle being focused.
+     *
+     * @var {VehicleModel|null}
+     */
+    @tracked focusedVehicle;
 
     /**
      * The current page of data being viewed
@@ -816,5 +830,35 @@ export default class OperationsOrdersIndexController extends Controller {
         this.fetch.get('fleet-ops/metrics/all', { discover: ['orders_in_progress'] }).then((response) => {
             this.activeOrdersCount = response.orders_in_progress;
         });
+    }
+
+    @action onDriverClicked(driver) {
+        this.focusedDriver = driver;
+
+        if (driver._marker && this.leafletMap) {
+            const longitude = get(driver.location, 'coordinates.0');
+            const latitude = get(driver.location, 'coordinates.1');
+
+            this.leafletMap.flyTo([latitude, longitude]);
+        }
+    }
+
+    @action unfocusDriver() {
+        this.focusedDriver = null;
+    }
+
+    @action onVehicleClicked(vehicle) {
+        this.focusedVehicle = vehicle;
+
+        if (vehicle._marker && this.leafletMap) {
+            const longitude = get(vehicle.location, 'coordinates.0');
+            const latitude = get(vehicle.location, 'coordinates.1');
+
+            this.leafletMap.flyTo([latitude, longitude]);
+        }
+    }
+
+    @action unfocusVehicle() {
+        this.focusedVehicle = null;
     }
 }

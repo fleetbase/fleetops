@@ -60,6 +60,16 @@
                 "Fleetbase\\FleetOps\\Providers\\FleetOpsServiceProvider",
                 "Fleetbase\\FleetOps\\Providers\\EventServiceProvider"
             ]
+        },
+        "fleetbase/fleetops-api": {
+            "excludes": [
+                "addon",
+                "app",
+                "assets",
+                "config",
+                "tests",
+                "vendor"
+            ]
         }
     },
     "config": {

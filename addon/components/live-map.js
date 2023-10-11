@@ -13,6 +13,10 @@ import { allSettled } from 'rsvp';
 const DEFAULT_LATITUDE = 1.369;
 const DEFAULT_LONGITUDE = 103.8864;
 
+const layerCanBindContextMenu = (layer) => {
+    return typeof layer === 'object' && typeof layer.bindContextMenu === 'function';
+};
+
 export default class LiveMapComponent extends Component {
     @service store;
     @service fetch;
@@ -25,10 +29,12 @@ export default class LiveMapComponent extends Component {
 
     @tracked routes = [];
     @tracked drivers = [];
+    @tracked vehicles = [];
     @tracked places = [];
     @tracked channels = [];
     @tracked isLoading = true;
     @tracked isReady = false;
+    @tracked isVehiclesVisible = true;
     @tracked isDriversVisible = true;
     @tracked isPlacesVisible = true;
     @tracked isRoutesVisible = true;
@@ -106,6 +112,7 @@ export default class LiveMapComponent extends Component {
         this.universe.trigger('livemap.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
 
         this.routes = await this.fetchActiveRoutes();
+        this.vehicles = await this.fetchActiveVehicles();
         this.drivers = await this.fetchActiveDrivers();
         this.places = await this.fetchActivePlaces();
         this.serviceAreaRecords = await this.fetchServiceAreas();
@@ -338,9 +345,16 @@ export default class LiveMapComponent extends Component {
         // set the marker instance to the driver model
         set(driver, '_marker', target);
 
-        console.log('onDriverAdded()', ...arguments);
-
         this.createContextMenuForDriver(driver, target);
+    }
+
+    @action onVehicleAdded(vehicle, event) {
+        const { target } = event;
+
+        // set the marker instance to the vehicle model
+        set(vehicle, '_marker', target);
+
+        this.createContextMenuForVehicle(vehicle, target);
     }
 
     @action onDrawControlCreated(drawControl) {
@@ -485,6 +499,18 @@ export default class LiveMapComponent extends Component {
 
     @action toggleDrivers() {
         this.isDriversVisible = !this.isDriversVisible;
+    }
+
+    @action hideVehicles() {
+        this.isVehiclesVisible = false;
+    }
+
+    @action showVehicles() {
+        this.isVehiclesVisible = true;
+    }
+
+    @action toggleVehicles() {
+        this.isVehiclesVisible = !this.isVehiclesVisible;
     }
 
     @action hidePlaces() {
@@ -638,7 +664,47 @@ export default class LiveMapComponent extends Component {
             },
         ];
 
-        if (typeof layer?.bindContextMenu === 'function') {
+        if (layerCanBindContextMenu(layer)) {
+            layer.bindContextMenu({
+                contextmenu: true,
+                contextmenuItems,
+            });
+        }
+    }
+
+    @action createContextMenuForVehicle(vehicle, layer) {
+        let contextmenuItems = [
+            {
+                separator: true,
+            },
+            {
+                text: `View Vehicle: ${vehicle.displayName}`,
+                // callback: () => this.editServiceAreaDetails(serviceArea)
+            },
+            {
+                text: `Edit Vehicle: ${vehicle.displayName}`,
+                // callback: () => this.editServiceAreaDetails(serviceArea)
+            },
+        ];
+
+        const registeredContextMenuItems = this.universe.getMenuItemsFromRegistry('contextmenu:vehicle');
+        if (isArray(registeredContextMenuItems)) {
+            contextmenuItems = [
+                ...contextmenuItems,
+                ...registeredContextMenuItems.map((menuItem) => {
+                    return {
+                        text: menuItem.title,
+                        callback: () => {
+                            return menuItem.onClick(vehicle, layer, menuItem);
+                        },
+                    };
+                }),
+            ];
+        }
+
+        console.log('createContextMenuForVehicle() #contextmenuItems', contextmenuItems);
+
+        if (layerCanBindContextMenu(layer)) {
             layer.bindContextMenu({
                 contextmenu: true,
                 contextmenuItems,
@@ -670,7 +736,7 @@ export default class LiveMapComponent extends Component {
             },
         ];
 
-        if (typeof layer?.bindContextMenu === 'function') {
+        if (layerCanBindContextMenu(layer)) {
             layer.bindContextMenu({
                 contextmenu: true,
                 contextmenuItems,
@@ -711,7 +777,7 @@ export default class LiveMapComponent extends Component {
             },
         ];
 
-        if (typeof layer?.bindContextMenu === 'function') {
+        if (layerCanBindContextMenu(layer)) {
             layer.bindContextMenu({
                 contextmenu: true,
                 contextmenuItems,
@@ -915,6 +981,27 @@ export default class LiveMapComponent extends Component {
                     }
 
                     resolve(drivers);
+                })
+                .catch(() => {
+                    resolve([]);
+                });
+        });
+    }
+
+    @action fetchActiveVehicles() {
+        this.isLoading = true;
+
+        return new Promise((resolve) => {
+            this.fetch
+                .get('fleet-ops/live/vehicles', {}, { normalizeToEmberData: true, normalizeModelType: 'vehicle' })
+                .then((vehicles) => {
+                    this.isLoading = false;
+
+                    if (typeof this.args.onVehiclesLoaded === 'function') {
+                        this.args.onVehiclesLoaded(vehicles);
+                    }
+
+                    resolve(vehicles);
                 })
                 .catch(() => {
                     resolve([]);

@@ -42,6 +42,12 @@ export default class FleetOpsEngine extends Engine {
 
         // register the driver panel
         universe.createRegistry('component:driver-panel');
+
+        // register vehicle context menu
+        universe.createRegistry('contextmenu:vehicle');
+
+        // register driver context menu
+        universe.createRegistry('contextmenu:driver');
     };
 }
 
