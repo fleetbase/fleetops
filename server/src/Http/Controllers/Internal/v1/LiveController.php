@@ -108,7 +108,7 @@ class LiveController extends Controller
     public function vehicles()
     {
         // Fetch vehicles that are online
-        $vehicles = Vehicle::where(['company_uuid' => session('company')])->get();
+        $vehicles = Vehicle::where(['company_uuid' => session('company')])->with(['devices'])->get();
 
         return VehicleResource::collection($vehicles);
     }

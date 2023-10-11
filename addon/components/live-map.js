@@ -702,7 +702,8 @@ export default class LiveMapComponent extends Component {
             ];
         }
 
-        console.log('createContextMenuForVehicle() #contextmenuItems', contextmenuItems);
+        // create registry event for extensions to listen for
+        this.universe.createRegistryEvent('contextmenu:vehicle', 'created', vehicle, contextmenuItems, layer);
 
         if (layerCanBindContextMenu(layer)) {
             layer.bindContextMenu({
