@@ -642,8 +642,7 @@ export default class OperationsOrdersIndexController extends Controller {
 
     @action resetView() {
         if (this.leafletMap && this.leafletMap.liveMap) {
-            this.leafletMap.liveMap.hideDrivers();
-            this.leafletMap.liveMap.hideRoutes();
+            this.leafletMap.liveMap.hideAll();
         }
     }
 

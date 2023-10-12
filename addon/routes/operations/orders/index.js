@@ -28,7 +28,9 @@ export default class OperationsOrdersIndexRoute extends Route {
     };
 
     @action willTransition(transition) {
-        this.controller?.resetView(transition);
+        if (this.controller) {
+            this.controller.resetView(transition);
+        }
     }
 
     @action model(params) {

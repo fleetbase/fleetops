@@ -437,6 +437,18 @@ export default class LiveMapComponent extends Component {
     }
 
     /**
+     * Hide all visibility controls associated with the current instance.
+     */
+    hideAll() {
+        const controls = Object.keys(this.visibilityControls);
+
+        for (let i = 0; i < controls.length; i++) {
+            const control = controls.objectAt(i);
+            this.hide(control);
+        }
+    }
+
+    /**
      * Hides a specific element by name using a visibility control.
      *
      * @function
@@ -519,6 +531,27 @@ export default class LiveMapComponent extends Component {
      */
     findLeafletLayer(callback) {
         return this.leafletMapManager.findLeafletLayer(this.leafletMap, callback);
+    }
+
+    /**
+     * Find an editable layer in the collection by its record ID.
+     *
+     * @param {Object} record - The record with the ID used for lookup.
+     * @returns {Layer|null} The found editable layer, or null if not found.
+     * @memberof LiveMapComponent
+     */
+    getLeafletLayerByRecordId(record) {
+        const id = getWithDefault(record, 'id', record);
+        let targetLayer = null;
+
+        this.leafletMap.eachLayer((layer) => {
+            // Check if the layer has an ID property
+            if (layer.record_id === id) {
+                targetLayer = layer;
+            }
+        });
+
+        return targetLayer;
     }
 
     /**
@@ -817,8 +850,8 @@ export default class LiveMapComponent extends Component {
      * @param {Object} record - The record to focus on.
      * @memberof LiveMapComponent
      */
-    @action focusLayerByRecord(record) {
-        const layer = this.findEditableLayerByRecordId(record);
+    @action focusLayerBoundsByRecord(record) {
+        const layer = this.getLeafletLayerByRecordId(record);
 
         if (layer) {
             this.flyToBoundsOnly(layer);
@@ -1024,11 +1057,32 @@ export default class LiveMapComponent extends Component {
      * @param {Object} options - Additional options for the focus operation.
      * @memberof LiveMapComponent
      */
-    focusLayer(layer, zoom, options = {}) {
+    @action focusLayer(layer, zoom, options = {}) {
         this.leafletMapManager.flyToLayer(layer, zoom, options);
 
         if (typeof options.onAfter === 'function') {
             options.onAfter(layer);
+        }
+    }
+
+    /**
+     * Focuses the Leaflet map on a specific layer associated with a record.
+     *
+     * @param {Object} record - The record associated with the target layer.
+     * @param {number} zoom - The desired zoom level for the map.
+     * @param {Object} [options={}] - Additional options for the map focus.
+     * @returns {void}
+     *
+     * @example
+     * // Assuming 'mapInstance' is your Leaflet map object.
+     * // Focus the map on a specific layer associated with a record with a custom zoom level:
+     * focusLayerByRecord(recordData, 12, { animate: true });
+     */
+    @action focusLayerByRecord(record, zoom, options = {}) {
+        const layer = this.getLeafletLayerByRecordId(record);
+
+        if (layer) {
+            this.focusLayer(layer, zoom, options);
         }
     }
 
@@ -1423,11 +1477,13 @@ export default class LiveMapComponent extends Component {
      * Close all socket channels associated subscribed to.
      * @memberof LiveMapComponent
      */
-    closeChannels() {
-        for (let i = 0; i < this.channels.length; i++) {
-            const channel = this.channels.objectAt(i);
+    @action closeChannels() {
+        if (isArray(this.channels)) {
+            for (let i = 0; i < this.channels.length; i++) {
+                const channel = this.channels.objectAt(i);
 
-            channel.close();
+                channel.close();
+            }
         }
     }
 

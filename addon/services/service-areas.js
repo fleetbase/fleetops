@@ -331,13 +331,13 @@ export default class ServiceAreasService extends Service {
                     // if service area has been created, add to the active service areas
                     if (selectedLayerType === 'Service Area') {
                         this.triggerLiveMapFn('activateServiceArea', record);
-                        this.triggerLiveMapFn('focusLayerByRecord', record);
+                        this.triggerLiveMapFn('focusLayerBoundsByRecord', record);
                     } else {
                         // if zone was created then we simply add the zone to the serviceArea selected
                         // then we focus the service area
                         serviceArea?.zones.pushObject(record);
                         this.triggerLiveMapFn('activateServiceArea', serviceArea);
-                        this.triggerLiveMapFn('focusLayerByRecord', serviceArea);
+                        this.triggerLiveMapFn('focusLayerBoundsByRecord', serviceArea);
                     }
 
                     // rebuild context menu
@@ -431,7 +431,7 @@ export default class ServiceAreasService extends Service {
      * @param {Object} options - Additional options for the deletion (optional).
      */
     @action deleteServiceArea(serviceArea, options = {}) {
-        this.triggerLiveMapFn('focusLayerByRecord', serviceArea);
+        this.triggerLiveMapFn('focusLayerBoundsByRecord', serviceArea);
 
         this.crud.delete(serviceArea, {
             onConfirm: () => {
