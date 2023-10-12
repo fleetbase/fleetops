@@ -59,11 +59,11 @@
 {{/if}}
 
 {{#if this.focusedDriver}}
-    <DriverPanel @driver={{this.focusedDriver}} @onPressCancel={{this.unfocusDriver}} />
+    <DriverPanel @driver={{this.focusedDriver}} @onPressCancel={{this.unfocusDriver}} @isResizable={{true}} @width="550px" />
 {{/if}}
 
 {{#if this.focusedVehicle}}
-    <VehiclePanel @vehicle={{this.focusedVehicle}} @onPressCancel={{this.unfocusVehicle}} />
+    <VehiclePanel @vehicle={{this.focusedVehicle}} @onPressCancel={{this.unfocusVehicle}} @isResizable={{true}} @width="550px" />
 {{/if}}
 
 {{outlet}}

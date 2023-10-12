@@ -585,7 +585,7 @@ export default class OperationsOrdersIndexNewController extends Controller {
             });
         } else {
             // setup interface when livemap is ready
-            this.universe.on('livemap.ready', () => {
+            this.universe.on('fleetops.livemap.ready', () => {
                 this.setupInterface();
             });
         }
