@@ -1,19 +1,14 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { action, computed, set } from '@ember/object';
+import { action, set } from '@ember/object';
 import { isArray } from '@ember/array';
-import { isBlank } from '@ember/utils';
 import { dasherize, camelize } from '@ember/string';
 import { singularize } from 'ember-inflector';
 import { alias } from '@ember/object/computed';
-import { guidFor } from '@ember/object/internals';
 import { later } from '@ember/runloop';
 import { allSettled } from 'rsvp';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
-import getModelName from '@fleetbase/ember-core/utils/get-model-name';
-import getLeafletLayerById from '../utils/get-leaflet-layer-by-id';
-import layerCanBindContextmenu from '../utils/layer-can-bind-contextmenu';
 
 const DEFAULT_LATITUDE = 1.369;
 const DEFAULT_LONGITUDE = 103.8864;
@@ -787,7 +782,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event object associated with the addition.
      * @memberof LiveMapComponent
      */
-    @action onDriverClicked(driver, event) {
+    @action onDriverClicked(driver) {
         this.contextPanel.focus(driver);
     }
 
@@ -798,7 +793,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event object associated with the addition.
      * @memberof LiveMapComponent
      */
-    @action onVehicleAdded(vehicle, event) {
+    @action onVehicleAdded(vehicle) {
         const { target } = event;
 
         set(target, 'record_id', vehicle.id);
@@ -817,7 +812,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event object associated with the addition.
      * @memberof LiveMapComponent
      */
-    @action onVehicleClicked(vehicle, event) {
+    @action onVehicleClicked(vehicle) {
         this.contextPanel.focus(vehicle);
     }
 
@@ -1071,10 +1066,9 @@ export default class LiveMapComponent extends Component {
      * Set the maximum bounds of the map based on the provided layer's bounds.
      *
      * @param {Layer} layer - The layer used to determine the map's maximum bounds.
-     * @param {Object} options - Additional options for setting the maximum bounds.
      * @memberof LiveMapComponent
      */
-    setMaxBoundsFromLayer(layer, options = {}) {
+    setMaxBoundsFromLayer(layer) {
         if (layer && typeof layer.getBounds === 'function') {
             const bounds = layer.getBounds();
 
@@ -1087,10 +1081,9 @@ export default class LiveMapComponent extends Component {
      * Fly to and focus on a specific layer's bounds on the map.
      *
      * @param {Layer} layer - The layer to focus on.
-     * @param {Object} options - Additional options for the focus operation.
      * @memberof LiveMapComponent
      */
-    flyToBoundsOnly(layer, options = {}) {
+    flyToBoundsOnly(layer) {
         if (layer && typeof layer.getBounds === 'function') {
             const bounds = layer.getBounds();
 
@@ -1493,8 +1486,8 @@ export default class LiveMapComponent extends Component {
                 // log incoming event
                 console.log(`${event} - #${data.additionalData.index} (${output.created_at}) [ ${data.location.coordinates.join(' ')} ]`);
 
-                // get movineObject marker
-                const objectMarker = movineObject._layer;
+                // get movingObject marker
+                const objectMarker = movingObject._layer;
 
                 if (objectMarker) {
                     // Update the object's heading degree

@@ -1,7 +1,6 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { camelize } from '@ember/string';
-import { isBlank } from '@ember/utils';
 import { later } from '@ember/runloop';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 

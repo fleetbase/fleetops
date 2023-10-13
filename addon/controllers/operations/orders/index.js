@@ -1,7 +1,7 @@
 import Controller, { inject as controller } from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action, get } from '@ember/object';
+import { action } from '@ember/object';
 import { equal } from '@ember/object/computed';
 import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';

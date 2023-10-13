@@ -1,6 +1,5 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
 import getLeafletLayerById from '../utils/get-leaflet-layer-by-id';
 import findLeafletLayer from '../utils/find-leaflet-layer';
 import flyToLeafletLayer from '../utils/fly-to-leaflet-layer';
