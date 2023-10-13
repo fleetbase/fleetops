@@ -14,21 +14,21 @@ export default class ContextPanelService extends Service {
         driver: {
             viewing: {
                 component: 'driver-panel',
-                componentArguments: [{ resizable: true }, { width: '550px' }],
+                componentArguments: [{ isResizable: true }, { width: '550px' }],
             },
             editing: {
                 component: 'driver-form-panel',
-                componentArguments: [{ resizable: true }, { width: '550px' }],
+                componentArguments: [{ isResizable: true }, { width: '550px' }],
             },
         },
         vehicle: {
             viewing: {
                 component: 'vehicle-panel',
-                componentArguments: [{ resizable: true }, { width: '550px' }],
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
             },
             editing: {
                 component: 'vehicle-form-panel',
-                componentArguments: [{ resizable: true }, { width: '550px' }],
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
             },
         },
     };
