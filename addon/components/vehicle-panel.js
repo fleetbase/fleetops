@@ -11,6 +11,7 @@ export default class VehiclePanelComponent extends Component {
     @service universe;
     @service store;
     @service hostRouter;
+    @service contextPanel;
     @tracked currentTab;
     @tracked devices = [];
     @tracked deviceApi = {};
@@ -39,10 +40,27 @@ export default class VehiclePanelComponent extends Component {
     constructor() {
         super(...arguments);
         this.vehicle = this.args.vehicle;
-        this.changeTab(this.args.tab || 'details');
+        this.changeTab(this.args.tab);
+        this.applyDynamicArguments();
     }
 
-    @action async changeTab(tab) {
+    applyDynamicArguments() {
+        // Apply context if available
+        if (this.args.context) {
+            this.vehicle = this.args.context;
+        }
+
+        // Apply dynamic arguments if available
+        if (this.args.dynamicArgs) {
+            const keys = Object.keys(this.args.dynamicArgs);
+
+            keys.forEach((key) => {
+                this[key] = this.args.dynamicArgs[key];
+            });
+        }
+    }
+
+    @action async changeTab(tab = 'details') {
         this.currentTab = tab;
 
         if (typeof this.args.onTabChanged === 'function') {
@@ -51,7 +69,6 @@ export default class VehiclePanelComponent extends Component {
     }
 
     @action editVehicle() {
-        const { vehicle } = this.args;
-        return this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.edit', vehicle.public_id);
+        this.contextPanel.focus(this.vehicle, 'editing');
     }
 }

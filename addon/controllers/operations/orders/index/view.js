@@ -170,8 +170,7 @@ export default class OperationsOrdersIndexViewController extends Controller {
 
     @action resetInterface() {
         if (this.leafletMap && this.leafletMap.liveMap) {
-            this.leafletMap.liveMap.showDrivers();
-            this.leafletMap.liveMap.showRoutes();
+            this.leafletMap.liveMap.show(['drivers', 'routes']);
         }
     }
 
@@ -219,8 +218,7 @@ export default class OperationsOrdersIndexViewController extends Controller {
                 this,
                 () => {
                     if (this.leafletMap && this.leafletMap.liveMap) {
-                        this.leafletMap.liveMap.hideDrivers();
-                        this.leafletMap.liveMap.hideRoutes();
+                        this.leafletMap.liveMap.hideAll();
                     }
 
                     // display order route on map

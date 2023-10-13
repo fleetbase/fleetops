@@ -81,6 +81,13 @@ export default class LiveMapComponent extends Component {
     @service universe;
 
     /**
+     * Inject the `contextPanel` service.
+     *
+     * @memberof LiveMapComponent
+     */
+    @service contextPanel;
+
+    /**
      * Inject the `leafletMapManager` service.
      *
      * @memberof LiveMapComponent
@@ -449,12 +456,28 @@ export default class LiveMapComponent extends Component {
     }
 
     /**
+     * Show all visibility controls associated with the current instance.
+     */
+    showAll() {
+        const controls = Object.keys(this.visibilityControls);
+
+        for (let i = 0; i < controls.length; i++) {
+            const control = controls.objectAt(i);
+            this.show(control);
+        }
+    }
+
+    /**
      * Hides a specific element by name using a visibility control.
      *
      * @function
      * @param {string} name - The name or identifier of the element to hide.
      */
     hide(name) {
+        if (isArray(name)) {
+            return name.forEach(this.hide);
+        }
+
         this.createVisibilityControl(name, false);
     }
 
@@ -465,6 +488,10 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - The name or identifier of the element to show.
      */
     show(name) {
+        if (isArray(name)) {
+            return name.forEach(this.show);
+        }
+
         this.createVisibilityControl(name, true);
     }
 
@@ -754,6 +781,17 @@ export default class LiveMapComponent extends Component {
     }
 
     /**
+     * Handle the click event of a driver marker.
+     *
+     * @param {DriverModel} driver - The driver object.
+     * @param {Event} event - The event object associated with the addition.
+     * @memberof LiveMapComponent
+     */
+    @action onDriverClicked(driver, event) {
+        this.contextPanel.focus(driver);
+    }
+
+    /**
      * Handle the addition of a vehicle marker.
      *
      * @param {VehicleModel} vehicle - The vehicle object.
@@ -770,6 +808,17 @@ export default class LiveMapComponent extends Component {
         set(vehicle, '_marker', target);
 
         this.createVehicleContextMenu(vehicle, target);
+    }
+
+    /**
+     * Handle the click event of a vehicle marker.
+     *
+     * @param {VehicleModel} vehicle - The vehicle object.
+     * @param {Event} event - The event object associated with the addition.
+     * @memberof LiveMapComponent
+     */
+    @action onVehicleClicked(vehicle, event) {
+        this.contextPanel.focus(vehicle);
     }
 
     /**
@@ -1058,10 +1107,10 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @action focusLayer(layer, zoom, options = {}) {
-        this.leafletMapManager.flyToLayer(layer, zoom, options);
+        this.leafletMapManager.flyToLayer(this.leafletMap, layer, zoom, options);
 
-        if (typeof options.onAfter === 'function') {
-            options.onAfter(layer);
+        if (typeof options.onAfterFocus === 'function') {
+            options.onAfterFocus(layer);
         }
     }
 
@@ -1074,8 +1123,6 @@ export default class LiveMapComponent extends Component {
      * @returns {void}
      *
      * @example
-     * // Assuming 'mapInstance' is your Leaflet map object.
-     * // Focus the map on a specific layer associated with a record with a custom zoom level:
      * focusLayerByRecord(recordData, 12, { animate: true });
      */
     @action focusLayerByRecord(record, zoom, options = {}) {
@@ -1083,6 +1130,10 @@ export default class LiveMapComponent extends Component {
 
         if (layer) {
             this.focusLayer(layer, zoom, options);
+        }
+
+        if (typeof options.onAfterFocusWithRecord === 'function') {
+            options.onAfterFocusWithRecord(record, layer);
         }
     }
 

@@ -567,8 +567,7 @@ export default class OperationsOrdersIndexNewController extends Controller {
 
     @action setupInterface() {
         if (this.leafletMap && this.leafletMap.liveMap) {
-            this.leafletMap.liveMap.hideDrivers();
-            this.leafletMap.liveMap.hideRoutes();
+            this.leafletMap.liveMap.hideAll();
 
             // track all layers added from this view
             this.leafletMap.on('layeradd', ({ layer }) => {
@@ -596,8 +595,7 @@ export default class OperationsOrdersIndexNewController extends Controller {
 
     @action resetInterface() {
         if (this.leafletMap && this.leafletMap.liveMap) {
-            this.leafletMap.liveMap.showDrivers();
-            this.leafletMap.liveMap.showRoutes();
+            this.leafletMap.liveMap.show(['drivers', 'vehicles', 'routes']);
         }
     }
 

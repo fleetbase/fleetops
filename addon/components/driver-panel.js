@@ -11,10 +11,11 @@ export default class DriverPanelComponent extends Component {
     @service universe;
     @service store;
     @service hostRouter;
+    @service contextPanel;
     @tracked currentTab;
     @tracked devices = [];
     @tracked deviceApi = {};
-    @tracked vehicle;
+    @tracked driver;
 
     get tabs() {
         const registeredTabs = this.universe.getMenuItemsFromRegistry('component:driver-panel');
@@ -38,11 +39,28 @@ export default class DriverPanelComponent extends Component {
 
     constructor() {
         super(...arguments);
-        this.vehicle = this.args.vehicle;
-        this.changeTab(this.args.tab || 'details');
+        this.driver = this.args.driver;
+        this.changeTab(this.args.tab);
+        this.applyDynamicArguments();
     }
 
-    @action async changeTab(tab) {
+    applyDynamicArguments() {
+        // Apply context if available
+        if (this.args.context) {
+            this.driver = this.args.context;
+        }
+
+        // Apply dynamic arguments if available
+        if (this.args.dynamicArgs) {
+            const keys = Object.keys(this.args.dynamicArgs);
+
+            keys.forEach((key) => {
+                this[key] = this.args.dynamicArgs[key];
+            });
+        }
+    }
+
+    @action async changeTab(tab = 'details') {
         this.currentTab = tab;
 
         if (typeof this.args.onTabChanged === 'function') {
@@ -51,7 +69,6 @@ export default class DriverPanelComponent extends Component {
     }
 
     @action editDriver() {
-        const { driver } = this.args;
-        return this.hostRouter.transitionTo('console.fleet-ops.management.drivers.index.edit', driver.public_id);
+        this.contextPanel.focus(this.driver, 'editing');
     }
 }

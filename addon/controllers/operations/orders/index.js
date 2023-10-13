@@ -830,34 +830,4 @@ export default class OperationsOrdersIndexController extends Controller {
             this.activeOrdersCount = response.orders_in_progress;
         });
     }
-
-    @action onDriverClicked(driver) {
-        this.focusedDriver = driver;
-
-        if (driver._marker && this.leafletMap) {
-            const longitude = get(driver.location, 'coordinates.0');
-            const latitude = get(driver.location, 'coordinates.1');
-
-            this.leafletMap.flyTo([latitude, longitude]);
-        }
-    }
-
-    @action unfocusDriver() {
-        this.focusedDriver = null;
-    }
-
-    @action onVehicleClicked(vehicle) {
-        this.focusedVehicle = vehicle;
-
-        if (vehicle._marker && this.leafletMap) {
-            const longitude = get(vehicle.location, 'coordinates.0');
-            const latitude = get(vehicle.location, 'coordinates.1');
-
-            this.leafletMap.flyTo([latitude, longitude]);
-        }
-    }
-
-    @action unfocusVehicle() {
-        this.focusedVehicle = null;
-    }
 }
