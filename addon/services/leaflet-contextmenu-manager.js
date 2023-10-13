@@ -270,31 +270,42 @@ export default class LeafletContextmenuManagerService extends Service {
      * @param {Array} contextmenuItems - An array of context menu items to bind.
      */
     rebindContextMenu(layer, contextmenuItems = []) {
+        // make sure layer is instance of leaflet
+        if (!(layer instanceof L.Layer)) {
+            return;
+        }
+
         const registry = this.findRegistryByLayer(layer);
 
-        later(
-            this,
-            () => {
-                if (typeof layer.unbindContextMenu === 'function') {
-                    layer.unbindContextMenu().bindContextMenu({
-                        contextmenu: true,
-                        contextmenuItems,
-                    });
-                } else {
-                    // just bind
-                    layer.bindContextMenu({
-                        contextmenu: true,
-                        contextmenuItems,
-                    });
-                }
+        if (registry) {
+            later(
+                this,
+                () => {
+                    try {
+                        if (typeof layer.unbindContextMenu === 'function') {
+                            layer.unbindContextMenu().bindContextMenu({
+                                contextmenu: true,
+                                contextmenuItems,
+                            });
+                        } else {
+                            // just bind
+                            layer.bindContextMenu({
+                                contextmenu: true,
+                                contextmenuItems,
+                            });
+                        }
+                    } catch (error) {
+                        // silence
+                    }
 
-                // if found registry update layer and contextmenu api
-                if (registry) {
-                    registry.layer = layer;
-                    registry.contextmenuApi = layer.contextmenu;
-                }
-            },
-            300
-        );
+                    // if found registry update layer and contextmenu api
+                    if (registry) {
+                        registry.layer = layer;
+                        registry.contextmenuApi = layer.contextmenu;
+                    }
+                },
+                300
+            );
+        }
     }
 }
