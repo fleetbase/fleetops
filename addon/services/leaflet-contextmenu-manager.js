@@ -275,10 +275,18 @@ export default class LeafletContextmenuManagerService extends Service {
         later(
             this,
             () => {
-                layer.unbindContextMenu().bindContextMenu({
-                    contextmenu: true,
-                    contextmenuItems,
-                });
+                if (typeof layer.unbindContextMenu === 'function') {
+                    layer.unbindContextMenu().bindContextMenu({
+                        contextmenu: true,
+                        contextmenuItems,
+                    });
+                } else {
+                    // just bind
+                    layer.bindContextMenu({
+                        contextmenu: true,
+                        contextmenuItems,
+                    });
+                }
 
                 // if found registry update layer and contextmenu api
                 if (registry) {
@@ -286,7 +294,7 @@ export default class LeafletContextmenuManagerService extends Service {
                     registry.contextmenuApi = layer.contextmenu;
                 }
             },
-            100
+            300
         );
     }
 }
