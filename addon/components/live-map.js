@@ -76,6 +76,13 @@ export default class LiveMapComponent extends Component {
     @service universe;
 
     /**
+     * Inject the `crud` service.
+     *
+     * @memberof LiveMapComponent
+     */
+    @service crud;
+
+    /**
      * Inject the `contextPanel` service.
      *
      * @memberof LiveMapComponent
@@ -793,7 +800,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event object associated with the addition.
      * @memberof LiveMapComponent
      */
-    @action onVehicleAdded(vehicle) {
+    @action onVehicleAdded(vehicle, event) {
         const { target } = event;
 
         set(target, 'record_id', vehicle.id);
@@ -1226,25 +1233,37 @@ export default class LiveMapComponent extends Component {
             },
             {
                 text: `View Driver: ${driver.name}`,
-                // callback: () => this.editServiceAreaDetails(serviceArea)
+                callback: () => this.contextPanel.focus(driver),
             },
             {
                 text: `Edit Driver: ${driver.name}`,
-                // callback: () => this.editServiceAreaDetails(serviceArea)
+                callback: () => this.contextPanel.focus(driver, 'editing'),
             },
             {
                 text: `Delete Driver: ${driver.name}`,
-                // callback: () => this.deleteServiceArea(serviceArea)
-            },
-            {
-                text: `Assign Order to Driver: ${driver.name}`,
-                // callback: () => this.deleteServiceArea(serviceArea)
+                callback: () => this.crud.delete(driver),
             },
             {
                 text: `View Vehicle for: ${driver.name}`,
-                // callback: () => this.deleteServiceArea(serviceArea)
+                callback: () => this.contextPanel.focus(driver.vehicle),
             },
         ];
+
+        // append items from universe registry
+        const registeredContextMenuItems = this.universe.getMenuItemsFromRegistry('contextmenu:driver');
+        if (isArray(registeredContextMenuItems)) {
+            contextmenuItems = [
+                ...contextmenuItems,
+                ...registeredContextMenuItems.map((menuItem) => {
+                    return {
+                        text: menuItem.title,
+                        callback: () => {
+                            return menuItem.onClick(driver, layer, menuItem);
+                        },
+                    };
+                }),
+            ];
+        }
 
         // create contextmenu registry
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`driver:${driver.public_id}`, layer, contextmenuItems, { driver });
@@ -1269,14 +1288,19 @@ export default class LiveMapComponent extends Component {
             },
             {
                 text: `View Vehicle: ${vehicle.displayName}`,
-                // callback: () => this.editServiceAreaDetails(serviceArea)
+                callback: () => this.contextPanel.focus(vehicle),
             },
             {
                 text: `Edit Vehicle: ${vehicle.displayName}`,
-                // callback: () => this.editServiceAreaDetails(serviceArea)
+                callback: () => this.contextPanel.focus(vehicle, 'editing'),
+            },
+            {
+                text: `Delete Vehicle: ${vehicle.displayName}`,
+                callback: () => this.crud.delete(vehicle),
             },
         ];
 
+        // append items from universe registry
         const registeredContextMenuItems = this.universe.getMenuItemsFromRegistry('contextmenu:vehicle');
         if (isArray(registeredContextMenuItems)) {
             contextmenuItems = [
