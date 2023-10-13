@@ -8,8 +8,10 @@ export default class OperationsOrdersIndexViewRoute extends Route {
     @service store;
     @service socket;
 
-    @action willTransition() {
-        if (this.controller) {
+    @action willTransition(transition) {
+        const shouldReset = typeof transition.to.name === 'string' && !transition.to.name.includes('operations.orders');
+
+        if (this.controller && shouldReset) {
             this.controller.resetView();
         }
     }

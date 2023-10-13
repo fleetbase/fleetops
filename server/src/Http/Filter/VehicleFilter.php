@@ -88,4 +88,11 @@ class VehicleFilter extends Filter
             }
         );
     }
+
+    public function assignedFleet(string $assignedFleet)
+    {
+        if ($assignedFleet === 'false') {
+            $this->builder->whereDoesntHave('fleets');
+        }
+    }
 }

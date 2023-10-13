@@ -7,9 +7,33 @@ export default class VehicleFormPanelComponent extends Component {
     @service notifications;
     @service hostRouter;
     @service loader;
+    @service contextPanel;
+
+    constructor() {
+        super(...arguments);
+        this.vehicle = this.args.vehicle;
+        this.applyDynamicArguments();
+    }
+
+    applyDynamicArguments() {
+        // Apply context if available
+        if (this.args.context) {
+            this.vehicle = this.args.context;
+        }
+
+        // Apply dynamic arguments if available
+        if (this.args.dynamicArgs) {
+            const keys = Object.keys(this.args.dynamicArgs);
+
+            keys.forEach((key) => {
+                this[key] = this.args.dynamicArgs[key];
+            });
+        }
+    }
 
     @action save() {
-        const { vehicle, onAfterSave } = this.args;
+        const { onAfterSave } = this.args;
+        const { vehicle } = this;
 
         this.loader.showLoader('.overlay-inner-content', 'Saving vehicle...');
 
@@ -33,7 +57,6 @@ export default class VehicleFormPanelComponent extends Component {
     }
 
     @action viewDetails() {
-        const { vehicle } = this.args;
-        return this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details', vehicle.public_id);
+        this.contextPanel.focus(this.vehicle, 'viewing');
     }
 }

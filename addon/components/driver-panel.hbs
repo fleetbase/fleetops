@@ -1,4 +1,4 @@
-<Overlay @position="right" @noBackdrop={{true}} @fullHeight={{true}} @width="700">
+<Overlay @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
      <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
@@ -13,17 +13,17 @@
             <div class="flex flex-col flex-1 w-3/4">
                 <div class="flex flex-row">
                     <div class="w-14 flex items-center justify-start">
-                        <Image src={{@driver.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{@driver.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                        <Image src={{this.driver.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{this.driver.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
                         <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
-                            <InputInfo @text={{@driver.public_id}} />
+                            <InputInfo @text={{this.driver.public_id}} />
                         </Attach::Tooltip>
                     </div>
                     <div class="flex flex-col">
-                        <h1 class="text-gray-900 dark:text-white text-2xl">{{@driver.name}}</h1>
+                        <h1 class="text-gray-900 dark:text-white text-2xl">{{this.driver.name}}</h1>
                         <div class="-mt-1">
-                            {{#if @driver.vehicle}}
+                            {{#if this.driver.vehicle}}
                                 <div class="flex flex-row items-center">
-                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{@driver.vehicle.displayName}}</span>
+                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{this.driver.vehicle.displayName}}</span>
                                 </div>
                             {{else}}
                                 <div class="flex flex-row items-center">
@@ -36,7 +36,7 @@
                 </div>
             </div>
             <div class="flex justify-end w-1/4">
-                <Badge @status={{@driver.status}} />
+                <Badge @status={{this.driver.status}} />
             </div>
         </div>
     </Overlay::Header>
@@ -54,7 +54,7 @@
             </div>
         </div>
         <div class="tab-content tab-{{this.currentTab}}">
-            {{component this.tab.component driver=@driver tabOptions=this.tab params=this.tab.componentParams}}
+            {{component this.tab.component driver=this.driver tabOptions=this.tab params=this.tab.componentParams}}
         </div>
     </Overlay::Body>
 </Overlay>

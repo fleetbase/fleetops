@@ -3,7 +3,10 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Filter\PlaceFilter;
+use Fleetbase\FleetOps\Http\Resources\v1\Driver as DriverResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Vehicle as VehicleResource;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
@@ -94,7 +97,7 @@ class LiveController extends Controller
             )
             ->get();
 
-        return response()->json($drivers);
+        return DriverResource::collection($drivers);
     }
 
     /**
@@ -105,9 +108,9 @@ class LiveController extends Controller
     public function vehicles()
     {
         // Fetch vehicles that are online
-        $vehicles = Vehicle::where(['company_uuid' => session('company'), 'online' => 1])->get();
+        $vehicles = Vehicle::where(['company_uuid' => session('company')])->with(['devices'])->get();
 
-        return response()->json($vehicles);
+        return VehicleResource::collection($vehicles);
     }
 
     /**
@@ -122,6 +125,6 @@ class LiveController extends Controller
             ->filter(new PlaceFilter($request))
             ->get();
 
-        return response()->json($places);
+        return PlaceResource::collection($places);
     }
 }

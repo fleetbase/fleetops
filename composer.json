@@ -1,6 +1,6 @@
 {
     "name": "fleetbase/fleetops-api",
-    "version": "0.2.8",
+    "version": "0.2.9",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "keywords": [
         "fleetbase-extension",
@@ -59,6 +59,16 @@
             "providers": [
                 "Fleetbase\\FleetOps\\Providers\\FleetOpsServiceProvider",
                 "Fleetbase\\FleetOps\\Providers\\EventServiceProvider"
+            ]
+        },
+        "fleetbase/fleetops-api": {
+            "excludes": [
+                "addon",
+                "app",
+                "assets",
+                "config",
+                "tests",
+                "vendor"
             ]
         }
     },

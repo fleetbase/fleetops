@@ -114,6 +114,20 @@ export default class OperationsOrdersIndexController extends Controller {
     ];
 
     /**
+     * The current driver being focused.
+     *
+     * @var {DriverModel|null}
+     */
+    @tracked focusedDriver;
+
+    /**
+     * The current vehicle being focused.
+     *
+     * @var {VehicleModel|null}
+     */
+    @tracked focusedVehicle;
+
+    /**
      * The current page of data being viewed
      *
      * @var {Integer}
@@ -628,8 +642,7 @@ export default class OperationsOrdersIndexController extends Controller {
 
     @action resetView() {
         if (this.leafletMap && this.leafletMap.liveMap) {
-            this.leafletMap.liveMap.hideDrivers();
-            this.leafletMap.liveMap.hideRoutes();
+            this.leafletMap.liveMap.hideAll();
         }
     }
 

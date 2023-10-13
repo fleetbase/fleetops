@@ -1,4 +1,4 @@
-<Overlay @onLoad={{this.onLoad}} @isOpen={{@isOpen}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{true}} @isMaximizable={{true}} @isMinimizable={{true}} as |overlay|>
+<Overlay @onLoad={{this.onLoad}} @isOpen={{@isOpen}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{true}} @isMaximizable={{true}} @isMinimizable={{true}} @width="600px" as |overlay|>
     <Overlay::Header @overlay={{overlay}} @title="FleetOps Settings" @onPressCancel={{@onPressCancel}}>
         <Button @icon="save" @type="primary" @text={{if (media 'isMobile') "" "Save Changes"}} @onClick={{this.saveSettings}} @isLoading={{this.isSaving}} @disabled={{or this.isLoading this.isSaving}} />
     </Overlay::Header>

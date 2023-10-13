@@ -170,8 +170,7 @@ export default class OperationsOrdersIndexViewController extends Controller {
 
     @action resetInterface() {
         if (this.leafletMap && this.leafletMap.liveMap) {
-            this.leafletMap.liveMap.showDrivers();
-            this.leafletMap.liveMap.showRoutes();
+            this.leafletMap.liveMap.show(['drivers', 'routes']);
         }
     }
 
@@ -219,8 +218,7 @@ export default class OperationsOrdersIndexViewController extends Controller {
                 this,
                 () => {
                     if (this.leafletMap && this.leafletMap.liveMap) {
-                        this.leafletMap.liveMap.hideDrivers();
-                        this.leafletMap.liveMap.hideRoutes();
+                        this.leafletMap.liveMap.hideAll();
                     }
 
                     // display order route on map
@@ -236,14 +234,14 @@ export default class OperationsOrdersIndexViewController extends Controller {
         };
 
         // re-display order routes when livemap has coordinates
-        this.universe.on('livemap.has_coordinates', this, displayOrderRoute);
+        this.universe.on('fleetops.livemap.has_coordinates', this, displayOrderRoute);
 
         // when transitioning away kill event listener
         this.hostRouter.on('routeWillChange', () => {
-            const isListening = this.universe.has('livemap.has_coordinates');
+            const isListening = this.universe.has('fleetops.livemap.has_coordinates');
 
             if (isListening) {
-                this.universe.off('livemap.has_coordinates', this, displayOrderRoute);
+                this.universe.off('fleetops.livemap.has_coordinates', this, displayOrderRoute);
             }
         });
 

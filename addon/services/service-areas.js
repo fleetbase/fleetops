@@ -11,22 +11,86 @@ import Polygon from '@fleetbase/fleetops-data/utils/geojson/polygon';
 import FeatureCollection from '@fleetbase/fleetops-data/utils/geojson/feature-collection';
 
 export default class ServiceAreasService extends Service {
+    /**
+     * Inject the `store` service.
+     *
+     * @memberof ServiceAreasService
+     */
     @service store;
+
+    /**
+     * Inject the `modalsManager` service.
+     *
+     * @memberof ServiceAreasService
+     */
     @service modalsManager;
+
+    /**
+     * Inject the `notifications` service.
+     *
+     * @memberof ServiceAreasService
+     */
     @service notifications;
+
+    /**
+     * Inject the `crud` service.
+     *
+     * @memberof ServiceAreasService
+     */
     @service crud;
+
+    /**
+     * Inject the `appCache` service.
+     *
+     * @memberof ServiceAreasService
+     */
     @service appCache;
 
+    /**
+     * The Leaflet map instance used by the service for map-related operations.
+     *
+     * @type {Object|null}
+     */
     @tracked leafletMap;
+
+    /**
+     * An array of service area types available within the application.
+     *
+     * @type {string[]}
+     */
     @tracked serviceAreaTypes = ['neighborhood', 'city', 'region', 'state', 'province', 'country', 'continent'];
+
+    /**
+     * A context variable that stores the current context for layer creation.
+     *
+     * @type {string|null}
+     */
     @tracked layerCreationContext;
+
+    /**
+     * A context variable that stores information related to the service area in which zones are being created.
+     *
+     * @type {Object|null}
+     */
     @tracked zoneServiceAreaContext;
 
-    @action getFromCache() {
+    /**
+     * Retrieves service areas from the cache.
+     *
+     * @function
+     * @returns {Array} An array of service areas retrieved from the cache.
+     */
+    getFromCache() {
         return this.appCache.getEmberData('serviceAreas', 'service-area');
     }
 
-    @action removeFromCache(serviceArea) {
+    /**
+     * Removes a service area from the cache.
+     *
+     * @function
+     * @param {Object} serviceArea - The service area to remove from the cache.
+     */
+    removeFromCache(serviceArea) {
         const serviceAreas = this.getFromCache();
         const index = serviceAreas?.findIndex((sa) => sa.id === serviceArea.id);
 
@@ -36,7 +100,13 @@ export default class ServiceAreasService extends Service {
         }
     }
 
-    @action addToCache(serviceArea) {
+    /**
+     * Adds a service area to the cache.
+     *
+     * @function
+     * @param {ServiceAreaModel} serviceArea - The service area to add to the cache.
+     */
+    addToCache(serviceArea) {
         const serviceAreas = this.getFromCache();
 
         if (isArray(serviceAreas)) {
@@ -46,7 +116,14 @@ export default class ServiceAreasService extends Service {
         }
     }
 
-    @action layerToTerraformerPrimitive(layer) {
+    /**
+     * Converts a Leaflet layer to a Terraformer primitive.
+     *
+     * @function
+     * @param {Object} layer - The Leaflet layer to convert.
+     * @returns {Object} The Terraformer primitive.
+     */
+    layerToTerraformerPrimitive(layer) {
         const leafletLayerGeoJson = layer.toGeoJSON();
         let featureCollection, feature;
 
@@ -62,7 +139,14 @@ export default class ServiceAreasService extends Service {
         return primitive;
     }
 
-    @action layerToTerraformerMultiPolygon(layer) {
+    /**
+     * Converts a Leaflet layer to a Terraformer MultiPolygon.
+     *
+     * @function
+     * @param {Object} layer - The Leaflet layer to convert.
+     * @returns {Object} The Terraformer MultiPolygon.
+     */
+    layerToTerraformerMultiPolygon(layer) {
         const leafletLayerGeoJson = layer.toGeoJSON();
         let featureCollection, feature, coordinates;
 
@@ -79,7 +163,14 @@ export default class ServiceAreasService extends Service {
         return multipolygon;
     }
 
-    @action layerToTerraformerPolygon(layer) {
+    /**
+     * Converts a Leaflet layer to a Terraformer Polygon.
+     *
+     * @function
+     * @param {Object} layer - The Leaflet layer to convert.
+     * @returns {Object} The Terraformer Polygon.
+     */
+    layerToTerraformerPolygon(layer) {
         const leafletLayerGeoJson = layer.toGeoJSON();
         let featureCollection, feature, coordinates;
 
@@ -96,36 +187,82 @@ export default class ServiceAreasService extends Service {
         return polygon;
     }
 
-    @action clearLayerCreationContext() {
+    /**
+     * Clears the layer creation context.
+     *
+     * @function
+     */
+    clearLayerCreationContext() {
         this.layerCreationContext = undefined;
     }
 
-    @action setLayerCreationContext(context) {
+    /**
+     * Sets the layer creation context.
+     *
+     * @function
+     * @param {string} context - The context to set.
+     */
+    setLayerCreationContext(context) {
         this.layerCreationContext = context;
     }
 
-    @action clearZoneServiceAreaContext() {
+    /**
+     * Clears the zone service area context.
+     *
+     * @function
+     */
+    clearZoneServiceAreaContext() {
         this.zoneServiceAreaContext = undefined;
     }
 
-    @action setZoneServiceAreaContext(serviceArea) {
+    /**
+     * Sets the zone service area context.
+     *
+     * @function
+     * @param {Object} serviceArea - The service area to set as the context.
+     */
+    setZoneServiceAreaContext(serviceArea) {
         this.zoneServiceAreaContext = serviceArea;
     }
 
-    @action getZoneServiceAreaContext() {
+    /**
+     * Retrieves the zone service area context.
+     *
+     * @function
+     * @returns {Object} The zone service area context.
+     */
+    getZoneServiceAreaContext() {
         return this.zoneServiceAreaContext;
     }
 
-    @action setMapInstance(map) {
+    /**
+     * Sets the Leaflet map instance for the service.
+     *
+     * @function
+     * @param {Object} map - The Leaflet map instance to set.
+     */
+    setMapInstance(map) {
         this.leafletMap = map;
     }
 
-    @action sendToLiveMap(fn, ...params) {
-        this.leafletMap?.liveMap[fn](...params);
+    /**
+     * Sends a command to the LiveMap through the Leaflet map instance.
+     *
+     * @function
+     * @param {string} fn - The function name to call on the LiveMap.
+     * @param {...any} params - Additional parameters to pass to the function.
+     */
+    triggerLiveMapFn(fn, ...params) {
+        this.leafletMap.liveMap[fn](...params);
     }
 
+    /**
+     * Initiates the creation of a service area on the map.
+     *
+     * @function
+     */
     @action createServiceArea() {
-        this.sendToLiveMap('enableDrawControls');
+        this.triggerLiveMapFn('showDrawControls', { text: true });
         this.setLayerCreationContext('service-area');
 
         this.notifications.info('Use drawing controls to the right to draw a service area, complete point connections to save service area.', {
@@ -133,6 +270,14 @@ export default class ServiceAreasService extends Service {
         });
     }
 
+    /**
+     * Creates a generic layer on the map, such as a service area or zone.
+     *
+     * @function
+     * @param {Object} event - The event that triggered the creation.
+     * @param {Object} layer - The layer being created.
+     * @param {Object} options - Additional options for the creation (optional).
+     */
     @action createGenericLayer(event, layer, options = {}) {
         if (this.layerCreationContext === 'service-area') {
             return this.saveServiceArea(...arguments);
@@ -185,18 +330,18 @@ export default class ServiceAreasService extends Service {
 
                     // if service area has been created, add to the active service areas
                     if (selectedLayerType === 'Service Area') {
-                        this.sendToLiveMap('activateServiceArea', record);
-                        this.sendToLiveMap('focusLayerByRecord', record);
+                        this.triggerLiveMapFn('activateServiceArea', record);
+                        this.triggerLiveMapFn('focusLayerBoundsByRecord', record);
                     } else {
                         // if zone was created then we simply add the zone to the serviceArea selected
                         // then we focus the service area
                         serviceArea?.zones.pushObject(record);
-                        this.sendToLiveMap('activateServiceArea', serviceArea);
-                        this.sendToLiveMap('focusLayerByRecord', serviceArea);
+                        this.triggerLiveMapFn('activateServiceArea', serviceArea);
+                        this.triggerLiveMapFn('focusLayerBoundsByRecord', serviceArea);
                     }
 
                     // rebuild context menu
-                    this.sendToLiveMap('rebuildContextMenu');
+                    this.triggerLiveMapFn('rebuildMapContextMenu');
                     this.clearLayerCreationContext();
                 });
             },
@@ -208,6 +353,13 @@ export default class ServiceAreasService extends Service {
         });
     }
 
+    /**
+     * Saves a service area to the database.
+     *
+     * @function
+     * @param {Object} event - The event that triggered the saving.
+     * @param {Object} layer - The layer to be saved as a service area.
+     */
     @action saveServiceArea(event, layer) {
         const { _map } = layer;
         const border = this.layerToTerraformerMultiPolygon(layer);
@@ -230,6 +382,13 @@ export default class ServiceAreasService extends Service {
         });
     }
 
+    /**
+     * Edits and saves details of a service area.
+     *
+     * @function
+     * @param {Object} serviceArea - The service area to edit.
+     * @param {Object} options - Additional options for the edit (optional).
+     */
     @action editServiceAreaDetails(serviceArea, options = {}) {
         this.modalsManager.show('modals/service-area-form', {
             title: 'Edit Service Area',
@@ -247,13 +406,13 @@ export default class ServiceAreasService extends Service {
 
                     this.clearLayerCreationContext();
                     this.addToCache(serviceArea);
-                    this.sendToLiveMap('focusServiceArea', serviceArea);
-                    // this.sendToLiveMap('rebuildContextMenu');
+                    this.triggerLiveMapFn('focusServiceArea', serviceArea);
+                    this.triggerLiveMapFn('rebuildMapContextMenu');
                 });
             },
             decline: (modal) => {
                 this.clearLayerCreationContext();
-                this.sendToLiveMap('hideDrawControls');
+                this.triggerLiveMapFn('hideDrawControls', { text: true });
 
                 if (serviceArea.isNew) {
                     serviceArea.destroyRecord();
@@ -264,21 +423,34 @@ export default class ServiceAreasService extends Service {
         });
     }
 
+    /**
+     * Deletes a service area from the database.
+     *
+     * @function
+     * @param {Object} serviceArea - The service area to delete.
+     * @param {Object} options - Additional options for the deletion (optional).
+     */
     @action deleteServiceArea(serviceArea, options = {}) {
-        this.sendToLiveMap('focusLayerByRecord', serviceArea);
+        this.triggerLiveMapFn('focusLayerBoundsByRecord', serviceArea);
 
         this.crud.delete(serviceArea, {
             onConfirm: () => {
-                this.sendToLiveMap('blurServiceArea', serviceArea);
+                this.triggerLiveMapFn('blurServiceArea', serviceArea);
                 this.removeFromCache(serviceArea);
             },
             ...options,
         });
     }
 
+    /**
+     * Initiates the creation of a zone within a service area on the map.
+     *
+     * @function
+     * @param {Object} serviceArea - The service area within which the zone is being created.
+     */
     @action createZone(serviceArea) {
-        this.sendToLiveMap('enableDrawControls');
-        this.sendToLiveMap('focusServiceArea', serviceArea);
+        this.triggerLiveMapFn('showDrawControls', { text: true });
+        this.triggerLiveMapFn('focusServiceArea', serviceArea);
         this.setZoneServiceAreaContext(serviceArea);
         this.setLayerCreationContext('zone');
 
@@ -287,6 +459,14 @@ export default class ServiceAreasService extends Service {
         });
     }
 
+    /**
+     * Saves a zone to the database.
+     *
+     * @function
+     * @param {Object} event - The event that triggered the saving.
+     * @param {Object} layer - The layer to be saved as a zone.
+     * @returns {Promise} A promise that resolves when the zone is saved.
+     */
     @action saveZone(event, layer) {
         const { _map } = layer;
         const border = this.layerToTerraformerPolygon(layer);
@@ -307,6 +487,15 @@ export default class ServiceAreasService extends Service {
         });
     }
 
+    /**
+     * Edits and saves details of a zone.
+     *
+     * @function
+     * @param {Object} zone - The zone to edit.
+     * @param {Object} serviceArea - The service area to which the zone belongs.
+     * @param {Object} options - Additional options for the edit (optional).
+     * @returns {Promise} A promise that resolves when the zone is successfully saved.
+     */
     @action editZone(zone, serviceArea, options = {}) {
         this.modalsManager.show('modals/zone-form', {
             title: 'Edit Zone',
@@ -323,23 +512,23 @@ export default class ServiceAreasService extends Service {
 
                     this.clearLayerCreationContext();
                     this.clearZoneServiceAreaContext();
-                    this.sendToLiveMap('hideDrawControls');
-                    this.sendToLiveMap('blurAllServiceAreas');
+                    this.triggerLiveMapFn('hideDrawControls', { text: true });
+                    this.triggerLiveMapFn('blurAllServiceAreas');
 
                     later(
                         this,
                         () => {
-                            this.sendToLiveMap('focusServiceArea', serviceArea);
+                            this.triggerLiveMapFn('focusServiceArea', serviceArea);
                         },
                         300
                     );
-                    // this.sendToLiveMap('rebuildContextMenu');
+                    this.triggerLiveMapFn('rebuildMapContextMenu');
                 });
             },
             decline: (modal) => {
                 this.clearLayerCreationContext();
                 this.clearZoneServiceAreaContext();
-                this.sendToLiveMap('hideDrawControls');
+                this.triggerLiveMapFn('hideDrawControls', { text: true });
 
                 if (zone.isNew) {
                     zone.destroyRecord();
@@ -350,12 +539,26 @@ export default class ServiceAreasService extends Service {
         });
     }
 
+    /**
+     * Deletes a zone from the database.
+     *
+     * @function
+     * @param {Object} zone - The zone to delete.
+     * @param {Object} options - Additional options for the deletion (optional).
+     */
     @action deleteZone(zone, options = {}) {
         this.crud.delete(zone, {
             ...options,
         });
     }
 
+    /**
+     * Displays a service area in a dialog for viewing.
+     *
+     * @function
+     * @param {Object} serviceArea - The service area to view in the dialog.
+     * @param {Object} options - Additional options for the dialog (optional).
+     */
     @action viewServiceAreaInDialog(serviceArea, options = {}) {
         this.modalsManager.show('modals/view-service-area', {
             title: `Service Area (${serviceArea.get('name')})`,
@@ -369,6 +572,13 @@ export default class ServiceAreasService extends Service {
         });
     }
 
+    /**
+     * Displays a zone in a dialog for viewing.
+     *
+     * @function
+     * @param {Object} zone - The zone to view in the dialog.
+     * @param {Object} options - Additional options for the dialog (optional).
+     */
     @action viewZoneInDialog(zone, options = {}) {
         this.modalsManager.show('modals/view-zone', {
             title: `Zone (${zone.get('name')})`,

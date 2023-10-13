@@ -1,67 +1,227 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { action, computed, set } from '@ember/object';
+import { action, set } from '@ember/object';
 import { isArray } from '@ember/array';
-import { isBlank } from '@ember/utils';
-import { dasherize } from '@ember/string';
+import { dasherize, camelize } from '@ember/string';
+import { singularize } from 'ember-inflector';
 import { alias } from '@ember/object/computed';
-import { guidFor } from '@ember/object/internals';
 import { later } from '@ember/runloop';
 import { allSettled } from 'rsvp';
+import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 const DEFAULT_LATITUDE = 1.369;
 const DEFAULT_LONGITUDE = 103.8864;
 
+/**
+ * Component which displays live activity.
+ *
+ * @class
+ */
 export default class LiveMapComponent extends Component {
+    /**
+     * Inject the `store` service.
+     *
+     * @memberof LiveMapComponent
+     */
     @service store;
+
+    /**
+     * Inject the `fetch` service.
+     *
+     * @memberof LiveMapComponent
+     */
     @service fetch;
+
+    /**
+     * Inject the `socket` service.
+     *
+     * @memberof LiveMapComponent
+     */
     @service socket;
+
+    /**
+     * Inject the `currentUser` service.
+     *
+     * @memberof LiveMapComponent
+     */
     @service currentUser;
+
+    /**
+     * Inject the `notifications` service.
+     *
+     * @memberof LiveMapComponent
+     */
     @service notifications;
+
+    /**
+     * Inject the `serviceAreas` service.
+     *
+     * @memberof LiveMapComponent
+     */
     @service serviceAreas;
+
+    /**
+     * Inject the `appCache` service.
+     *
+     * @memberof LiveMapComponent
+     */
     @service appCache;
+
+    /**
+     * Inject the `universe` service.
+     *
+     * @memberof LiveMapComponent
+     */
     @service universe;
 
+    /**
+     * Inject the `crud` service.
+     *
+     * @memberof LiveMapComponent
+     */
+    @service crud;
+
+    /**
+     * Inject the `contextPanel` service.
+     *
+     * @memberof LiveMapComponent
+     */
+    @service contextPanel;
+
+    /**
+     * Inject the `leafletMapManager` service.
+     *
+     * @memberof LiveMapComponent
+     */
+    @service leafletMapManager;
+
+    /**
+     * Inject the `leafletContextmenuManager` service.
+     *
+     * @memberof LiveMapComponent
+     */
+    @service leafletContextmenuManager;
+
+    /**
+     * An array of routes.
+     * @type {Array}
+     */
     @tracked routes = [];
+
+    /**
+     * An array of drivers.
+     * @type {Array}
+     */
     @tracked drivers = [];
+
+    /**
+     * An array of vehicles.
+     * @type {Array}
+     */
+    @tracked vehicles = [];
+
+    /**
+     * An array of places.
+     * @type {Array}
+     */
     @tracked places = [];
+
+    /**
+     * An array of channels.
+     * @type {Array}
+     */
     @tracked channels = [];
+
+    /**
+     * Indicates if data is loading.
+     * @type {boolean}
+     */
     @tracked isLoading = true;
+
+    /**
+     * Indicates if the component is ready.
+     * @type {boolean}
+     */
     @tracked isReady = false;
-    @tracked isDriversVisible = true;
-    @tracked isPlacesVisible = true;
-    @tracked isRoutesVisible = true;
-    @tracked isDrawControlsVisible = false;
-    @tracked isCreatingServiceArea = false;
-    @tracked isCreatingZone = false;
-    @tracked currentContextMenuItems = [];
+
+    /**
+     * Controls for visibility.
+     * @type {Object}
+     */
+    @tracked visibilityControls = {};
+
+    /**
+     * An array of active service areas.
+     * @type {Array}
+     */
     @tracked activeServiceAreas = [];
+
+    /**
+     * An array of editable map layers.
+     * @type {Array}
+     */
     @tracked editableLayers = [];
+
+    /**
+     * The Leaflet map instance.
+     * @type {Object}
+     */
     @tracked leafletMap;
-    @tracked activeFeatureGroup;
+
+    /**
+     * The map's zoom level.
+     * @type {number}
+     */
+    @tracked zoom = 12;
+
+    /**
+     * The feature group for drawing on the map.
+     * @type {Object}
+     */
     @tracked drawFeatureGroup;
+
+    /**
+     * The draw control for the map.
+     * @type {Object}
+     */
     @tracked drawControl;
+
+    /**
+     * The URL for the map's tile source.
+     * @type {string}
+     */
+    @tracked tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+
+    /**
+     * The latitude for the map view.
+     * @type {number}
+     */
     @tracked latitude = DEFAULT_LATITUDE;
+
+    /**
+     * The longitude for the map view.
+     * @type {number}
+     */
     @tracked longitude = DEFAULT_LONGITUDE;
+
+    /**
+     * Indicates if coordinate setting should be skipped.
+     * @type {boolean}
+     */
     @tracked skipSetCoordinates = false;
-    @tracked mapId = guidFor(this);
+
+    /**
+     * The user's latitude from the currentUser.
+     * @type {number}
+     */
     @alias('currentUser.latitude') userLatitude;
+
+    /**
+     * The user's longitude from the currentUser.
+     * @type {number}
+     */
     @alias('currentUser.longitude') userLongitude;
-
-    @computed('args.zoom') get zoom() {
-        return this.args.zoom || 12;
-    }
-
-    @computed('args.{tileSourceUrl,darkMode}') get tileSourceUrl() {
-        const { darkMode, tileSourceUrl } = this.args;
-
-        if (darkMode === true) {
-            return 'https://{s}.tile.jawg.io/jawg-matrix/{z}/{x}/{y}{r}.png?access-token=';
-        }
-
-        return tileSourceUrl ?? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-    }
 
     /**
      * Creates an instance of LiveMapComponent.
@@ -69,26 +229,85 @@ export default class LiveMapComponent extends Component {
      */
     constructor() {
         super(...arguments);
+        this.skipSetCoordinates = getWithDefault(this.args, 'skipSetCoordinates', false);
+        this.zoom = getWithDefault(this.args, 'zoom', 12);
+        this.tileSourceUrl = getWithDefault(this.args, 'tileSourceUrl', 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png');
 
-        this.skipSetCoordinates = this.args.skipSetCoordinates ?? false;
+        if (this.args.darkMode === true) {
+            this.tileSourceUrl = 'https://{s}.tile.jawg.io/jawg-matrix/{z}/{x}/{y}{r}.png?access-token=';
+        }
     }
 
     /**
-     * ----------------------------------------------------------------------------
-     * SETUP
-     * ----------------------------------------------------------------------------
+     * Initializes the LiveMapComponent by triggering events, setting initial coordinates,
+     * and loading required live data.
      *
-     * Functions for initialization and setup.
+     * @memberof LiveMapComponent
+     * @action
+     * @function
      */
-    @action async setupLiveMap() {
+    @action setupComponent() {
         // trigger that initial coordinates have been set
-        this.universe.trigger('livemap.loaded', this);
+        this.universe.trigger('fleetops.livemap.loaded', this);
 
+        // set initial coordinates
+        this.setInitialCoordinates();
+
+        // load required live data
+        this.fetchLiveData('routes');
+        this.fetchLiveData('vehicles', {
+            onLoaded: (vehicles) => {
+                this.watchMovingObjects('vehicles', vehicles);
+            },
+        });
+        this.fetchLiveData('drivers', {
+            onLoaded: (drivers) => {
+                this.watchMovingObjects('drivers', drivers);
+            },
+        });
+        this.fetchLiveData('places');
+        this.listen();
+        this.ready();
+    }
+
+    /**
+     * Marks the LiveMapComponent as ready by setting the "isReady" property and triggering
+     * the "onReady" action and a "fleetops.livemap.ready" event.
+     *
+     * @memberof LiveMapComponent
+     * @function
+     */
+    ready() {
+        this.isReady = true;
+        this.triggerAction('onReady');
+        this.universe.trigger('fleetops.livemap.ready', this);
+    }
+
+    /**
+     * Sets the initial coordinates for the LiveMapComponent.
+     *
+     * This function checks if initial coordinates are available in the appCache, and if not,
+     * it fetches the coordinates using the "getInitialCoordinates" function. It sets the
+     * latitude and longitude properties and triggers an event to notify that coordinates
+     * have been set.
+     *
+     * @memberof LiveMapComponent
+     * @async
+     * @function
+     * @returns {Promise<[number, number] | null>} An array containing the latitude and longitude
+     * if available, or null if the function is skipped.
+     */
+    async setInitialCoordinates() {
         if (this.skipSetCoordinates === false) {
             if (this.appCache.has(['map_latitude', 'map_longitude'])) {
                 this.latitude = this.appCache.get('map_latitude');
                 this.longitude = this.appCache.get('map_longitude');
                 this.isReady = true;
+
+                // trigger that initial coordinates is set to livemap component
+                this.universe.trigger('fleetops.livemap.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
+
+                return [this.latitude, this.longitude];
             }
 
             const { latitude, longitude } = await this.getInitialCoordinates();
@@ -100,39 +319,49 @@ export default class LiveMapComponent extends Component {
 
             this.latitude = latitude;
             this.longitude = longitude;
+            this.isReady = true;
+
+            // trigger that initial coordinates is set to livemap component
+            this.universe.trigger('fleetops.livemap.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
+
+            return [this.latitude, this.longitude];
         }
 
-        // trigger that initial coordinates have been set
-        this.universe.trigger('livemap.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
-
-        this.routes = await this.fetchActiveRoutes();
-        this.drivers = await this.fetchActiveDrivers();
-        this.places = await this.fetchActivePlaces();
-        this.serviceAreaRecords = await this.fetchServiceAreas();
-        this.isReady = true;
-
-        this.watchDrivers(this.drivers);
-        this.listenForOrders();
-
-        if (typeof this.args.onReady === 'function') {
-            this.args.onReady(this);
-        }
-
-        // add context event
-        this.universe.trigger('livemap.ready', this);
+        return null;
     }
 
-    @action setMapReference(event) {
+    /**
+     * Sets up the LiveMap component and the Leaflet map instance.
+     *
+     * This function initializes the LiveMap component, associates it with the Leaflet map instance,
+     * triggers the "fleetops.livemap.leaflet_ready" event, and performs additional setup tasks like
+     * configuring context menus, hiding draw controls, and associating the map with the "serviceAreas"
+     * service. It also triggers the "onLoad" action with the provided event and target.
+     *
+     * @action
+     * @function
+     * @param {Event} event - The event object.
+     */
+    @action setupMap(event) {
         const { target } = event;
 
         // set liveMapComponent component to instance
-        set(event, 'target.liveMap', this);
+        set(target, 'liveMap', this);
 
         // set map instance
         this.leafletMap = target;
 
+        // trigger liveMap ready through universe
+        this.universe.trigger('fleetops.livemap.leaflet_ready', event, target);
+
+        // make fleetops map globally available on the window
+        window.FleetOpsLeafletMap = target;
+
+        // store this component to universe
+        this.universe.set('FleetOpsLiveMap', this);
+
         // setup context menu
-        this.setupContextMenu(target);
+        this.createMapContextMenu(target);
 
         // hide draw controls by default
         this.hideDrawControls();
@@ -140,114 +369,23 @@ export default class LiveMapComponent extends Component {
         // set instance to service areas service
         this.serviceAreas.setMapInstance(target);
 
-        if (typeof this.args.onLoad === 'function') {
-            this.args.onLoad(...arguments);
-        }
-    }
-
-    @action setupContextMenu(map) {
-        if (!map?.contextmenu) {
-            return;
-        }
-
-        // reset items if any
-        if (typeof map?.contextmenu?.removeAllItems === 'function') {
-            map?.contextmenu?.removeAllItems();
-        }
-
-        const { contextmenu } = map;
-        const contextMenuItems = this.buildContextMenuItems();
-
-        contextMenuItems.forEach((options) => contextmenu.addItem(options));
-
-        if (contextmenu.enabled === true || contextmenu._enabled === true) {
-            return;
-        }
-
-        contextmenu.enable();
-    }
-
-    @action toggleDrawControlContextMenuItem() {
-        const index = this.currentContextMenuItems.findIndex((options) => options.text?.includes('draw controls'));
-
-        if (index > 0) {
-            const options = this.currentContextMenuItems.objectAt(index);
-
-            if (!isBlank(options)) {
-                options.text = this.isDrawControlsVisible ? 'Hide draw controls...' : 'Enable draw controls...';
-            }
-
-            this.leafletMap?.contextmenu?.removeItem(index);
-            this.leafletMap?.contextmenu?.insertItem(options, index);
-        }
-    }
-
-    @action removeServiceAreaFromContextMenu(serviceArea) {
-        const index = this.currentContextMenuItems.findIndex((options) => options.text?.includes(`Focus Service Area: ${serviceArea.name}`));
-
-        if (index > 0) {
-            this.leafletMap?.contextmenu?.removeItem(index);
-        }
-    }
-
-    @action rebuildContextMenu() {
-        const map = this.leafletMap;
-
-        if (map) {
-            this.setupContextMenu(map);
-        }
-    }
-
-    @action setFn(actionName, callback) {
-        this[actionName] = callback;
-    }
-
-    @action shouldSkipSettingInitialCoordinates() {
-        this.skipSetCoordinates = true;
+        // trigger map loaded event
+        this.triggerAction('onLoad', ...arguments);
     }
 
     /**
-     * ----------------------------------------------------------------------------
-     * TRACKED LAYER UTILITIES
-     * ----------------------------------------------------------------------------
+     * Invokes an action by name on the current component and its arguments (if defined).
      *
-     * Functions provide utility for managing tracked editable layers.
-     */
-    @action pushEditableLayer(layer) {
-        if (!this.editableLayers.includes(layer)) {
-            this.editableLayers.pushObject(layer);
-        }
-    }
-
-    @action removeEditableLayerByRecordId(record) {
-        const index = this.editableLayers.findIndex((layer) => layer.record_id === record?.id ?? record);
-        const layer = this.editableLayers.objectAt(index);
-
-        this.drawFeatureGroup?.addLayer(layer);
-        this.editableLayers.removeAt(index);
-    }
-
-    @action findEditableLayerByRecordId(record) {
-        return this.editableLayers.find((layer) => layer.record_id === record?.id ?? record);
-    }
-
-    @action peekRecordForLayer(layer) {
-        if (layer.record_id && layer.record_type) {
-            return this.store.peekRecord(dasherize(layer.record_type), layer.record_id);
-        }
-
-        return null;
-    }
-
-    /**
-     * ----------------------------------------------------------------------------
-     * LAYER EVENTS
-     * ----------------------------------------------------------------------------
+     * This function checks if an action with the specified name exists on the current component.
+     * If found, it invokes the action with the provided parameters. It also checks the component's
+     * arguments for the action and invokes it if defined.
      *
-     * Functions that are only triggered from the `LiveMap` Leaflet Layer Component callbacks.
+     * @action
+     * @function
+     * @param {string} actionName - The name of the action to trigger.
+     * @param {...any} params - Optional parameters to pass to the action.
      */
-
-    @action onAction(actionName, ...params) {
+    @action triggerAction(actionName, ...params) {
         if (typeof this[actionName] === 'function') {
             this[actionName](...params);
         }
@@ -257,10 +395,267 @@ export default class LiveMapComponent extends Component {
         }
     }
 
+    /**
+     * Fetches live data from the specified path and updates the component state accordingly.
+     *
+     * @memberof LiveMapComponent
+     * @function
+     * @param {string} path - The path to fetch live data from.
+     * @param {Object} [options={}] - Optional configuration options.
+     * @param {Object} [options.params={}] - Additional parameters to include in the request.
+     * @param {Function} [options.onLoaded] - A callback function to execute when the data is loaded.
+     * @returns {Promise} A promise that resolves with the fetched data.
+     */
+    fetchLiveData(path, options = {}) {
+        this.isLoading = true;
+
+        const internalName = camelize(path);
+        const callbackFnName = `on${internalName}Loaded`;
+        const params = getWithDefault(options, 'params', {});
+
+        return this.fetch
+            .get(`fleet-ops/live/${path}`, params, { normalizeToEmberData: true, normalizeModelType: singularize(internalName) })
+            .then((data) => {
+                this.triggerAction(callbackFnName);
+                this.createVisibilityControl(internalName);
+                this[internalName] = data;
+
+                if (typeof options.onLoaded === 'function') {
+                    options.onLoaded(data);
+                }
+
+                return data;
+            })
+            .finally(() => {
+                this.isLoading = false;
+            });
+    }
+
+    /**
+     * Creates or updates a visibility control for a specific element by name.
+     *
+     * @function
+     * @param {string} name - The name or identifier for the visibility control.
+     * @param {boolean} [visible=true] - A boolean value indicating whether the element is initially visible (default is true).
+     */
+    createVisibilityControl(name, visible = true) {
+        this.visibilityControls = {
+            ...this.visibilityControls,
+            [name]: visible,
+        };
+    }
+
+    /**
+     * Hide all visibility controls associated with the current instance.
+     */
+    hideAll() {
+        const controls = Object.keys(this.visibilityControls);
+
+        for (let i = 0; i < controls.length; i++) {
+            const control = controls.objectAt(i);
+            this.hide(control);
+        }
+    }
+
+    /**
+     * Show all visibility controls associated with the current instance.
+     */
+    showAll() {
+        const controls = Object.keys(this.visibilityControls);
+
+        for (let i = 0; i < controls.length; i++) {
+            const control = controls.objectAt(i);
+            this.show(control);
+        }
+    }
+
+    /**
+     * Hides a specific element by name using a visibility control.
+     *
+     * @function
+     * @param {string} name - The name or identifier of the element to hide.
+     */
+    hide(name) {
+        if (isArray(name)) {
+            return name.forEach(this.hide);
+        }
+
+        this.createVisibilityControl(name, false);
+    }
+
+    /**
+     * Shows a specific element by name using a visibility control.
+     *
+     * @function
+     * @param {string} name - The name or identifier of the element to show.
+     */
+    show(name) {
+        if (isArray(name)) {
+            return name.forEach(this.show);
+        }
+
+        this.createVisibilityControl(name, true);
+    }
+
+    /**
+     * Check if a specific element or feature is currently visible based on its name.
+     *
+     * @param {string} name - The name of the element or feature to check visibility for.
+     * @returns {boolean} Returns `true` if the element or feature is currently visible, `false` otherwise.
+     */
+    isVisible(name) {
+        return this.visibilityControls[name] === true;
+    }
+
+    /**
+     * Toggles the context menu item for enabling/disabling draw controls.
+     *
+     * @param {Object} [options] - Optional settings for the context menu item.
+     * @param {string} [options.onText='Hide draw controls...'] - Text to display when enabling draw controls.
+     * @param {string} [options.offText='Enable draw controls...'] - Text to display when disabling draw controls.
+     * @param {string} [options.callback=function] - Callback function to trigger after toggle.
+     */
+    toggleDrawControlContextMenuItem(options = {}) {
+        const toggle = !this.isVisible('drawControls');
+
+        this.leafletContextmenuManager.toggleContextMenuItem('map', 'draw controls', {
+            onText: 'Hide draw controls...',
+            offText: 'Enable draw controls...',
+            toggle,
+            callback: (isToggled) => {
+                if (isToggled) {
+                    this.showDrawControls();
+                } else {
+                    this.hideDrawControls();
+                }
+            },
+            ...options,
+        });
+    }
+
+    /**
+     * Removes a specific service area from the context menu.
+     *
+     * @param {Object} serviceArea - The service area to be removed from the context menu.
+     */
+    removeServiceAreaFromContextMenu(serviceArea) {
+        this.leafletContextmenuManager.removeItemFromContextMenu('map', `Focus Service Area: ${serviceArea.name}`);
+    }
+
+    /**
+     * Get a Leaflet layer from the map based on its ID.
+     *
+     * @param {string} id - The ID of the Leaflet layer to retrieve.
+     * @returns {Object|null} The found Leaflet layer or `null` if not found.
+     */
+    getLeafletLayerById(id) {
+        return this.leafletMapManager.getLeafletLayerById(this.leafletMap, id);
+    }
+
+    /**
+     * Find a specific Leaflet layer on the map using a callback function.
+     *
+     * @param {Function} callback - A callback function that defines the condition for finding the layer.
+     * @returns {Object|null} The found Leaflet layer or `null` if not found.
+     */
+    findLeafletLayer(callback) {
+        return this.leafletMapManager.findLeafletLayer(this.leafletMap, callback);
+    }
+
+    /**
+     * Find an editable layer in the collection by its record ID.
+     *
+     * @param {Object} record - The record with the ID used for lookup.
+     * @returns {Layer|null} The found editable layer, or null if not found.
+     * @memberof LiveMapComponent
+     */
+    getLeafletLayerByRecordId(record) {
+        const id = getWithDefault(record, 'id', record);
+        let targetLayer = null;
+
+        this.leafletMap.eachLayer((layer) => {
+            // Check if the layer has an ID property
+            if (layer.record_id === id) {
+                targetLayer = layer;
+            }
+        });
+
+        return targetLayer;
+    }
+
+    /**
+     * Push an editable layer to the collection of editable layers.
+     *
+     * @param {Layer} layer - The layer to be added to the collection.
+     * @memberof LiveMapComponent
+     */
+    pushEditableLayer(layer) {
+        if (!this.editableLayers.includes(layer)) {
+            this.editableLayers.pushObject(layer);
+        }
+    }
+
+    /**
+     * Remove an editable layer from the collection by its record ID.
+     *
+     * @param {Object} record - The record with the ID used for removal.
+     * @memberof LiveMapComponent
+     */
+    removeEditableLayerByRecordId(record) {
+        const id = getWithDefault(record, 'id', record);
+        const index = this.editableLayers.findIndex((layer) => layer.record_id === id);
+        const layer = this.editableLayers.objectAt(index);
+
+        if (this.drawFeatureGroup) {
+            this.drawFeatureGroup.addLayer(layer);
+            this.editableLayers.removeAt(index);
+        }
+    }
+
+    /**
+     * Find an editable layer in the collection by its record ID.
+     *
+     * @param {Object} record - The record with the ID used for lookup.
+     * @returns {Layer|null} The found editable layer, or null if not found.
+     * @memberof LiveMapComponent
+     */
+    findEditableLayerByRecordId(record) {
+        const id = getWithDefault(record, 'id', record);
+        return this.editableLayers.find((layer) => layer.record_id === id);
+    }
+
+    /**
+     * Peek a record for a given layer by its record ID and type.
+     *
+     * @param {Layer} layer - The layer associated with a record.
+     * @returns {Object|null} The peeked record, or null if not found.
+     * @memberof LiveMapComponent
+     */
+    peekRecordForLayer(layer) {
+        if (layer.record_id && layer.record_type) {
+            return this.store.peekRecord(dasherize(layer.record_type), layer.record_id);
+        }
+
+        return null;
+    }
+
+    /**
+     * Handle the 'drawstop' event.
+     *
+     * @param {Event} event - The 'drawstop' event object.
+     * @param {Layer} layer - The layer associated with the event.
+     * @memberof LiveMapComponent
+     */
     @action onDrawDrawstop(event, layer) {
         this.serviceAreas.createGenericLayer(event, layer);
     }
 
+    /**
+     * Handle the 'deleted' event for drawn elements.
+     *
+     * @param {Event} event - The 'deleted' event object.
+     * @memberof LiveMapComponent
+     */
     @action onDrawDeleted(event) {
         /** @var {L.LayerGroup} layers  */
         const { layers } = event;
@@ -278,6 +673,12 @@ export default class LiveMapComponent extends Component {
         });
     }
 
+    /**
+     * Handle the 'edited' event for drawn elements.
+     *
+     * @param {Event} event - The 'edited' event object.
+     * @memberof LiveMapComponent
+     */
     @action onDrawEdited(event) {
         /** @var {L.LayerGroup} layers  */
         const { layers } = event;
@@ -301,89 +702,219 @@ export default class LiveMapComponent extends Component {
         allSettled(requests);
     }
 
+    /**
+     * Handle the addition of a service area layer.
+     *
+     * @param {ServiceAreaModel} serviceArea - The service area object.
+     * @param {Event} event - The event object associated with the addition.
+     * @memberof LiveMapComponent
+     */
     @action onServiceAreaLayerAdded(serviceArea, event) {
         const { target } = event;
 
         set(target, 'record_id', serviceArea.id);
         set(target, 'record_type', 'service-area');
 
-        // add to draw feature group
-        this.drawFeatureGroup?.addLayer(target);
+        // set the layer instance to the serviceArea model
+        set(serviceArea, '_layer', target);
+
+        if (this.drawFeatureGroup) {
+            // add to draw feature group
+            this.drawFeatureGroup.addLayer(target);
+        }
 
         // this.flyToBoundsOnly(target);
-        this.createContextMenuForServiceArea(serviceArea, target);
+        this.createServiceAreaContextMenu(serviceArea, target);
         this.pushEditableLayer(target);
     }
 
+    /**
+     * Handle the addition of a zone layer.
+     *
+     * @param {ZoneModel} zone - The zone object.
+     * @param {Event} event - The event object associated with the addition.
+     * @memberof LiveMapComponent
+     */
     @action onZoneLayerAdd(zone, event) {
         const { target } = event;
 
         set(target, 'record_id', zone.id);
         set(target, 'record_type', 'zone');
 
-        // add to draw feature group
-        this.drawFeatureGroup?.addLayer(target);
+        // set the layer instance to the zone model
+        set(zone, '_layer', target);
 
-        this.createContextMenuForZone(zone, target);
+        if (this.drawFeatureGroup) {
+            // add to draw feature group
+            this.drawFeatureGroup.addLayer(target);
+        }
+
+        this.createZoneContextMenu(zone, target);
         this.pushEditableLayer(target);
     }
 
+    /**
+     * Handle the creation of the draw feature group.
+     *
+     * @param {DrawFeatureGroup} drawFeatureGroup - The draw feature group instance.
+     * @memberof LiveMapComponent
+     */
     @action onDrawFeatureGroupCreated(drawFeatureGroup) {
         this.drawFeatureGroup = drawFeatureGroup;
     }
 
+    /**
+     * Handle the addition of a driver marker.
+     *
+     * @param {DriverModel} driver - The driver object.
+     * @param {Event} event - The event object associated with the addition.
+     * @memberof LiveMapComponent
+     */
     @action onDriverAdded(driver, event) {
         const { target } = event;
+
+        set(target, 'record_id', driver.id);
+        set(target, 'record_type', 'driver');
 
         // set the marker instance to the driver model
         set(driver, '_marker', target);
 
-        console.log('onDriverAdded()', ...arguments);
-
-        this.createContextMenuForDriver(driver, target);
+        this.createDriverContextMenu(driver, target);
     }
 
+    /**
+     * Handle the click event of a driver marker.
+     *
+     * @param {DriverModel} driver - The driver object.
+     * @param {Event} event - The event object associated with the addition.
+     * @memberof LiveMapComponent
+     */
+    @action onDriverClicked(driver) {
+        this.contextPanel.focus(driver);
+    }
+
+    /**
+     * Handle the addition of a vehicle marker.
+     *
+     * @param {VehicleModel} vehicle - The vehicle object.
+     * @param {Event} event - The event object associated with the addition.
+     * @memberof LiveMapComponent
+     */
+    @action onVehicleAdded(vehicle, event) {
+        const { target } = event;
+
+        set(target, 'record_id', vehicle.id);
+        set(target, 'record_type', 'vehicle');
+
+        // set the marker instance to the vehicle model
+        set(vehicle, '_marker', target);
+
+        this.createVehicleContextMenu(vehicle, target);
+    }
+
+    /**
+     * Handle the click event of a vehicle marker.
+     *
+     * @param {VehicleModel} vehicle - The vehicle object.
+     * @param {Event} event - The event object associated with the addition.
+     * @memberof LiveMapComponent
+     */
+    @action onVehicleClicked(vehicle) {
+        this.contextPanel.focus(vehicle);
+    }
+
+    /**
+     * Handle the creation of the draw control.
+     *
+     * @param {DrawControl} drawControl - The draw control instance.
+     * @memberof LiveMapComponent
+     */
     @action onDrawControlCreated(drawControl) {
         this.drawControl = drawControl;
     }
 
     /**
-     * ----------------------------------------------------------------------------
-     * LEAFLET UTILITIES
-     * ----------------------------------------------------------------------------
+     * Hide the draw controls on the map.
      *
-     * Functions are used to help or utilize on Leaflet Layers/ Controls.
-     *
+     * @param {Object} [options={}] - Additional options.
+     * @param {string|boolean} [options.text] - Text to set for the menu item or `true` to set the default text.
+     * @param {function} [options.callback] - A callback function to execute.
+     * @memberof LiveMapComponent
      */
-    @action removeDrawingControl() {
-        if (isBlank(this.drawControl)) {
-            return;
+    @action hideDrawControls(options = {}) {
+        this.hide('drawControls');
+
+        const text = getWithDefault(options, 'text');
+        const callback = getWithDefault(options, 'callback');
+
+        if (typeof callback === 'function') {
+            callback();
         }
 
-        this.isDrawControlsVisible = false;
-        this.leafletMap?.removeControl(this.drawControl);
-        this.toggleDrawControlContextMenuItem();
+        if (typeof text === 'string') {
+            this.leafletContextmenuManager.changeMenuItemText('map', 'draw controls', text);
+        }
+
+        if (text === true) {
+            this.leafletContextmenuManager.changeMenuItemText('map', 'draw controls', 'Enable draw controls...');
+        }
+
+        if (this.drawControl) {
+            this.leafletMap.removeControl(this.drawControl);
+        }
     }
 
-    // alias for `removeDrawingControl()`
-    @action hideDrawControls() {
-        this.removeDrawingControl();
+    /**
+     * Show the draw controls on the map.
+     *
+     * @param {Object} [options={}] - Additional options.
+     * @param {string|boolean} [options.text] - Text to set for the menu item or `true` to set the default text.
+     * @param {function} [options.callback] - A callback function to execute.
+     * @memberof LiveMapComponent
+     */
+    @action showDrawControls(options = {}) {
+        this.show('drawControls');
+
+        const text = getWithDefault(options, 'text');
+        const callback = getWithDefault(options, 'callback');
+
+        if (typeof callback === 'function') {
+            callback();
+        }
+
+        if (typeof text === 'string') {
+            this.leafletContextmenuManager.changeMenuItemText('map', 'draw controls', text);
+        }
+
+        if (text === true) {
+            this.leafletContextmenuManager.changeMenuItemText('map', 'draw controls', 'Hide draw controls...');
+        }
+
+        if (this.drawControl) {
+            this.leafletMap.addControl(this.drawControl);
+        }
     }
 
-    @action enableDrawControls() {
-        this.isDrawControlsVisible = true;
-        this.leafletMap?.addControl(this.drawControl);
-        this.toggleDrawControlContextMenuItem();
-    }
-
-    @action focusLayerByRecord(record) {
-        const layer = this.findEditableLayerByRecordId(record);
+    /**
+     * Focus on a layer associated with a record.
+     *
+     * @param {Object} record - The record to focus on.
+     * @memberof LiveMapComponent
+     */
+    @action focusLayerBoundsByRecord(record) {
+        const layer = this.getLeafletLayerByRecordId(record);
 
         if (layer) {
             this.flyToBoundsOnly(layer);
         }
     }
 
+    /**
+     * Fly to a service area layer on the map.
+     *
+     * @param {ServiceAreaModel} serviceArea - The service area object to fly to.
+     * @memberof LiveMapComponent
+     */
     @action flyToServiceArea(serviceArea) {
         const layer = this.findEditableLayerByRecordId(serviceArea);
 
@@ -392,11 +923,12 @@ export default class LiveMapComponent extends Component {
         }
     }
 
-    // alias for `flyToServiceArea()`
-    @action jumpToServiceArea(serviceArea) {
-        return this.flyToServiceArea(serviceArea);
-    }
-
+    /**
+     * Focus on a service area by activating it and then flying to it on the map.
+     *
+     * @param {ServiceArea} serviceArea - The service area to focus on.
+     * @memberof LiveMapComponent
+     */
     @action focusServiceArea(serviceArea) {
         this.activateServiceArea(serviceArea);
 
@@ -409,7 +941,13 @@ export default class LiveMapComponent extends Component {
         );
     }
 
-    @action blurAllServiceAreas(except = []) {
+    /**
+     * Blur all service areas except for those specified in the 'except' array.
+     *
+     * @param {Array} except - An array of records to exclude from blurring.
+     * @memberof LiveMapComponent
+     */
+    blurAllServiceAreas(except = []) {
         if (!isArray(except)) {
             except = [];
         }
@@ -441,7 +979,13 @@ export default class LiveMapComponent extends Component {
         }
     }
 
-    @action focusAllServiceAreas(except = []) {
+    /**
+     * Focus on all service areas except for those specified in the 'except' array by activating them.
+     *
+     * @param {Array} except - An array of records to exclude from activation.
+     * @memberof LiveMapComponent
+     */
+    focusAllServiceAreas(except = []) {
         if (!isArray(except)) {
             except = [];
         }
@@ -463,93 +1007,143 @@ export default class LiveMapComponent extends Component {
         }
     }
 
-    @action blurServiceArea(serviceArea) {
+    /**
+     * Blur a specific service area by removing it from the active service areas.
+     *
+     * @param {ServiceAreaModel} serviceArea - The service area to blur.
+     * @memberof LiveMapComponent
+     */
+    blurServiceArea(serviceArea) {
         if (this.activeServiceAreas.includes(serviceArea)) {
             this.activeServiceAreas.removeObject(serviceArea);
         }
     }
 
-    @action activateServiceArea(serviceArea) {
+    /**
+     * Activate a service area by adding it to the active service areas.
+     *
+     * @param {ServiceAreaModel} serviceArea - The service area to activate.
+     * @memberof LiveMapComponent
+     */
+    activateServiceArea(serviceArea) {
         if (!this.activeServiceAreas.includes(serviceArea)) {
             this.activeServiceAreas.pushObject(serviceArea);
         }
     }
 
-    @action hideDrivers() {
-        this.isDriversVisible = false;
-    }
-
-    @action showDrivers() {
-        this.isDriversVisible = true;
-    }
-
-    @action toggleDrivers() {
-        this.isDriversVisible = !this.isDriversVisible;
-    }
-
-    @action hidePlaces() {
-        this.isPlacesVisible = false;
-    }
-
-    @action showPlaces() {
-        this.isPlacesVisible = true;
-    }
-
-    @action togglePlaces() {
-        this.isPlacesVisible = !this.isPlacesVisible;
-    }
-
-    @action hideRoutes() {
-        this.isRoutesVisible = false;
-    }
-
-    @action showRoutes() {
-        this.isRoutesVisible = true;
-    }
-
-    @action toggleRoutes() {
-        this.isRoutesVisible = !this.isRoutesVisible;
-    }
-
+    /**
+     * Show coordinates information by displaying them as an info notification.
+     *
+     * @param {Event} event - The event containing latitude and longitude information.
+     * @memberof LiveMapComponent
+     */
     @action showCoordinates(event) {
         this.notifications.info(event.latlng);
     }
 
+    /**
+     * Center the map on a specific location provided in the event.
+     *
+     * @param {Event} event - The event containing the target location (latlng).
+     * @memberof LiveMapComponent
+     */
     @action centerMap(event) {
-        this.leafletMap?.panTo(event.latlng);
-    }
-
-    @action zoomIn() {
-        this.leafletMap?.zoomIn();
-    }
-
-    @action zoomOut() {
-        this.leafletMap?.zoomOut();
-    }
-
-    @action setMaxBoundsFromLayer(layer) {
-        const bounds = layer?.getBounds();
-
-        this.leafletMap?.flyToBounds(bounds);
-        this.leafletMap?.setMaxBounds(bounds);
-    }
-
-    @action flyToBoundsOnly(layer) {
-        const bounds = layer?.getBounds();
-
-        this.leafletMap?.flyToBounds(bounds);
+        this.leafletMap.panTo(event.latlng);
     }
 
     /**
-     * ----------------------------------------------------------------------------
-     * CONTEXT MENU INITIALIZERS
-     * ----------------------------------------------------------------------------
+     * Zoom in on the map.
      *
-     * Functions that are used to build context menu for layers and controls on the map.
-     *
+     * @memberof LiveMapComponent
      */
+    @action zoomIn() {
+        this.leafletMap.zoomIn();
+    }
 
-    @action buildContextMenuItems() {
+    /**
+     * Zoom out on the map.
+     *
+     * @memberof LiveMapComponent
+     */
+    @action zoomOut() {
+        this.leafletMap.zoomOut();
+    }
+
+    /**
+     * Set the maximum bounds of the map based on the provided layer's bounds.
+     *
+     * @param {Layer} layer - The layer used to determine the map's maximum bounds.
+     * @memberof LiveMapComponent
+     */
+    setMaxBoundsFromLayer(layer) {
+        if (layer && typeof layer.getBounds === 'function') {
+            const bounds = layer.getBounds();
+
+            this.leafletMap.flyToBounds(bounds);
+            this.leafletMap.setMaxBounds(bounds);
+        }
+    }
+
+    /**
+     * Fly to and focus on a specific layer's bounds on the map.
+     *
+     * @param {Layer} layer - The layer to focus on.
+     * @memberof LiveMapComponent
+     */
+    flyToBoundsOnly(layer) {
+        if (layer && typeof layer.getBounds === 'function') {
+            const bounds = layer.getBounds();
+
+            this.leafletMap.flyToBounds(bounds);
+        }
+    }
+
+    /**
+     * Focus on a specific layer and optionally zoom in/out on it.
+     *
+     * @param {Layer} layer - The layer to focus on.
+     * @param {number} zoom - The zoom level for the focus operation.
+     * @param {Object} options - Additional options for the focus operation.
+     * @memberof LiveMapComponent
+     */
+    @action focusLayer(layer, zoom, options = {}) {
+        this.leafletMapManager.flyToLayer(this.leafletMap, layer, zoom, options);
+
+        if (typeof options.onAfterFocus === 'function') {
+            options.onAfterFocus(layer);
+        }
+    }
+
+    /**
+     * Focuses the Leaflet map on a specific layer associated with a record.
+     *
+     * @param {Object} record - The record associated with the target layer.
+     * @param {number} zoom - The desired zoom level for the map.
+     * @param {Object} [options={}] - Additional options for the map focus.
+     * @returns {void}
+     *
+     * @example
+     * focusLayerByRecord(recordData, 12, { animate: true });
+     */
+    @action focusLayerByRecord(record, zoom, options = {}) {
+        const layer = this.getLeafletLayerByRecordId(record);
+
+        if (layer) {
+            this.focusLayer(layer, zoom, options);
+        }
+
+        if (typeof options.onAfterFocusWithRecord === 'function') {
+            options.onAfterFocusWithRecord(record, layer);
+        }
+    }
+
+    /**
+     * Create a context menu for the map with various options.
+     *
+     * @param {L.Map} map - The map to which the context menu is attached.
+     * @memberof LiveMapComponent
+     */
+    @action createMapContextMenu(map) {
         const contextmenuItems = [
             {
                 text: 'Show coordinates...',
@@ -572,8 +1166,8 @@ export default class LiveMapComponent extends Component {
                 index: 3,
             },
             {
-                text: this.isDrawControlsVisible ? `Hide draw controls...` : `Enable draw controls...`,
-                callback: () => (this.isDrawControlsVisible ? this.hideDrawControls() : this.enableDrawControls()),
+                text: this.isVisible('drawControls') ? `Hide draw controls...` : `Enable draw controls...`,
+                callback: this.toggleDrawControlContextMenuItem.bind(this),
                 index: 4,
             },
             {
@@ -586,67 +1180,159 @@ export default class LiveMapComponent extends Component {
             },
         ];
 
-        // add service areas to context menu
-        const serviceAreas = this.serviceAreas.getFromCache() ?? [];
+        // Add Service Area Context Menu Items
+        const serviceAreas = this.serviceAreas.getFromCache();
 
-        if (serviceAreas?.length > 0) {
+        if (isArray(serviceAreas)) {
             contextmenuItems.pushObject({
                 separator: true,
             });
+
+            // Add for each Service Area
+            for (let i = 0; i < serviceAreas.length; i++) {
+                const serviceArea = serviceAreas.objectAt(i);
+                const nextIndex = contextmenuItems.length + 2;
+
+                contextmenuItems.pushObject({
+                    text: `Focus Service Area: ${serviceArea.name}`,
+                    callback: () => this.focusServiceArea(serviceArea),
+                    index: nextIndex,
+                });
+            }
         }
 
-        // add to context menu
-        for (let i = 0; i < serviceAreas?.length; i++) {
-            const serviceArea = serviceAreas.objectAt(i);
+        // create contextmenu registry
+        const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu('map', map, contextmenuItems);
 
-            contextmenuItems.pushObject({
-                text: `Focus Service Area: ${serviceArea.name}`,
-                callback: () => this.focusServiceArea(serviceArea),
-                index: (contextmenuItems.lastObject?.index ?? 0) + 1 + i,
-            });
-        }
+        // trigger that contextmenu registry was created
+        this.universe.createRegistryEvent('contextmenu:map', 'created', contextmenuRegistry, this.leafletContextmenuManager);
 
-        this.currentContextMenuItems = contextmenuItems;
-
-        return contextmenuItems;
+        return contextmenuRegistry;
     }
 
-    @action createContextMenuForDriver(driver, layer) {
+    /**
+     * Rebuild the context menu for the map.
+     * This function calls the `createMapContextMenu` method.
+     * @memberof LiveMapComponent
+     */
+    rebuildMapContextMenu() {
+        this.createMapContextMenu(this.leafletMap);
+    }
+
+    /**
+     * Create a context menu for a driver marker on the map.
+     *
+     * @param {DriverModel} driver - The driver associated with the marker.
+     * @param {L.Layer} layer - The layer representing the driver marker.
+     * @memberof LiveMapComponent
+     */
+    @action createDriverContextMenu(driver, layer) {
         const contextmenuItems = [
             {
                 separator: true,
             },
             {
                 text: `View Driver: ${driver.name}`,
-                // callback: () => this.editServiceAreaDetails(serviceArea)
+                callback: () => this.contextPanel.focus(driver),
             },
             {
                 text: `Edit Driver: ${driver.name}`,
-                // callback: () => this.editServiceAreaDetails(serviceArea)
+                callback: () => this.contextPanel.focus(driver, 'editing'),
             },
             {
                 text: `Delete Driver: ${driver.name}`,
-                // callback: () => this.deleteServiceArea(serviceArea)
-            },
-            {
-                text: `Assign Order to Driver: ${driver.name}`,
-                // callback: () => this.deleteServiceArea(serviceArea)
+                callback: () => this.crud.delete(driver),
             },
             {
                 text: `View Vehicle for: ${driver.name}`,
-                // callback: () => this.deleteServiceArea(serviceArea)
+                callback: () => this.contextPanel.focus(driver.vehicle),
             },
         ];
 
-        if (typeof layer?.bindContextMenu === 'function') {
-            layer.bindContextMenu({
-                contextmenu: true,
-                contextmenuItems,
-            });
+        // append items from universe registry
+        const registeredContextMenuItems = this.universe.getMenuItemsFromRegistry('contextmenu:driver');
+        if (isArray(registeredContextMenuItems)) {
+            contextmenuItems = [
+                ...contextmenuItems,
+                ...registeredContextMenuItems.map((menuItem) => {
+                    return {
+                        text: menuItem.title,
+                        callback: () => {
+                            return menuItem.onClick(driver, layer, menuItem);
+                        },
+                    };
+                }),
+            ];
         }
+
+        // create contextmenu registry
+        const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`driver:${driver.public_id}`, layer, contextmenuItems, { driver });
+
+        // trigger that contextmenu registry was created
+        this.universe.createRegistryEvent('contextmenu:driver', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+
+        return contextmenuRegistry;
     }
 
-    @action createContextMenuForZone(zone, layer) {
+    /**
+     * Create a context menu for a vehicle marker on the map.
+     *
+     * @param {Vehicle} vehicle - The vehicle associated with the marker.
+     * @param {Layer} layer - The layer representing the vehicle marker.
+     * @memberof LiveMapComponent
+     */
+    @action createVehicleContextMenu(vehicle, layer) {
+        let contextmenuItems = [
+            {
+                separator: true,
+            },
+            {
+                text: `View Vehicle: ${vehicle.displayName}`,
+                callback: () => this.contextPanel.focus(vehicle),
+            },
+            {
+                text: `Edit Vehicle: ${vehicle.displayName}`,
+                callback: () => this.contextPanel.focus(vehicle, 'editing'),
+            },
+            {
+                text: `Delete Vehicle: ${vehicle.displayName}`,
+                callback: () => this.crud.delete(vehicle),
+            },
+        ];
+
+        // append items from universe registry
+        const registeredContextMenuItems = this.universe.getMenuItemsFromRegistry('contextmenu:vehicle');
+        if (isArray(registeredContextMenuItems)) {
+            contextmenuItems = [
+                ...contextmenuItems,
+                ...registeredContextMenuItems.map((menuItem) => {
+                    return {
+                        text: menuItem.title,
+                        callback: () => {
+                            return menuItem.onClick(vehicle, layer, menuItem);
+                        },
+                    };
+                }),
+            ];
+        }
+
+        // create contextmenu registry
+        const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`vehicle:${vehicle.public_id}`, layer, contextmenuItems, { vehicle });
+
+        // trigger that contextmenu registry was created
+        this.universe.createRegistryEvent('contextmenu:vehicle', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+
+        return contextmenuRegistry;
+    }
+
+    /**
+     * Create a context menu for a zone layer on the map.
+     *
+     * @param {ZoneModel} zone - The zone associated with the layer.
+     * @param {Layer} layer - The layer representing the zone.
+     * @memberof LiveMapComponent
+     */
+    @action createZoneContextMenu(zone, layer) {
         const contextmenuItems = [
             {
                 separator: true,
@@ -670,15 +1356,23 @@ export default class LiveMapComponent extends Component {
             },
         ];
 
-        if (typeof layer?.bindContextMenu === 'function') {
-            layer.bindContextMenu({
-                contextmenu: true,
-                contextmenuItems,
-            });
-        }
+        // create contextmenu registry
+        const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`zone:${zone.public_id}`, layer, contextmenuItems, { zone });
+
+        // trigger that contextmenu registry was created
+        this.universe.createRegistryEvent('contextmenu:zone', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+
+        return contextmenuRegistry;
     }
 
-    @action createContextMenuForServiceArea(serviceArea, layer) {
+    /**
+     * Create a context menu for a service area layer on the map.
+     *
+     * @param {ServiceAreaModel} serviceArea - The service area associated with the layer.
+     * @param {Layer} layer - The layer representing the service area.
+     * @memberof LiveMapComponent
+     */
+    @action createServiceAreaContextMenu(serviceArea, layer) {
         const contextmenuItems = [
             {
                 separator: true,
@@ -704,30 +1398,32 @@ export default class LiveMapComponent extends Component {
                 callback: () =>
                     this.serviceAreas.deleteServiceArea(serviceArea, {
                         onFinish: () => {
-                            this.rebuildContextMenu();
+                            this.rebuildMapContextMenu();
                             this.removeEditableLayerByRecordId(serviceArea);
                         },
                     }),
             },
         ];
 
-        if (typeof layer?.bindContextMenu === 'function') {
-            layer.bindContextMenu({
-                contextmenu: true,
-                contextmenuItems,
-            });
-        }
+        // create contextmenu registry
+        const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`service-area:${serviceArea.public_id}`, layer, contextmenuItems, { serviceArea });
+
+        // trigger that contextmenu registry was created
+        this.universe.createRegistryEvent('contextmenu:service-area', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+
+        return contextmenuRegistry;
     }
 
     /**
-     * ----------------------------------------------------------------------------
-     * Async/Socket Functions
-     * ----------------------------------------------------------------------------
+     * Listens for events on the company channel and logs incoming data.
      *
-     * Functions are used to fetch date or handle socket callbacks/initializations.
+     * This function sets up a WebSocket connection, subscribes to the company-specific channel,
+     * and listens for events. When events are received, it logs them to the console.
      *
+     * @async
+     * @function
      */
-    @action async listenForOrders() {
+    async listen() {
         // setup socket
         const socket = this.socket.instance();
 
@@ -751,26 +1447,49 @@ export default class LiveMapComponent extends Component {
         })();
     }
 
-    @action watchDrivers(drivers = []) {
-        // setup socket
+    /**
+     * Watches and manages moving objects (e.g., drivers or vehicles) on the LiveMapComponent.
+     *
+     * This function can be used to watch different types of moving objects by specifying
+     * the 'type' parameter.
+     *
+     * @action
+     * @function
+     * @param {string} objectType - The type of moving object to watch (e.g., 'drivers', 'vehicles').
+     * @param {Array} movingObjects - An array of moving objects to watch.
+     */
+    watchMovingObjects(objectType, objects = []) {
+        // Setup socket
         const socket = this.socket.instance();
 
-        // listen for stivers
-        for (let i = 0; i < drivers.length; i++) {
-            const driver = drivers.objectAt(i);
-            this.listenForDriver(driver, socket);
+        // Listen for moving objects
+        for (let i = 0; i < objects.length; i++) {
+            const movingObject = objects.objectAt(i);
+            this.listenForMovingObject(objectType, movingObject, socket);
         }
     }
 
-    @action async listenForDriver(driver, socket) {
-        // listen on company channel
-        const channelId = `driver.${driver.id}`;
+    /**
+     * Listens for events related to a specific type of moving object (e.g., driver or vehicle) and manages the associated marker.
+     *
+     * This function subscribes to the channel corresponding to the provided 'objectType' and the specific 'movingObject'
+     * to listen for location-related events. It processes and updates the associated marker when events are received.
+     *
+     * @async
+     * @function
+     * @param {string} objectType - The type of moving object being watched (e.g., 'drivers', 'vehicles').
+     * @param {Object} movingObject - The specific moving object to track.
+     * @param {Socket} socket - The WebSocket instance used for communication.
+     */
+    async listenForMovingObject(objectType, movingObject, socket) {
+        // Listen on the specific channel
+        const channelId = `${objectType}.${movingObject.id}`;
         const channel = socket.subscribe(channelId);
 
-        // track channel
+        // Track the channel
         this.channels.pushObject(channel);
 
-        // listen to channel for events
+        // Listen to the channel for events
         await channel.listener('subscribe').once();
 
         // Initialize an empty buffer to store incoming events
@@ -787,11 +1506,19 @@ export default class LiveMapComponent extends Component {
             // Process sorted events
             for (const output of eventBuffer) {
                 const { event, data } = output;
+
+                // log incoming event
                 console.log(`${event} - #${data.additionalData.index} (${output.created_at}) [ ${data.location.coordinates.join(' ')} ]`);
-                // update driver heading degree
-                driver._marker.setRotationAngle(data.heading);
-                // move driver's marker to new coordinates
-                driver._marker.slideTo(data.location.coordinates, { duration: 2000 });
+
+                // get movingObject marker
+                const objectMarker = movingObject._layer;
+
+                if (objectMarker) {
+                    // Update the object's heading degree
+                    objectMarker.setRotationAngle(data.heading);
+                    // Move the object's marker to new coordinates
+                    objectMarker.slideTo(data.location.coordinates, { duration: 2000 });
+                }
             }
 
             // Clear the buffer
@@ -801,12 +1528,12 @@ export default class LiveMapComponent extends Component {
         // Start a timer to process the buffer at intervals
         setInterval(processBuffer, bufferTime);
 
-        // get incoming data and console out
+        // Get incoming data and console out
         (async () => {
             for await (let output of channel) {
                 const { event } = output;
 
-                if (event === 'driver.location_changed' || event === 'driver.simulated_location_changed') {
+                if (event === `${objectType}.location_changed` || event === `${objectType}.simulated_location_changed`) {
                     // Add the incoming event to the buffer
                     eventBuffer.push(output);
                 }
@@ -814,15 +1541,27 @@ export default class LiveMapComponent extends Component {
         })();
     }
 
+    /**
+     * Close all socket channels associated subscribed to.
+     * @memberof LiveMapComponent
+     */
     @action closeChannels() {
-        for (let i = 0; i < this.channels.length; i++) {
-            const channel = this.channels.objectAt(i);
+        if (isArray(this.channels)) {
+            for (let i = 0; i < this.channels.length; i++) {
+                const channel = this.channels.objectAt(i);
 
-            channel.close();
+                channel.close();
+            }
         }
     }
 
-    @action getInitialCoordinates() {
+    /**
+     * Retrieve the initial coordinates for the map view.
+     *
+     * @returns {Promise} A promise that resolves to an object containing latitude and longitude.
+     * @memberof LiveMapComponent
+     */
+    getInitialCoordinates() {
         const initialCoordinates = {
             latitude: DEFAULT_LATITUDE,
             longitude: DEFAULT_LONGITUDE,
@@ -880,73 +1619,13 @@ export default class LiveMapComponent extends Component {
         });
     }
 
-    @action fetchActiveRoutes() {
-        this.isLoading = true;
-
-        return new Promise((resolve) => {
-            this.fetch
-                .get('fleet-ops/live/routes')
-                .then((routes) => {
-                    this.isLoading = false;
-
-                    if (typeof this.args.onRoutesLoaded === 'function') {
-                        this.args.onRoutesLoaded(routes);
-                    }
-
-                    resolve(routes);
-                })
-                .catch(() => {
-                    resolve([]);
-                });
-        });
-    }
-
-    @action fetchActiveDrivers() {
-        this.isLoading = true;
-
-        return new Promise((resolve) => {
-            this.fetch
-                .get('fleet-ops/live/drivers', {}, { normalizeToEmberData: true, normalizeModelType: 'driver' })
-                .then((drivers) => {
-                    this.isLoading = false;
-
-                    if (typeof this.args.onDriversLoaded === 'function') {
-                        this.args.onDriversLoaded(drivers);
-                    }
-
-                    resolve(drivers);
-                })
-                .catch(() => {
-                    resolve([]);
-                });
-        });
-    }
-
-    @action fetchActivePlaces() {
-        this.isLoading = true;
-
-        // get the center of map
-        const center = this.leafletMap.getCenter();
-
-        return new Promise((resolve) => {
-            this.fetch
-                .get('fleet-ops/live/places', { within: center }, { normalizeToEmberData: true, normalizeModelType: 'place' })
-                .then((places) => {
-                    this.isLoading = false;
-
-                    if (typeof this.args.onPlacesLoaded === 'function') {
-                        this.args.onPlacesLoaded(places);
-                    }
-
-                    resolve(places);
-                })
-                .catch(() => {
-                    resolve([]);
-                });
-        });
-    }
-
-    @action fetchServiceAreas() {
+    /**
+     * Fetch service areas and cache them if not already cached.
+     *
+     * @returns {Promise} A promise that resolves to an array of service area records.
+     * @memberof LiveMapComponent
+     */
+    fetchServiceAreas() {
         this.isLoading = true;
 
         return new Promise((resolve) => {
@@ -968,14 +1647,26 @@ export default class LiveMapComponent extends Component {
         });
     }
 
-    @action getLocalLatitude() {
+    /**
+     * Get the local latitude for the map view.
+     *
+     * @returns {number} The local latitude.
+     * @memberof LiveMapComponent
+     */
+    getLocalLatitude() {
         const whois = this.currentUser.getOption('whois');
         const latitude = this.appCache.get('map_latitude');
 
         return latitude || whois?.latitude || DEFAULT_LATITUDE;
     }
 
-    @action getLocalLongitude() {
+    /**
+     * Get the local longitude for the map view.
+     *
+     * @returns {number} The local longitude.
+     * @memberof LiveMapComponent
+     */
+    getLocalLongitude() {
         const whois = this.currentUser.getOption('whois');
         const longitude = this.appCache.get('map_longitude');
 

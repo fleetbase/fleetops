@@ -1,8 +1,7 @@
-<Overlay @position="right" @noBackdrop={{true}} @fullHeight={{true}} @width="700">
+<Overlay @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
-                {{!-- <Button @type="default" @icon="location-arrow" @helpText="Locate vehicle" @onClick={{@onPressCancel}} /> --}}
                 <Button @type="default" @icon="pen" @helpText="Edit vehicle" @onClick={{this.editVehicle}} />
             </div>
             <div class="flex flex-1 justify-end">
@@ -13,17 +12,17 @@
             <div class="flex flex-col flex-1 w-3/4">
                 <div class="flex flex-row">
                     <div class="w-14 flex items-center justify-center">
-                        <Image src={{@vehicle.photo_url}} @fallbackSrc={{@vehicle.avatar_url}} alt={{@vehicle.name}} height="48" width="48" class="h-12 w-12" />
+                        <Image src={{this.vehicle.photo_url}} @fallbackSrc={{this.vehicle.avatar_url}} alt={{this.vehicle.name}} height="48" width="48" class="h-12 w-12" />
                         <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
-                            <InputInfo @text={{@vehicle.public_id}} />
+                            <InputInfo @text={{this.vehicle.public_id}} />
                         </Attach::Tooltip>
                     </div>
                     <div class="flex flex-col">
-                        <h1 class="text-gray-900 dark:text-white text-2xl">{{@vehicle.display_name}}</h1>
+                        <h1 class="text-gray-900 dark:text-white text-2xl">{{this.vehicle.display_name}}</h1>
                         <div class="-mt-1">
-                            {{#if @vehicle.driver}}
+                            {{#if this.vehicle.driver}}
                                 <div class="flex flex-row items-center">
-                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{@vehicle.driver.name}}</span>
+                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{this.vehicle.driver.name}}</span>
                                 </div>
                             {{else}}
                                 <div class="flex flex-row items-center">
@@ -36,7 +35,7 @@
                 </div>
             </div>
             <div class="flex justify-end w-1/4">
-                <Badge @status={{@vehicle.status}} />
+                <Badge @status={{this.vehicle.status}} />
             </div>
         </div>
     </Overlay::Header>
@@ -54,7 +53,7 @@
             </div>
         </div>
         <div class="tab-content tab-{{this.currentTab}}">
-            {{component this.tab.component vehicle=@vehicle tabOptions=this.tab params=this.tab.componentParams}}
+            {{component this.tab.component vehicle=this.vehicle tabOptions=this.tab params=this.tab.componentParams}}
         </div>
     </Overlay::Body>
 </Overlay>

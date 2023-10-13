@@ -28,7 +28,11 @@ export default class OperationsOrdersIndexRoute extends Route {
     };
 
     @action willTransition(transition) {
-        this.controller?.resetView(transition);
+        const shouldReset = typeof transition.to.name === 'string' && !transition.to.name.includes('operations.orders');
+
+        if (this.controller && shouldReset) {
+            this.controller.resetView(transition);
+        }
     }
 
     @action model(params) {
