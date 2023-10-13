@@ -13,7 +13,7 @@
         </div>
         <div class="w-56">
             {{#if @onAddVehicle}}
-                <ModelSelect @modelName="vehicle" @selectedModel={{@options.selectedVehicle}} @placeholder="Add vehicle to fleet" @triggerClass="form-select form-input form-select-sm form-input-sm" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{this.onAdd}} as |model|>
+                <ModelSelect @modelName="vehicle" @query={{hash assignedFleet=false}}  @selectedModel={{@options.selectedVehicle}} @placeholder="Add vehicle to fleet" @triggerClass="form-select form-input form-select-sm form-input-sm" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{this.onAdd}} as |model|>
                     {{model.display_name}}
                 </ModelSelect>
             {{/if}}
