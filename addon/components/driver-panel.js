@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { action, computed } from '@ember/object';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
 import DriverPanelDetailComponent from './driver-panel/details';
@@ -83,10 +83,10 @@ export default class DriverPanelComponent extends Component {
         return defaultTabs;
     }
 
-     /**
+    /**
      * Initializes the driver panel component.
      */
-     constructor() {
+    constructor() {
         super(...arguments);
         this.driver = this.args.driver;
         this.tab = this.getTabUsingSlug(this.args.tab);

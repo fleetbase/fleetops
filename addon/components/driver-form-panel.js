@@ -80,7 +80,7 @@ export default class DriverFormPanelComponent extends Component {
         try {
             return driver
                 .save()
-                .then((vehicle) => {
+                .then((driver) => {
                     this.notifications.success(`Driver (${driver.name}) saved successfully.`);
                     contextComponentCallback(this, 'onAfterSave', driver);
                 })

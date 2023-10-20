@@ -1227,7 +1227,7 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @action createDriverContextMenu(driver, layer) {
-        const contextmenuItems = [
+        let contextmenuItems = [
             {
                 separator: true,
             },
@@ -1333,7 +1333,7 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @action createZoneContextMenu(zone, layer) {
-        const contextmenuItems = [
+        let contextmenuItems = [
             {
                 separator: true,
             },
@@ -1373,7 +1373,7 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @action createServiceAreaContextMenu(serviceArea, layer) {
-        const contextmenuItems = [
+        let contextmenuItems = [
             {
                 separator: true,
             },
