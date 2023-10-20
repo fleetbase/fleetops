@@ -1,16 +1,16 @@
-<Overlay @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
+<Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
                 {{#if this.driver.id}}
-                    <Button @type="default" @icon="id-card" @helpText="View driver details" @onClick={{this.viewDetails}} />
+                    <Button @type="default" @icon="id-card" @helpText="View driver details" @onClick={{this.onViewDetails}} />
                 {{/if}}
             </div>
             <div class="flex flex-1 justify-end">
                 <div class="mr-2">
                     <Button @icon={{if this.driver.id "save" "check"}} @type="primary" @text={{if this.driver.id "Save Driver" "Create Driver"}} @onClick={{this.save}} />
                 </div>
-                <Button @type="default" @icon="times" @helpText={{if this.driver.id "Cancel edit driver" "Cancel new driver"}} @onClick={{@onPressCancel}} />
+                <Button @type="default" @icon="times" @helpText={{if this.driver.id "Cancel edit driver" "Cancel new driver"}} @onClick={{this.onPressCancel}} />
             </div>
         </div>
         <div class="flex flex-row justify-between w-full">

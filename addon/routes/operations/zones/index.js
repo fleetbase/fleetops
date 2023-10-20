@@ -16,7 +16,7 @@ export default class OperationsZonesIndexRoute extends Route {
      * @param {Transition} transition
      */
     @action loading(transition) {
-        this.loader.showOnInitialTransition(transition, 'section.next-view-section', 'Loading zones...');
+        this.loader.showOnInitialTransition(transition, 'section.next-view-section', { loadingMessage: 'Loading zones...' });
     }
 
     model() {

@@ -294,7 +294,7 @@ export default class OperationsServiceRatesIndexNewController extends Controller
         }
 
         this.isCreatingServiceRate = true;
-        this.loader.showLoader('.overlay-inner-content', 'Creating service rate...');
+        this.loader.showLoader('.overlay-inner-content', { loadingMessage: 'Creating service rate...' });
 
         try {
             return serviceRate

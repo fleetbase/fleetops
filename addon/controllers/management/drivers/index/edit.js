@@ -5,76 +5,107 @@ import { action } from '@ember/object';
 
 export default class ManagementDriversIndexEditController extends Controller {
     /**
-     * True if updating service rate.
+     * Inject the `hostRouter` service
      *
-     * @var {Boolean}
+     * @memberof ManagementDriversIndexEditController
      */
-    @tracked isUpdatingDriver = false;
-    /**
-     * Inject the `loader` service
-     *
-     * @var {Service}
-     */
-    @service loader;
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
-    @service notifications;
+    @service hostRouter;
+
     /**
      * Inject the `hostRouter` service
      *
-     * @var {Service}
+     * @memberof ManagementDriversIndexEditController
      */
-    @service hostRouter;
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
-     */
-    @service store;
-    /**
-     * Updates the drivers to server
-     *
-     * @void
-     */
-    @action updateDriver() {
-        const { driver } = this;
+    @service modalsManager;
 
-        this.isUpdatingDriver = true;
-        this.loader.showLoader('.overlay-inner-content', 'Updating driver...');
+    /**
+     * The overlay component context.
+     *
+     * @memberof ManagementDriversIndexEditController
+     */
+    @tracked overlay;
 
-        try {
-            return driver
-                .save()
-                .then((driver) => {
-                    return this.transitionToRoute('management.drivers.index').then(() => {
-                        this.notifications.success(`Driver '${driver.name}' updated`);
-                        this.resetForm();
-                        this.hostRouter.refresh();
-                    });
-                })
-                .catch(this.notifications.serverError)
-                .finally(() => {
-                    this.isUpdatingDriver = false;
-                    this.loader.removeLoader();
-                });
-        } catch (error) {
-            this.isUpdatingDriver = false;
-            this.loader.removeLoader();
+    /**
+     * When exiting the overlay.
+     *
+     * @return {Transition}
+     * @memberof ManagementDriversIndexEditController
+     */
+    @action transitionBack(driver) {
+        // check if driver record has been edited and prompt for confirmation
+        if (driver.hasDirtyAttributes) {
+            return this.confirmContinueWithUnsavedChanges(driver, {
+                confirm: () => {
+                    driver.rollbackAttributes();
+                    return this.transitionToRoute('management.drivers.index');
+                },
+            });
         }
-    }
 
-    @action transitionBack() {
         return this.transitionToRoute('management.drivers.index');
     }
+
     /**
-     * Resets the driver form
+     * Set the overlay component context object.
      *
-     * @void
+     * @param {OverlayContext} overlay
+     * @memberof ManagementDriversIndexEditController
      */
-    @action resetForm() {
-        this.driver = this.store.createRecord('driver');
+    @action setOverlayContext(overlay) {
+        this.overlay = overlay;
+    }
+
+    /**
+     * When driver details button is clicked in overlay.
+     *
+     * @param {VehicleModel} driver
+     * @return {Promise}
+     * @memberof ManagementDriversIndexEditController
+     */
+    @action onViewDetails(driver) {
+        // check if driver record has been edited and prompt for confirmation
+        if (driver.hasDirtyAttributes) {
+            return this.confirmContinueWithUnsavedChanges(driver);
+        }
+
+        return this.transitionToRoute('management.drivers.index.details', driver);
+    }
+
+    /**
+     * Trigger a route refresh and focus the new driver created.
+     *
+     * @param {VehicleModel} driver
+     * @return {Promise}
+     * @memberof ManagementDriversIndexEditController
+     */
+    @action onAfterSave(driver) {
+        if (this.overlay) {
+            this.overlay.close();
+        }
+
+        this.hostRouter.refresh();
+        return this.transitionToRoute('management.drivers.index.details', driver);
+    }
+
+    /**
+     * Prompts the user to confirm if they wish to continue with unsaved changes.
+     *
+     * @method
+     * @param {VehicleModel} driver - The driver object with unsaved changes.
+     * @param {Object} [options={}] - Additional options for configuring the modal.
+     * @returns {Promise} A promise that resolves when the user confirms, and transitions to a new route.
+     * @memberof ManagementDriversIndexEditController
+     */
+    confirmContinueWithUnsavedChanges(driver, options = {}) {
+        return this.modalsManager.confirm({
+            title: 'Continue Without Saving?',
+            body: 'Unsaved changes to this driver will be lost. Click continue to proceed.',
+            acceptButtonText: 'Continue without saving',
+            confirm: () => {
+                driver.rollbackAttributes();
+                return this.transitionToRoute('management.drivers.index.details', driver);
+            },
+            ...options,
+        });
     }
 }

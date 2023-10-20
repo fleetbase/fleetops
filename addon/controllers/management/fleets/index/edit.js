@@ -49,7 +49,7 @@ export default class ManagementFleetsIndexEditController extends Controller {
 
         console.log(model, model);
         this.isUpdatingFleet = true;
-        this.loader.showLoader('.overlay-inner-content', 'Updating fleet...');
+        this.loader.showLoader('.overlay-inner-content', { loadingMessage: 'Updating fleet...' });
 
         try {
             return model

@@ -34,7 +34,7 @@ export default class OperationsServiceRatesIndexEditController extends Operation
         }
 
         this.isUpdatingServiceRate = true;
-        this.loader.showLoader('.overlay-inner-content', 'Updating service rate...');
+        this.loader.showLoader('.overlay-inner-content', { loadingMessage: 'Updating service rate...' });
 
         try {
             return serviceRate

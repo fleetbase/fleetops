@@ -1,6 +1,6 @@
 {
     "name": "@fleetbase/fleetops-engine",
-    "version": "0.2.9",
+    "version": "0.3.0",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "fleetbase": {
         "route": "fleet-ops",
@@ -39,7 +39,7 @@
         "publish:github": "npm config set '@fleetbase:registry' https://npm.pkg.github.com/ && npm publish"
     },
     "dependencies": {
-        "@fleetbase/ember-core": "^0.1.5",
+        "@fleetbase/ember-core": "link:../packages/ember-core",
         "@fleetbase/ember-ui": "^0.2.0",
         "@fleetbase/fleetops-data": "^0.1.1",
         "@fleetbase/leaflet-routing-machine": "^3.2.16",

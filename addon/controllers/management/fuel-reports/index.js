@@ -319,7 +319,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             return this.notifications.warning('No driver attributed to fuel report.');
         }
 
-        this.loader.show('Loading...');
+        this.loader.show({ loadingMessage: 'Loading...' });
         const driver = await this.store.findRecord('driver', fuelReport.driver_uuid);
         this.loader.removeLoader();
 
@@ -332,7 +332,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             return this.notifications.warning('No vehicle attributed to fuel report.');
         }
 
-        this.loader.show('Loading...');
+        this.loader.show({ loadingMessage: 'Loading...' });
         const vehicle = await this.store.findRecord('vehicle', fuelReport.vehicle_uuid);
         this.loader.remove();
 
