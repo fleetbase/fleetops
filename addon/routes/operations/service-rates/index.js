@@ -23,7 +23,7 @@ export default class OperationsServiceRatesIndexRoute extends Route {
      * @param {Transition} transition
      */
     @action loading(transition) {
-        this.loader.showOnInitialTransition(transition, 'section.next-view-section', 'Loading service rates...');
+        this.loader.showOnInitialTransition(transition, 'section.next-view-section', { loadingMessage: 'Loading service rates...' });
     }
 
     /**

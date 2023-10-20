@@ -7,7 +7,7 @@ export default class ApplicationRoute extends Route {
 
     loading(transition) {
         const resourceName = this.getResouceName(transition);
-        this.loader.showOnInitialTransition(transition, 'section.next-view-section', resourceName ? `Loading ${resourceName}...` : `Loading...`);
+        this.loader.showOnInitialTransition(transition, 'section.next-view-section', { loadingMessage: resourceName ? `Loading ${resourceName}...` : `Loading...` });
     }
 
     model() {

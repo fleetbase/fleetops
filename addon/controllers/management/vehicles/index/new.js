@@ -4,7 +4,33 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 
 export default class ManagementVehiclesIndexNewController extends Controller {
+    /**
+     * Inject the `store` service
+     *
+     * @memberof ManagementVehiclesIndexNewController
+     */
     @service store;
+
+    /**
+     * Inject the `hostRouter` service
+     *
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    @service hostRouter;
+
+    /**
+     * Inject the `hostRouter` service
+     *
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    @service modalsManager;
+
+    /**
+     * The overlay component context.
+     *
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    @tracked overlay;
 
     /**
      * The vehicle being created.
@@ -15,7 +41,52 @@ export default class ManagementVehiclesIndexNewController extends Controller {
         status: `active`,
     });
 
+    /**
+     * Set the overlay component context object.
+     *
+     * @param {OverlayContext} overlay
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    @action setOverlayContext(overlay) {
+        this.overlay = overlay;
+    }
+
+    /**
+     * When exiting the overlay.
+     *
+     * @return {Transition}
+     * @memberof ManagementVehiclesIndexNewController
+     */
     @action transitionBack() {
         return this.transitionToRoute('management.vehicles.index');
+    }
+
+    /**
+     * Trigger a route refresh and focus the new vehicle created.
+     *
+     * @param {VehicleModel} vehicle
+     * @return {Promise}
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    @action onAfterSave(vehicle) {
+        if (this.overlay) {
+            this.overlay.close();
+        }
+
+        this.hostRouter.refresh();
+        return this.transitionToRoute('management.vehicles.index.details', vehicle).then(() => {
+            this.resetForm();
+        });
+    }
+
+    /**
+     * Resets the form with a new vehicle record
+     *
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    resetForm() {
+        this.vehicle = this.store.createRecord('vehicle', {
+            status: `active`,
+        });
     }
 }
