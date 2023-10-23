@@ -44,14 +44,19 @@
                 </Attach::Tooltip>
             </dd.Trigger>
             <dd.Content>
-                <MapContainer::Toolbar::ZonesPanel @dd={{dd}} @map={{@map}} @onPressCreateServiceArea={{@onPressCreateServiceArea}} />
+                <MapContainer::Toolbar::ZonesPanel @dd={{dd}} @liveMap={{@liveMap}} @map={{@map}} @onPressCreateServiceArea={{@onPressCreateServiceArea}} />
             </dd.Content>
         </BasicDropdown>
-        <button type="button" class="toolbar-button relative" {{on "click" (fn this.onAction "onPressDisplayPlaces")}}>
-            <FaIcon @icon="city" />
-            <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
-                <InputInfo @text="Toggle Places" @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
-            </Attach::Tooltip>
-        </button>
+        <BasicDropdown @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
+            <dd.Trigger class="toolbar-button">
+                <FaIcon @icon="eye" />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                    <InputInfo @text="Visibility Controls" @iconClass="hidden" class="{{if dd.isOpen 'hidden'}} py-1 px-2 bg-gray-900 -mt-1" />
+                </Attach::Tooltip>
+            </dd.Trigger>
+            <dd.Content>
+                <MapContainer::Toolbar::VisibilityControlPanel @dd={{dd}} @liveMap={{@liveMap}} @map={{@map}} />
+            </dd.Content>
+        </BasicDropdown>
     </div>
 </MapContainer::ToolbarContainer>

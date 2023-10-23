@@ -7,7 +7,6 @@ import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';
 import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
-import isModel from '@fleetbase/ember-core/utils/is-model';
 
 export default class OperationsOrdersIndexController extends Controller {
     /**
@@ -630,38 +629,59 @@ export default class OperationsOrdersIndexController extends Controller {
         this.query = value;
     }
 
-    @action viewPlacesOnMap() {
-        const {
-            leafletMap: { liveMap },
-        } = this;
-
-        if (liveMap) {
-            liveMap.togglePlaces();
-        }
-    }
-
+    /**
+     * Hides all elements on the live map.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action resetView() {
         if (this.leafletMap && this.leafletMap.liveMap) {
             this.leafletMap.liveMap.hideAll();
         }
     }
 
+    /**
+     * Toggles the visibility of the search interface.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action toggleSearch() {
         this.isSearchVisible = !this.isSearchVisible;
     }
 
+    /**
+     * Toggles the visibility of the orders panel.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action toggleOrdersPanel() {
         this.isOrdersPanelVisible = !this.isOrdersPanelVisible;
     }
 
+    /**
+     * Hides the orders panel.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action hideOrdersPanel() {
         this.isOrdersPanelVisible = false;
     }
 
+    /**
+     * Shows the orders panel.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action showOrdersPanel() {
         this.isOrdersPanelVisible = true;
     }
 
+    /**
+     * Zooms the map in or out.
+     * @param {string} [direction='in'] - The direction to zoom. Either 'in' or 'out'.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action zoomMap(direction = 'in') {
         if (direction === 'in') {
             this.leafletMap?.zoomIn();
@@ -670,6 +690,12 @@ export default class OperationsOrdersIndexController extends Controller {
         }
     }
 
+    /**
+     * Sets the layout mode and triggers a layout change event.
+     * @param {string} mode - The layout mode to set. E.g., 'table'.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action setLayoutMode(mode) {
         this.layout = mode;
 
@@ -680,22 +706,57 @@ export default class OperationsOrdersIndexController extends Controller {
         this.universe.trigger('dashboard.layout.changed', mode);
     }
 
-    @action setMapReference({ target }) {
+    /**
+     * Sets the map references for this component.
+     * Extracts the `liveMap` from the `target` object passed in the event and sets it as `this.liveMap`.
+     * Also, sets `target` as `this.leafletMap`.
+     *
+     * @param {Object} event - The event object containing the map references.
+     * @param {Object} event.target - The target map object.
+     * @param {Object} event.target.liveMap - The live map reference.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
+    @action setMapReference({ target, target: { liveMap } }) {
         this.leafletMap = target;
+        this.liveMap = liveMap;
     }
 
+    /**
+     * Exports all orders.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action exportOrders() {
         this.crud.export('order');
     }
 
+    /**
+     * Redirects to the new order creation page.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action createOrder() {
         return this.transitionToRoute('operations.orders.index.new');
     }
 
+    /**
+     * Redirects to the view page of a specific order.
+     * @param {Object} order - The order to view.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action viewOrder(order) {
         return this.transitionToRoute('operations.orders.index.view', order);
     }
 
+    /**
+     * Cancels a specific order after confirmation.
+     * @param {Object} order - The order to cancel.
+     * @param {Object} [options={}] - Additional options for the modal.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action cancelOrder(order, options = {}) {
         this.modalsManager.confirm({
             title: `Are you sure you wish to cancel this order?`,
@@ -713,6 +774,13 @@ export default class OperationsOrdersIndexController extends Controller {
         });
     }
 
+    /**
+     * Dispatches a specific order after confirmation.
+     * @param {Object} order - The order to dispatch.
+     * @param {Object} [options={}] - Additional options for the modal.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action dispatchOrder(order, options = {}) {
         this.modalsManager.confirm({
             title: `Are you sure you want to dispatch this order?`,
@@ -739,6 +807,13 @@ export default class OperationsOrdersIndexController extends Controller {
         });
     }
 
+    /**
+     * Deletes a specific order.
+     * @param {Object} order - The order to delete.
+     * @param {Object} [options={}] - Additional options for deletion.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action deleteOrder(order, options = {}) {
         this.crud.delete(order, {
             onSuccess: () => {
@@ -748,6 +823,12 @@ export default class OperationsOrdersIndexController extends Controller {
         });
     }
 
+    /**
+     * Deletes multiple selected orders.
+     * @param {Array} [selected=[]] - Orders selected for deletion.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action bulkDeleteOrders(selected = []) {
         selected = selected.length > 0 ? selected : this.table.selectedRows;
 
@@ -760,6 +841,12 @@ export default class OperationsOrdersIndexController extends Controller {
         });
     }
 
+    /**
+     * Cancels multiple selected orders.
+     * @param {Array} [selected=[]] - Orders selected for cancellation.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action bulkCancelOrders(selected = []) {
         selected = selected.length > 0 ? selected : this.table.selectedRows;
 
@@ -785,46 +872,20 @@ export default class OperationsOrdersIndexController extends Controller {
         });
     }
 
-    @action applyFilters(columns) {
-        columns.forEach((column) => {
-            // if value is a model only filter by id
-            if (isModel(column.filterValue)) {
-                column.filterValue = column.filterValue.id;
-            }
-
-            // if value is an array of models map to ids
-            if (isArray(column.filterValue) && column.filterValue.every((v) => isModel(v))) {
-                column.filterValue = column.filterValue.map((v) => v.id);
-            }
-
-            // only if filter is active continue
-            if (column.isFilterActive && column.filterValue) {
-                this[column.filterParam || column.valuePath] = column.filterValue;
-            } else {
-                this[column.filterParam || column.valuePath] = undefined;
-                column.isFilterActive = false;
-                column.filterValue = undefined;
-            }
-        });
-
-        this.columns = columns;
-    }
-
-    @action setFilterOptions(valuePath, options) {
-        const updatedColumns = this.columns.map((column) => {
-            if (column.valuePath === valuePath) {
-                column.filterOptions = options;
-            }
-            return column;
-        });
-
-        this.columns = updatedColumns;
-    }
-
+    /**
+     * Triggers when the map container is ready.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action onMapContainerReady() {
         this.fetchActiveOrdersCount();
     }
 
+    /**
+     * Fetches the count of active orders.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action fetchActiveOrdersCount() {
         this.fetch.get('fleet-ops/metrics/all', { discover: ['orders_in_progress'] }).then((response) => {
             this.activeOrdersCount = response.orders_in_progress;

@@ -95,6 +95,13 @@ export default class OperationsOrdersIndexViewController extends Controller {
      */
     @service universe;
 
+    /**
+     * Inject the `contextPanel` service
+     *
+     * @var {Service}
+     */
+    @service contextPanel;
+
     @tracked isLoadingAdditionalData = false;
     @tracked isWaypointsCollapsed;
     @tracked leafletRoute;
@@ -782,15 +789,18 @@ export default class OperationsOrdersIndexViewController extends Controller {
         this.vendorsController.viewVendor(customer);
     }
 
-    @action async viewDriver(order) {
-        if (order.canLoadDriver) {
-            this.modalsManager.displayLoader();
-
-            order.driver = await this.store.findRecord('driver', order.driver_uuid);
-            await this.modalsManager.done();
+    @action focusOrderAssignedDriver({ driver_assigned, driver_assigned_uuid, canLoadDriver }) {
+        // if can load the driver then load and display via context
+        if (canLoadDriver) {
+            return this.store.findRecord('driver', driver_assigned_uuid).then((driver) => {
+                this.contextPanel.focus(driver);
+            });
         }
 
-        this.driversController.viewDriver(order.driver_assigned);
+        // if driver already loaded use this
+        if (driver_assigned) {
+            this.contextPanel.focus(driver_assigned);
+        }
     }
 
     @action async viewFacilitator({ facilitator, facilitator_is_contact }) {
