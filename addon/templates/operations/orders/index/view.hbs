@@ -150,7 +150,7 @@
                         <span>Driver Assigned</span>
                     </div>
                     <div>
-                        <div class="flex flex-row">
+                        <a href="javascript:;" class="flex flex-row" {{on "click" (fn this.focusOrderAssignedDriver @model)}}>
                             <div>
                                 <Image src={{avatar-url @model.driver_assigned.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} width="32" height="32" class="w-8 h-8 rounded-md shadow-sm mr-3 lg:mr-2" alt={{@model.driver_assigned.name}} />
                             </div>
@@ -160,7 +160,7 @@
                                     <div>{{@model.driver_assigned.phone}}</div>
                                 {{/if}}
                             </div>
-                        </div>
+                        </a>
                         <div class="mt-1">
                             <Button @size="xs" @type="default" @icon="edit" @text={{if @model.has_driver_assigned "Change Driver" "Assign Driver"}} @onClick={{fn this.assignDriver @model}} />
                         </div>

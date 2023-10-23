@@ -162,6 +162,6 @@ export default class VehiclePanelComponent extends Component {
             return this.tabs.find(({ slug }) => slug === tabSlug);
         }
 
-        return null;
+        return this.tabs[0];
     }
 }

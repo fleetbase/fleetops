@@ -1,51 +1,15 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { classify } from '@ember/string';
 import { calculateInPlacePosition } from 'ember-basic-dropdown/utils/calculate-position';
 
 /**
- * @class MapContainerToolbarZonesPanelComponent
+ * @class MapContainerToolbarVisibilityControlPanelComponent
  * @extends {Component}
  * @memberof @fleetbase/fleetops-engine
  */
-export default class MapContainerToolbarZonesPanelComponent extends Component {
-    /**
-     * Ember Data store service.
-     * @type {Service}
-     * @memberof MapContainerToolbarZonesPanelComponent
-     */
-    @service store;
-
-    /**
-     * Service areas service.
-     * @type {Service}
-     * @memberof MapContainerToolbarZonesPanelComponent
-     */
-    @service serviceAreas;
-
-    /**
-     * Application cache service.
-     * @type {Service}
-     * @memberof MapContainerToolbarZonesPanelComponent
-     */
-    @service appCache;
-
-    /**
-     * Indicates if the component is in a loading state.
-     * @type {boolean}
-     * @memberof MapContainerToolbarZonesPanelComponent
-     */
-    @tracked isLoading = false;
-
-    /**
-     * Holds the records for service areas.
-     * @type {Array}
-     * @memberof MapContainerToolbarZonesPanelComponent
-     */
-    @tracked serviceAreaRecords = [];
-
+export default class MapContainerToolbarVisibilityControlPanelComponent extends Component {
     /**
      * Reference to the map instance.
      * @type {L.Map}
@@ -68,8 +32,6 @@ export default class MapContainerToolbarZonesPanelComponent extends Component {
         super(...arguments);
         this.map = this.args.map;
         this.liveMap = this.args.liveMap;
-        this.fetchServiceAreas();
-        this.serviceAreas.setMapInstance(this.args.map);
     }
 
     /**
@@ -104,32 +66,9 @@ export default class MapContainerToolbarZonesPanelComponent extends Component {
         tryInvoke(this, callbackFn);
         tryInvoke(this.args, callbackFn);
         tryInvoke(this.liveMap, callbackFn);
-        tryInvoke(this.serviceAreas, callbackFn);
 
         // Additional check for event callback function in args
         const eventCallbackFn = `on${classify(callbackFn)}`;
         tryInvoke(this.args, eventCallbackFn);
-    }
-
-    /**
-     * Fetch service areas and update state.
-     * @memberof MapContainerToolbarZonesPanelComponent
-     */
-    fetchServiceAreas() {
-        this.isLoading = true;
-
-        if (this.appCache.has('serviceAreas')) {
-            this.serviceAreaRecords = this.appCache.getEmberData('serviceAreas', 'service-area');
-        }
-
-        return this.store
-            .query('service-area', { with: ['zones'] })
-            .then((serviceAreaRecords) => {
-                this.serviceAreaRecords = serviceAreaRecords;
-                this.appCache.setEmberData('serviceAreas', serviceAreaRecords);
-            })
-            .finally(() => {
-                this.isLoading = false;
-            });
     }
 }

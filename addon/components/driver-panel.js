@@ -156,6 +156,6 @@ export default class DriverPanelComponent extends Component {
             return this.tabs.find(({ slug }) => slug === tabSlug);
         }
 
-        return null;
+        return this.tabs[0];
     }
 }
