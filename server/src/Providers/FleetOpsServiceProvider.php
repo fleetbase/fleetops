@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Providers;
 
 use Brick\Geo\Engine\GeometryEngineRegistry;
 use Brick\Geo\Engine\GEOSEngine;
+use Fleetbase\Notifications\NotificationRegistry;
 use Fleetbase\Providers\CoreServiceProvider;
 
 if (!class_exists(CoreServiceProvider::class)) {
@@ -87,6 +88,15 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../../config/cache.stores.php', 'cache.stores');
         $this->mergeConfigFrom(__DIR__ . '/../../config/geocoder.php', 'geocoder');
         $this->mergeConfigFrom(__DIR__ . '/../../config/dompdf.php', 'dompdf');
+
+        // register notifications
+        NotificationRegistry::register([
+            \Fleetbase\FleetOps\Notifications\OrderAssigned::class,
+            \Fleetbase\FleetOps\Notifications\OrderCanceled::class,
+            \Fleetbase\FleetOps\Notifications\OrderDispatched::class,
+            \Fleetbase\FleetOps\Notifications\OrderDispatchFailed::class,
+            \Fleetbase\FleetOps\Notifications\OrderPing::class,
+        ]);
 
         // Register the GeometryEngine for GEOSEngine
         GeometryEngineRegistry::set(new GEOSEngine());
