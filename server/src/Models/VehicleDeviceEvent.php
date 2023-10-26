@@ -3,21 +3,24 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasUuid;
+use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
+use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 
-class VehicleDevice extends Model
+class VehicleDeviceEvent extends Model
 {
-    use HasUuid, TracksApiCredential, HasApiModelBehavior;
+    use HasUuid, TracksApiCredential, HasApiModelBehavior, SpatialTrait, Searchable;
 
     /**
      * The database table used by the model.
      *
      * @var string
      */
-    protected $table = 'vehicle_devices';
+    protected $table = 'vehicle_device_events';
 
     /**
      * Attributes that is filterable on this model.
@@ -26,23 +29,17 @@ class VehicleDevice extends Model
      */
     protected $fillable = [
         'uuid',
-        'vehicle_uuid',
-        'device_type',
-        'device_id',
-        'device_provider',
-        'device_name',
-        'device_model',
-        'device_location',
-        'manufacturer',
-        'serial_number',
-        'installation_date',
-        'last_maintenance_date',
+        'vehicle_device_uuid',
+        'payload',
         'meta',
-        'data',
-        'online',
-        'status',
-        'data_frequency',
-        'notes',
+        'location',
+        'ident',
+        'protocol',
+        'provider',
+        'mileage',
+        'state',
+        'code',
+        'reason',
     ];
     /**
      * The attributes that should be cast to native types.
@@ -50,9 +47,17 @@ class VehicleDevice extends Model
      * @var array
      */
     protected $casts = [
+        'payload' => Json::class,
         'meta' => Json::class,
-        'data' => Json::class,
+        'location' => Point::class,
     ];
+
+    /**
+     * The attributes that are spatial columns.
+     *
+     * @var array
+     */
+    protected $spatialFields = ['location'];
 
     /**
      * Dynamic attributes that are appended to object.
@@ -78,16 +83,8 @@ class VehicleDevice extends Model
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function vehicle()
+    public function device()
     {
-        return $this->belongsTo(Vehicle::class);
-    }
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function events()
-    {
-        return $this->hasMany(VehicleDeviceEvent::class);
+        return $this->belongsTo(VehicleDevice::class);
     }
 }
