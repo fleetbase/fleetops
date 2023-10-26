@@ -30,6 +30,7 @@ class Vehicle extends FleetbaseResource
                 'driver'                 => $this->whenLoaded('driver', new Driver($this->driver)),
                 'devices'                => $this->whenLoaded('devices', $this->devices),
                 'photo'                  => $this->photoUrl,
+                'avatar_url'             => $this->avatar_url,
                 'make'                   => $this->make,
                 'model'                  => $this->model,
                 'year'                   => $this->year,

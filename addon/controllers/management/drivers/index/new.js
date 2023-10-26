@@ -1,128 +1,88 @@
-import Controller, { inject as controller } from '@ember/controller';
-import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import generateSlug from '@fleetbase/ember-core/utils/generate-slug';
 
 export default class ManagementDriversIndexNewController extends Controller {
     /**
-     * Inject the `management.drivers.index` controller
+     * Inject the `store` service
      *
-     * @var {Controller}
-     */
-    @controller('management.drivers.index') index;
-
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
+     * @memberof ManagementDriversIndexNewController
      */
     @service store;
 
     /**
      * Inject the `hostRouter` service
      *
-     * @var {Service}
+     * @memberof ManagementDriversIndexNewController
      */
     @service hostRouter;
 
     /**
-     * Inject the `notifications` service
+     * Inject the `hostRouter` service
      *
-     * @var {Service}
+     * @memberof ManagementDriversIndexNewController
      */
-    @service notifications;
+    @service modalsManager;
 
     /**
-     * Inject the `loader` service
+     * The overlay component context.
      *
-     * @var {Service}
+     * @memberof ManagementDriversIndexNewController
      */
-    @service loader;
+    @tracked overlay;
 
     /**
      * The driver being created.
      *
      * @var {DriverModel}
      */
-    @tracked driver = this.store.createRecord('driver', {
-        status: `active`,
-        slug: generateSlug(),
-    });
+    @tracked driver = this.store.createRecord('driver');
 
     /**
-     * Different service types available, based on order type.
+     * Set the overlay component context object.
      *
-     * @var {Array}
+     * @param {OverlayContext} overlay
+     * @memberof ManagementDriversIndexNewController
      */
-    @tracked serviceTypes = [];
-
-    /**
-     * Service areas.
-     *
-     * @var {Array}
-     */
-    @tracked serviceAreas = [];
-
-    /**
-     * Zones.
-     *
-     * @var {Array}
-     */
-    @tracked zones = [];
-
-    /**
-     * True if creating driver.
-     *
-     * @var {Boolean}
-     */
-    @tracked isCreatingDriver = false;
-
-    /**
-     * Saves the driver to server
-     *
-     * @void
-     */
-    @action createDriver() {
-        const { driver } = this;
-
-        this.isCreatingDriver = true;
-        this.loader.showLoader('.overlay-inner-content', 'Creating driver...');
-
-        try {
-            return driver
-                .save()
-                .then((driver) => {
-                    return this.transitionToRoute('management.drivers.index').then(() => {
-                        this.notifications.success(`New Driver ${driver.name} Created`);
-                        this.resetForm();
-                        this.hostRouter.refresh();
-                    });
-                })
-                .catch((error) => {
-                    console.log(error);
-                    this.notifications.serverError(error);
-                })
-                .finally(() => {
-                    this.isCreatingDriver = false;
-                    this.loader.removeLoader();
-                });
-        } catch (error) {
-            this.isCreatingDriver = false;
-            this.loader.removeLoader();
-        }
+    @action setOverlayContext(overlay) {
+        this.overlay = overlay;
     }
 
     /**
-     * Resets the driver form
+     * When exiting the overlay.
      *
-     * @void
+     * @return {Transition}
+     * @memberof ManagementDriversIndexNewController
      */
-    @action resetForm() {
-        this.driver = this.store.createRecord('driver');
-    }
-
     @action transitionBack() {
         return this.transitionToRoute('management.drivers.index');
+    }
+
+    /**
+     * Trigger a route refresh and focus the new driver created.
+     *
+     * @param {DriverModel} driver
+     * @return {Promise}
+     * @memberof ManagementDriversIndexNewController
+     */
+    @action onAfterSave(driver) {
+        if (this.overlay) {
+            this.overlay.close();
+        }
+
+        this.hostRouter.refresh();
+        return this.transitionToRoute('management.drivers.index.details', driver).then(() => {
+            this.resetForm();
+        });
+    }
+
+    /**
+     * Resets the form with a new driver record
+     *
+     * @memberof ManagementDriversIndexNewController
+     */
+    resetForm() {
+        this.driver = this.store.createRecord('driver');
     }
 }

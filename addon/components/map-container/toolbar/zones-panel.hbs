@@ -1,4 +1,4 @@
-<div class="next-dd-menu overflow-visible" {{did-insert this.setupZonesPanel}}>
+<div class="next-dd-menu overflow-visible">
     <div class="px-1">
         <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1 text-gray-800 dark:text-gray-300">
             Service Areas
@@ -6,9 +6,9 @@
     </div>
     <div class="next-dd-menu-seperator"></div>
     <div class="px-1">
-        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.serviceAreaAction "createServiceArea" @dd)}}>Create new service area...</a>
-        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.liveMapAction "focusAllServiceAreas" @dd)}}>Show all service areas</a>
-        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.liveMapAction "blurAllServiceAreas" @dd)}}>Hide all service areas</a>
+        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn @dd this.triggerCallback "createServiceArea")}}>Create new service area...</a>
+        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn @dd this.triggerCallback "focusAllServiceAreas")}}>Show all service areas</a>
+        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn @dd this.triggerCallback "blurAllServiceAreas")}}>Hide all service areas</a>
         {{#each this.serviceAreaRecords as |serviceArea|}}
             <BasicDropdownHover @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
                 <dd.Trigger class="next-dd-item {{if dd.isOpen 'active'}}">
@@ -25,13 +25,13 @@
                         </div>
                         <div class="next-dd-menu-seperator"></div>
                         <div class="px-1">
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.liveMapAction "focusServiceArea" dd serviceArea)}}>Focus {{serviceArea.name}}...</a>
-                            {{#if (eq serviceArea this.activeServiceArea)}}
-                                <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.liveMapAction "blurServiceArea" dd serviceArea)}}>Blur service area...</a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "focusServiceArea" serviceArea)}}>Focus {{serviceArea.name}}...</a>
+                            {{#if (eq serviceArea this.liveMap.activeServiceArea)}}
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "blurServiceArea" serviceArea)}}>Blur service area...</a>
                             {{/if}}
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.serviceAreaAction "createZone" dd serviceArea)}}>Create zone inside...</a>
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.serviceAreaAction "editServiceAreaDetails" dd serviceArea)}}>Edit {{serviceArea.name}}...</a>
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.serviceAreaAction "deleteServiceArea" dd serviceArea)}}>Delete {{serviceArea.name}}...</a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "createZone" serviceArea)}}>Create zone inside...</a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "editServiceAreaDetails" serviceArea)}}>Edit {{serviceArea.name}}...</a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "deleteServiceArea" serviceArea)}}>Delete {{serviceArea.name}}...</a>
                         </div>
                     </div>
                 </dd.Content>

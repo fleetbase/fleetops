@@ -1,25 +1,46 @@
 import Component from '@glimmer/component';
-import { inject as controller } from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 
+/**
+ * DriverCardMiniComponent
+ *
+ * A mini-component responsible for displaying a specific driver's card.
+ *
+ * @extends Component
+ *
+ * @property {Service} store - Ember's store service.
+ * @property {Service} fetch - Service for fetching data.
+ * @property {Service} contextPanel - Service for context panel operations.
+ */
 export default class DriverCardMiniComponent extends Component {
-    @controller('management.drivers.index') drivers;
+    /**
+     * Ember's store service.
+     * @type {Service}
+     */
     @service store;
 
-    toModel(record, modelName) {
-        // set id
-        if (!record.id && record.uuid) {
-            record.id = record.uuid;
-        }
+    /**
+     * Fetch service.
+     * @type {Service}
+     */
+    @service fetch;
 
-        const normalized = this.store.normalize(modelName, record);
-        return this.store.push(normalized);
-    }
+    /**
+     * ContextPanel service.
+     * @type {Service}
+     */
+    @service contextPanel;
 
+    /**
+     * View the details of a specific driver.
+     *
+     * @param {Object} record - The driver record to view.
+     * @action
+     * @returns {Promise} Resolves when the driver's details are focused in the context panel.
+     */
     @action viewDriver(record) {
-        const driver = this.toModel(record, 'driver');
-
-        return this.drivers.viewDriver(driver);
+        const driver = this.fetch.jsonToModel(record, 'driver');
+        return this.contextPanel.focus(driver);
     }
 }

@@ -1,0 +1,66 @@
+<div class="next-dd-menu overflow-visible">
+    <div class="px-1">
+        <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1 text-gray-800 dark:text-gray-300">
+            Visibility Controls
+        </div>
+    </div>
+    <div class="next-dd-menu-seperator"></div>
+    <div class="px-1">
+        <a href="javascript:;" class="next-dd-item flex-row items-center justify-between relative" {{on "click" (fn this.triggerCallback "toggleVisibility" "places")}}>
+            <div class="flex flex-row items-center">
+                <div class="w-6">
+                    <FaIcon @icon="building" />
+                </div>
+                <span>
+                    {{#if (is-visibility-control-visible this.liveMap "places")}}
+                        Hide all places...
+                    {{else}}
+                        Show all places...
+                    {{/if}}
+                </span>
+            </div>
+            <div>
+                <Badge @status="info" @hideStatusDot={{true}} @spanClass="rounded-full -mr-2">{{this.liveMap.originalResources.places.length}}</Badge>
+            </div>
+        </a>
+        <BasicDropdownHover @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
+            <dd.Trigger class="next-dd-item flex-row items-center justify-between relative {{if dd.isOpen 'active'}}">
+                <div class="flex flex-row items-center">
+                    <div class="w-6">
+                        <FaIcon @icon="car" />
+                    </div>
+                    <span>Vehicles</span>
+                </div>
+                <div>
+                    <Badge @status="info" @hideStatusDot={{true}} @spanClass="rounded-full -mr-2">{{this.liveMap.originalResources.vehicles.length}}</Badge>
+                </div>
+            </dd.Trigger>
+            <dd.Content>
+                <div class="next-dd-menu">
+                    <div class="px-1">
+                        <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1 text-gray-800 dark:text-gray-300 truncate">
+                            <FaIcon @icon="binoculars" class="mr-2" />
+                            <span>Vehicle Visibility Controls...</span>
+                        </div>
+                    </div>
+                    <div class="next-dd-menu-seperator"></div>
+                    <div class="px-1">
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.triggerCallback "toggleAllOnlineOffline" "vehicles")}}>
+                            {{#if (is-visibility-control-visible this.liveMap "vehicles")}}
+                                Hide all vehicles...
+                            {{else}}
+                                Show all vehicles...
+                            {{/if}}
+                        </a>
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.triggerCallback "showOnline" "vehicles")}}>
+                            Only show online vehicles...
+                        </a>
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.triggerCallback "showOffline" "vehicles")}}>
+                            Only show offline vehicles...
+                        </a>
+                    </div>
+                </div>
+            </dd.Content>
+        </BasicDropdownHover>
+    </div>
+</div>

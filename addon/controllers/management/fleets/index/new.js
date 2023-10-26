@@ -62,7 +62,7 @@ export default class ManagementFleetsIndexNewController extends Controller {
         const { fleet } = this;
 
         this.isCreatingFleet = true;
-        this.loader.showLoader('.overlay-inner-content', 'Creating fleet...');
+        this.loader.showLoader('.overlay-inner-content', { loadingMessage: 'Creating fleet...' });
 
         try {
             return fleet

@@ -11,7 +11,7 @@ export default class HomeRoute extends Route {
     @service loader;
 
     @action loading(transition) {
-        const loader = this.loader.show(`Loading FleetOps...`);
+        const loader = this.loader.show({ loadingMessage: `Loading Fleet-Ops...` });
 
         transition.finally(() => {
             this.loader.removeLoader(loader);

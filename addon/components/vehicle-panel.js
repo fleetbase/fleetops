@@ -1,22 +1,82 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { action, computed } from '@ember/object';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
 import VehiclePanelDetailComponent from './vehicle-panel/details';
+import contextComponentCallback from '../utils/context-component-callback';
+import applyContextComponentArguments from '../utils/apply-context-component-arguments';
 
+/**
+ * Represents the vehicle panel component, handling vehicle information display and editing.
+ *
+ * @class VehiclePanelComponent
+ * @extends Component
+ */
 export default class VehiclePanelComponent extends Component {
+    /**
+     * Service for fetching data.
+     *
+     * @type {Service}
+     */
     @service fetch;
+
+    /**
+     * Service for managing modals.
+     *
+     * @type {Service}
+     */
     @service modalsManager;
+
+    /**
+     * Universe service for managing global data and settings.
+     *
+     * @type {Service}
+     */
     @service universe;
+
+    /**
+     * Ember data store service.
+     *
+     * @type {Service}
+     */
     @service store;
+
+    /**
+     * Service for managing routing within the host app.
+     *
+     * @type {Service}
+     */
     @service hostRouter;
+
+    /**
+     * Service for managing the context panel.
+     *
+     * @type {Service}
+     */
     @service contextPanel;
-    @tracked currentTab;
-    @tracked devices = [];
-    @tracked deviceApi = {};
+
+    /**
+     * The current active tab.
+     *
+     * @type {Object}
+     * @tracked
+     */
+    @tracked tab;
+
+    /**
+     * The vehicle being displayed or edited.
+     *
+     * @type {VehicleModel}
+     * @tracked
+     */
     @tracked vehicle;
 
+    /**
+     * Returns the array of tabs available for the panel.
+     *
+     * @type {Array}
+     */
     get tabs() {
         const registeredTabs = this.universe.getMenuItemsFromRegistry('component:vehicle-panel');
         // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: VehiclePanelTrackingComponent }),
@@ -29,46 +89,79 @@ export default class VehiclePanelComponent extends Component {
         return defaultTabs;
     }
 
-    @computed('currentTab', 'tabs') get tab() {
-        if (this.currentTab) {
-            return this.tabs.find(({ slug }) => slug === this.currentTab);
-        }
-
-        return null;
-    }
-
+    /**
+     * Initializes the vehicle panel component.
+     */
     constructor() {
         super(...arguments);
         this.vehicle = this.args.vehicle;
-        this.changeTab(this.args.tab);
-        this.applyDynamicArguments();
+        this.tab = this.getTabUsingSlug(this.args.tab);
+        applyContextComponentArguments(this);
     }
 
-    applyDynamicArguments() {
-        // Apply context if available
-        if (this.args.context) {
-            this.vehicle = this.args.context;
-        }
+    /**
+     * Sets the overlay context.
+     *
+     * @action
+     * @param {OverlayContextObject} overlayContext
+     */
+    @action setOverlayContext(overlayContext) {
+        this.context = overlayContext;
+        contextComponentCallback(this, 'onLoad', ...arguments);
+    }
 
-        // Apply dynamic arguments if available
-        if (this.args.dynamicArgs) {
-            const keys = Object.keys(this.args.dynamicArgs);
+    /**
+     * Handles changing the active tab.
+     *
+     * @method
+     * @param {String} tab - The new tab to switch to.
+     * @action
+     */
+    @action onTabChanged(tab) {
+        this.tab = this.getTabUsingSlug(tab);
+        contextComponentCallback(this, 'onTabChanged', tab);
+    }
 
-            keys.forEach((key) => {
-                this[key] = this.args.dynamicArgs[key];
+    /**
+     * Handles edit action for the vehicle.
+     *
+     * @method
+     * @action
+     */
+    @action onEdit() {
+        const isActionOverrided = contextComponentCallback(this, 'onEdit', this.vehicle);
+
+        if (!isActionOverrided) {
+            this.contextPanel.focus(this.vehicle, 'editing', {
+                onAfterSave: () => {
+                    this.contextPanel.clear();
+                },
             });
         }
     }
 
-    @action async changeTab(tab = 'details') {
-        this.currentTab = tab;
-
-        if (typeof this.args.onTabChanged === 'function') {
-            this.args.onTabChanged(tab);
-        }
+    /**
+     * Handles the cancel action.
+     *
+     * @method
+     * @action
+     * @returns {Boolean} Indicates whether the cancel action was overridden.
+     */
+    @action onPressCancel() {
+        return contextComponentCallback(this, 'onPressCancel', this.vehicle);
     }
 
-    @action editVehicle() {
-        this.contextPanel.focus(this.vehicle, 'editing');
+    /**
+     * Finds and returns a tab based on its slug.
+     *
+     * @param {String} tabSlug - The slug of the tab.
+     * @returns {Object|null} The found tab or null.
+     */
+    getTabUsingSlug(tabSlug) {
+        if (tabSlug) {
+            return this.tabs.find(({ slug }) => slug === tabSlug);
+        }
+
+        return this.tabs[0];
     }
 }

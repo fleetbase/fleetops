@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action, set } from '@ember/object';
 import { isArray } from '@ember/array';
-import { dasherize, camelize } from '@ember/string';
+import { dasherize, camelize, classify } from '@ember/string';
 import { singularize } from 'ember-inflector';
 import { alias } from '@ember/object/computed';
 import { later } from '@ember/runloop';
@@ -106,120 +106,155 @@ export default class LiveMapComponent extends Component {
     /**
      * An array of routes.
      * @type {Array}
+     * @memberof LiveMapComponent
      */
     @tracked routes = [];
 
     /**
      * An array of drivers.
      * @type {Array}
+     * @memberof LiveMapComponent
      */
     @tracked drivers = [];
 
     /**
      * An array of vehicles.
      * @type {Array}
+     * @memberof LiveMapComponent
      */
     @tracked vehicles = [];
 
     /**
      * An array of places.
      * @type {Array}
+     * @memberof LiveMapComponent
      */
     @tracked places = [];
 
     /**
      * An array of channels.
      * @type {Array}
+     * @memberof LiveMapComponent
      */
     @tracked channels = [];
 
     /**
      * Indicates if data is loading.
      * @type {boolean}
+     * @memberof LiveMapComponent
      */
     @tracked isLoading = true;
 
     /**
      * Indicates if the component is ready.
      * @type {boolean}
+     * @memberof LiveMapComponent
      */
     @tracked isReady = false;
 
     /**
      * Controls for visibility.
      * @type {Object}
+     * @memberof LiveMapComponent
      */
-    @tracked visibilityControls = {};
+    @tracked visibilityControls = {
+        vehicles: true,
+        onlineVehicles: true,
+        offlineVehicles: true,
+        drivers: true,
+        onlineDrivers: true,
+        offlineDrivers: true,
+        places: true,
+    };
 
     /**
      * An array of active service areas.
      * @type {Array}
+     * @memberof LiveMapComponent
      */
     @tracked activeServiceAreas = [];
 
     /**
      * An array of editable map layers.
      * @type {Array}
+     * @memberof LiveMapComponent
      */
     @tracked editableLayers = [];
 
     /**
      * The Leaflet map instance.
      * @type {Object}
+     * @memberof LiveMapComponent
      */
     @tracked leafletMap;
 
     /**
      * The map's zoom level.
      * @type {number}
+     * @memberof LiveMapComponent
      */
     @tracked zoom = 12;
 
     /**
      * The feature group for drawing on the map.
      * @type {Object}
+     * @memberof LiveMapComponent
      */
     @tracked drawFeatureGroup;
 
     /**
      * The draw control for the map.
      * @type {Object}
+     * @memberof LiveMapComponent
      */
     @tracked drawControl;
 
     /**
      * The URL for the map's tile source.
      * @type {string}
+     * @memberof LiveMapComponent
      */
     @tracked tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
 
     /**
      * The latitude for the map view.
      * @type {number}
+     * @memberof LiveMapComponent
      */
     @tracked latitude = DEFAULT_LATITUDE;
 
     /**
      * The longitude for the map view.
      * @type {number}
+     * @memberof LiveMapComponent
      */
     @tracked longitude = DEFAULT_LONGITUDE;
 
     /**
      * Indicates if coordinate setting should be skipped.
      * @type {boolean}
+     * @memberof LiveMapComponent
      */
     @tracked skipSetCoordinates = false;
 
     /**
+     * Cache for storing original state of resource arrays.
+     * @type {Object.<string, Array>}
+     * @memberof LiveMapComponent
+     */
+    originalResources = {};
+
+    /**
      * The user's latitude from the currentUser.
      * @type {number}
+     * @memberof LiveMapComponent
      */
     @alias('currentUser.latitude') userLatitude;
 
     /**
      * The user's longitude from the currentUser.
      * @type {number}
+     * @memberof LiveMapComponent
      */
     @alias('currentUser.longitude') userLongitude;
 
@@ -419,6 +454,8 @@ export default class LiveMapComponent extends Component {
                 this.triggerAction(callbackFnName);
                 this.createVisibilityControl(internalName);
                 this[internalName] = data;
+                // cache as resource
+                this.cacheOriginalResources(internalName);
 
                 if (typeof options.onLoaded === 'function') {
                     options.onLoaded(data);
@@ -477,7 +514,7 @@ export default class LiveMapComponent extends Component {
      */
     hide(name) {
         if (isArray(name)) {
-            return name.forEach(this.hide);
+            return name.forEach(this.hide.bind(this));
         }
 
         this.createVisibilityControl(name, false);
@@ -491,10 +528,25 @@ export default class LiveMapComponent extends Component {
      */
     show(name) {
         if (isArray(name)) {
-            return name.forEach(this.show);
+            return name.forEach(this.show.bind(this));
         }
 
         this.createVisibilityControl(name, true);
+    }
+
+    /**
+     * Toggles the visibility of a control by its name.
+     * Calls `hide()` if the control is currently visible, and `show()` otherwise.
+     *
+     * @param {string} name - The name of the control to toggle.
+     * @memberof LiveMapComponent
+     */
+    toggleVisibility(name) {
+        if (this.isVisible(name)) {
+            this.hide(name);
+        } else {
+            this.show(name);
+        }
     }
 
     /**
@@ -502,9 +554,152 @@ export default class LiveMapComponent extends Component {
      *
      * @param {string} name - The name of the element or feature to check visibility for.
      * @returns {boolean} Returns `true` if the element or feature is currently visible, `false` otherwise.
+     * @memberof LiveMapComponent
      */
     isVisible(name) {
         return this.visibilityControls[name] === true;
+    }
+
+    /**
+     * Caches the original state of a resource array.
+     * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
+     * @memberof LiveMapComponent
+     */
+    cacheOriginalResources(name) {
+        if (!this.originalResources[name]) {
+            this.originalResources[name] = [...this[name]];
+        }
+    }
+
+    /**
+     * Retrieves the original resources array for a given name.
+     * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
+     * @returns {Array} - The original array of resources; an empty array if not set.
+     * @memberof LiveMapComponent
+     */
+    getOriginalResources(name) {
+        if (isArray(this.originalResources[name])) {
+            return this.originalResources[name];
+        }
+
+        return [];
+    }
+
+    /**
+     * Shows all online and offline resources for a given name.
+     * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
+     * @memberof LiveMapComponent
+     */
+    showAllOnlineOffline(name) {
+        this.show(name);
+        this.showOnline(name);
+        this.showOffline(name);
+    }
+
+    /**
+     * Hides all online and offline resources for a given name.
+     * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
+     * @memberof LiveMapComponent
+     */
+    hideAllOnlineOffline(name) {
+        this.hide(name);
+        this.hideOnline(name);
+        this.hideOffline(name);
+    }
+
+    /**
+     * Toggles the visibility of all online and offline resources for a given name.
+     * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
+     * @memberof LiveMapComponent
+     */
+    toggleAllOnlineOffline(name) {
+        if (this.isVisible(name)) {
+            this.hideAllOnlineOffline(name);
+        } else {
+            this.showAllOnlineOffline(name);
+        }
+    }
+
+    /**
+     * Toggles the visibility of online resources for a given array.
+     * @method toggleOnline
+     * @param {string} name - The name of the resource array (e.g., 'vehicles', 'drivers').
+     * @memberof LiveMapComponent
+     */
+    toggleOnline(name) {
+        const visibilityControlName = `online${classify(name)}`;
+
+        if (this.isVisible(visibilityControlName)) {
+            this.hideOnline(name);
+        } else {
+            this.showOnline(name);
+        }
+    }
+
+    /**
+     * Toggles the visibility of offline resources for a given array.
+     * @method toggleOffline
+     * @param {string} name - The name of the resource array (e.g., 'vehicles', 'drivers').
+     * @memberof LiveMapComponent
+     */
+    toggleOffline(name) {
+        const visibilityControlName = `offline${classify(name)}`;
+
+        if (this.isVisible(visibilityControlName)) {
+            this.hideOffline(name);
+        } else {
+            this.showOffline(name);
+        }
+    }
+
+    /**
+     * Hides online resources from a given array and updates it.
+     * @method hideOnline
+     * @param {string} name - The name of the resource array (e.g., 'vehicles', 'drivers').
+     * @memberof LiveMapComponent
+     */
+    hideOnline(name) {
+        this[name] = this.getOriginalResources(name).filter((resource) => !resource.online);
+
+        // track with visibility controls
+        this.createVisibilityControl(`online${classify(name)}`, false);
+    }
+
+    /**
+     * Shows online resources from a given array and updates it.
+     * @method showOnline
+     * @param {string} name - The name of the resource array (e.g., 'vehicles', 'drivers').
+     * @memberof LiveMapComponent
+     */
+    showOnline(name) {
+        this[name] = this.getOriginalResources(name).filter((resource) => resource.online);
+
+        // track with visibility controls
+        this.createVisibilityControl(`online${classify(name)}`, true);
+    }
+
+    /**
+     * Hides offline resources from a specified array.
+     * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
+     * @memberof LiveMapComponent
+     */
+    hideOffline(name) {
+        this[name] = this.getOriginalResources(name).filter((resource) => resource.online);
+
+        // track with visibility controls
+        this.createVisibilityControl(`offline${classify(name)}`, false);
+    }
+
+    /**
+     * Shows offline resources from a specified array.
+     * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
+     * @memberof LiveMapComponent
+     */
+    showOffline(name) {
+        this[name] = this.getOriginalResources(name).filter((resource) => !resource.online);
+
+        // track with visibility controls
+        this.createVisibilityControl(`offline${classify(name)}`, true);
     }
 
     /**
@@ -514,6 +709,7 @@ export default class LiveMapComponent extends Component {
      * @param {string} [options.onText='Hide draw controls...'] - Text to display when enabling draw controls.
      * @param {string} [options.offText='Enable draw controls...'] - Text to display when disabling draw controls.
      * @param {string} [options.callback=function] - Callback function to trigger after toggle.
+     * @memberof LiveMapComponent
      */
     toggleDrawControlContextMenuItem(options = {}) {
         const toggle = !this.isVisible('drawControls');
@@ -537,6 +733,7 @@ export default class LiveMapComponent extends Component {
      * Removes a specific service area from the context menu.
      *
      * @param {Object} serviceArea - The service area to be removed from the context menu.
+     * @memberof LiveMapComponent
      */
     removeServiceAreaFromContextMenu(serviceArea) {
         this.leafletContextmenuManager.removeItemFromContextMenu('map', `Focus Service Area: ${serviceArea.name}`);
@@ -547,6 +744,7 @@ export default class LiveMapComponent extends Component {
      *
      * @param {string} id - The ID of the Leaflet layer to retrieve.
      * @returns {Object|null} The found Leaflet layer or `null` if not found.
+     * @memberof LiveMapComponent
      */
     getLeafletLayerById(id) {
         return this.leafletMapManager.getLeafletLayerById(this.leafletMap, id);
@@ -557,6 +755,7 @@ export default class LiveMapComponent extends Component {
      *
      * @param {Function} callback - A callback function that defines the condition for finding the layer.
      * @returns {Object|null} The found Leaflet layer or `null` if not found.
+     * @memberof LiveMapComponent
      */
     findLeafletLayer(callback) {
         return this.leafletMapManager.findLeafletLayer(this.leafletMap, callback);
@@ -1183,7 +1382,7 @@ export default class LiveMapComponent extends Component {
         // Add Service Area Context Menu Items
         const serviceAreas = this.serviceAreas.getFromCache();
 
-        if (isArray(serviceAreas)) {
+        if (isArray(serviceAreas) && serviceAreas.length) {
             contextmenuItems.pushObject({
                 separator: true,
             });
@@ -1227,7 +1426,7 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @action createDriverContextMenu(driver, layer) {
-        const contextmenuItems = [
+        let contextmenuItems = [
             {
                 separator: true,
             },
@@ -1258,7 +1457,13 @@ export default class LiveMapComponent extends Component {
                     return {
                         text: menuItem.title,
                         callback: () => {
-                            return menuItem.onClick(driver, layer, menuItem);
+                            const callbackContext = {
+                                driver,
+                                layer,
+                                contextmenuService: this.leafletContextmenuManager,
+                                menuItem,
+                            };
+                            return menuItem.onClick(callbackContext);
                         },
                     };
                 }),
@@ -1309,7 +1514,13 @@ export default class LiveMapComponent extends Component {
                     return {
                         text: menuItem.title,
                         callback: () => {
-                            return menuItem.onClick(vehicle, layer, menuItem);
+                            const callbackContext = {
+                                vehicle,
+                                layer,
+                                contextmenuService: this.leafletContextmenuManager,
+                                menuItem,
+                            };
+                            return menuItem.onClick(callbackContext);
                         },
                     };
                 }),
@@ -1333,7 +1544,7 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @action createZoneContextMenu(zone, layer) {
-        const contextmenuItems = [
+        let contextmenuItems = [
             {
                 separator: true,
             },
@@ -1373,7 +1584,7 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @action createServiceAreaContextMenu(serviceArea, layer) {
-        const contextmenuItems = [
+        let contextmenuItems = [
             {
                 separator: true,
             },
