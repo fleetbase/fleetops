@@ -116,9 +116,8 @@
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
                     <div class="input-group mb-2">
                         <InputLabel @labelText="Select map avatar" @helpText="Select an avatar to be used for rendering on maps when using geolocation tracking features." />
-                        <FetchSelect class="w-60" @placeholder="Select avatar" @path="vehicles/avatars" @value={{this.vehicle.avatar_url}} @onSelect={{fn (mut
-                                this.vehicle.avatar_url)}} as |option key|>
-                            {{titleize (humanize key)}}
+                        <FetchSelect @wrapperClass="w-60" @placeholder="Select avatar" @endpoint="vehicles/avatars" @selected={{this.vehicle.avatar_url}} @optionValue="value" @onChange={{fn (mut this.vehicle.avatar_url)}} as |option|>
+                            {{titleize (humanize option.key)}}
                         </FetchSelect>
                     </div>
                     <div>
