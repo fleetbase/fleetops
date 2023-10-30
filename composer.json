@@ -1,6 +1,6 @@
 {
     "name": "fleetbase/fleetops-api",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "keywords": [
         "fleetbase-extension",
@@ -58,7 +58,8 @@
         "laravel": {
             "providers": [
                 "Fleetbase\\FleetOps\\Providers\\FleetOpsServiceProvider",
-                "Fleetbase\\FleetOps\\Providers\\EventServiceProvider"
+                "Fleetbase\\FleetOps\\Providers\\EventServiceProvider",
+                "Fleetbase\\FleetOps\\Providers\\NotificationServiceProvider"
             ]
         },
         "fleetbase/fleetops-api": {
