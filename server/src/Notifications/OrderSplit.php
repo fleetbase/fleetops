@@ -12,6 +12,34 @@ class OrderSplit extends Notification
     use Queueable;
 
     /**
+     * The order instance this notification is for.
+     *
+     * @var \Fleetbase\Models\Order
+     */
+    public $order;
+
+    /**
+     * Notification name.
+     *
+     * @var string
+     */
+    public static string $name = 'Order Split';
+
+    /**
+     * Notification description.
+     *
+     * @var string
+     */
+    public static string $description = 'Notify when an order has been splited.';
+
+    /**
+     * Notification package.
+     *
+     * @var string
+     */
+    public static string $package = 'fleet-ops';
+
+    /**
      * Create a new notification instance.
      *
      * @return void
@@ -38,9 +66,9 @@ class OrderSplit extends Notification
     public function toMail($notifiable)
     {
         return (new MailMessage())
-                    ->line('The introduction to the notification.')
-                    ->action('Notification Action', url('/'))
-                    ->line('Thank you for using our application!');
+            ->line('The introduction to the notification.')
+            ->action('Notification Action', url('/'))
+            ->line('Thank you for using our application!');
     }
 
     /**
@@ -50,7 +78,6 @@ class OrderSplit extends Notification
      */
     public function toArray($notifiable)
     {
-        return [
-        ];
+        return [];
     }
 }

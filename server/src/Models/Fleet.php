@@ -9,6 +9,7 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
@@ -23,6 +24,7 @@ class Fleet extends Model
     use Searchable;
     use HasSlug;
     use LogsActivity;
+    use Notifiable;
 
     /**
      * The database table used by the model.

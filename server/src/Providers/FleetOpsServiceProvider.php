@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Providers;
 use Brick\Geo\Engine\GeometryEngineRegistry;
 use Brick\Geo\Engine\GEOSEngine;
 use Fleetbase\Providers\CoreServiceProvider;
+use Fleetbase\Support\NotificationRegistry;
 
 if (!class_exists(CoreServiceProvider::class)) {
     throw new \Exception('FleetOps cannot be loaded without `fleetbase/core-api` installed!');
@@ -78,6 +79,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             $schedule->command('fleetops:dispatch-adhoc')->everyMinute();
             $schedule->command('fleetops:update-estimations')->everyFifteenMinutes();
         });
+        $this->registerNotifications();
         $this->registerExpansionsFrom(__DIR__ . '/../Expansions');
         $this->loadRoutesFrom(__DIR__ . '/../routes.php');
         $this->loadMigrationsFrom(__DIR__ . '/../../migrations');
@@ -90,5 +92,25 @@ class FleetOpsServiceProvider extends CoreServiceProvider
 
         // Register the GeometryEngine for GEOSEngine
         GeometryEngineRegistry::set(new GEOSEngine());
+    }
+
+    public function registerNotifications()
+    {
+        // Register Notifications
+        NotificationRegistry::register([
+            \Fleetbase\FleetOps\Notifications\OrderAssigned::class,
+            \Fleetbase\FleetOps\Notifications\OrderCanceled::class,
+            \Fleetbase\FleetOps\Notifications\OrderDispatched::class,
+            \Fleetbase\FleetOps\Notifications\OrderDispatchFailed::class,
+            \Fleetbase\FleetOps\Notifications\OrderPing::class,
+        ]);
+
+        // Register Notifiables
+        NotificationRegistry::registerNotifiable([
+            \Fleetbase\FleetOps\Models\Contact::class,
+            \Fleetbase\FleetOps\Models\Driver::class,
+            \Fleetbase\FleetOps\Models\Vendor::class,
+            \Fleetbase\FleetOps\Models\Fleet::class,
+        ]);
     }
 }

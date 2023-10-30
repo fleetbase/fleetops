@@ -30,6 +30,27 @@ class OrderDispatchFailed extends Notification implements ShouldQueue
     public $reason;
 
     /**
+     * Notification name.
+     *
+     * @var string
+     */
+    public static string $name = 'Order dispatch Failed';
+
+    /**
+     * Notification description.
+     *
+     * @var string
+     */
+    public static string $description = 'Notify when an order dispatch has been failed.';
+
+    /**
+     * Notification package.
+     *
+     * @var string
+     */
+    public static string $package = 'fleet-ops';
+
+    /**
      * Create a new notification instance.
      *
      * @return void

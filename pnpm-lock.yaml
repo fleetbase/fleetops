@@ -5,8 +5,8 @@ dependencies:
     specifier: ^0.1.6
     version: 0.1.6(@babel/core@7.23.2)(ember-fetch@8.1.2)(postcss@8.4.31)(webpack@5.74.0)
   '@fleetbase/ember-ui':
-    specifier: ^0.2.1
-    version: 0.2.1(@babel/core@7.23.2)(@ember/test-helpers@2.8.1)(ember-source@4.6.0)(postcss@8.4.31)(rollup@4.1.4)(webpack@5.74.0)
+    specifier: ^0.2.2
+    version: 0.2.2(@babel/core@7.23.2)(@ember/test-helpers@2.8.1)(ember-source@4.6.0)(postcss@8.4.31)(rollup@4.1.4)(webpack@5.74.0)
   '@fleetbase/fleetops-data':
     specifier: ^0.1.1
     version: 0.1.1
@@ -2285,8 +2285,8 @@ packages:
       - webpack
     dev: false
 
-  /@fleetbase/ember-ui@0.2.1(@babel/core@7.23.2)(@ember/test-helpers@2.8.1)(ember-source@4.6.0)(postcss@8.4.31)(rollup@4.1.4)(webpack@5.74.0):
-    resolution: {integrity: sha512-yxQFvPxY+6paJkj0pa6dW2+DpIEGAi053hsGEo9+7oyLpKD14x4kYTXh94q1z1wHx4+1gNGEuFkc1oEzsC+aqA==}
+  /@fleetbase/ember-ui@0.2.2(@babel/core@7.23.2)(@ember/test-helpers@2.8.1)(ember-source@4.6.0)(postcss@8.4.31)(rollup@4.1.4)(webpack@5.74.0):
+    resolution: {integrity: sha512-g9NvlHSqJrmNzAM1Te4NZ5A2lwP6VbPTyJ8BfBcIUy0sjEL/oH1mmgA3jR5h9r+6m+FbcViByO9CXw6XMs/yLQ==}
     engines: {node: 14.* || >= 16}
     dependencies:
       '@ember/render-modifiers': 2.1.0(@babel/core@7.23.2)(ember-source@4.6.0)
@@ -2309,11 +2309,11 @@ packages:
       chartjs-adapter-date-fns: 3.0.0(chart.js@4.4.0)(date-fns@2.30.0)
       date-fns: 2.30.0
       ember-animated: 1.0.4(@ember/test-helpers@2.8.1)(ember-source@4.6.0)
-      ember-auto-import: 2.4.2(webpack@5.74.0)
+      ember-auto-import: 2.6.3(webpack@5.74.0)
       ember-basic-dropdown: 7.2.2(@babel/core@7.23.2)(@ember/string@3.1.1)(ember-source@4.6.0)(webpack@5.74.0)
       ember-cli-accounting: 2.1.0
       ember-cli-babel: 7.26.11
-      ember-cli-htmlbars: 6.1.0
+      ember-cli-htmlbars: 6.3.0
       ember-cli-postcss: 8.2.0
       ember-cli-string-helpers: 6.1.0
       ember-composable-helpers: 5.0.0
@@ -2503,7 +2503,7 @@ packages:
       broccoli-source: 3.0.1
       camel-case: 4.1.2
       ember-ast-helpers: 0.3.5
-      ember-auto-import: 2.4.2(webpack@5.74.0)
+      ember-auto-import: 2.6.3(webpack@5.74.0)
       ember-cli-babel: 7.26.11
       ember-cli-htmlbars: 5.7.2
       ember-get-config: 2.1.1
@@ -6448,7 +6448,7 @@ packages:
     engines: {node: '>= 12'}
     dependencies:
       ember-cli-babel: 7.26.11
-      ember-cli-htmlbars: 6.1.0
+      ember-cli-htmlbars: 6.3.0
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -6589,7 +6589,7 @@ packages:
       '@glimmer/component': 1.1.2(@babel/core@7.23.2)
       '@glimmer/tracking': 1.1.2
       ember-cli-babel: 7.26.11
-      ember-cli-htmlbars: 6.1.0
+      ember-cli-htmlbars: 6.3.0
       ember-cli-typescript: 4.2.1
       ember-element-helper: 0.6.1(ember-source@4.6.0)
       ember-get-config: 2.1.1
@@ -7509,7 +7509,7 @@ packages:
     dependencies:
       '@embroider/util': 1.12.0(ember-source@4.6.0)
       ember-cli-babel: 7.26.11
-      ember-cli-htmlbars: 6.1.0
+      ember-cli-htmlbars: 6.3.0
       ember-source: 4.6.0(@babel/core@7.23.2)(webpack@5.74.0)
     transitivePeerDependencies:
       - '@glint/environment-ember-loose'
@@ -7612,7 +7612,7 @@ packages:
       '@embroider/macros': 1.13.2
       '@glimmer/component': 1.1.2(@babel/core@7.23.2)
       '@glimmer/tracking': 1.1.2
-      ember-auto-import: 2.4.2(webpack@5.74.0)
+      ember-auto-import: 2.6.3(webpack@5.74.0)
       ember-modifier: 3.2.7(@babel/core@7.23.2)
       tracked-built-ins: 3.3.0
     transitivePeerDependencies:
@@ -7932,7 +7932,7 @@ packages:
       ember-assign-helper: 0.4.0
       ember-cli-babel: 7.26.11
       ember-cli-element-closest-polyfill: 0.0.2
-      ember-cli-htmlbars: 6.1.0
+      ember-cli-htmlbars: 6.3.0
       ember-concurrency: 2.3.7(@babel/core@7.23.2)
       ember-decorators: 6.1.1
       ember-element-helper: 0.6.1(ember-source@4.6.0)
@@ -7955,7 +7955,7 @@ packages:
       ember-assign-helper: 0.4.0
       ember-basic-dropdown: 6.0.2(@babel/core@7.23.2)(ember-source@4.6.0)
       ember-cli-babel: 7.26.11
-      ember-cli-htmlbars: 6.1.0
+      ember-cli-htmlbars: 6.3.0
       ember-cli-typescript: 4.2.1
       ember-concurrency: 2.3.7(@babel/core@7.23.2)
       ember-concurrency-decorators: 2.0.3(@babel/core@7.23.2)
@@ -8013,7 +8013,7 @@ packages:
     engines: {node: 10.* || >= 12}
     dependencies:
       ember-cli-babel: 7.26.11
-      ember-cli-htmlbars: 6.1.0
+      ember-cli-htmlbars: 6.3.0
       ember-modifier: 3.2.7(@babel/core@7.23.2)
     transitivePeerDependencies:
       - '@babel/core'
