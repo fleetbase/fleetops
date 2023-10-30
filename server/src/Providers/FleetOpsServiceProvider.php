@@ -4,7 +4,7 @@ namespace Fleetbase\FleetOps\Providers;
 
 use Brick\Geo\Engine\GeometryEngineRegistry;
 use Brick\Geo\Engine\GEOSEngine;
-use Fleetbase\Notifications\NotificationRegistry;
+use Fleetbase\Support\NotificationRegistry;
 use Fleetbase\Providers\CoreServiceProvider;
 
 if (!class_exists(CoreServiceProvider::class)) {
