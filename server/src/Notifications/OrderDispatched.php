@@ -34,6 +34,27 @@ class OrderDispatched extends Notification implements ShouldQueue
     public $order;
 
     /**
+     * Notification name.
+     *
+     * @var string
+     */
+    public static string $name = 'Order Dispatched';
+
+    /**
+     * Notification description.
+     *
+     * @var string
+     */
+    public static string $description = 'Notify when an order has been dispatched.';
+
+    /**
+     * Notification package.
+     *
+     * @var string
+     */
+    public static string $package = 'fleet-ops';
+
+    /**
      * Create a new notification instance.
      *
      * @return void

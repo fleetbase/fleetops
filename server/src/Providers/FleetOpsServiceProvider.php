@@ -98,6 +98,14 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Notifications\OrderPing::class,
         ]);
 
+        // register notifiables
+        NotificationRegistry::registerNotifiable([
+            \Fleetbase\FleetOps\Models\Contact::class,
+            \Fleetbase\FleetOps\Models\Driver::class,
+            \Fleetbase\FleetOps\Models\Vendor::class,
+            \Fleetbase\FleetOps\Models\Fleet::class,
+        ]);
+
         // Register the GeometryEngine for GEOSEngine
         GeometryEngineRegistry::set(new GEOSEngine());
     }
