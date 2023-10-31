@@ -1,4 +1,4 @@
-import Controller, { inject as controller } from '@ember/controller';
+import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -7,20 +7,6 @@ import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 
 export default class ManagementFuelReportsIndexController extends Controller {
-    /**
-     * Inject the `management.drivers.index` controller
-     *
-     * @var {Controller}
-     */
-    @controller('management.drivers.index') drivers;
-
-    /**
-     * Inject the `management.vehicles.index` controller
-     *
-     * @var {Controller}
-     */
-    @controller('management.vehicles.index') vehicles;
-
     /**
      * Inject the `notifications` service
      *
@@ -55,6 +41,13 @@ export default class ManagementFuelReportsIndexController extends Controller {
      * @var {Service}
      */
     @service hostRouter;
+
+    /**
+     * Inject the `contextPanel` service
+     *
+     * @var {Service}
+     */
+    @service contextPanel;
 
     /**
      * Inject the `filters` service
@@ -152,7 +145,17 @@ export default class ManagementFuelReportsIndexController extends Controller {
             valuePath: 'driver_name',
             width: '120px',
             cellComponent: 'table/cell/anchor',
-            action: this.viewDriver,
+            action: async (fuelReport) => {
+                let driver;
+
+                if (!fuelReport.driver) {
+                    driver = await fuelReport.loadDriver();
+                } else {
+                    driver = await fuelReport.driver;
+                }
+
+                this.contextPanel.focus(driver);
+            },
             resizable: true,
             sortable: true,
             filterable: true,
@@ -166,7 +169,17 @@ export default class ManagementFuelReportsIndexController extends Controller {
             valuePath: 'vehicle_name',
             width: '120px',
             cellComponent: 'table/cell/anchor',
-            action: this.viewVehicle,
+            action: async (fuelReport) => {
+                let vehicle;
+                
+                if (!fuelReport.vehicle) {
+                    vehicle = await fuelReport.loadVehicle();
+                } else {
+                    vehicle = await fuelReport.vehicle;
+                }
+
+                this.contextPanel.focus(vehicle);
+            },
             resizable: true,
             sortable: true,
             filterable: true,
@@ -264,24 +277,6 @@ export default class ManagementFuelReportsIndexController extends Controller {
     ];
 
     /**
-     * Bulk deletes selected `driver` via confirm prompt
-     *
-     * @param {Array} selected an array of selected models
-     * @void
-     */
-    @action bulkDeleteFuelReports() {
-        const selected = this.table.selectedRows;
-
-        this.crud.bulkFuelReports(selected, {
-            modelNamePath: `name`,
-            acceptButtonText: 'Delete Fuel Reports',
-            onSuccess: () => {
-                return this.hostRouter.refresh();
-            },
-        });
-    }
-
-    /**
      * The search task.
      *
      * @void
@@ -306,7 +301,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
     }
 
     /**
-     * Toggles dialog to export `fuel-report`
+     * Toggles dialog to export a fuel report
      *
      * @void
      */
@@ -314,105 +309,38 @@ export default class ManagementFuelReportsIndexController extends Controller {
         this.crud.export('fuel-report');
     }
 
-    @action async viewDriver(fuelReport) {
-        if (!fuelReport.driver_uuid) {
-            return this.notifications.warning('No driver attributed to fuel report.');
-        }
-
-        this.loader.show({ loadingMessage: 'Loading...' });
-        const driver = await this.store.findRecord('driver', fuelReport.driver_uuid);
-        this.loader.removeLoader();
-
-        // display driver details
-        this.drivers.viewDriver(driver);
-    }
-
-    @action async viewVehicle(fuelReport) {
-        if (!fuelReport.vehicle_uuid) {
-            return this.notifications.warning('No vehicle attributed to fuel report.');
-        }
-
-        this.loader.show({ loadingMessage: 'Loading...' });
-        const vehicle = await this.store.findRecord('vehicle', fuelReport.vehicle_uuid);
-        this.loader.remove();
-
-        // display vehicle details
-        this.vehicles.viewVehicle(vehicle);
-    }
-
     /**
-     * View a `fuelReport` details in modal
+     * View the selected fuel report
      *
      * @param {FuelReportModel} fuelReport
      * @param {Object} options
      * @void
      */
-    @action viewFuelReport(fuelReport, options = {}) {
-        this.modalsManager.show('modals/fuel-report-details', {
-            title: `Fuel Report - ${fuelReport.createdAt}`,
-            hideDeclineButton: true,
-            confirmButtonText: 'Done',
-            fuelReport,
-            ...options,
-        });
+    @action viewFuelReport(fuelReport) {
+        this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport);
     }
 
     /**
-     * Create a new `fuelReport` in modal
+     * Create a new fuel report
      *
      * @void
      */
     @action createFuelReport() {
-        const fuelReport = this.store.createRecord('fuel-report');
-
-        return this.editFuelReport(fuelReport, {
-            title: 'New Fuel Report',
-            acceptButtonText: 'Confirm & Create',
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            successNotification: 'New fuel report created.',
-            onConfirm: () => {
-                this.hostRouter.refresh();
-            },
-        });
+        this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.new');
     }
 
     /**
-     * Edit a `fuelReport` details
+     * Edit a fuel report
      *
      * @param {FuelReportModel} fuelReport
-     * @param {Object} options
      * @void
      */
-    @action editFuelReport(fuelReport, options = {}) {
-        this.modalsManager.show('modals/fuel-report-form', {
-            title: 'Edit FuelReport',
-            acceptButtonIcon: 'save',
-            fuelReport,
-            confirm: (modal, done) => {
-                modal.startLoading();
-
-                return fuelReport
-                    .save()
-                    .then((fuelReport) => {
-                        if (typeof options.successNotification === 'function') {
-                            this.notifications.success(options.successNotification(fuelReport));
-                        } else {
-                            this.notifications.success(options.successNotification ?? `Fuel report details updated.`);
-                        }
-                        return done();
-                    })
-                    .catch((error) => {
-                        this.notifications.serverError(error);
-                        modal.stopLoading();
-                    });
-            },
-            ...options,
-        });
+    @action editFuelReport(fuelReport) {
+        this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.edit', fuelReport);
     }
 
     /**
-     * Delete a `fuelReport` via confirm prompt
+     * Prompt to delete a fuel report
      *
      * @param {FuelReportModel} fuelReport
      * @param {Object} options
@@ -424,6 +352,24 @@ export default class ManagementFuelReportsIndexController extends Controller {
                 this.hostRouter.refresh();
             },
             ...options,
+        });
+    }
+
+    /**
+     * Bulk deletes selected fuel report's via confirm prompt
+     *
+     * @param {Array} selected an array of selected models
+     * @void
+     */
+    @action bulkDeleteFuelReports() {
+        const selected = this.table.selectedRows;
+
+        this.crud.bulkFuelReports(selected, {
+            modelNamePath: `name`,
+            acceptButtonText: 'Delete Fuel Reports',
+            onSuccess: () => {
+                return this.hostRouter.refresh();
+            },
         });
     }
 }

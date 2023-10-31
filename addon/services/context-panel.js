@@ -36,6 +36,16 @@ export default class ContextPanelService extends Service {
                 componentArguments: [{ isResizable: true }, { width: '600px' }],
             },
         },
+        fuelReport: {
+            viewing: {
+                component: 'fuel-report-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+            editing: {
+                component: 'fuel-report-form-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+        },
     };
 
     /**

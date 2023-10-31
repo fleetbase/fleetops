@@ -1,0 +1,104 @@
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizeble={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "600px"}}
+>
+    <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
+        <div class="flex flex-row items-center justify-between w-full mb-4">
+            <div class="flex flex-1 space-x-2">
+                {{#if this.fuelReport.id}}
+                    <Button @type="default" @icon="car" @helpText="View fuel report details" @onClick={{this.onViewDetails}} />
+                {{/if}}
+            </div>
+            <div class="flex flex-1 justify-end">
+                <div class="mr-2">
+                    <Button @icon={{if this.fuelReport.id "save" "check"}} @type="primary" @text={{if this.fuelReport.id "Save Fuel Report" "Create Fuel Report"}} @onClick={{this.save}} />
+                </div>
+                <Button @type="default" @icon="times" @helpText={{if this.fuelReport.id "Cancel editing fuel report" "Cancel new fuel report"}} @onClick={{this.onPressCancel}} />
+            </div>
+        </div>
+        <div class="flex flex-row justify-between w-full">
+            <div class="flex flex-col flex-1 w-3/4">
+                <div class="flex flex-row">
+                    <div class="flex flex-col pt-2">
+                        <h1 class="text-gray-900 dark:text-white text-2xl">
+                            {{#if this.fuelReport.id}}
+                                {{this.fuelReport.name}}
+                            {{else}}
+                                {{#if this.fuelReport.name}}
+                                    {{this.fuelReport.name}}
+                                {{else}}
+                                    <span>New Fuel Report</span>
+                                {{/if}}
+                            {{/if}}
+                        </h1>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end w-1/4">
+                <Badge @status={{this.fuelReport.status}} />
+            </div>
+        </div>
+    </Overlay::Header>
+
+    <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
+        <div class="grid grid-cols-1 text-xs dark:text-gray-100">
+            <InputGroup @name="Driver">
+                <ModelSelect
+                    @modelName="driver"
+                    @selectedModel={{this.fuelReport.driver}}
+                    @placeholder="Select Driver"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut this.fuelReport.driver)}}
+                    @onChangeId={{fn (mut this.fuelReport.driver_uuid)}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+            <InputGroup @name="Vehicle">
+                <ModelSelect
+                    @modelName="vehicle"
+                    @selectedModel={{this.fuelReport.vehicle}}
+                    @placeholder="Select Vehicle"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut this.fuelReport.vehicle)}}
+                    @onChangeId={{fn (mut this.fuelReport.vehicle_uuid)}}
+                    as |model|
+                >
+                    {{model.display_name}}
+                </ModelSelect>
+            </InputGroup>
+            <InputGroup @name="Odometer" @type="number" @value={{this.fuelReport.odometer}} />
+            <InputGroup @name="Cost">
+                <MoneyInput
+                    class="w-full"
+                    @value={{this.fuelReport.amount}}
+                    @currency={{this.fuelReport.currency}}
+                    @canSelectCurrency={{true}}
+                    @onCurrencyChange={{fn (mut this.fuelReport.currency)}}
+                />
+            </InputGroup>
+            <InputGroup @name="Volume" @helpText="Select the metric unit and volume of fuel to report." @wrapperClass="w-full">
+                <UnitInput
+                    class="w-full"
+                    @measurement="volume"
+                    @value={{this.fuelReport.volume}}
+                    @unit={{this.fuelReport.metric_unit}}
+                    @canSelectUnit={{true}}
+                    @onUnitChange={{fn (mut this.fuelReport.metric_unit)}}
+                />
+            </InputGroup>
+            <InputGroup @name="Coordinates">
+                <CoordinatesInput @value={{this.fuelReport.location}} @onChange={{fn (mut this.fuelReport.location)}} />
+            </InputGroup>
+        </div>
+    </Overlay::Body>
+</Overlay>
