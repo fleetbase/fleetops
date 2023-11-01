@@ -33,16 +33,16 @@ export default class ManagementFuelReportsIndexEditController extends Controller
      */
     @action transitionBack(fuelReport) {
         // check if fuel-report record has been edited and prompt for confirmation
-        if (driver.hasDirtyAttributes) {
+        if (fuelReport.hasDirtyAttributes) {
             return this.confirmContinueWithUnsavedChanges(fuelReport, {
                 confirm: () => {
-                    driver.rollbackAttributes();
-                    return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index');
+                    fuelReport.rollbackAttributes();
+                    return this.transitionToRoute('management.fuel-reports.index');
                 },
             });
         }
 
-        return this.hostRouter.transitionTo('console.fleet-ops.management.fuelReports.index');
+        return this.transitionToRoute('management.fuel-reports.index');
     }
 
     /**
@@ -64,11 +64,11 @@ export default class ManagementFuelReportsIndexEditController extends Controller
      */
     @action onViewDetails(fuelReport) {
         // check if fuel-report record has been edited and prompt for confirmation
-        if (driver.hasDirtyAttributes) {
+        if (fuelReport.hasDirtyAttributes) {
             return this.confirmContinueWithUnsavedChanges(fuelReport);
         }
 
-        return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport);
+        return this.transitionToRoute('management.fuel-reports.index.details', fuelReport);
     }
 
     /**
@@ -84,7 +84,7 @@ export default class ManagementFuelReportsIndexEditController extends Controller
         }
 
         this.hostRouter.refresh();
-        return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport);
+        return this.transitionToRoute('management.fuel-reports.index.details', fuelReport);
     }
 
     /**
@@ -99,11 +99,11 @@ export default class ManagementFuelReportsIndexEditController extends Controller
     confirmContinueWithUnsavedChanges(fuelReport, options = {}) {
         return this.modalsManager.confirm({
             title: 'Continue Without Saving?',
-            body: 'Unsaved changes to this driver will be lost. Click continue to proceed.',
+            body: 'Unsaved changes to this fuel report will be lost. Click continue to proceed.',
             acceptButtonText: 'Continue without saving',
             confirm: () => {
-                driver.rollbackAttributes();
-                return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport);
+                fuelReport.rollbackAttributes();
+                return this.transitionToRoute('management.fuel-reports.index.details', fuelReport);
             },
             ...options,
         });

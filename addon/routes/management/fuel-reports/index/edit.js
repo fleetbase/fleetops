@@ -7,8 +7,4 @@ export default class ManagementFuelReportsIndexEditRoute extends Route {
     model({ public_id }) {
         return this.store.findRecord('fuel-report', public_id);
     }
-
-    async setupController(controller, model) {
-        controller.fuelReport = model;
-    }
 }

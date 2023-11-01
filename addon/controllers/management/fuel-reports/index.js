@@ -133,12 +133,15 @@ export default class ManagementFuelReportsIndexController extends Controller {
      */
     @tracked columns = [
         {
-            label: null,
-            width: '20px',
+            label: 'ID',
+            valuePath: 'public_id',
+            width: '120px',
             cellComponent: 'table/cell/anchor',
-            anchorIcon: 'eye',
-            anchorSpanClass: 'hidden',
             action: this.viewFuelReport,
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterComponent: 'filter/string',
         },
         {
             label: 'Driver',
@@ -171,7 +174,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             cellComponent: 'table/cell/anchor',
             action: async (fuelReport) => {
                 let vehicle;
-                
+
                 if (!fuelReport.vehicle) {
                     vehicle = await fuelReport.loadVehicle();
                 } else {
@@ -187,17 +190,6 @@ export default class ManagementFuelReportsIndexController extends Controller {
             filterComponentPlaceholder: 'Select vehicle',
             filterParam: 'vehicle',
             model: 'vehicle',
-        },
-        {
-            label: 'ID',
-            valuePath: 'public_id',
-            width: '120px',
-            cellComponent: 'table/cell/anchor',
-            action: this.viewFuelReport,
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/string',
         },
         {
             label: 'Country',
@@ -317,7 +309,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
      * @void
      */
     @action viewFuelReport(fuelReport) {
-        this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport);
+        this.transitionToRoute('management.fuel-reports.index.details', fuelReport);
     }
 
     /**
@@ -326,7 +318,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
      * @void
      */
     @action createFuelReport() {
-        this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.new');
+        this.transitionToRoute('management.fuel-reports.index.new');
     }
 
     /**
@@ -336,7 +328,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
      * @void
      */
     @action editFuelReport(fuelReport) {
-        this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.edit', fuelReport);
+        this.transitionToRoute('management.fuel-reports.index.edit', fuelReport);
     }
 
     /**

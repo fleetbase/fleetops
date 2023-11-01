@@ -36,7 +36,7 @@ export default class ManagementFuelReportsIndexDetailsController extends Control
      * @returns {Transition} The transition object representing the route change.
      */
     @action transitionBack() {
-        return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index');
+        return this.transitionToRoute('management.fuel-reports.index');
     }
 
     /**
@@ -48,7 +48,7 @@ export default class ManagementFuelReportsIndexDetailsController extends Control
      * @returns {Transition} The transition object representing the route change.
      */
     @action onEdit(fuelReport) {
-        return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.edit', fuelReport);
+        return this.transitionToRoute('management.fuel-reports.index.edit', fuelReport);
     }
 
     /**
