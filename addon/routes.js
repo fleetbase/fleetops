@@ -51,7 +51,11 @@ export default buildRoutes(function () {
             this.route('index', { path: '/' });
         });
         this.route('contacts', function () {
-            this.route('index', { path: '/' });
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('details', { path: '/:public_id' });
+                this.route('edit', { path: '/edit/:public_id' });
+            });
         });
         this.route('issues', function () {
             this.route('index', { path: '/' });

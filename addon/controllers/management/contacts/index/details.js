@@ -1,16 +1,8 @@
 import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
-/**
- * Controller for managing the details view within the "Management -> Fuel-Report -> Index" route.
- *
- * @class ManagementFuelReportsIndexDetailsController
- * @extends Controller
- */
-export default class ManagementFuelReportsIndexDetailsController extends Controller {
-    @service hostRouter;
 
+export default class ManagementContactsIndexDetailsController extends Controller {
     /**
      * The currently active view tab ('details' by default).
      *
@@ -28,26 +20,26 @@ export default class ManagementFuelReportsIndexDetailsController extends Control
     @tracked queryParams = ['view'];
 
     /**
-     * Transitions back to the "management.fuelReport.index" route.
+     * Transitions back to the "management.contacts.index" route.
      *
      * @method
      * @action
      * @returns {Transition} The transition object representing the route change.
      */
     @action transitionBack() {
-        return this.transitionToRoute('management.fuel-reports.index');
+        return this.transitionToRoute('management.contacts.index');
     }
 
     /**
      * Transitions to the edit view for a specific vehicle.
      *
-     * @param {FuelReportModel} fuelReport
      * @method
+     * @param {contactModel} contact - The vehicle to be edited.
      * @action
      * @returns {Transition} The transition object representing the route change.
      */
-    @action onEdit(fuelReport) {
-        return this.transitionToRoute('management.fuel-reports.index.edit', fuelReport);
+    @action onEdit(contact) {
+        return this.transitionToRoute('management.contacts.index.edit', contact);
     }
 
     /**

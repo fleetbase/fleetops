@@ -1,0 +1,36 @@
+<div class="p-4">
+    <ContentPanel @title="Details" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-900">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-4 text-xs dark:text-gray-100">
+
+            <div class="field-info-container">
+                <div class="field-name">Website URL</div>
+                <div class="field-value">{{n-a @contact.name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Title</div>
+                <div class="field-value">{{n-a @contact.title}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Internal ID</div>
+                <div class="field-value">{{n-a @contact.internal_id}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Email</div>
+                <div class="field-value">{{n-a @contact.email}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Phone</div>
+                <div class="field-value">{{n-a @contact.phone}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Type</div>
+                <div class="field-value"><Badge @status={{@contact.type}} /></div>
+            </div>
+        </div>
+    </ContentPanel>
+</div>

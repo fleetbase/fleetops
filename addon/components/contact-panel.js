@@ -1,13 +1,13 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
-import FuelReportPanelDetailsComponent from './fuel-report-panel/details';
+import ContactPanelDetailComponent from './contact-panel/details';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
 
-export default class FuelReportPanelComponent extends Component {
+export default class ContactPanelComponent extends Component {
     /**
      * Service for fetching data.
      *
@@ -59,12 +59,12 @@ export default class FuelReportPanelComponent extends Component {
     @tracked tab;
 
     /**
-     * The fuel-report being displayed or edited.
+     * The contact being displayed or edited.
      *
-     * @type {fuelReport}
+     * @type {contactModel}
      * @tracked
      */
-    @tracked fuelReport;
+    @tracked contact;
 
     /**
      * Returns the array of tabs available for the panel.
@@ -72,9 +72,9 @@ export default class FuelReportPanelComponent extends Component {
      * @type {Array}
      */
     get tabs() {
-        const registeredTabs = this.universe.getMenuItemsFromRegistry('component:fuel-report-panel');
-        // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: VehiclePanelTrackingComponent }),
-        const defaultTabs = [this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: FuelReportPanelDetailsComponent })];
+        const registeredTabs = this.universe.getMenuItemsFromRegistry('component:contact-panel');
+        // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: contactPanelTrackingComponent }),
+        const defaultTabs = [this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: ContactPanelDetailComponent })];
 
         if (isArray(registeredTabs)) {
             return [...defaultTabs, ...registeredTabs];
@@ -84,11 +84,11 @@ export default class FuelReportPanelComponent extends Component {
     }
 
     /**
-     * Initializes the fuel-report panel component.
+     * Initializes the contact panel component.
      */
     constructor() {
         super(...arguments);
-        this.fuelReport = this.args.fuelReport;
+        this.contact = this.args.contact;
         this.tab = this.getTabUsingSlug(this.args.tab);
         applyContextComponentArguments(this);
     }
@@ -117,16 +117,16 @@ export default class FuelReportPanelComponent extends Component {
     }
 
     /**
-     * Handles edit action for the fuel-report.
+     * Handles edit action for the contact.
      *
      * @method
      * @action
      */
     @action onEdit() {
-        const isActionOverrided = contextComponentCallback(this, 'onEdit', this.fuelReport);
+        const isActionOverrided = contextComponentCallback(this, 'onEdit', this.contact);
 
         if (!isActionOverrided) {
-            this.contextPanel.focus(this.fuelReport, 'editing', {
+            this.contextPanel.focus(this.contact, 'editing', {
                 onAfterSave: () => {
                     this.contextPanel.clear();
                 },
@@ -142,7 +142,7 @@ export default class FuelReportPanelComponent extends Component {
      * @returns {Boolean} Indicates whether the cancel action was overridden.
      */
     @action onPressCancel() {
-        return contextComponentCallback(this, 'onPressCancel', this.fuelReport);
+        return contextComponentCallback(this, 'onPressCancel', this.contact);
     }
 
     /**

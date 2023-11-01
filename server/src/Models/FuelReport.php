@@ -78,6 +78,13 @@ class FuelReport extends Model
     protected $hidden = ['driver', 'vehicle'];
 
     /**
+     * Filterable attributes/parameters.
+     *
+     * @var array
+     */
+    protected $filterParams = ['type'];
+
+    /**
      * Set the parcel fee as only numbers.
      *
      * @void

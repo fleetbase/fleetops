@@ -5,11 +5,16 @@ import { action } from '@ember/object';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
 
-export default class FuelReportFormPanelComponent extends Component {
+export default class ContactFormPanelComponent extends Component {
     /**
      * @service store
      */
     @service store;
+
+    /**
+     * @service fetch
+     */
+    @service fetch;
 
     /**
      * @service notifications
@@ -44,11 +49,18 @@ export default class FuelReportFormPanelComponent extends Component {
     @tracked isLoading = false;
 
     /**
+     * All possible contact types
+     *
+     * @var {String}
+     */
+    @tracked contactTypes = ['contact', 'customer'];
+
+    /**
      * Constructs the component and applies initial state.
      */
     constructor() {
         super(...arguments);
-        this.fuelReport = this.args.fuelReport;
+        this.contact = this.args.contact;
         applyContextComponentArguments(this);
     }
 
@@ -64,25 +76,25 @@ export default class FuelReportFormPanelComponent extends Component {
     }
 
     /**
-     * Saves the fuel report changes.
+     * Saves the contact changes.
      *
      * @action
      * @returns {Promise<any>}
      */
     @action save() {
-        const { fuelReport } = this;
+        const { contact } = this;
 
-        this.loader.showLoader('.next-content-overlay-panel-container', { loadingMessage: 'Saving fuel report...', preserveTargetPosition: true });
+        this.loader.showLoader('.next-content-overlay-panel-container', { loadingMessage: 'Saving contact...', preserveTargetPosition: true });
         this.isLoading = true;
 
-        contextComponentCallback(this, 'onBeforeSave', fuelReport);
+        contextComponentCallback(this, 'onBeforeSave', contact);
 
         try {
-            return fuelReport
+            return contact
                 .save()
-                .then((fuelReport) => {
-                    this.notifications.success(`Fuel report saved successfully.`);
-                    contextComponentCallback(this, 'onAfterSave', fuelReport);
+                .then((contact) => {
+                    this.notifications.success(`contact (${contact.name}) saved successfully.`);
+                    contextComponentCallback(this, 'onAfterSave', contact);
                 })
                 .catch((error) => {
                     this.notifications.serverError(error);
@@ -98,15 +110,15 @@ export default class FuelReportFormPanelComponent extends Component {
     }
 
     /**
-     * View the details of the fuel-report.
+     * View the details of the contact.
      *
      * @action
      */
     @action onViewDetails() {
-        const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.fuelReport);
+        const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.contact);
 
         if (!isActionOverrided) {
-            this.contextPanel.focus(this.fuelReport, 'viewing');
+            this.contextPanel.focus(this.contact, 'viewing');
         }
     }
 
@@ -117,6 +129,30 @@ export default class FuelReportFormPanelComponent extends Component {
      * @returns {any}
      */
     @action onPressCancel() {
-        return contextComponentCallback(this, 'onPressCancel', this.fuelReport);
+        return contextComponentCallback(this, 'onPressCancel', this.contact);
+    }
+
+    /**
+     * Uploads a file to the server for the contact.
+     *
+     * @param {File} file
+     */
+    uploadContactPhoto(file) {
+        this.fetch.uploadFile.perform(
+            file,
+            {
+                path: `uploads/${this.contact.company_uuid}/contacts/${this.contact.slug}`,
+                subject_uuid: this.contact.id,
+                subject_type: 'contact',
+                type: 'contact_photo',
+            },
+            (uploadedFile) => {
+                contact.setProperties({
+                    photo_uuid: uploadedFile.id,
+                    photo_url: uploadedFile.url,
+                    photo: uploadedFile,
+                });
+            }
+        );
     }
 }

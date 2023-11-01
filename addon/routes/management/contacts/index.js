@@ -18,6 +18,6 @@ export default class ManagementContactsIndexRoute extends Route {
     };
 
     model(params) {
-        return this.store.query('contact', { ...params });
+        return this.store.query('contact', params);
     }
 }
