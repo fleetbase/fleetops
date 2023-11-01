@@ -1,0 +1,92 @@
+import Controller from '@ember/controller';
+import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
+
+export default class ManagementVendorsIndexNewController extends Controller {
+    /**
+     * Inject the `store` service
+     *
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    @service store;
+
+    /**
+     * Inject the `hostRouter` service
+     *
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    @service hostRouter;
+
+    /**
+     * Inject the `hostRouter` service
+     *
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    @service modalsManager;
+
+    /**
+     * The overlay component context.
+     *
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    @tracked overlay;
+
+    /**
+     * The vendor being created.
+     *
+     * @var {VehicleModel}
+     */
+    @tracked vendor = this.store.createRecord('vendor', {
+        status: `active`,
+    });
+
+    /**
+     * Set the overlay component context object.
+     *
+     * @param {OverlayContext} overlay
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    @action setOverlayContext(overlay) {
+        this.overlay = overlay;
+    }
+
+    /**
+     * When exiting the overlay.
+     *
+     * @return {Transition}
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    @action transitionBack() {
+        return this.transitionToRoute('management.vendors.index');
+    }
+
+    /**
+     * Trigger a route refresh and focus the new vendor created.
+     *
+     * @param {VehicleModel} vendor
+     * @return {Promise}
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    @action onAfterSave(vendor) {
+        if (this.overlay) {
+            this.overlay.close();
+        }
+
+        this.hostRouter.refresh();
+        return this.transitionToRoute('management.vendors.index.details', vendor).then(() => {
+            this.resetForm();
+        });
+    }
+
+    /**
+     * Resets the form with a new vendor record
+     *
+     * @memberof ManagementVehiclesIndexNewController
+     */
+    resetForm() {
+        this.vendor = this.store.createRecord('vendor', {
+            status: `active`,
+        });
+    }
+}

@@ -306,24 +306,6 @@ export default class ManagementVendorsIndexController extends Controller {
     }
 
     /**
-     * Bulk deletes selected `driver` via confirm prompt
-     *
-     * @param {Array} selected an array of selected models
-     * @void
-     */
-    @action bulkDeleteVendors() {
-        const selected = this.table.selectedRows;
-
-        this.crud.bulkDelete(selected, {
-            modelNamePath: `name`,
-            acceptButtonText: 'Delete Vendors',
-            onSuccess: () => {
-                return this.hostRouter.refresh();
-            },
-        });
-    }
-
-    /**
      * Toggles dialog to export `vendor`
      *
      * @void
@@ -336,225 +318,225 @@ export default class ManagementVendorsIndexController extends Controller {
      * View a `vendor` details in modal
      *
      * @param {VendorModel} vendor
-     * @param {Object} options
      * @void
      */
-    @action viewVendor(vendor, options) {
-        const isIntegratedVendor = vendor.get('type') === 'integrated-vendor';
+    @action viewVendor(vendor) {
+        return this.transitionToRoute('management.vendors.index.details', vendor);
+        // const isIntegratedVendor = vendor.get('type') === 'integrated-vendor';
 
-        this.modalsManager.show('modals/vendor-details', {
-            title: vendor.name,
-            titleComponent: 'modal/title-with-buttons',
-            acceptButtonText: 'Done',
-            hideDeclineButton: true,
-            headerButtons: [
-                {
-                    icon: 'cog',
-                    iconPrefix: 'fas',
-                    type: 'link',
-                    size: 'xs',
-                    options: [
-                        {
-                            title: 'Edit Vendor',
-                            action: () => {
-                                this.modalsManager.done().then(() => {
-                                    return this.editVendor(vendor, {
-                                        onFinish: () => {
-                                            this.viewVendor(vendor);
-                                        },
-                                    });
-                                });
-                            },
-                        },
-                        {
-                            title: 'Delete Vendor',
-                            action: () => {
-                                this.modalsManager.done().then(() => {
-                                    return this.deleteVendor(vendor, {
-                                        onDecline: () => {
-                                            this.viewVendor(vendor);
-                                        },
-                                    });
-                                });
-                            },
-                        },
-                    ],
-                },
-            ],
-            isIntegratedVendor,
-            vendor,
-            ...options,
-        });
+        // this.modalsManager.show('modals/vendor-details', {
+        //     title: vendor.name,
+        //     titleComponent: 'modal/title-with-buttons',
+        //     acceptButtonText: 'Done',
+        //     hideDeclineButton: true,
+        //     headerButtons: [
+        //         {
+        //             icon: 'cog',
+        //             iconPrefix: 'fas',
+        //             type: 'link',
+        //             size: 'xs',
+        //             options: [
+        //                 {
+        //                     title: 'Edit Vendor',
+        //                     action: () => {
+        //                         this.modalsManager.done().then(() => {
+        //                             return this.editVendor(vendor, {
+        //                                 onFinish: () => {
+        //                                     this.viewVendor(vendor);
+        //                                 },
+        //                             });
+        //                         });
+        //                     },
+        //                 },
+        //                 {
+        //                     title: 'Delete Vendor',
+        //                     action: () => {
+        //                         this.modalsManager.done().then(() => {
+        //                             return this.deleteVendor(vendor, {
+        //                                 onDecline: () => {
+        //                                     this.viewVendor(vendor);
+        //                                 },
+        //                             });
+        //                         });
+        //                     },
+        //                 },
+        //             ],
+        //         },
+        //     ],
+        //     isIntegratedVendor,
+        //     vendor,
+        //     ...options,
+        // });
     }
 
     /**
      * Create a new `vendor` in modal
      *
-     * @param {Object} options
      * @void
      */
     @action async createVendor() {
-        const vendor = this.store.createRecord('vendor', { status: 'active' });
-        const supportedIntegratedVendors = await this.fetch.get('integrated-vendors/supported');
+        return this.transitionToRoute('management.vendors.index.new');
+        // const vendor = this.store.createRecord('vendor', { status: 'active' });
+        // const supportedIntegratedVendors = await this.fetch.get('integrated-vendors/supported');
 
-        return this.editVendor(vendor, {
-            title: 'New Vendor',
-            acceptButtonText: 'Confirm & Create',
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            action: 'select',
-            supportedIntegratedVendors,
-            selectedIntegratedVendor: null,
-            integratedVendor: null,
-            selectIntegratedVendor: (integratedVendor) => {
-                this.modalsManager.setOption('selectedIntegratedVendor', integratedVendor);
+        // return this.editVendor(vendor, {
+        //     title: 'New Vendor',
+        //     acceptButtonText: 'Confirm & Create',
+        //     acceptButtonIcon: 'check',
+        //     acceptButtonIconPrefix: 'fas',
+        //     action: 'select',
+        //     supportedIntegratedVendors,
+        //     selectedIntegratedVendor: null,
+        //     integratedVendor: null,
+        //     selectIntegratedVendor: (integratedVendor) => {
+        //         this.modalsManager.setOption('selectedIntegratedVendor', integratedVendor);
 
-                const { credential_params, option_params } = integratedVendor;
+        //         const { credential_params, option_params } = integratedVendor;
 
-                // create credentials object
-                const credentials = {};
-                if (isArray(integratedVendor.credential_params)) {
-                    for (let i = 0; i < integratedVendor.credential_params.length; i++) {
-                        const param = integratedVendor.credential_params.objectAt(i);
-                        credentials[param] = null;
-                    }
-                }
+        //         // create credentials object
+        //         const credentials = {};
+        //         if (isArray(integratedVendor.credential_params)) {
+        //             for (let i = 0; i < integratedVendor.credential_params.length; i++) {
+        //                 const param = integratedVendor.credential_params.objectAt(i);
+        //                 credentials[param] = null;
+        //             }
+        //         }
 
-                // create options object
-                const options = {};
-                if (isArray(integratedVendor.option_params)) {
-                    for (let i = 0; i < integratedVendor.option_params.length; i++) {
-                        const param = integratedVendor.option_params.objectAt(i);
-                        options[param.key] = null;
-                    }
-                }
+        //         // create options object
+        //         const options = {};
+        //         if (isArray(integratedVendor.option_params)) {
+        //             for (let i = 0; i < integratedVendor.option_params.length; i++) {
+        //                 const param = integratedVendor.option_params.objectAt(i);
+        //                 options[param.key] = null;
+        //             }
+        //         }
 
-                const vendor = this.store.createRecord('integrated-vendor', {
-                    provider: integratedVendor.code,
-                    webhook_url: apiUrl(`listeners/${integratedVendor.code}`),
-                    credentials: {},
-                    options: {},
-                    credential_params,
-                    option_params,
-                });
+        //         const vendor = this.store.createRecord('integrated-vendor', {
+        //             provider: integratedVendor.code,
+        //             webhook_url: apiUrl(`listeners/${integratedVendor.code}`),
+        //             credentials: {},
+        //             options: {},
+        //             credential_params,
+        //             option_params,
+        //         });
 
-                this.modalsManager.setOption('integratedVendor', vendor);
-            },
-            successNotification: (vendor) => `New vendor '${vendor.name}' successfully created.`,
-        });
+        //         this.modalsManager.setOption('integratedVendor', vendor);
+        //     },
+        //     successNotification: (vendor) => `New vendor '${vendor.name}' successfully created.`,
+        // });
     }
 
     /**
      * Edit a `vendor` details
      *
      * @param {VendorModel} vendor
-     * @param {Object} options
      * @void
      */
-    @action editVendor(vendor, options = {}) {
-        const editVendorOptions = options;
-        const isIntegratedVendor = vendor.get('type') === 'integrated-vendor';
+    @action editVendor(vendor) {
+        return this.transitionToRoute('management.vendors.index.edit', vendor);
+        // const editVendorOptions = options;
+        // const isIntegratedVendor = vendor.get('type') === 'integrated-vendor';
 
-        this.modalsManager.show('modals/vendor-form', {
-            title: isIntegratedVendor ? 'Integrated Vendor Settings' : 'Edit Vendor',
-            acceptButtonText: 'Save Changes',
-            acceptButtonIcon: 'save',
-            declineButtonIcon: 'times',
-            declineButtonIconPrefix: 'fas',
-            isIntegratedVendor,
-            vendor,
-            showAdvancedOptions: false,
-            isEditingCredentials: false,
-            toggleCredentialsReset: () => {
-                const isEditingCredentials = this.modalsManager.getOption('isEditingCredentials');
+        // this.modalsManager.show('modals/vendor-form', {
+        //     title: isIntegratedVendor ? 'Integrated Vendor Settings' : 'Edit Vendor',
+        //     acceptButtonText: 'Save Changes',
+        //     acceptButtonIcon: 'save',
+        //     declineButtonIcon: 'times',
+        //     declineButtonIconPrefix: 'fas',
+        //     isIntegratedVendor,
+        //     vendor,
+        //     showAdvancedOptions: false,
+        //     isEditingCredentials: false,
+        //     toggleCredentialsReset: () => {
+        //         const isEditingCredentials = this.modalsManager.getOption('isEditingCredentials');
 
-                if (isEditingCredentials) {
-                    this.modalsManager.setOption('isEditingCredentials', false);
-                } else {
-                    this.modalsManager.setOption('isEditingCredentials', true);
-                }
-            },
-            toggleAdvancedOptions: () => {
-                const showAdvancedOptions = this.modalsManager.getOption('showAdvancedOptions');
+        //         if (isEditingCredentials) {
+        //             this.modalsManager.setOption('isEditingCredentials', false);
+        //         } else {
+        //             this.modalsManager.setOption('isEditingCredentials', true);
+        //         }
+        //     },
+        //     toggleAdvancedOptions: () => {
+        //         const showAdvancedOptions = this.modalsManager.getOption('showAdvancedOptions');
 
-                if (showAdvancedOptions) {
-                    this.modalsManager.setOption('showAdvancedOptions', false);
-                } else {
-                    this.modalsManager.setOption('showAdvancedOptions', true);
-                }
-            },
-            selectAddress: (place) => {
-                vendor.setProperties({
-                    place_uuid: place.id,
-                    place: place,
-                    country: place.country,
-                });
-            },
-            editAddress: () => {
-                return this.editVendorPlace(vendor, {
-                    onFinish: () => {
-                        this.editVendor(vendor, editVendorOptions);
-                    },
-                });
-            },
-            newAddress: () => {
-                return this.createVendorPlace(vendor, {
-                    onConfirm: (place) => {
-                        vendor.set('place_uuid', place.id);
-                        vendor.save();
-                    },
-                    onFinish: () => {
-                        this.modalsManager.done().then(() => {
-                            this.editVendor(vendor, editVendorOptions);
-                        });
-                    },
-                });
-            },
-            confirm: (modal) => {
-                modal.startLoading();
+        //         if (showAdvancedOptions) {
+        //             this.modalsManager.setOption('showAdvancedOptions', false);
+        //         } else {
+        //             this.modalsManager.setOption('showAdvancedOptions', true);
+        //         }
+        //     },
+        //     selectAddress: (place) => {
+        //         vendor.setProperties({
+        //             place_uuid: place.id,
+        //             place: place,
+        //             country: place.country,
+        //         });
+        //     },
+        //     editAddress: () => {
+        //         return this.editVendorPlace(vendor, {
+        //             onFinish: () => {
+        //                 this.editVendor(vendor, editVendorOptions);
+        //             },
+        //         });
+        //     },
+        //     newAddress: () => {
+        //         return this.createVendorPlace(vendor, {
+        //             onConfirm: (place) => {
+        //                 vendor.set('place_uuid', place.id);
+        //                 vendor.save();
+        //             },
+        //             onFinish: () => {
+        //                 this.modalsManager.done().then(() => {
+        //                     this.editVendor(vendor, editVendorOptions);
+        //                 });
+        //             },
+        //         });
+        //     },
+        //     confirm: (modal) => {
+        //         modal.startLoading();
 
-                const isAddingIntegratedVendor = modal.getOption('action') !== undefined && modal.getOption('integratedVendor')?.isNew;
+        //         const isAddingIntegratedVendor = modal.getOption('action') !== undefined && modal.getOption('integratedVendor')?.isNew;
 
-                if (isAddingIntegratedVendor) {
-                    const integratedVendor = modal.getOption('integratedVendor');
+        //         if (isAddingIntegratedVendor) {
+        //             const integratedVendor = modal.getOption('integratedVendor');
 
-                    return integratedVendor
-                        .save()
-                        .then((integratedVendor) => {
-                            this.notifications.success(`Successfully added ${capitalize(integratedVendor.provider)} new integrated vendor`);
+        //             return integratedVendor
+        //                 .save()
+        //                 .then((integratedVendor) => {
+        //                     this.notifications.success(`Successfully added ${capitalize(integratedVendor.provider)} new integrated vendor`);
 
-                            return this.hostRouter.refresh();
-                        })
-                        .catch((error) => {
-                            this.notifications.serverError(error, {
-                                clearDuration: 600 * 6,
-                            });
-                        })
-                        .finally(() => {
-                            modal.stopLoading();
-                        });
-                }
+        //                     return this.hostRouter.refresh();
+        //                 })
+        //                 .catch((error) => {
+        //                     this.notifications.serverError(error, {
+        //                         clearDuration: 600 * 6,
+        //                     });
+        //                 })
+        //                 .finally(() => {
+        //                     modal.stopLoading();
+        //                 });
+        //         }
 
-                return vendor
-                    .save()
-                    .then((vendor) => {
-                        if (typeof options.successNotification === 'function') {
-                            this.notifications.success(options.successNotification(vendor));
-                        } else {
-                            this.notifications.success(options.successNotification || `${vendor.name} details updated.`);
-                        }
+        //         return vendor
+        //             .save()
+        //             .then((vendor) => {
+        //                 if (typeof options.successNotification === 'function') {
+        //                     this.notifications.success(options.successNotification(vendor));
+        //                 } else {
+        //                     this.notifications.success(options.successNotification || `${vendor.name} details updated.`);
+        //                 }
 
-                        return this.hostRouter.refresh();
-                    })
-                    .catch((error) => {
-                        this.notifications.serverError(error);
-                    })
-                    .finally(() => {
-                        modal.stopLoading();
-                    });
-            },
-            ...options,
-        });
+        //                 return this.hostRouter.refresh();
+        //             })
+        //             .catch((error) => {
+        //                 this.notifications.serverError(error);
+        //             })
+        //             .finally(() => {
+        //                 modal.stopLoading();
+        //             });
+        //     },
+        //     ...options,
+        // });
     }
 
     /**
@@ -571,6 +553,24 @@ export default class ManagementVendorsIndexController extends Controller {
                 return this.hostRouter.refresh();
             },
             ...options,
+        });
+    }
+
+    /**
+     * Bulk deletes selected `driver` via confirm prompt
+     *
+     * @param {Array} selected an array of selected models
+     * @void
+     */
+    @action bulkDeleteVendors() {
+        const selected = this.table.selectedRows;
+
+        this.crud.bulkDelete(selected, {
+            modelNamePath: `name`,
+            acceptButtonText: 'Delete Vendors',
+            onSuccess: () => {
+                return this.hostRouter.refresh();
+            },
         });
     }
 
