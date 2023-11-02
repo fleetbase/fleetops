@@ -319,106 +319,107 @@ export default class ManagementPlacesIndexController extends Controller {
      * @param {Object} options
      * @void
      */
-    @action viewPlace(place, options) {
-        const viewPlaceOnMap = () => {
-            this.modalsManager.done().then(() => {
-                return this.viewOnMap(place, {
-                    onFinish: () => {
-                        this.viewPlace(place);
-                    },
-                });
-            });
-        };
+    @action viewPlace(place) {
+        return this.transitionToRoute('management.places.index.details', place);
+        //     const viewPlaceOnMap = () => {
+        //         this.modalsManager.done().then(() => {
+        //             return this.viewOnMap(place, {
+        //                 onFinish: () => {
+        //                     this.viewPlace(place);
+        //                 },
+        //             });
+        //         });
+        //     };
 
-        this.modalsManager.show('modals/place-details', {
-            title: place.name,
-            place,
-            titleComponent: 'modal/title-with-buttons',
-            acceptButtonText: 'Done',
-            headerButtons: [
-                {
-                    icon: 'cog',
-                    type: 'link',
-                    size: 'xs',
-                    options: [
-                        {
-                            title: 'Edit Place',
-                            action: () => {
-                                this.modalsManager.done().then(() => {
-                                    return this.editPlace(place, {
-                                        onFinish: () => {
-                                            this.viewDriver(place);
-                                        },
-                                    });
-                                });
-                            },
-                        },
-                        {
-                            title: 'View Place on Map',
-                            action: viewPlaceOnMap,
-                        },
-                        {
-                            title: 'Assign to Vendor',
-                            action: () => {
-                                this.modalsManager.done().then(() => {
-                                    return this.assignVendor(place, {
-                                        onFinish: () => {
-                                            this.viewPlace(place);
-                                        },
-                                    });
-                                });
-                            },
-                        },
-                        {
-                            title: 'Delete Place',
-                            action: () => {
-                                this.modalsManager.done().then(() => {
-                                    return this.deletePlace(place, {
-                                        onDecline: () => {
-                                            this.viewPlace(place);
-                                        },
-                                    });
-                                });
-                            },
-                        },
-                    ],
-                },
-            ],
-            viewVendor: () =>
-                this.viewPlaceVendor(place, {
-                    onFinish: () => {
-                        this.viewPlace(place);
-                    },
-                }),
-            viewPlaceOnMap,
-            ...options,
-        });
-    }
+        //     this.modalsManager.show('modals/place-details', {
+        //         title: place.name,
+        //         place,
+        //         titleComponent: 'modal/title-with-buttons',
+        //         acceptButtonText: 'Done',
+        //         headerButtons: [
+        //             {
+        //                 icon: 'cog',
+        //                 type: 'link',
+        //                 size: 'xs',
+        //                 options: [
+        //                     {
+        //                         title: 'Edit Place',
+        //                         action: () => {
+        //                             this.modalsManager.done().then(() => {
+        //                                 return this.editPlace(place, {
+        //                                     onFinish: () => {
+        //                                         this.viewDriver(place);
+        //                                     },
+        //                                 });
+        //                             });
+        //                         },
+        //                     },
+        //                     {
+        //                         title: 'View Place on Map',
+        //                         action: viewPlaceOnMap,
+        //                     },
+        //                     {
+        //                         title: 'Assign to Vendor',
+        //                         action: () => {
+        //                             this.modalsManager.done().then(() => {
+        //                                 return this.assignVendor(place, {
+        //                                     onFinish: () => {
+        //                                         this.viewPlace(place);
+        //                                     },
+        //                                 });
+        //                             });
+        //                         },
+        //                     },
+        //                     {
+        //                         title: 'Delete Place',
+        //                         action: () => {
+        //                             this.modalsManager.done().then(() => {
+        //                                 return this.deletePlace(place, {
+        //                                     onDecline: () => {
+        //                                         this.viewPlace(place);
+        //                                     },
+        //                                 });
+        //                             });
+        //                         },
+        //                     },
+        //                 ],
+        //             },
+        //         ],
+        //         viewVendor: () =>
+        //             this.viewPlaceVendor(place, {
+        //                 onFinish: () => {
+        //                     this.viewPlace(place);
+        //                 },
+        //             }),
+        //         viewPlaceOnMap,
+        //         ...options,
+        //     });
+        // }
 
-    /**
-     * Create a new `place` in modal
-     *
-     * @param {Object} options
-     * @void
-     */
-    @action createPlace(options = {}) {
-        const place = this.store.createRecord('place');
+        // /**
+        //  * Create a new `place` in modal
+        //  *
+        //  * @param {Object} options
+        //  * @void
+        //  */
+        // @action createPlace(options = {}) {
+        //     const place = this.store.createRecord('place');
 
-        return this.editPlace(place, {
-            title: 'New Place',
-            acceptButtonText: 'Confirm & Create',
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            successNotification: (place) => `New place (${place.get('name') || place.get('street1')}) created.`,
-            onConfirm: () => {
-                if (place.get('isNew')) {
-                    return;
-                }
+        //     return this.editPlace(place, {
+        //         title: 'New Place',
+        //         acceptButtonText: 'Confirm & Create',
+        //         acceptButtonIcon: 'check',
+        //         acceptButtonIconPrefix: 'fas',
+        //         successNotification: (place) => `New place (${place.get('name') || place.get('street1')}) created.`,
+        //         onConfirm: () => {
+        //             if (place.get('isNew')) {
+        //                 return;
+        //             }
 
-                return this.hostRouter.refresh();
-            },
-            ...options,
-        });
+        //             return this.hostRouter.refresh();
+        //         },
+        //         ...options,
+        //     });
     }
 
     /**
@@ -428,63 +429,69 @@ export default class ManagementPlacesIndexController extends Controller {
      * @param {Object} options
      * @void
      */
-    @action async editPlace(place, options = {}) {
-        place = await place;
 
-        this.modalsManager.show('modals/place-form', {
-            title: 'Edit Place',
-            acceptButtonText: 'Save Changes',
-            acceptButtonIcon: 'save',
-            declineButtonIcon: 'times',
-            declineButtonIconPrefix: 'fas',
-            place,
-            autocomplete: (selected) => {
-                const coordinatesInputComponent = this.modalsManager.getOption('coordinatesInputComponent');
+    @action createPlace() {
+        return this.transitionToRoute('management.places.index.new');
+    }
 
-                place.setProperties({ ...selected });
+    @action editPlace(place) {
+        return this.transitionToRoute('management.places.index.edit', place);
+        // place = await place;
 
-                if (coordinatesInputComponent) {
-                    coordinatesInputComponent.updateCoordinates(selected.location);
-                }
-            },
-            reverseGeocode: ({ latitude, longitude }) => {
-                return this.fetch.get('geocoder/reverse', { coordinates: [latitude, longitude].join(','), single: true }).then((result) => {
-                    if (isBlank(result)) {
-                        return;
-                    }
+        // this.modalsManager.show('modals/place-form', {
+        //     title: 'Edit Place',
+        //     acceptButtonText: 'Save Changes',
+        //     acceptButtonIcon: 'save',
+        //     declineButtonIcon: 'times',
+        //     declineButtonIconPrefix: 'fas',
+        //     place,
+        //     autocomplete: (selected) => {
+        //         const coordinatesInputComponent = this.modalsManager.getOption('coordinatesInputComponent');
 
-                    place.setProperties({ ...result });
-                });
-            },
-            setCoordinatesInput: (coordinatesInputComponent) => {
-                this.modalsManager.setOption('coordinatesInputComponent', coordinatesInputComponent);
-            },
-            updatePlaceCoordinates: ({ latitude, longitude }) => {
-                const location = new Point(longitude, latitude);
+        //         place.setProperties({ ...selected });
 
-                place.setProperties({ location });
-            },
-            confirm: (modal) => {
-                modal.startLoading();
+        //         if (coordinatesInputComponent) {
+        //             coordinatesInputComponent.updateCoordinates(selected.location);
+        //         }
+        //     },
+        //     reverseGeocode: ({ latitude, longitude }) => {
+        //         return this.fetch.get('geocoder/reverse', { coordinates: [latitude, longitude].join(','), single: true }).then((result) => {
+        //             if (isBlank(result)) {
+        //                 return;
+        //             }
 
-                return place
-                    .save()
-                    .then((place) => {
-                        if (typeof options.successNotification === 'function') {
-                            this.notifications.success(options.successNotification(place));
-                        } else {
-                            this.notifications.success(options.successNotification ?? `${place.name} details updated.`);
-                        }
+        //             place.setProperties({ ...result });
+        //         });
+        //     },
+        //     setCoordinatesInput: (coordinatesInputComponent) => {
+        //         this.modalsManager.setOption('coordinatesInputComponent', coordinatesInputComponent);
+        //     },
+        //     updatePlaceCoordinates: ({ latitude, longitude }) => {
+        //         const location = new Point(longitude, latitude);
 
-                        return this.hostRouter.refresh();
-                    })
-                    .catch((error) => {
-                        modal.stopLoading();
-                        this.notifications.serverError(error);
-                    });
-            },
-            ...options,
-        });
+        //         place.setProperties({ location });
+        //     },
+        //     confirm: (modal) => {
+        //         modal.startLoading();
+
+        //         return place
+        //             .save()
+        //             .then((place) => {
+        //                 if (typeof options.successNotification === 'function') {
+        //                     this.notifications.success(options.successNotification(place));
+        //                 } else {
+        //                     this.notifications.success(options.successNotification ?? `${place.name} details updated.`);
+        //                 }
+
+        //                 return this.hostRouter.refresh();
+        //             })
+        //             .catch((error) => {
+        //                 modal.stopLoading();
+        //                 this.notifications.serverError(error);
+        //             });
+        //     },
+        //     ...options,
+        // });
     }
 
     /**

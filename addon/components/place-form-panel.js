@@ -5,11 +5,16 @@ import { action } from '@ember/object';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
 
-export default class VendorFormPanelComponent extends Component {
+export default class PlaceFormPanelComponent extends Component {
     /**
      * @service store
      */
     @service store;
+
+    /**
+     * @service fetch
+     */
+    @service fetch;
 
     /**
      * @service notifications
@@ -44,11 +49,18 @@ export default class VendorFormPanelComponent extends Component {
     @tracked isLoading = false;
 
     /**
+     * All possible place types
+     *
+     * @var {String}
+     */
+    @tracked placeTypes = ['place', 'customer'];
+
+    /**
      * Constructs the component and applies initial state.
      */
     constructor() {
         super(...arguments);
-        this.vendor = this.args.vendor;
+        this.place = this.args.place;
         applyContextComponentArguments(this);
     }
 
@@ -64,25 +76,25 @@ export default class VendorFormPanelComponent extends Component {
     }
 
     /**
-     * Saves the vendor changes.
+     * Saves the place changes.
      *
      * @action
      * @returns {Promise<any>}
      */
     @action save() {
-        const { vendor } = this;
+        const { place } = this;
 
-        this.loader.showLoader('.next-content-overlay-panel-container', { loadingMessage: 'Saving vendor...', preserveTargetPosition: true });
+        this.loader.showLoader('.next-content-overlay-panel-container', { loadingMessage: 'Saving place...', preserveTargetPosition: true });
         this.isLoading = true;
 
-        contextComponentCallback(this, 'onBeforeSave', vendor);
+        contextComponentCallback(this, 'onBeforeSave', place);
 
         try {
-            return vendor
+            return place
                 .save()
-                .then((vendor) => {
-                    this.notifications.success(`Vendor (${vendor.displayName}) saved successfully.`);
-                    contextComponentCallback(this, 'onAfterSave', vendor);
+                .then((place) => {
+                    this.notifications.success(`place (${place.name}) saved successfully.`);
+                    contextComponentCallback(this, 'onAfterSave', place);
                 })
                 .catch((error) => {
                     this.notifications.serverError(error);
@@ -98,15 +110,15 @@ export default class VendorFormPanelComponent extends Component {
     }
 
     /**
-     * View the details of the vendor.
+     * View the details of the place.
      *
      * @action
      */
     @action onViewDetails() {
-        const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.vendor);
+        const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.place);
 
         if (!isActionOverrided) {
-            this.contextPanel.focus(this.vendor, 'viewing');
+            this.contextPanel.focus(this.place, 'viewing');
         }
     }
 
@@ -117,8 +129,6 @@ export default class VendorFormPanelComponent extends Component {
      * @returns {any}
      */
     @action onPressCancel() {
-        return contextComponentCallback(this, 'onPressCancel', this.vendor);
+        return contextComponentCallback(this, 'onPressCancel', this.place);
     }
-
-    @action onAction() {}
 }
