@@ -7,35 +7,35 @@ export default class ManagementVendorsIndexNewController extends Controller {
     /**
      * Inject the `store` service
      *
-     * @memberof ManagementVehiclesIndexNewController
+     * @memberof ManagementVendorIndexNewController
      */
     @service store;
 
     /**
      * Inject the `hostRouter` service
      *
-     * @memberof ManagementVehiclesIndexNewController
+     * @memberof ManagementVendorIndexNewController
      */
     @service hostRouter;
 
     /**
      * Inject the `hostRouter` service
      *
-     * @memberof ManagementVehiclesIndexNewController
+     * @memberof ManagementVendorIndexNewController
      */
     @service modalsManager;
 
     /**
      * The overlay component context.
      *
-     * @memberof ManagementVehiclesIndexNewController
+     * @memberof ManagementVendorIndexNewController
      */
     @tracked overlay;
 
     /**
      * The vendor being created.
      *
-     * @var {VehicleModel}
+     * @var {VendorModel}
      */
     @tracked vendor = this.store.createRecord('vendor', {
         status: `active`,
@@ -45,7 +45,7 @@ export default class ManagementVendorsIndexNewController extends Controller {
      * Set the overlay component context object.
      *
      * @param {OverlayContext} overlay
-     * @memberof ManagementVehiclesIndexNewController
+     * @memberof ManagementVendorsIndexNewController
      */
     @action setOverlayContext(overlay) {
         this.overlay = overlay;
@@ -55,7 +55,7 @@ export default class ManagementVendorsIndexNewController extends Controller {
      * When exiting the overlay.
      *
      * @return {Transition}
-     * @memberof ManagementVehiclesIndexNewController
+     * @memberof ManagementVendorIndexNewController
      */
     @action transitionBack() {
         return this.transitionToRoute('management.vendors.index');
@@ -64,9 +64,9 @@ export default class ManagementVendorsIndexNewController extends Controller {
     /**
      * Trigger a route refresh and focus the new vendor created.
      *
-     * @param {VehicleModel} vendor
+     * @param {VendorModel} vendor
      * @return {Promise}
-     * @memberof ManagementVehiclesIndexNewController
+     * @memberof ManagementVendorsIndexNewController
      */
     @action onAfterSave(vendor) {
         if (this.overlay) {
@@ -82,7 +82,7 @@ export default class ManagementVendorsIndexNewController extends Controller {
     /**
      * Resets the form with a new vendor record
      *
-     * @memberof ManagementVehiclesIndexNewController
+     * @memberof ManagementVendorIndexNewController
      */
     resetForm() {
         this.vendor = this.store.createRecord('vendor', {

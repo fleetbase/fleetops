@@ -621,7 +621,7 @@ export default class ManagementVendorsIndexController extends Controller {
         await this.modalsManager.done();
 
         this.modalsManager.done().then(() => {
-            return this.places.createPlace(options);
+            return this.places.createPlace(vendor, options);
         });
     }
 }

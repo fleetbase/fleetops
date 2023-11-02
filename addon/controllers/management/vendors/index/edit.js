@@ -7,21 +7,21 @@ export default class ManagementVendorsIndexEditController extends Controller {
     /**
      * Inject the `hostRouter` service
      *
-     * @memberof ManagementVehiclesIndexEditController
+     * @memberof ManagementVendorsIndexEditController
      */
     @service hostRouter;
 
     /**
      * Inject the `hostRouter` service
      *
-     * @memberof ManagementVehiclesIndexEditController
+     * @memberof ManagementVendorsIndexEditController
      */
     @service modalsManager;
 
     /**
      * The overlay component context.
      *
-     * @memberof ManagementVehiclesIndexEditController
+     * @memberof ManagementVendorsIndexEditController
      */
     @tracked overlay;
 
@@ -29,7 +29,7 @@ export default class ManagementVendorsIndexEditController extends Controller {
      * When exiting the overlay.
      *
      * @return {Transition}
-     * @memberof ManagementVehiclesIndexEditController
+     * @memberof ManagementVendorsIndexEditController
      */
     @action transitionBack(vendor) {
         // check if vendor record has been edited and prompt for confirmation
@@ -49,7 +49,7 @@ export default class ManagementVendorsIndexEditController extends Controller {
      * Set the overlay component context object.
      *
      * @param {OverlayContext} overlay
-     * @memberof ManagementVehiclesIndexEditController
+     * @memberof ManagementVendorsIndexEditController
      */
     @action setOverlayContext(overlay) {
         this.overlay = overlay;
@@ -58,9 +58,9 @@ export default class ManagementVendorsIndexEditController extends Controller {
     /**
      * When vendor details button is clicked in overlay.
      *
-     * @param {VehicleModel} vendor
+     * @param {VendorModel} vendor
      * @return {Promise}
-     * @memberof ManagementVehiclesIndexEditController
+     * @memberof ManagementVendorsIndexEditController
      */
     @action onViewDetails(vendor) {
         // check if vendor record has been edited and prompt for confirmation
@@ -74,9 +74,9 @@ export default class ManagementVendorsIndexEditController extends Controller {
     /**
      * Trigger a route refresh and focus the new vendor created.
      *
-     * @param {VehicleModel} vendor
+     * @param {VendorModel} vendor
      * @return {Promise}
-     * @memberof ManagementVehiclesIndexEditController
+     * @memberof ManagementVendorsIndexEditController
      */
     @action onAfterSave(vendor) {
         if (this.overlay) {
@@ -91,10 +91,10 @@ export default class ManagementVendorsIndexEditController extends Controller {
      * Prompts the user to confirm if they wish to continue with unsaved changes.
      *
      * @method
-     * @param {VehicleModel} vendor - The vendor object with unsaved changes.
+     * @param {VendorModel} vendor - The vendor object with unsaved changes.
      * @param {Object} [options={}] - Additional options for configuring the modal.
      * @returns {Promise} A promise that resolves when the user confirms, and transitions to a new route.
-     * @memberof ManagementVehiclesIndexEditController
+     * @memberof ManagementVendorsIndexEditController
      */
     confirmContinueWithUnsavedChanges(vendor, options = {}) {
         return this.modalsManager.confirm({

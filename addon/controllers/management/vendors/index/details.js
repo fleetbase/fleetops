@@ -34,7 +34,7 @@ export default class ManagementVendorsIndexDetailsController extends Controller 
      * Transitions to the edit view for a specific vendor.
      *
      * @method
-     * @param {VehicleModel} vendor - The vendor to be edited.
+     * @param {VendorModel} vendor - The vendor to be edited.
      * @action
      * @returns {Transition} The transition object representing the route change.
      */

@@ -119,4 +119,8 @@ export default class VendorFormPanelComponent extends Component {
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.vendor);
     }
+
+    @action onAction() {
+        
+    }
 }

@@ -1,4 +1,11 @@
-<Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizeble={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "600px"}}
+>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
@@ -8,9 +15,21 @@
             </div>
             <div class="flex flex-1 justify-end">
                 <div class="mr-2">
-                    <Button @icon={{if this.vehicle.id "save" "check"}} @type="primary" @text={{if this.vehicle.id "Save Vehicle" "Create Vehicle"}} @onClick={{this.save}} @isLoading={{this.isLoading}} />
+                    <Button
+                        @icon={{if this.vehicle.id "save" "check"}}
+                        @type="primary"
+                        @text={{if this.vehicle.id "Save Vehicle" "Create Vehicle"}}
+                        @onClick={{this.save}}
+                        @isLoading={{this.isLoading}}
+                    />
                 </div>
-                <Button @type="default" @icon="times" @helpText={{if this.vehicle.id "Cancel edit vehicle" "Cancel new vehicle"}} @onClick={{this.onPressCancel}} @disabled={{this.isLoading}} />
+                <Button
+                    @type="default"
+                    @icon="times"
+                    @helpText={{if this.vehicle.id "Cancel edit vehicle" "Cancel new vehicle"}}
+                    @onClick={{this.onPressCancel}}
+                    @disabled={{this.isLoading}}
+                />
             </div>
         </div>
         <div class="flex flex-row justify-between w-full">
@@ -104,8 +123,16 @@
                         <label>
                             Driver Assigned
                         </label>
-                        <ModelSelect @modelName="driver" @selectedModel={{this.vehicle.driver}} @placeholder="Select Driver" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut
-                                this.vehicle.driver)}} as |model|>
+                        <ModelSelect
+                            @modelName="driver"
+                            @selectedModel={{this.vehicle.driver}}
+                            @placeholder="Select Driver"
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{fn (mut this.vehicle.driver)}}
+                            as |model|
+                        >
                             {{model.name}}
                         </ModelSelect>
                     </div>
@@ -116,7 +143,15 @@
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
                     <div class="input-group mb-2">
                         <InputLabel @labelText="Select map avatar" @helpText="Select an avatar to be used for rendering on maps when using geolocation tracking features." />
-                        <FetchSelect @wrapperClass="w-60" @placeholder="Select avatar" @endpoint="vehicles/avatars" @selected={{this.vehicle.avatar_url}} @optionValue="value" @onChange={{fn (mut this.vehicle.avatar_url)}} as |option|>
+                        <FetchSelect
+                            @wrapperClass="w-60"
+                            @placeholder="Select avatar"
+                            @endpoint="vehicles/avatars"
+                            @selected={{this.vehicle.avatar_url}}
+                            @optionValue="value"
+                            @onChange={{fn (mut this.vehicle.avatar_url)}}
+                            as |option|
+                        >
                             {{titleize (humanize option.key)}}
                         </FetchSelect>
                     </div>
