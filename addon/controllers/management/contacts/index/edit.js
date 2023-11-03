@@ -58,7 +58,7 @@ export default class ManagementContactsIndexEditController extends Controller {
     /**
      * When contact details button is clicked in overlay.
      *
-     * @param {VehicleModel} contact
+     * @param {ContactModel} contact
      * @return {Promise}
      * @memberof ManagementcontactsIndexEditController
      */
@@ -74,7 +74,7 @@ export default class ManagementContactsIndexEditController extends Controller {
     /**
      * Trigger a route refresh and focus the new contact created.
      *
-     * @param {VehicleModel} contact
+     * @param {ContactModel} contact
      * @return {Promise}
      * @memberof ManagementcontactsIndexEditController
      */
@@ -91,7 +91,7 @@ export default class ManagementContactsIndexEditController extends Controller {
      * Prompts the user to confirm if they wish to continue with unsaved changes.
      *
      * @method
-     * @param {VehicleModel} contact - The contact object with unsaved changes.
+     * @param {ContactModel} contact - The contact object with unsaved changes.
      * @param {Object} [options={}] - Additional options for configuring the modal.
      * @returns {Promise} A promise that resolves when the user confirms, and transitions to a new route.
      * @memberof ManagementcontactsIndexEditController

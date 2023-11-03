@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Models;
 
+use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -46,18 +47,18 @@ class Issue extends Model
      */
     protected $fillable = [
         '_key',
+        'public_id',
         'company_uuid',
         'reported_by_uuid',
-        'vehicle_uuid',
         'assigned_to_uuid',
+        'vehicle_uuid',
+        'driver_uuid',
         'issue_id',
-        'odometer',
         'location',
-        'latitude',
-        'longitude',
         'type',
         'report',
         'priority',
+        'meta',
         'resolved_at',
         'status',
     ];
@@ -68,6 +69,7 @@ class Issue extends Model
      * @var array
      */
     protected $spatialFields = [
+        'meta'     => Json::class,
         'location' => Point::class,
     ];
 
@@ -77,6 +79,15 @@ class Issue extends Model
      * @var array
      */
     protected $appends = [];
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'resolved_at'     => 'date',
+    ];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -107,5 +118,13 @@ class Issue extends Model
     public function vehicle()
     {
         return $this->belongsTo(Vehicle::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function driver()
+    {
+        return $this->belongsTo(Driver::class);
     }
 }

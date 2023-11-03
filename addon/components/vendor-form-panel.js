@@ -12,6 +12,11 @@ export default class VendorFormPanelComponent extends Component {
     @service store;
 
     /**
+     * @service fetch
+     */
+    @service fetch;
+
+    /**
      * @service notifications
      */
     @service notifications;
@@ -44,11 +49,18 @@ export default class VendorFormPanelComponent extends Component {
     @tracked isLoading = false;
 
     /**
+     * The users vendor instance.
+     * @type {VendorModel|IntegratedVendorModel}
+     */
+    @tracked vendor;
+
+    /**
      * Constructs the component and applies initial state.
      */
     constructor() {
         super(...arguments);
         this.vendor = this.args.vendor;
+        this.isEditing = typeof this.vendor.id === 'string';
         applyContextComponentArguments(this);
     }
 
@@ -97,6 +109,10 @@ export default class VendorFormPanelComponent extends Component {
         }
     }
 
+    @action onVendorChanged(vendor) {
+        this.vendor = vendor;
+    }
+
     /**
      * View the details of the vendor.
      *
@@ -119,6 +135,4 @@ export default class VendorFormPanelComponent extends Component {
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.vendor);
     }
-
-    @action onAction() {}
 }

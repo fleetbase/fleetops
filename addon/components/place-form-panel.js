@@ -93,7 +93,7 @@ export default class PlaceFormPanelComponent extends Component {
             return place
                 .save()
                 .then((place) => {
-                    this.notifications.success(`place (${place.name}) saved successfully.`);
+                    this.notifications.success(`place (${place.address}) saved successfully.`);
                     contextComponentCallback(this, 'onAfterSave', place);
                 })
                 .catch((error) => {

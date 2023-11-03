@@ -314,7 +314,7 @@ export default class ManagementContactsIndexController extends Controller {
     }
 
     /**
-     * Bulk deletes selected `driver` via confirm prompt
+     * Bulk deletes selected `contacts` via confirm prompt
      *
      * @param {Array} selected an array of selected models
      * @void

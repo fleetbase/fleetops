@@ -15,36 +15,36 @@
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
         <div class="grid grid-cols-3 gap-1 text-xs dark:text-gray-100">
-            <InputGroup @name="Name" @autocomplete="nope" @value={{@options.place.name}} @wrapperClass="col-span-3" />
-            <InputGroup @name="Street 1" @value={{@options.place.street1}} @wrapperClass="col-span-3">
-                <AutocompleteInput @value={{@options.place.street1}} @fetchUrl="places/lookup" @onSelect={{@options.autocomplete}} placeholder="Street 1" class="w-full" as |result|>
+            <InputGroup @name="Name" @autocomplete="nope" @value={{this.place.name}} @wrapperClass="col-span-3" />
+            <InputGroup @name="Street 1" @value={{this.place.street1}} @wrapperClass="col-span-3">
+                <AutocompleteInput @value={{this.place.street1}} @fetchUrl="places/lookup" @onSelect={{this.autocomplete}} placeholder="Street 1" class="w-full" as |result|>
                     {{result.address}}
                 </AutocompleteInput>
             </InputGroup>
-            <InputGroup @name="Street 2" @autocomplete="nope" @value={{@options.place.street2}} @wrapperClass="col-span-3" />
-            <InputGroup @name="Neighborhood" @autocomplete="nope" @value={{@options.place.neighborhood}} />
-            <InputGroup @name="Building" @autocomplete="nope" @value={{@options.place.building}} />
-            <InputGroup @name="Security Access Code" @autocomplete="nope" @value={{@options.place.security_access_code}} />
-            <InputGroup @name="Postal Code" @autocomplete="nope" @value={{@options.place.postal_code}} />
-            <InputGroup @name="City" @autocomplete="nope" @value={{@options.place.city}} />
-            <InputGroup @name="State" @autocomplete="nope" @value={{@options.place.province}} />
+            <InputGroup @name="Street 2" @autocomplete="nope" @value={{this.place.street2}} @wrapperClass="col-span-3" />
+            <InputGroup @name="Neighborhood" @autocomplete="nope" @value={{this.place.neighborhood}} />
+            <InputGroup @name="Building" @autocomplete="nope" @value={{this.place.building}} />
+            <InputGroup @name="Security Access Code" @autocomplete="nope" @value={{this.place.security_access_code}} />
+            <InputGroup @name="Postal Code" @autocomplete="nope" @value={{this.place.postal_code}} />
+            <InputGroup @name="City" @autocomplete="nope" @value={{this.place.city}} />
+            <InputGroup @name="State" @autocomplete="nope" @value={{this.place.province}} />
             <InputGroup @name="Country" @wrapperClass="col-span-2">
-                <CountrySelect class="w-full form-input form-select form-datalist" @value={{@options.place.country}} @onChange={{@options.place.country}} placeholder="Country" />
+                <CountrySelect class="w-full form-input form-select form-datalist" @value={{this.place.country}} @onChange={{this.place.country}} placeholder="Country" />
             </InputGroup>
             <InputGroup @name="Coordinates" @wrapperClass="col-span-2">
                 <CoordinatesInput
-                    @value={{@options.place.location}}
-                    @onChange={{@options.updatePlaceCoordinates}}
-                    @onGeocode={{@options.autocomplete}}
-                    @onUpdatedFromMap={{@options.reverseGeocode}}
-                    @onInit={{@options.setCoordinatesInput}}
+                    @value={{this.place.location}}
+                    @onChange={{this.updatePlaceCoordinates}}
+                    @onGeocode={{this.autocomplete}}
+                    @onUpdatedFromMap={{this.reverseGeocode}}
+                    @onInit={{this.setCoordinatesInput}}
                 />
             </InputGroup>
             <div class="col-span-1"></div>
             <InputGroup @name="Phone">
-                <PhoneInput @value={{@options.place.phone}} @autocomplete="nope" @onInput={{@options.phone}} class="form-input w-full" />
+                <PhoneInput @value={{this.place.phone}} @autocomplete="nope" @onInput={{this.phone}} class="form-input w-full" />
             </InputGroup>
-            <InputGroup @name="Email" @autocomplete="nope" @value={{@options.place.email}} />
+            <InputGroup @name="Email" @autocomplete="nope" @value={{this.place.email}} />
         </div>
     </Overlay::Body>
 </Overlay>

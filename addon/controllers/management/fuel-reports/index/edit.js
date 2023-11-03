@@ -7,21 +7,21 @@ export default class ManagementFuelReportsIndexEditController extends Controller
     /**
      * Inject the `hostRouter` service
      *
-     * @memberof ManagementDriversIndexEditController
+     * @memberof ManagementFuelReportsIndexEditController
      */
     @service hostRouter;
 
     /**
      * Inject the `hostRouter` service
      *
-     * @memberof ManagementDriversIndexEditController
+     * @memberof ManagementFuelReportsIndexEditController
      */
     @service modalsManager;
 
     /**
      * The overlay component context.
      *
-     * @memberof ManagementDriversIndexEditController
+     * @memberof ManagementFuelReportsIndexEditController
      */
     @tracked overlay;
 
@@ -29,7 +29,7 @@ export default class ManagementFuelReportsIndexEditController extends Controller
      * When exiting the overlay.
      *
      * @return {Transition}
-     * @memberof ManagementDriversIndexEditController
+     * @memberof ManagementFuelReportsIndexEditController
      */
     @action transitionBack(fuelReport) {
         // check if fuel-report record has been edited and prompt for confirmation
@@ -49,18 +49,18 @@ export default class ManagementFuelReportsIndexEditController extends Controller
      * Set the overlay component context object.
      *
      * @param {OverlayContext} overlay
-     * @memberof ManagementDriversIndexEditController
+     * @memberof ManagementFuelReportsIndexEditController
      */
     @action setOverlayContext(overlay) {
         this.overlay = overlay;
     }
 
     /**
-     * When driver details button is clicked in overlay.
+     * When fuel-report details button is clicked in overlay.
      *
-     * @param {VehicleModel} driver
+     * @param {FuelReportModel} fuelReport
      * @return {Promise}
-     * @memberof ManagementDriversIndexEditController
+     * @memberof ManagementFuelReportsIndexEditController
      */
     @action onViewDetails(fuelReport) {
         // check if fuel-report record has been edited and prompt for confirmation
@@ -72,11 +72,11 @@ export default class ManagementFuelReportsIndexEditController extends Controller
     }
 
     /**
-     * Trigger a route refresh and focus the new driver created.
+     * Trigger a route refresh and focus the new fuel-report created.
      *
-     * @param {VehicleModel} driver
+     * @param {FuelReportModel} fuel-report
      * @return {Promise}
-     * @memberof ManagementDriversIndexEditController
+     * @memberof ManagementFuelReportsIndexEditController
      */
     @action onAfterSave(fuelReport) {
         if (this.overlay) {
@@ -91,15 +91,15 @@ export default class ManagementFuelReportsIndexEditController extends Controller
      * Prompts the user to confirm if they wish to continue with unsaved changes.
      *
      * @method
-     * @param {VehicleModel} driver - The driver object with unsaved changes.
+     * @param {FuelReportModel} fuel-report - The fuel-report object with unsaved changes.
      * @param {Object} [options={}] - Additional options for configuring the modal.
      * @returns {Promise} A promise that resolves when the user confirms, and transitions to a new route.
-     * @memberof ManagementDriversIndexEditController
+     * @memberof ManagementFuelReportsIndexEditController
      */
     confirmContinueWithUnsavedChanges(fuelReport, options = {}) {
         return this.modalsManager.confirm({
             title: 'Continue Without Saving?',
-            body: 'Unsaved changes to this fuel report will be lost. Click continue to proceed.',
+            body: 'Unsaved changes to this fuel-report will be lost. Click continue to proceed.',
             acceptButtonText: 'Continue without saving',
             confirm: () => {
                 fuelReport.rollbackAttributes();

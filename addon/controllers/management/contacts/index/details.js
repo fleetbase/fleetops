@@ -31,10 +31,10 @@ export default class ManagementContactsIndexDetailsController extends Controller
     }
 
     /**
-     * Transitions to the edit view for a specific vehicle.
+     * Transitions to the edit view for a specific contact.
      *
      * @method
-     * @param {contactModel} contact - The vehicle to be edited.
+     * @param {contactModel} contact - The contact to be edited.
      * @action
      * @returns {Transition} The transition object representing the route change.
      */

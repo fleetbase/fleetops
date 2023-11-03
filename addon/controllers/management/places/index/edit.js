@@ -58,7 +58,7 @@ export default class ManagementPlacesIndexEditController extends Controller {
     /**
      * When place details button is clicked in overlay.
      *
-     * @param {VehicleModel} place
+     * @param {PlaceModel} place
      * @return {Promise}
      * @memberof ManagementplacesIndexEditController
      */
@@ -74,7 +74,7 @@ export default class ManagementPlacesIndexEditController extends Controller {
     /**
      * Trigger a route refresh and focus the new place created.
      *
-     * @param {VehicleModel} place
+     * @param {PlaceModel} place
      * @return {Promise}
      * @memberof ManagementplacesIndexEditController
      */
@@ -86,13 +86,12 @@ export default class ManagementPlacesIndexEditController extends Controller {
         this.hostRouter.refresh();
         return this.transitionToRoute('management.places.index.details', place);
     }
-    
 
     /**
      * Prompts the user to confirm if they wish to continue with unsaved changes.
      *
      * @method
-     * @param {VehicleModel} place - The place object with unsaved changes.
+     * @param {PlaceModel} place - The place object with unsaved changes.
      * @param {Object} [options={}] - Additional options for configuring the modal.
      * @returns {Promise} A promise that resolves when the user confirms, and transitions to a new route.
      * @memberof ManagementplacesIndexEditController
