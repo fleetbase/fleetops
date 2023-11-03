@@ -1,0 +1,8 @@
+<Layout::Sidebar::Panel @open={{or @open true}} @title={{this.fleet.name}} @wrapperClass="next-fleet-summary-fleet fleet-depth-{{@depth}}">
+    {{#each this.fleet.subfleets as |subFleet|}}
+        <FleetListingPanel @fleet={{subFleet}} @onVehicleClicked={{this.onVehicleClicked}} @depth={{add @depth 1}} />
+    {{/each}}
+    {{#each this.fleet.vehicles as |vehicle|}}
+        <Layout::Sidebar::Item @icon="circle" @iconSize="2xs" @iconClass={{if vehicle.online "text-green-500" "text-yellow-200"}} @onClick={{fn this.onVehicleClicked vehicle}}>{{vehicle.displayName}}</Layout::Sidebar::Item>
+    {{/each}}
+</Layout::Sidebar::Panel>

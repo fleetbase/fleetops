@@ -434,7 +434,6 @@ export default class ManagementFleetsIndexController extends Controller {
      * @void
      */
     @action editFleet(fleet) {
-        console.log('xxx', fleet);
         return this.transitionToRoute('management.fleets.index.edit', fleet);
     }
 

@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { underscore } from '@ember/string';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
 
@@ -34,12 +35,14 @@ export default class FleetFormPanelComponent extends Component {
     /**
      * Overlay context.
      * @type {any}
+     * @memberof FleetFormPanelComponent
      */
     @tracked context;
 
     /**
      * Indicates whether the component is in a loading state.
      * @type {boolean}
+     * @memberof FleetFormPanelComponent
      */
     @tracked isLoading = false;
 
@@ -47,6 +50,7 @@ export default class FleetFormPanelComponent extends Component {
      * All possible order status options
      *
      * @var {String}
+     * @memberof FleetFormPanelComponent
      */
     @tracked statusOptions = ['active', 'disabled', 'decommissioned'];
 
@@ -64,6 +68,7 @@ export default class FleetFormPanelComponent extends Component {
      *
      * @action
      * @param {OverlayContextObject} overlayContext
+     * @memberof FleetFormPanelComponent
      */
     @action setOverlayContext(overlayContext) {
         this.context = overlayContext;
@@ -75,6 +80,7 @@ export default class FleetFormPanelComponent extends Component {
      *
      * @action
      * @returns {Promise<any>}
+     * @memberof FleetFormPanelComponent
      */
     @action save() {
         const { fleet } = this;
@@ -108,6 +114,7 @@ export default class FleetFormPanelComponent extends Component {
      * View the details of the fleet.
      *
      * @action
+     * @memberof FleetFormPanelComponent
      */
     @action onViewDetails() {
         const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.fleet);
@@ -122,8 +129,24 @@ export default class FleetFormPanelComponent extends Component {
      *
      * @action
      * @returns {any}
+     * @memberof FleetFormPanelComponent
      */
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.fleet);
+    }
+
+    /**
+     * Update relation on a model.
+     *
+     * @param {String} relation
+     * @param {Model|null} value
+     * @memberof FleetFormPanelComponent
+     */
+    @action updateRelationship(relation, value) {
+        this.fleet.set(relation, value);
+
+        if (!value) {
+            this.fleet.set(underscore(relation) + '_uuid', null);
+        }
     }
 }

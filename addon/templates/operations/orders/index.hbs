@@ -1,12 +1,12 @@
 <MapContainer::Topbar class="next-topbar-{{this.layout}}">
     <MapContainer::ViewSwitch>
         <FaIcon @icon="layer-group" class="mr-2 text-gray-400 dark:text-gray-600" />
-        <button type="button" class="{{if this.isMapLayout 'active'}}" {{on "click" (fn this.setLayoutMode "map")}}>Map</button>
-        <button type="button" class="{{if this.isTableLayout 'active'}} flex flex-row items-center relative" {{on "click" (fn this.setLayoutMode "table")}}>
+        <button type="button" id="ops-map-view-button" class="{{if this.isMapLayout 'active'}}" {{on "click" (fn this.setLayoutMode "map")}}>Map</button>
+        <button type="button" id="ops-table-view-button" class="{{if this.isTableLayout 'active'}} flex flex-row items-center relative" {{on "click" (fn this.setLayoutMode "table")}}>
             <div class="mr-1.5">Table</div>
             <Badge class="flex items-center justify-center -mr-4" @spanClass="rounded-full items-center justify-center h-4 w-4" @hideStatusDot={{true}} @status="info">{{@model.meta.total}}</Badge>
         </button>
-        {{!-- <button type="button" class="{{if this.isKanbanView 'active'}}" {{on "click" (fn this.setLayoutMode "kanban")}}>Board</button> --}}
+        {{!-- <button type="button" id="ops-kanban-view-button" class="{{if this.isKanbanView 'active'}}" {{on "click" (fn this.setLayoutMode "kanban")}}>Board</button> --}}
     </MapContainer::ViewSwitch>
 </MapContainer::Topbar>
 

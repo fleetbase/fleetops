@@ -1,5 +1,7 @@
 <Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
-    <Overlay::Header @title="Vehicle Details" @status={{this.fleet.public_id}} @hideStatusDot={{true}} @createdAt={{this.fleet.createdAt}} @onPressCancel={{@onPressCancel}}>
+    <Overlay::Header @title={{this.fleet.name}} @status={{this.fleet.public_id}} @disableBadgeHumanize={{true}} @hideStatusDot={{true}} @createdAt={{this.fleet.createdAt}}>
+        <Button @type="default" @icon="pen" @helpText="Edit fleet" @onClick={{this.onEdit}} @wrapperClass="mr-2" />
+        <Button @type="default" @icon="times" @helpText={{if this.fleet.id "Cancel edit fleet" "Cancel new fleet"}} @onClick={{this.onPressCancel}} />
     </Overlay::Header>
 
     <Overlay::Body class="no-padding" @increaseInnerBodyHeightBy={{1000}}>

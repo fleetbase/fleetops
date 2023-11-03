@@ -130,16 +130,16 @@ export default class FleetPanelComponent extends Component {
     }
 
     /**
-     * Handles edit action for the vehicle.
+     * Handles edit action for the fleet.
      *
      * @method
      * @action
      */
     @action onEdit() {
-        const isActionOverrided = contextComponentCallback(this, 'onEdit', this.vehicle);
+        const isActionOverrided = contextComponentCallback(this, 'onEdit', this.fleet);
 
         if (!isActionOverrided) {
-            this.contextPanel.focus(this.vehicle, 'editing', {
+            this.contextPanel.focus(this.fleet, 'editing', {
                 onAfterSave: () => {
                     this.contextPanel.clear();
                 },
@@ -155,7 +155,7 @@ export default class FleetPanelComponent extends Component {
      * @returns {Boolean} Indicates whether the cancel action was overridden.
      */
     @action onPressCancel() {
-        return contextComponentCallback(this, 'onPressCancel', this.vehicle);
+        return contextComponentCallback(this, 'onPressCancel', this.fleet);
     }
 
     /**

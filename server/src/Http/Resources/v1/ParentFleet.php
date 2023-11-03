@@ -5,7 +5,7 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 
-class Fleet extends FleetbaseResource
+class ParentFleet extends FleetbaseResource
 {
     /**
      * Transform the resource into an array.
@@ -25,13 +25,14 @@ class Fleet extends FleetbaseResource
             'status'               => $this->status ?? null,
             'drivers_count'        => $this->when(Http::isInternalRequest(), $this->drivers_count),
             'drivers_online_count' => $this->when(Http::isInternalRequest(), $this->drivers_online_count),
+            'vehicles_count'        => $this->when(Http::isInternalRequest(), $this->vehicles_count),
+            'vehicles_online_count' => $this->when(Http::isInternalRequest(), $this->vehicles_online_count),
             'service_area'         => $this->whenLoaded('serviceArea', new ServiceArea($this->serviceArea)),
             'zone'                 => $this->whenLoaded('zone', new Zone($this->zone)),
             'vendor'               => $this->whenLoaded('vendor', new Vendor($this->vendor)),
-            'parent_fleet'         => $this->whenLoaded('parentFleet', new ParentFleet($this->parentFleet)),
-            'subfleets'            => $this->whenLoaded('subFleets', SubFleet::collection($this->subFleets)),
             'drivers'              => $this->whenLoaded('drivers', Driver::collection($this->drivers()->without(['driverAssigned'])->with(Http::isInternalRequest() ? ['jobs'] : [])->get())),
             'vehicles'             => $this->whenLoaded('vehicles', Vehicle::collection($this->vehicles)),
+            'subfleets' => [],
             'updated_at'           => $this->updated_at,
             'created_at'           => $this->created_at,
         ];
@@ -49,7 +50,6 @@ class Fleet extends FleetbaseResource
             'name'         => $this->name,
             'task'         => $this->task ?? null,
             'status'       => $this->status ?? null,
-            'parent_fleet' => $this->when($this->serviceArea, data_get($this, 'parentFleet.public_id')),
             'service_area' => $this->when($this->serviceArea, data_get($this, 'serviceArea.public_id')),
             'zone'         => $this->when($this->zone, data_get($this, 'zone.public_id')),
             'updated_at'   => $this->updated_at,
