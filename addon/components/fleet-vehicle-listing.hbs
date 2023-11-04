@@ -4,7 +4,6 @@
             <div class="fleet-vehicle-listing-search">
                 <Input @type="text" {{on "keyup" (perform this.search)}} placeholder="Search vehicle in fleet" class="w-64 form-input form-input-sm" />
             </div>
-
             {{#if this.isLoading}}
                 <div class="mx-2">
                     <Spinner @iconClass="text-sky-500 fa-spin-800ms" />
