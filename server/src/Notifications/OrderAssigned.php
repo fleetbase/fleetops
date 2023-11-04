@@ -32,22 +32,16 @@ class OrderAssigned extends Notification implements ShouldQueue
 
     /**
      * Notification name.
-     *
-     * @var string
      */
     public static string $name = 'Order Assigned';
 
     /**
      * Notification description.
-     *
-     * @var string
      */
     public static string $description = 'Notify when an order has been assigned to a driver.';
 
     /**
      * Notification package.
-     *
-     * @var string
      */
     public static string $package = 'fleet-ops';
 

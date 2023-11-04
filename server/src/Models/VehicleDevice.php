@@ -10,7 +10,9 @@ use Fleetbase\Traits\TracksApiCredential;
 
 class VehicleDevice extends Model
 {
-    use HasUuid, TracksApiCredential, HasApiModelBehavior;
+    use HasUuid;
+    use TracksApiCredential;
+    use HasApiModelBehavior;
 
     /**
      * The database table used by the model.

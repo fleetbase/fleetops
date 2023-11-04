@@ -13,7 +13,11 @@ use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 
 class VehicleDeviceEvent extends Model
 {
-    use HasUuid, TracksApiCredential, HasApiModelBehavior, SpatialTrait, Searchable;
+    use HasUuid;
+    use TracksApiCredential;
+    use HasApiModelBehavior;
+    use SpatialTrait;
+    use Searchable;
 
     /**
      * The database table used by the model.
@@ -47,8 +51,8 @@ class VehicleDeviceEvent extends Model
      * @var array
      */
     protected $casts = [
-        'payload' => Json::class,
-        'meta' => Json::class,
+        'payload'  => Json::class,
+        'meta'     => Json::class,
         'location' => Point::class,
     ];
 

@@ -85,6 +85,13 @@ class Contact extends Model
     protected $hidden = ['photo'];
 
     /**
+     * Filterable attributes/parameters.
+     *
+     * @var array
+     */
+    protected $filterParams = ['place_uuid', 'customer_type', 'facilitator_type', 'place'];
+
+    /**
      * Properties which activity needs to be logged.
      *
      * @var array
