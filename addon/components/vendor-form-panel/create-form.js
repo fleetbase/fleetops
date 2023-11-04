@@ -119,7 +119,7 @@ export default class VendorFormPanelCreateFormComponent extends Component {
 
         this.vendor = vendor;
 
-        // trigger callback 
+        // trigger callback
         contextComponentCallback(this, 'onVendorChanged', vendor);
     }
 

@@ -1,11 +1,4 @@
-<Overlay
-    @onLoad={{this.setOverlayContext}}
-    @position="right"
-    @noBackdrop={{true}}
-    @fullHeight={{true}}
-    @isResizeble={{or this.isResizable @isResizable}}
-    @width={{or this.width @width "600px"}}
->
+<Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
@@ -23,20 +16,18 @@
         <div class="flex flex-row justify-between w-full">
             <div class="flex flex-col flex-1 w-3/4">
                 <div class="flex flex-row">
-                    <div class="w-14 flex items-center justify-start">
-                        <Image
-                            src={{this.contact.photo_url}}
-                            @fallbackSrc={{config "defaultValues.contactImage"}}
-                            alt={{this.contact.name}}
-                            height="48"
-                            width="48"
-                            class="h-12 w-12 rounded-lg shadow-sm"
-                        />
-                        <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
-                            <InputInfo @text={{this.contact.public_id}} />
-                        </Attach::Tooltip>
+                    <div class="w-14">
+                        <div class="w-12 h-12 flex items-center justify-start relative hover:bg-gray-100 transition-all rounded-lg overflow-hidden">
+                            <img src={{this.contact.photo_url}} alt={{this.contact.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                            <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
+                                <InputInfo @text={{this.contact.public_id}} />
+                            </Attach::Tooltip>
+                            <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-gray-600 bg-opacity-50 rounded-lg">
+                                <UploadButton @name="photos" @accept="image/*" @onFileAdded={{this.onUploadNewPhoto}} @icon="upload" @hideButtonText={{true}} @labelClass="upload-avatar-label-overlay" class="w-12 btn-reset" />
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex flex-col pt-2">
+                    <div class="flex flex-col">
                         <h1 class="text-gray-900 dark:text-white text-2xl">
                             {{#if this.contact.id}}
                                 {{this.contact.name}}
@@ -48,11 +39,16 @@
                                 {{/if}}
                             {{/if}}
                         </h1>
+                        <div class="-mt-1">
+                            <div class="flex flex-row items-center">
+                                <span class="text-sm dark:text-blue-400 text-blue-600">{{n-a this.contact.title (smart-humanize this.contact.type)}}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="flex justify-end w-1/4">
-                <Badge @status={{this.contact.status}} />
+                <Badge @status={{this.contact.public_id}} @status="info" @hideStatusDot={{true}} />
             </div>
         </div>
     </Overlay::Header>
@@ -60,47 +56,33 @@
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
         <div class="flex-1">
             <div class="grid grid-cols-1 gap-2 text-xs dark:text-gray-100 mb-4">
-                <div class="input-group">
-                    <label>
-                        Name
-                    </label>
+                <InputGroup @name="Name">
                     <Input @value={{this.contact.name}} @type="text" class="w-full form-input" placeholder="Name" />
-                </div>
+                </InputGroup>
 
-                <div class="input-group">
-                    <label>
-                        Title
-                    </label>
+                <InputGroup @name="Title">
                     <Input @value={{this.contact.title}} @type="text" class="w-full form-input" placeholder="Title" />
-                </div>
+                </InputGroup>
 
-                <div class="input-group">
-                    <label>
-                        Internal ID
-                    </label>
+                <InputGroup @name="Internal ID">
                     <Input @value={{this.contact.internal_id}} @type="text" class="w-full form-input" placeholder="Internal ID" />
-                </div>
+                </InputGroup>
 
-                <div class="input-group">
-                    <label>
-                        Email
-                    </label>
+                <InputGroup @name="Email">
                     <Input @value={{this.contact.email}} @type="text" class="w-full form-input" placeholder="Email" />
-                </div>
+                </InputGroup>
 
-                <div class="input-group">
-                    <label>
-                        Phone
-                    </label>
+                <InputGroup @name="Phone">
                     <PhoneInput @value={{this.contact.phone}} @onInput={{fn (mut this.contact.phone)}} class="form-input w-full" />
-                </div>
+                </InputGroup>
 
-                <div class="input-group">
-                    <label>
-                        Type
-                    </label>
-                    <Select @options={{this.contactTypes}} @value={{this.contact.type}} @onSelect={{fn (mut this.contact.type)}} class="form-input w-full" />
-                </div>
+                <InputGroup @name="Type">
+                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                        <PowerSelect @options={{this.contactTypeOptions}} @selected={{this.contact.type}} @onChange={{fn (mut this.contact.type)}} @placeholder="Select contact type" @triggerClass="form-select form-input" as |type|>
+                            {{smart-humanize type}}
+                        </PowerSelect>
+                    </div>
+                </InputGroup>
             </div>
         </div>
     </Overlay::Body>

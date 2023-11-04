@@ -44,6 +44,12 @@ export default class VehicleFormPanelComponent extends Component {
     @tracked isLoading = false;
 
     /**
+     * Status options for vehicles.
+     * @type {Array}
+     */
+    @tracked vehicleStatusOptions = ['active', 'pending'];
+
+    /**
      * Constructs the component and applies initial state.
      */
     constructor() {

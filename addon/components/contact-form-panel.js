@@ -17,6 +17,11 @@ export default class ContactFormPanelComponent extends Component {
     @service fetch;
 
     /**
+     * @service currentUser
+     */
+    @service currentUser;
+
+    /**
      * @service notifications
      */
     @service notifications;
@@ -49,11 +54,18 @@ export default class ContactFormPanelComponent extends Component {
     @tracked isLoading = false;
 
     /**
-     * All possible contact types
+     * All possible contact types.
      *
      * @var {String}
      */
-    @tracked contactTypes = ['contact', 'customer'];
+    @tracked contactTypeOptions = ['contact', 'customer'];
+
+    /**
+     * All possible contact status options.
+     *
+     * @var {String}
+     */
+    @tracked contactStatusOptions = ['pending', 'active'];
 
     /**
      * Constructs the component and applies initial state.
@@ -107,6 +119,31 @@ export default class ContactFormPanelComponent extends Component {
             this.loader.removeLoader('.next-content-overlay-panel-container ');
             this.isLoading = false;
         }
+    }
+
+    /**
+     * Uploads a new photo for the driver.
+     *
+     * @param {File} file
+     * @memberof DriverFormPanelComponent
+     */
+    @action onUploadNewPhoto(file) {
+        this.fetch.uploadFile.perform(
+            file,
+            {
+                path: `uploads/${this.currentUser.companyId}/drivers/${this.contact.id}`,
+                subject_uuid: this.contact.id,
+                subject_type: `contact`,
+                type: `contact_photo`,
+            },
+            (uploadedFile) => {
+                this.contact.setProperties({
+                    photo_uuid: uploadedFile.id,
+                    photo_url: uploadedFile.url,
+                    photo: uploadedFile,
+                });
+            }
+        );
     }
 
     /**

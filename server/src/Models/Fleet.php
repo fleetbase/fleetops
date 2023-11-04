@@ -77,8 +77,6 @@ class Fleet extends Model
 
     /**
      * The flug options for this model.
-     *
-     * @return \Spatie\Sluggable\SlugOptions
      */
     public function getSlugOptions(): SlugOptions
     {

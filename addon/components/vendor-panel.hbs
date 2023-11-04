@@ -24,21 +24,6 @@
                             <InputInfo @text={{this.vendor.public_id}} />
                         </Attach::Tooltip>
                     </div>
-                    <div class="flex flex-col">
-                        <h1 class="text-gray-900 dark:text-white text-2xl">{{this.vendor.display_name}}</h1>
-                        <div class="-mt-1">
-                            {{#if this.vendor.driver}}
-                                <div class="flex flex-row items-center">
-                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{this.vendor.driver.name}}</span>
-                                </div>
-                            {{else}}
-                                <div class="flex flex-row items-center">
-                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">No driver assigned</span>
-                                    {{! <Button @icon="user-plus" @size="xs" @helpText="Assign a driver to vendor" /> }}
-                                </div>
-                            {{/if}}
-                        </div>
-                    </div>
                 </div>
             </div>
             <div class="flex justify-end w-1/4">

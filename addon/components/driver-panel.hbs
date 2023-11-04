@@ -37,7 +37,7 @@
                         <div class="-mt-1">
                             {{#if this.driver.vehicle}}
                                 <div class="flex flex-row items-center">
-                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{this.driver.vehicle.displayName}}</span>
+                                    <a href="javascript:;" class="text-sm dark:text-blue-400 text-blue-600 hover:opacity-50" {{on "click" this.onClickDriverVehicle}}>{{this.driver.vehicle.displayName}}</a>
                                 </div>
                             {{else}}
                                 <div class="flex flex-row items-center">

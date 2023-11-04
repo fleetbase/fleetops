@@ -35,6 +35,7 @@ class Driver extends FleetbaseResource
                 'vendor_name'            => $this->when(Http::isInternalRequest(), $this->vendor_name),
                 'vehicle'                => $this->whenLoaded('vehicle', new VehicleWithoutDriver($this->vehicle)),
                 'current_job'            => $this->whenLoaded('currentJob', new CurrentJob($this->currentJob)),
+                'current_job_id'         => $this->when(Http::isInternalRequest(), data_get($this, 'currentJob.public_id')),
                 'jobs'                   => $this->whenLoaded('jobs', CurrentJob::collection($this->jobs()->without(['driverAssigned'])->get())),
                 'vendor'                 => $this->whenLoaded('vendor', new Vendor($this->vendor)),
                 'fleets'                 => $this->whenLoaded('fleets', Fleet::collection($this->fleets()->without('drivers')->get())),

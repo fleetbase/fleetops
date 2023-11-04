@@ -44,7 +44,7 @@ export default class ContextPanelService extends Service {
             editing: {
                 component: 'fleet-form-panel',
                 componentArguments: [{ isResizable: true }, { width: '600px' }],
-            }
+            },
         },
         fuelReport: {
             viewing: {

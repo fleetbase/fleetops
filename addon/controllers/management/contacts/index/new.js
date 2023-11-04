@@ -37,7 +37,7 @@ export default class ManagementContactsIndexNewController extends Controller {
      *
      * @var {contactModel}
      */
-    @tracked contact = this.store.createRecord('contact');
+    @tracked contact = this.store.createRecord('contact', { type: 'contact', status: 'active' });
 
     /**
      * Set the overlay component context object.
@@ -83,6 +83,6 @@ export default class ManagementContactsIndexNewController extends Controller {
      * @memberof ManagementcontactsIndexNewController
      */
     resetForm() {
-        this.contact = this.store.createRecord('contact');
+        this.contact = this.store.createRecord('contact', { type: 'contact', status: 'active' });
     }
 }

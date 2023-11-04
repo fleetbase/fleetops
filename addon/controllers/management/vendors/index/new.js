@@ -37,9 +37,7 @@ export default class ManagementVendorsIndexNewController extends Controller {
      *
      * @var {VendorModel}
      */
-    @tracked vendor = this.store.createRecord('vendor', {
-        status: `active`,
-    });
+    @tracked vendor = this.store.createRecord('vendor', { status: 'active' });
 
     /**
      * Set the overlay component context object.
@@ -85,8 +83,6 @@ export default class ManagementVendorsIndexNewController extends Controller {
      * @memberof ManagementVendorIndexNewController
      */
     resetForm() {
-        this.vendor = this.store.createRecord('vendor', {
-            status: `active`,
-        });
+        this.vendor = this.store.createRecord('vendor', { status: 'active' });
     }
 }

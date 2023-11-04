@@ -1,4 +1,4 @@
-import Controller, { inject as controller } from '@ember/controller';
+import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -8,30 +8,8 @@ import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 import extractCoordinates from '@fleetbase/ember-core/utils/extract-coordinates';
 import leafletIcon from '@fleetbase/ember-core/utils/leaflet-icon';
-// import Point from '@fleetbase/fleetops-data/utils/geojson/point';
 
 export default class ManagementDriversIndexController extends Controller {
-    /**
-     * Inject the `management.vendors.index` controller
-     *
-     * @var {Controller}
-     */
-    @controller('management.vendors.index') vendors;
-
-    /**
-     * Inject the `management.vehicles.index` controller
-     *
-     * @var {Controller}
-     */
-    @controller('management.vehicles.index') vehicles;
-
-    /**
-     * Inject the `management.fleets.index` controller
-     *
-     * @var {Controller}
-     */
-    @controller('management.fleets.index') fleets;
-
     /**
      * Inject the `notifications` service
      *
@@ -224,7 +202,18 @@ export default class ManagementDriversIndexController extends Controller {
      */
     @tracked layout = 'table';
 
+    /**
+     * True if the current layout style is grid.
+     *
+     * @memberof ManagementDriversIndexController
+     */
     @equal('layout', 'grid') isGridLayout;
+
+    /**
+     *Ttrue if the current layour style is table.
+     *
+     * @memberof ManagementDriversIndexController
+     */
     @equal('layout', 'table') isTableLayout;
 
     /**
@@ -307,7 +296,7 @@ export default class ManagementDriversIndexController extends Controller {
             cellComponent: 'table/cell/link-list',
             cellComponentLabelPath: 'name',
             action: (fleet) => {
-                this.fleets.viewFleet(fleet);
+                this.contextPanel.focus(fleet);
             },
             valuePath: 'fleets',
             width: '180px',
@@ -664,16 +653,13 @@ export default class ManagementDriversIndexController extends Controller {
      * View information about the driver vendor
      *
      * @param {DriverModel} driver
-     * @param {Object} options
      * @void
      */
-    @action async viewDriverVendor(driver, options = {}) {
-        this.modalsManager.displayLoader();
+    @action async viewDriverVendor(driver) {
+        const vendor = await driver.loadVendor();
 
-        const vendor = await this.store.findRecord('vendor', driver.vendor_uuid);
-
-        this.modalsManager.done().then(() => {
-            return this.vendors.viewVendor(vendor, options);
-        });
+        if (vendor) {
+            this.contextPanel.focus(vendor);
+        }
     }
 }

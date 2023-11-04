@@ -57,6 +57,16 @@ class VehicleFilter extends Filter
         );
     }
 
+    public function driverUuid(?string $driverId)
+    {
+        $this->builder->whereHas(
+            'driver',
+            function ($query) use ($driverId) {
+                $query->where('uuid', $driverId);
+            }
+        );
+    }
+
     public function createdAt($createdAt)
     {
         $createdAt = Utils::dateRange($createdAt);
