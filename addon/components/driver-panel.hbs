@@ -1,11 +1,4 @@
-<Overlay
-    @onLoad={{this.setOverlayContext}}
-    @position="right"
-    @noBackdrop={{true}}
-    @fullHeight={{true}}
-    @isResizeble={{or this.isResizable @isResizable}}
-    @width={{or this.width @width "600px"}}
->
+<Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
@@ -19,18 +12,13 @@
         <div class="flex flex-row justify-between w-full">
             <div class="flex flex-col flex-1 w-3/4">
                 <div class="flex flex-row">
-                    <div class="w-14 flex items-center justify-start">
-                        <Image
-                            src={{this.driver.photo_url}}
-                            @fallbackSrc={{config "defaultValues.driverImage"}}
-                            alt={{this.driver.name}}
-                            height="48"
-                            width="48"
-                            class="h-12 w-12 rounded-lg shadow-sm"
-                        />
-                        <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
-                            <InputInfo @text={{this.driver.public_id}} />
-                        </Attach::Tooltip>
+                    <div class="w-14">
+                        <div class="w-12 h-12 flex items-center justify-start rounded-lg">
+                            <Image src={{this.driver.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{this.driver.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                            <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
+                                <InputInfo @text={{this.driver.name}} />
+                            </Attach::Tooltip>
+                        </div>
                     </div>
                     <div class="flex flex-col">
                         <h1 class="text-gray-900 dark:text-white text-2xl">{{this.driver.name}}</h1>

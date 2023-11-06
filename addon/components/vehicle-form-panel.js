@@ -12,6 +12,16 @@ export default class VehicleFormPanelComponent extends Component {
     @service store;
 
     /**
+     * @service store
+     */
+    @service fetch;
+
+    /**
+     * @service currentUser
+     */
+    @service currentUser;
+
+    /**
      * @service notifications
      */
     @service notifications;
@@ -101,6 +111,31 @@ export default class VehicleFormPanelComponent extends Component {
             this.loader.removeLoader('.next-content-overlay-panel-container ');
             this.isLoading = false;
         }
+    }
+
+    /**
+     * Uploads a new photo for the vehicle.
+     *
+     * @param {File} file
+     * @memberof DriverFormPanelComponent
+     */
+    @action onUploadNewPhoto(file) {
+        this.fetch.uploadFile.perform(
+            file,
+            {
+                path: `uploads/${this.currentUser.companyId}/vehicles/${this.vehicle.id}`,
+                subject_uuid: this.vehicle.id,
+                subject_type: 'vehicle',
+                type: 'vehicle_photo',
+            },
+            (uploadedFile) => {
+                this.vehicle.setProperties({
+                    photo_uuid: uploadedFile.id,
+                    photo_url: uploadedFile.url,
+                    photo: uploadedFile,
+                });
+            }
+        );
     }
 
     /**
