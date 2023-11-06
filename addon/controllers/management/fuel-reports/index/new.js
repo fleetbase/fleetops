@@ -12,6 +12,13 @@ export default class ManagementFuelReportsIndexNewController extends Controller 
     @service store;
 
     /**
+     * Inject the `currentUser` service
+     *
+     * @memberof ManagementFuelReportsIndexNewController
+     */
+    @service currentUser;
+
+    /**
      * Inject the `hostRouter` service
      *
      * @memberof ManagementFuelReportsIndexNewController
@@ -37,7 +44,7 @@ export default class ManagementFuelReportsIndexNewController extends Controller 
      *
      * @var {FuelReportModel}
      */
-    @tracked fuelReport = this.store.createRecord('fuelReport');
+    @tracked fuelReport = this.store.createRecord('fuelReport', { reporter: this.currentUser.user });
 
     /**
      * Set the overlay component context object.
@@ -83,6 +90,6 @@ export default class ManagementFuelReportsIndexNewController extends Controller 
      * @memberof ManagementFuelReportsIndexNewController
      */
     resetForm() {
-        this.fuelReport = this.store.createRecord('fuelReport');
+        this.fuelReport = this.store.createRecord('fuelReport', { reporter: this.currentUser.user });
     }
 }

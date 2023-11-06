@@ -84,11 +84,18 @@ class Issue extends Model
     ];
 
     /**
+     * Filterable attributes/parameters.
+     *
+     * @var array
+     */
+    protected $filterParams = ['assignee', 'reporter'];
+
+    /**
      * Dynamic attributes that are appended to object.
      *
      * @var array
      */
-    protected $appends = [];
+    protected $appends = ['driver_name', 'vehicle_name', 'assignee_name', 'reporter_name'];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -108,9 +115,25 @@ class Issue extends Model
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
+    public function reporter()
+    {
+        return $this->belongsTo(\Fleetbase\Models\User::class, 'reported_by_uuid');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
     public function assignedTo()
     {
         return $this->belongsTo(\Fleetbase\Models\User::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function assignee()
+    {
+        return $this->belongsTo(\Fleetbase\Models\User::class, 'assigned_to_uuid');
     }
 
     /**
@@ -133,6 +156,7 @@ class Issue extends Model
      * Set a default status if none is provided, and always dasherize status input.
      *
      * @param string $value
+     *
      * @return void
      */
     public function setStatusAttribute($value)
@@ -142,5 +166,45 @@ class Issue extends Model
         } else {
             $this->attributes['status'] = Str::slug($value);
         }
+    }
+
+    /**
+     * Get the driver's name assigned to vehicle.
+     *
+     * @return string
+     */
+    public function getDriverNameAttribute()
+    {
+        return data_get($this, 'driver.name');
+    }
+
+    /**
+     * Get the vehicless name.
+     *
+     * @return string
+     */
+    public function getVehicleNameAttribute()
+    {
+        return data_get($this, 'vehicle.display_name');
+    }
+
+    /**
+     * Get the reporter name.
+     *
+     * @return string
+     */
+    public function getReporterNameAttribute()
+    {
+        return data_get($this, 'reporter.name');
+    }
+
+    /**
+     * Get the assignee name.
+     *
+     * @return string
+     */
+    public function getAssigneeNameAttribute()
+    {
+        return data_get($this, 'assignee.name');
     }
 }

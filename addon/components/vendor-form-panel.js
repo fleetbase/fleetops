@@ -105,6 +105,13 @@ export default class VendorFormPanelComponent extends Component {
     ];
 
     /**
+     * Applicable status options for vendor.
+     *
+     * @memberof VendorFormPanelComponent
+     */
+    @tracked vendorStatusOptions = ['pending', 'active', 'do-not-contact', 'prospective', 'archived'];
+
+    /**
      * Constructs the component and applies initial state.
      */
     constructor() {

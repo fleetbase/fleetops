@@ -13,7 +13,7 @@
                 <div class="flex flex-row">
                     <div class="w-14 flex items-center justify-start">
                         <Image src={{this.contact.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} alt={{this.contact.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
-                        <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
+                        <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                             <InputInfo @text={{this.contact.public_id}} />
                         </Attach::Tooltip>
                     </div>
@@ -28,7 +28,7 @@
                 </div>
             </div>
             <div class="flex justify-end w-1/4">
-                <Badge @status={{this.contact.public_id}} @status="info" @hideStatusDot={{true}} />
+                <Badge @status={{this.contact.public_id}} @type="info" @hideStatusDot={{true}} />
             </div>
         </div>
     </Overlay::Header>

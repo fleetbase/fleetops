@@ -5,6 +5,6 @@ export default class ManagementIssuesIndexEditRoute extends Route {
     @service store;
 
     model({ public_id }) {
-        return this.store.findRecord('issue', public_id);
+        return this.store.queryRecord('issue', { public_id, single: true, with: ['driver', 'vehicle', 'assignee', 'reporter'] });
     }
 }

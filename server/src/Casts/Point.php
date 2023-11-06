@@ -64,15 +64,13 @@ class Point implements CastsAttributes
 
     /**
      * Creates an empty Point as a SpatialExpression.
-     *
-     * @return SpatialExpression
      */
     public static function createEmptySpatialExpression(): SpatialExpression
     {
         $value = json_encode([
-            'type' => 'Point',
+            'type'        => 'Point',
             'coordinates' => [0, 0],
-            'bbox' => [0, 0, 0, 0]
+            'bbox'        => [0, 0, 0, 0],
         ]);
 
         return Utils::createSpatialExpressionFromGeoJson($value);

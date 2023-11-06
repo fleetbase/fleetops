@@ -1,7 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';
 import { action, set } from '@ember/object';
 import { timeout } from 'ember-concurrency';

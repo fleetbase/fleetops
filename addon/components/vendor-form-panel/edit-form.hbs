@@ -68,6 +68,13 @@
                 </PowerSelect>
             </div>
         </InputGroup>
+        <InputGroup @name="Status">
+            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                <PowerSelect @options={{@vendorStatusOptions}} @selected={{this.vendor.status}} @onChange={{fn (mut this.vendor.status)}} @placeholder="Select vendor status" @triggerClass="form-select form-input" as |status|>
+                    {{smart-humanize status}}
+                </PowerSelect>
+            </div>
+        </InputGroup>
         <InputGroup @wrapperClass="col-span-2">
             <div class="flex items-center justify-between">
                 <label>
@@ -77,7 +84,6 @@
                     <Button @type="default" @size="xs" @icon="edit" @text={{if this.vendor.has_place "Edit" "New Address"}} @onClick={{this.editAddress}} />
                 </div>
             </div>
-
             <ModelSelect @modelName="place" @selectedModel={{this.vendor.place}} @placeholder="Select Address" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{this.selectVendorAddress}} as |model|>
                 <div class="flex items-center flex-row justify-between">
                     <div class="truncate flex-1">{{n-a model.address}}</div>

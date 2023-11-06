@@ -148,16 +148,12 @@ export default class ManagementFuelReportsIndexController extends Controller {
             valuePath: 'driver_name',
             width: '120px',
             cellComponent: 'table/cell/anchor',
-            action: async (fuelReport) => {
-                let driver;
+            onClick: async (fuelReport) => {
+                let driver = await fuelReport.loadDriver();
 
-                if (!fuelReport.driver) {
-                    driver = await fuelReport.loadDriver();
-                } else {
-                    driver = await fuelReport.driver;
+                if (driver) {
+                    this.contextPanel.focus(driver);
                 }
-
-                this.contextPanel.focus(driver);
             },
             resizable: true,
             sortable: true,
@@ -172,16 +168,12 @@ export default class ManagementFuelReportsIndexController extends Controller {
             valuePath: 'vehicle_name',
             width: '120px',
             cellComponent: 'table/cell/anchor',
-            action: async (fuelReport) => {
-                let vehicle;
+            onClick: async (fuelReport) => {
+                let vehicle = await fuelReport.loadVehicle();
 
-                if (!fuelReport.vehicle) {
-                    vehicle = await fuelReport.loadVehicle();
-                } else {
-                    vehicle = await fuelReport.vehicle;
+                if (vehicle) {
+                    this.contextPanel.focus(vehicle);
                 }
-
-                this.contextPanel.focus(vehicle);
             },
             resizable: true,
             sortable: true,

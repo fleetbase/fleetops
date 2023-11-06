@@ -9,6 +9,6 @@ export default class ManagementFuelReportsIndexDetailsRoute extends Route {
     };
 
     model({ public_id }) {
-        return this.store.findRecord('fuel-report', public_id);
+        return this.store.queryRecord('fuel-report', { public_id, single: true, with: ['driver', 'vehicle', 'reporter'] });
     }
 }

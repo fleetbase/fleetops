@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
+import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
 
@@ -73,9 +74,26 @@ export default class IssueFormPanelComponent extends Component {
         'environmental-sustainability': ['Fuel Consumption', 'Carbon Footprint', 'Waste Management', 'Green Initiatives Opportunities'],
     };
 
+    /**
+     * Selectable issue categories.
+     *
+     * @memberof IssueFormPanelComponent
+     */
     @tracked issueCategories = [];
 
+    /**
+     * Issue status options.
+     *
+     * @memberof IssueFormPanelComponent
+     */
     @tracked issueStatusOptions = ['pending', 'in-progress', 'backlogged', 'requires-update', 'in-review', 're-opened', 'duplicate', 'pending-review', 'escalated', 'completed', 'canceled'];
+
+    /**
+     * Issue priorty options.
+     *
+     * @memberof IssueFormPanelComponent
+     */
+    @tracked issuePriorityOptions = ['low', 'medium', 'high', 'critical', 'scheduled-maintenance', 'operational-suggestion'];
 
     /**
      * Constructs the component and applies initial state.
@@ -83,6 +101,7 @@ export default class IssueFormPanelComponent extends Component {
     constructor() {
         super(...arguments);
         this.issue = this.args.issue;
+        this.issueCategories = getWithDefault(this.issueCategoriesByType, this.issue.type, []);
         applyContextComponentArguments(this);
     }
 
@@ -115,7 +134,7 @@ export default class IssueFormPanelComponent extends Component {
             return issue
                 .save()
                 .then((issue) => {
-                    this.notifications.success(`issue (${issue.name}) saved successfully.`);
+                    this.notifications.success(`Issue (${issue.public_id}) saved successfully.`);
                     contextComponentCallback(this, 'onAfterSave', issue);
                 })
                 .catch((error) => {
@@ -131,12 +150,24 @@ export default class IssueFormPanelComponent extends Component {
         }
     }
 
+    /**
+     * Trigger when the issue type is selected.
+     *
+     * @param {String} type
+     * @memberof IssueFormPanelComponent
+     */
     @action onSelectIssueType(type) {
         this.issue.type = type;
         this.issue.category = null;
-        this.issueCategories = this.issueCategoriesByType[type] ?? [];
+        this.issueCategories = getWithDefault(this.issueCategoriesByType, type, []);
     }
 
+    /**
+     * Add a tag to the issue
+     *
+     * @param {String} tag
+     * @memberof IssueFormPanelComponent
+     */
     @action addTag(tag) {
         if (!isArray(this.issue.tags)) {
             this.issue.tags = [];
@@ -145,6 +176,12 @@ export default class IssueFormPanelComponent extends Component {
         this.issue.tags.pushObject(tag);
     }
 
+    /**
+     * Remove a tag from the issue tags.
+     *
+     * @param {Number} index
+     * @memberof IssueFormPanelComponent
+     */
     @action removeTag(index) {
         this.issue.tags.removeAt(index);
     }

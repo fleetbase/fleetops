@@ -5,7 +5,7 @@
                 <div class="w-14">
                     <div class="upload-avatar-overlay w-12 h-12 flex items-center justify-start rounded-lg">
                         <img src={{this.vendor.logo_url}} alt={{this.vendor.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
-                        <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
+                        <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                             <InputInfo @text="Upload new photo" />
                         </Attach::Tooltip>
                         <div class="upload-avatar-button-wrapper rounded-lg">
@@ -28,7 +28,7 @@
                     </div>
                 </div>
             </div>
-            <div class="justify-end">
+            <div>
                 <Button @icon={{if this.vendor.id "save" "check"}} @type="primary" @text={{if this.vendor.id "Save Vendor" "Create Vendor"}} @onClick={{this.save}} @wrapperClass="mr-2" />
                 {{#if this.vendor.id}}
                     <Button @type="default" @icon="id-card" @helpText="View fleet details" @onClick={{this.onViewDetails}} @wrapperClass="mr-2" />
@@ -40,9 +40,9 @@
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
         {{#if this.isEditing}}
-            <VendorFormPanel::EditForm @vendor={{this.vendor}} @vendorTypes={{this.vendorTypeOptions}} @onVendorChanged={{this.onVendorChanged}} />
+            <VendorFormPanel::EditForm @vendor={{this.vendor}} @vendorTypes={{this.vendorTypeOptions}} @vendorStatusOptions={{this.vendorStatusOptions}} @onVendorChanged={{this.onVendorChanged}} />
         {{else}}
-            <VendorFormPanel::CreateForm @vendor={{this.vendor}} @vendorTypes={{this.vendorTypeOptions}} @onVendorChanged={{this.onVendorChanged}} />
+            <VendorFormPanel::CreateForm @vendor={{this.vendor}} @vendorTypes={{this.vendorTypeOptions}} @vendorStatusOptions={{this.vendorStatusOptions}} @onVendorChanged={{this.onVendorChanged}} />
         {{/if}}
     </Overlay::Body>
 </Overlay>

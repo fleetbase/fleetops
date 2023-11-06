@@ -9,6 +9,7 @@ use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
+use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 
@@ -19,6 +20,7 @@ class FuelReport extends Model
     use HasPublicId;
     use HasApiModelBehavior;
     use SpatialTrait;
+    use Searchable;
 
     /**
      * The database table used by the model.
@@ -39,7 +41,7 @@ class FuelReport extends Model
      *
      * @var array
      */
-    protected $searchableColumns = [];
+    protected $searchableColumns = ['report', 'vehicle.name', 'driver.name'];
 
     /**
      * The attributes that are mass assignable.
@@ -58,7 +60,7 @@ class FuelReport extends Model
         'currency',
         'volume',
         'metric_unit',
-        'meta'
+        'meta',
     ];
 
     /**
@@ -75,7 +77,7 @@ class FuelReport extends Model
      */
     protected $casts = [
         'location' => Point::class,
-        'meta' => Json::class,
+        'meta'     => Json::class,
     ];
 
     /**
@@ -83,7 +85,7 @@ class FuelReport extends Model
      *
      * @var array
      */
-    protected $appends = ['vehicle_name', 'driver_name'];
+    protected $appends = ['vehicle_name', 'driver_name', 'reporter_name'];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -97,7 +99,7 @@ class FuelReport extends Model
      *
      * @var array
      */
-    protected $filterParams = ['type'];
+    protected $filterParams = ['type', 'reporter'];
 
     /**
      * Set the parcel fee as only numbers.
@@ -130,7 +132,15 @@ class FuelReport extends Model
      */
     public function reportedBy()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(\Fleetbase\Models\User::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function reporter()
+    {
+        return $this->belongsTo(\Fleetbase\Models\User::class, 'reported_by_uuid');
     }
 
     /**
@@ -151,5 +161,15 @@ class FuelReport extends Model
     public function getVehicleNameAttribute()
     {
         return data_get($this, 'vehicle.display_name');
+    }
+
+    /**
+     * Get the vehicless name.
+     *
+     * @var Model
+     */
+    public function getReporterNameAttribute()
+    {
+        return data_get($this, 'reportedBy.name');
     }
 }

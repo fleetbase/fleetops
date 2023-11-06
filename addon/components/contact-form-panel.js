@@ -65,7 +65,7 @@ export default class ContactFormPanelComponent extends Component {
      *
      * @var {String}
      */
-    @tracked contactStatusOptions = ['pending', 'active'];
+    @tracked contactStatusOptions = ['pending', 'active', 'do-not-contact', 'prospective', 'archived'];
 
     /**
      * Constructs the component and applies initial state.
@@ -184,7 +184,7 @@ export default class ContactFormPanelComponent extends Component {
                 type: 'contact_photo',
             },
             (uploadedFile) => {
-                contact.setProperties({
+                this.contact.setProperties({
                     photo_uuid: uploadedFile.id,
                     photo_url: uploadedFile.url,
                     photo: uploadedFile,
