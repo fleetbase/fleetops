@@ -210,7 +210,7 @@ export default class ManagementIssuesIndexController extends Controller {
         },
         {
             label: 'Assignee',
-            valuePath: 'reporter.name',
+            valuePath: 'assignee.name',
             width: '120px',
             resizable: true,
             sortable: true,

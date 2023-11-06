@@ -10,6 +10,7 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Illuminate\Support\Str;
 
 class Issue extends Model
 {
@@ -55,6 +56,7 @@ class Issue extends Model
         'driver_uuid',
         'issue_id',
         'location',
+        'category',
         'type',
         'report',
         'priority',
@@ -125,5 +127,20 @@ class Issue extends Model
     public function driver()
     {
         return $this->belongsTo(Driver::class);
+    }
+
+    /**
+     * Set a default status if none is provided, and always dasherize status input.
+     *
+     * @param string $value
+     * @return void
+     */
+    public function setStatusAttribute($value)
+    {
+        if (empty($value)) {
+            $this->attributes['status'] = 'pending';
+        } else {
+            $this->attributes['status'] = Str::slug($value);
+        }
     }
 }

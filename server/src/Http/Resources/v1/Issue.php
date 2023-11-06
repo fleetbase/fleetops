@@ -20,7 +20,8 @@ class Issue extends FleetbaseResource
         return [
             'id'               => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'uuid'             => $this->when(Http::isInternalRequest(), $this->uuid),
-            'issue_id'         => $this->when(Http::isInternalRequest(), $this->public_id),
+            'public_id'             => $this->when(Http::isInternalRequest(), $this->public_id),
+            'issue_id'         => $this->when(Http::isInternalRequest(), $this->issue_id),
             'driver_uuid'      => $this->when(Http::isInternalRequest(), $this->driver_uuid),
             'vehicle_uuid'     => $this->when(Http::isInternalRequest(), $this->vehicle_uuid),
             'assigned_to_uuid' => $this->when(Http::isInternalRequest(), $this->assigned_to_uuid),

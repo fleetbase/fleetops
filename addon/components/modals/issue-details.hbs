@@ -2,28 +2,36 @@
     <div class="modal-body-container">
         <div class="grid grid-cols-2 flex-col md:flex-row gap-2 mb-6">
             <div class="field-info-container">
-                <div class="field-name">Type</div>
-                <div class="field-value"><Badge @status={{@options.issue.type}} /></div>
+                <div class="field-name">Reporter</div>
+                <div class="field-value">{{n-a @issue.reporter}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Report</div>
-                <div class="field-value">{{n-a @options.issue.report}}</div>
+                <div class="field-name">Assigned To</div>
+                <div class="field-value">{{n-a @issue.assignee}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Priority</div>
-                <div class="field-value">{{n-a @options.issue.priority}}</div>
+                <div class="field-name">Driver</div>
+                <div class="field-value">{{n-a @issue.driver}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Status</div>
-                <div class="field-value">{{n-a @options.issue.status}}</div>
+                <div class="field-name">Vehicle</div>
+                <div class="field-value">{{n-a @issue.vehicle.displayName}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Coordinates</div>
-                <div class="field-value">{{point-coordinates @options.issue.location}}</div>
+                <div class="field-name">Issue Type</div>
+                <div class="field-value">{{n-a @issue.type}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Issue Category</div>
+                <div class="field-value">{{n-a @issue.category}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">Date Created</div>
-                <div class="field-value">{{@options.issue.createdAtShort}}</div>
+                <div class="field-value">{{@issue.createdAtShort}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Coordinates</div>
+                <div class="field-value">{{point-coordinates @issue.location}}</div>
             </div>
         </div>
     </div>
