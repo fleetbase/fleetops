@@ -256,24 +256,24 @@ export default class ManagementIssuesIndexController extends Controller {
             ddButtonText: false,
             ddButtonIcon: 'ellipsis-h',
             ddButtonIconPrefix: 'fas',
-            ddMenuLabel: 'Fuel Report Actions',
+            ddMenuLabel: 'Issue Actions',
             cellClassNames: 'overflow-visible',
             width: '150px',
             actions: [
                 {
                     label: 'View Details',
-                    // fn: this.viewFuelReport,
+                    fn: this.viewIssue,
                 },
                 {
                     label: 'Edit Issue',
-                    // fn: this.editFuelReport,
+                    fn: this.editIssue,
                 },
                 {
                     separator: true,
                 },
                 {
                     label: 'Delete Issue',
-                    // fn: this.deleteFuelReport,
+                    fn: this.deleteIssue,
                 },
             ],
             sortable: false,
@@ -308,7 +308,63 @@ export default class ManagementIssuesIndexController extends Controller {
     }
 
     /**
-     * Bulk deletes selected `driver` via confirm prompt
+     * Toggles dialog to export a issue
+     *
+     * @void
+     */
+    @action exportIssues() {
+        this.crud.export('issue');
+    }
+
+    /**
+     * View the selected issue
+     *
+     * @param {IssueModel} issue
+     * @param {Object} options
+     * @void
+     */
+    @action viewIssue(issue) {
+        return this.transitionToRoute('management.issues.index.details', issue);
+    }
+
+    /**
+     * Create a new `issue` in modal
+     *
+     * @void
+     */
+    @action createIssue() {
+        return this.transitionToRoute('management.issues.index.new');
+    }
+
+    /**
+     * Edit a `issue` details
+     *
+     * @param {IssueModel} issue
+     * @void
+     */
+    @action editIssue(issue) {
+        return this.transitionToRoute('management.issues.index.edit', issue);
+    }
+
+    /**
+     * Delete a `issue` via confirm prompt
+     *
+     * @param {IssueModel} issue
+     * @param {Object} options
+     * @void
+     */
+    @action deleteIssue(issue, options = {}) {
+        this.crud.delete(issue, {
+            acceptButtonIcon: 'trash',
+            onConfirm: () => {
+                this.hostRouter.refresh();
+            },
+            ...options,
+        });
+    }
+
+    /**
+     * Bulk deletes selected `issues` via confirm prompt
      *
      * @param {Array} selected an array of selected models
      * @void
@@ -323,14 +379,5 @@ export default class ManagementIssuesIndexController extends Controller {
                 return this.hostRouter.refresh();
             },
         });
-    }
-
-    /**
-     * Toggles dialog to export `issue`
-     *
-     * @void
-     */
-    @action exportIssues() {
-        this.crud.export('issue');
     }
 }

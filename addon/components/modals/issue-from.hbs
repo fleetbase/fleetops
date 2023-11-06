@@ -1,0 +1,43 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="flex">
+            <div class="flex-1">
+                <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
+                    <div class="input-group">
+                        <label>
+                            Type
+                        </label>
+                        <Select @options={{@options.issueTypes}} @value={{@options.issue.type}} @onSelect={{fn (mut @options.issue.type)}} class="form-input w-full" />
+                    </div>
+
+                    <div class="input-group">
+                        <label>
+                            Report
+                        </label>
+                        <Input @value={{@options.issue.report}} @type="text" class="w-full form-input" placeholder="Report" />
+                    </div>
+
+                    <div class="input-group">
+                        <label>
+                            Priority
+                        </label>
+                        <Input @value={{@options.issue.priority}} @type="text" class="w-full form-input" placeholder="Priority" />
+                    </div>
+
+                    <div class="input-group">
+                        <label>
+                            Status
+                        </label>
+                        <Input @value={{@options.issue.status}} @type="text" class="w-full form-input" placeholder="Status" />
+                    </div>
+
+                    <InputGroup @name="Coordinates">
+                        <CoordinatesInput @value={{@options.issue.location}} @onChange={{fn (mut @options.issue.location)}} />
+                    </InputGroup>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    {{yield}}
+</Modal::Default>

@@ -58,7 +58,7 @@ export default class ManagementIssuesIndexEditController extends Controller {
     /**
      * When issue details button is clicked in overlay.
      *
-     * @param {VehicleModel} issue
+     * @param {IssueModel} issue
      * @return {Promise}
      * @memberof ManagementissuesIndexEditController
      */
@@ -74,7 +74,7 @@ export default class ManagementIssuesIndexEditController extends Controller {
     /**
      * Trigger a route refresh and focus the new issue created.
      *
-     * @param {VehicleModel} issue
+     * @param {IssueModel} issue
      * @return {Promise}
      * @memberof ManagementissuesIndexEditController
      */
@@ -91,7 +91,7 @@ export default class ManagementIssuesIndexEditController extends Controller {
      * Prompts the user to confirm if they wish to continue with unsaved changes.
      *
      * @method
-     * @param {VehicleModel} issue - The issue object with unsaved changes.
+     * @param {IssueModel} issue - The issue object with unsaved changes.
      * @param {Object} [options={}] - Additional options for configuring the modal.
      * @returns {Promise} A promise that resolves when the user confirms, and transitions to a new route.
      * @memberof ManagementissuesIndexEditController

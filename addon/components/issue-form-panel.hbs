@@ -1,1 +1,55 @@
-{{yield}}
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizeble={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "600px"}}
+>
+    <Overlay::Header @title={{if this.issue.public_id this.issue.name "New Fuel Report"}} @status={{this.issue.public_id}} @hideStatusDot={{true}} @createdAt={{this.issue.createdAt}} @titleWrapperClass="leading-5">
+        <div class="flex flex-1 justify-end">
+            <Button @icon={{if this.issue.id "save" "check"}} @type="primary" @text={{if this.issue.id "Save Fuel Report" "Create Fuel Report"}} @onClick={{this.save}} @wrapperClass="mr-2" />
+            <Button @type="default" @icon="gas-pump" @helpText="View issue details" @onClick={{this.onViewDetails}} @wrapperClass="mr-2" />
+            <Button @type="default" @icon="times" @helpText={{if this.issue.id "Cancel edit issue" "Cancel new issue"}} @onClick={{this.onPressCancel}} />
+        </div>
+    </Overlay::Header>
+
+    <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
+        <div class="flex-1">
+            <div class="grid grid-cols-1 gap-2 text-xs dark:text-gray-100 mb-4">
+                <div class="input-group">
+                    <label>
+                        Type
+                    </label>
+                    <Select @options={{this.issueTypes}} @value={{this.issue.type}} @onSelect={{fn (mut this.issue.type)}} class="form-input w-full" />
+                </div>
+
+                <div class="input-group">
+                    <label>
+                        Report
+                    </label>
+                    <Input @value={{this.issue.report}} @type="text" class="w-full form-input" placeholder="Report" />
+                </div>
+
+                <div class="input-group">
+                    <label>
+                        Priority
+                    </label>
+                    <Input @value={{this.issue.priority}} @type="text" class="w-full form-input" placeholder="Priority" />
+                </div>
+
+                <div class="input-group">
+                    <label>
+                        Status
+                    </label>
+                    <Input @value={{this.issue.status}} @type="text" class="w-full form-input" placeholder="Status" />
+                </div>
+
+                <InputGroup @name="Coordinates">
+                    <CoordinatesInput @value={{this.issue.location}} @onChange={{fn (mut this.issue.location)}} />
+                </InputGroup>
+
+            </div>
+        </div>
+    </Overlay::Body>
+</Overlay>

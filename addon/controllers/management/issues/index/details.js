@@ -1,7 +1,6 @@
 import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-
 export default class ManagementIssuesIndexDetailsController extends Controller {
     /**
      * The currently active view tab ('details' by default).
@@ -31,10 +30,10 @@ export default class ManagementIssuesIndexDetailsController extends Controller {
     }
 
     /**
-     * Transitions to the edit view for a specific vehicle.
+     * Transitions to the edit view for a specific issue.
      *
      * @method
-     * @param {issueModel} issue - The vehicle to be edited.
+     * @param {issueModel} issue - The issue to be edited.
      * @action
      * @returns {Transition} The transition object representing the route change.
      */
