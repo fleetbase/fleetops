@@ -76,7 +76,7 @@ class Lalamove
      */
     private ?IntegratedVendor $integratedVendor = null;
 
-    public function __construct(?string $apiKey = null, ?string $apiSecret = null, bool $sandbox = false, $market = null)
+    public function __construct(string $apiKey = null, string $apiSecret = null, bool $sandbox = false, $market = null)
     {
         if ($apiKey === null) {
             $apiKey = config('services.lalamove.key');
@@ -109,7 +109,7 @@ class Lalamove
         );
     }
 
-    public static function instance(?string $apiKey = null, ?string $apiSecret = null, bool $sandbox = false, $market = null): Lalamove
+    public static function instance(string $apiKey = null, string $apiSecret = null, bool $sandbox = false, $market = null): Lalamove
     {
         return new static($apiKey, $apiSecret, $market, $sandbox);
     }

@@ -68,9 +68,17 @@ class Issue extends Model
      *
      * @var array
      */
-    protected $spatialFields = [
-        'meta'     => Json::class,
-        'location' => Point::class,
+    protected $spatialFields = ['location'];
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'location'        => Point::class,
+        'meta'            => Json::class,
+        'resolved_at'     => 'date',
     ];
 
     /**
@@ -79,15 +87,6 @@ class Issue extends Model
      * @var array
      */
     protected $appends = [];
-
-    /**
-     * The attributes that should be cast to native types.
-     *
-     * @var array
-     */
-    protected $casts = [
-        'resolved_at'     => 'date',
-    ];
 
     /**
      * The attributes excluded from the model's JSON form.
