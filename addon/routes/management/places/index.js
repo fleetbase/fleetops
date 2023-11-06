@@ -4,6 +4,11 @@ import { inject as service } from '@ember/service';
 export default class ManagementPlacesIndexRoute extends Route {
     @service store;
 
+    /**
+     * Queryable parameters
+     *
+     * @var {Object}
+     */
     queryParams = {
         page: { refreshModel: true },
         limit: { refreshModel: true },
@@ -13,6 +18,6 @@ export default class ManagementPlacesIndexRoute extends Route {
     };
 
     model(params) {
-        return this.store.query('place', { ...params });
+        return this.store.query('place', { params });
     }
 }

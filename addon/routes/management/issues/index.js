@@ -19,6 +19,6 @@ export default class ManagementIssuesIndexRoute extends Route {
     };
 
     model(params) {
-        return this.store.query('issue', { ...params });
+        return this.store.query('issue', { ...params, with: ['driver', 'vehicle', 'assignee', 'reporter'] });
     }
 }

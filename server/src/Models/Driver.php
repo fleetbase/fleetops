@@ -144,7 +144,7 @@ class Driver extends Model
      *
      * @var array
      */
-    protected $filterParams = ['vendor', 'facilitator', 'customer', 'fleet'];
+    protected $filterParams = ['vendor', 'facilitator', 'customer', 'fleet', 'photo_uuid', 'avatar_uuid'];
 
     /**
      * Properties which activity needs to be logged.

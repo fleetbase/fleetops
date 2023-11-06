@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Models;
 
+use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -9,6 +10,7 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Illuminate\Support\Str;
 
 class Issue extends Model
 {
@@ -46,18 +48,19 @@ class Issue extends Model
      */
     protected $fillable = [
         '_key',
+        'public_id',
         'company_uuid',
         'reported_by_uuid',
-        'vehicle_uuid',
         'assigned_to_uuid',
+        'vehicle_uuid',
+        'driver_uuid',
         'issue_id',
-        'odometer',
         'location',
-        'latitude',
-        'longitude',
+        'category',
         'type',
         'report',
         'priority',
+        'meta',
         'resolved_at',
         'status',
     ];
@@ -67,16 +70,32 @@ class Issue extends Model
      *
      * @var array
      */
-    protected $spatialFields = [
-        'location' => Point::class,
+    protected $spatialFields = ['location'];
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'location'        => Point::class,
+        'meta'            => Json::class,
+        'resolved_at'     => 'date',
     ];
+
+    /**
+     * Filterable attributes/parameters.
+     *
+     * @var array
+     */
+    protected $filterParams = ['assignee', 'reporter'];
 
     /**
      * Dynamic attributes that are appended to object.
      *
      * @var array
      */
-    protected $appends = [];
+    protected $appends = ['driver_name', 'vehicle_name', 'assignee_name', 'reporter_name'];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -96,6 +115,14 @@ class Issue extends Model
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
+    public function reporter()
+    {
+        return $this->belongsTo(\Fleetbase\Models\User::class, 'reported_by_uuid');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
     public function assignedTo()
     {
         return $this->belongsTo(\Fleetbase\Models\User::class);
@@ -104,8 +131,80 @@ class Issue extends Model
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
+    public function assignee()
+    {
+        return $this->belongsTo(\Fleetbase\Models\User::class, 'assigned_to_uuid');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
     public function vehicle()
     {
         return $this->belongsTo(Vehicle::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function driver()
+    {
+        return $this->belongsTo(Driver::class);
+    }
+
+    /**
+     * Set a default status if none is provided, and always dasherize status input.
+     *
+     * @param string $value
+     *
+     * @return void
+     */
+    public function setStatusAttribute($value)
+    {
+        if (empty($value)) {
+            $this->attributes['status'] = 'pending';
+        } else {
+            $this->attributes['status'] = Str::slug($value);
+        }
+    }
+
+    /**
+     * Get the driver's name assigned to vehicle.
+     *
+     * @return string
+     */
+    public function getDriverNameAttribute()
+    {
+        return data_get($this, 'driver.name');
+    }
+
+    /**
+     * Get the vehicless name.
+     *
+     * @return string
+     */
+    public function getVehicleNameAttribute()
+    {
+        return data_get($this, 'vehicle.display_name');
+    }
+
+    /**
+     * Get the reporter name.
+     *
+     * @return string
+     */
+    public function getReporterNameAttribute()
+    {
+        return data_get($this, 'reporter.name');
+    }
+
+    /**
+     * Get the assignee name.
+     *
+     * @return string
+     */
+    public function getAssigneeNameAttribute()
+    {
+        return data_get($this, 'assignee.name');
     }
 }

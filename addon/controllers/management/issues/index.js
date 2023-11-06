@@ -188,9 +188,22 @@ export default class ManagementIssuesIndexController extends Controller {
         {
             label: 'ID',
             valuePath: 'public_id',
-            width: '120px',
+            cellComponent: 'table/cell/anchor',
+            action: this.viewIssue,
+            width: '110px',
             resizable: true,
             sortable: true,
+        },
+        {
+            label: 'Priority',
+            valuePath: 'priority',
+            cellComponent: 'table/cell/status',
+            width: '100px',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterComponent: 'filter/multi-option',
+            filterOptions: ['low', 'medium', 'high', 'critical', 'scheduled-maintenance', 'operational-suggestion'],
         },
         {
             label: 'Type',
@@ -202,38 +215,82 @@ export default class ManagementIssuesIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Reporter',
-            valuePath: 'reporter.name',
+            label: 'Category',
+            valuePath: 'category',
             width: '120px',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterComponent: 'filter/string',
+        },
+        {
+            label: 'Reporter',
+            valuePath: 'reporter_name',
+            width: '110px',
             resizable: true,
             sortable: true,
         },
         {
             label: 'Assignee',
-            valuePath: 'reporter.name',
-            width: '120px',
+            valuePath: 'assignee_name',
+            width: '100px',
             resizable: true,
             sortable: true,
+        },
+        {
+            label: 'Driver',
+            valuePath: 'driver_name',
+            width: '100px',
+            cellComponent: 'table/cell/anchor',
+            onClick: async (issue) => {
+                let driver = await issue.loadDriver();
+
+                if (driver) {
+                    this.contextPanel.focus(driver);
+                }
+            },
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterComponent: 'filter/model',
+            filterComponentPlaceholder: 'Select driver',
+            filterParam: 'driver',
+            model: 'driver',
         },
         {
             label: 'Vehicle',
-            valuePath: 'vehicle.name',
-            width: '120px',
+            valuePath: 'vehicle_name',
+            width: '100px',
+            cellComponent: 'table/cell/anchor',
+            onClick: async (issue) => {
+                let vehicle = await issue.loadVehicle();
+
+                if (vehicle) {
+                    this.contextPanel.focus(vehicle);
+                }
+            },
             resizable: true,
             sortable: true,
+            filterable: true,
+            filterComponent: 'filter/model',
+            filterComponentPlaceholder: 'Select vehicle',
+            filterParam: 'vehicle',
+            model: 'vehicle',
         },
         {
-            label: 'Report',
-            valuePath: 'report',
+            label: 'Status',
+            valuePath: 'status',
+            cellComponent: 'table/cell/status',
             width: '120px',
             resizable: true,
             sortable: true,
+            filterable: true,
         },
         {
             label: 'Created At',
             valuePath: 'createdAt',
             sortParam: 'created_at',
-            width: '10%',
+            width: '120px',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -243,7 +300,7 @@ export default class ManagementIssuesIndexController extends Controller {
             label: 'Updated At',
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
-            width: '10%',
+            width: '120px',
             resizable: true,
             sortable: true,
             hidden: true,
@@ -256,24 +313,25 @@ export default class ManagementIssuesIndexController extends Controller {
             ddButtonText: false,
             ddButtonIcon: 'ellipsis-h',
             ddButtonIconPrefix: 'fas',
-            ddMenuLabel: 'Fuel Report Actions',
+            ddMenuLabel: 'Issue Actions',
             cellClassNames: 'overflow-visible',
-            width: '150px',
+            wrapperClass: 'flex items-center justify-end mx-2',
+            width: '10%',
             actions: [
                 {
                     label: 'View Details',
-                    // fn: this.viewFuelReport,
+                    fn: this.viewIssue,
                 },
                 {
                     label: 'Edit Issue',
-                    // fn: this.editFuelReport,
+                    fn: this.editIssue,
                 },
                 {
                     separator: true,
                 },
                 {
                     label: 'Delete Issue',
-                    // fn: this.deleteFuelReport,
+                    fn: this.deleteIssue,
                 },
             ],
             sortable: false,
@@ -308,7 +366,63 @@ export default class ManagementIssuesIndexController extends Controller {
     }
 
     /**
-     * Bulk deletes selected `driver` via confirm prompt
+     * Toggles dialog to export a issue
+     *
+     * @void
+     */
+    @action exportIssues() {
+        this.crud.export('issue');
+    }
+
+    /**
+     * View the selected issue
+     *
+     * @param {IssueModel} issue
+     * @param {Object} options
+     * @void
+     */
+    @action viewIssue(issue) {
+        return this.transitionToRoute('management.issues.index.details', issue);
+    }
+
+    /**
+     * Create a new `issue` in modal
+     *
+     * @void
+     */
+    @action createIssue() {
+        return this.transitionToRoute('management.issues.index.new');
+    }
+
+    /**
+     * Edit a `issue` details
+     *
+     * @param {IssueModel} issue
+     * @void
+     */
+    @action editIssue(issue) {
+        return this.transitionToRoute('management.issues.index.edit', issue);
+    }
+
+    /**
+     * Delete a `issue` via confirm prompt
+     *
+     * @param {IssueModel} issue
+     * @param {Object} options
+     * @void
+     */
+    @action deleteIssue(issue, options = {}) {
+        this.crud.delete(issue, {
+            acceptButtonIcon: 'trash',
+            onConfirm: () => {
+                this.hostRouter.refresh();
+            },
+            ...options,
+        });
+    }
+
+    /**
+     * Bulk deletes selected `issues` via confirm prompt
      *
      * @param {Array} selected an array of selected models
      * @void
@@ -323,14 +437,5 @@ export default class ManagementIssuesIndexController extends Controller {
                 return this.hostRouter.refresh();
             },
         });
-    }
-
-    /**
-     * Toggles dialog to export `issue`
-     *
-     * @void
-     */
-    @action exportIssues() {
-        this.crud.export('issue');
     }
 }

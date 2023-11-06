@@ -3,11 +3,8 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { isBlank } from '@ember/utils';
-import { isArray } from '@ember/array';
-import { capitalize } from '@ember/string';
 import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
-import apiUrl from '@fleetbase/ember-core/utils/api-url';
 
 export default class ManagementVendorsIndexController extends Controller {
     /**
@@ -133,6 +130,7 @@ export default class ManagementVendorsIndexController extends Controller {
             valuePath: 'name',
             width: '180px',
             cellComponent: 'table/cell/media-name',
+            mediaPath: 'logo_url',
             action: this.viewVendor,
             resizable: true,
             sortable: true,
@@ -306,24 +304,6 @@ export default class ManagementVendorsIndexController extends Controller {
     }
 
     /**
-     * Bulk deletes selected `driver` via confirm prompt
-     *
-     * @param {Array} selected an array of selected models
-     * @void
-     */
-    @action bulkDeleteVendors() {
-        const selected = this.table.selectedRows;
-
-        this.crud.bulkDelete(selected, {
-            modelNamePath: `name`,
-            acceptButtonText: 'Delete Vendors',
-            onSuccess: () => {
-                return this.hostRouter.refresh();
-            },
-        });
-    }
-
-    /**
      * Toggles dialog to export `vendor`
      *
      * @void
@@ -336,225 +316,29 @@ export default class ManagementVendorsIndexController extends Controller {
      * View a `vendor` details in modal
      *
      * @param {VendorModel} vendor
-     * @param {Object} options
      * @void
      */
-    @action viewVendor(vendor, options) {
-        const isIntegratedVendor = vendor.get('type') === 'integrated-vendor';
-
-        this.modalsManager.show('modals/vendor-details', {
-            title: vendor.name,
-            titleComponent: 'modal/title-with-buttons',
-            acceptButtonText: 'Done',
-            hideDeclineButton: true,
-            headerButtons: [
-                {
-                    icon: 'cog',
-                    iconPrefix: 'fas',
-                    type: 'link',
-                    size: 'xs',
-                    options: [
-                        {
-                            title: 'Edit Vendor',
-                            action: () => {
-                                this.modalsManager.done().then(() => {
-                                    return this.editVendor(vendor, {
-                                        onFinish: () => {
-                                            this.viewVendor(vendor);
-                                        },
-                                    });
-                                });
-                            },
-                        },
-                        {
-                            title: 'Delete Vendor',
-                            action: () => {
-                                this.modalsManager.done().then(() => {
-                                    return this.deleteVendor(vendor, {
-                                        onDecline: () => {
-                                            this.viewVendor(vendor);
-                                        },
-                                    });
-                                });
-                            },
-                        },
-                    ],
-                },
-            ],
-            isIntegratedVendor,
-            vendor,
-            ...options,
-        });
+    @action viewVendor(vendor) {
+        return this.transitionToRoute('management.vendors.index.details', vendor);
     }
 
     /**
      * Create a new `vendor` in modal
      *
-     * @param {Object} options
      * @void
      */
     @action async createVendor() {
-        const vendor = this.store.createRecord('vendor', { status: 'active' });
-        const supportedIntegratedVendors = await this.fetch.get('integrated-vendors/supported');
-
-        return this.editVendor(vendor, {
-            title: 'New Vendor',
-            acceptButtonText: 'Confirm & Create',
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            action: 'select',
-            supportedIntegratedVendors,
-            selectedIntegratedVendor: null,
-            integratedVendor: null,
-            selectIntegratedVendor: (integratedVendor) => {
-                this.modalsManager.setOption('selectedIntegratedVendor', integratedVendor);
-
-                const { credential_params, option_params } = integratedVendor;
-
-                // create credentials object
-                const credentials = {};
-                if (isArray(integratedVendor.credential_params)) {
-                    for (let i = 0; i < integratedVendor.credential_params.length; i++) {
-                        const param = integratedVendor.credential_params.objectAt(i);
-                        credentials[param] = null;
-                    }
-                }
-
-                // create options object
-                const options = {};
-                if (isArray(integratedVendor.option_params)) {
-                    for (let i = 0; i < integratedVendor.option_params.length; i++) {
-                        const param = integratedVendor.option_params.objectAt(i);
-                        options[param.key] = null;
-                    }
-                }
-
-                const vendor = this.store.createRecord('integrated-vendor', {
-                    provider: integratedVendor.code,
-                    webhook_url: apiUrl(`listeners/${integratedVendor.code}`),
-                    credentials: {},
-                    options: {},
-                    credential_params,
-                    option_params,
-                });
-
-                this.modalsManager.setOption('integratedVendor', vendor);
-            },
-            successNotification: (vendor) => `New vendor '${vendor.name}' successfully created.`,
-        });
+        return this.transitionToRoute('management.vendors.index.new');
     }
 
     /**
      * Edit a `vendor` details
      *
      * @param {VendorModel} vendor
-     * @param {Object} options
      * @void
      */
-    @action editVendor(vendor, options = {}) {
-        const editVendorOptions = options;
-        const isIntegratedVendor = vendor.get('type') === 'integrated-vendor';
-
-        this.modalsManager.show('modals/vendor-form', {
-            title: isIntegratedVendor ? 'Integrated Vendor Settings' : 'Edit Vendor',
-            acceptButtonText: 'Save Changes',
-            acceptButtonIcon: 'save',
-            declineButtonIcon: 'times',
-            declineButtonIconPrefix: 'fas',
-            isIntegratedVendor,
-            vendor,
-            showAdvancedOptions: false,
-            isEditingCredentials: false,
-            toggleCredentialsReset: () => {
-                const isEditingCredentials = this.modalsManager.getOption('isEditingCredentials');
-
-                if (isEditingCredentials) {
-                    this.modalsManager.setOption('isEditingCredentials', false);
-                } else {
-                    this.modalsManager.setOption('isEditingCredentials', true);
-                }
-            },
-            toggleAdvancedOptions: () => {
-                const showAdvancedOptions = this.modalsManager.getOption('showAdvancedOptions');
-
-                if (showAdvancedOptions) {
-                    this.modalsManager.setOption('showAdvancedOptions', false);
-                } else {
-                    this.modalsManager.setOption('showAdvancedOptions', true);
-                }
-            },
-            selectAddress: (place) => {
-                vendor.setProperties({
-                    place_uuid: place.id,
-                    place: place,
-                    country: place.country,
-                });
-            },
-            editAddress: () => {
-                return this.editVendorPlace(vendor, {
-                    onFinish: () => {
-                        this.editVendor(vendor, editVendorOptions);
-                    },
-                });
-            },
-            newAddress: () => {
-                return this.createVendorPlace(vendor, {
-                    onConfirm: (place) => {
-                        vendor.set('place_uuid', place.id);
-                        vendor.save();
-                    },
-                    onFinish: () => {
-                        this.modalsManager.done().then(() => {
-                            this.editVendor(vendor, editVendorOptions);
-                        });
-                    },
-                });
-            },
-            confirm: (modal) => {
-                modal.startLoading();
-
-                const isAddingIntegratedVendor = modal.getOption('action') !== undefined && modal.getOption('integratedVendor')?.isNew;
-
-                if (isAddingIntegratedVendor) {
-                    const integratedVendor = modal.getOption('integratedVendor');
-
-                    return integratedVendor
-                        .save()
-                        .then((integratedVendor) => {
-                            this.notifications.success(`Successfully added ${capitalize(integratedVendor.provider)} new integrated vendor`);
-
-                            return this.hostRouter.refresh();
-                        })
-                        .catch((error) => {
-                            this.notifications.serverError(error, {
-                                clearDuration: 600 * 6,
-                            });
-                        })
-                        .finally(() => {
-                            modal.stopLoading();
-                        });
-                }
-
-                return vendor
-                    .save()
-                    .then((vendor) => {
-                        if (typeof options.successNotification === 'function') {
-                            this.notifications.success(options.successNotification(vendor));
-                        } else {
-                            this.notifications.success(options.successNotification || `${vendor.name} details updated.`);
-                        }
-
-                        return this.hostRouter.refresh();
-                    })
-                    .catch((error) => {
-                        this.notifications.serverError(error);
-                    })
-                    .finally(() => {
-                        modal.stopLoading();
-                    });
-            },
-            ...options,
-        });
+    @action editVendor(vendor) {
+        return this.transitionToRoute('management.vendors.index.edit', vendor);
     }
 
     /**
@@ -575,53 +359,65 @@ export default class ManagementVendorsIndexController extends Controller {
     }
 
     /**
+     * Bulk deletes selected `vendor` via confirm prompt
+     *
+     * @param {Array} selected an array of selected models
+     * @void
+     */
+    @action bulkDeleteVendors() {
+        const selected = this.table.selectedRows;
+
+        this.crud.bulkDelete(selected, {
+            modelNamePath: `name`,
+            acceptButtonText: 'Delete Vendors',
+            onSuccess: () => {
+                return this.hostRouter.refresh();
+            },
+        });
+    }
+
+    /**
      * View information about the vendors place
      *
      * @param {VendorModel} vendor
-     * @param {Object} options
      * @void
      */
-    @action async viewVendorPlace(vendor, options = {}) {
-        this.modalsManager.displayLoader();
-
+    @action async viewVendorPlace(vendor) {
         const place = await this.store.findRecord('place', vendor.place_uuid);
 
-        this.modalsManager.done().then(() => {
-            return this.places.viewPlace(place, options);
-        });
+        if (place) {
+            this.contextPanel.focus(place);
+        }
     }
 
     /**
-     * View information about the vendors place
+     * Edit a vendor's current place
      *
      * @param {VendorModel} vendor
-     * @param {Object} options
      * @void
      */
-    @action async editVendorPlace(vendor, options = {}) {
-        this.modalsManager.displayLoader();
+    @action async editVendorPlace(vendor) {
+        const place = await this.store.findRecord('place', vendor.place_uuid);
 
-        const place = await this.store.findRecord('place', vendor.get('place_uuid'));
-        await this.modalsManager.done({ skipCallbacks: true });
-
-        this.modalsManager.done({ skipCallbacks: true }).then(() => {
-            return this.places.editPlace(place, options);
-        });
+        if (place) {
+            this.contextPanel.focus(place, 'editing');
+        }
     }
 
     /**
-     * View information about the vendors place
+     * Create a new place for a vendor.
      *
-     * @param {DriverModel} driver
-     * @param {Object} options
+     * @param {VendorModel} vendor
      * @void
      */
-    @action async createVendorPlace(vendor, options = {}) {
-        this.modalsManager.displayLoader();
-        await this.modalsManager.done();
+    @action async createVendorPlace(vendor) {
+        const place = this.store.createRecord('place');
 
-        this.modalsManager.done().then(() => {
-            return this.places.createPlace(options);
+        this.contextPanel.focus(place, 'editing', {
+            onAfterSave: (place) => {
+                vendor.set('place_uuid', place.id);
+                vendor.save();
+            },
         });
     }
 }

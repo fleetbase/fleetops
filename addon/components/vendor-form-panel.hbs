@@ -1,0 +1,48 @@
+<Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
+    <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i">
+        <div class="flex flex-row justify-between w-full">
+            <div class="flex flex-1 flex-row">
+                <div class="w-14">
+                    <div class="upload-avatar-overlay w-12 h-12 flex items-center justify-start rounded-lg">
+                        <img src={{this.vendor.logo_url}} alt={{this.vendor.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                        <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                            <InputInfo @text="Upload new photo" />
+                        </Attach::Tooltip>
+                        <div class="upload-avatar-button-wrapper rounded-lg">
+                            <UploadButton @name="photos" @accept="image/*" @onFileAdded={{this.onUploadNewPhoto}} @icon="upload" @hideButtonText={{true}} @labelClass="upload-avatar-label-overlay" class="w-12 btn-reset" />
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col">
+                    <h1 class="text-gray-900 dark:text-white text-2xl">
+                        {{#if this.vendor.id}}
+                            {{this.vendor.name}}
+                        {{else}}
+                            <span>New Vendor</span>
+                        {{/if}}
+                    </h1>
+                    <div class="-mt-1">
+                        <div class="flex flex-row items-center">
+                            <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{n-a (smart-humanize this.vendor.type)}}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <Button @icon={{if this.vendor.id "save" "check"}} @type="primary" @text={{if this.vendor.id "Save Vendor" "Create Vendor"}} @onClick={{this.save}} @wrapperClass="mr-2" />
+                {{#if this.vendor.id}}
+                    <Button @type="default" @icon="id-card" @helpText="View fleet details" @onClick={{this.onViewDetails}} @wrapperClass="mr-2" />
+                {{/if}}
+                <Button @type="default" @icon="times" @helpText={{if this.vendor.id "Cancel edit vendor" "Cancel new vendor"}} @onClick={{this.onPressCancel}} />
+            </div>
+        </div>
+    </Overlay::Header>
+
+    <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
+        {{#if this.isEditing}}
+            <VendorFormPanel::EditForm @vendor={{this.vendor}} @vendorTypes={{this.vendorTypeOptions}} @vendorStatusOptions={{this.vendorStatusOptions}} @onVendorChanged={{this.onVendorChanged}} />
+        {{else}}
+            <VendorFormPanel::CreateForm @vendor={{this.vendor}} @vendorTypes={{this.vendorTypeOptions}} @vendorStatusOptions={{this.vendorStatusOptions}} @onVendorChanged={{this.onVendorChanged}} />
+        {{/if}}
+    </Overlay::Body>
+</Overlay>

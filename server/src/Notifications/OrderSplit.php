@@ -20,22 +20,16 @@ class OrderSplit extends Notification
 
     /**
      * Notification name.
-     *
-     * @var string
      */
     public static string $name = 'Order Split';
 
     /**
      * Notification description.
-     *
-     * @var string
      */
     public static string $description = 'Notify when an order has been splited.';
 
     /**
      * Notification package.
-     *
-     * @var string
      */
     public static string $package = 'fleet-ops';
 

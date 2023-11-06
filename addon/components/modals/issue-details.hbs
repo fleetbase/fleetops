@@ -1,0 +1,38 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="grid grid-cols-2 flex-col md:flex-row gap-2 mb-6">
+            <div class="field-info-container">
+                <div class="field-name">Reporter</div>
+                <div class="field-value">{{n-a @issue.reporter}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Assigned To</div>
+                <div class="field-value">{{n-a @issue.assignee}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Driver</div>
+                <div class="field-value">{{n-a @issue.driver}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Vehicle</div>
+                <div class="field-value">{{n-a @issue.vehicle.displayName}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Issue Type</div>
+                <div class="field-value">{{n-a @issue.type}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Issue Category</div>
+                <div class="field-value">{{n-a @issue.category}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Date Created</div>
+                <div class="field-value">{{@issue.createdAtShort}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Coordinates</div>
+                <div class="field-value">{{point-coordinates @issue.location}}</div>
+            </div>
+        </div>
+    </div>
+</Modal::Default>

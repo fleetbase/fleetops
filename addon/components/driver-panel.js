@@ -146,6 +146,19 @@ export default class DriverPanelComponent extends Component {
     }
 
     /**
+     * View the driver's assigned vehicle.
+     *
+     * @memberof DriverPanelComponent
+     */
+    @action onClickDriverVehicle() {
+        const { vehicle } = this.driver;
+
+        if (vehicle) {
+            this.contextPanel.focus(vehicle);
+        }
+    }
+
+    /**
      * Finds and returns a tab based on its slug.
      *
      * @param {String} tabSlug - The slug of the tab.

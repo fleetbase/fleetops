@@ -2,8 +2,8 @@
 
 namespace Fleetbase\FleetOps\Providers;
 
-use Fleetbase\Support\NotificationRegistry;
 use Fleetbase\Providers\CoreServiceProvider;
+use Fleetbase\Support\NotificationRegistry;
 
 if (!class_exists(CoreServiceProvider::class)) {
     throw new \Exception('FleetOps cannot be loaded without `fleetbase/core-api` installed!');

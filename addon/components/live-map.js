@@ -989,6 +989,7 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @action onDriverClicked(driver) {
+        this.contextPanel.clear();
         this.contextPanel.focus(driver);
     }
 
@@ -1019,6 +1020,7 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @action onVehicleClicked(vehicle) {
+        this.contextPanel.clear();
         this.contextPanel.focus(vehicle);
     }
 

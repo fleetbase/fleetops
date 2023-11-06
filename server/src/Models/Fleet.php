@@ -75,6 +75,9 @@ class Fleet extends Model
      */
     protected static $logName = 'fleet';
 
+    /**
+     * The flug options for this model.
+     */
     public function getSlugOptions(): SlugOptions
     {
         return SlugOptions::create()
@@ -108,7 +111,7 @@ class Fleet extends Model
      *
      * @var array
      */
-    protected $appends = ['photo_url', 'drivers_count', 'drivers_online_count'];
+    protected $appends = ['photo_url', 'drivers_count', 'drivers_online_count', 'vehicles_count', 'vehicles_online_count'];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -154,7 +157,15 @@ class Fleet extends Model
      */
     public function parentFleet()
     {
-        return $this->belongsTo(Fleet::class)->select(['uuid', 'public_id', 'name']);
+        return $this->belongsTo(Fleet::class)->without(['subFleets']);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function subFleets()
+    {
+        return $this->hasMany(Fleet::class, 'parent_fleet_uuid', 'uuid')->without(['parentFleet']);
     }
 
     /**
@@ -180,7 +191,7 @@ class Fleet extends Model
      */
     public function getPhotoUrlAttribute()
     {
-        return data_get($this, 'photo.s3url', 'https://s3.ap-northeast-2.amazonaws.com/fleetbase/public/default-fleet.png');
+        return data_get($this, 'photo.url', 'https://s3.ap-northeast-2.amazonaws.com/fleetbase/public/default-fleet.png');
     }
 
     /**
@@ -194,12 +205,32 @@ class Fleet extends Model
     }
 
     /**
-     * Get the number of drivers in fleet.
+     * Get the number of online drivers in fleet.
      *
      * @return int
      */
     public function getDriversOnlineCountAttribute()
     {
         return $this->drivers()->where('online', 1)->count();
+    }
+
+    /**
+     * Get the number of vehicles in fleet.
+     *
+     * @return int
+     */
+    public function getVehiclesCountAttribute()
+    {
+        return $this->vehicles()->count();
+    }
+
+    /**
+     * Get the number of online vehicles in fleet.
+     *
+     * @return int
+     */
+    public function getVehiclesOnlineCountAttribute()
+    {
+        return $this->vehicles()->where('online', 1)->count();
     }
 }

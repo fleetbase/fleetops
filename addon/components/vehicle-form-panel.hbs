@@ -16,11 +16,16 @@
         <div class="flex flex-row justify-between w-full">
             <div class="flex flex-col flex-1 w-3/4">
                 <div class="flex flex-row">
-                    <div class="w-14 flex items-center justify-center">
-                        <Image src={{this.vehicle.photo_url}} @fallbackSrc={{config "defaultValues.vehicleImage"}} alt={{this.vehicle.name}} height="48" width="48" class="h-12 w-12" />
-                        <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
-                            <InputInfo @text={{this.vehicle.public_id}} />
-                        </Attach::Tooltip>
+                    <div class="w-14">
+                        <div class="upload-avatar-overlay w-12 h-12 flex items-center justify-start rounded-lg">
+                            <img src={{this.vehicle.photo_url}} alt={{this.vehicle.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                            <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                                <InputInfo @text="Upload new photo" />
+                            </Attach::Tooltip>
+                            <div class="upload-avatar-button-wrapper rounded-lg">
+                                <UploadButton @name="photos" @accept="image/*" @onFileAdded={{this.onUploadNewPhoto}} @icon="upload" @hideButtonText={{true}} @labelClass="upload-avatar-label-overlay" class="w-12 btn-reset" />
+                            </div>
+                        </div>
                     </div>
                     <div class="flex flex-col">
                         <h1 class="text-gray-900 dark:text-white text-2xl">
@@ -58,61 +63,47 @@
         <div class="flex-1 space-y-4">
             <ContentPanel @title="Details" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
-                    <div class="input-group mb-2">
-                        <label>
-                            Internal ID
-                        </label>
+                    <InputGroup @name="Internal ID">
                         <Input @value={{this.vehicle.internal_id}} @type="text" class="w-full form-input" placeholder="Internal ID" />
-                    </div>
+                    </InputGroup>
 
-                    <div class="input-group mb-2">
-                        <label>
-                            Plate Number
-                        </label>
+                    <InputGroup @name="Plate Number">
                         <Input @value={{this.vehicle.plate_number}} @type="text" class="w-full form-input" placeholder="Plate Number" />
-                    </div>
+                    </InputGroup>
 
-                    <div class="input-group mb-2">
-                        <label>
-                            VIN Number
-                        </label>
+                    <InputGroup @name="VIN Number">
                         <Input @value={{this.vehicle.vin}} @type="text" class="w-full form-input" placeholder="VIN Number" />
-                    </div>
+                    </InputGroup>
 
-                    <div class="input-group mb-2">
-                        <label>
-                            Make
-                        </label>
+                    <InputGroup @name="Make">
                         <Input @value={{this.vehicle.make}} @type="text" class="w-full form-input" placeholder="Vehicle Make" />
-                    </div>
+                    </InputGroup>
 
-                    <div class="input-group mb-2">
-                        <label>
-                            Model
-                        </label>
+                    <InputGroup @name="Model">
                         <Input @value={{this.vehicle.model}} @type="text" class="w-full form-input" placeholder="Vehicle Model" />
-                    </div>
+                    </InputGroup>
 
-                    <div class="input-group mb-2">
-                        <label>
-                            Year
-                        </label>
+                    <InputGroup @name="Year">
                         <Input @value={{this.vehicle.year}} @type="text" class="w-full form-input" placeholder="Vehicle Year" />
-                    </div>
+                    </InputGroup>
 
-                    <div class="input-group mb-2">
-                        <label>
-                            Driver Assigned
-                        </label>
-                        <ModelSelect @modelName="driver" @selectedModel={{this.vehicle.driver}} @placeholder="Select Driver" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut
-                                this.vehicle.driver)}} as |model|>
+                    <InputGroup @name="Driver Assigned">
+                        <ModelSelect @modelName="driver" @selectedModel={{this.vehicle.driver}} @placeholder="Select Driver" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.vehicle.driver)}} as |model|>
                             {{model.name}}
                         </ModelSelect>
-                    </div>
+                    </InputGroup>
+
+                    <InputGroup @name="Status">
+                        <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                            <PowerSelect @options={{this.vehicleStatusOptions}} @selected={{this.vehicle.status}} @onChange={{fn (mut this.vehicle.status)}} @placeholder="Select vehicle status" @triggerClass="form-select form-input" as |status|>
+                                {{smart-humanize status}}
+                            </PowerSelect>
+                        </div>
+                    </InputGroup>
                 </div>
             </ContentPanel>
 
-            <ContentPanel @title="Avatar" @open={{false}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title="Avatar" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
                     <div class="input-group mb-2">
                         <InputLabel @labelText="Select map avatar" @helpText="Select an avatar to be used for rendering on maps when using geolocation tracking features." />
@@ -121,7 +112,7 @@
                         </FetchSelect>
                     </div>
                     <div>
-                        <img alt={{this.vehicle.public_id}} src={{this.vehicle.avatar_url}} class="w-24 h-24" />
+                        <img alt={{this.vehicle.displayName}} src={{this.vehicle.avatar_url}} class="w-24 h-24" />
                     </div>
                 </div>
             </ContentPanel>

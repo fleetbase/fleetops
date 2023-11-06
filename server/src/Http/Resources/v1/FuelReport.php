@@ -17,29 +17,29 @@ class FuelReport extends FleetbaseResource
      */
     public function toArray($request)
     {
-        return array_merge(
-            $this->getInternalIds(),
-            [
-                'id'           => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-                'uuid'         => $this->when(Http::isInternalRequest(), $this->uuid),
-                'public_id'    => $this->when(Http::isInternalRequest(), $this->public_id),
-                'driver_uuid'  => $this->when(Http::isInternalRequest(), $this->driver_uuid),
-                'vehicle_uuid' => $this->when(Http::isInternalRequest(), $this->vehicle_uuid),
-                'driver_name'  => $this->when(Http::isInternalRequest(), $this->driver_name),
-                'vehicle_name' => $this->when(Http::isInternalRequest(), $this->vehicle_name),
-                'vehicle'      => $this->whenLoaded('vehicle', new Vehicle($this->vehicle)),
-                'driver'       => $this->whenLoaded('driver', new Driver($this->driver)),
-                'odometer'     => $this->odometer,
-                'amount'       => $this->amount,
-                'currency'     => $this->currency,
-                'volume'       => $this->volume,
-                'metric_unit'  => $this->metric_unit,
-                'type'         => $this->type,
-                'location'     => $this->location ?? new Point(0, 0),
-                'updated_at'   => $this->updated_at,
-                'created_at'   => $this->created_at,
-            ]
-        );
+        return [
+            'id'                => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'uuid'              => $this->when(Http::isInternalRequest(), $this->uuid),
+            'public_id'         => $this->when(Http::isInternalRequest(), $this->public_id),
+            'reported_by_uuid'  => $this->when(Http::isInternalRequest(), $this->reported_by_uuid),
+            'driver_uuid'       => $this->when(Http::isInternalRequest(), $this->driver_uuid),
+            'vehicle_uuid'      => $this->when(Http::isInternalRequest(), $this->vehicle_uuid),
+            'reporter_name'     => $this->when(Http::isInternalRequest(), $this->reporter_name),
+            'driver_name'       => $this->when(Http::isInternalRequest(), $this->driver_name),
+            'vehicle_name'      => $this->when(Http::isInternalRequest(), $this->vehicle_name),
+            'reporter'          => $this->whenLoaded('reporter', $this->reporter),
+            'vehicle'           => $this->whenLoaded('vehicle', new Vehicle($this->vehicle)),
+            'driver'            => $this->whenLoaded('driver', new Driver($this->driver)),
+            'odometer'          => $this->odometer,
+            'amount'            => $this->amount,
+            'currency'          => $this->currency,
+            'volume'            => $this->volume,
+            'metric_unit'       => $this->metric_unit,
+            'type'              => $this->type,
+            'location'          => $this->location ?? new Point(0, 0),
+            'updated_at'        => $this->updated_at,
+            'created_at'        => $this->created_at,
+        ];
     }
 
     /**
@@ -50,18 +50,20 @@ class FuelReport extends FleetbaseResource
     public function toWebhookPayload()
     {
         return [
-            'id'          => $this->public_id,
-            'driver'      => data_get($this, 'driver.public_id'),
-            'vehicle'     => data_get($this, 'vehicle.public_id'),
-            'odometer'    => $this->odometer,
-            'amount'      => $this->amount,
-            'currency'    => $this->currency,
-            'volume'      => $this->volume,
-            'metric_unit' => $this->metric_unit,
-            'type'        => $this->type,
-            'location'    => $this->location ?? new Point(0, 0),
-            'updated_at'  => $this->updated_at,
-            'created_at'  => $this->created_at,
+            'id'            => $this->public_id,
+            'reporter'      => data_get($this, 'reportedBy.public_id'),
+            'driver'        => data_get($this, 'driver.public_id'),
+            'vehicle'       => data_get($this, 'vehicle.public_id'),
+            'report'        => $this->report,
+            'odometer'      => $this->odometer,
+            'amount'        => $this->amount,
+            'currency'      => $this->currency,
+            'volume'        => $this->volume,
+            'metric_unit'   => $this->metric_unit,
+            'type'          => $this->type,
+            'location'      => $this->location ?? new Point(0, 0),
+            'updated_at'    => $this->updated_at,
+            'created_at'    => $this->created_at,
         ];
     }
 }

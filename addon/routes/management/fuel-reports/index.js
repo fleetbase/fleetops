@@ -14,10 +14,12 @@ export default class ManagementFuelReportsIndexRoute extends Route {
         limit: { refreshModel: true },
         sort: { refreshModel: true },
         query: { refreshModel: true },
+        vehicle: { refreshModel: true },
+        driver: { refreshModel: true },
         status: { refreshModel: true },
     };
 
     model(params) {
-        return this.store.query('fuel-report', { ...params });
+        return this.store.query('fuel-report', { ...params, with: ['driver', 'vehicle', 'reporter'] });
     }
 }

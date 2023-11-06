@@ -24,6 +24,13 @@ class FleetFilter extends Filter
         });
     }
 
+    public function parentsOnly(bool $parentsOnly = false)
+    {
+        if ($parentsOnly) {
+            $this->builder->whereNull('parent_fleet_uuid');
+        }
+    }
+
     public function serviceArea(?string $serviceArea)
     {
         $this->builder->whereHas(

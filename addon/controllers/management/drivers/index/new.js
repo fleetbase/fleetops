@@ -37,7 +37,7 @@ export default class ManagementDriversIndexNewController extends Controller {
      *
      * @var {DriverModel}
      */
-    @tracked driver = this.store.createRecord('driver');
+    @tracked driver = this.store.createRecord('driver', { status: 'active' });
 
     /**
      * Set the overlay component context object.
@@ -83,6 +83,6 @@ export default class ManagementDriversIndexNewController extends Controller {
      * @memberof ManagementDriversIndexNewController
      */
     resetForm() {
-        this.driver = this.store.createRecord('driver');
+        this.driver = this.store.createRecord('driver', { status: 'active' });
     }
 }

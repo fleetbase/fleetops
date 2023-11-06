@@ -259,24 +259,6 @@ export default class ManagementContactsIndexController extends Controller {
     }
 
     /**
-     * Bulk deletes selected `driver` via confirm prompt
-     *
-     * @param {Array} selected an array of selected models
-     * @void
-     */
-    @action bulkDeleteContacts() {
-        const selected = this.table.selectedRows;
-
-        this.crud.bulkDelete(selected, {
-            modelNamePath: `name`,
-            acceptButtonText: 'Delete Contacts',
-            onSuccess: () => {
-                return this.hostRouter.refresh();
-            },
-        });
-    }
-
-    /**
      * Toggles dialog to export `contact`
      *
      * @void
@@ -289,134 +271,29 @@ export default class ManagementContactsIndexController extends Controller {
      * View a `contact` details in modal
      *
      * @param {ContactModel} contact
-     * @param {Object} options
      * @void
      */
-    @action viewContact(contact, options) {
-        this.modalsManager.show('modals/contact-details', {
-            title: contact.name,
-            titleComponent: 'modal/title-with-buttons',
-            acceptButtonText: 'Done',
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            hideDeclineButton: true,
-            headerButtons: [
-                {
-                    icon: 'cog',
-                    iconPrefix: 'fas',
-                    type: 'link',
-                    size: 'xs',
-                    options: [
-                        {
-                            title: 'Edit Contact',
-                            action: () => {
-                                this.modalsManager.done().then(() => {
-                                    return this.editContact(contact, {
-                                        onFinish: () => {
-                                            this.viewContact(contact);
-                                        },
-                                    });
-                                });
-                            },
-                        },
-                        {
-                            title: 'Delete Contact',
-                            action: () => {
-                                this.modalsManager.done().then(() => {
-                                    return this.deleteContact(contact, {
-                                        onDecline: () => {
-                                            this.viewContact(contact);
-                                        },
-                                    });
-                                });
-                            },
-                        },
-                    ],
-                },
-            ],
-            contact,
-            ...options,
-        });
+    @action viewContact(contact) {
+        return this.transitionToRoute('management.contacts.index.details', contact);
     }
 
     /**
      * Create a new `contact` in modal
      *
-     * @param {Object} options
      * @void
      */
     @action createContact() {
-        const contact = this.store.createRecord('contact', {
-            photo_url: `/images/no-avatar.png`,
-        });
-
-        return this.editContact(contact, {
-            title: 'New Contact',
-            acceptButtonText: 'Confirm & Create',
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            successNotification: (contact) => `New contact (${contact.name}) created.`,
-            onConfirm: () => {
-                return this.hostRouter.refresh();
-            },
-        });
+        return this.transitionToRoute('management.contacts.index.new');
     }
 
     /**
      * Edit a `contact` details
      *
      * @param {ContactModel} contact
-     * @param {Object} options
      * @void
      */
-    @action editContact(contact, options = {}) {
-        this.modalsManager.show('modals/contact-form', {
-            title: 'Edit Contact',
-            acceptButtonText: 'Save Changes',
-            acceptButtonIcon: 'save',
-            declineButtonIcon: 'times',
-            declineButtonIconPrefix: 'fas',
-            contactTypes: this.contactTypes,
-            contact,
-            uploadNewPhoto: (file) => {
-                this.fetch.uploadFile.perform(
-                    file,
-                    {
-                        path: `uploads/${contact.company_uuid}/contacts/${contact.slug}`,
-                        subject_uuid: contact.id,
-                        subject_type: 'contact',
-                        type: 'contact_photo',
-                    },
-                    (uploadedFile) => {
-                        contact.setProperties({
-                            photo_uuid: uploadedFile.id,
-                            photo_url: uploadedFile.url,
-                            photo: uploadedFile,
-                        });
-                    }
-                );
-            },
-            confirm: (modal, done) => {
-                modal.startLoading();
-
-                return contact
-                    .save()
-                    .then((contact) => {
-                        if (typeof options.successNotification === 'function') {
-                            this.notifications.success(options.successNotification(contact));
-                        } else {
-                            this.notifications.success(options.successNotification ?? `${contact.name} details updated.`);
-                        }
-
-                        done();
-                    })
-                    .catch((error) => {
-                        modal.stopLoading();
-                        this.notifications.serverError(error);
-                    });
-            },
-            ...options,
-        });
+    @action editContact(contact) {
+        return this.transitionToRoute('management.contacts.index.edit', contact);
     }
 
     /**
@@ -433,6 +310,24 @@ export default class ManagementContactsIndexController extends Controller {
                 this.hostRouter.refresh();
             },
             ...options,
+        });
+    }
+
+    /**
+     * Bulk deletes selected `contacts` via confirm prompt
+     *
+     * @param {Array} selected an array of selected models
+     * @void
+     */
+    @action bulkDeleteContacts() {
+        const selected = this.table.selectedRows;
+
+        this.crud.bulkDelete(selected, {
+            modelNamePath: `name`,
+            acceptButtonText: 'Delete Contacts',
+            onSuccess: () => {
+                return this.hostRouter.refresh();
+            },
         });
     }
 }

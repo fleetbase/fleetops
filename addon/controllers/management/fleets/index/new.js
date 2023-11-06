@@ -1,43 +1,36 @@
-import Controller, { inject as controller } from '@ember/controller';
-import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 
 export default class ManagementFleetsIndexNewController extends Controller {
     /**
-     * Inject the `management.fleets.index` controller
+     * Inject the `store` service
      *
-     * @var {Controller}
-     */
-    @controller('management.fleets.index') index;
-
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
+     * @memberof ManagementFleetsIndexNewController
      */
     @service store;
 
     /**
      * Inject the `hostRouter` service
      *
-     * @var {Service}
+     * @memberof ManagementFleetsIndexNewController
      */
     @service hostRouter;
 
     /**
-     * Inject the `notifications` service
+     * Inject the `hostRouter` service
      *
-     * @var {Service}
+     * @memberof ManagementFleetsIndexNewController
      */
-    @service notifications;
+    @service modalsManager;
 
     /**
-     * Inject the `loader` service
+     * The overlay component context.
      *
-     * @var {Service}
+     * @memberof ManagementFleetsIndexNewController
      */
-    @service loader;
+    @tracked overlay;
 
     /**
      * The fleet being created.
@@ -47,57 +40,49 @@ export default class ManagementFleetsIndexNewController extends Controller {
     @tracked fleet = this.store.createRecord('fleet', { status: 'active' });
 
     /**
-     * True if creating fleet.
+     * Set the overlay component context object.
      *
-     * @var {Boolean}
+     * @param {OverlayContext} overlay
+     * @memberof ManagementFleetsIndexNewController
      */
-    @tracked isCreatingFleet = false;
-
-    /**
-     * Saves the fleet to server
-     *
-     * @void
-     */
-    @action createFleet() {
-        const { fleet } = this;
-
-        this.isCreatingFleet = true;
-        this.loader.showLoader('.overlay-inner-content', { loadingMessage: 'Creating fleet...' });
-
-        try {
-            return fleet
-                .save()
-                .then((fleet) => {
-                    return this.transitionToRoute('management.fleets.index').then(() => {
-                        this.notifications.success(`New fleet (${fleet.name}) created.`);
-                        this.resetForm();
-                        this.hostRouter.refresh();
-                    });
-                })
-                .catch((error) => {
-                    console.log(error);
-                    this.notifications.serverError(error);
-                })
-                .finally(() => {
-                    this.isCreatingFleet = false;
-                    this.loader.removeLoader();
-                });
-        } catch (error) {
-            this.isCreatingFleet = false;
-            this.loader.removeLoader();
-        }
+    @action setOverlayContext(overlay) {
+        this.overlay = overlay;
     }
 
     /**
-     * Resets the driver form
+     * When exiting the overlay.
      *
-     * @void
+     * @return {Transition}
+     * @memberof ManagementFleetsIndexNewController
      */
-    @action resetForm() {
-        this.fleet = this.store.createRecord('fleet');
-    }
-
     @action transitionBack() {
         return this.transitionToRoute('management.fleets.index');
+    }
+
+    /**
+     * Trigger a route refresh and focus the new fleet created.
+     *
+     * @param {FleetModel} fleet
+     * @return {Promise}
+     * @memberof ManagementFleetsIndexNewController
+     */
+    @action onAfterSave(fleet) {
+        if (this.overlay) {
+            this.overlay.close();
+        }
+
+        this.hostRouter.refresh();
+        return this.transitionToRoute('management.fleets.index.details', fleet).then(() => {
+            this.resetForm();
+        });
+    }
+
+    /**
+     * Resets the form with a new fleet record
+     *
+     * @memberof ManagementFleetsIndexNewController
+     */
+    resetForm() {
+        this.fleet = this.store.createRecord('fleet', { status: 'active' });
     }
 }

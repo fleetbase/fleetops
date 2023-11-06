@@ -37,9 +37,7 @@ export default class ManagementVehiclesIndexNewController extends Controller {
      *
      * @var {VehicleModel}
      */
-    @tracked vehicle = this.store.createRecord('vehicle', {
-        status: `active`,
-    });
+    @tracked vehicle = this.store.createRecord('vehicle', { status: 'active' });
 
     /**
      * Set the overlay component context object.
@@ -85,8 +83,6 @@ export default class ManagementVehiclesIndexNewController extends Controller {
      * @memberof ManagementVehiclesIndexNewController
      */
     resetForm() {
-        this.vehicle = this.store.createRecord('vehicle', {
-            status: `active`,
-        });
+        this.vehicle = this.store.createRecord('vehicle', { status: 'active' });
     }
 }

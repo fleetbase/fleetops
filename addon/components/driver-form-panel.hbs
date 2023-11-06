@@ -16,13 +16,18 @@
         <div class="flex flex-row justify-between w-full">
             <div class="flex flex-col flex-1 w-3/4">
                 <div class="flex flex-row">
-                    <div class="w-14 flex items-center justify-start">
-                        <Image src={{this.driver.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{this.driver.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
-                        <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
-                            <InputInfo @text={{this.driver.public_id}} />
-                        </Attach::Tooltip>
+                    <div class="w-14">
+                        <div class="upload-avatar-overlay w-12 h-12 flex items-center justify-start rounded-lg">
+                            <img src={{this.driver.photo_url}} alt={{this.driver.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                            <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                                <InputInfo @text="Upload new photo" />
+                            </Attach::Tooltip>
+                            <div class="upload-avatar-button-wrapper rounded-lg">
+                                <UploadButton @name="photos" @accept="image/*" @onFileAdded={{this.onUploadNewPhoto}} @icon="upload" @hideButtonText={{true}} @labelClass="upload-avatar-label-overlay" class="w-12 btn-reset" />
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex flex-col pt-2">
+                    <div class="flex flex-col">
                         <h1 class="text-gray-900 dark:text-white text-2xl">
                             {{#if this.driver.id}}
                                 {{this.driver.name}}
@@ -56,75 +61,54 @@
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
         <div class="flex-1">
-            <div class="grid grid-cols-1 gap-2 text-xs dark:text-gray-100 mb-4">
-                <div class="input-group">
-                    <label>
-                        Name
-                    </label>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+                <InputGroup @name="Name" @wrapperClass="col-span-2">
                     <Input @value={{this.driver.name}} @type="text" class="w-full form-input" placeholder="Name" />
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
-                <div class="input-group">
-                    <label>
-                        Internal ID
-                    </label>
+                </InputGroup>
+                
+                <InputGroup @name="Internal ID">
                     <Input @value={{this.driver.internal_id}} @type="text" class="w-full form-input" placeholder="Internal ID" />
-                </div>
+                </InputGroup>
 
-                <div class="input-group">
-                    <label>
-                        Drivers License
-                    </label>
+                <InputGroup @name="Drivers License">
                     <Input @value={{this.driver.drivers_license_number}} @type="text" class="w-full form-input" placeholder="Drivers License" />
-                </div>
+                </InputGroup>
 
-                <div class="input-group">
-                    <label>
-                        Email
-                    </label>
+                <InputGroup @name="Email">
                     <Input @value={{this.driver.email}} @type="text" class="w-full form-input" placeholder="Email" />
-                </div>
+                </InputGroup>
 
-                <div class="input-group">
-                    <label>
-                        Phone
-                    </label>
+                <InputGroup @name="Phone">
                     <PhoneInput @value={{this.driver.phone}} @onInput={{fn (mut this.driver.phone)}} class="form-input w-full" />
-                </div>
+                </InputGroup>
 
-                <div class="input-group">
-                    <label>
-                        Vendor
-                    </label>
+                <InputGroup @name="Vendor">
                     <ModelSelect @modelName="vendor" @selectedModel={{this.driver.vendor}} @placeholder="Select Vendor" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.driver.vendor)}} as |model|>
                         {{model.name}}
                     </ModelSelect>
-                </div>
+                </InputGroup>
 
-                <div class="input-group">
-                    <label>
-                        Vehicle
-                    </label>
+                <InputGroup @name="Vehicle">
                     <ModelSelect @modelName="vehicle" @selectedModel={{this.driver.vehicle}} @placeholder="Select Vehicle" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.driver.vehicle)}} as |model|>
                         {{model.display_name}}
                     </ModelSelect>
-                </div>
+                </InputGroup>
 
-                <div class="input-group">
-                    <label>
-                        City
-                    </label>
+                <InputGroup @name="City">
                     <Input @value={{this.driver.city}} @type="text" class="w-full form-input" placeholder="City" />
-                </div>
+                </InputGroup>
 
-                <div class="input-group">
-                    <label>
-                        Country
-                    </label>
+                <InputGroup @name="Country">
                     <CountrySelect class="w-full form-input form-select form-datalist" @value={{this.driver.country}} @onChange={{fn (mut this.driver.country)}} placeholder="Country" />
-                </div>
+                </InputGroup>
+
+                <InputGroup @name="Status">
+                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                        <PowerSelect @options={{this.driverStatusOptions}} @selected={{this.driver.status}} @onChange={{fn (mut this.driver.status)}} @placeholder="Select driver status" @triggerClass="form-select form-input" as |status|>
+                            {{smart-humanize status}}
+                        </PowerSelect>
+                    </div>
+                </InputGroup>
             </div>
         </div>
     </Overlay::Body>

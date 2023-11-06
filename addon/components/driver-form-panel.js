@@ -12,6 +12,16 @@ export default class DriverFormPanelComponent extends Component {
     @service store;
 
     /**
+     * @service fetch
+     */
+    @service fetch;
+
+    /**
+     * @service currentUser
+     */
+    @service currentUser;
+
+    /**
      * @service notifications
      */
     @service notifications;
@@ -36,6 +46,12 @@ export default class DriverFormPanelComponent extends Component {
      * @type {any}
      */
     @tracked context;
+
+    /**
+     * Status options for drivers.
+     * @type {Array}
+     */
+    @tracked driverStatusOptions = ['active', 'pending'];
 
     /**
      * Indicates whether the component is in a loading state.
@@ -95,6 +111,31 @@ export default class DriverFormPanelComponent extends Component {
             this.loader.removeLoader('.next-content-overlay-panel-container ');
             this.isLoading = false;
         }
+    }
+
+    /**
+     * Uploads a new photo for the driver.
+     *
+     * @param {File} file
+     * @memberof DriverFormPanelComponent
+     */
+    @action onUploadNewPhoto(file) {
+        this.fetch.uploadFile.perform(
+            file,
+            {
+                path: `uploads/${this.currentUser.companyId}/drivers/${this.driver.id}`,
+                subject_uuid: this.driver.id,
+                subject_type: 'driver',
+                type: 'driver_photo',
+            },
+            (uploadedFile) => {
+                this.driver.setProperties({
+                    photo_uuid: uploadedFile.id,
+                    photo_url: uploadedFile.url,
+                    photo: uploadedFile,
+                });
+            }
+        );
     }
 
     /**

@@ -39,22 +39,16 @@ class OrderPing extends Notification implements ShouldQueue
 
     /**
      * Notification name.
-     *
-     * @var string
      */
     public static string $name = 'Order Ping';
 
     /**
      * Notification description.
-     *
-     * @var string
      */
     public static string $description = 'Notify when an order has been pinged.';
 
     /**
      * Notification package.
-     *
-     * @var string
      */
     public static string $package = 'fleet-ops';
 

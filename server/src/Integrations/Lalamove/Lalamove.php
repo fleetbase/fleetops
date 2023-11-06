@@ -44,17 +44,17 @@ class Lalamove
     /**
      * API Key.
      */
-    private string $apiKey;
+    private ?string $apiKey;
 
     /**
      * API Secret.
      */
-    private string $apiSecret;
+    private ?string $apiSecret;
 
     /**
      * Applicable request ID.
      */
-    private string $requestId;
+    private ?string $requestId;
 
     /**
      * Applicable options.
@@ -272,7 +272,7 @@ class Lalamove
         return $this;
     }
 
-    private static function sign($timestamp, string $apiSecret, string $requestMethod, string $requestPath, string $requestBody)
+    private static function sign($timestamp, ?string $apiSecret, ?string $requestMethod, ?string $requestPath, ?string $requestBody)
     {
         $requestMethod = strtoupper($requestMethod);
         $rawSignature  =  "$timestamp\r\n$requestMethod\r\n$requestPath\r\n\r\n$requestBody";
@@ -281,7 +281,7 @@ class Lalamove
         return $signature;
     }
 
-    private function createSignature($timestamp, string $requestMethod, string $requestPath, string $requestBody)
+    private function createSignature($timestamp, ?string $requestMethod, ?string $requestPath, ?string $requestBody)
     {
         $requestPath = '/' . $this->namespace . '/' . $requestPath;
         $apiSecret   = $this->apiSecret;
@@ -289,7 +289,7 @@ class Lalamove
         return static::sign($timestamp, $apiSecret, $requestMethod, $requestPath, $requestBody);
     }
 
-    private function getAuthorizationKey(string $method, string $path, string $body)
+    private function getAuthorizationKey(?string $method, ?string $path, ?string $body)
     {
         $key       = $this->apiKey;
         $timestamp = floor(microtime(true) * 1000);

@@ -1,5 +1,5 @@
 <Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
-     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
+    <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
                 {{!-- <Button @type="default" @icon="location-arrow" @helpText="Locate driver" @onClick={{@onPressCancel}} /> --}}
@@ -12,23 +12,25 @@
         <div class="flex flex-row justify-between w-full">
             <div class="flex flex-col flex-1 w-3/4">
                 <div class="flex flex-row">
-                    <div class="w-14 flex items-center justify-start">
-                        <Image src={{this.driver.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{this.driver.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
-                        <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
-                            <InputInfo @text={{this.driver.public_id}} />
-                        </Attach::Tooltip>
+                    <div class="w-14">
+                        <div class="w-12 h-12 flex items-center justify-start rounded-lg">
+                            <Image src={{this.driver.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{this.driver.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                            <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                                <InputInfo @text={{this.driver.name}} />
+                            </Attach::Tooltip>
+                        </div>
                     </div>
                     <div class="flex flex-col">
                         <h1 class="text-gray-900 dark:text-white text-2xl">{{this.driver.name}}</h1>
                         <div class="-mt-1">
                             {{#if this.driver.vehicle}}
                                 <div class="flex flex-row items-center">
-                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{this.driver.vehicle.displayName}}</span>
+                                    <a href="javascript:;" class="text-sm dark:text-blue-400 text-blue-600 hover:opacity-50" {{on "click" this.onClickDriverVehicle}}>{{this.driver.vehicle.displayName}}</a>
                                 </div>
                             {{else}}
                                 <div class="flex flex-row items-center">
                                     <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">No vehicle assigned</span>
-                                    {{!-- <Button @icon="plus" @size="xs" @helpText="Assign a vehicle to driver" /> --}}
+                                    {{! <Button @icon="plus" @size="xs" @helpText="Assign a vehicle to driver" /> }}
                                 </div>
                             {{/if}}
                         </div>
@@ -45,7 +47,7 @@
             <div class="ui-tabs mt-4">
                 <nav>
                     {{#each this.tabs as |tab|}}
-                        <a href="javascript:;" class="ui-tab {{if (eq this.tab.slug tab.slug) 'active' }}" {{on "click" (fn this.onTabChanged tab.slug)}}>
+                        <a href="javascript:;" class="ui-tab {{if (eq this.tab.slug tab.slug) 'active'}}" {{on "click" (fn this.onTabChanged tab.slug)}}>
                             <FaIcon @icon={{tab.icon}} class="mr-1" />
                             <span>{{tab.title}}</span>
                         </a>
@@ -54,7 +56,7 @@
             </div>
         </div>
         <div class="tab-content tab-{{this.tab.slug}}">
-            {{component this.tab.component driver=this.driver tabOptions=this.tab params=this.tab.componentParams}}
+            {{component this.tab.component driver=this.driver tabOptions=this.tab options=this.tab.componentParams}}
         </div>
     </Overlay::Body>
 </Overlay>

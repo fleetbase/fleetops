@@ -36,6 +36,66 @@ export default class ContextPanelService extends Service {
                 componentArguments: [{ isResizable: true }, { width: '600px' }],
             },
         },
+        fleet: {
+            viewing: {
+                component: 'fleet-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+            editing: {
+                component: 'fleet-form-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+        },
+        fuelReport: {
+            viewing: {
+                component: 'fuel-report-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+            editing: {
+                component: 'fuel-report-form-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+        },
+        vendor: {
+            viewing: {
+                component: 'vendor-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+            editing: {
+                component: 'vendor-form-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+        },
+        contact: {
+            viewing: {
+                component: 'contact-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+            editing: {
+                component: 'contact-form-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+        },
+        place: {
+            viewing: {
+                component: 'place-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+            editing: {
+                component: 'place-form-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+        },
+        issue: {
+            viewing: {
+                component: 'issue-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+            editing: {
+                component: 'issue-form-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+        },
     };
 
     /**
