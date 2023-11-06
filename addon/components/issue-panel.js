@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
-import IssuePanelDetailComponent from './Issue-panel/details';
+import IssuePanelDetailComponent from './issue-panel/details';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
 export default class IssuePanelComponent extends Component {
@@ -63,7 +63,7 @@ export default class IssuePanelComponent extends Component {
      * @type {IssueModel}
      * @tracked
      */
-    @tracked Issue;
+    @tracked issue;
 
     /**
      * Returns the array of tabs available for the panel.
@@ -71,7 +71,7 @@ export default class IssuePanelComponent extends Component {
      * @type {Array}
      */
     get tabs() {
-        const registeredTabs = this.universe.getMenuItemsFromRegistry('component:Issue-panel');
+        const registeredTabs = this.universe.getMenuItemsFromRegistry('component:issue-panel');
         // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: IssuePanelTrackingComponent }),
         const defaultTabs = [this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: IssuePanelDetailComponent })];
 
@@ -87,7 +87,7 @@ export default class IssuePanelComponent extends Component {
      */
     constructor() {
         super(...arguments);
-        this.Issue = this.args.Issue;
+        this.issue = this.args.issue;
         this.tab = this.getTabUsingSlug(this.args.tab);
         applyContextComponentArguments(this);
     }
@@ -122,10 +122,10 @@ export default class IssuePanelComponent extends Component {
      * @action
      */
     @action onEdit() {
-        const isActionOverrided = contextComponentCallback(this, 'onEdit', this.Issue);
+        const isActionOverrided = contextComponentCallback(this, 'onEdit', this.issue);
 
         if (!isActionOverrided) {
-            this.contextPanel.focus(this.Issue, 'editing', {
+            this.contextPanel.focus(this.issue, 'editing', {
                 onAfterSave: () => {
                     this.contextPanel.clear();
                 },
@@ -141,7 +141,7 @@ export default class IssuePanelComponent extends Component {
      * @returns {Boolean} Indicates whether the cancel action was overridden.
      */
     @action onPressCancel() {
-        return contextComponentCallback(this, 'onPressCancel', this.Issue);
+        return contextComponentCallback(this, 'onPressCancel', this.issue);
     }
 
     /**

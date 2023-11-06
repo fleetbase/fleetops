@@ -86,6 +86,16 @@ export default class ContextPanelService extends Service {
                 componentArguments: [{ isResizable: true }, { width: '600px' }],
             },
         },
+        issue: {
+            viewing: {
+                component: 'issue-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+            editing: {
+                component: 'issue-form-panel',
+                componentArguments: [{ isResizable: true }, { width: '600px' }],
+            },
+        },
     };
 
     /**

@@ -18,6 +18,13 @@ export default class ManagementIssuesIndexNewController extends Controller {
     @service hostRouter;
 
     /**
+     * Inject the `currentUser` service
+     *
+     * @memberof ManagementissuesIndexNewController
+     */
+    @service currentUser;
+
+    /**
      * Inject the `hostRouter` service
      *
      * @memberof ManagementissuesIndexNewController
@@ -36,7 +43,7 @@ export default class ManagementIssuesIndexNewController extends Controller {
      *
      * @var {issueModel}
      */
-    @tracked issue = this.store.createRecord('issue');
+    @tracked issue = this.store.createRecord('issue', { reporter: this.currentUser.user, status: 'pending' });
 
     /**
      * Set the overlay component context object.
@@ -82,6 +89,6 @@ export default class ManagementIssuesIndexNewController extends Controller {
      * @memberof ManagementissuesIndexNewController
      */
     resetForm() {
-        this.issue = this.store.createRecord('issue');
+        this.issue = this.store.createRecord('issue', { reporter: this.currentUser.user, status: 'pending' });
     }
 }

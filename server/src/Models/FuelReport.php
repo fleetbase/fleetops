@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Models;
 
+use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
@@ -45,7 +46,20 @@ class FuelReport extends Model
      *
      * @var array
      */
-    protected $fillable = ['company_uuid', 'driver_uuid', 'vehicle_uuid', 'odometer', 'latitude', 'longitude', 'location', 'amount', 'currency', 'volume', 'metric_unit'];
+    protected $fillable = [
+        'company_uuid',
+        'driver_uuid',
+        'vehicle_uuid',
+        'reported_by_uuid',
+        'report',
+        'odometer',
+        'location',
+        'amount',
+        'currency',
+        'volume',
+        'metric_unit',
+        'meta'
+    ];
 
     /**
      * The attributes that are spatial columns.
@@ -61,6 +75,7 @@ class FuelReport extends Model
      */
     protected $casts = [
         'location' => Point::class,
+        'meta' => Json::class,
     ];
 
     /**
@@ -108,6 +123,14 @@ class FuelReport extends Model
     public function vehicle()
     {
         return $this->belongsTo(Vehicle::class)->without(['driver']);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function reportedBy()
+    {
+        return $this->belongsTo(User::class);
     }
 
     /**

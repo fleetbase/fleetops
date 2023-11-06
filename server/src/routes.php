@@ -23,7 +23,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
         | End-user API routes, these are routes that the SDK and applications will interface with, and require API credentials.
         */
         Route::prefix('v1')
-            ->middleware('fleetbase.api')
+            ->middleware(['fleetbase.api', \Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class])
             ->namespace('Api\v1')
             ->group(function ($router) {
                 // drivers routes
@@ -185,7 +185,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
         $router->prefix(config('fleetops.api.routing.internal_prefix', 'int'))->namespace('Internal')->group(
             function ($router) {
                 $router->group(
-                    ['prefix' => 'v1', 'namespace' => 'v1', 'middleware' => ['fleetbase.protected']],
+                    ['prefix' => 'v1', 'namespace' => 'v1', 'middleware' => ['fleetbase.protected', \Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]],
                     function ($router) {
                         $router->fleetbaseRoutes(
                             'contacts',

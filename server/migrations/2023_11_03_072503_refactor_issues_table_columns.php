@@ -15,6 +15,8 @@ class RefactorIssuesTableColumns extends Migration
     {
         Schema::table('issues', function (Blueprint $table) {
             $table->dropColumn(['longitude', 'latitude', 'odometer']);
+            $table->string('category')->nullable()->after('type');
+            $table->json('tags')->nullable()->after('priority');
             $table->json('meta')->nullable()->after('priority');
             $table->mediumText('report')->change();
             $table->foreignUuid('reported_by_uuid')->nullable()->after('assigned_to_uuid')->references('uuid')->on('users')->onDelete('cascade');
@@ -34,7 +36,7 @@ class RefactorIssuesTableColumns extends Migration
             $table->string('odometer')->nullable()->after('location');
             $table->string('report')->change();
             $table->dropForeign(['reported_by_uuid']);
-            $table->dropColumn(['reported_by_uuid', 'meta']);
+            $table->dropColumn(['reported_by_uuid', 'meta', 'tags', 'category']);
         });
     }
 }
