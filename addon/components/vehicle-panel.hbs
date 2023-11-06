@@ -11,11 +11,13 @@
         <div class="flex flex-row justify-between w-full">
             <div class="flex flex-col flex-1 w-3/4">
                 <div class="flex flex-row">
-                    <div class="w-14 flex items-center justify-center">
-                        <Image src={{this.vehicle.photo_url}} @fallbackSrc={{this.vehicle.avatar_url}} alt={{this.vehicle.name}} height="48" width="48" class="h-12 w-12" />
-                        <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
-                            <InputInfo @text={{this.vehicle.public_id}} />
-                        </Attach::Tooltip>
+                    <div class="w-14">
+                        <div class="w-12 h-12 flex items-center justify-start rounded-lg">
+                            <Image src={{this.vehicle.photo_url}} @fallbackSrc={{config "defaultValues.vehicleImage"}} alt={{this.vehicle.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                            <Attach::Tooltip @class="clean" @animation="scale" @placement={{"top"}}>
+                                <InputInfo @text={{this.vehicle.displayName}} />
+                            </Attach::Tooltip>
+                        </div>
                     </div>
                     <div class="flex flex-col">
                         <h1 class="text-gray-900 dark:text-white text-2xl">{{this.vehicle.display_name}}</h1>

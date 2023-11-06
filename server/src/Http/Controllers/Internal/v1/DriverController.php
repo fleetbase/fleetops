@@ -51,17 +51,26 @@ class DriverController extends FleetOpsController
             // outside organization: invite to join organization AS DRIVER
             if ($validator->errors()->hasAny(['phone', 'email'])) {
                 // get existing user
-                $existingUser = User::where(
-                    function ($q) use ($input) {
-                        if (!empty($input['phone'])) {
-                            $q->orWhere('phone', $input['phone']);
-                        }
+                $existingUser = null;
 
-                        if (!empty($input['email'])) {
-                            $q->orWhere('email', $input['email']);
-                        }
+                // if values provided for user lookup
+                if (!empty($input['phone']) || !empty($input['email'])) {
+                    $existingUserQuery = User::query();
+
+                    if (!empty($input['phone']) && is_string($input['phone'])) {
+                        $existingUserQuery->orWhere(function ($q) use ($input) {
+                            $q->where('phone', $input['phone'])->whereNotNull('phone');
+                        });
                     }
-                )->first();
+
+                    if (!empty($input['email']) && is_string($input['email'])) {
+                        $existingUserQuery->orWhere(function ($q) use ($input) {
+                            $q->where('email', $input['email'])->whereNotNull('email');
+                        });
+                    }
+
+                    $existingUser = $existingUserQuery->first();
+                }
 
                 if ($existingUser) {
                     // if exists in organization create driver profile for user
@@ -69,7 +78,7 @@ class DriverController extends FleetOpsController
 
                     // create driver profile for user
                     $input = collect($input)
-                        ->except(['name', 'password', 'email', 'phone', 'location', 'meta'])
+                        ->except(['name', 'password', 'email', 'phone', 'location', 'meta', 'avatar_uuid', 'photo_uuid'])
                         ->filter()
                         ->toArray();
 
@@ -116,12 +125,17 @@ class DriverController extends FleetOpsController
                     $input = collect($input);
 
                     $userInput = $input
-                        ->only(['name', 'password', 'email', 'phone', 'status'])
+                        ->only(['name', 'password', 'email', 'phone', 'status', 'avatar_uuid'])
                         ->filter()
                         ->toArray();
 
+                    // handle `photo_uuid`
+                    if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
+                        $userInput['avatar_uuid'] = $input['photo_uuid'];
+                    }
+
                     $input = $input
-                        ->except(['name', 'password', 'email', 'phone', 'location', 'meta'])
+                        ->except(['name', 'password', 'email', 'phone', 'location', 'meta', 'avatar_uuid', 'photo_uuid'])
                         ->filter()
                         ->toArray();
 
@@ -198,8 +212,12 @@ class DriverController extends FleetOpsController
                 function (&$request, &$driver, &$input) {
                     $driver->load(['user']);
                     $input     = collect($input);
-                    $userInput = $input->only(['name', 'password', 'email', 'phone'])->toArray();
-                    $input     = $input->except(['name', 'password', 'email', 'phone', 'location', 'meta'])->toArray();
+                    $userInput = $input->only(['name', 'password', 'email', 'phone', 'avatar_uuid'])->toArray();
+                    // handle `photo_uuid`
+                    if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
+                        $userInput['avatar_uuid'] = $input['photo_uuid'];
+                    }
+                    $input     = $input->except(['name', 'password', 'email', 'phone', 'location', 'meta', 'avatar_uuid', 'photo_uuid'])->toArray();
 
                     $driver->user->update($userInput);
                     $driver->flushAttributesCache();

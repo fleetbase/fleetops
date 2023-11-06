@@ -125,8 +125,8 @@ export default class DriverFormPanelComponent extends Component {
             {
                 path: `uploads/${this.currentUser.companyId}/drivers/${this.driver.id}`,
                 subject_uuid: this.driver.id,
-                subject_type: `driver`,
-                type: `driver_photo`,
+                subject_type: 'driver',
+                type: 'driver_photo',
             },
             (uploadedFile) => {
                 this.driver.setProperties({
