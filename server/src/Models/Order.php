@@ -947,6 +947,28 @@ class Order extends Model
         $this->customer_type = Utils::getModelClassName($model);
     }
 
+    public function setCustomerTypeAttribute($type)
+    {
+        if (is_string($type)) {
+            if ($type === 'customer' || $type === 'vendor' || !Str::startsWith($type, 'fleet-ops')) {
+                $type = 'fleet-ops:' . $type;
+            }
+
+            $this->attributes['customer_type'] = Utils::getMutationType($type);
+        }
+    }
+
+    public function setFacilitatorTypeAttribute($type)
+    {
+        if (is_string($type)) {
+            if ($type === 'customer' || $type === 'vendor' || !Str::startsWith($type, 'fleet-ops')) {
+                $type = 'fleet-ops:' . $type;
+            }
+
+            $this->attributes['facilitator_type'] = Utils::getMutationType($type);
+        }
+    }
+
     public function setDriverLocationAsPickup($force = false)
     {
         if ($force === true) {
