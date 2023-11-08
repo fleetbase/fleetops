@@ -1,6 +1,6 @@
 <div class="p-4 space-y-4">
-    <ContentPanel @title="Map" @open={{true}}>
-        <LeafletMap class="w-full h-48 rounded-b-md shadow-md" @lat={{@place.latitude}} @lng={{@place.longitude}} @zoom={{17}} as |layers|>
+    <ContentPanel @title="Map" @open={{false}}>
+        <LeafletMap class="w-full h-48 rounded-b-md shadow-md" @lat={{@place.latitude}} @lng={{@place.longitude}} @zoom={{17}} @zoomControl={{false}} as |layers|>
             <layers.tile @url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png" />
             <layers.marker @id={{@place.id}} @icon={{icon iconUrl="/engines-dist/images/building-marker.png" iconSize=(array 16 16)}} @location={{point-to-coordinates @place.location}} @riseOnHover={{true}} @title={{@place.address}} @alt={{@place.address}} as |marker|>
                 <marker.popup>
