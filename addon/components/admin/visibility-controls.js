@@ -9,6 +9,7 @@ export default class AdminVisibilityControlsComponent extends Component {
     @tracked visibilitySettings = [
         { name: 'Dashboard', route: 'operations.orders', visible: true },
         { name: 'Service Rates', route: 'operations.service-rates', visible: true },
+        { name: 'Scheduler', route: 'operations.scheduler', visible: true },
         { name: 'Drivers', route: 'management.drivers', visible: true },
         { name: 'Vehicles', route: 'management.vehicles', visible: true },
         { name: 'Fleets', route: 'management.fleets', visible: true },
