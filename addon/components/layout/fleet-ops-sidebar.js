@@ -38,7 +38,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         ];
 
         const resourcesItems = [
-            { title: 'Drivers', icon: 'route', route: 'management.drivers' },
+            { title: 'Drivers', icon: 'id-card', route: 'management.drivers' },
             { title: 'Vehicles', icon: 'truck', route: 'management.vehicles' },
             { title: 'Fleets', icon: 'user-group', route: 'management.fleets' },
             { title: 'Vendors', icon: 'warehouse', route: 'management.vendors' },

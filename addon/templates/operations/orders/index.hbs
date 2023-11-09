@@ -13,9 +13,9 @@
 {{#if this.isMapLayout}}
     <MapContainer @layout={{this.layout}} @onReady={{this.onMapContainerReady}}>
         <GlobalSearch @visible={{this.isSearchVisible}} @onPressOrder={{this.viewOrder}} />
-        <MapContainer::Toolbar @activeOrdersCount={{this.activeOrdersCount}} @liveMap={{this.liveMap}} @map={{this.leafletMap}} @onPressViewOrders={{this.toggleOrdersPanel}} @onPressSearch={{this.toggleSearch}} @onPressCreateOrder={{this.createOrder}} @onPressCreateDriver={{this.driversController.createDriver}} @onPressDriverProfile={{this.driversController.viewDriver}} />
+        <MapContainer::Toolbar @activeOrdersCount={{this.activeOrdersCount}} @liveMap={{this.liveMap}} @map={{this.leafletMap}} @onPressViewOrders={{this.toggleOrdersPanel}} @onPressSearch={{this.toggleSearch}} @onPressCreateOrder={{this.createOrder}} @onPressLiveMapDrawerToggle={{this.onPressLiveMapDrawerToggle}} />
         <OrderListOverlay @noBackdrop={{true}} @fullHeight={{true}} @outView={{not this.isOrdersPanelVisible}} @width={{if (media 'isMobile') "100%" "338px"}} @onPressCancel={{this.hideOrdersPanel}} @onPressCreateOrder={{this.createOrder}} @onPressViewOrder={{this.viewOrder}} @onPressCreateFleet={{this.fleetController.createFleet}} @onPressManageFleet={{this.fleetController.viewFleet}} @onPressCancelOrders={{this.bulkCancelOrders}} @onPressDeleteOrders={{this.bulkDeleteOrders}} />
-        <LiveMap id="leafletMap" class="next-leaflet-container-map" @lat={{1.3521}} @lng={{103.8198}} @zoom={{12}} @zoomControl={{false}} @onLoad={{this.setMapReference}} {{set-container-dimensions}} />
+        <LiveMap id="leafletMap" class="next-leaflet-container-map" @lat={{1.3521}} @lng={{103.8198}} @zoom={{12}} @zoomControl={{false}} @onLoad={{this.setMapReference}} @onDrawerReady={{this.setDrawerContext}} {{set-container-dimensions}} />
     </MapContainer>
 {{/if}}
 

@@ -153,6 +153,13 @@ export default class LiveMapComponent extends Component {
     @tracked isReady = false;
 
     /**
+     * Indicates if all the data requested has completed loading.
+     * @type {boolean}
+     * @memberof LiveMapComponent
+     */
+    @tracked isDataLoaded = false;
+
+    /**
      * Controls for visibility.
      * @type {Object}
      * @memberof LiveMapComponent
@@ -187,6 +194,13 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @tracked leafletMap;
+
+    /**
+     * The Drawer component context API.
+     * @type {Object}
+     * @memberof LiveMapComponent
+     */
+    @tracked drawer;
 
     /**
      * The map's zoom level.
@@ -288,21 +302,63 @@ export default class LiveMapComponent extends Component {
         // set initial coordinates
         this.setInitialCoordinates();
 
-        // load required live data
-        this.fetchLiveData('routes');
-        this.fetchLiveData('vehicles', {
-            onLoaded: (vehicles) => {
-                this.watchMovingObjects('vehicles', vehicles);
-            },
-        });
-        this.fetchLiveData('drivers', {
-            onLoaded: (drivers) => {
-                this.watchMovingObjects('drivers', drivers);
-            },
-        });
-        this.fetchLiveData('places');
-        this.listen();
-        this.ready();
+        // load data and complete setup
+        this.completeSetup([
+            this.fetchLiveData('routes'),
+            this.fetchLiveData('vehicles', {
+                onLoaded: (vehicles) => {
+                    this.watchMovingObjects('vehicles', vehicles);
+                },
+            }),
+            this.fetchLiveData('drivers', {
+                onLoaded: (drivers) => {
+                    this.watchMovingObjects('drivers', drivers);
+                },
+            }),
+            this.fetchLiveData('places'),
+        ]);
+    }
+
+    /**
+     * Completes the setup of the component by processing an array of live data promises.
+     * It waits for all the provided promises to settle and then sets a flag indicating
+     * that data fetching is complete. It ensures that any final listening and readiness
+     * processes are invoked at the end of the setup process.
+     *
+     * @param {Promise[]} liveDataPromises - An array of promises that fetch live data.
+     * @returns {Promise} A promise that resolves when all data-fetching promises have settled.
+     */
+    completeSetup(liveDataPromises) {
+        return allSettled(liveDataPromises)
+            .then(() => {
+                this.isDataLoaded = true;
+            })
+            .finally(() => {
+                this.listen();
+                this.ready();
+            });
+    }
+
+    /**
+     * Reloads the live map data.
+     *
+     * @memberof LiveMapComponent
+     */
+    reload() {
+        this.completeSetup([
+            this.fetchLiveData('routes'),
+            this.fetchLiveData('vehicles', {
+                onLoaded: (vehicles) => {
+                    this.watchMovingObjects('vehicles', vehicles);
+                },
+            }),
+            this.fetchLiveData('drivers', {
+                onLoaded: (drivers) => {
+                    this.watchMovingObjects('drivers', drivers);
+                },
+            }),
+            this.fetchLiveData('places'),
+        ]);
     }
 
     /**
@@ -462,6 +518,11 @@ export default class LiveMapComponent extends Component {
                 }
 
                 return data;
+            })
+            .catch((error) => {
+                if (typeof options.onFailure === 'function') {
+                    options.onFailure(error);
+                }
             })
             .finally(() => {
                 this.isLoading = false;
@@ -839,6 +900,20 @@ export default class LiveMapComponent extends Component {
     }
 
     /**
+     * Sets the drawer component context api.
+     *
+     * @param {Object} drawerApi
+     * @memberof LiveMapComponent
+     */
+    @action setDrawerContext(drawerApi) {
+        this.drawer = drawerApi;
+
+        if (typeof this.args.onDrawerReady === 'function') {
+            this.args.onDrawerReady(...arguments);
+        }
+    }
+
+    /**
      * Handle the 'drawstop' event.
      *
      * @param {Event} event - The 'drawstop' event object.
@@ -1010,6 +1085,23 @@ export default class LiveMapComponent extends Component {
         set(vehicle, '_marker', target);
 
         this.createVehicleContextMenu(vehicle, target);
+    }
+
+    /**
+     * Handle the addition of a place marker.
+     *
+     * @param {PlaceModel} place - The place object.
+     * @param {Event} event - The event object associated with the addition.
+     * @memberof LiveMapComponent
+     */
+    @action onPlaceAdded(place, event) {
+        const { target } = event;
+
+        set(target, 'record_id', place.id);
+        set(target, 'record_type', 'place');
+
+        // set the marker instance to the vehicle model
+        set(place, '_marker', target);
     }
 
     /**
