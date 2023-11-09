@@ -2,14 +2,14 @@ lockfileVersion: '6.0'
 
 dependencies:
   '@fleetbase/ember-core':
-    specifier: ^0.1.6
-    version: 0.1.6(@babel/core@7.23.2)(ember-fetch@8.1.2)(postcss@8.4.31)(webpack@5.74.0)
+    specifier: ^0.1.7
+    version: 0.1.7(@babel/core@7.23.2)(ember-fetch@8.1.2)(postcss@8.4.31)(webpack@5.74.0)
   '@fleetbase/ember-ui':
-    specifier: ^0.2.3
-    version: 0.2.3(@babel/core@7.23.2)(@ember/test-helpers@2.8.1)(ember-source@4.6.0)(postcss@8.4.31)(rollup@4.3.0)(webpack@5.74.0)
+    specifier: ^0.2.4
+    version: 0.2.4(@babel/core@7.23.2)(@ember/test-helpers@2.8.1)(ember-source@4.6.0)(postcss@8.4.31)(rollup@4.3.0)(webpack@5.74.0)
   '@fleetbase/fleetops-data':
-    specifier: ^0.1.2
-    version: 0.1.2
+    specifier: ^0.1.3
+    version: 0.1.3
   '@fleetbase/leaflet-routing-machine':
     specifier: ^3.2.16
     version: 3.2.16
@@ -1852,7 +1852,7 @@ packages:
       '@ember-data/store': 4.6.0(@babel/core@7.23.2)(webpack@5.74.0)
       '@ember/edition-utils': 1.2.0
       '@ember/string': 3.1.1
-      ember-auto-import: 2.4.2(webpack@5.74.0)
+      ember-auto-import: 2.6.3(webpack@5.74.0)
       ember-cli-babel: 7.26.11
       ember-cli-test-info: 1.0.0
       ember-cli-typescript: 5.2.1
@@ -1880,7 +1880,7 @@ packages:
       '@ember-data/private-build-infra': 4.6.0(@babel/core@7.23.2)
       '@ember/edition-utils': 1.2.0
       '@ember/string': 3.1.1
-      ember-auto-import: 2.4.2(webpack@5.74.0)
+      ember-auto-import: 2.6.3(webpack@5.74.0)
       ember-cli-babel: 7.26.11
       ember-cli-test-info: 1.0.0
       ember-cli-typescript: 5.2.1
@@ -1901,7 +1901,7 @@ packages:
       '@ember/edition-utils': 1.2.0
       '@ember/string': 3.1.1
       '@embroider/macros': 1.13.2
-      ember-auto-import: 2.4.2(webpack@5.74.0)
+      ember-auto-import: 2.6.3(webpack@5.74.0)
       ember-cached-decorator-polyfill: 0.1.4(@babel/core@7.23.2)
       ember-cli-babel: 7.26.11
       ember-cli-string-utils: 1.1.0
@@ -1958,7 +1958,7 @@ packages:
       '@ember-data/private-build-infra': 4.6.0(@babel/core@7.23.2)
       '@ember-data/store': 4.6.0(@babel/core@7.23.2)(webpack@5.74.0)
       '@ember/edition-utils': 1.2.0
-      ember-auto-import: 2.4.2(webpack@5.74.0)
+      ember-auto-import: 2.6.3(webpack@5.74.0)
       ember-cli-babel: 7.26.11
       ember-cli-test-info: 1.0.0
       ember-cli-typescript: 5.2.1
@@ -1978,7 +1978,7 @@ packages:
     dependencies:
       '@ember-data/private-build-infra': 4.6.0(@babel/core@7.23.2)
       '@ember-data/store': 4.6.0(@babel/core@7.23.2)(webpack@5.74.0)
-      ember-auto-import: 2.4.2(webpack@5.74.0)
+      ember-auto-import: 2.6.3(webpack@5.74.0)
       ember-cli-babel: 7.26.11
       ember-cli-test-info: 1.0.0
       ember-cli-typescript: 5.2.1
@@ -1998,7 +1998,7 @@ packages:
       '@ember/string': 3.1.1
       '@embroider/macros': 1.13.2
       '@glimmer/tracking': 1.1.2
-      ember-auto-import: 2.4.2(webpack@5.74.0)
+      ember-auto-import: 2.6.3(webpack@5.74.0)
       ember-cached-decorator-polyfill: 0.1.4(@babel/core@7.23.2)
       ember-cli-babel: 7.26.11
       ember-cli-path-utils: 1.0.0
@@ -2263,14 +2263,14 @@ packages:
       - supports-color
     dev: true
 
-  /@fleetbase/ember-core@0.1.6(@babel/core@7.23.2)(ember-fetch@8.1.2)(postcss@8.4.31)(webpack@5.74.0):
-    resolution: {integrity: sha512-S17tzOM/h+ao8vX9t3Fn8Dr+Ge/oznFOUaB4cXzlnChpB/UBAVvAXocikFnuMWiHUaZqm498oQRo2Fp9zc+Y2w==}
+  /@fleetbase/ember-core@0.1.7(@babel/core@7.23.2)(ember-fetch@8.1.2)(postcss@8.4.31)(webpack@5.74.0):
+    resolution: {integrity: sha512-t9705rWuBt9OvsW750G8gHuYg7cJysAtVFnthGPCd8ynCq15OFdrCfZPJhaaDzz8LfeYrxM8ttkzg3gUJeAi9A==, tarball: https://npm.pkg.github.com/download/@fleetbase/ember-core/0.1.7/5c231e3d2549e4f2d8f972117716bf540942ee27}
     engines: {node: 14.* || >= 16}
     dependencies:
       date-fns: 2.30.0
-      ember-auto-import: 2.4.2(webpack@5.74.0)
+      ember-auto-import: 2.6.3(webpack@5.74.0)
       ember-cli-babel: 7.26.11
-      ember-cli-htmlbars: 6.1.0
+      ember-cli-htmlbars: 6.3.0
       ember-cli-notifications: 8.0.0(@babel/core@7.23.2)(postcss@8.4.31)
       ember-concurrency: 2.3.7(@babel/core@7.23.2)
       ember-concurrency-decorators: 2.0.3(@babel/core@7.23.2)
@@ -2295,8 +2295,8 @@ packages:
       - webpack
     dev: false
 
-  /@fleetbase/ember-ui@0.2.3(@babel/core@7.23.2)(@ember/test-helpers@2.8.1)(ember-source@4.6.0)(postcss@8.4.31)(rollup@4.3.0)(webpack@5.74.0):
-    resolution: {integrity: sha512-NKcQ4LABJjoKY55qGGwPkCWECuW6RtHHTQqYgNbqkRIj4Sftx3+s7PIenFR/TqYsdpANRLULm/qRKN1hyKfnjQ==}
+  /@fleetbase/ember-ui@0.2.4(@babel/core@7.23.2)(@ember/test-helpers@2.8.1)(ember-source@4.6.0)(postcss@8.4.31)(rollup@4.3.0)(webpack@5.74.0):
+    resolution: {integrity: sha512-k5dQvJeOHHdKWMF0o0oDXVev2bbhxgiiMZ6vBUfyOLIXdxaxjWHnUhpNi2e7iZ3oawcC2rz6vnQT0BrDpduaFQ==, tarball: https://npm.pkg.github.com/download/@fleetbase/ember-ui/0.2.4/9aad33246bdb5546f4e76a2247ecd6e92b37c498}
     engines: {node: 14.* || >= 16}
     dependencies:
       '@ember/render-modifiers': 2.1.0(@babel/core@7.23.2)(ember-source@4.6.0)
@@ -2308,6 +2308,9 @@ packages:
       '@fortawesome/fontawesome-svg-core': 6.4.0
       '@fortawesome/free-brands-svg-icons': 6.4.2
       '@fortawesome/free-solid-svg-icons': 6.4.0
+      '@fullcalendar/core': 6.1.9
+      '@fullcalendar/daygrid': 6.1.9(@fullcalendar/core@6.1.9)
+      '@fullcalendar/interaction': 6.1.9(@fullcalendar/core@6.1.9)
       '@makepanic/ember-power-calendar-date-fns': 0.4.2
       '@tailwindcss/forms': 0.5.6(tailwindcss@3.3.5)
       air-datepicker: 3.4.0
@@ -2373,8 +2376,8 @@ packages:
       - webpack-command
     dev: false
 
-  /@fleetbase/fleetops-data@0.1.2:
-    resolution: {integrity: sha512-JSz3qHoXSRlJ5VJK7rTNXhpUjlF0yAv6HnCGRDTZEu/XL31Q/5wD0jTsB2FGJUG+YnTTIR8GFsB+4M2nanN7kQ==}
+  /@fleetbase/fleetops-data@0.1.3:
+    resolution: {integrity: sha512-71UVhdvl/g5d+/ihfkVLaWesyCSKggJGdYmyYvB/AHjoxpk7EIKGYUMYct/Ka6TA0vVzN4fqhMRtDt8NZn/1QA==, tarball: https://npm.pkg.github.com/download/@fleetbase/fleetops-data/0.1.3/c2e2d034d3d9b4df1d54661ae9341016493a6393}
     engines: {node: 14.* || >= 16}
     dependencies:
       date-fns: 2.30.0
@@ -2385,7 +2388,7 @@ packages:
     dev: false
 
   /@fleetbase/leaflet-routing-machine@3.2.16:
-    resolution: {integrity: sha512-af0mKH3VKIGEfYEGXS9cedhgniwgkNwjC/Gp9ZEzXGTX2/13PyMdd1XOQTamaItPbh5x2uK2/n1BP0vIJ7ObEQ==}
+    resolution: {integrity: sha512-sd+Cn3TmWQKyx3Wtx+nFfkejV0f/3ugY6Gl71NUBhaEZ5SlwiR/npibHWXXXQWA377TFSXTc3MKjY+MnpO2uAA==, tarball: https://npm.pkg.github.com/download/@fleetbase/leaflet-routing-machine/3.2.16/f5c1d638b5d1ebd0a81544ae49740005eec27a92}
     dependencies:
       '@mapbox/corslite': 0.0.7
       '@mapbox/polyline': 0.2.0
@@ -2409,10 +2412,10 @@ packages:
     resolution: {integrity: sha512-OfX7E2oUDYxtBvsuS4e/jSn4Q9Qb6DzgeYtsAdkPZ47znpoNsMgZw0+tVijiv3uGNR6dgNlty6r9rzIzHjtd/A==}
     dev: false
 
-  /@formatjs/ecma402-abstract@1.17.2:
-    resolution: {integrity: sha512-k2mTh0m+IV1HRdU0xXM617tSQTi53tVR2muvYOsBeYcUgEAyxV1FOC7Qj279th3fBVQ+Dj6muvNJZcHSPNdbKg==}
+  /@formatjs/ecma402-abstract@1.17.3:
+    resolution: {integrity: sha512-2Q4hmKQ6CM30mRG/YMdSBW8LXf32BfuOb1FZgG+uVWPC/SQMoiVFz5JaeOukt96v6TZ4ddE+bHCmd611PW38QA==}
     dependencies:
-      '@formatjs/intl-localematcher': 0.4.2
+      '@formatjs/intl-localematcher': 0.5.0
       tslib: 2.6.2
     dev: false
 
@@ -2422,57 +2425,57 @@ packages:
       tslib: 2.6.2
     dev: false
 
-  /@formatjs/icu-messageformat-parser@2.7.0:
-    resolution: {integrity: sha512-7uqC4C2RqOaBQtcjqXsSpGRYVn+ckjhNga5T/otFh6MgxRrCJQqvjfbrGLpX1Lcbxdm5WH3Z2WZqt1+Tm/cn/Q==}
+  /@formatjs/icu-messageformat-parser@2.7.1:
+    resolution: {integrity: sha512-ErnXyRdk8AlpGcKskKVYn23aAlWXhI1kt5ek2o3pJwVeMTcrosSESQ8baztdTtJjfQHlB4NBeocfRA5C6DKv2g==}
     dependencies:
-      '@formatjs/ecma402-abstract': 1.17.2
-      '@formatjs/icu-skeleton-parser': 1.6.2
+      '@formatjs/ecma402-abstract': 1.17.3
+      '@formatjs/icu-skeleton-parser': 1.6.3
       tslib: 2.6.2
     dev: false
 
-  /@formatjs/icu-skeleton-parser@1.6.2:
-    resolution: {integrity: sha512-VtB9Slo4ZL6QgtDFJ8Injvscf0xiDd4bIV93SOJTBjUF4xe2nAWOoSjLEtqIG+hlIs1sNrVKAaFo3nuTI4r5ZA==}
+  /@formatjs/icu-skeleton-parser@1.6.3:
+    resolution: {integrity: sha512-Viggz4Pic7oC4uR8z2VroL8H9boiUTTB0TqEsiRb6DHZv7QEcg1BoVQZBkBdLmvxhBS7nwBNrTdbaiW8GOV58Q==}
     dependencies:
-      '@formatjs/ecma402-abstract': 1.17.2
+      '@formatjs/ecma402-abstract': 1.17.3
       tslib: 2.6.2
     dev: false
 
-  /@formatjs/intl-displaynames@6.6.1:
-    resolution: {integrity: sha512-TIPaDu0SlwJUXlIyeSL9052jrUC4QviLnvUEJ53Ldc3Q4nZJnT2wD8NHIroTOYX9lgp5m3BeTlhpRcsnuExDkA==}
+  /@formatjs/intl-displaynames@6.6.2:
+    resolution: {integrity: sha512-8wenvLpInbVEPoVDHiG1QC/dE16io3fptVanMr2jKUqr3938UziygflnUqPlG7U6AHRbU7geCFthfZt8x2NpsA==}
     dependencies:
-      '@formatjs/ecma402-abstract': 1.17.2
-      '@formatjs/intl-localematcher': 0.4.2
+      '@formatjs/ecma402-abstract': 1.17.3
+      '@formatjs/intl-localematcher': 0.5.0
       tslib: 2.6.2
     dev: false
 
-  /@formatjs/intl-listformat@7.5.0:
-    resolution: {integrity: sha512-n9FsXGl1T2ZbX6wSyrzCDJHrbJR0YJ9ZNsAqUvHXfbY3nsOmGnSTf5+bkuIp1Xiywu7m1X1Pfm/Ngp/yK1H84A==}
+  /@formatjs/intl-listformat@7.5.1:
+    resolution: {integrity: sha512-J6heE28cikJ2cUZ7Mvmets418lE96k5OcbgDYQkXDFHVbRnUKCHQwRAXKRCPFEGDrEmcvtqUj7NmZEJYbsJdqQ==}
     dependencies:
-      '@formatjs/ecma402-abstract': 1.17.2
-      '@formatjs/intl-localematcher': 0.4.2
+      '@formatjs/ecma402-abstract': 1.17.3
+      '@formatjs/intl-localematcher': 0.5.0
       tslib: 2.6.2
     dev: false
 
-  /@formatjs/intl-localematcher@0.4.2:
-    resolution: {integrity: sha512-BGdtJFmaNJy5An/Zan4OId/yR9Ih1OojFjcduX/xOvq798OgWSyDtd6Qd5jqJXwJs1ipe4Fxu9+cshic5Ox2tA==}
+  /@formatjs/intl-localematcher@0.5.0:
+    resolution: {integrity: sha512-K1Xpg/8oyfCMxisJQa/fILoeoeyndcM0wcN8QiNG/uM5OAe1BcO1+2yd0gIboDI2tRJEsUi/sSBEYPbgkIdq4A==}
     dependencies:
       tslib: 2.6.2
     dev: false
 
-  /@formatjs/intl@2.9.5:
-    resolution: {integrity: sha512-WEdEv8Jf2nKBErTK4MJ2xCesUJVHH9iunXzfHzZo4tnn2NSj48g04FNH9w17XDpEbj9KEM39fLkwBz7ay/ErPQ==}
+  /@formatjs/intl@2.9.6:
+    resolution: {integrity: sha512-pHvVycu4g1S8zsZhYm0naf/ODCsDXHw00ITMMUM9TK9MYa8zGkf4W5gdItVbUX7elYN3JdDwp0d5fLNBBljhgQ==}
     peerDependencies:
       typescript: '5'
     peerDependenciesMeta:
       typescript:
         optional: true
     dependencies:
-      '@formatjs/ecma402-abstract': 1.17.2
+      '@formatjs/ecma402-abstract': 1.17.3
       '@formatjs/fast-memoize': 2.2.0
-      '@formatjs/icu-messageformat-parser': 2.7.0
-      '@formatjs/intl-displaynames': 6.6.1
-      '@formatjs/intl-listformat': 7.5.0
-      intl-messageformat: 10.5.4
+      '@formatjs/icu-messageformat-parser': 2.7.1
+      '@formatjs/intl-displaynames': 6.6.2
+      '@formatjs/intl-listformat': 7.5.1
+      intl-messageformat: 10.5.5
       tslib: 2.6.2
     dev: false
 
@@ -2560,6 +2563,28 @@ packages:
     requiresBuild: true
     dependencies:
       '@fortawesome/fontawesome-common-types': 6.4.0
+    dev: false
+
+  /@fullcalendar/core@6.1.9:
+    resolution: {integrity: sha512-eeG+z9BWerdsU9Ac6j16rpYpPnE0wxtnEHiHrh/u/ADbGTR3hCOjCD9PxQOfhOTHbWOVs7JQunGcksSPu5WZBQ==}
+    dependencies:
+      preact: 10.12.1
+    dev: false
+
+  /@fullcalendar/daygrid@6.1.9(@fullcalendar/core@6.1.9):
+    resolution: {integrity: sha512-o/6joH/7lmVHXAkbaa/tUbzWYnGp/LgfdiFyYPkqQbjKEeivNZWF1WhHqFbhx0zbFONSHtrvkjY2bjr+Ef2quQ==}
+    peerDependencies:
+      '@fullcalendar/core': ~6.1.9
+    dependencies:
+      '@fullcalendar/core': 6.1.9
+    dev: false
+
+  /@fullcalendar/interaction@6.1.9(@fullcalendar/core@6.1.9):
+    resolution: {integrity: sha512-I3FGnv0kKZpIwujg3HllbKrciNjTqeTYy3oJG226oAn7lV6wnrrDYMmuGmA0jPJAGN46HKrQqKN7ItxQRDec4Q==}
+    peerDependencies:
+      '@fullcalendar/core': ~6.1.9
+    dependencies:
+      '@fullcalendar/core': 6.1.9
     dev: false
 
   /@glimmer/compiler@0.27.0:
@@ -2836,7 +2861,7 @@ packages:
       rollup:
         optional: true
     dependencies:
-      '@types/estree': 1.0.4
+      '@types/estree': 1.0.5
       estree-walker: 2.0.2
       picomatch: 2.3.1
       rollup: 4.3.0
@@ -2979,13 +3004,13 @@ packages:
   /@types/acorn@4.0.6:
     resolution: {integrity: sha512-veQTnWP+1D/xbxVrPC3zHnCZRjSrKfhbMUlEA43iMZLu7EsnTtkJklIuwrCPbOi8YkvDQAiW05VQQFvvz9oieQ==}
     dependencies:
-      '@types/estree': 1.0.4
+      '@types/estree': 1.0.5
     dev: false
 
-  /@types/body-parser@1.19.4:
-    resolution: {integrity: sha512-N7UDG0/xiPQa2D/XrVJXjkWbpqHCd2sBaB32ggRF2l83RhPfamgKGF8gwwqyksS95qUS5ZYF9aF+lLPRlwI2UA==}
+  /@types/body-parser@1.19.5:
+    resolution: {integrity: sha512-fB3Zu92ucau0iQ0JMCFQE7b/dv8Ot07NI3KaZIkIUNXq82k4eBAqUaneXfleGY9JWskeS9y+u0nXMyspcuQrCg==}
     dependencies:
-      '@types/connect': 3.4.37
+      '@types/connect': 3.4.38
       '@types/node': 20.8.10
     dev: true
 
@@ -3001,8 +3026,8 @@ packages:
     transitivePeerDependencies:
       - supports-color
 
-  /@types/chai-as-promised@7.1.7:
-    resolution: {integrity: sha512-APucaP5rlmTRYKtRA6FE5QPP87x76ejw5t5guRJ4y5OgMnwtsvigw7HHhKZlx2MGXLeZd6R/GNZR/IqDHcbtQw==}
+  /@types/chai-as-promised@7.1.8:
+    resolution: {integrity: sha512-ThlRVIJhr69FLlh6IctTXFkmhtP3NpMZ2QGq69StYLyKZFp/HOp1VdKZj7RvfNWYYcJ1xlbLGLLWj1UvP5u/Gw==}
     dependencies:
       '@types/chai': 4.3.9
     dev: true
@@ -3011,8 +3036,8 @@ packages:
     resolution: {integrity: sha512-69TtiDzu0bcmKQv3yg1Zx409/Kd7r0b5F1PfpYJfSHzLGtB53547V4u+9iqKYsTu/O2ai6KTb0TInNpvuQ3qmg==}
     dev: true
 
-  /@types/connect@3.4.37:
-    resolution: {integrity: sha512-zBUSRqkfZ59OcwXon4HVxhx5oWCJmc0OtBTK05M+p0dYjgN6iTwIL2T/WbsQZrEsdnwaF9cWQ+azOnpPvIqY3Q==}
+  /@types/connect@3.4.38:
+    resolution: {integrity: sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==}
     dependencies:
       '@types/node': 20.8.10
     dev: true
@@ -3021,8 +3046,8 @@ packages:
     resolution: {integrity: sha512-XW/Aa8APYr6jSVVA1y/DEIZX0/GMKLEVekNG727R8cs56ahETkRAy/3DR7+fJyh7oUgGwNQaRfXCun0+KbWY7Q==}
     dev: true
 
-  /@types/cors@2.8.15:
-    resolution: {integrity: sha512-n91JxbNLD8eQIuXDIChAN1tCKNWCEgpceU9b7ZMbFA+P+Q4yIeh80jizFLEvolRPc1ES0VdwFlGv+kJTSirogw==}
+  /@types/cors@2.8.16:
+    resolution: {integrity: sha512-Trx5or1Nyg1Fq138PCuWqoApzvoSLWzZ25ORBiHMbbUT42g578lH1GT4TwYDbiUOLFuDsCkfLneT2105fsFWGg==}
     dependencies:
       '@types/node': 20.8.10
     dev: true
@@ -3036,18 +3061,17 @@ packages:
   /@types/eslint@8.44.6:
     resolution: {integrity: sha512-P6bY56TVmX8y9J87jHNgQh43h6VVU+6H7oN7hgvivV81K2XY8qJZ5vqPy/HdUoVIelii2kChYVzQanlswPWVFw==}
     dependencies:
-      '@types/estree': 0.0.51
+      '@types/estree': 1.0.5
       '@types/json-schema': 7.0.14
 
   /@types/estree@0.0.51:
     resolution: {integrity: sha512-CuPgU6f3eT/XgKKPqKd/gLZV1Xmvf1a2R5POBOGQa6uv82xpls89HU5zKeVoyR8XzHd1RGNOlQlvUe3CFkjWNQ==}
 
-  /@types/estree@1.0.4:
-    resolution: {integrity: sha512-2JwWnHK9H+wUZNorf2Zr6ves96WHoWDJIftkcxPKsS7Djta6Zu519LarhRNljPXkpsZR2ZMwNCPeW7omW07BJw==}
-    dev: false
+  /@types/estree@1.0.5:
+    resolution: {integrity: sha512-/kYRxGDLWzHOB7q+wtSUQlFrtcdUccpfy+X+9iMBpHK8QLLhx2wIPYuS5DYtR9Wa/YlZAbIovy7qVdB1Aq6Lyw==}
 
-  /@types/express-serve-static-core@4.17.39:
-    resolution: {integrity: sha512-BiEUfAiGCOllomsRAZOiMFP7LAnrifHpt56pc4Z7l9K6ACyN06Ns1JLMBxwkfLOjJRlSf06NwWsT7yzfpaVpyQ==}
+  /@types/express-serve-static-core@4.17.40:
+    resolution: {integrity: sha512-dzQWNQktgK3AyMpPeIeWbnR/ve2wU0bDSfdhf+RSt1ivelrO3hwfrKjTZvJDK4IyGWlDoRj+knNSePnL7OUqOA==}
     dependencies:
       '@types/node': 20.8.10
       '@types/qs': 6.9.9
@@ -3058,8 +3082,8 @@ packages:
   /@types/express@4.17.20:
     resolution: {integrity: sha512-rOaqlkgEvOW495xErXMsmyX3WKBInbhG5eqojXYi3cGUaLoRDlXa5d52fkfWZT963AZ3v2eZ4MbKE6WpDAGVsw==}
     dependencies:
-      '@types/body-parser': 1.19.4
-      '@types/express-serve-static-core': 4.17.39
+      '@types/body-parser': 1.19.5
+      '@types/express-serve-static-core': 4.17.40
       '@types/qs': 6.9.9
       '@types/serve-static': 1.15.4
     dev: true
@@ -4019,7 +4043,6 @@ packages:
     dependencies:
       '@glimmer/syntax': 0.84.3
       babel-import-util: 2.0.1
-    dev: false
 
   /babel-plugin-filter-imports@4.0.0:
     resolution: {integrity: sha512-jDLlxI8QnfKd7PtieH6pl4tZJzymzfCDCPGdTq/grgbiYAikwDPp/oL0IlFJn0HQjLpcLkyYhPKkUVneRESw5w==}
@@ -5059,7 +5082,7 @@ packages:
     engines: {node: 8.* || >= 10.*}
     dependencies:
       '@types/chai': 4.3.9
-      '@types/chai-as-promised': 7.1.7
+      '@types/chai-as-promised': 7.1.8
       '@types/express': 4.17.20
       ansi-html: 0.0.7
       broccoli-node-info: 2.2.0
@@ -6589,7 +6612,6 @@ packages:
       - '@glint/template'
       - supports-color
       - webpack
-    dev: false
 
   /ember-basic-dropdown@6.0.2(@babel/core@7.23.2)(ember-source@4.6.0):
     resolution: {integrity: sha512-JgI/cy7eS/Y2WoQl7B2Mko/1aFTAlxr5d+KpQeH7rBKOFml7IQtLvhiDQrpU/FLkrQ9aLNEJtzwtDZV1xQxAKA==}
@@ -6920,7 +6942,7 @@ packages:
       broccoli-merge-trees: 4.2.0
       broccoli-postcss: 6.1.0
       ember-cli-babel: 7.26.11
-      ember-cli-htmlbars: 6.1.0
+      ember-cli-htmlbars: 6.3.0
       ember-decorators-polyfill: 1.1.5(@babel/core@7.23.2)
       ember-get-config: 0.5.0
       ember-on-modifier: 1.0.1(@babel/core@7.23.2)
@@ -7740,8 +7762,8 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@formatjs/icu-messageformat-parser': 2.7.0
-      '@formatjs/intl': 2.9.5
+      '@formatjs/icu-messageformat-parser': 2.7.1
+      '@formatjs/intl': 2.9.6
       broccoli-caching-writer: 3.0.3
       broccoli-funnel: 3.0.8
       broccoli-merge-files: 0.8.0
@@ -7757,7 +7779,7 @@ packages:
       extend: 3.0.2
       fast-memoize: 2.5.2
       has-unicode: 2.0.1
-      intl-messageformat: 10.5.4
+      intl-messageformat: 10.5.5
       js-yaml: 4.1.0
       json-stable-stringify: 1.0.2
       locale-emoji: 0.3.0
@@ -8174,7 +8196,7 @@ packages:
     engines: {node: 12.* || 14.* || >= 16}
     dependencies:
       ember-cli-babel: 7.26.11
-      ember-cli-htmlbars: 6.3.0
+      ember-cli-htmlbars: 6.1.0
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -8336,7 +8358,7 @@ packages:
     engines: {node: '>=10.2.0'}
     dependencies:
       '@types/cookie': 0.4.1
-      '@types/cors': 2.8.15
+      '@types/cors': 2.8.16
       '@types/node': 20.8.10
       accepts: 1.3.8
       base64id: 2.0.0
@@ -8950,8 +8972,8 @@ packages:
       - supports-color
     dev: false
 
-  /fast-glob@3.3.1:
-    resolution: {integrity: sha512-kNFPyjhh5cKjrUltxs+wFx+ZkbRaxxmZ+X0ZU31SOsxCEtP9VPgtq2teZw1DebupL5GmDaNQ6yKMMVcM41iqDg==}
+  /fast-glob@3.3.2:
+    resolution: {integrity: sha512-oX2ruAFQwf/Orj8m737Y5adxDQO0LAB7/S5MnxCdTNDd4p6BsyIVsv9JQsATbTSq8KHRpLwIHbVlUNatxd+1Ow==}
     engines: {node: '>=8.6.0'}
     dependencies:
       '@nodelib/fs.stat': 2.0.5
@@ -9705,7 +9727,7 @@ packages:
       '@types/glob': 7.2.0
       array-union: 2.1.0
       dir-glob: 3.0.1
-      fast-glob: 3.3.1
+      fast-glob: 3.3.2
       glob: 7.2.3
       ignore: 5.2.4
       merge2: 1.4.1
@@ -9718,7 +9740,7 @@ packages:
     dependencies:
       array-union: 2.1.0
       dir-glob: 3.0.1
-      fast-glob: 3.3.1
+      fast-glob: 3.3.2
       ignore: 5.2.4
       merge2: 1.4.1
       slash: 3.0.0
@@ -9729,7 +9751,7 @@ packages:
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
     dependencies:
       dir-glob: 3.0.1
-      fast-glob: 3.3.1
+      fast-glob: 3.3.2
       ignore: 5.2.4
       merge2: 1.4.1
       slash: 4.0.0
@@ -10149,12 +10171,12 @@ packages:
     resolution: {integrity: sha512-aKMJPw/8cxybcgYTbnwGn87VgSFbSNNqeChRJahD+ai+jtwlCOdIcEvtuBd2BWO9bPuylVgeQVmGGfX2aS1NIg==}
     dev: false
 
-  /intl-messageformat@10.5.4:
-    resolution: {integrity: sha512-z+hrFdiJ/heRYlzegrdFYqU1m/KOMOVMqNilIArj+PbsuU8TNE7v4TWdQgSoxlxbT4AcZH3Op3/Fu15QTp+W1w==}
+  /intl-messageformat@10.5.5:
+    resolution: {integrity: sha512-sF+cJCfMn+kGcSeGGRcB1UpBH0/+Ko2KByHj2RpL2qIkRvsrnuDl8zufEkvk+GPosk932C6W1Kq24xWaw+2jDA==}
     dependencies:
-      '@formatjs/ecma402-abstract': 1.17.2
+      '@formatjs/ecma402-abstract': 1.17.3
       '@formatjs/fast-memoize': 2.2.0
-      '@formatjs/icu-messageformat-parser': 2.7.0
+      '@formatjs/icu-messageformat-parser': 2.7.1
       tslib: 2.6.2
     dev: false
 
@@ -10364,7 +10386,7 @@ packages:
   /is-reference@1.2.1:
     resolution: {integrity: sha512-U82MsXXiFIrjCK4otLT+o2NA2Cd2g5MLoOVXUZjIOhLurrRxpEXzI8O0KZHr3IjLvlAH1kTPYSuqer5T9ZVBKQ==}
     dependencies:
-      '@types/estree': 1.0.4
+      '@types/estree': 1.0.5
     dev: false
 
   /is-regex@1.1.4:
@@ -12517,7 +12539,7 @@ packages:
     peerDependencies:
       postcss: ^8.2.14
     dependencies:
-      fast-glob: 3.3.1
+      fast-glob: 3.3.2
       postcss: 8.4.31
       postcss-js: 4.0.1(postcss@8.4.31)
       postcss-simple-vars: 7.0.1(postcss@8.4.31)
@@ -12876,6 +12898,10 @@ packages:
       nanoid: 3.3.7
       picocolors: 1.0.0
       source-map-js: 1.0.2
+
+  /preact@10.12.1:
+    resolution: {integrity: sha512-l8386ixSsBdbreOAkqtrwqHwdvR35ID8c3rKPa8lCWuO86dBi32QWHV4vfsZK1utLLFMvw+Z5Ad4XLkZzchscg==}
+    dev: false
 
   /prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
@@ -13492,7 +13518,7 @@ packages:
     resolution: {integrity: sha512-/2HA0Ec70TvQnXdzynFffkjA6XN+1e2pEv/uKS5Ulca40g2L7KuOE3riasHoNVHOsFD5KKZgDsMk1CP3Tw9s+A==}
     hasBin: true
     dependencies:
-      '@types/estree': 1.0.4
+      '@types/estree': 1.0.5
       '@types/node': 20.8.10
       acorn: 7.4.1
     dev: false
@@ -13948,7 +13974,7 @@ packages:
       stream-demux: 8.1.0
       uuid: 8.3.2
       vinyl-buffer: 1.0.1
-      ws: 8.14.2
+      ws: 8.11.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -14382,7 +14408,7 @@ packages:
       chokidar: 3.5.3
       didyoumean: 1.2.2
       dlv: 1.1.3
-      fast-glob: 3.3.1
+      fast-glob: 3.3.2
       glob-parent: 6.0.2
       is-glob: 4.0.3
       jiti: 1.21.0
@@ -15399,20 +15425,6 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
-    dev: true
-
-  /ws@8.14.2:
-    resolution: {integrity: sha512-wEBG1ftX4jcglPxgFCMJmZ2PLtSbJ2Peg6TmpJFTbe9GZYOQCDPdMYu/Tm0/bGZkw8paZnJY45J4K2PZrLYq8g==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-    dev: false
 
   /xdg-basedir@4.0.0:
     resolution: {integrity: sha512-PSNhEJDejZYV7h50BohL09Er9VaIefr2LMAf3OEmpCkjOi34eYyQYAXUTjEQtZJTKcF0E2UKTh+osDLsgNim9Q==}

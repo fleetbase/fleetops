@@ -3,7 +3,6 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { format, isValid as isValidDate } from 'date-fns';
-import { isNone } from '@ember/utils';
 import createFullCalendarEventFromOrder from '../../../utils/create-full-calendar-event-from-order';
 
 export default class OperationsSchedulerIndexController extends Controller {

@@ -715,16 +715,16 @@ export default class OperationsOrdersIndexController extends Controller {
         this.liveMap = liveMap;
     }
 
-     /**
+    /**
      * Sets the drawer component context api.
      *
      * @param {Object} drawerApi
      * @memberof OperationsOrdersIndexController
      */
-     @action setDrawerContext(drawerApi) {
+    @action setDrawerContext(drawerApi) {
         this.drawer = drawerApi;
     }
-    
+
     /**
      * Toggles the LiveMap drawer component.
      *
