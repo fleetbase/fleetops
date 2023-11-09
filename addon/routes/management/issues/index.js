@@ -22,6 +22,8 @@ export default class ManagementIssuesIndexRoute extends Route {
         reporter: { refreshModel: true },
         type: { refreshModel: true },
         category: { refreshModel: true },
+        updatedAt: { refreshModel: true },
+        createdAt: { refreshModel: true },
     };
 
     model(params) {

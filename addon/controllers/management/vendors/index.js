@@ -5,7 +5,8 @@ import { action } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
-
+import getVendorStatusOptions from '../../../utils/get-vendor-status-options';
+import getVendorTypeOptions from '../../../utils/get-vendor-type-options';
 export default class ManagementVendorsIndexController extends Controller {
     /**
      * Inject the `management.places.index` controller
@@ -68,7 +69,7 @@ export default class ManagementVendorsIndexController extends Controller {
      *
      * @var {Array}
      */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status'];
+    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status', 'name', 'email', 'phone', 'type', 'country', 'address'];
 
     /**
      * The current page of data being viewed
@@ -111,6 +112,41 @@ export default class ManagementVendorsIndexController extends Controller {
      * @var {Array}
      */
     @tracked status;
+
+    /**
+     * The filterable param `type`
+     *
+     * @var {Array|String}
+     */
+    @tracked type;
+
+    /**
+     * The filterable param `name`
+     *
+     * @var {String}
+     */
+    @tracked name;
+
+    /**
+     * The filterable param `phone`
+     *
+     * @var {String}
+     */
+    @tracked phone;
+
+    /**
+     * The filterable param `email`
+     *
+     * @var {String}
+     */
+    @tracked email;
+
+    /**
+     * The filterable param `email`
+     *
+     * @var {String}
+     */
+    @tracked coutry;
 
     /**
      * Rows for the table
@@ -194,24 +230,26 @@ export default class ManagementVendorsIndexController extends Controller {
         {
             label: 'Type',
             valuePath: 'type',
-            cellComponent: 'table/cell/status',
-            width: '120px',
+            cellComponent: 'table/cell/anchor',
+            action: this.viewVendorPlace,
+            width: '150px',
             resizable: true,
             sortable: true,
             filterable: true,
+            filterParam: 'type',
             filterComponent: 'filter/string',
         },
         {
             label: 'Country',
-            valuePath: 'country',
+            valuePath: 'country_name',
             cellComponent: 'table/cell/base',
             cellClassNames: 'uppercase',
-            width: '130px',
+            width: '120px',
             resizable: true,
             sortable: true,
-            hidden: true,
             filterable: true,
-            filterComponent: 'filter/string',
+            filterComponent: 'filter/country',
+            filterParam: 'country',
         },
         {
             label: 'Created At',
@@ -243,7 +281,7 @@ export default class ManagementVendorsIndexController extends Controller {
             sortable: true,
             filterable: true,
             filterComponent: 'filter/multi-option',
-            filterOptions: this.statusOptions,
+            filterOptions: getVendorStatusOptions(),
         },
         {
             label: '',

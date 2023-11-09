@@ -61,6 +61,7 @@ class FuelReport extends Model
         'volume',
         'metric_unit',
         'meta',
+        'status',
     ];
 
     /**

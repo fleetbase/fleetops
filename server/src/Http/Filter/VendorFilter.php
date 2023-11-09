@@ -58,6 +58,11 @@ class VendorFilter extends Filter
     {
         $this->builder->searchWhere('status', $status);
     }
+    
+    public function address(?string $address)
+    {
+        $this->builder->searchWhere('place_uuid', $address);
+    }
 
     public function createdAt($createdAt)
     {

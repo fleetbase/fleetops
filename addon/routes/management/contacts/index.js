@@ -15,6 +15,14 @@ export default class ManagementContactsIndexRoute extends Route {
         sort: { refreshModel: true },
         query: { refreshModel: true },
         status: { refreshModel: true },
+        name: { refreshModel: true },
+        title: { refreshModel: true },
+        phone: { refreshModel: true },
+        email: { refreshModel: true },
+        type: { refreshModel: true },
+        internal_id: { refreshModel: true },
+        createdAt: { refreshModel: true },
+        updatedAt: { refreshModel: true },
     };
 
     model(params) {

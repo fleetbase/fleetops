@@ -35,6 +35,19 @@ class IssueFilter extends Filter
             $this->builder->where('priority', $priority);
         }
     }
+    
+    public function status($status)
+    {
+        if (Str::contains($status, ',')) {
+            $status = explode(',', $status);
+        }
+
+        if (is_array($status)) {
+            $this->builder->whereIn('status', $status);
+        } else {
+            $this->builder->where('status', $status);
+        }
+    }
 
     public function assignee(?string $assignee)
     {

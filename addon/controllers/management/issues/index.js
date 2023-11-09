@@ -72,7 +72,7 @@ export default class ManagementIssuesIndexController extends Controller {
         'status',
         'priority',
         'cateogry',
-        'type'
+        'type',
     ];
 
     /**
@@ -118,6 +118,13 @@ export default class ManagementIssuesIndexController extends Controller {
     @tracked priority;
 
     /**
+     * The filterable param `priority`
+     *
+     * @var {Array|String}
+     */
+    @tracked status;
+
+    /**
      * The filterable param `type`
      *
      * @var {String}
@@ -144,14 +151,14 @@ export default class ManagementIssuesIndexController extends Controller {
      * @var {String}
      */
     @tracked driver;
-    
+
     /**
      * The filterable param `assignee`
      *
      * @var {String}
      */
     @tracked assignee;
-    
+
     /**
      * The filterable param `reporter`
      *
@@ -194,7 +201,7 @@ export default class ManagementIssuesIndexController extends Controller {
             filterable: true,
             filterComponent: 'filter/select',
             filterOptions: getIssueTypes(),
-            placeholder: 'Select issue type'
+            placeholder: 'Select issue type',
         },
         {
             label: 'Category',
@@ -205,7 +212,7 @@ export default class ManagementIssuesIndexController extends Controller {
             filterable: true,
             filterComponent: 'filter/select',
             filterOptions: getIssueCategories(),
-            placeholder: 'Select issue category'
+            placeholder: 'Select issue category',
         },
         {
             label: 'Reporter',
@@ -226,7 +233,7 @@ export default class ManagementIssuesIndexController extends Controller {
             filterComponent: 'filter/model',
             filterComponentPlaceholder: 'Select reporter',
             filterParam: 'reporter',
-            model: 'user'
+            model: 'user',
         },
         {
             label: 'Assignee',
@@ -247,7 +254,7 @@ export default class ManagementIssuesIndexController extends Controller {
             filterComponent: 'filter/model',
             filterComponentPlaceholder: 'Select assignee',
             filterParam: 'assignee',
-            model: 'user'
+            model: 'user',
         },
         {
             label: 'Driver',
@@ -268,7 +275,7 @@ export default class ManagementIssuesIndexController extends Controller {
             filterComponent: 'filter/model',
             filterComponentPlaceholder: 'Select driver',
             filterParam: 'driver',
-            model: 'driver'
+            model: 'driver',
         },
         {
             label: 'Vehicle',
@@ -290,7 +297,7 @@ export default class ManagementIssuesIndexController extends Controller {
             filterComponentPlaceholder: 'Select vehicle',
             filterParam: 'vehicle',
             model: 'vehicle',
-            modelNamePath: 'displayName'
+            modelNamePath: 'displayName',
         },
         {
             label: 'Status',
@@ -300,6 +307,8 @@ export default class ManagementIssuesIndexController extends Controller {
             resizable: true,
             sortable: true,
             filterable: true,
+            filterComponent: 'filter/multi-option',
+            filterOptions: ['pending', 'in-progress', 'backlogged', 'requires-update', 'in-review', 're-opened', 'duplicate', 'pending-review', 'escalated', 'completed', 'canceled'],
         },
         {
             label: 'Created At',
