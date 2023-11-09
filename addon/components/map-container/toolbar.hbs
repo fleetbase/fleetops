@@ -58,5 +58,11 @@
                 <MapContainer::Toolbar::VisibilityControlPanel @dd={{dd}} @liveMap={{@liveMap}} @map={{@map}} />
             </dd.Content>
         </BasicDropdown>
+        <button type="button" id="map-toolbar-live-map-drawer-button" class="toolbar-button is-action mb-0i" {{on "click" (fn this.onAction "onPressLiveMapDrawerToggle")}}>
+            <FaIcon @icon="binoculars" />
+            <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                <InputInfo @text="Scope" @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+            </Attach::Tooltip>
+        </button>
     </div>
 </MapContainer::ToolbarContainer>

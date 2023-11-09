@@ -1,4 +1,4 @@
-import Controller, { inject as controller } from '@ember/controller';
+import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -9,20 +9,6 @@ import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 
 export default class OperationsOrdersIndexController extends Controller {
-    /**
-     * Injection of the `ManagementDriversIndexController` controller
-     *
-     * @memberof OperationsOrdersIndexController
-     */
-    @controller('management.drivers.index') driversController;
-
-    /**
-     * Injection of the `ManagementFleetIndexController` controller
-     *
-     * @memberof OperationsOrdersIndexController
-     */
-    @controller('management.fleets.index') fleetController;
-
     /**
      * Inject the `currentUser` service
      *
@@ -265,6 +251,13 @@ export default class OperationsOrdersIndexController extends Controller {
      * @type {Object}
      */
     @tracked leafletMap;
+
+    /**
+     * Reference to the drawer context API.
+     *
+     * @type {Object}
+     */
+    @tracked drawer;
 
     /**
      * Current layout type (e.g., 'map', 'table', 'kanban', 'analytics')
@@ -720,6 +713,27 @@ export default class OperationsOrdersIndexController extends Controller {
     @action setMapReference({ target, target: { liveMap } }) {
         this.leafletMap = target;
         this.liveMap = liveMap;
+    }
+
+    /**
+     * Sets the drawer component context api.
+     *
+     * @param {Object} drawerApi
+     * @memberof OperationsOrdersIndexController
+     */
+    @action setDrawerContext(drawerApi) {
+        this.drawer = drawerApi;
+    }
+
+    /**
+     * Toggles the LiveMap drawer component.
+     *
+     * @memberof OperationsOrdersIndexController
+     */
+    @action onPressLiveMapDrawerToggle() {
+        if (this.drawer) {
+            this.drawer.toggleMinimize();
+        }
     }
 
     /**

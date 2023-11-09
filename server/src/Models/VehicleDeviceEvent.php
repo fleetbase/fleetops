@@ -89,6 +89,6 @@ class VehicleDeviceEvent extends Model
      */
     public function device()
     {
-        return $this->belongsTo(VehicleDevice::class);
+        return $this->belongsTo(VehicleDevice::class, 'vehicle_device_uuid');
     }
 }

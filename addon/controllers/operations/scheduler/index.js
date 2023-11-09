@@ -1,31 +1,26 @@
 import Controller from '@ember/controller';
+import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { computed, action } from '@ember/object';
+import { action } from '@ember/object';
 import { format, isValid as isValidDate } from 'date-fns';
+import createFullCalendarEventFromOrder from '../../../utils/create-full-calendar-event-from-order';
 
 export default class OperationsSchedulerIndexController extends Controller {
     @service modalsManager;
     @service notifications;
+    @service store;
+    @service hostRouter;
+    @tracked scheduledOrders = [];
+    @tracked unscheduledOrders = [];
+    @tracked events = [];
 
-    @computed('model.@each.scheduled_at') get scheduledOrders() {
-        return this.model.filter((order) => isValidDate(order.scheduled_at));
+    @action setCalendarApi(calendar) {
+        this.calendar = calendar;
     }
 
-    @computed('model.@each.scheduled_at') get unscheduledOrders() {
-        return this.model.filter((order) => !order.scheduled_at);
-    }
-
-    @computed('scheduledOrders.@each.scheduled_at') get events() {
-        return this.scheduledOrders.map((order) => ({
-            id: order.id,
-            title: `${order.scheduledAtTime} - ${order.public_id}`,
-            start: order.scheduled_at,
-            allDay: true,
-        }));
-    }
-
-    @action viewEvent(order, eventClickInfo) {
-        const { event } = eventClickInfo;
+    @action viewEvent(order) {
+        // get the event from the calendar
+        let event = this.calendar.getEventById(order.id);
 
         this.modalsManager.show('modals/order-event', {
             title: `Scheduling for ${order.public_id}`,
@@ -34,7 +29,7 @@ export default class OperationsSchedulerIndexController extends Controller {
             hideDeclineButton: true,
             order,
             reschedule: (date) => {
-                if (typeof date?.toDate === 'function') {
+                if (date && typeof date.toDate === 'function') {
                     date = date.toDate();
                 }
 
@@ -51,15 +46,27 @@ export default class OperationsSchedulerIndexController extends Controller {
                 }
 
                 return order.save().then((order) => {
-                    this.notifications.success(`'${order.public_id}' has been updated.`);
-
-                    // update event props
-                    event?.setProp('title', order.eventTitle);
-
-                    // remove event from calendar if unscheduled
-                    if (!order.scheduled_at || !isValidDate(order.scheduled_at)) {
+                    // remove event from calendar
+                    if (event) {
                         event.remove();
                     }
+
+                    if (order.scheduled_at) {
+                        // notify order has been scheduled
+                        this.notifications.success(`Order '${order.public_id}' has been scheduled at ${order.scheduledAt}.`);
+                        // add event to calendar
+                        event = this.calendar.addEvent(createFullCalendarEventFromOrder(order));
+                    } else {
+                        this.notifications.info(`Order '${order.public_id}' has been unscheduled.`);
+                    }
+
+                    // update event props
+                    if (event && typeof event.setProp === 'function') {
+                        event.setProp('title', order.eventTitle);
+                    }
+
+                    // refresh route
+                    this.hostRouter.refresh();
                 });
             },
         });
@@ -80,7 +87,9 @@ export default class OperationsSchedulerIndexController extends Controller {
         const order = this.store.peekRecord('order', data.id);
 
         order.set('scheduled_at', date);
-        order.save();
+        return order.save().then(() => {
+            this.hostRouter.refresh();
+        });
     }
 
     @action receivedEvent(eventReceivedInfo) {
@@ -88,7 +97,9 @@ export default class OperationsSchedulerIndexController extends Controller {
         const order = this.store.peekRecord('order', event.id);
 
         // update event props
-        event?.setProp('title', order.eventTitle);
+        if (typeof event.setProp === 'function') {
+            event.setProp('title', order.eventTitle);
+        }
     }
 
     @action rescheduleEventFromDrag(eventDropInfo) {
@@ -102,9 +113,13 @@ export default class OperationsSchedulerIndexController extends Controller {
 
         // set and save order props
         order.set('scheduled_at', isValidDate(newDate) ? newDate : start);
-        order.save();
+        order.save().then(() => {
+            this.hostRouter.refresh();
+        });
 
         // update event props
-        event?.setProp('title', order.eventTitle);
+        if (typeof event.setProp === 'function') {
+            event.setProp('title', order.eventTitle);
+        }
     }
 }
