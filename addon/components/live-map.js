@@ -196,6 +196,13 @@ export default class LiveMapComponent extends Component {
     @tracked leafletMap;
 
     /**
+     * The Drawer component context API.
+     * @type {Object}
+     * @memberof LiveMapComponent
+     */
+    @tracked drawer;
+
+    /**
      * The map's zoom level.
      * @type {number}
      * @memberof LiveMapComponent
@@ -890,6 +897,20 @@ export default class LiveMapComponent extends Component {
         }
 
         return null;
+    }
+
+    /**
+     * Sets the drawer component context api.
+     *
+     * @param {Object} drawerApi
+     * @memberof LiveMapComponent
+     */
+    @action setDrawerContext(drawerApi) {
+        this.drawer = drawerApi;
+
+        if (typeof this.args.onDrawerReady === 'function') {
+            this.args.onDrawerReady(...arguments);
+        }
     }
 
     /**

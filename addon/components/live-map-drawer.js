@@ -70,6 +70,10 @@ export default class LiveMapDrawerComponent extends Component {
      */
     @action setDrawerContext(drawerApi) {
         this.drawer = drawerApi;
+
+        if (typeof this.args.onDrawerReady === 'function') {
+            this.args.onDrawerReady(...arguments);
+        }
     }
 
     /**

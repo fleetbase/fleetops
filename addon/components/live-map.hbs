@@ -87,5 +87,5 @@
 </div>
 
 {{#if this.isDataLoaded}}
-    <LiveMapDrawer @vehicles={{this.vehicles}} @drivers={{this.drivers}} @places={{this.places}} @liveMap={{this}} />
+    <LiveMapDrawer @vehicles={{this.vehicles}} @drivers={{this.drivers}} @places={{this.places}} @liveMap={{this}} @onDrawerReady={{this.setDrawerContext}} />
 {{/if}}
