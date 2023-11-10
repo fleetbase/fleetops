@@ -1,4 +1,4 @@
-<div class="order-schedule-card border border-gray-200 dark:border-gray-700" {{did-insert this.setupComponent}} ...attributes>
+<div class="order-schedule-card border border-gray-200 dark:border-gray-700" ...attributes>
     <a href="javascript:;" class="{{@titleClass}} card-title border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900" {{on "click" (fn this.onTitleClick @order)}}>
         <span>{{@order.public_id}}</span>
         <div>
@@ -11,21 +11,21 @@
                 <FaIcon @icon="calendar" class="mr-2" />
                 <span class="font-semibold">Date scheduled</span>
             </div>
-            <span>{{@order.scheduledAt}}</span>
+            <span class={{unless @order.scheduled_at "dark:text-gray-600 text-gray-400"}}>{{n-a @order.scheduledAt "Not Scheduled"}}</span>
         </div>
         <div class="flex items-center justify-between">
             <div>
                 <FaIcon @icon="calendar" class="mr-2" />
                 <span class="font-semibold">Date created</span>
             </div>
-            <span>{{@order.createdAtWithTime}}</span>
+            <span>{{n-a @order.createdAtWithTime}}</span>
         </div>
         <div class="flex items-center justify-between">
             <div>
                 <FaIcon @icon="calendar" class="mr-2" />
                 <span class="font-semibold">Driver Assigned</span>
             </div>
-            <span>{{@order.driver_assigned.name "None"}}</span>
+            <span class={{unless @order.driver_assigned "dark:text-gray-600 text-gray-400"}}>{{n-a @order.driver_assigned.name "No Driver Assigned"}}</span>
         </div>
         <div class="z-20 relative">
             <RouteList @order={{@order}} />

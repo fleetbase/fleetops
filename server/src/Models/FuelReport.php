@@ -100,7 +100,7 @@ class FuelReport extends Model
      *
      * @var array
      */
-    protected $filterParams = ['type', 'reporter'];
+    protected $filterParams = ['type', 'status', 'reporter'];
 
     /**
      * Set the parcel fee as only numbers.

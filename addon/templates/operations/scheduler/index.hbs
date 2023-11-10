@@ -1,10 +1,18 @@
 <Layout::Section::Header @title="Scheduler" />
 
-{{!-- <div>
-    <div class="p-6">
-        <div class="grid grid-cols-3 gap-4">
-            <div class="space-y-4">
-                <ContentPanel @title="Unscheduled Orders" @titleStatuRight={{this.unscheduledOrders.length}} @titleStatuRightClass="info-status-badge" @hideStatusDot={{true}} @open={{this.unscheduledOrders.length}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+<Layout::Section::Body class="overflow-y-scroll h-screen">
+    <div class="h-screen">
+        <div class="grid grid-cols-1 lg:grid-cols-3">
+            <div class="scheduler-left-sidebar">
+                <ContentPanel
+                    @title="Unscheduled Orders"
+                    @titleStatuRight={{this.unscheduledOrders.length}}
+                    @titleStatuRightClass="info-status-badge"
+                    @hideStatusDot={{true}}
+                    @open={{true}}
+                    @pad={{true}}
+                    @panelBodyClass="bg-white dark:bg-gray-900"
+                >
                     <div class="space-y-4">
                         {{#each this.unscheduledOrders as |order|}}
                             <FullCalendar::Draggable @eventData={{json-hash id=order.id title=order.eventTitle allDay=true}}>
@@ -13,7 +21,15 @@
                         {{/each}}
                     </div>
                 </ContentPanel>
-                <ContentPanel @title="Scheduled Orders" @titleStatuRight={{this.scheduledOrders.length}} @titleStatusRightClass="info-status-badge" @hideStatusDot={{true}} @open={{this.scheduledOrders.length}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <ContentPanel
+                    @title="Scheduled Orders"
+                    @titleStatuRight={{this.scheduledOrders.length}}
+                    @titleStatusRightClass="info-status-badge"
+                    @hideStatusDot={{true}}
+                    @open={{true}}
+                    @pad={{true}}
+                    @panelBodyClass="bg-white dark:bg-gray-900"
+                >
                     <div class="space-y-4">
                         {{#each this.scheduledOrders as |order|}}
                             <Order::ScheduleCard @order={{order}} @titleClass="cursor-pointer" @onTitleClick={{fn this.viewEvent order}} />
@@ -22,9 +38,17 @@
                 </ContentPanel>
             </div>
 
-            <div class="col-span-2">
-                <FullCalendar @events={{this.events}} @onDrop={{this.scheduleEventFromDrop}} @onEventReceive={{this.receivedEvent}} @onEventDrop={{this.rescheduleEventFromDrag}} @onEventClick={{this.viewOrderAsEvent}} />
+            <div class="col-span-2 p-4">
+                <FullCalendar
+                    @events={{this.events}}
+                    @editable={{true}}
+                    @onDrop={{this.scheduleEventFromDrop}}
+                    @onEventReceive={{this.receivedEvent}}
+                    @onEventDrop={{this.rescheduleEventFromDrag}}
+                    @onEventClick={{this.viewOrderAsEvent}}
+                    @onInit={{this.setCalendarApi}}
+                />
             </div>
         </div>
     </div>
-</div> --}}
+</Layout::Section::Body>
