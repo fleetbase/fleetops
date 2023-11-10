@@ -69,7 +69,7 @@ class IntegratedVendor extends Model
      *
      * @var array
      */
-    protected $appends = ['name', 'status', 'type', 'photo_url', 'service_types', 'supported_countries', 'provider_settings'];
+    protected $appends = ['name', 'status', 'type', 'photo_url', 'logo_url', 'service_types', 'supported_countries', 'provider_settings'];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -203,6 +203,11 @@ class IntegratedVendor extends Model
     }
 
     public function getPhotoUrlAttribute()
+    {
+        return $this->provider()->getLogo();
+    }
+
+    public function getLogoUrlAttribute()
     {
         return $this->provider()->getLogo();
     }

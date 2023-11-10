@@ -55,7 +55,7 @@ class FuelReport extends FleetbaseResource
             'reporter'      => data_get($this, 'reportedBy.public_id'),
             'driver'        => data_get($this, 'driver.public_id'),
             'vehicle'       => data_get($this, 'vehicle.public_id'),
-            'report'        => $this->report,
+            'report_name'        => $this->report,
             'odometer'      => $this->odometer,
             'amount'        => $this->amount,
             'currency'      => $this->currency,

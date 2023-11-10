@@ -23,6 +23,7 @@ export default class ManagementVendorsIndexRoute extends Route {
         type: { refreshModel: true },
         createdAt: { refreshModel: true },
         updatedAt: { refreshModel: true },
+        website_url: { refreshModel: true },
     };
 
     model(params) {

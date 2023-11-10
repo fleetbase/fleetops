@@ -60,7 +60,7 @@
         <InputGroup @name="Name" @value={{this.vendor.name}} @helpText="The vendor's name, typically the name of a business." />
         <InputGroup @name="Email" @type="email" @value={{this.vendor.email}} @helpText="The vendor's email, this can be used to trigger emails to the vendor." />
         <InputGroup @name="Phone" @type="tel" @value={{this.vendor.phone}} @helpText="The vendor's phone #, this can be used to trigger SMS or messages to the vendor." />
-        <InputGroup @name="Website" @value={{this.vendor.website}} @helpText="The vendor's website, optionally add the vendors website for reference." />
+        <InputGroup @name="Website" @value={{this.vendor.website_url}} @helpText="The vendor's website, optionally add the vendors website for reference." />
         <InputGroup @name="Type">
             <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                 <PowerSelect @options={{@vendorTypes}} @selected={{this.vendor.type}} @onChange={{fn (mut this.vendor.type)}} @placeholder="Select vendor type" @triggerClass="form-select form-input" as |type|>
