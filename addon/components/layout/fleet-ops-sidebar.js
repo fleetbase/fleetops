@@ -100,6 +100,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             return true;
         }
 
+        // Check if the route exists in the settings
+        const routeExists = visibilitySettings.some((visibilityControl) => (exactMatch ? visibilityControl.route === routePrefix : visibilityControl.route.startsWith(routePrefix)));
+
+        // If the route doesn't exist in the settings, return true (visible by default)
+        if (!routeExists) {
+            return true;
+        }
+
         return visibilitySettings.some((visibilityControl) => {
             const match = exactMatch ? visibilityControl.route === routePrefix : visibilityControl.route.startsWith(routePrefix);
             return match && visibilityControl.visible;
