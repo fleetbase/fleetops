@@ -179,9 +179,6 @@ export default class DriverFormPanelComponent extends Component {
      * @memberof DriverFormPanelComponent
      */
     @action onAutocomplete(selected) {
-        console.log('onAutocomplete', ...arguments);
-        // this.driver.setProperties({ ...selected });
-
         if (this.coordinatesInputComponent) {
             this.coordinatesInputComponent.updateCoordinates(selected.location);
         }
@@ -209,7 +206,6 @@ export default class DriverFormPanelComponent extends Component {
      */
     @action onCoordinatesChanged({ latitude, longitude }) {
         const location = new Point(longitude, latitude);
-
         this.driver.setProperties({ location });
     }
 }
