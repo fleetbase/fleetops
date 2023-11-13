@@ -39,8 +39,6 @@ class OrderController extends FleetOpsController
     /**
      * Creates a record with request payload.
      *
-     * @param Illuminate\Http\Request $request
-     *
      * @return \Illuminate\Http\Response
      */
     public function createRecord(Request $request)
@@ -319,7 +317,7 @@ class OrderController extends FleetOpsController
     public function start(Request $request)
     {
         /**
-         * @var \Fleetbase\Models\Order
+         * @var \Fleetbase\FleetOps\Models\Order
          */
         $order = Order::where('uuid', $request->input('order'))->withoutGlobalScopes()->first();
 

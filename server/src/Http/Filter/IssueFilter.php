@@ -35,7 +35,7 @@ class IssueFilter extends Filter
             $this->builder->where('priority', $priority);
         }
     }
-    
+
     public function status($status)
     {
         if (Str::contains($status, ',')) {
@@ -54,7 +54,7 @@ class IssueFilter extends Filter
         $this->builder->whereHas('assignedTo', function ($q) use ($assignee) {
             if (Str::isUuid($assignee)) {
                 $q->where('uuid', $assignee);
-            } else if (Utils::isPublicId($assignee)) {
+            } elseif (Utils::isPublicId($assignee)) {
                 $q->where('public_id', $assignee);
             } else {
                 $q->search($assignee);
@@ -67,7 +67,7 @@ class IssueFilter extends Filter
         $this->builder->whereHas('reportedBy', function ($q) use ($reporter) {
             if (Str::isUuid($reporter)) {
                 $q->where('uuid', $reporter);
-            } else if (Utils::isPublicId($reporter)) {
+            } elseif (Utils::isPublicId($reporter)) {
                 $q->where('public_id', $reporter);
             } else {
                 $q->search($reporter);
@@ -80,7 +80,7 @@ class IssueFilter extends Filter
         $this->builder->whereHas('driver', function ($q) use ($driver) {
             if (Str::isUuid($driver)) {
                 $q->where('uuid', $driver);
-            } else if (Utils::isPublicId($driver)) {
+            } elseif (Utils::isPublicId($driver)) {
                 $q->where('public_id', $driver);
             } else {
                 $q->search($driver);
@@ -93,7 +93,7 @@ class IssueFilter extends Filter
         $this->builder->whereHas('vehicle', function ($q) use ($vehicle) {
             if (Str::isUuid($vehicle)) {
                 $q->where('uuid', $vehicle);
-            } else if (Utils::isPublicId($vehicle)) {
+            } elseif (Utils::isPublicId($vehicle)) {
                 $q->where('public_id', $vehicle);
             } else {
                 $q->search($vehicle);

@@ -41,6 +41,7 @@ class VendorFilter extends Filter
     {
         $this->builder->searchWhere('email', $email);
     }
+
     public function websiteUrl(?string $websiteUrl)
     {
         $this->builder->searchWhere('website_url', $websiteUrl);
@@ -55,7 +56,7 @@ class VendorFilter extends Filter
     {
         $this->builder->searchWhere('status', $status);
     }
-    
+
     public function address(?string $address)
     {
         $this->builder->searchWhere('place_uuid', $address);

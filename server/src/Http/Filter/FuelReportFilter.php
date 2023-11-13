@@ -22,10 +22,12 @@ class FuelReportFilter extends Filter
     {
         $this->builder->searchWhere('public_id', $publicId);
     }
+
     public function volume(?string $volume)
     {
         $this->builder->searchWhere('volume', $volume);
     }
+
     public function odometer(?string $odometer)
     {
         $this->builder->searchWhere('odometer', $odometer);
@@ -36,7 +38,7 @@ class FuelReportFilter extends Filter
         $this->builder->whereHas('reportedBy', function ($q) use ($reporter) {
             if (Str::isUuid($reporter)) {
                 $q->where('uuid', $reporter);
-            } else if (Utils::isPublicId($reporter)) {
+            } elseif (Utils::isPublicId($reporter)) {
                 $q->where('public_id', $reporter);
             } else {
                 $q->search($reporter);
@@ -71,7 +73,7 @@ class FuelReportFilter extends Filter
         $this->builder->whereHas('driver', function ($q) use ($driver) {
             if (Str::isUuid($driver)) {
                 $q->where('uuid', $driver);
-            } else if (Utils::isPublicId($driver)) {
+            } elseif (Utils::isPublicId($driver)) {
                 $q->where('public_id', $driver);
             } else {
                 $q->search($driver);
@@ -79,14 +81,12 @@ class FuelReportFilter extends Filter
         });
     }
 
-
-
     public function vehicle(?string $vehicle)
     {
         $this->builder->whereHas('vehicle', function ($q) use ($vehicle) {
             if (Str::isUuid($vehicle)) {
                 $q->where('uuid', $vehicle);
-            } else if (Utils::isPublicId($vehicle)) {
+            } elseif (Utils::isPublicId($vehicle)) {
                 $q->where('public_id', $vehicle);
             } else {
                 $q->search($vehicle);

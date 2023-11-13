@@ -44,6 +44,7 @@ class PlaceFilter extends Filter
     {
         $this->builder->searchWhere('neighborhood', $neighborhood);
     }
+
     public function state(?string $state)
     {
         $this->builder->searchWhere('province', $state);
@@ -53,6 +54,7 @@ class PlaceFilter extends Filter
     {
         $this->builder->searchWhere('name', $name);
     }
+
     public function address(?string $address)
     {
         $this->builder->searchWhere(['street1', 'street2'], $address);
