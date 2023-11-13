@@ -116,6 +116,7 @@ export default class DriverFormPanelComponent extends Component {
                     this.isLoading = false;
                 });
         } catch (error) {
+            this.notifications.error(error.message);
             this.loader.removeLoader('.next-content-overlay-panel-container ');
             this.isLoading = false;
         }
