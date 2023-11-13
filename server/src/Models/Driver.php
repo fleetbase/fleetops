@@ -108,7 +108,6 @@ class Driver extends Model
      * @var array
      */
     protected $casts = [
-        'meta'     => Json::class,
         'location' => Point::class,
         'online'   => 'boolean',
     ];

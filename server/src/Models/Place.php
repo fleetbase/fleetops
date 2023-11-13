@@ -213,7 +213,7 @@ class Place extends Model
         }
 
         if (empty($this->country) && $address) {
-            $this->setAttribute('country', $address->getCountry()->getCode());
+            $this->setAttribute('country', $address->getCountry() instanceof \Geocoder\Model\Country ? $address->getCountry()->getCode() : null);
         }
 
         if ($coordinates = $address->getCoordinates()) {
@@ -243,7 +243,7 @@ class Place extends Model
         $attributes['neighborhood'] = $address->getNeighborhood();
         $attributes['city']         = $address->getLocality();
         $attributes['building']     = $address->getStreetNumber();
-        $attributes['country']      = $address->getCountry()->getCode();
+        $attributes['country']      = $address->getCountry() instanceof \Geocoder\Model\Country ? $address->getCountry()->getCode() : null;
         $attributes['location']     = new \Grimzy\LaravelMysqlSpatial\Types\Point($coordinates->getLatitude(), $coordinates->getLongitude());
 
         return $attributes;
