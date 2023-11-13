@@ -43,7 +43,7 @@ export default class ManagementIssuesIndexNewController extends Controller {
      *
      * @var {issueModel}
      */
-    @tracked issue = this.store.createRecord('issue', { reporter: this.currentUser.user, status: 'pending', priority: 'low' });
+    @tracked issue = this.store.createRecord('issue', { reporter: this.currentUser.user, status: 'pending', priority: 'low', type: 'operational' });
 
     /**
      * Set the overlay component context object.
@@ -89,6 +89,6 @@ export default class ManagementIssuesIndexNewController extends Controller {
      * @memberof ManagementissuesIndexNewController
      */
     resetForm() {
-        this.issue = this.store.createRecord('issue', { reporter: this.currentUser.user, status: 'pending', priority: 'low' });
+        this.issue = this.store.createRecord('issue', { reporter: this.currentUser.user, status: 'pending', priority: 'low', type: 'operational' });
     }
 }

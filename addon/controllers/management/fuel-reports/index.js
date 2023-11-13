@@ -68,7 +68,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
      *
      * @var {Array}
      */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'vehicle', 'driver', 'created_by', 'updated_by', 'status'];
+    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'vehicle', 'driver', 'created_by', 'updated_by', 'status', 'country', 'volume', 'odometer'];
 
     /**
      * The current page of data being viewed
@@ -120,6 +120,27 @@ export default class ManagementFuelReportsIndexController extends Controller {
     @tracked vehicle;
 
     /**
+     * The filterable param `vehicle`
+     *
+     * @var {String}
+     */
+    @tracked reporter;
+
+    /**
+     * The filterable param `vehicle`
+     *
+     * @var {String}
+     */
+    @tracked volume;
+
+    /**
+     * The filterable param `vehicle`
+     *
+     * @var {String}
+     */
+    @tracked odometer;
+
+    /**
      * The filterable param `status`
      *
      * @var {Array}
@@ -135,13 +156,34 @@ export default class ManagementFuelReportsIndexController extends Controller {
         {
             label: 'ID',
             valuePath: 'public_id',
-            width: '120px',
-            cellComponent: 'table/cell/anchor',
-            action: this.viewFuelReport,
+            width: '130px',
+            cellComponent: 'click-to-copy',
             resizable: true,
             sortable: true,
             filterable: true,
+            hidden: false,
             filterComponent: 'filter/string',
+        },
+        {
+            label: 'Reporter',
+            valuePath: 'reporter_name',
+            filterParam: 'reporter',
+            width: '100px',
+            cellComponent: 'table/cell/anchor',
+            onClick: async (issue) => {
+                let reporter = await issue.loadDReporter();
+
+                if (reporter) {
+                    this.contextPanel.focus(reporter);
+                }
+            },
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterComponent: 'filter/model',
+            filterComponentPlaceholder: 'Select reporter',
+            filterParam: 'reporter',
+            model: 'user',
         },
         {
             label: 'Driver',
@@ -166,10 +208,11 @@ export default class ManagementFuelReportsIndexController extends Controller {
         {
             label: 'Vehicle',
             valuePath: 'vehicle_name',
-            width: '120px',
+            filterParam: 'vehicle',
+            width: '100px',
             cellComponent: 'table/cell/anchor',
-            onClick: async (fuelReport) => {
-                let vehicle = await fuelReport.loadVehicle();
+            onClick: async (issue) => {
+                let vehicle = await issue.loadVehicle();
 
                 if (vehicle) {
                     this.contextPanel.focus(vehicle);
@@ -182,17 +225,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             filterComponentPlaceholder: 'Select vehicle',
             filterParam: 'vehicle',
             model: 'vehicle',
-        },
-        {
-            label: 'Country',
-            valuePath: 'country',
-            cellComponent: 'table/cell/base',
-            width: '100px',
-            resizable: true,
-            sortable: true,
-            hidden: true,
-            filterable: true,
-            filterComponent: 'filter/string',
+            modelNamePath: 'displayName',
         },
         {
             label: 'Status',
@@ -203,13 +236,35 @@ export default class ManagementFuelReportsIndexController extends Controller {
             sortable: true,
             filterable: true,
             filterComponent: 'filter/multi-option',
-            filterOptions: this.statusOptions,
+            filterOptions: ['draft', 'pending-approval', 'approved', 'rejected', 'revised', 'submitted', 'in-review', 'confirmed', 'processed', 'archived', 'cancelled'],
+        },
+        {
+            label: 'volume',
+            valuePath: 'volume',
+            width: '130px',
+            cellComponent: 'click-to-copy',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            hidden: false,
+            filterComponent: 'filter/string',
+        },
+        {
+            label: 'odometer',
+            valuePath: 'odometer',
+            width: '130px',
+            cellComponent: 'click-to-copy',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            hidden: false,
+            filterComponent: 'filter/string',
         },
         {
             label: 'Created At',
             valuePath: 'createdAt',
             sortParam: 'created_at',
-            width: '150px',
+            width: '120px',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -219,7 +274,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             label: 'Updated At',
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
-            width: '150px',
+            width: '120px',
             resizable: true,
             sortable: true,
             hidden: true,
@@ -348,7 +403,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
     @action bulkDeleteFuelReports() {
         const selected = this.table.selectedRows;
 
-        this.crud.bulkFuelReports(selected, {
+        this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
             acceptButtonText: 'Delete Fuel Reports',
             onSuccess: () => {

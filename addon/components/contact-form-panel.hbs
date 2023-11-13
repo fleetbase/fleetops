@@ -1,4 +1,11 @@
-<Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizeble={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "600px"}}
+>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
@@ -17,13 +24,21 @@
             <div class="flex flex-col flex-1 w-3/4">
                 <div class="flex flex-row">
                     <div class="w-14">
-                        <div class="w-12 h-12 flex items-center justify-start relative hover:bg-gray-100 transition-all rounded-lg overflow-hidden">
-                            <img src={{this.contact.photo_url}} alt={{this.contact.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                        <div class="upload-avatar-overlay w-12 h-12 flex items-center justify-start rounded-lg">
+                            <img src={{this.contact.photo_url}} alt={{this.contact.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm"  />
                             <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                                 <InputInfo @text={{this.contact.public_id}} />
                             </Attach::Tooltip>
-                            <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-gray-600 bg-opacity-50 rounded-lg">
-                                <UploadButton @name="photos" @accept="image/*" @onFileAdded={{this.onUploadNewPhoto}} @icon="upload" @hideButtonText={{true}} @labelClass="upload-avatar-label-overlay" class="w-12 btn-reset" />
+                            <div class="upload-avatar-button-wrapper rounded-lg">
+                                <UploadButton
+                                    @name="photos"
+                                    @accept="image/*"
+                                    @onFileAdded={{this.onUploadNewPhoto}}
+                                    @icon="upload"
+                                    @hideButtonText={{true}}
+                                    @labelClass="upload-avatar-label-overlay"
+                                    class="w-12 btn-reset"
+                                />
                             </div>
                         </div>
                     </div>
@@ -72,7 +87,14 @@
             </InputGroup>
             <InputGroup @name="Type">
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                    <PowerSelect @options={{this.contactTypeOptions}} @selected={{this.contact.type}} @onChange={{fn (mut this.contact.type)}} @placeholder="Select contact type" @triggerClass="form-select form-input" as |type|>
+                    <PowerSelect
+                        @options={{this.contactTypeOptions}}
+                        @selected={{this.contact.type}}
+                        @onChange={{fn (mut this.contact.type)}}
+                        @placeholder="Select contact type"
+                        @triggerClass="form-select form-input"
+                        as |type|
+                    >
                         {{smart-humanize type}}
                     </PowerSelect>
                 </div>

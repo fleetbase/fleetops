@@ -2,7 +2,15 @@
     <ContentPanel @title="Map" @open={{false}}>
         <LeafletMap class="w-full h-48 rounded-b-md shadow-md" @lat={{@place.latitude}} @lng={{@place.longitude}} @zoom={{17}} @zoomControl={{false}} as |layers|>
             <layers.tile @url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png" />
-            <layers.marker @id={{@place.id}} @icon={{icon iconUrl="/engines-dist/images/building-marker.png" iconSize=(array 16 16)}} @location={{point-to-coordinates @place.location}} @riseOnHover={{true}} @title={{@place.address}} @alt={{@place.address}} as |marker|>
+            <layers.marker
+                @id={{@place.id}}
+                @icon={{icon iconUrl="/engines-dist/images/building-marker.png" iconSize=(array 16 16)}}
+                @location={{point-to-coordinates @place.location}}
+                @riseOnHover={{true}}
+                @title={{@place.address}}
+                @alt={{@place.address}}
+                as |marker|
+            >
                 <marker.popup>
                     <div>{{@place.address}}</div>
                     <div>{{format-point @place.location}}</div>
@@ -58,24 +66,6 @@
             <div class="field-info-container">
                 <div class="field-name">Phone</div>
                 <div class="field-value">{{n-a @place.phone}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Email</div>
-                <div class="field-value">{{n-a @place.email}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Vendor</div>
-                <div class="field-value">
-                    {{#if @place.vendor_uuid}}
-                        <a href="javascript:;" {{on "click" @place.viewVendor}}>
-                            {{@place.vendor_name}}
-                        </a>
-                    {{else}}
-                        {{@place.vendor_name}}
-                    {{/if}}
-                </div>
             </div>
 
             <div class="field-info-container col-span-3">

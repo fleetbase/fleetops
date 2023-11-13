@@ -61,7 +61,7 @@ export default class ManagementContactsIndexController extends Controller {
      *
      * @var {Array}
      */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status'];
+    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status', 'title', 'email', 'phone', 'type'];
 
     /**
      * The current page of data being viewed
@@ -97,6 +97,34 @@ export default class ManagementContactsIndexController extends Controller {
      * @var {String}
      */
     @tracked internal_id;
+
+    /**
+     * The filterable param `title`
+     *
+     * @var {String}
+     */
+    @tracked title;
+
+    /**
+     * The filterable param `email`
+     *
+     * @var {String}
+     */
+    @tracked email;
+
+    /**
+     * The filterable param `phone`
+     *
+     * @var {String}
+     */
+    @tracked phone;
+
+    /**
+     * The filterable param `email`
+     *
+     * @var {Array|String}
+     */
+    @tracked type;
 
     /**
      * The filterable param `status`
@@ -150,6 +178,16 @@ export default class ManagementContactsIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
+            label: 'Title',
+            valuePath: 'title',
+            cellComponent: 'click-to-copy',
+            width: '160px',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterComponent: 'filter/string',
+        },
+        {
             label: 'Email',
             valuePath: 'email',
             cellComponent: 'click-to-copy',
@@ -173,11 +211,12 @@ export default class ManagementContactsIndexController extends Controller {
             label: 'Type',
             valuePath: 'type',
             cellComponent: 'table/cell/status',
-            width: '140px',
+            width: '100px',
             resizable: true,
             sortable: true,
             filterable: true,
-            filterComponent: 'filter/string',
+            filterComponent: 'filter/multi-option',
+            filterOptions: ['contact', 'customer'],
         },
         {
             label: 'Created At',
