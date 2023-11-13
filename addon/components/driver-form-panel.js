@@ -178,9 +178,12 @@ export default class DriverFormPanelComponent extends Component {
      * @param {Object} selected.location - The location data of the selected item.
      * @memberof DriverFormPanelComponent
      */
-    @action onAutocomplete(selected) {
-        if (this.coordinatesInputComponent) {
-            this.coordinatesInputComponent.updateCoordinates(selected.location);
+    @action onAutocomplete({ location }) {
+        if (location) {
+            this.driver.set('location', location);
+            if (this.coordinatesInputComponent) {
+                this.coordinatesInputComponent.updateCoordinates(location);
+            }
         }
     }
 
