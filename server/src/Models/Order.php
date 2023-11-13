@@ -312,7 +312,7 @@ class Order extends Model
      */
     public function driverAssigned()
     {
-        return $this->belongsTo(Driver::class)->without(['devices', 'vehicle', 'vendor'])->withoutGlobalScopes();
+        return $this->belongsTo(Driver::class)->without(['devices', 'vendor']);
     }
 
     /**
@@ -320,7 +320,7 @@ class Order extends Model
      */
     public function driver()
     {
-        return $this->belongsTo(Driver::class)->without(['devices', 'vehicle', 'vendor'])->withoutGlobalScopes();
+        return $this->belongsTo(Driver::class)->without(['devices', 'vendor']);
     }
 
     /**

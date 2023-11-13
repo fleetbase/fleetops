@@ -47,7 +47,8 @@ class VehicleFilter extends Filter
         $this->builder->searchWhere('model', $vehicle_model);
     }
 
-    public function vehicleYear(?string $vehicleYear) {
+    public function vehicleYear(?string $vehicleYear)
+    {
         $this->builder->searchWhere('year', $vehicleYear);
     }
 

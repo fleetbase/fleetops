@@ -35,13 +35,13 @@ class ContactFilter extends Filter
     public function publicId(?string $publicId)
     {
         $this->builder->searchWhere('public_id', $publicId);
-    } 
-    
+    }
+
     public function name(?string $name)
     {
         $this->builder->searchWhere('name', $name);
     }
-    
+
     public function title(?string $title)
     {
         $this->builder->searchWhere('title', $title);

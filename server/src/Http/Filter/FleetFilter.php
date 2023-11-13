@@ -60,7 +60,7 @@ class FleetFilter extends Filter
             }
         );
 
-        $this->builder->searchWhere('parent_fleet_uuid',$fleet);
+        $this->builder->searchWhere('parent_fleet_uuid', $fleet);
     }
 
     public function vendor(?string $vendor)
@@ -72,7 +72,7 @@ class FleetFilter extends Filter
             }
         );
     }
-    
+
     public function publicId(?string $publicId)
     {
         $this->builder->searchWhere('public_id', $publicId);
@@ -82,7 +82,7 @@ class FleetFilter extends Filter
     {
         $this->builder->searchWhere('task', $task);
     }
-    
+
     public function name(?string $name)
     {
         $this->builder->searchWhere('name', $name);
