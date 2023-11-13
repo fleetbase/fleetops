@@ -528,4 +528,25 @@ export default class ManagementVehiclesIndexController extends ManagementControl
      * @void
      */
     @action assignDriver() {}
+
+    /**
+     * View a place location on map
+     *
+     * @param {PlaceModel} place
+     * @param {Object} options
+     * @void
+     */
+    @action viewOnMap(place, options = {}) {
+        const { latitude, longitude } = place;
+
+        this.modalsManager.show('modals/point-map', {
+            title: `Location of ${place.name}`,
+            acceptButtonText: 'Done',
+            hideDeclineButton: true,
+            latitude,
+            longitude,
+            location: [latitude, longitude],
+            ...options,
+        });
+    }
 }

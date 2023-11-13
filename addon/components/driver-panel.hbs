@@ -1,4 +1,11 @@
-<Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizeble={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "600px"}}
+>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
@@ -14,7 +21,14 @@
                 <div class="flex flex-row">
                     <div class="w-14">
                         <div class="w-12 h-12 flex items-center justify-start rounded-lg">
-                            <Image src={{this.driver.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{this.driver.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                            <Image
+                                src={{this.driver.photo_url}}
+                                @fallbackSrc={{config "defaultValues.driverImage"}}
+                                alt={{this.driver.name}}
+                                height="48"
+                                width="48"
+                                class="h-12 w-12 rounded-lg shadow-sm"
+                            />
                             <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                                 <InputInfo @text={{this.driver.name}} />
                             </Attach::Tooltip>
@@ -25,7 +39,11 @@
                         <div class="-mt-1">
                             {{#if this.driver.vehicle}}
                                 <div class="flex flex-row items-center">
-                                    <a href="javascript:;" class="text-sm dark:text-blue-400 text-blue-600 hover:opacity-50" {{on "click" this.onClickDriverVehicle}}>{{this.driver.vehicle.displayName}}</a>
+                                    <a
+                                        href="javascript:;"
+                                        class="text-sm dark:text-blue-400 text-blue-600 hover:opacity-50"
+                                        {{on "click" this.onClickDriverVehicle}}
+                                    >{{this.driver.vehicle.displayName}}</a>
                                 </div>
                             {{else}}
                                 <div class="flex flex-row items-center">

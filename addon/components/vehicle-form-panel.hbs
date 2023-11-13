@@ -143,6 +143,15 @@
                             </PowerSelect>
                         </div>
                     </InputGroup>
+                    <InputGroup @name="Coordinates" @wrapperClass="col-span-2">
+                <CoordinatesInput
+                    @value={{this.vehicle.location}}
+                    @onChange={{this.onCoordinatesChanged}}
+                    @onGeocode={{this.onAutocomplete}}
+                    @onUpdatedFromMap={{this.onCoordinatesChanged}}
+                    @onInit={{this.setCoordinatesInput}}
+                />
+            </InputGroup>
                 </div>
             </ContentPanel>
 
