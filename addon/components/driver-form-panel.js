@@ -2,6 +2,8 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { isBlank } from '@ember/utils';
+import Point from '@fleetbase/fleetops-data/utils/geojson/point';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
 
@@ -58,6 +60,12 @@ export default class DriverFormPanelComponent extends Component {
      * @type {boolean}
      */
     @tracked isLoading = false;
+
+    /**
+     * The coordinates input component instance.
+     * @type {CoordinateInputComponent}
+     */
+    @tracked coordinatesInputComponent;
 
     /**
      * Constructs the component and applies initial state.
@@ -159,5 +167,49 @@ export default class DriverFormPanelComponent extends Component {
      */
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.driver);
+    }
+
+    /**
+     * Handles the selection from an autocomplete. Updates the place properties with the selected data.
+     * If a coordinates input component is present, updates its coordinates too.
+     *
+     * @action
+     * @param {Object} selected - The selected item from the autocomplete.
+     * @param {Object} selected.location - The location data of the selected item.
+     * @memberof DriverFormPanelComponent
+     */
+    @action onAutocomplete(selected) {
+        console.log('onAutocomplete', ...arguments);
+        // this.driver.setProperties({ ...selected });
+
+        if (this.coordinatesInputComponent) {
+            this.coordinatesInputComponent.updateCoordinates(selected.location);
+        }
+    }
+
+    /**
+     * Sets the coordinates input component.
+     *
+     * @action
+     * @param {Object} coordinatesInputComponent - The coordinates input component to be set.
+     * @memberof DriverFormPanelComponent
+     */
+    @action setCoordinatesInput(coordinatesInputComponent) {
+        this.coordinatesInputComponent = coordinatesInputComponent;
+    }
+
+    /**
+     * Updates the place coordinates with the given latitude and longitude.
+     *
+     * @action
+     * @param {Object} coordinates - The latitude and longitude coordinates.
+     * @param {number} coordinates.latitude - Latitude value.
+     * @param {number} coordinates.longitude - Longitude value.
+     * @memberof DriverFormPanelComponent
+     */
+    @action onCoordinatesChanged({ latitude, longitude }) {
+        const location = new Point(longitude, latitude);
+
+        this.driver.setProperties({ location });
     }
 }
