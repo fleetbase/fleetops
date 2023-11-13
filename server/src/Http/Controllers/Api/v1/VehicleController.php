@@ -24,7 +24,7 @@ class VehicleController extends Controller
     public function create(CreateVehicleRequest $request)
     {
         // get request input
-        $input = $request->only(['status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin', 'meta']);
+        $input = $request->only(['status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin', 'meta', 'location', 'altitude', 'heading', 'speed']);
         // make sure company is set
         $input['company_uuid'] = session('company');
 
@@ -90,7 +90,7 @@ class VehicleController extends Controller
         }
 
         // get request input
-        $input = $request->only(['status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin', 'meta']);
+        $input = $request->only(['status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin', 'meta', 'location', 'altitude', 'heading', 'speed']);
 
         // vendor assignment
         if ($request->has('vendor')) {

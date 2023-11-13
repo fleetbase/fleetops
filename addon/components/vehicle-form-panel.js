@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
+import Point from '@fleetbase/fleetops-data/utils/geojson/point';
 
 export default class VehicleFormPanelComponent extends Component {
     /**
@@ -159,5 +160,41 @@ export default class VehicleFormPanelComponent extends Component {
      */
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.vehicle);
+    }
+
+    @action onAutocomplete({ location }) {
+        if (location) {
+            this.vehicle.setProperties({ location });
+
+            if (this.coordinatesInputComponent) {
+                this.coordinatesInputComponent.updateCoordinates(location);
+            }
+        }
+    }
+
+    /**
+     * Sets the coordinates input component.
+     *
+     * @action
+     * @param {Object} coordinatesInputComponent - The coordinates input component to be set.
+     * @memberof PlaceFormPanelComponent
+     */
+    @action setCoordinatesInput(coordinatesInputComponent) {
+        this.coordinatesInputComponent = coordinatesInputComponent;
+    }
+
+    /**
+     * Updates the Vehicle coordinates with the given latitude and longitude.
+     *
+     * @action
+     * @param {Object} coordinates - The latitude and longitude coordinates.
+     * @param {number} coordinates.latitude - Latitude value.
+     * @param {number} coordinates.longitude - Longitude value.
+     * @memberof PlaceFormPanelComponent
+     */
+    @action onCoordinatesChanged({ latitude, longitude }) {
+        const location = new Point(longitude, latitude);
+
+        this.vehicle.setProperties({ location });
     }
 }
