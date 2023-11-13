@@ -217,7 +217,6 @@ export default class ManagementIssuesIndexController extends Controller {
         {
             label: 'Reporter',
             valuePath: 'reporter_name',
-            filterParam: 'reporter',
             width: '100px',
             cellComponent: 'table/cell/anchor',
             onClick: async (issue) => {

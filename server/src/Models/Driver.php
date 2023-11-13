@@ -89,6 +89,13 @@ class Driver extends Model
     ];
 
     /**
+     * The attributes that are guarded and not mass assignable.
+     *
+     * @var array
+     */
+    protected $guarded = [];
+
+    /**
      * The attributes that are spatial columns.
      *
      * @var array
