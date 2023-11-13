@@ -69,7 +69,24 @@ export default class ManagementVehiclesIndexController extends ManagementControl
      *
      * @var {Array}
      */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'status', 'created_at', 'updated_at', 'created_by', 'updated_by'];
+    queryParams = [
+        'page',
+        'limit',
+        'sort',
+        'query',
+        'public_id',
+        'status',
+        'created_at',
+        'updated_at',
+        'created_by',
+        'updated_by',
+        'name',
+        'plate_number',
+        'year',
+        'make',
+        'vehicle_model',
+        'display_name',
+    ];
 
     /**
      * The search query.
@@ -149,6 +166,20 @@ export default class ManagementVehiclesIndexController extends ManagementControl
     @tracked year;
 
     /**
+     * The filterable param `make`.
+     *
+     * @var {String}
+     */
+    @tracked make;
+
+    /**
+     * The filterable param `model`.
+     *
+     * @var {String}
+     */
+    @tracked model;
+
+    /**
      * The filterable param `country`.
      *
      * @var {String}
@@ -175,6 +206,13 @@ export default class ManagementVehiclesIndexController extends ManagementControl
      * @var {String}
      */
     @tracked driver;
+
+    /**
+     * The filterable param `display_name`.
+     *
+     * @var {String}
+     */
+    @tracked display_name;
 
     /**
      * TableComponent instance.
@@ -214,7 +252,7 @@ export default class ManagementVehiclesIndexController extends ManagementControl
             sortable: true,
             filterable: true,
             filterComponent: 'filter/string',
-            filterParam: 'name',
+            filterParam: 'display_name',
             showOnlineIndicator: true,
         },
         {
@@ -264,12 +302,12 @@ export default class ManagementVehiclesIndexController extends ManagementControl
             sortable: true,
             hidden: true,
             filterable: true,
-            filterParam: 'vehicle_make',
+            filterParam: 'make',
             filterComponent: 'filter/string',
         },
         {
             label: 'Model',
-            valuePath: 'model',
+            valuePath: 'vehicle_model',
             cellComponent: 'table/cell/base',
             width: '80px',
             resizable: true,

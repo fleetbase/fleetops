@@ -14,8 +14,16 @@ export default class ManagementIssuesIndexRoute extends Route {
         limit: { refreshModel: true },
         sort: { refreshModel: true },
         query: { refreshModel: true },
-        country: { refreshModel: true },
+        priority: { refreshModel: true },
         status: { refreshModel: true },
+        vehicle: { refreshModel: true },
+        driver: { refreshModel: true },
+        assignee: { refreshModel: true },
+        reporter: { refreshModel: true },
+        type: { refreshModel: true },
+        category: { refreshModel: true },
+        updatedAt: { refreshModel: true },
+        createdAt: { refreshModel: true },
     };
 
     model(params) {

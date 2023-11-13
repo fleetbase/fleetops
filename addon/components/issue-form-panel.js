@@ -6,6 +6,8 @@ import { isArray } from '@ember/array';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
+import getIssueTypes from '../utils/get-issue-types';
+import getIssueCategories from '../utils/get-issue-categories';
 
 export default class IssueFormPanelComponent extends Component {
     /**
@@ -55,24 +57,14 @@ export default class IssueFormPanelComponent extends Component {
      *
      * @var {String}
      */
-    @tracked issueTypes = ['vehicle', 'driver', 'route', 'payload-cargo', 'software-technical', 'operational', 'customer', 'security', 'environmental-sustainability'];
+    @tracked issueTypes = getIssueTypes();
 
     /**
      *  The subcategories for issue types.
      *
      * @var {Object}
      */
-    @tracked issueCategoriesByType = {
-        vehicle: ['Mechanical Problems', 'Cosmetic Damages', 'Tire Issues', 'Electronics and Instruments', 'Maintenance Alerts', 'Fuel Efficiency Issues'],
-        driver: ['Behavior Concerns', 'Documentation', 'Time Management', 'Communication', 'Training Needs', 'Health and Safety Violations'],
-        route: ['Inefficient Routes', 'Safety Concerns', 'Blocked Routes', 'Environmental Considerations', 'Unfavorable Weather Conditions'],
-        'payload-cargo': ['Damaged Goods', 'Misplaced Goods', 'Documentation Issues', 'Temperature-Sensitive Goods', 'Incorrect Cargo Loading'],
-        'software-technical': ['Bugs', 'UI/UX Concerns', 'Integration Failures', 'Performance', 'Feature Requests', 'Security Vulnerabilities'],
-        operational: ['Compliance', 'Resource Allocation', 'Cost Overruns', 'Communication', 'Vendor Management Issues'],
-        customer: ['Service Quality', 'Billing Discrepancies', 'Communication Breakdown', 'Feedback and Suggestions', 'Order Errors'],
-        security: ['Unauthorized Access', 'Data Concerns', 'Physical Security', 'Data Integrity Issues'],
-        'environmental-sustainability': ['Fuel Consumption', 'Carbon Footprint', 'Waste Management', 'Green Initiatives Opportunities'],
-    };
+    @tracked issueCategoriesByType = getIssueCategories({ fullObject: true });
 
     /**
      * Selectable issue categories.
@@ -101,7 +93,7 @@ export default class IssueFormPanelComponent extends Component {
     constructor() {
         super(...arguments);
         this.issue = this.args.issue;
-        this.issueCategories = getWithDefault(this.issueCategoriesByType, this.issue.type, []);
+        this.issueCategories = getWithDefault(this.issueCategoriesByType, getWithDefault(this.issue, 'type', 'operational'), []);
         applyContextComponentArguments(this);
     }
 

@@ -72,7 +72,7 @@ class Vendor extends Model
      *
      * @var array
      */
-    protected $searchableColumns = ['name', 'email', 'business_id', 'company.name'];
+    protected $searchableColumns = ['name', 'email', 'business_id', 'connectCompany.name'];
 
     /**
      * Dynamic attributes that are appended to object.

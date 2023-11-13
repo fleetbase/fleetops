@@ -40,7 +40,7 @@ class Order extends FleetbaseResource
             'customer'             => $this->setCustomerType(Resolve::resourceForMorph($this->customer_type, $this->customer_uuid)),
             'payload'              => new Payload($this->payload),
             'facilitator'          => $this->setFacilitatorType(Resolve::resourceForMorph($this->facilitator_type, $this->facilitator_uuid)),
-            'driver_assigned'      => new Driver($this->driverAssigned()->without(['jobs', 'currentJob', 'driverAssigned'])->first()),
+            'driver_assigned'      => new Driver($this->driverAssigned()->without(['jobs', 'currentJob'])->first()),
             'tracking_number'      => new TrackingNumber($this->trackingNumber),
             'tracking_statuses'    => $this->whenLoaded('trackingStatuses', TrackingStatus::collection($this->trackingStatuses)),
             'purchase_rate'        => new PurchaseRate($this->purchaseRate),

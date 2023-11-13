@@ -4,6 +4,8 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
+import getVendorTypeOptions from '../utils/get-vendor-type-options';
+import getVendorStatusOptions from '../utils/get-vendor-status-options';
 
 export default class VendorFormPanelComponent extends Component {
     /**
@@ -64,52 +66,14 @@ export default class VendorFormPanelComponent extends Component {
      *
      * @memberof VendorFormPanelComponent
      */
-    @tracked vendorTypeOptions = [
-        'carrier-trucking-company',
-        'carrier-shipping-line',
-        'carrier-air-cargo',
-        'carrier-rail',
-        'freight-forwarder',
-        'warehouse-provider',
-        'broker',
-        'maintenance-repair-facility',
-        'fuel-station',
-        'tire-service-provider',
-        'equipment-rental',
-        'customs-broker',
-        'third-party-logistics-provider',
-        'technology-provider',
-        'consultant',
-        'insurance-provider',
-        'last-mile-delivery-service',
-        'packing-crating-service',
-        'intermodal-operator',
-        'drayage-service-provider',
-        'cold-chain-provider',
-        'hazardous-material-specialist',
-        'parcel-courier',
-        'bulk-material-handler',
-        'towing-service',
-        'cargo-inspector',
-        'pallet-provider',
-        'label-packaging-material-supplier',
-        'driver-leasing-service',
-        'vehicle-manufacturer',
-        'vehicle-dealership',
-        'parts-supplier',
-        'logistics-association',
-        'regulatory-body',
-        'training-certification-provider',
-        'general-vendor',
-        'ecommerce',
-    ];
+    @tracked vendorTypeOptions = getVendorTypeOptions();
 
     /**
      * Applicable status options for vendor.
      *
      * @memberof VendorFormPanelComponent
      */
-    @tracked vendorStatusOptions = ['pending', 'active', 'do-not-contact', 'prospective', 'archived'];
+    @tracked vendorStatusOptions = getVendorStatusOptions();
 
     /**
      * Constructs the component and applies initial state.

@@ -1,4 +1,11 @@
-<Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizable={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "600px"}}
+>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
@@ -13,7 +20,14 @@
                 <div class="flex flex-row">
                     <div class="w-14">
                         <div class="w-12 h-12 flex items-center justify-start rounded-lg">
-                            <Image src={{this.vehicle.photo_url}} @fallbackSrc={{config "defaultValues.vehicleImage"}} alt={{this.vehicle.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                            <Image
+                                src={{this.vehicle.photo_url}}
+                                @fallbackSrc={{config "defaultValues.vehicleImage"}}
+                                alt={{this.vehicle.name}}
+                                height="48"
+                                width="48"
+                                class="h-12 w-12 rounded-lg shadow-sm"
+                            />
                             <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                                 <InputInfo @text={{this.vehicle.displayName}} />
                             </Attach::Tooltip>
@@ -29,7 +43,7 @@
                             {{else}}
                                 <div class="flex flex-row items-center">
                                     <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">No driver assigned</span>
-                                    {{!-- <Button @icon="user-plus" @size="xs" @helpText="Assign a driver to vehicle" /> --}}
+                                    {{! <Button @icon="user-plus" @size="xs" @helpText="Assign a driver to vehicle" /> }}
                                 </div>
                             {{/if}}
                         </div>
@@ -46,7 +60,7 @@
             <div class="ui-tabs mt-4">
                 <nav>
                     {{#each this.tabs as |tab|}}
-                        <a href="javascript:;" class="ui-tab {{if (eq this.tab.slug tab.slug) 'active' }}" {{on "click" (fn this.onTabChanged tab.slug)}}>
+                        <a href="javascript:;" class="ui-tab {{if (eq this.tab.slug tab.slug) 'active'}}" {{on "click" (fn this.onTabChanged tab.slug)}}>
                             <FaIcon @icon={{tab.icon}} class="mr-1" />
                             <span>{{tab.title}}</span>
                         </a>
