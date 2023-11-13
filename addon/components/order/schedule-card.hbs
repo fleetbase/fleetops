@@ -25,21 +25,21 @@
                 <FaIcon @icon="calendar" class="mr-2" />
                 <span class="font-semibold">Driver Assigned</span>
                 <div class="ml-2">
-                    <a href="javascript:;" {{on "click" this.startAssignDriver}}>
-                        <FaIcon @icon="pencil" />
+                    <a href="javascript:;" class="text-blue-400 hover:opacity-75" {{on "click" this.startAssignDriver}}>
+                        <FaIcon @icon="edit" @size="xs" />
                     </a>
                 </div>
             </div>
             <div>
                 {{#if this.isAssigningDriver}}
-                    <ModelSelect @modelName="driver" @selectedModel={{@order.driver_assigned}} @placeholder="Select Driver" @triggerClass="form-select form-input form-input-sm" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @disabled={{@model.isLoading}} @onChange={{this.assignDriver}} as |model|>
+                    <ModelSelect @modelName="driver" @selectedModel={{@order.driver_assigned}} @placeholder="Select Driver" @triggerClass="form-select form-input form-input-sm w-48" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @disabled={{@model.isLoading}} @onChange={{this.assignDriver}} as |model|>
                         <div class="flex items-center">
-                            <div class="w-7">
-                                <FaIcon @icon="id-card-alt" />
+                            <div class="w-5">
+                                <FaIcon @icon="id-card-alt" @size="xs" />
                             </div>
-                            <div class="flex-1 flex flex-row truncate">
-                                <span class="uppercase mr-2">{{model.name}}</span>
-                                <span class="uppercase">{{model.phone}}</span>
+                            <div class="flex-1 flex flex-row truncate text-xs">
+                                <span class="uppercase mr-1.5 text-xs">{{model.name}}</span>
+                                <span class="uppercase text-xs">{{model.phone}}</span>
                             </div>
                         </div>
                     </ModelSelect>

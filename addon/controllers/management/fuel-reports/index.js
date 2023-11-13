@@ -167,7 +167,6 @@ export default class ManagementFuelReportsIndexController extends Controller {
         {
             label: 'Reporter',
             valuePath: 'reporter_name',
-            filterParam: 'reporter',
             width: '100px',
             cellComponent: 'table/cell/anchor',
             onClick: async (issue) => {
@@ -208,7 +207,6 @@ export default class ManagementFuelReportsIndexController extends Controller {
         {
             label: 'Vehicle',
             valuePath: 'vehicle_name',
-            filterParam: 'vehicle',
             width: '100px',
             cellComponent: 'table/cell/anchor',
             onClick: async (issue) => {

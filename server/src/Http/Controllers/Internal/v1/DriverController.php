@@ -136,7 +136,7 @@ class DriverController extends FleetOpsController
                         ->toArray();
 
                     if (!isset($input['password'])) {
-                        $input['password'] = $userInput['phone'] ?? Str::random(14);
+                        $input['password'] = data_get($userInput, 'phone', Str::random(14));
                     }
 
                     $userInput['company_uuid'] = session('company');
@@ -202,7 +202,7 @@ class DriverController extends FleetOpsController
                 $request,
                 $id,
                 function (&$request, &$driver, &$input) {
-                    $driver->load(['user']);
+                    $driver->load(['user'])->guard(['user_uuid']);
                     $input     = collect($input);
                     $userInput = $input->only(['name', 'password', 'email', 'phone', 'avatar_uuid'])->toArray();
                     // handle `photo_uuid`

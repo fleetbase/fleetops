@@ -75,7 +75,7 @@ export default class ManagementFleetsIndexController extends Controller {
      *
      * @var {Array}
      */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'zone', 'service_area', 'parent_fleet', 'vendor', 'created_by', 'updated_by', 'status', 'task', 'name',];
+    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'zone', 'service_area', 'parent_fleet', 'vendor', 'created_by', 'updated_by', 'status', 'task', 'name'];
 
     /**
      * The current page of data being viewed
@@ -137,7 +137,7 @@ export default class ManagementFleetsIndexController extends Controller {
      * @var {Array}
      */
     @tracked task;
-    
+
     /**
      * The filterable param `task`
      *
