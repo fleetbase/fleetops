@@ -68,7 +68,7 @@ export default class ManagementVendorsIndexController extends Controller {
      *
      * @var {Array}
      */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status', 'name', 'email', 'phone', 'type', 'country', 'address','website_url'];
+    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status', 'name', 'email', 'phone', 'type', 'country', 'address', 'website_url'];
 
     /**
      * The current page of data being viewed
@@ -125,7 +125,7 @@ export default class ManagementVendorsIndexController extends Controller {
      * @var {String}
      */
     @tracked name;
-    
+
     /**
      * The filterable param `website_url`
      *

@@ -14,7 +14,6 @@ export default class ManagementVehiclesIndexRoute extends Route {
         public_id: { refreshModel: true },
         vin: { refreshModel: true },
         plate_number: { refreshModel: true },
-        make: { refreshModel: true },
         model: { refreshModel: true },
         year: { refreshModel: true },
         country: { refreshModel: true },

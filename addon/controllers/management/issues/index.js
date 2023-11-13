@@ -237,7 +237,6 @@ export default class ManagementIssuesIndexController extends Controller {
         {
             label: 'Assignee',
             valuePath: 'assignee_name',
-            filterParam: 'assignee',
             width: '100px',
             cellComponent: 'table/cell/anchor',
             onClick: async (issue) => {
@@ -258,7 +257,6 @@ export default class ManagementIssuesIndexController extends Controller {
         {
             label: 'Driver',
             valuePath: 'driver_name',
-            filterParam: 'driver',
             width: '100px',
             cellComponent: 'table/cell/anchor',
             onClick: async (issue) => {
@@ -279,7 +277,6 @@ export default class ManagementIssuesIndexController extends Controller {
         {
             label: 'Vehicle',
             valuePath: 'vehicle_name',
-            filterParam: 'vehicle',
             width: '100px',
             cellComponent: 'table/cell/anchor',
             onClick: async (issue) => {
