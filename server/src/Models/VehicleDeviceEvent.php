@@ -44,6 +44,7 @@ class VehicleDeviceEvent extends Model
         'state',
         'code',
         'reason',
+        'comment'
     ];
     /**
      * The attributes that should be cast to native types.
