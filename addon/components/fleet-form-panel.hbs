@@ -1,5 +1,18 @@
-<Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
-    <Overlay::Header @title={{if this.fleet.public_id this.fleet.name "New Fleet"}} @status={{this.fleet.public_id}} @hideStatusDot={{true}} @createdAt={{this.fleet.createdAt}} @titleWrapperClass="leading-5">
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizeble={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "600px"}}
+>
+    <Overlay::Header
+        @title={{if this.fleet.public_id this.fleet.name "New Fleet"}}
+        @status={{this.fleet.public_id}}
+        @hideStatusDot={{true}}
+        @createdAt={{this.fleet.createdAt}}
+        @titleWrapperClass="leading-5"
+    >
         <div class="flex flex-1 justify-end">
             <Button @icon={{if this.fleet.id "save" "check"}} @type="primary" @text={{if this.fleet.id "Save Fleet" "Create Fleet"}} @onClick={{this.save}} @wrapperClass="mr-2" />
             {{#if this.fleet.id}}
@@ -14,23 +27,64 @@
             <div class="flex flex-col text-xs dark:text-gray-100">
                 <InputGroup @name="Fleet Name" @value={{this.fleet.name}} />
                 <InputGroup @name="Parent Fleet" @value={{this.fleet.parent_fleet}}>
-                    <ModelSelect @modelName="fleet" @selectedModel={{this.fleet.parent_fleet}} @placeholder="Select parent fleet to assign fleet to" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn this.updateRelationship "parent_fleet"}} @allowClear={{true}} as |model|>
+                    <ModelSelect
+                        @modelName="fleet"
+                        @selectedModel={{this.fleet.parent_fleet}}
+                        @placeholder="Select parent fleet to assign fleet to"
+                        @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
+                        @onChange={{fn this.updateRelationship "parent_fleet"}}
+                        @allowClear={{true}}
+                        as |model|
+                    >
                         {{model.name}}
                     </ModelSelect>
                 </InputGroup>
                 <InputGroup @name="Vendor" @value={{this.fleet.vendor}}>
-                    <ModelSelect @modelName="vendor" @selectedModel={{this.fleet.vendor}} @placeholder="Select vendor to assign fleet to" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn this.updateRelationship "vendor"}} @allowClear={{true}} as |model|>
+                    <ModelSelect
+                        @modelName="vendor"
+                        @selectedModel={{this.fleet.vendor}}
+                        @placeholder="Select vendor to assign fleet to"
+                        @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
+                        @onChange={{fn this.updateRelationship "vendor"}}
+                        @allowClear={{true}}
+                        as |model|
+                    >
                         {{model.name}}
                     </ModelSelect>
                 </InputGroup>
                 <InputGroup @name="Assign to Service Area" @value={{this.fleet.service_area}}>
-                    <ModelSelect @modelName="service-area" @selectedModel={{this.fleet.service_area}} @placeholder="Select service area to assign fleet to" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn this.updateRelationship "service_area"}} @allowClear={{true}} as |model|>
+                    <ModelSelect
+                        @modelName="service-area"
+                        @selectedModel={{this.fleet.service_area}}
+                        @placeholder="Select service area to assign fleet to"
+                        @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
+                        @onChange={{fn this.updateRelationship "service_area"}}
+                        @allowClear={{true}}
+                        as |model|
+                    >
                         {{model.name}}
                     </ModelSelect>
                 </InputGroup>
                 {{#if this.fleet.service_area}}
                     <InputGroup @name="Assign to Zone" @value={{this.fleet.zone}}>
-                        <ModelSelect @modelName="zone" @selectedModel={{this.fleet.zone}} @query={{hash service_area_uuid=this.fleet.service_area.id}} @placeholder="Select zone to assign fleet to" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn this.updateRelationship "zone"}} @allowClear={{true}} as |model|>
+                        <ModelSelect
+                            @modelName="zone"
+                            @selectedModel={{this.fleet.zone}}
+                            @query={{hash service_area_uuid=this.fleet.service_area.id}}
+                            @placeholder="Select zone to assign fleet to"
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{fn this.updateRelationship "zone"}}
+                            @allowClear={{true}}
+                            as |model|
+                        >
                             {{model.name}}
                         </ModelSelect>
                     </InputGroup>

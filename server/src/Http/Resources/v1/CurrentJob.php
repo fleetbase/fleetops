@@ -16,21 +16,18 @@ class CurrentJob extends FleetbaseResource
      */
     public function toArray($request)
     {
-        return array_merge(
-            $this->getInternalIds(),
-            [
-                'id'           => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-                'uuid'         => $this->when(Http::isInternalRequest(), $this->uuid),
-                'public_id'    => $this->when(Http::isInternalRequest(), $this->public_id),
-                'company_uuid' => $this->when(Http::isInternalRequest(), $this->company_uuid),
-                'internal_id'  => $this->internal_id,
-                'payload'      => $this->when(Http::isInternalRequest(), new Payload($this->payload)),
-                'type'         => $this->type,
-                'status'       => $this->status,
-                'meta'         => $this->meta ?? [],
-                'updated_at'   => $this->updated_at,
-                'created_at'   => $this->created_at,
-            ]
-        );
+        return [
+            'id'           => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'uuid'         => $this->when(Http::isInternalRequest(), $this->uuid),
+            'public_id'    => $this->when(Http::isInternalRequest(), $this->public_id),
+            'company_uuid' => $this->when(Http::isInternalRequest(), $this->company_uuid),
+            'internal_id'  => $this->internal_id,
+            'payload'      => $this->when(Http::isInternalRequest(), new Payload($this->payload)),
+            'type'         => $this->type,
+            'status'       => $this->status,
+            'meta'         => $this->meta ?? [],
+            'updated_at'   => $this->updated_at,
+            'created_at'   => $this->created_at,
+        ];
     }
 }

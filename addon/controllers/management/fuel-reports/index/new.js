@@ -79,7 +79,7 @@ export default class ManagementFuelReportsIndexNewController extends Controller 
         }
 
         this.hostRouter.refresh();
-        return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport).then(() => {
+        return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport.public_id).then(() => {
             this.resetForm();
         });
     }

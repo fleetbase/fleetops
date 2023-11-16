@@ -16,7 +16,7 @@ export default class OperationsSchedulerIndexRoute extends Route {
     @service store;
 
     model() {
-        return this.store.query('order', { status: 'created', with: ['payload'] });
+        return this.store.query('order', { status: 'created', with: ['payload', 'driverAssigned.vehicle'] });
     }
 
     setupController(controller, model) {

@@ -14,14 +14,7 @@ class VendorFilter extends Filter
 
     public function query(?string $searchQuery)
     {
-        $this->builder->where(function ($query) use ($searchQuery) {
-            $query->orWhereHas(
-                'user',
-                function ($query) use ($searchQuery) {
-                    $query->searchWhere(['name', 'email', 'phone', 'address'], $searchQuery);
-                }
-            );
-        });
+        $this->builder->search($searchQuery);
     }
 
     public function internalId(?string $internalId)
@@ -49,6 +42,11 @@ class VendorFilter extends Filter
         $this->builder->searchWhere('email', $email);
     }
 
+    public function websiteUrl(?string $websiteUrl)
+    {
+        $this->builder->searchWhere('website_url', $websiteUrl);
+    }
+
     public function country(?string $country)
     {
         $this->builder->searchWhere('country', $country);
@@ -57,6 +55,11 @@ class VendorFilter extends Filter
     public function status(?string $status)
     {
         $this->builder->searchWhere('status', $status);
+    }
+
+    public function address(?string $address)
+    {
+        $this->builder->searchWhere('place_uuid', $address);
     }
 
     public function createdAt($createdAt)

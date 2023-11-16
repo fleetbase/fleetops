@@ -44,6 +44,12 @@ export default class FuelReportFormPanelComponent extends Component {
     @tracked isLoading = false;
 
     /**
+     * Fuel Report status
+     * @type {Array}
+     */
+    @tracked statusOptions = ['draft', 'pending-approval', 'approved', 'rejected', 'revised', 'submitted', 'in-review', 'confirmed', 'processed', 'archived', 'cancelled'];
+
+    /**
      * Constructs the component and applies initial state.
      */
     constructor() {

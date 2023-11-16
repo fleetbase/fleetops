@@ -5,7 +5,7 @@ import { action } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
-
+import getVendorStatusOptions from '../../../utils/get-vendor-status-options';
 export default class ManagementVendorsIndexController extends Controller {
     /**
      * Inject the `management.places.index` controller
@@ -68,7 +68,7 @@ export default class ManagementVendorsIndexController extends Controller {
      *
      * @var {Array}
      */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status'];
+    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status', 'name', 'email', 'phone', 'type', 'country', 'address', 'website_url'];
 
     /**
      * The current page of data being viewed
@@ -111,6 +111,48 @@ export default class ManagementVendorsIndexController extends Controller {
      * @var {Array}
      */
     @tracked status;
+
+    /**
+     * The filterable param `type`
+     *
+     * @var {Array|String}
+     */
+    @tracked type;
+
+    /**
+     * The filterable param `name`
+     *
+     * @var {String}
+     */
+    @tracked name;
+
+    /**
+     * The filterable param `website_url`
+     *
+     * @var {String}
+     */
+    @tracked website_url;
+
+    /**
+     * The filterable param `phone`
+     *
+     * @var {String}
+     */
+    @tracked phone;
+
+    /**
+     * The filterable param `email`
+     *
+     * @var {String}
+     */
+    @tracked email;
+
+    /**
+     * The filterable param `country`
+     *
+     * @var {String}
+     */
+    @tracked country;
 
     /**
      * Rows for the table
@@ -169,6 +211,17 @@ export default class ManagementVendorsIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
+            label: 'Website URL',
+            valuePath: 'website_url',
+            cellComponent: 'click-to-copy',
+            width: '80px',
+            resizable: true,
+            sortable: true,
+            hidden: true,
+            filterable: true,
+            filterComponent: 'filter/string',
+        },
+        {
             label: 'Phone',
             valuePath: 'phone',
             cellComponent: 'click-to-copy',
@@ -194,11 +247,13 @@ export default class ManagementVendorsIndexController extends Controller {
         {
             label: 'Type',
             valuePath: 'type',
-            cellComponent: 'table/cell/status',
-            width: '120px',
+            cellComponent: 'table/cell/anchor',
+            action: this.viewVendorPlace,
+            width: '150px',
             resizable: true,
             sortable: true,
             filterable: true,
+            filterParam: 'type',
             filterComponent: 'filter/string',
         },
         {
@@ -206,12 +261,12 @@ export default class ManagementVendorsIndexController extends Controller {
             valuePath: 'country',
             cellComponent: 'table/cell/base',
             cellClassNames: 'uppercase',
-            width: '130px',
+            width: '120px',
             resizable: true,
             sortable: true,
-            hidden: true,
             filterable: true,
-            filterComponent: 'filter/string',
+            filterComponent: 'filter/country',
+            filterParam: 'country',
         },
         {
             label: 'Created At',
@@ -243,7 +298,7 @@ export default class ManagementVendorsIndexController extends Controller {
             sortable: true,
             filterable: true,
             filterComponent: 'filter/multi-option',
-            filterOptions: this.statusOptions,
+            filterOptions: getVendorStatusOptions(),
         },
         {
             label: '',

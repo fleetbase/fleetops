@@ -60,7 +60,7 @@ export default class ManagementPlacesIndexController extends Controller {
      *
      * @var {Array}
      */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'country', 'phone', 'email', 'created_at', 'updated_at'];
+    queryParams = ['name', 'page', 'limit', 'sort', 'query', 'public_id', 'country', 'phone', 'created_at', 'updated_at', 'city', 'neighborhood', 'state'];
 
     /**
      * The current page of data being viewed
@@ -91,11 +91,11 @@ export default class ManagementPlacesIndexController extends Controller {
     @tracked public_id;
 
     /**
-     * The filterable param `internal_id`
+     * The filterable param `public_id`
      *
      * @var {String}
      */
-    @tracked internal_id;
+    @tracked postal_code;
 
     /**
      * The filterable param `phone`
@@ -105,11 +105,18 @@ export default class ManagementPlacesIndexController extends Controller {
     @tracked phone;
 
     /**
-     * The filterable param `email`
+     * The filterable param `city`
      *
      * @var {String}
      */
-    @tracked email;
+    @tracked city;
+
+    /**
+     * The filterable param `name`
+     *
+     * @var {String}
+     */
+    @tracked name;
 
     /**
      * The filterable param `country`
@@ -117,6 +124,13 @@ export default class ManagementPlacesIndexController extends Controller {
      * @var {String}
      */
     @tracked country;
+
+    /**
+     * The filterable param `country`
+     *
+     * @var {String}
+     */
+    @tracked neighborhood;
 
     /**
      * All columns applicable for orders
@@ -133,6 +147,7 @@ export default class ManagementPlacesIndexController extends Controller {
             resizable: true,
             sortable: true,
             filterable: true,
+            filterParam: 'name',
             filterComponent: 'filter/string',
         },
         {
@@ -148,34 +163,36 @@ export default class ManagementPlacesIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
+            label: 'State',
+            valuePath: 'state',
+            cellComponent: 'table/cell/anchor',
+            action: this.viewPlace,
+            width: '100px',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterParam: 'state',
+            filterComponent: 'filter/string',
+        },
+        {
+            label: 'City',
+            valuePath: 'city',
+            cellComponent: 'table/cell/anchor',
+            action: this.viewPlace,
+            width: '100px',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterParam: 'city',
+            filterComponent: 'filter/string',
+        },
+        {
             label: 'ID',
             valuePath: 'public_id',
             width: '120px',
             cellComponent: 'click-to-copy',
             resizable: true,
             sortable: true,
-            filterable: true,
-            filterComponent: 'filter/string',
-        },
-        {
-            label: 'Internal ID',
-            valuePath: 'internal_id',
-            cellComponent: 'click-to-copy',
-            width: '120px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            hidden: true,
-            filterComponent: 'filter/string',
-        },
-        {
-            label: 'Email',
-            valuePath: 'email',
-            cellComponent: 'table/cell/base',
-            width: '120px',
-            resizable: true,
-            sortable: true,
-            hidden: true,
             filterable: true,
             filterComponent: 'filter/string',
         },
@@ -203,6 +220,29 @@ export default class ManagementPlacesIndexController extends Controller {
             filterParam: 'country',
         },
         {
+            label: 'Neighborhood',
+            valuePath: 'neighborhood',
+            cellComponent: 'table/cell/anchor',
+            action: this.viewPlace,
+            width: '100px',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterParam: 'neighborhood',
+            filterComponent: 'filter/string',
+        },
+        {
+            label: 'Postal Code',
+            valuePath: 'postal_code',
+            cellComponent: 'table/cell/anchor',
+            action: this.viewPlace,
+            width: '100px',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterComponent: 'filter/string',
+        },
+        {
             label: 'Created At',
             valuePath: 'createdAt',
             sortParam: 'created_at',
@@ -223,6 +263,7 @@ export default class ManagementPlacesIndexController extends Controller {
             filterable: true,
             filterComponent: 'filter/date',
         },
+
         {
             label: '',
             cellComponent: 'table/cell/dropdown',

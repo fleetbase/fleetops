@@ -15,8 +15,14 @@ export default class ManagementFuelReportsIndexRoute extends Route {
         sort: { refreshModel: true },
         query: { refreshModel: true },
         vehicle: { refreshModel: true },
+        reporter: { refreshModel: true },
         driver: { refreshModel: true },
         status: { refreshModel: true },
+        createdAt: { refreshModel: true },
+        updatedAt: { refreshModel: true },
+        public_id: { refreshModel: true },
+        volume: { refreshModel: true },
+        odometer: { refreshModel: true },
     };
 
     model(params) {

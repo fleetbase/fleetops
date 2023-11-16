@@ -17,30 +17,27 @@ class Payload extends FleetbaseResource
      */
     public function toArray($request)
     {
-        return array_merge(
-            $this->getInternalIds(),
-            [
-                'id'                    => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-                'uuid'                  => $this->when(Http::isInternalRequest(), $this->uuid),
-                'public_id'             => $this->when(Http::isInternalRequest(), $this->public_id),
-                'current_waypoint_uuid' => $this->when(Http::isInternalRequest(), $this->current_waypoint_uuid),
-                'pickup_uuid'           => $this->when(Http::isInternalRequest(), $this->pickup_uuid),
-                'dropoff_uuid'          => $this->when(Http::isInternalRequest(), $this->dropoff_uuid),
-                'return_uuid'           => $this->when(Http::isInternalRequest(), $this->return_uuid),
-                'current_waypoint'      => $this->when(!Http::isInternalRequest() && $this->currentWaypoint, data_get($this, 'currentWaypoint.public_id'), null),
-                'pickup'                => new Place($this->pickup),
-                'dropoff'               => new Place($this->dropoff),
-                'return'                => new Place($this->return),
-                'waypoints'             => $this->waypoints($this->waypoints),
-                'entities'              => Entity::collection($this->entities ?? []),
-                'cod_amount'            => $this->cod_amount ?? null,
-                'cod_currency'          => $this->cod_currency ?? null,
-                'cod_payment_method'    => $this->cod_payment_method ?? null,
-                'meta'                  => $this->meta ?? [],
-                'updated_at'            => $this->updated_at,
-                'created_at'            => $this->created_at,
-            ]
-        );
+        return [
+            'id'                    => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'uuid'                  => $this->when(Http::isInternalRequest(), $this->uuid),
+            'public_id'             => $this->when(Http::isInternalRequest(), $this->public_id),
+            'current_waypoint_uuid' => $this->when(Http::isInternalRequest(), $this->current_waypoint_uuid),
+            'pickup_uuid'           => $this->when(Http::isInternalRequest(), $this->pickup_uuid),
+            'dropoff_uuid'          => $this->when(Http::isInternalRequest(), $this->dropoff_uuid),
+            'return_uuid'           => $this->when(Http::isInternalRequest(), $this->return_uuid),
+            'current_waypoint'      => $this->when(!Http::isInternalRequest() && $this->currentWaypoint, data_get($this, 'currentWaypoint.public_id'), null),
+            'pickup'                => new Place($this->pickup),
+            'dropoff'               => new Place($this->dropoff),
+            'return'                => new Place($this->return),
+            'waypoints'             => $this->waypoints($this->waypoints),
+            'entities'              => Entity::collection($this->entities ?? []),
+            'cod_amount'            => $this->cod_amount ?? null,
+            'cod_currency'          => $this->cod_currency ?? null,
+            'cod_payment_method'    => $this->cod_payment_method ?? null,
+            'meta'                  => $this->meta ?? [],
+            'updated_at'            => $this->updated_at,
+            'created_at'            => $this->created_at,
+        ];
     }
 
     /**

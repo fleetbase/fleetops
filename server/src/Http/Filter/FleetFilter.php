@@ -46,7 +46,7 @@ class FleetFilter extends Filter
         $this->builder->whereHas(
             'zone',
             function ($query) use ($zone) {
-                $query->where('uuid', $zone);
+                $query->where('zone_uuid', $zone);
             }
         );
     }
@@ -59,6 +59,8 @@ class FleetFilter extends Filter
                 $query->where('uuid', $fleet);
             }
         );
+
+        $this->builder->searchWhere('parent_fleet_uuid', $fleet);
     }
 
     public function vendor(?string $vendor)
@@ -71,11 +73,6 @@ class FleetFilter extends Filter
         );
     }
 
-    public function internalId(?string $internalId)
-    {
-        $this->builder->searchWhere('internal_id', $internalId);
-    }
-
     public function publicId(?string $publicId)
     {
         $this->builder->searchWhere('public_id', $publicId);
@@ -84,6 +81,11 @@ class FleetFilter extends Filter
     public function task(?string $task)
     {
         $this->builder->searchWhere('task', $task);
+    }
+
+    public function name(?string $name)
+    {
+        $this->builder->searchWhere('name', $name);
     }
 
     public function status(?string $status)

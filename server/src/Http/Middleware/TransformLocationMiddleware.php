@@ -35,7 +35,7 @@ class TransformLocationMiddleware
     {
         foreach ($data as $key => $value) {
             if (is_array($value)) {
-                // If the value is an array, recursively transform it
+                // If the value is a valid coordinates type, recursively transform it
                 $data[$key] = $this->transformNestedLocation($value);
             } elseif ($key === 'location' && $value === null) {
                 // Transform the 'location' property if it's null
