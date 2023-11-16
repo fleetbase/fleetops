@@ -97,7 +97,7 @@ export default class OperationsOrdersIndexController extends Controller {
         'type',
         'layout',
         'drawerOpen',
-        'drawerTab'
+        'drawerTab',
     ];
 
     /**
