@@ -9,6 +9,7 @@ use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
+use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
@@ -27,6 +28,7 @@ class Vehicle extends Model
     use Searchable;
     use HasSlug;
     use LogsActivity;
+    use HasMetaAttributes;
 
     /**
      * The database table used by the model.
@@ -165,7 +167,7 @@ class Vehicle extends Model
         'location'   => Point::class,
         'meta'       => Json::class,
         'telematics' => Json::class,
-        'model'      => Json::class,
+        'model_data' => Json::class,
         'vin_data'   => Json::class,
         'online'     => 'boolean',
     ];
