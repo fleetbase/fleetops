@@ -17,9 +17,9 @@ class VehicleFilter extends Filter
         $this->builder->search($query);
     }
 
-    public function name(?string $name)
+    public function display_name(?string $display_name)
     {
-        $this->builder->searchWhere(['year', 'model_make_display', 'make', 'model', 'trim', 'plate_number'], $name);
+        $this->builder->searchWhere(['year', 'make', 'model', 'plate_number'], $display_name);
     }
 
     public function vin(?string $vin)
@@ -37,14 +37,19 @@ class VehicleFilter extends Filter
         $this->builder->searchWhere('plate_number', $plateNumber);
     }
 
-    public function vehicleMake(?string $make)
+    public function vehicleMake(?string $vehicleMake)
     {
-        $this->builder->searchWhere('make', $make);
+        $this->builder->searchWhere('make', $vehicleMake);
     }
 
-    public function vehicleModel(?string $model)
+    public function vehicleModel(?string $vehicle_model)
     {
-        $this->builder->searchWhere('model', $model);
+        $this->builder->searchWhere('model', $vehicle_model);
+    }
+
+    public function vehicleYear(?string $vehicleYear)
+    {
+        $this->builder->searchWhere('year', $vehicleYear);
     }
 
     public function driver(?string $driverId)
@@ -53,6 +58,16 @@ class VehicleFilter extends Filter
             'driver',
             function ($query) use ($driverId) {
                 $query->where('uuid', $driverId);
+            }
+        );
+    }
+
+    public function vendor(?string $vendorId)
+    {
+        $this->builder->whereHas(
+            'vendor',
+            function ($query) use ($vendorId) {
+                $query->where('uuid', $vendorId);
             }
         );
     }

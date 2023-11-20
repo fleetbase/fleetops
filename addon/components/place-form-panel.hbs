@@ -6,7 +6,13 @@
     @isResizeble={{or this.isResizable @isResizable}}
     @width={{or this.width @width "600px"}}
 >
-    <Overlay::Header @title={{if this.place.public_id this.place.name "New Place"}} @status={{this.place.public_id}} @hideStatusDot={{true}} @createdAt={{this.place.createdAt}} @titleWrapperClass="leading-5">
+    <Overlay::Header
+        @title={{if this.place.public_id this.place.name "New Place"}}
+        @status={{this.place.public_id}}
+        @hideStatusDot={{true}}
+        @createdAt={{this.place.createdAt}}
+        @titleWrapperClass="leading-5"
+    >
         <div class="flex flex-1 justify-end">
             <Button @icon={{if this.place.id "save" "check"}} @type="primary" @text={{if this.place.id "Save Place" "Create Place"}} @onClick={{this.save}} @wrapperClass="mr-2" />
             <Button @type="default" @icon="times" @helpText={{if this.place.id "Cancel edit place" "Cancel new place"}} @onClick={{this.onPressCancel}} />
@@ -15,9 +21,11 @@
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
         <div class="grid grid-cols-3 gap-1 text-xs dark:text-gray-100">
-            <InputGroup @name="Name" @autocomplete="nope" @value={{this.place.name}} @wrapperClass="col-span-3" />
+            <InputGroup @name="Name" @wrapperClass="col-span-2">
+                <Input @value={{this.place.name}} @type="text" class="w-full form-input" placeholder="Name" />
+            </InputGroup>
             <InputGroup @name="Street 1" @value={{this.place.street1}} @wrapperClass="col-span-3">
-                <AutocompleteInput @value={{this.place.street1}} @fetchUrl="places/lookup" @onSelect={{this.autocomplete}} placeholder="Street 1" class="w-full" as |result|>
+                <AutocompleteInput @value={{this.place.street1}} @fetchUrl="places/lookup" @onSelect={{this.onAutocomplete}} placeholder="Street 1" class="w-full" as |result|>
                     {{result.address}}
                 </AutocompleteInput>
             </InputGroup>
@@ -29,14 +37,14 @@
             <InputGroup @name="City" @autocomplete="nope" @value={{this.place.city}} />
             <InputGroup @name="State" @autocomplete="nope" @value={{this.place.province}} />
             <InputGroup @name="Country" @wrapperClass="col-span-2">
-                <CountrySelect class="w-full form-input form-select form-datalist" @value={{this.place.country}} @onChange={{this.place.country}} placeholder="Country" />
+                <CountrySelect class="w-full form-input form-select form-datalist" @value={{this.place.country}} @onChange={{fn (mut this.place.country)}} placeholder="Country" />
             </InputGroup>
             <InputGroup @name="Coordinates" @wrapperClass="col-span-2">
                 <CoordinatesInput
                     @value={{this.place.location}}
                     @onChange={{this.updatePlaceCoordinates}}
-                    @onGeocode={{this.autocomplete}}
-                    @onUpdatedFromMap={{this.reverseGeocode}}
+                    @onGeocode={{this.onAutocomplete}}
+                    @onUpdatedFromMap={{this.onReverseGeocode}}
                     @onInit={{this.setCoordinatesInput}}
                 />
             </InputGroup>
@@ -44,7 +52,6 @@
             <InputGroup @name="Phone">
                 <PhoneInput @value={{this.place.phone}} @autocomplete="nope" @onInput={{this.phone}} class="form-input w-full" />
             </InputGroup>
-            <InputGroup @name="Email" @autocomplete="nope" @value={{this.place.email}} />
         </div>
     </Overlay::Body>
 </Overlay>

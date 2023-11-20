@@ -75,7 +75,7 @@ export default class ManagementFleetsIndexController extends Controller {
      *
      * @var {Array}
      */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'zone', 'service_area', 'parent_fleet', 'vendor', 'created_by', 'updated_by', 'status'];
+    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'zone', 'service_area', 'parent_fleet', 'vendor', 'created_by', 'updated_by', 'status', 'task', 'name'];
 
     /**
      * The current page of data being viewed
@@ -104,13 +104,6 @@ export default class ManagementFleetsIndexController extends Controller {
      * @var {String}
      */
     @tracked public_id;
-
-    /**
-     * The filterable param `internal_id`
-     *
-     * @var {String}
-     */
-    @tracked internal_id;
 
     /**
      * The filterable param `service_area`
@@ -144,6 +137,13 @@ export default class ManagementFleetsIndexController extends Controller {
      * @var {Array}
      */
     @tracked task;
+
+    /**
+     * The filterable param `task`
+     *
+     * @var {String}
+     */
+    @tracked name;
 
     /**
      * The filterable param `status`
@@ -181,6 +181,7 @@ export default class ManagementFleetsIndexController extends Controller {
             resizable: true,
             sortable: true,
             filterable: true,
+            filterParam: 'name',
             filterComponent: 'filter/string',
         },
         {
@@ -206,7 +207,7 @@ export default class ManagementFleetsIndexController extends Controller {
             filterable: true,
             filterComponent: 'filter/model',
             filterComponentPlaceholder: 'Select fleet',
-            filterParam: 'parent_fleet',
+            filterParam: 'parent_fleet_uuid',
             model: 'fleet',
         },
         {
@@ -244,18 +245,6 @@ export default class ManagementFleetsIndexController extends Controller {
             resizable: true,
             sortable: true,
             filterable: true,
-            filterComponent: 'filter/string',
-        },
-        {
-            label: 'Internal ID',
-            valuePath: 'internal_id',
-            cellComponent: 'table/cell/anchor',
-            action: this.viewFleet,
-            width: '120px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            hidden: true,
             filterComponent: 'filter/string',
         },
         {
@@ -297,7 +286,7 @@ export default class ManagementFleetsIndexController extends Controller {
         },
         {
             label: 'Created At',
-            valuePath: 'createdAtShort',
+            valuePath: 'createdAt',
             sortParam: 'created_at',
             width: '120px',
             resizable: true,
@@ -307,7 +296,7 @@ export default class ManagementFleetsIndexController extends Controller {
         },
         {
             label: 'Updated At',
-            valuePath: 'updatedAtShort',
+            valuePath: 'updatedAt',
             sortParam: 'updated_at',
             width: '120px',
             resizable: true,

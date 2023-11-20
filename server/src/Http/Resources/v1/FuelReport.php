@@ -36,6 +36,7 @@ class FuelReport extends FleetbaseResource
             'volume'            => $this->volume,
             'metric_unit'       => $this->metric_unit,
             'type'              => $this->type,
+            'status'            => $this->status,
             'location'          => $this->location ?? new Point(0, 0),
             'updated_at'        => $this->updated_at,
             'created_at'        => $this->created_at,
@@ -50,20 +51,21 @@ class FuelReport extends FleetbaseResource
     public function toWebhookPayload()
     {
         return [
-            'id'            => $this->public_id,
-            'reporter'      => data_get($this, 'reportedBy.public_id'),
-            'driver'        => data_get($this, 'driver.public_id'),
-            'vehicle'       => data_get($this, 'vehicle.public_id'),
-            'report'        => $this->report,
-            'odometer'      => $this->odometer,
-            'amount'        => $this->amount,
-            'currency'      => $this->currency,
-            'volume'        => $this->volume,
-            'metric_unit'   => $this->metric_unit,
-            'type'          => $this->type,
-            'location'      => $this->location ?? new Point(0, 0),
-            'updated_at'    => $this->updated_at,
-            'created_at'    => $this->created_at,
+            'id'                 => $this->public_id,
+            'reporter'           => data_get($this, 'reportedBy.public_id'),
+            'driver'             => data_get($this, 'driver.public_id'),
+            'vehicle'            => data_get($this, 'vehicle.public_id'),
+            'report_name'        => $this->report,
+            'odometer'           => $this->odometer,
+            'amount'             => $this->amount,
+            'currency'           => $this->currency,
+            'volume'             => $this->volume,
+            'metric_unit'        => $this->metric_unit,
+            'type'               => $this->type,
+            'status'             => $this->status,
+            'location'           => $this->location ?? new Point(0, 0),
+            'updated_at'         => $this->updated_at,
+            'created_at'         => $this->created_at,
         ];
     }
 }

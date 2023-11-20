@@ -5,6 +5,8 @@ import { action } from '@ember/object';
 import { isBlank } from '@ember/object';
 import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
+import getIssueTypes from '../../../utils/get-issue-types';
+import getIssueCategories from '../../../utils/get-issue-categories';
 
 export default class ManagementIssuesIndexController extends Controller {
     /**
@@ -59,19 +61,18 @@ export default class ManagementIssuesIndexController extends Controller {
         'limit',
         'sort',
         'query',
-        'status',
         'public_id',
-        'internal_id',
-        'payload',
-        'tracking_number',
-        'facilitator',
-        'customer',
+        'issue_id',
         'driver',
-        'pickup',
-        'dropoff',
+        'vehicle',
+        'assignee',
+        'reporter',
         'created_by',
         'updated_by',
         'status',
+        'priority',
+        'cateogry',
+        'type',
     ];
 
     /**
@@ -103,32 +104,46 @@ export default class ManagementIssuesIndexController extends Controller {
     @tracked public_id;
 
     /**
-     * The filterable param `internal_id`
+     * The filterable param `status`
      *
      * @var {String}
      */
-    @tracked internal_id;
+    @tracked status;
 
     /**
-     * The filterable param `tracking` for `tracking_number`
+     * The filterable param `priority`
      *
-     * @var {String}
+     * @var {Array|String}
      */
-    @tracked tracking;
+    @tracked priority;
 
     /**
-     * The filterable param `facilitator`
+     * The filterable param `priority`
      *
-     * @var {String}
+     * @var {Array|String}
      */
-    @tracked facilitator;
+    @tracked status;
 
     /**
-     * The filterable param `customer`
+     * The filterable param `type`
      *
      * @var {String}
      */
-    @tracked customer;
+    @tracked type;
+
+    /**
+     * The filterable param `category`
+     *
+     * @var {String}
+     */
+    @tracked category;
+
+    /**
+     * The filterable param `vehicle`
+     *
+     * @var {String}
+     */
+    @tracked vehicle;
 
     /**
      * The filterable param `driver`
@@ -138,46 +153,18 @@ export default class ManagementIssuesIndexController extends Controller {
     @tracked driver;
 
     /**
-     * The filterable param `payload`
+     * The filterable param `assignee`
      *
      * @var {String}
      */
-    @tracked payload;
+    @tracked assignee;
 
     /**
-     * The filterable param `pickup`
+     * The filterable param `reporter`
      *
      * @var {String}
      */
-    @tracked pickup;
-
-    /**
-     * The filterable param `dropoff`
-     *
-     * @var {String}
-     */
-    @tracked dropoff;
-
-    /**
-     * The filterable param `updated_by`
-     *
-     * @var {String}
-     */
-    @tracked updated_by;
-
-    /**
-     * The filterable param `created_by`
-     *
-     * @var {String}
-     */
-    @tracked created_by;
-
-    /**
-     * The filterable param `status`
-     *
-     * @var {Array}
-     */
-    @tracked status;
+    @tracked reporter;
 
     /**
      * All columns applicable for orders
@@ -212,7 +199,9 @@ export default class ManagementIssuesIndexController extends Controller {
             resizable: true,
             sortable: true,
             filterable: true,
-            filterComponent: 'filter/string',
+            filterComponent: 'filter/select',
+            filterOptions: getIssueTypes(),
+            placeholder: 'Select issue type',
         },
         {
             label: 'Category',
@@ -221,21 +210,49 @@ export default class ManagementIssuesIndexController extends Controller {
             resizable: true,
             sortable: true,
             filterable: true,
-            filterComponent: 'filter/string',
+            filterComponent: 'filter/select',
+            filterOptions: getIssueCategories(),
+            placeholder: 'Select issue category',
         },
         {
             label: 'Reporter',
             valuePath: 'reporter_name',
-            width: '110px',
+            width: '100px',
+            cellComponent: 'table/cell/anchor',
+            onClick: async (issue) => {
+                let reporter = await issue.loadDReporter();
+
+                if (reporter) {
+                    this.contextPanel.focus(reporter);
+                }
+            },
             resizable: true,
             sortable: true,
+            filterable: true,
+            filterComponent: 'filter/model',
+            filterComponentPlaceholder: 'Select reporter',
+            filterParam: 'reporter',
+            model: 'user',
         },
         {
             label: 'Assignee',
             valuePath: 'assignee_name',
             width: '100px',
+            cellComponent: 'table/cell/anchor',
+            onClick: async (issue) => {
+                let assignee = await issue.loadDAssignee();
+
+                if (assignee) {
+                    this.contextPanel.focus(assignee);
+                }
+            },
             resizable: true,
             sortable: true,
+            filterable: true,
+            filterComponent: 'filter/model',
+            filterComponentPlaceholder: 'Select assignee',
+            filterParam: 'assignee',
+            model: 'user',
         },
         {
             label: 'Driver',
@@ -276,6 +293,7 @@ export default class ManagementIssuesIndexController extends Controller {
             filterComponentPlaceholder: 'Select vehicle',
             filterParam: 'vehicle',
             model: 'vehicle',
+            modelNamePath: 'displayName',
         },
         {
             label: 'Status',
@@ -285,6 +303,8 @@ export default class ManagementIssuesIndexController extends Controller {
             resizable: true,
             sortable: true,
             filterable: true,
+            filterComponent: 'filter/multi-option',
+            filterOptions: ['pending', 'in-progress', 'backlogged', 'requires-update', 'in-review', 're-opened', 'duplicate', 'pending-review', 'escalated', 'completed', 'canceled'],
         },
         {
             label: 'Created At',

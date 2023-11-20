@@ -96,6 +96,8 @@ export default class OperationsOrdersIndexController extends Controller {
         'status',
         'type',
         'layout',
+        'drawerOpen',
+        'drawerTab',
     ];
 
     /**
@@ -265,6 +267,20 @@ export default class OperationsOrdersIndexController extends Controller {
      * @type {String}
      */
     @tracked layout = 'map';
+
+    /**
+     * Decides if scope drawer is open.
+     *
+     * @type {Boolean}
+     */
+    @tracked drawerOpen = 0;
+
+    /**
+     * The drawer tab that is active.
+     *
+     * @type {Boolean}
+     */
+    @tracked drawerTab;
 
     /**
      * Flag to determine if the layout is 'map'
@@ -732,8 +748,33 @@ export default class OperationsOrdersIndexController extends Controller {
      */
     @action onPressLiveMapDrawerToggle() {
         if (this.drawer) {
-            this.drawer.toggleMinimize();
+            this.drawer.toggleMinimize({
+                onToggle: (drawerApi) => {
+                    this.drawerOpen = drawerApi.isMinimized ? 0 : 1;
+                },
+            });
         }
+    }
+
+    /**
+     * Handles the resize end event for the `<LiveMapDrawer />` component.
+     *
+     * @params {Object} event
+     * @params {Object.drawerPanelNode|HTMLElement}
+     * @memberof OperationsOrdersIndexController
+     */
+    @action onDrawerResizeEnd({ drawerPanelNode }) {
+        const rect = drawerPanelNode.getBoundingClientRect();
+
+        if (rect.height === 0) {
+            this.drawerOpen = 0;
+        } else if (rect.height > 1) {
+            this.drawerOpen = 1;
+        }
+    }
+
+    @action onDrawerTabChanged(tabName) {
+        this.drawerTab = tabName;
     }
 
     /**

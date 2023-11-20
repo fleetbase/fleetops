@@ -69,7 +69,24 @@ export default class ManagementVehiclesIndexController extends ManagementControl
      *
      * @var {Array}
      */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'status', 'created_at', 'updated_at', 'created_by', 'updated_by'];
+    queryParams = [
+        'page',
+        'limit',
+        'sort',
+        'query',
+        'public_id',
+        'status',
+        'created_at',
+        'updated_at',
+        'created_by',
+        'updated_by',
+        'name',
+        'plate_number',
+        'year',
+        'make',
+        'model',
+        'display_name',
+    ];
 
     /**
      * The search query.
@@ -128,18 +145,18 @@ export default class ManagementVehiclesIndexController extends ManagementControl
     @tracked plate_number;
 
     /**
-     * The filterable param `vehicle_make`.
+     * The filterable param `make`.
      *
      * @var {String}
      */
-    @tracked vehicle_make;
+    @tracked make;
 
     /**
-     * The filterable param `vehicle_model`.
+     * The filterable param `model`.
      *
      * @var {String}
      */
-    @tracked vehicle_model;
+    @tracked model;
 
     /**
      * The filterable param `year`.
@@ -147,6 +164,20 @@ export default class ManagementVehiclesIndexController extends ManagementControl
      * @var {String}
      */
     @tracked year;
+
+    /**
+     * The filterable param `make`.
+     *
+     * @var {String}
+     */
+    @tracked make;
+
+    /**
+     * The filterable param `model`.
+     *
+     * @var {String}
+     */
+    @tracked model;
 
     /**
      * The filterable param `country`.
@@ -175,6 +206,13 @@ export default class ManagementVehiclesIndexController extends ManagementControl
      * @var {String}
      */
     @tracked driver;
+
+    /**
+     * The filterable param `display_name`.
+     *
+     * @var {String}
+     */
+    @tracked display_name;
 
     /**
      * TableComponent instance.
@@ -214,7 +252,7 @@ export default class ManagementVehiclesIndexController extends ManagementControl
             sortable: true,
             filterable: true,
             filterComponent: 'filter/string',
-            filterParam: 'name',
+            filterParam: 'display_name',
             showOnlineIndicator: true,
         },
         {
@@ -264,7 +302,7 @@ export default class ManagementVehiclesIndexController extends ManagementControl
             sortable: true,
             hidden: true,
             filterable: true,
-            filterParam: 'vehicle_make',
+            filterParam: 'make',
             filterComponent: 'filter/string',
         },
         {
@@ -276,7 +314,7 @@ export default class ManagementVehiclesIndexController extends ManagementControl
             sortable: true,
             hidden: true,
             filterable: true,
-            filterParam: 'vehicle_model',
+            filterParam: 'model',
             filterComponent: 'filter/string',
         },
         {
@@ -490,4 +528,25 @@ export default class ManagementVehiclesIndexController extends ManagementControl
      * @void
      */
     @action assignDriver() {}
+
+    /**
+     * View a place location on map
+     *
+     * @param {PlaceModel} place
+     * @param {Object} options
+     * @void
+     */
+    @action viewOnMap(place, options = {}) {
+        const { latitude, longitude } = place;
+
+        this.modalsManager.show('modals/point-map', {
+            title: `Location of ${place.name}`,
+            acceptButtonText: 'Done',
+            hideDeclineButton: true,
+            latitude,
+            longitude,
+            location: [latitude, longitude],
+            ...options,
+        });
+    }
 }

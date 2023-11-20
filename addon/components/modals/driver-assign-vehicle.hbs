@@ -2,19 +2,10 @@
     <div class="modal-body-container">
         <div class="grid grid-cols-1 gap-2 text-xs dark:text-gray-100">
             <InputGroup @name="Select Vehicle" @value={{@options.driver.vehicle_uuid}}>
-                <ModelSelect
-                    @modelName="vehicle"
-                    @selectedModel={{@options.driver.vehicle_uuid}}
-                    @placeholder="Select Vehicle to Assign"
-                    @triggerClass="form-select form-input"
-                    @infiniteScroll={{false}}
-                    @renderInPlace={{true}}
-                    @onChange={{fn (mut @options.driver.vehicle_uuid)}} as |model|
-                >
-                    {{model.name}}
+                <ModelSelect @modelName="vehicle" @selectedModel={{@options.driver.vehicle_uuid}} @placeholder="Select Vehicle to Assign" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut @options.driver.vehicle)}} @onChangeId={{fn (mut @options.driver.vehicle_uuid)}} as |model|>
+                    {{model.display_name}}
                 </ModelSelect>
             </InputGroup>
         </div>
     </div>
-    {{yield}}
 </Modal::Default>

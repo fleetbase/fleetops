@@ -109,6 +109,16 @@
                         </PowerSelect>
                     </div>
                 </InputGroup>
+              <InputGroup @name="Coordinates" @wrapperClass="col-span-2">
+                <CoordinatesInput
+                    @value={{this.driver.location}}
+                    @onChange={{this.onCoordinatesChanged}}
+                    @onGeocode={{this.onAutocomplete}}
+                    @onUpdatedFromMap={{this.onCoordinatesChanged}}
+                    @onInit={{this.setCoordinatesInput}}
+                    @renderInPlace={{false}}
+                />
+            </InputGroup>
             </div>
         </div>
     </Overlay::Body>

@@ -1,5 +1,18 @@
-<Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
-    <Overlay::Header @title={{if this.issue.public_id this.issue.name "New Issue"}} @status={{this.issue.public_id}} @hideStatusDot={{true}} @createdAt={{this.issue.createdAt}} @titleWrapperClass="leading-5">
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizable={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "600px"}}
+>
+    <Overlay::Header
+        @title={{if this.issue.public_id this.issue.name "New Issue"}}
+        @status={{this.issue.public_id}}
+        @hideStatusDot={{true}}
+        @createdAt={{this.issue.createdAt}}
+        @titleWrapperClass="leading-5"
+    >
         <div class="flex flex-1 justify-end">
             <Button @icon={{if this.issue.id "save" "check"}} @type="primary" @text={{if this.issue.id "Save Issue" "Create Issue"}} @onClick={{this.save}} @wrapperClass="mr-2" />
             {{#if this.issue.id}}
@@ -12,32 +25,77 @@
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
         <div class="grid grid-cols-1 text-xs dark:text-gray-100">
             <InputGroup @name="Reported By">
-                <ModelSelect @modelName="user" @selectedModel={{this.issue.reporter}} @placeholder="Select Reporter" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.issue.reporter)}} @onChangeId={{fn (mut this.issue.reported_by_uuid)}} as |model|>
+                <ModelSelect
+                    @modelName="user"
+                    @selectedModel={{this.issue.reporter}}
+                    @placeholder="Select Reporter"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut this.issue.reporter)}}
+                    @onChangeId={{fn (mut this.issue.reported_by_uuid)}}
+                    as |model|
+                >
                     {{model.name}}
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name="Assigned To">
-                <ModelSelect @modelName="user" @selectedModel={{this.issue.assignee}} @placeholder="Select Assignee" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.issue.assignee)}} @onChangeId={{fn (mut this.issue.assigned_to_uuid)}} as |model|>
+                <ModelSelect
+                    @modelName="user"
+                    @selectedModel={{this.issue.assignee}}
+                    @placeholder="Select Assignee"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut this.issue.assignee)}}
+                    @onChangeId={{fn (mut this.issue.assigned_to_uuid)}}
+                    as |model|
+                >
                     {{model.name}}
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name="Driver">
-                <ModelSelect @modelName="driver" @selectedModel={{this.issue.driver}} @placeholder="Select Driver" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.issue.driver)}} as |model|>
+                <ModelSelect
+                    @modelName="driver"
+                    @selectedModel={{this.issue.driver}}
+                    @placeholder="Select Driver"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut this.issue.driver)}}
+                    as |model|
+                >
                     {{model.name}}
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name="Vehicle">
-                <ModelSelect @modelName="vehicle" @selectedModel={{this.issue.vehicle}} @placeholder="Select Vehicle" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.issue.vehicle)}} as |model|>
+                <ModelSelect
+                    @modelName="vehicle"
+                    @selectedModel={{this.issue.vehicle}}
+                    @placeholder="Select Vehicle"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut this.issue.vehicle)}}
+                    as |model|
+                >
                     {{model.displayName}}
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name="Issue Type">
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                    <PowerSelect @options={{this.issueTypes}} @selected={{this.issue.type}} @onChange={{this.onSelectIssueType}} @placeholder="Select issue type" @triggerClass="form-select form-input" as |type|>
+                    <PowerSelect
+                        @options={{this.issueTypes}}
+                        @selected={{this.issue.type}}
+                        @onChange={{this.onSelectIssueType}}
+                        @placeholder="Select issue type"
+                        @triggerClass="form-select form-input"
+                        as |type|
+                    >
                         {{smart-humanize type}}
                     </PowerSelect>
                 </div>
@@ -45,7 +103,15 @@
 
             <InputGroup @name="Issue Category">
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                    <PowerSelect @options={{this.issueCategories}} @selected={{this.issue.category}} @onChange={{fn (mut this.issue.category)}} @placeholder="Select issue category" @triggerClass="form-select form-input" @disabled={{not this.issueCategories}} as |category|>
+                    <PowerSelect
+                        @options={{this.issueCategories}}
+                        @selected={{this.issue.category}}
+                        @onChange={{fn (mut this.issue.category)}}
+                        @placeholder="Select issue category"
+                        @triggerClass="form-select form-input"
+                        @disabled={{not this.issueCategories}}
+                        as |category|
+                    >
                         {{smart-humanize category}}
                     </PowerSelect>
                 </div>
@@ -56,14 +122,29 @@
             </InputGroup>
 
             <InputGroup @name="Issue Tags">
-                <TagInput class="form-input" @placeholder="Add tags" @allowSpacesInTags={{true}} @tags={{this.issue.tags}} @addTag={{this.addTag}} @removeTagAtIndex={{this.removeTag}} as |tag|>
+                <TagInput
+                    class="form-input"
+                    @placeholder="Add tags"
+                    @allowSpacesInTags={{true}}
+                    @tags={{this.issue.tags}}
+                    @addTag={{this.addTag}}
+                    @removeTagAtIndex={{this.removeTag}}
+                    as |tag|
+                >
                     {{tag}}
                 </TagInput>
             </InputGroup>
 
             <InputGroup @name="Issue Priority">
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                    <PowerSelect @options={{this.issuePriorityOptions}} @selected={{this.issue.priority}} @onChange={{fn (mut this.issue.priority)}} @placeholder="Select issue priority" @triggerClass="form-select form-input" as |priority|>
+                    <PowerSelect
+                        @options={{this.issuePriorityOptions}}
+                        @selected={{this.issue.priority}}
+                        @onChange={{fn (mut this.issue.priority)}}
+                        @placeholder="Select issue priority"
+                        @triggerClass="form-select form-input"
+                        as |priority|
+                    >
                         {{smart-humanize priority}}
                     </PowerSelect>
                 </div>
@@ -71,7 +152,14 @@
 
             <InputGroup @name="Status">
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                    <PowerSelect @options={{this.issueStatusOptions}} @selected={{this.issue.status}} @onChange={{fn (mut this.issue.status)}} @placeholder="Select issue status" @triggerClass="form-select form-input" as |status|>
+                    <PowerSelect
+                        @options={{this.issueStatusOptions}}
+                        @selected={{this.issue.status}}
+                        @onChange={{fn (mut this.issue.status)}}
+                        @placeholder="Select issue status"
+                        @triggerClass="form-select form-input"
+                        as |status|
+                    >
                         {{smart-humanize status}}
                     </PowerSelect>
                 </div>

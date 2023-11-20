@@ -21,15 +21,43 @@
             <span>{{n-a @order.createdAtWithTime}}</span>
         </div>
         <div class="flex items-center justify-between">
-            <div>
+            <div class="flex flex-row items-center">
                 <FaIcon @icon="calendar" class="mr-2" />
                 <span class="font-semibold">Driver Assigned</span>
+                <div class="ml-2">
+                    <a href="javascript:;" class="text-blue-400 hover:opacity-75" {{on "click" this.startAssignDriver}}>
+                        <FaIcon @icon="edit" @size="xs" />
+                    </a>
+                </div>
             </div>
-            <span class={{unless @order.driver_assigned "dark:text-gray-600 text-gray-400"}}>{{n-a @order.driver_assigned.name "No Driver Assigned"}}</span>
+            <div>
+                {{#if this.isAssigningDriver}}
+                    <ModelSelect @modelName="driver" @selectedModel={{@order.driver_assigned}} @placeholder="Select Driver" @triggerClass="form-select form-input form-input-sm w-48" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @disabled={{@model.isLoading}} @onChange={{this.assignDriver}} as |model|>
+                        <div class="flex items-center">
+                            <div class="w-5">
+                                <FaIcon @icon="id-card-alt" @size="xs" />
+                            </div>
+                            <div class="flex-1 flex flex-row truncate text-xs">
+                                <span class="uppercase mr-1.5 text-xs">{{model.name}}</span>
+                                <span class="uppercase text-xs">{{model.phone}}</span>
+                            </div>
+                        </div>
+                    </ModelSelect>
+                {{else}}
+                    <a href="javascript:;" disabled={{not @order.driver_assigned}} class={{unless @order.driver_assigned "dark:text-gray-600 text-gray-400"}} {{on "click" (fn this.onClickDriver @order.driver_assigned)}}>{{n-a @order.driver_assigned.name "No Driver Assigned"}}</a>
+                {{/if}}
+            </div>
         </div>
-        <div class="z-20 relative">
+        <div class="flex items-center justify-between">
+            <div class="flex flex-row items-center">
+                <FaIcon @icon="calendar" class="mr-2" />
+                <span class="font-semibold">Vehicle Assigned</span>
+            </div>
+            <a href="javascript:;" disabled={{not @order.driver_assigned.vehicle}} class={{unless @order.driver_assigned.vehicle_uuid "dark:text-gray-600 text-gray-400"}} {{on "click" (fn this.onClickVehicle @order.driver_assigned.vehicle)}}>{{n-a @order.driver_assigned.vehicle_name "No Vehicle Assigned"}}</a>
+        </div>
+        {{!-- <div class="z-20 relative">
             <RouteList @order={{@order}} />
-        </div>
+        </div> --}}
     </div>
     {{yield}}
 </div>
