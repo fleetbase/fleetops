@@ -209,14 +209,12 @@ class DriverController extends FleetOpsController
                     if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
                         $userInput['avatar_uuid'] = $input['photo_uuid'];
                     }
-                    
                     $input     = $input->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])->toArray();
-                    $user = $driver->getUser();
-                    $user->update($userInput);
+
+                    $driver->user->update($userInput);
                     $driver->flushAttributesCache();
 
-                    // set the slug for driver from user
-                    $input['slug'] = $user->slug;
+                    $input['slug'] = $driver->user->slug;
                 },
                 function ($request, &$driver) {
                     $driver->load(['user']);
