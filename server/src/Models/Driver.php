@@ -18,6 +18,7 @@ use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
@@ -545,5 +546,22 @@ class Driver extends Model
         }
 
         return $position;
+    }
+
+    /**
+     * Get the user relationship from the driver.
+     *
+     * @return \Fleetbase\Models\User
+     */
+    public function getUser(): ?\Fleetbase\Models\User
+    {
+        // get user
+        $user = $this->load(['user'])->user;
+
+        if (empty($user) && Str::isUuid($this->user_uuid)) {
+            $user = \Fleetbase\Models\User::where('uuid', $this->user_uuid)->first();
+        }
+
+        return $user;
     }
 }
