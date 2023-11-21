@@ -56,7 +56,7 @@ class Vehicle extends Model
      *
      * @var array
      */
-    protected $filterParams = ['vendor', 'driver', 'driver_uuid'];
+    protected $filterParams = ['vendor', 'driver', 'driver_uuid', 'vehicle_make', 'vehicle_model'];
 
     /**
      * Relationships to auto load with driver.
