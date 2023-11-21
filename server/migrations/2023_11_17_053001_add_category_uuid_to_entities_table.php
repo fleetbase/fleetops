@@ -14,7 +14,7 @@ class AddCategoryUuidToEntitiesTable extends Migration
     public function up()
     {
         Schema::table('entities', function (Blueprint $table) {
-            $table->foreignUuid('category_uuid')->nullable()->references('uuid')->on('categories')->after('company_uuid');
+            $table->foreignUuid('category_uuid')->nullable()->after('photo_uuid')->references('uuid')->on('categories');
         });
     }
 
@@ -26,7 +26,7 @@ class AddCategoryUuidToEntitiesTable extends Migration
     public function down()
     {
         Schema::table('entities', function (Blueprint $table) {
-            $table->dropIndex(['category_uuid']);
+            $table->dropForeign(['category_uuid']);
             $table->dropColumn(['category_uuid']);
         });
     }

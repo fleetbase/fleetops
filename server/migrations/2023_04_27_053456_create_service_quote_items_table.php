@@ -17,7 +17,7 @@ return new class extends Migration
             $table->increments('id');
             $table->string('_key')->nullable();
             $table->string('uuid', 191)->nullable()->index();
-            $table->string('service_quote_uuid', 191)->nullable()->index();
+            $table->uuid('service_quote_uuid')->nullable()->index();
             $table->string('amount')->nullable();
             $table->string('currency')->nullable();
             $table->string('details')->nullable();

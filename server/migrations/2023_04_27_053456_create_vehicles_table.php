@@ -18,9 +18,9 @@ return new class extends Migration
             $table->string('_key')->nullable();
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->index();
-            $table->string('company_uuid', 191)->nullable()->index();
-            $table->string('vendor_uuid', 191)->nullable()->index('vehicles_vendor_uuid_foreign');
-            $table->string('photo_uuid', 191)->nullable()->index('vehicles_photo_uuid_foreign');
+            $table->uuid('company_uuid')->nullable()->index();
+            $table->uuid('vendor_uuid')->nullable()->index('vehicles_vendor_uuid_foreign');
+            $table->uuid('photo_uuid')->nullable()->index('vehicles_photo_uuid_foreign');
             $table->string('avatar_url', 300)->nullable();
             $table->string('make', 191)->nullable()->index();
             $table->string('model', 191)->nullable()->index();

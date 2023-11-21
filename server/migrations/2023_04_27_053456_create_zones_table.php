@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('_key')->nullable();
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->unique();
-            $table->string('company_uuid', 191)->nullable()->index('zones_company_uuid_foreign');
-            $table->string('service_area_uuid', 191)->nullable()->index();
+            $table->uuid('company_uuid')->nullable()->index('zones_company_uuid_foreign');
+            $table->uuid('service_area_uuid')->nullable()->index();
             $table->string('name')->nullable();
             $table->mediumText('description')->nullable();
             $table->polygon('border')->nullable();

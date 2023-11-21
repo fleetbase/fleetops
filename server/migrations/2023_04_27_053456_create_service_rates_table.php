@@ -18,9 +18,9 @@ return new class extends Migration
             $table->string('_key')->nullable();
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->unique();
-            $table->string('company_uuid', 191)->nullable()->index();
-            $table->string('service_area_uuid', 191)->nullable()->index();
-            $table->string('zone_uuid', 191)->nullable()->index();
+            $table->uuid('company_uuid')->nullable()->index();
+            $table->uuid('service_area_uuid')->nullable()->index();
+            $table->uuid('zone_uuid')->nullable()->index();
             $table->string('service_name')->nullable();
             $table->string('service_type', 191)->nullable()->index();
             $table->integer('base_fee')->default(0)->nullable();

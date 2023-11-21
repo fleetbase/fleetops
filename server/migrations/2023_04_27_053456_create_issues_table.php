@@ -19,10 +19,10 @@ return new class extends Migration
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->unique();
             $table->string('issue_id', 191)->nullable()->unique();
-            $table->string('company_uuid', 191)->nullable()->index();
-            $table->string('driver_uuid', 191)->nullable()->index('issues_driver_uuid_foreign');
-            $table->string('vehicle_uuid', 191)->nullable()->index('issues_vehicle_uuid_foreign');
-            $table->string('assigned_to_uuid', 191)->nullable()->index('issues_assigned_to_uuid_foreign');
+            $table->uuid('company_uuid')->nullable()->index();
+            $table->uuid('driver_uuid')->nullable()->index('issues_driver_uuid_foreign');
+            $table->uuid('vehicle_uuid')->nullable()->index('issues_vehicle_uuid_foreign');
+            $table->uuid('assigned_to_uuid')->nullable()->index('issues_assigned_to_uuid_foreign');
             $table->string('odometer')->nullable();
             $table->point('location');
             $table->string('latitude')->nullable();
