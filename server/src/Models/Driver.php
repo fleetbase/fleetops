@@ -550,8 +550,6 @@ class Driver extends Model
 
     /**
      * Get the user relationship from the driver.
-     *
-     * @return \Fleetbase\Models\User
      */
     public function getUser(): ?\Fleetbase\Models\User
     {

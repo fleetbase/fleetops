@@ -41,7 +41,7 @@ class EntityController extends Controller
             'sku',
             'currency',
             'meta',
-            'supplier_uuid'
+            'supplier_uuid',
         ]);
 
         // payload assignment
@@ -127,7 +127,7 @@ class EntityController extends Controller
             'sku',
             'currency',
             'meta',
-            'supplier_uuid'
+            'supplier_uuid',
         ]);
 
         // payload assignment

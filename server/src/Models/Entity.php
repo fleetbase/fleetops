@@ -8,7 +8,6 @@ use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\Models\Model;
-use Fleetbase\Pallet\Models\Supplier;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -204,7 +203,8 @@ class Entity extends Model
     /**
      * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function supplier() {
+    public function supplier()
+    {
         return $this->belongsTo(Vendor::class, 'supplier_uuid');
     }
 
