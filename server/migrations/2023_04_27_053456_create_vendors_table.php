@@ -18,11 +18,11 @@ return new class extends Migration
             $table->string('_key')->nullable();
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->unique();
-            $table->string('company_uuid', 191)->nullable()->index();
-            $table->string('place_uuid', 191)->nullable()->index('vendors_place_uuid_foreign');
-            $table->string('type_uuid', 191)->nullable()->index('vendors_type_uuid_foreign');
-            $table->string('connect_company_uuid', 191)->nullable()->index('vendors_connect_company_uuid_foreign');
-            $table->string('logo_uuid', 191)->nullable()->index('vendors_logo_uuid_foreign');
+            $table->uuid('company_uuid')->nullable()->index();
+            $table->uuid('place_uuid')->nullable()->index('vendors_place_uuid_foreign');
+            $table->uuid('type_uuid')->nullable()->index('vendors_type_uuid_foreign');
+            $table->uuid('connect_company_uuid')->nullable()->index('vendors_connect_company_uuid_foreign');
+            $table->uuid('logo_uuid')->nullable()->index('vendors_logo_uuid_foreign');
             $table->string('name')->nullable();
             $table->string('internal_id', 191)->nullable()->index();
             $table->string('business_id')->nullable();

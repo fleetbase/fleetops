@@ -1,5 +1,13 @@
 <Layout::Section::Header @title="Vehicles" @searchQuery={{this.query}} @onSearch={{perform this.search}}>
-    <FiltersPicker @columns={{this.columns}} @onApply={{fn this.filters.apply this}} @onClear={{fn this.filters.reset this}} @onFilterClear={{this.filters.clear}} @onChange={{this.filters.set}} @buttonWrapperClass="mr-2" />
+    <Button @icon="refresh" @onClick={{this.reload}} @helpText="Reload data" class="mr-2" />
+    <FiltersPicker
+        @columns={{this.columns}}
+        @onApply={{fn this.filters.apply this}}
+        @onClear={{fn this.filters.reset this}}
+        @onFilterClear={{this.filters.clear}}
+        @onChange={{this.filters.set}}
+        @buttonWrapperClass="mr-2"
+    />
     <VisibleColumnPicker @columns={{this.columns}} @onChange={{fn (mut this.columns)}} class="mr-2" />
     {{#if (safe-has this.table "selectedRows")}}
         <DropdownButton @icon="layer-group" @text="Bulk Action" @type="magic" @size="sm" @buttonWrapperClass="mr-2" @contentClass="dropdown-menu" as |dd|>
@@ -17,6 +25,18 @@
 </Layout::Section::Header>
 
 <Layout::Section::Body>
-    <Table @rows={{@model}} @columns={{this.columns}} @selectable={{true}} @canSelectAll={{true}} @onSetup={{fn (mut this.table)}} @pagination={{true}} @paginationMeta={{@model.meta}} @page={{this.page}} @onPageChange={{fn (mut this.page)}} @tfootVerticalOffset="53" @tfootVerticalOffsetElements=".next-view-section-subheader" />
+    <Table
+        @rows={{@model}}
+        @columns={{this.columns}}
+        @selectable={{true}}
+        @canSelectAll={{true}}
+        @onSetup={{fn (mut this.table)}}
+        @pagination={{true}}
+        @paginationMeta={{@model.meta}}
+        @page={{this.page}}
+        @onPageChange={{fn (mut this.page)}}
+        @tfootVerticalOffset="53"
+        @tfootVerticalOffsetElements=".next-view-section-subheader"
+    />
 </Layout::Section::Body>
 {{outlet}}

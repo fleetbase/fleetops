@@ -13,7 +13,6 @@ use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Models\Invite;
 use Fleetbase\Models\User;
 use Fleetbase\Notifications\UserInvited;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;

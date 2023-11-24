@@ -83,8 +83,8 @@ export default class ManagementVehiclesIndexController extends ManagementControl
         'name',
         'plate_number',
         'year',
-        'make',
-        'model',
+        'vehicle_make',
+        'vehicle_model',
         'display_name',
     ];
 
@@ -145,18 +145,18 @@ export default class ManagementVehiclesIndexController extends ManagementControl
     @tracked plate_number;
 
     /**
-     * The filterable param `make`.
+     * The filterable param `vehicle_make`.
      *
      * @var {String}
      */
-    @tracked make;
+    @tracked vehicle_make;
 
     /**
-     * The filterable param `model`.
+     * The filterable param `vehicle_model`.
      *
      * @var {String}
      */
-    @tracked model;
+    @tracked vehicle_model;
 
     /**
      * The filterable param `year`.
@@ -164,20 +164,6 @@ export default class ManagementVehiclesIndexController extends ManagementControl
      * @var {String}
      */
     @tracked year;
-
-    /**
-     * The filterable param `make`.
-     *
-     * @var {String}
-     */
-    @tracked make;
-
-    /**
-     * The filterable param `model`.
-     *
-     * @var {String}
-     */
-    @tracked model;
 
     /**
      * The filterable param `country`.
@@ -419,6 +405,13 @@ export default class ManagementVehiclesIndexController extends ManagementControl
             searchable: false,
         },
     ];
+
+    /**
+     * Reload layout view.
+     */
+    @action reload() {
+        return this.hostRouter.refresh();
+    }
 
     /**
      * Bulk deletes selected `vehicle` via confirm prompt

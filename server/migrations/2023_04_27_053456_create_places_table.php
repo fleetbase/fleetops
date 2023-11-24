@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('uuid', 191)->nullable()->unique();
             $table->string('public_id', 191)->nullable()->unique();
             $table->string('_import_id', 191)->nullable()->index();
-            $table->string('company_uuid', 191)->nullable()->index();
+            $table->uuid('company_uuid')->nullable()->index();
             $table->char('owner_uuid', 36)->nullable()->index();
             $table->string('owner_type')->nullable();
             $table->string('name')->nullable();

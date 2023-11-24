@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
@@ -27,6 +28,7 @@ class Vehicle extends Model
     use Searchable;
     use HasSlug;
     use LogsActivity;
+    use HasMetaAttributes;
 
     /**
      * The database table used by the model.
@@ -54,7 +56,7 @@ class Vehicle extends Model
      *
      * @var array
      */
-    protected $filterParams = ['vendor', 'driver', 'driver_uuid'];
+    protected $filterParams = ['vendor', 'driver', 'driver_uuid', 'vehicle_make', 'vehicle_model'];
 
     /**
      * Relationships to auto load with driver.
@@ -165,7 +167,7 @@ class Vehicle extends Model
         'location'   => Point::class,
         'meta'       => Json::class,
         'telematics' => Json::class,
-        'model'      => Json::class,
+        'model_data' => Json::class,
         'vin_data'   => Json::class,
         'online'     => 'boolean',
     ];

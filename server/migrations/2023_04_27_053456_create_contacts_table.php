@@ -19,9 +19,9 @@ return new class extends Migration
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->unique();
             $table->string('internal_id')->nullable();
-            $table->string('company_uuid', 191)->nullable()->index('contacts_company_uuid_foreign');
+            $table->uuid('company_uuid')->nullable()->index('contacts_company_uuid_foreign');
             $table->char('user_uuid', 36)->nullable()->index();
-            $table->string('photo_uuid', 191)->nullable()->index('contacts_photo_uuid_foreign');
+            $table->uuid('photo_uuid')->nullable()->index('contacts_photo_uuid_foreign');
             $table->string('name')->nullable();
             $table->string('title')->nullable();
             $table->string('email', 191)->nullable()->index();

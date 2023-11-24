@@ -298,6 +298,13 @@ export default class ManagementContactsIndexController extends Controller {
     }
 
     /**
+     * Reload layout view.
+     */
+    @action reload() {
+        return this.hostRouter.refresh();
+    }
+
+    /**
      * Toggles dialog to export `contact`
      *
      * @void

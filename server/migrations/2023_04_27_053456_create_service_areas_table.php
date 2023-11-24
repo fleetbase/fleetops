@@ -18,14 +18,14 @@ return new class extends Migration
             $table->string('_key')->nullable();
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->unique();
-            $table->string('company_uuid', 191)->nullable()->index('service_areas_company_uuid_foreign');
+            $table->uuid('company_uuid')->nullable()->index('service_areas_company_uuid_foreign');
             $table->string('name')->nullable();
             $table->string('type')->nullable();
             $table->string('country')->nullable();
             $table->multiPolygon('border')->nullable();
             $table->string('color')->nullable();
             $table->string('stroke_color')->nullable();
-            $table->string('parent_uuid', 191)->nullable()->index('service_areas_parent_uuid_foreign');
+            $table->uuid('parent_uuid')->nullable()->index('service_areas_parent_uuid_foreign');
             $table->string('status')->nullable();
             $table->softDeletes();
             $table->timestamp('created_at')->nullable()->index();

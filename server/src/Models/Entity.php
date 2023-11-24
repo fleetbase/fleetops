@@ -68,6 +68,7 @@ class Entity extends Model
         'customer_type',
         'tracking_number_uuid',
         'destination_uuid',
+        'supplier_uuid',
         'photo_uuid',
         '_import_id',
         'internal_id',
@@ -160,9 +161,7 @@ class Entity extends Model
     }
 
     /**
-     * Photo of entity belongs to.
-     *
-     * @var Model
+     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function photo()
     {
@@ -170,9 +169,7 @@ class Entity extends Model
     }
 
     /**
-     * Files assosciated with entity.
-     *
-     * @var Model
+     * @var \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function files()
     {
@@ -180,7 +177,7 @@ class Entity extends Model
     }
 
     /**
-     * The proofs for this order.
+     * @var \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function proofs()
     {
@@ -188,9 +185,7 @@ class Entity extends Model
     }
 
     /**
-     * The entity destination.
-     *
-     * @var Model
+     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function destination()
     {
@@ -198,9 +193,7 @@ class Entity extends Model
     }
 
     /**
-     * Payload entity belongs to.
-     *
-     * @var Model
+     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function payload()
     {
@@ -208,9 +201,15 @@ class Entity extends Model
     }
 
     /**
-     * Driver assigned to order.
-     *
-     * @var Model
+     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function supplier()
+    {
+        return $this->belongsTo(Vendor::class, 'supplier_uuid');
+    }
+
+    /**
+     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function driver()
     {
@@ -218,9 +217,7 @@ class Entity extends Model
     }
 
     /**
-     * The company who manages this order.
-     *
-     * @var Model
+     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function company()
     {
@@ -228,7 +225,7 @@ class Entity extends Model
     }
 
     /**
-     * The tracking number assosicated to the entity.
+     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function trackingNumber()
     {
@@ -236,9 +233,7 @@ class Entity extends Model
     }
 
     /**
-     * The customer of this order.
-     *
-     * @var Model
+     * @var \Illuminate\Database\Eloquent\Relations\MorphTo
      */
     public function customer()
     {

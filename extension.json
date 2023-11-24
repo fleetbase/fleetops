@@ -1,6 +1,6 @@
 {
     "name": "Fleet-Ops",
-    "version": "0.3.4",
+    "version": "0.3.5",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "repository": "https://github.com/fleetbase/fleetops",
     "license": "MIT",

@@ -21,10 +21,10 @@ return new class extends Migration
             $table->json('meta')->nullable();
             $table->string('customer_uuid')->nullable();
             $table->string('customer_type')->nullable();
-            $table->string('company_uuid', 191)->nullable()->index('purchase_rates_company_uuid_foreign');
-            $table->string('transaction_uuid', 191)->nullable()->index('purchase_rates_transaction_uuid_foreign');
-            $table->string('service_quote_uuid', 191)->nullable()->index('purchase_rates_service_quote_uuid_foreign');
-            $table->string('payload_uuid', 191)->nullable()->index('purchase_rates_payload_uuid_foreign');
+            $table->uuid('company_uuid')->nullable()->index('purchase_rates_company_uuid_foreign');
+            $table->uuid('transaction_uuid')->nullable()->index('purchase_rates_transaction_uuid_foreign');
+            $table->uuid('service_quote_uuid')->nullable()->index('purchase_rates_service_quote_uuid_foreign');
+            $table->uuid('payload_uuid')->nullable()->index('purchase_rates_payload_uuid_foreign');
             $table->string('status')->nullable();
             $table->softDeletes();
             $table->timestamp('created_at')->nullable()->index();

@@ -395,6 +395,13 @@ export default class ManagementIssuesIndexController extends Controller {
     }
 
     /**
+     * Reload layout view.
+     */
+    @action reload() {
+        return this.hostRouter.refresh();
+    }
+
+    /**
      * View the selected issue
      *
      * @param {IssueModel} issue

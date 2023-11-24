@@ -18,13 +18,13 @@ return new class extends Migration
             $table->string('_key')->nullable();
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->index();
-            $table->string('payload_uuid', 191)->nullable()->index('entities_payload_uuid_foreign');
-            $table->string('company_uuid', 191)->nullable()->index();
-            $table->string('driver_assigned_uuid', 191)->nullable()->index('entities_driver_assigned_uuid_foreign');
-            $table->string('destination_uuid', 191)->nullable()->index();
+            $table->uuid('payload_uuid')->nullable()->index('entities_payload_uuid_foreign');
+            $table->uuid('company_uuid')->nullable()->index();
+            $table->uuid('driver_assigned_uuid')->nullable()->index('entities_driver_assigned_uuid_foreign');
+            $table->uuid('destination_uuid')->nullable()->index();
             $table->string('customer_uuid')->nullable();
             $table->string('customer_type')->nullable();
-            $table->string('tracking_number_uuid', 191)->nullable()->index('entities_tracking_number_uuid_foreign');
+            $table->uuid('tracking_number_uuid')->nullable()->index('entities_tracking_number_uuid_foreign');
             $table->mediumText('photo_uuid')->nullable();
             $table->string('_import_id', 191)->nullable()->index();
             $table->string('internal_id', 191)->nullable()->index();

@@ -18,11 +18,11 @@ return new class extends Migration
             $table->string('_key')->nullable();
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->index();
-            $table->string('company_uuid', 191)->nullable()->index();
-            $table->string('pickup_uuid', 191)->nullable()->index('payloads_from_place_uuid_index');
-            $table->string('dropoff_uuid', 191)->nullable()->index('payloads_to_place_uuid_index');
-            $table->string('return_uuid', 191)->nullable()->index('payloads_return_uuid_foreign');
-            $table->string('current_waypoint_uuid', 191)->nullable()->index();
+            $table->uuid('company_uuid')->nullable()->index();
+            $table->uuid('pickup_uuid')->nullable()->index('payloads_from_place_uuid_index');
+            $table->uuid('dropoff_uuid')->nullable()->index('payloads_to_place_uuid_index');
+            $table->uuid('return_uuid')->nullable()->index('payloads_return_uuid_foreign');
+            $table->uuid('current_waypoint_uuid')->nullable()->index();
             $table->string('provider', 191)->nullable()->index();
             $table->string('payment_method')->nullable();
             $table->integer('cod_amount')->nullable();

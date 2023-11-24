@@ -11,6 +11,8 @@ import { isArray } from '@ember/array';
  */
 export default class LayoutFleetOpsSidebarComponent extends Component {
     @service universe;
+    @service contextPanel;
+    @service store;
     @tracked routePrefix = 'console.fleet-ops.';
     @tracked menuPanels = [];
     @tracked universeMenuItems = [];
