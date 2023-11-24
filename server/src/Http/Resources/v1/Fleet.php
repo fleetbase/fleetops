@@ -25,6 +25,8 @@ class Fleet extends FleetbaseResource
             'status'               => $this->status ?? null,
             'drivers_count'        => $this->when(Http::isInternalRequest(), $this->drivers_count),
             'drivers_online_count' => $this->when(Http::isInternalRequest(), $this->drivers_online_count),
+            'vehicles_count'        => $this->when(Http::isInternalRequest(), $this->vehicles_count),
+            'vehicles_online_count' => $this->when(Http::isInternalRequest(), $this->vehicles_online_count),
             'service_area'         => $this->whenLoaded('serviceArea', new ServiceArea($this->serviceArea)),
             'zone'                 => $this->whenLoaded('zone', new Zone($this->zone)),
             'vendor'               => $this->whenLoaded('vendor', new Vendor($this->vendor)),
