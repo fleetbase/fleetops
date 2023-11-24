@@ -78,7 +78,7 @@ class DriverController extends FleetOpsController
 
                     // create driver profile for user
                     $input = collect($input)
-                        ->except(['name', 'password', 'email', 'phone', 'location', 'meta', 'avatar_uuid', 'photo_uuid'])
+                        ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])
                         ->filter()
                         ->toArray();
 
@@ -86,10 +86,6 @@ class DriverController extends FleetOpsController
                     $input['company_uuid'] = session('company');
                     $input['user_uuid']    = $existingUser->uuid;
                     $input['slug']         = $existingUser->slug;
-
-                    if ($request->missing('location')) {
-                        $input['location'] = new Point(0, 0);
-                    }
 
                     // create the profile
                     $driverProfile = Driver::create($input);
@@ -135,12 +131,12 @@ class DriverController extends FleetOpsController
                     }
 
                     $input = $input
-                        ->except(['name', 'password', 'email', 'phone', 'location', 'meta', 'avatar_uuid', 'photo_uuid'])
+                        ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])
                         ->filter()
                         ->toArray();
 
                     if (!isset($input['password'])) {
-                        $input['password'] = $userInput['phone'] ?? Str::random(14);
+                        $input['password'] = data_get($userInput, 'phone', Str::random(14));
                     }
 
                     $userInput['company_uuid'] = session('company');
@@ -164,10 +160,6 @@ class DriverController extends FleetOpsController
 
                     $input['user_uuid'] = $user->uuid;
                     $input['slug']      = $user->slug;
-
-                    if ($request->missing('location')) {
-                        $input['location'] = new Point(0, 0);
-                    }
                 },
                 function ($request, &$driver) {
                     $driver->load(['user']);
@@ -210,14 +202,14 @@ class DriverController extends FleetOpsController
                 $request,
                 $id,
                 function (&$request, &$driver, &$input) {
-                    $driver->load(['user']);
+                    $driver->load(['user'])->guard(['user_uuid']);
                     $input     = collect($input);
                     $userInput = $input->only(['name', 'password', 'email', 'phone', 'avatar_uuid'])->toArray();
                     // handle `photo_uuid`
                     if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
                         $userInput['avatar_uuid'] = $input['photo_uuid'];
                     }
-                    $input     = $input->except(['name', 'password', 'email', 'phone', 'location', 'meta', 'avatar_uuid', 'photo_uuid'])->toArray();
+                    $input     = $input->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])->toArray();
 
                     $driver->user->update($userInput);
                     $driver->flushAttributesCache();

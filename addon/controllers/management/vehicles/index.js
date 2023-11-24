@@ -84,7 +84,7 @@ export default class ManagementVehiclesIndexController extends ManagementControl
         'plate_number',
         'year',
         'make',
-        'vehicle_model',
+        'model',
         'display_name',
     ];
 
@@ -145,18 +145,18 @@ export default class ManagementVehiclesIndexController extends ManagementControl
     @tracked plate_number;
 
     /**
-     * The filterable param `vehicle_make`.
+     * The filterable param `make`.
      *
      * @var {String}
      */
-    @tracked vehicle_make;
+    @tracked make;
 
     /**
-     * The filterable param `vehicle_model`.
+     * The filterable param `model`.
      *
      * @var {String}
      */
-    @tracked vehicle_model;
+    @tracked model;
 
     /**
      * The filterable param `year`.
@@ -307,14 +307,14 @@ export default class ManagementVehiclesIndexController extends ManagementControl
         },
         {
             label: 'Model',
-            valuePath: 'vehicle_model',
+            valuePath: 'model',
             cellComponent: 'table/cell/base',
             width: '80px',
             resizable: true,
             sortable: true,
             hidden: true,
             filterable: true,
-            filterParam: 'vehicle_model',
+            filterParam: 'model',
             filterComponent: 'filter/string',
         },
         {

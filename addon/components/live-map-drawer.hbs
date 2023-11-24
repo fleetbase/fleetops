@@ -1,4 +1,4 @@
-<Drawer @isMinimized={{true}} @notchEnabled={{true}} @onLoad={{this.setDrawerContext}}>
+<Drawer @onResizeEnd={{@onResizeEnd}} @onResizeStart={{@onResizeStart}} @isMinimized={{@isMinimized}} @isOpen={{@isOpen}} @notchEnabled={{true}} @onLoad={{this.setDrawerContext}}>
     <div class="ui-tabs pt-4">
         <nav>
             {{#each this.tabs as |tab|}}
