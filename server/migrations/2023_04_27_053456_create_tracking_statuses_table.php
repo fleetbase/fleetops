@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('_key')->nullable();
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->index();
-            $table->string('company_uuid', 191)->nullable()->index('tracking_statuses_company_uuid_foreign');
-            $table->string('tracking_number_uuid', 191)->nullable()->index('tracking_statuses_tracking_number_uuid_foreign');
+            $table->uuid('company_uuid')->nullable()->index('tracking_statuses_company_uuid_foreign');
+            $table->uuid('tracking_number_uuid')->nullable()->index('tracking_statuses_tracking_number_uuid_foreign');
             $table->char('proof_uuid', 36)->nullable();
             $table->json('meta')->nullable();
             $table->string('status', 191)->nullable()->index();

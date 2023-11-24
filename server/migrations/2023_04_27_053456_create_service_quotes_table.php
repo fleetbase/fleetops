@@ -19,9 +19,9 @@ return new class extends Migration
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->unique();
             $table->string('request_id', 191)->nullable()->index('service_quotes_request_id_foreign');
-            $table->string('company_uuid', 191)->nullable()->index('service_quotes_company_uuid_foreign');
-            $table->string('payload_uuid', 191)->nullable()->index('service_quotes_payload_uuid_foreign');
-            $table->string('service_rate_uuid', 191)->nullable()->index();
+            $table->uuid('company_uuid')->nullable()->index('service_quotes_company_uuid_foreign');
+            $table->uuid('payload_uuid')->nullable()->index('service_quotes_payload_uuid_foreign');
+            $table->uuid('service_rate_uuid')->nullable()->index();
             $table->integer('amount')->nullable();
             $table->string('currency')->nullable();
             $table->json('meta')->nullable();

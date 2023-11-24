@@ -18,10 +18,10 @@ return new class extends Migration
             $table->string('_key')->nullable();
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->unique();
-            $table->string('company_uuid', 191)->nullable()->index();
-            $table->string('owner_uuid', 191)->nullable()->index('tracking_numbers_owner_uuid_foreign');
+            $table->uuid('company_uuid')->nullable()->index();
+            $table->uuid('owner_uuid')->nullable()->index('tracking_numbers_owner_uuid_foreign');
             $table->string('owner_type')->nullable();
-            $table->string('status_uuid', 191)->nullable()->index('tracking_numbers_status_uuid_foreign');
+            $table->uuid('status_uuid')->nullable()->index('tracking_numbers_status_uuid_foreign');
             $table->string('tracking_number', 191)->nullable()->index();
             $table->string('region')->nullable();
             $table->mediumText('qr_code')->nullable();

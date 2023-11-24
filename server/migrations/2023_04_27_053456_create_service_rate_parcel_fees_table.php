@@ -17,7 +17,7 @@ return new class extends Migration
             $table->increments('id');
             $table->string('_key')->nullable();
             $table->string('uuid', 191)->nullable()->index();
-            $table->string('service_rate_uuid', 191)->nullable()->index();
+            $table->uuid('service_rate_uuid')->nullable()->index();
             $table->string('size')->nullable();
             $table->string('length')->nullable();
             $table->string('width')->nullable();

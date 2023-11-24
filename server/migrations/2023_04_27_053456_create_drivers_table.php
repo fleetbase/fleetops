@@ -19,12 +19,12 @@ return new class extends Migration
             $table->string('uuid', 191)->nullable()->index();
             $table->string('public_id', 191)->nullable()->unique();
             $table->string('internal_id')->nullable();
-            $table->string('company_uuid', 191)->nullable()->index('drivers_company_uuid_foreign');
-            $table->string('vehicle_uuid', 191)->nullable()->index('drivers_vehicle_uuid_foreign');
-            $table->string('vendor_uuid', 191)->nullable()->index('drivers_vendor_uuid_foreign');
+            $table->uuid('company_uuid')->nullable()->index('drivers_company_uuid_foreign');
+            $table->uuid('vehicle_uuid')->nullable()->index('drivers_vehicle_uuid_foreign');
+            $table->uuid('vendor_uuid')->nullable()->index('drivers_vendor_uuid_foreign');
             $table->string('vendor_type')->nullable();
-            $table->string('current_job_uuid', 191)->nullable()->index('drivers_current_job_uuid_foreign');
-            $table->string('user_uuid', 191)->nullable()->index();
+            $table->uuid('current_job_uuid')->nullable()->index('drivers_current_job_uuid_foreign');
+            $table->uuid('user_uuid')->nullable()->index();
             $table->string('auth_token')->nullable();
             $table->string('drivers_license_number')->nullable();
             $table->string('signup_token_used')->nullable();
