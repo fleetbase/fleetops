@@ -407,6 +407,13 @@ export default class ManagementVehiclesIndexController extends ManagementControl
     ];
 
     /**
+     * Reload layout view.
+     */
+    @action reload() {
+        return this.hostRouter.refresh();
+    }
+
+    /**
      * Bulk deletes selected `vehicle` via confirm prompt
      *
      * @param {Array} selected an array of selected models

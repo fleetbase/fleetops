@@ -1,4 +1,5 @@
 <Layout::Section::Header @title="Fuel Reports" @searchQuery={{this.query}} @onSearch={{perform this.search}}>
+    <Button @icon="refresh" @onClick={{this.reload}} @helpText="Reload data" class="mr-2" />
     <FiltersPicker
         @columns={{this.columns}}
         @onApply={{fn this.filters.apply this}}

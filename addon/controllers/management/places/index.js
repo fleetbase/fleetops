@@ -350,6 +350,12 @@ export default class ManagementPlacesIndexController extends Controller {
     }
 
     /**
+     * Reload layout view.
+     */
+    @action reload() {
+        return this.hostRouter.refresh();
+    }
+    /**
      * Create a new place
      *
      * @return {Promise}

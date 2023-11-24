@@ -358,6 +358,13 @@ export default class ManagementFuelReportsIndexController extends Controller {
     }
 
     /**
+     * Reload layout view.
+     */
+    @action reload() {
+        return this.hostRouter.refresh();
+    }
+
+    /**
      * Create a new fuel report
      *
      * @void

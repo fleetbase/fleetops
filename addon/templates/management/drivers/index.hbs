@@ -4,7 +4,8 @@
     @searchQuery={{this.query}}
     @onSearch={{perform this.search}}
 >
-    <Button @icon="grip-horizontal" @prefix="fas" @onClick={{fn this.changeLayout "grid"}} @disabled={{this.isGridLayout}} class="mr-2" />
+    <Button @icon="refresh" @onClick={{this.reload}} @helpText="Reload data" class="mr-2" />
+    <Button @icon="grip-horizontal" @prefix="fas" @onClick={{this.reload}} @disabled={{this.isGridLayout}} class="mr-2" />
     <Button @icon="table" @prefix="fas" @onClick={{fn this.changeLayout "table"}} @disabled={{this.isTableLayout}} class="mr-2" />
     <FiltersPicker
         @columns={{this.columns}}
