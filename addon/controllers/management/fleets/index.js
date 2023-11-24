@@ -386,6 +386,13 @@ export default class ManagementFleetsIndexController extends Controller {
     }
 
     /**
+     * Reload layout view.
+     */
+    @action reload() {
+        return this.hostRouter.refresh();
+    }
+
+    /**
      * Toggles dialog to export `fleet`
      *
      * @void

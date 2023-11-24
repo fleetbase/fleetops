@@ -229,6 +229,13 @@ export default class OperationsServiceRatesIndexController extends Controller {
     }
 
     /**
+     * Reload layout view.
+     */
+    @action reload() {
+        return this.hostRouter.refresh();
+    }
+
+    /**
      * Toggles dialog to export `service-rate`
      *
      * @memberof OperationsServiceRatesIndexController
