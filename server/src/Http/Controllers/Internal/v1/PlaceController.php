@@ -76,7 +76,7 @@ class PlaceController extends FleetOpsController
             }
         }
 
-        return response()->json($results);
+        return response()->json($results)->withHeaders(['Cache-Control' => 'no-cache']);
     }
 
     /**
@@ -113,7 +113,7 @@ class PlaceController extends FleetOpsController
             }
         }
 
-        return response()->json($results);
+        return response()->json($results)->withHeaders(['Cache-Control' => 'no-cache']);
     }
 
     /**
