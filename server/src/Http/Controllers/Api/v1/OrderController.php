@@ -64,14 +64,16 @@ class OrderController extends Controller
             $payloadInput = $request->input('payload');
             $payload      = new Payload();
 
-            $payload->setPickup($payloadInput['pickup']);
-            $payload->setDropoff($payloadInput['dropoff']);
+            $payload->setPickup(data_get($payloadInput, 'pickup'));
+            $payload->setDropoff(data_get($payloadInput, 'dropoff'));
             if ($request->has('payload.return')) {
-                $payload->setReturn($payloadInput['return']);
+                $payload->setReturn(data_get($payloadInput, 'return'));
             }
-            $payload->setWaypoints($payloadInput['waypoints'] ?? []);
-            $payload->setEntities($payloadInput['entities'] ?? []);
             $payload->save();
+
+            // sey waypoints and entities after saving
+            $payload->setWaypoints(data_get($payloadInput, 'waypoints', []));
+            $payload->setEntities(data_get($payloadInput, 'entities', []));
 
             $input['payload_uuid'] = $payload->uuid;
         } elseif ($request->isString('payload')) {
@@ -87,14 +89,16 @@ class OrderController extends Controller
             $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
             $payload      = new Payload();
 
-            $payload->setPickup($payloadInput['pickup']);
-            $payload->setDropoff($payloadInput['dropoff']);
+            $payload->setPickup(data_get($payloadInput, 'pickup'));
+            $payload->setDropoff(data_get($payloadInput, 'dropoff'));
             if ($request->has('return')) {
-                $payload->setReturn($payloadInput['return']);
+                $payload->setReturn(data_get($payloadInput, 'return'));
             }
-            $payload->setWaypoints($payloadInput['waypoints'] ?? []);
-            $payload->setEntities($payloadInput['entities'] ?? []);
             $payload->save();
+
+            // set waypoints and entities after payload is saved
+            $payload->setWaypoints(data_get($payloadInput, 'waypoints', []));
+            $payload->setEntities(data_get($payloadInput, 'entities', []));
 
             $input['payload_uuid'] = $payload->uuid;
         }
@@ -221,13 +225,13 @@ class OrderController extends Controller
             $payloadInput = $request->input('payload');
             $payload      = new Payload();
 
-            $payload->setPickup($payloadInput['pickup']);
-            $payload->setDropoff($payloadInput['dropoff']);
+            $payload->setPickup(data_get($payloadInput, 'pickup'));
+            $payload->setDropoff(data_get($payloadInput, 'dropoff'));
             if ($request->has('payload.return')) {
-                $payload->setReturn($payloadInput['return']);
+                $payload->setReturn(data_get($payloadInput, 'return'));
             }
-            $payload->setWaypoints($payloadInput['waypoints'] ?? []);
-            $payload->setEntities($payloadInput['entities'] ?? []);
+            $payload->setWaypoints(data_get($payloadInput, 'waypoints', []));
+            $payload->setEntities(data_get($payloadInput, 'entities', []));
             $payload->save();
 
             $input['payload_uuid'] = $payload->uuid;
