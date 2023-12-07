@@ -336,7 +336,7 @@ class Payload extends Model
                 $placeUuid = Place::insertFromMixed($attributes);
 
                 // if has a temporary uuid from search create meta attr for search_uuid
-                if (Utils::isUuid($placeUuid) && isset($attributes['uuid']) && $placeUuid !== $attributes['uuid']) {
+                if (Str::isUuid($placeUuid) && isset($attributes['uuid']) && $placeUuid !== $attributes['uuid']) {
                     $place = Place::where('uuid', $placeUuid)->first();
 
                     if ($place instanceof Place) {
