@@ -25,8 +25,7 @@ class NavigatorController extends Controller
                     "name" => "NavigationAppLinker",
                 ]
             );
-
-            return redirect()->away('flbnavigator://configure?key=' . $apiCredential->key . '&host=' . $apiCredential->host);
+            return redirect()->away('flbnavigator://configure?key=' . $apiCredential->key . '&host=' . url()->secure('/'));
         }
         return response()->error("Company not found for the admin user");
     }
@@ -34,7 +33,7 @@ class NavigatorController extends Controller
     public function getLinkAppUrl()
     {
         return response()->json([
-            'linkUrl' => url('int/v1/fleet-ops/link-app')
+            "linkUrl" => url("int/v1/fleet-ops/navigator/link-app"),
         ]);
     }
 }
