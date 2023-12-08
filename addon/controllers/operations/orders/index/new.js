@@ -1,4 +1,5 @@
-import Controller, { inject as controller } from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import { inject as controller } from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, computed, setProperties, set, get } from '@ember/object';
@@ -25,7 +26,7 @@ L.Bounds.prototype.intersects = function (bounds) {
     return xIntersects && yIntersects;
 };
 
-export default class OperationsOrdersIndexNewController extends Controller {
+export default class OperationsOrdersIndexNewController extends BaseController {
     @controller('management.places.index') placesController;
     @controller('management.contacts.index') contactsController;
     @controller('management.vendors.index') vendorsController;

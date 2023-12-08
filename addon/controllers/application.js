@@ -1,9 +1,9 @@
-import Controller from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { computed, action } from '@ember/object';
 
-export default class ApplicationController extends Controller {
+export default class ApplicationController extends BaseController {
     @service hostRouter;
 
     @tracked routes = ['console.fleet-ops.operations', 'console.fleet-ops.management', 'console.fleet-ops.comms'];

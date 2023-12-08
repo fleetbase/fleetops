@@ -69,6 +69,7 @@ module.exports = buildEngine({
             new Funnel(leafletImagesPath, {
                 srcDir: '/',
                 destDir: '/leaflet-images',
+                allowEmpty: true,
             })
         );
         trees.push(

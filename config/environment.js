@@ -1,11 +1,12 @@
 /* eslint-env node */
 'use strict';
-const { name } = require('../package');
+const { name, fleetbase } = require('../package');
 
 module.exports = function (environment) {
     let ENV = {
         modulePrefix: name,
         environment,
+        mountedEngineRoutePrefix: getMountedEngineRoutePrefix(),
 
         defaultValues: {
             driverImage: getenv('DEFAULT_DRIVER_IMAGE', 'https://s3.ap-southeast-1.amazonaws.com/flb-assets/static/no-avatar.png'),
@@ -19,6 +20,15 @@ module.exports = function (environment) {
 
     return ENV;
 };
+
+function getMountedEngineRoutePrefix() {
+    let mountedEngineRoutePrefix = 'fleet-ops';
+    if (fleetbase && typeof fleetbase.route === 'string') {
+        mountedEngineRoutePrefix = fleetbase.route;
+    }
+
+    return `console.${mountedEngineRoutePrefix}.`;
+}
 
 function getenv(variable, defaultValue = null) {
     return process.env[variable] !== undefined ? process.env[variable] : defaultValue;

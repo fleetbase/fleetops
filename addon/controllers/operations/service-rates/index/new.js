@@ -1,10 +1,10 @@
-import Controller from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, computed } from '@ember/object';
 import { isBlank } from '@ember/utils';
 
-export default class OperationsServiceRatesIndexNewController extends Controller {
+export default class OperationsServiceRatesIndexNewController extends BaseController {
     /**
      * Inject the `currentUser` service
      *

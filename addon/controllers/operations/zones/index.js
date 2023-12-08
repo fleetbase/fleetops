@@ -1,4 +1,4 @@
-import Controller from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -7,7 +7,7 @@ import GeoJson from '@fleetbase/fleetops-data/utils/geojson/geo-json';
 import FeatureCollection from '@fleetbase/fleetops-data/utils/geojson/feature-collection';
 import last from '@fleetbase/ember-core/utils/last';
 
-export default class OperationsZonesIndexController extends Controller {
+export default class OperationsZonesIndexController extends BaseController {
     /**
      * Inject the `currentUser` service
      *

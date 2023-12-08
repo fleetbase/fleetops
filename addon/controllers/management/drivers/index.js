@@ -1,4 +1,4 @@
-import Controller from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -9,7 +9,7 @@ import { task } from 'ember-concurrency-decorators';
 import extractCoordinates from '@fleetbase/ember-core/utils/extract-coordinates';
 import leafletIcon from '@fleetbase/ember-core/utils/leaflet-icon';
 
-export default class ManagementDriversIndexController extends Controller {
+export default class ManagementDriversIndexController extends BaseController {
     /**
      * Inject the `notifications` service
      *

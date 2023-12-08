@@ -13,10 +13,10 @@ This monorepo contains both the frontend and backend components of the FleetOps 
 
 ### Requirements
 
-- PHP 7.3.0 or above
-- Ember.js v3.24 or above
-- Ember CLI v3.24 or above
-- Node.js v14 or above
+* PHP 7.3.0 or above
+* Ember.js v4.8 or above
+* Ember CLI v4.8 or above
+* Node.js v18 or above
 
 ## Structure
 

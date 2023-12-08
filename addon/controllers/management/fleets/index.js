@@ -1,4 +1,4 @@
-import Controller, { inject as controller } from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -6,14 +6,7 @@ import { isBlank } from '@ember/utils';
 import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 
-export default class ManagementFleetsIndexController extends Controller {
-    /**
-     * Inject the `operations.zones.index` controller
-     *
-     * @var {Controller}
-     */
-    @controller('operations.zones.index') zones;
-
+export default class ManagementFleetsIndexController extends BaseController {
     /**
      * Inject the `notifications` service
      *
@@ -55,6 +48,13 @@ export default class ManagementFleetsIndexController extends Controller {
      * @var {Service}
      */
     @service hostRouter;
+
+    /**
+     * Inject the `universe` service
+     *
+     * @var {Service}
+     */
+    @service universe;
 
     /**
      * Inject the `filters` service

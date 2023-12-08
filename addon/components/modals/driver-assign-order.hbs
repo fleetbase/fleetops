@@ -17,8 +17,8 @@
                                         </div>
                                     </div>
                                     <div class="order-route-location dark:text-gray-100">
-                                        <div>{{or order.payload.waypoints.firstObject.name order.payload.waypoints.firstObject.street1}}</div>
-                                        <div>{{or order.payload.waypoints.firstObject.city order.payload.waypoints.firstObject.postal_code}}</div>
+                                        <div>{{or (get order.payload.waypoints "0.name") (get order.payload.waypoints "0.street1")}}</div>
+                                        <div>{{or (get order.payload.waypoints "0.city") (get order.payload.waypoints "0.postal_code")}}</div>
                                     </div>
                                 </div>
                                 <div class="order-route-stop">

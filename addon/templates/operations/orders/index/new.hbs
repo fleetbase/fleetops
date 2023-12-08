@@ -1,7 +1,7 @@
 <Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @isMaximizable={{true}} @isMinimizable={{true}} @width="700px" @fullHeight={{true}} @onLoad={{this.setupInterface}} as |overlay|>
     <Overlay::Header @overlay={{overlay}} @title="New Order" @onPressCancel={{this.transitionBack}}>
         <DropdownButton @icon="ellipsis-h" @size="sm" @iconPrefix="fas" @triggerClass="mr-2 hidden md:flex" as |dd|>
-            <div class="next-dd-menu mt-1 mx-0" aria-orientation="vertical" aria-labelledby="user-menu">
+            <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                 <div class="p-1">
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newCustomer)}}>
                         <div class="w-6">
@@ -162,7 +162,7 @@
                         {{#each group.items as |metaField|}}
                             <div class="input-group {{if (eq metaField.type "boolean") "col-span-2 items-center" ""}}">
                                 <div class="flex items-center justify-between">
-                                    {{#if (not (eq metaField.type "boolean"))}}
+                                    {{#if (not-eq metaField.type "boolean")}}
                                         <InputLabel @labelText={{metaField.label}} @required={{metaField.required}} />
                                     {{/if}}
 

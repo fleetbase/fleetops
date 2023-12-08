@@ -4,7 +4,7 @@
             <Button @type="primary" @icon="paper-plane" @text="Dispatch" class="mr-2" @onClick={{fn this.dispatchOrder @model}} />
         {{/if}}
         <DropdownButton @icon="ellipsis-h" @size="sm" @iconPrefix="fas" as |dd|>
-            <div class="next-dd-menu mt-1 mx-0" aria-orientation="vertical" aria-labelledby="user-menu">
+            <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                 <div class="px-1">
                     <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-800 dark:text-gray-300">
                         Order Actions
@@ -351,7 +351,7 @@
                                     </div>
                                     <div class="flex items-start">
                                         <DropdownButton @triggerClass="mr-2" @iconClass="icon-text-height" @buttonSize="sm" @icon="ellipsis-h" @iconPrefix="fas" @contentClass="dropdown-menu" as |dd|>
-                                            <div class="next-dd-menu mt-1 mx-0" aria-orientation="vertical" aria-labelledby="user-menu">
+                                            <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                                                 <div class="px-1">
                                                     <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-300">
                                                         Waypoint Actions
