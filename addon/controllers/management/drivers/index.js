@@ -257,7 +257,13 @@ export default class ManagementDriversIndexController extends BaseController {
         {
             label: 'Vendor',
             cellComponent: 'table/cell/anchor',
-            action: this.viewDriverVendor,
+            onClick: async (driver) => {
+                const vendor = await driver.loadVendor();
+
+                if (vendor) {
+                    this.contextPanel.focus(vendor);
+                }
+            },
             valuePath: 'vendor.name',
             modelNamePath: 'name',
             width: '180px',
@@ -510,6 +516,7 @@ export default class ManagementDriversIndexController extends BaseController {
     @action viewDriver(driver) {
         return this.transitionToRoute('management.drivers.index.details', driver);
     }
+
     /**
      * Create a new `driver` in modal
      *
@@ -530,6 +537,7 @@ export default class ManagementDriversIndexController extends BaseController {
     @action editDriver(driver) {
         return this.transitionToRoute('management.drivers.index.edit', driver);
     }
+    
     /**
      * Delete a `driver` via confirm prompt
      *
@@ -654,19 +662,5 @@ export default class ManagementDriversIndexController extends BaseController {
             }),
             ...options,
         });
-    }
-
-    /**
-     * View information about the driver vendor
-     *
-     * @param {DriverModel} driver
-     * @void
-     */
-    @action async viewDriverVendor(driver) {
-        const vendor = await driver.loadVendor();
-
-        if (vendor) {
-            this.contextPanel.focus(vendor);
-        }
     }
 }

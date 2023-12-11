@@ -1,5 +1,7 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { action, set } from '@ember/object';
+import isNestedRouteTransition from '@fleetbase/ember-core/utils/is-nested-route-transition';
 
 export default class ManagementVehiclesIndexRoute extends Route {
     @service store;
@@ -28,6 +30,13 @@ export default class ManagementVehiclesIndexRoute extends Route {
         'within[radius]': { refreshModel: true, replace: true },
         'within[where]': { refreshModel: true, replace: true },
     };
+
+    @action willTransition(transition) {
+        if (isNestedRouteTransition(transition)) {
+            set(this.queryParams, 'page.refreshModel', false);
+            set(this.queryParams, 'sort.refreshModel', false);
+        }
+    }
 
     model(params) {
         return this.store.query('vehicle', { ...params });

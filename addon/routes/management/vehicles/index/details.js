@@ -8,8 +8,8 @@ export default class ManagementVehiclesIndexDetailsRoute extends Route {
         view: { refreshModel: false },
     };
 
-    model({ public_id }) {
-        return this.store.findRecord('vehicle', public_id);
+    model(params) {
+        return this.store.findRecord('vehicle', params.public_id);
     }
 
     afterModel(model) {

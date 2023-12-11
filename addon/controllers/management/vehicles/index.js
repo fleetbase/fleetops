@@ -1,4 +1,4 @@
-import ManagementController from '../../management';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -6,7 +6,14 @@ import { isBlank } from '@ember/utils';
 import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 
-export default class ManagementVehiclesIndexController extends ManagementController {
+export default class ManagementVehiclesIndexController extends BaseController {
+    /**
+     * Inject the `contextPanel` service
+     *
+     * @var {Service}
+     */
+    @service contextPanel;
+
     /**
      * Inject the `notifications` service
      *
@@ -207,13 +214,6 @@ export default class ManagementVehiclesIndexController extends ManagementControl
     @tracked table;
 
     /**
-     * Inject the `management.drivers.index` controller
-     *
-     * @var {Controller}
-     */
-    @controller('management.drivers.index') drivers;
-
-    /**
      * All possible order status options.
      *
      * @var {String}
@@ -257,7 +257,7 @@ export default class ManagementVehiclesIndexController extends ManagementControl
             action: async (vehicle) => {
                 const driver = await vehicle.loadDriver();
 
-                return this.drivers.viewDriver(driver);
+                return this.contextPanel.focus(driver);
             },
             valuePath: 'driver_name',
             width: '120px',
@@ -471,7 +471,7 @@ export default class ManagementVehiclesIndexController extends ManagementControl
      * @void
      */
     @action viewVehicle(vehicle) {
-        return this.transitionToRoute('management.vehicles.index.details', vehicle);
+        return this.transitionToRoute('management.vehicles.index.details', vehicle, { queryParams: { view: 'details' } });
     }
 
     /**

@@ -36,24 +36,18 @@ export default class OperationsServiceRatesIndexEditController extends Operation
         this.isUpdatingServiceRate = true;
         this.loader.showLoader('.overlay-inner-content', { loadingMessage: 'Updating service rate...' });
 
-        try {
-            return serviceRate
-                .save()
-                .then((serviceRate) => {
-                    return this.transitionToRoute('operations.service-rates.index').then(() => {
-                        this.notifications.success(`Service rate '${serviceRate.service_name}' updated`);
-                        this.resetForm();
-                        this.hostRouter.refresh();
-                    });
-                })
-                .catch(this.notifications.serverError)
-                .finally(() => {
-                    this.isUpdatingServiceRate = false;
-                    this.loader.removeLoader();
+        return serviceRate
+            .save()
+            .then((serviceRate) => {
+                return this.transitionToRoute('operations.service-rates.index').then(() => {
+                    this.notifications.success(`Service rate '${serviceRate.service_name}' updated`);
+                    this.resetForm();
                 });
-        } catch (error) {
-            this.isUpdatingServiceRate = false;
-            this.loader.removeLoader();
-        }
+            })
+            .catch(this.notifications.serverError)
+            .finally(() => {
+                this.isUpdatingServiceRate = false;
+                this.loader.removeLoader();
+            });
     }
 }

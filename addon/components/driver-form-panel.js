@@ -100,25 +100,19 @@ export default class DriverFormPanelComponent extends Component {
 
         contextComponentCallback(this, 'onBeforeSave', driver);
 
-        try {
-            return driver
-                .save()
-                .then((driver) => {
-                    this.notifications.success(`Driver (${driver.name}) saved successfully.`);
-                    contextComponentCallback(this, 'onAfterSave', driver);
-                })
-                .catch((error) => {
-                    this.notifications.serverError(error);
-                })
-                .finally(() => {
-                    this.loader.removeLoader('.next-content-overlay-panel-container ');
-                    this.isLoading = false;
-                });
-        } catch (error) {
-            this.notifications.error(error.message);
-            this.loader.removeLoader('.next-content-overlay-panel-container ');
-            this.isLoading = false;
-        }
+        return driver
+            .save()
+            .then((driver) => {
+                this.notifications.success(`Driver (${driver.name}) saved successfully.`);
+                contextComponentCallback(this, 'onAfterSave', driver);
+            })
+            .catch((error) => {
+                this.notifications.serverError(error);
+            })
+            .finally(() => {
+                this.loader.removeLoader('.next-content-overlay-panel-container ');
+                this.isLoading = false;
+            });
     }
 
     /**

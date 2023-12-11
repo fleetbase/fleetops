@@ -296,27 +296,21 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
         this.isCreatingServiceRate = true;
         this.loader.showLoader('.overlay-inner-content', { loadingMessage: 'Creating service rate...' });
 
-        try {
-            return serviceRate
-                .save()
-                .then((serviceRate) => {
-                    return this.transitionToRoute('operations.service-rates.index').then(() => {
-                        this.notifications.success(`New Service Rate ${serviceRate.service_name} Created`);
-                        this.resetForm();
-                        this.hostRouter.refresh();
-                    });
-                })
-                .catch((error) => {
-                    this.notifications.serverError(error);
-                })
-                .finally(() => {
-                    this.isCreatingServiceRate = false;
-                    this.loader.removeLoader();
+        return serviceRate
+            .save()
+            .then((serviceRate) => {
+                return this.transitionToRoute('operations.service-rates.index').then(() => {
+                    this.notifications.success(`New Service Rate ${serviceRate.service_name} Created`);
+                    this.resetForm();
                 });
-        } catch (error) {
-            this.isCreatingServiceRate = false;
-            this.loader.removeLoader();
-        }
+            })
+            .catch((error) => {
+                this.notifications.serverError(error);
+            })
+            .finally(() => {
+                this.isCreatingServiceRate = false;
+                this.loader.removeLoader();
+            });
     }
 
     /**
