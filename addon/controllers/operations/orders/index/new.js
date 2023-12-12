@@ -133,7 +133,6 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @tracked routeProfile = 'driving';
     @tracked routeProfileOptions = ['driving', 'bycicle', 'walking'];
     @tracked podOptions = ['scan', 'signature'];
-    @tracked isViewingRoutePreview = false;
     @tracked isCsvImportedOrder = false;
     @tracked routePreviewArray = [];
     @tracked previewRouteControl;

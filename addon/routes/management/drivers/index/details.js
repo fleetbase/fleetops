@@ -5,7 +5,7 @@ export default class ManagementDriversIndexDetailsRoute extends Route {
     @service store;
 
     queryParams = {
-        view: { refreshModel: false }
+        view: { refreshModel: false },
     };
 
     model({ public_id }) {

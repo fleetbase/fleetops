@@ -118,13 +118,6 @@ export default class ManagementIssuesIndexController extends BaseController {
     @tracked priority;
 
     /**
-     * The filterable param `priority`
-     *
-     * @var {Array|String}
-     */
-    @tracked status;
-
-    /**
      * The filterable param `type`
      *
      * @var {String}

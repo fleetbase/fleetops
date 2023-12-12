@@ -183,6 +183,22 @@ class Vendor extends Model
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function facilitatorOrders()
+    {
+        return $this->hasMany(Order::class, 'facilitator_uuid', 'uuid');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function customerOrders()
+    {
+        return $this->hasMany(Order::class, 'customer_uuid')->whereNull('deleted_at')->withoutGlobalScopes();
+    }
+
+    /**
      * Get the vendor logo url.
      *
      * @return string

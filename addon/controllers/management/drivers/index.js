@@ -133,13 +133,6 @@ export default class ManagementDriversIndexController extends BaseController {
     @tracked internal_id;
 
     /**
-     * The filterable param `drivers_license_number`
-     *
-     * @var {String}
-     */
-    @tracked drivers_license_number;
-
-    /**
      * The filterable param `name`
      *
      * @var {String}
@@ -537,7 +530,7 @@ export default class ManagementDriversIndexController extends BaseController {
     @action editDriver(driver) {
         return this.transitionToRoute('management.drivers.index.edit', driver);
     }
-    
+
     /**
      * Delete a `driver` via confirm prompt
      *
