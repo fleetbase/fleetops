@@ -221,7 +221,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         this.ordersController.setLayoutMode('map');
 
         // create initial setup function which runs 600ms after invoked
-        const setup = (ms = 500) => {
+        const setup = (ms = 600) => {
             return later(
                 this,
                 () => {
@@ -238,7 +238,13 @@ export default class OperationsOrdersIndexViewController extends BaseController 
 
         // create a display order route only function
         const displayOrderRoute = () => {
-            return this.displayOrderRoute();
+            return later(
+                this,
+                () => {
+                    return this.displayOrderRoute();
+                },
+                300
+            );
         };
 
         // re-display order routes when livemap has coordinates
