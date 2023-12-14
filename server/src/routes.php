@@ -185,6 +185,14 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
         $router->prefix(config('fleetops.api.routing.internal_prefix', 'int'))->namespace('Internal')->group(
             function ($router) {
                 $router->group(
+                    ['prefix' => 'v1/fleet-ops/navigator', 'namespace' => 'v1'],
+                    function ($router) {
+                        $router->get('get-link-app', 'NavigatorController@getLinkAppUrl');
+                        $router->get('link-app', 'NavigatorController@linkApp');
+                    }
+                );
+
+                $router->group(
                     ['prefix' => 'v1', 'namespace' => 'v1', 'middleware' => ['fleetbase.protected', \Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]],
                     function ($router) {
                         $router->fleetbaseRoutes(
