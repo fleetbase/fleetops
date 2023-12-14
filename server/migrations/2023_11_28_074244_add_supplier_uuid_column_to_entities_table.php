@@ -14,7 +14,7 @@ class AddSupplierUuidColumnToEntitiesTable extends Migration
     public function up()
     {
         Schema::table('entities', function (Blueprint $table) {
-            $table->foreignUuid('supplier_uuid')->nullable()->after('driver_assigned_uuid')->references('uuid')->on('categories');
+            $table->foreignUuid('supplier_uuid')->nullable()->after('driver_assigned_uuid')->references('uuid')->on('vendors');
         });
     }
 
