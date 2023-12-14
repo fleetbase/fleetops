@@ -92,4 +92,32 @@ class VehicleDevice extends Model
     {
         return $this->hasMany(VehicleDeviceEvent::class);
     }
+
+    /**
+     * Retrieve the associated Vehicle model for the current instance.
+     *
+     * @param \Closure|null $callback A callback function to be executed if a Vehicle model is found.
+     *
+     * @return \App\Models\Vehicle|null The associated Vehicle model, or null if not found.
+     */
+    public function getVehicle(?\Closure $callback): ?Vehicle
+    {
+        $this->load(['vehicle']);
+        $vehicle = null;
+
+        if ($this->vehicle instanceof Vehicle) {
+            $vehicle = $this->vehicle;
+        }
+
+        // check if id is set
+        if (!$vehicle && $this->vehicle_uuid) {
+            $vehicle = Vehicle::where('uuid', $this->vehicle_uuid)->first();
+        }
+
+        if ($vehicle && is_callable($callback)) {
+            $callback($vehicle);
+        }
+
+        return $vehicle;
+    }
 }
