@@ -562,6 +562,9 @@ class Place extends Model
             'province'      => ['alias' => ['state']],
             'postal_code'   => ['alias' => ['postal', 'zip', 'zip_code']],
             'phone'         => ['alias' => ['phone', 'mobile', 'phone_number', 'number', 'cell', 'cell_phone', 'mobile_number', 'contact_number']],
+            'location'      => ['alias' => ['position']],
+            'latitude'      => ['alias' => ['lat', 'x']],
+            'longitude'     => ['alias' => ['lon', 'lng', 'y']],
         ];
         $address = '';
 
@@ -569,7 +572,8 @@ class Place extends Model
             if ($field === 'phone') {
                 continue;
             }
-            $value = Utils::or($row, $options['alias']);
+
+            $value = Utils::or($row, array_merge([$field], $options['alias']));
             if ($value) {
                 $address .= $value . ' ';
             }
@@ -601,7 +605,7 @@ class Place extends Model
 
         // set meta data
         $meta = collect($row)->except(['name', ...$addressFields['street_number']['alias'], ...$addressFields['street2']['alias'], ...$addressFields['city']['alias'], ...$addressFields['neighborhood']['alias'], ...$addressFields['province']['alias'], ...$addressFields['postal_code']['alias'], ...$addressFields['phone']['alias']])->toArray();
-        $place->setMetas($meta);
+        $place->setMeta($meta);
 
         // set the import id
         $place->setAttribute('_import_id', $importId);
