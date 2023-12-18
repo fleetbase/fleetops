@@ -567,9 +567,21 @@ class Place extends Model
             'longitude'     => ['alias' => ['lon', 'lng', 'y']],
         ];
         $address = '';
+        $latitude = null;
+        $longitude = null;
 
         foreach ($addressFields as $field => $options) {
             if ($field === 'phone') {
+                continue;
+            }
+
+            if ($field === 'latitude') {
+                $latitude = Utils::or($row, array_merge([$field], $options['alias']));
+                continue;
+            }
+
+            if ($field === 'longitude') {
+                $longitude = Utils::or($row, array_merge([$field], $options['alias']));
                 continue;
             }
 
@@ -581,6 +593,12 @@ class Place extends Model
 
         $address = rtrim($address);
 
+        // if latitude and longitude provided
+        if ($latitude && $longitude) {
+            $address = $latitude . ', ' . $longitude;
+        }
+
+        // if no address
         if (!$address) {
             return null;
         }
