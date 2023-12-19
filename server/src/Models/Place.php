@@ -564,7 +564,7 @@ class Place extends Model
             'phone'         => ['alias' => ['phone', 'mobile', 'phone_number', 'number', 'cell', 'cell_phone', 'mobile_number', 'contact_number']],
             'location'      => ['alias' => ['position']],
             'latitude'      => ['alias' => ['lat', 'x']],
-            'longitude'     => ['alias' => ['lon', 'lng', 'y']],
+            'longitude'     => ['alias' => ['lon', 'lng', 'long', 'y']],
         ];
         $address = '';
         $latitude = null;
@@ -606,8 +606,9 @@ class Place extends Model
         $place = Place::createFromGeocodingLookup($address, false);
 
         foreach ($addressFields as $field => $options) {
-            if (empty($place->{$field})) {
-                $value = Utils::or($row, $options['alias']);
+            if ($place->isFillable($field) && empty($place->{$field})) {
+                $value = Utils::or($row, array_merge([$field], $options['alias']));
+
                 if ($value) {
                     $place->{$field} = $value;
                 }

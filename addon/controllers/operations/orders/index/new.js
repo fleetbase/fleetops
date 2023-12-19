@@ -14,6 +14,7 @@ import isNotEmpty from '@fleetbase/ember-core/utils/is-not-empty';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import groupBy from '@fleetbase/ember-core/utils/macros/group-by';
 import extractCoordinates from '@fleetbase/ember-core/utils/extract-coordinates';
+import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 L.Bounds.prototype.intersects = function (bounds) {
     var min = this.min,
@@ -233,11 +234,6 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
             if (importId) {
                 const entities = this.entities.filter((entity) => entity._import_id === importId);
-
-                // if (entities.length === 0) {
-                //     return;
-                // }
-
                 const group = {
                     importId,
                     waypoint,
@@ -445,7 +441,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
         if (on) {
             const company = this.store.peekRecord('company', this.currentUser.companyId);
-            this.order.adhoc_distance = company?.options?.fleetops?.adhoc_distance ?? defaultDistanceInMeters;
+            this.order.adhoc_distance =getWithDefault(company, 'options.fleetops.adhoc_distance', defaultDistanceInMeters);
         } else {
             this.order.adhoc_distance = defaultDistanceInMeters;
         }

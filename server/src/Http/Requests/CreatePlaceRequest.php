@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
+use Fleetbase\FleetOps\Rules\ResolvablePoint;
 use Fleetbase\Http\Requests\FleetbaseRequest;
 use Fleetbase\Rules\ExistsInAny;
 use Illuminate\Validation\Rule;
@@ -33,6 +34,9 @@ class CreatePlaceRequest extends FleetbaseRequest
             'customer' => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
             'contact'  => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
             'vendor'   => 'nullable|exists:vendors,public_id',
+            'location' => ['nullable', new ResolvablePoint()],
+            'latitude' => 'nullable',
+            'longitude' => 'nullable',
         ];
     }
 }

@@ -975,7 +975,7 @@ class Order extends Model
             $this->load('driverAssigned');
 
             if ($this->driverAssigned instanceof Driver) {
-                $this->payload->setPickup($this->driverAssigned->location, true);
+                $this->payload->setPickup($this->driverAssigned->location, ['save' => true]);
             }
         }
 
@@ -985,7 +985,7 @@ class Order extends Model
             $this->load('driverAssigned');
 
             if ($this->driverAssigned instanceof Driver) {
-                $this->payload->setPickup($this->driverAssigned->location, true);
+                $this->payload->setPickup($this->driverAssigned->location, ['save' => true]);
             }
         }
     }

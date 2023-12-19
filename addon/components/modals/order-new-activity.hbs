@@ -33,7 +33,7 @@
                             </span>
                         </label>
                         <div>
-                            <Badge @status="default" class="uppercase">{{activity.code}}</Badge>
+                            <Badge @status={{dasherize activity.code}} class="uppercase">{{activity.code}}</Badge>
                         </div>
                     </div>
                 {{/each}}

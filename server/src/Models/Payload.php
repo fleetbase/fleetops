@@ -273,6 +273,17 @@ class Payload extends Model
         return $this;
     }
 
+    public function setCurrentWaypoint(Place $destination, bool $save = true): Payload
+    {
+        $this->current_waypoint_uuid = $destination->uuid;
+
+        if ($this->save) {
+            $this->save();
+        }
+
+        return $this;
+    }
+
     public function setWaypoints($waypoints = [])
     {
         if (!is_array($waypoints)) {
@@ -544,7 +555,7 @@ class Payload extends Model
         return $this->order;
     }
 
-    public function setPlace($property, $place, $save = false)
+    public function setPlace($property, Place $place, array $options = [])
     {
         if (!$place) {
             return;
@@ -552,6 +563,8 @@ class Payload extends Model
 
         $attr     = $property . '_uuid';
         $instance = Place::createFromMixed($place);
+        $save = data_get($options, 'save', false);
+        $callback = data_get($options, 'callback', false);
 
         if ($instance) {
             if (Str::isUuid($instance)) {
@@ -567,34 +580,38 @@ class Payload extends Model
             $this->save();
         }
 
+        if (is_callable($callback)) {
+            $callback($instance, $this);
+        }
+
         return $this;
     }
 
-    public function setPickup($place, $save = false)
+    public function setPickup($place, array $options = [])
     {
         // if using the special [driver] value, set the meta `pickup_is_driver_location`
         if ($place === '[driver]') {
             $this->setMeta('pickup_is_driver_location', true);
-
             return;
         }
 
-        return $this->setPlace('pickup', $place, $save);
+        return $this->setPlace('pickup', $place, $options);
     }
 
-    public function setDropoff($place, $save = false)
+    public function setDropoff($place, array $options = [])
     {
-        return $this->setPlace('dropoff', $place, $save);
+        return $this->setPlace('dropoff', $place, $options);
     }
 
-    public function setReturn($place, $save = false)
+    public function setReturn($place, array $options = [])
     {
-        return $this->setPlace('return', $place, $save);
+        return $this->setPlace('return', $place, $options);
     }
 
+    // when an order only has waypoints -- no pickup/dropoff
     public function getIsMultipleDropOrderAttribute()
     {
-        return $this->waypoints && $this->waypoints->count() > 0;
+        return !$this->pickup && $this->waypoints && $this->waypoints->count() > 0;
     }
 
     /**

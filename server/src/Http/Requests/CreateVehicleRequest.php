@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
+use Fleetbase\FleetOps\Rules\ResolvablePoint;
 use Fleetbase\Http\Requests\FleetbaseRequest;
 
 class CreateVehicleRequest extends FleetbaseRequest
@@ -27,6 +28,7 @@ class CreateVehicleRequest extends FleetbaseRequest
             'status' => 'nullable|in:operational,maintenance,decommissioned',
             'vendor' => 'nullable|exists:vendors,public_id',
             'driver' => 'nullable|exists:drivers,public_id',
+            'location' => ['nullable', new ResolvablePoint()]
         ];
     }
 }
