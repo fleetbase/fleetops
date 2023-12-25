@@ -370,7 +370,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                         this.fetch.uploadFile.perform(
                             file,
                             {
-                                path: `uploads/order-imports/${this.currentUser.companyId}`,
+                                path: `uploads/fleet-ops/order-imports/${this.currentUser.companyId}`,
                                 type: `order_import`,
                             },
                             (uploadedFile) => {
@@ -441,7 +441,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
         if (on) {
             const company = this.store.peekRecord('company', this.currentUser.companyId);
-            this.order.adhoc_distance =getWithDefault(company, 'options.fleetops.adhoc_distance', defaultDistanceInMeters);
+            this.order.adhoc_distance = getWithDefault(company, 'options.fleetops.adhoc_distance', defaultDistanceInMeters);
         } else {
             this.order.adhoc_distance = defaultDistanceInMeters;
         }
@@ -1294,7 +1294,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 onAfterSave: (vendor) => {
                     this.setOrderFacilitator(vendor);
                     this.contextPanel.clear();
-                }
+                },
             });
         }
 
@@ -1304,7 +1304,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 onAfterSave: (contact) => {
                     this.setOrderFacilitator(contact);
                     this.contextPanel.clear();
-                }
+                },
             });
         }
     }
@@ -1318,7 +1318,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 onAfterSave: (vendor) => {
                     this.setOrderCustomer(vendor);
                     this.contextPanel.clear();
-                }
+                },
             });
         }
 
@@ -1328,7 +1328,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 onAfterSave: (contact) => {
                     this.setOrderCustomer(contact);
                     this.contextPanel.clear();
-                }
+                },
             });
         }
     }

@@ -1,4 +1,4 @@
-<Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @isMaximizable={{true}} @isMinimizable={{true}} @width="570px" @fullHeight={{true}} @onLoad={{this.setupInterface}} as |overlay|>
+<Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @width="570px" @fullHeight={{true}} @onLoad={{this.setupInterface}} as |overlay|>
     <Overlay::Header @overlay={{overlay}} @title="New Order" @onPressCancel={{this.transitionBack}}>
         <DropdownButton @icon="ellipsis-h" @size="sm" @iconPrefix="fas" @triggerClass="mr-2 hidden md:flex" as |dd|>
             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">

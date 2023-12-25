@@ -87,14 +87,14 @@
                     <TimelineItem @activeStatus={{@model.status}} as |trackingStatus|>
                         <div class="flex flex-col px-3 py-2 rounded text-sm leading-4 space-y-2 bg-gray-100 dark:bg-gray-900 dark:text-white">
                             <div class="flex flex-col space-y-1">
-                                <div class="text-sm font-semibold truncate">{{trackingStatus.status}}</div>
-                                {{!-- <div class="text-xs truncate">{{n-a trackingStatus.details}}</div> --}}
-                                {{!-- <div class="text-xs">{{trackingStatus.createdAtShortWithTimedivspan> --}}
+                                <div class="text-xs font-semibold truncate">{{trackingStatus.status}}</div>
+                                <div class="text-xs truncate">{{n-a trackingStatus.details}}</div>
+                                <div class="text-xs">{{trackingStatus.createdAtShortWithTime}}</div>
                             </div>
                             <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                                 <InputInfo>
-                                    <div>{{or trackingStatus.details trackingStatus.status}}</div>
-                                    <div>{{trackingStatus.createdAtShortWithTime}}</div>
+                                    <div class="text-xs">{{or trackingStatus.details trackingStatus.status}}</div>
+                                    <div class="text-xs">{{trackingStatus.createdAtShortWithTime}}</div>
                                 </InputInfo>
                             </Attach::Tooltip>
                         </div>

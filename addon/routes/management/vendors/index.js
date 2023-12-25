@@ -35,7 +35,6 @@ export default class ManagementVendorsIndexRoute extends Route {
     }
 
     async setupController(controller, model) {
-        console.log('setupController action called');
         super.setupController(...arguments);
 
         // load integrated vendors

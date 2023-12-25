@@ -96,12 +96,10 @@ export default class OrderConfigEntitiesEditorComponent extends Component {
     }
 
     @action setMetaKeyValue(index, key, { target }) {
-        console.log('setMetaKeyValue()', ...arguments);
         const { orderConfig } = this;
         const { value } = target;
 
-        console.log(value, get(orderConfig, `meta.entities.${index}.meta.${key}`));
-
+        // console.log(value, get(orderConfig, `meta.entities.${index}.meta.${key}`));
         // set(orderConfig, `meta.entities.${index}.meta.${key}`, value);
 
         if (typeof this.args.onEntitiesChanged === 'function') {
