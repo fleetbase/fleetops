@@ -7,10 +7,9 @@ use Fleetbase\FleetOps\Http\Requests\UpdatePayloadRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Payload as PayloadResource;
 use Fleetbase\FleetOps\Models\Payload;
-use Fleetbase\FleetOps\Models\Place;
-use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 
 // use Fleetbase\FleetOps\Support\Utils;
 
@@ -25,41 +24,42 @@ class PayloadController extends Controller
      */
     public function create(CreatePayloadRequest $request)
     {
-        // get request input
-        $input = $request->only(['pickup', 'dropoff', 'type', 'return', 'waypoints', 'customer', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method']);
+        $input     = $request->all();
+        $entities  = data_get($input, 'entities', []);
+        $waypoints = data_get($input, 'waypoints', []);
+        $pickup    = data_get($input, 'pickup');
+        $dropoff   = data_get($input, 'dropoff');
+        $return    = data_get($input, 'return');
 
         // make sure company is set
         $input['company_uuid'] = session('company');
 
         // create the payload
-        $payload = new Payload($input);
+        $payload = new Payload(Arr::only($input, ['type', 'provider', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method']));
+
+        // if no pickup and dropoff extract from waypoints
+        if (empty($pickup) && empty($dropoff) && count($waypoints)) {
+            $pickup  = array_shift($waypoints);
+            $dropoff = array_pop($waypoints);
+        }
 
         // set pickup point
-        $payload->setPickup($request->input('pickup'));
+        $payload->setPickup($pickup);
 
         // set dropoff point
-        $payload->setDropoff($request->input('dropoff'));
+        $payload->setDropoff($dropoff);
 
         // set return point
-        $payload->setReturn($request->input('return'));
+        $payload->setReturn($return);
 
         // save payload
         $payload->save();
 
         // set waypoints
-        if ($request->has('waypoints') && is_array($request->input('waypoints'))) {
-            foreach ($request->input('waypoints') as $index => $place) {
-                // get place
-                $id = Place::createFromMixed($place);
+        $payload->setWaypoints($waypoints);
 
-                // create waypoint
-                Waypoint::create([
-                    'place_uuid'   => $id,
-                    'payload_uuid' => $payload->uuid,
-                    'order'        => $index,
-                ]);
-            }
-        }
+        // set entities
+        $payload->setEntities($entities);
 
         // response the driver resource
         return new PayloadResource($payload);
@@ -88,42 +88,40 @@ class PayloadController extends Controller
         }
 
         // get request input
-        $input = $request->only(['pickup', 'dropoff', 'type', 'return', 'waypoints', 'customer', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method']);
+        $input     = $request->all();
+        $entities  = data_get($input, 'entities', []);
+        $waypoints = data_get($input, 'waypoints', []);
+        $pickup    = data_get($input, 'pickup');
+        $dropoff   = data_get($input, 'dropoff');
+        $return    = data_get($input, 'return');
 
         // pickup assignment
-        if ($request->has('pickup')) {
-            $payload->setPickup($request->input('pickup'));
+        if ($pickup) {
+            $payload->setPickup($pickup);
         }
 
         // dropoff assignment
-        if ($request->has('dropoff')) {
-            $payload->setDropoff($request->input('dropoff'));
+        if ($dropoff) {
+            $payload->setDropoff($dropoff);
         }
 
         // return assignment
-        if ($request->has('return')) {
-            $payload->setReturn($request->input('return'));
+        if ($return) {
+            $payload->setReturn($return);
         }
 
         // set waypoints
-        if ($request->has('waypoints') && is_array($request->input('waypoints'))) {
-            $waypointCount = $payload->waypoints->count() ?? 0;
+        if ($waypoints) {
+            $payload->setWaypoints($waypoints);
+        }
 
-            foreach ($request->input('waypoints') as $index => $place) {
-                // get place
-                $id = Place::createFromMixed($place);
-
-                // create waypoint
-                Waypoint::create([
-                    'place_uuid'   => $id,
-                    'payload_uuid' => $payload->uuid,
-                    'order'        => $index + $waypointCount,
-                ]);
-            }
+        // set entities
+        if ($entities) {
+            $payload->setEntities($entities);
         }
 
         // update the payload
-        $payload->fill($input);
+        $payload->fill(array_filter(Arr::only($input, ['type', 'provider', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method'])));
 
         // save the payload
         $payload->save();

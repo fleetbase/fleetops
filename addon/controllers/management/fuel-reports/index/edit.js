@@ -1,9 +1,9 @@
-import Controller from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
-export default class ManagementFuelReportsIndexEditController extends Controller {
+export default class ManagementFuelReportsIndexEditController extends BaseController {
     /**
      * Inject the `hostRouter` service
      *

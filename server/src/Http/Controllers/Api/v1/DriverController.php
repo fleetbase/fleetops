@@ -431,7 +431,10 @@ class DriverController extends Controller
         }
 
         // check if user exists
-        $user = User::where('phone', $identity)->orWhere('email', $identity)->first();
+        $user = User::where('type', 'driver')->where(function ($query) use ($identity) {
+            $query->where('phone', $identity);
+            $query->orWhere('phone', $identity);
+        })->first();
 
         if (!$user) {
             return response()->error('Unable to verify code.');
@@ -456,9 +459,9 @@ class DriverController extends Controller
             [
                 'user_uuid'    => $user->uuid,
                 'company_uuid' => $company->uuid,
-                'name'         => $attrs['name'] ?? $user->name,
-                'phone'        => $attrs['phone'] ?? $user->phone,
-                'email'        => $attrs['email'] ?? $user->email,
+                'name'         => data_get($attrs, 'name', $user->name),
+                'phone'        => data_get($attrs, 'phone', $user->phone),
+                'email'        => data_get($attrs, 'email', $user->email),
                 'location'     => new Point(0, 0),
             ]
         );

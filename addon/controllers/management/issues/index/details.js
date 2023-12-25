@@ -1,7 +1,7 @@
-import Controller from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-export default class ManagementIssuesIndexDetailsController extends Controller {
+export default class ManagementIssuesIndexDetailsController extends BaseController {
     /**
      * The currently active view tab ('details' by default).
      *

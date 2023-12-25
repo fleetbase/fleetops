@@ -1911,7 +1911,8 @@ export default class LiveMapComponent extends Component {
 
                     // from the `get-active-order-coordinates` the responded coordinates will always be [longitude, latitude]
                     // const [latitude, longitude] = extractCoordinates(coordinates.firstObject.coordinates);
-                    const [longitude, latitude] = coordinates.filter((point) => point.cordinates[0] !== 0).firstObject?.coordinates;
+                    const validCoordinates = coordinates.filter((point) => point.cordinates[0] !== 0);
+                    const [longitude, latitude] = getWithDefault(validCoordinates, '0.coordiantes', [0, 0]);
 
                     initialCoordinates.latitude = latitude;
                     initialCoordinates.longitude = longitude;
@@ -1934,10 +1935,12 @@ export default class LiveMapComponent extends Component {
         this.isLoading = true;
 
         return new Promise((resolve) => {
-            const cachedRecords = this.serviceAreas?.getFromCache('serviceAreas', 'service-area');
+            if (this.serviceAreas && typeof this.serviceAreas.getFromCache === 'function') {
+                const cachedRecords = this.serviceAreas.getFromCache('serviceAreas', 'service-area');
 
-            if (cachedRecords) {
-                resolve(cachedRecords);
+                if (cachedRecords) {
+                    resolve(cachedRecords);
+                }
             }
 
             return this.store

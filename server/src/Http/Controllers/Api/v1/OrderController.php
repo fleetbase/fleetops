@@ -33,7 +33,7 @@ class OrderController extends Controller
     /**
      * Creates a new Fleetbase Order resource.
      *
-     * @param \Fleetbase\Http\Requests\CreateOrderRequest $request
+     * @param \Illuminate\Http\Request|\Fleetbase\Http\Requests\CreateOrderRequest $request
      *
      * @return \Fleetbase\Http\Resources\Order
      */
@@ -61,17 +61,35 @@ class OrderController extends Controller
 
         // create payload
         if ($request->has('payload') && $request->isArray('payload')) {
-            $payloadInput = $request->input('payload');
             $payload      = new Payload();
+            $payloadInput = $request->input('payload');
+            $entities     = data_get($payloadInput, 'entities', []);
+            $waypoints    = data_get($payloadInput, 'waypoints', []);
+            $pickup       = data_get($payloadInput, 'pickup');
+            $dropoff      = data_get($payloadInput, 'dropoff');
+            $return       = data_get($payloadInput, 'return');
 
-            $payload->setPickup($payloadInput['pickup']);
-            $payload->setDropoff($payloadInput['dropoff']);
-            if ($request->has('payload.return')) {
-                $payload->setReturn($payloadInput['return']);
+            // if no pickup and dropoff extract from waypoints
+            if (empty($pickup) && empty($dropoff) && count($waypoints)) {
+                $pickup  = array_shift($waypoints);
+                $dropoff = array_pop($waypoints);
             }
-            $payload->setWaypoints($payloadInput['waypoints'] ?? []);
-            $payload->setEntities($payloadInput['entities'] ?? []);
+
+            $payload->setPickup($pickup, [
+                'callback' => function ($pickup, $payload) {
+                    $payload->setCurrentWaypoint($pickup);
+                },
+            ]);
+            $payload->setDropoff($dropoff);
+            if ($return) {
+                $payload->setReturn($return);
+            }
+
             $payload->save();
+
+            // set waypoints and entities after payload is saved
+            $payload->setWaypoints($waypoints);
+            $payload->setEntities($entities);
 
             $input['payload_uuid'] = $payload->uuid;
         } elseif ($request->isString('payload')) {
@@ -84,19 +102,40 @@ class OrderController extends Controller
 
         // create a payload if missing payload[] but has pickup/dropoff/etc
         if ($request->missing('payload')) {
-            $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
             $payload      = new Payload();
+            $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
+            $entities     = data_get($payloadInput, 'entities', []);
+            $waypoints    = data_get($payloadInput, 'waypoints', []);
+            $pickup       = data_get($payloadInput, 'pickup');
+            $dropoff      = data_get($payloadInput, 'dropoff');
+            $return       = data_get($payloadInput, 'return');
 
-            $payload->setPickup($payloadInput['pickup']);
-            $payload->setDropoff($payloadInput['dropoff']);
-            if ($request->has('return')) {
-                $payload->setReturn($payloadInput['return']);
+            // if no pickup and dropoff extract from waypoints
+            if (empty($pickup) && empty($dropoff) && count($waypoints)) {
+                $pickup  = array_shift($waypoints);
+                $dropoff = array_pop($waypoints);
             }
-            $payload->setWaypoints($payloadInput['waypoints'] ?? []);
-            $payload->setEntities($payloadInput['entities'] ?? []);
+
+            $payload->setPickup($pickup, [
+                'callback' => function ($pickup, $payload) {
+                    $payload->setCurrentWaypoint($pickup);
+                },
+            ]);
+            $payload->setDropoff($dropoff);
+            if ($return) {
+                $payload->setReturn($return);
+            }
+
             $payload->save();
 
+            // set waypoints and entities after payload is saved
+            $payload->setWaypoints($waypoints);
+            $payload->setEntities($entities);
+
             $input['payload_uuid'] = $payload->uuid;
+
+            // set the first / current waypoint
+            $payload->setCurrentWaypoint($payload->pickup);
         }
 
         // driver assignment
@@ -218,17 +257,42 @@ class OrderController extends Controller
 
         // update payload if new input or change payload by id
         if ($request->isArray('payload')) {
+            $payload      = data_get($order, 'payload', new Payload());
             $payloadInput = $request->input('payload');
-            $payload      = new Payload();
+            $entities     = data_get($payloadInput, 'entities', []);
+            $waypoints    = data_get($payloadInput, 'waypoints', []);
+            $pickup       = data_get($payloadInput, 'pickup');
+            $dropoff      = data_get($payloadInput, 'dropoff');
+            $return       = data_get($payloadInput, 'return');
 
-            $payload->setPickup($payloadInput['pickup']);
-            $payload->setDropoff($payloadInput['dropoff']);
-            if ($request->has('payload.return')) {
-                $payload->setReturn($payloadInput['return']);
+            // if no pickup and dropoff extract from waypoints
+            if (empty($pickup) && empty($dropoff) && count($waypoints)) {
+                $pickup  = array_shift($waypoints);
+                $dropoff = array_pop($waypoints);
             }
-            $payload->setWaypoints($payloadInput['waypoints'] ?? []);
-            $payload->setEntities($payloadInput['entities'] ?? []);
+
+            if ($pickup) {
+                $payload->setPickup($pickup);
+            }
+
+            if ($dropoff) {
+                $payload->setDropoff($dropoff);
+            }
+
+            if ($return) {
+                $payload->setReturn($return);
+            }
+
             $payload->save();
+
+            // set waypoints and entities after payload is saved
+            if ($waypoints) {
+                $payload->setWaypoints($waypoints);
+            }
+
+            if ($entities) {
+                $payload->setEntities($entities);
+            }
 
             $input['payload_uuid'] = $payload->uuid;
         } elseif ($request->has('payload')) {
@@ -239,34 +303,46 @@ class OrderController extends Controller
             unset($input['payload']);
         }
 
-        // update payload properties if applicable
-        if ($request->has('pickup')) {
-            if ($order->payload) {
-                $order->payload->setPickup($request->input('pickup'));
-            }
-        }
-        if ($request->has('dropoff')) {
-            if ($order->payload) {
-                $order->payload->setDropoff($request->input('dropoff'));
-            }
-        }
+        // create a payload if missing payload[] but has pickup/dropoff/etc
+        if ($request->missing('payload')) {
+            $payload      = data_get($order, 'payload', new Payload());
+            $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
+            $entities     = data_get($payloadInput, 'entities', []);
+            $waypoints    = data_get($payloadInput, 'waypoints', []);
+            $pickup       = data_get($payloadInput, 'pickup');
+            $dropoff      = data_get($payloadInput, 'dropoff');
+            $return       = data_get($payloadInput, 'return');
 
-        if ($request->has('return')) {
-            if ($order->payload) {
-                $order->payload->setReturn($request->input('return'));
+            // if no pickup and dropoff extract from waypoints
+            if (empty($pickup) && empty($dropoff) && count($waypoints)) {
+                $pickup  = array_shift($waypoints);
+                $dropoff = array_pop($waypoints);
             }
-        }
 
-        if ($request->has('waypoints')) {
-            if ($order->payload) {
-                $order->payload->setWaypoints($request->input('waypoints'));
+            if ($pickup) {
+                $payload->setPickup($pickup);
             }
-        }
 
-        if ($request->has('entities')) {
-            if ($order->payload) {
-                $order->payload->setEntities($request->input('entities'));
+            if ($dropoff) {
+                $payload->setDropoff($dropoff);
             }
+
+            if ($return) {
+                $payload->setReturn($return);
+            }
+
+            $payload->save();
+
+            // set waypoints and entities after payload is saved
+            if ($waypoints) {
+                $payload->setWaypoints($waypoints);
+            }
+
+            if ($entities) {
+                $payload->setEntities($entities);
+            }
+
+            $input['payload_uuid'] = $payload->uuid;
         }
 
         // driver assignment

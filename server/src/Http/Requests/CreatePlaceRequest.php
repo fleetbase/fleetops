@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
+use Fleetbase\FleetOps\Rules\ResolvablePoint;
 use Fleetbase\Http\Requests\FleetbaseRequest;
 use Fleetbase\Rules\ExistsInAny;
 use Illuminate\Validation\Rule;
@@ -28,11 +29,14 @@ class CreatePlaceRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'name'     => [Rule::requiredIf($this->isMethod('POST'))],
-            'street1'  => [Rule::requiredIf($this->isMethod('POST'))],
-            'customer' => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
-            'contact'  => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
-            'vendor'   => 'nullable|exists:vendors,public_id',
+            'name'      => [Rule::requiredIf($this->isMethod('POST'))],
+            'street1'   => [Rule::requiredIf($this->isMethod('POST'))],
+            'customer'  => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
+            'contact'   => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
+            'vendor'    => 'nullable|exists:vendors,public_id',
+            'location'  => ['nullable', new ResolvablePoint()],
+            'latitude'  => 'nullable',
+            'longitude' => 'nullable',
         ];
     }
 }

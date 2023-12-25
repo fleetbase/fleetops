@@ -562,14 +562,30 @@ class Place extends Model
             'province'      => ['alias' => ['state']],
             'postal_code'   => ['alias' => ['postal', 'zip', 'zip_code']],
             'phone'         => ['alias' => ['phone', 'mobile', 'phone_number', 'number', 'cell', 'cell_phone', 'mobile_number', 'contact_number']],
+            'location'      => ['alias' => ['position']],
+            'latitude'      => ['alias' => ['lat', 'x']],
+            'longitude'     => ['alias' => ['lon', 'lng', 'long', 'y']],
         ];
-        $address = '';
+        $address   = '';
+        $latitude  = null;
+        $longitude = null;
 
         foreach ($addressFields as $field => $options) {
             if ($field === 'phone') {
                 continue;
             }
-            $value = Utils::or($row, $options['alias']);
+
+            if ($field === 'latitude') {
+                $latitude = Utils::or($row, array_merge([$field], $options['alias']));
+                continue;
+            }
+
+            if ($field === 'longitude') {
+                $longitude = Utils::or($row, array_merge([$field], $options['alias']));
+                continue;
+            }
+
+            $value = Utils::or($row, array_merge([$field], $options['alias']));
             if ($value) {
                 $address .= $value . ' ';
             }
@@ -577,6 +593,12 @@ class Place extends Model
 
         $address = rtrim($address);
 
+        // if latitude and longitude provided
+        if ($latitude && $longitude) {
+            $address = $latitude . ', ' . $longitude;
+        }
+
+        // if no address
         if (!$address) {
             return null;
         }
@@ -584,8 +606,9 @@ class Place extends Model
         $place = Place::createFromGeocodingLookup($address, false);
 
         foreach ($addressFields as $field => $options) {
-            if (empty($place->{$field})) {
-                $value = Utils::or($row, $options['alias']);
+            if ($place->isFillable($field) && empty($place->{$field})) {
+                $value = Utils::or($row, array_merge([$field], $options['alias']));
+
                 if ($value) {
                     $place->{$field} = $value;
                 }
@@ -601,7 +624,7 @@ class Place extends Model
 
         // set meta data
         $meta = collect($row)->except(['name', ...$addressFields['street_number']['alias'], ...$addressFields['street2']['alias'], ...$addressFields['city']['alias'], ...$addressFields['neighborhood']['alias'], ...$addressFields['province']['alias'], ...$addressFields['postal_code']['alias'], ...$addressFields['phone']['alias']])->toArray();
-        $place->setMetas($meta);
+        $place->setMeta($meta);
 
         // set the import id
         $place->setAttribute('_import_id', $importId);

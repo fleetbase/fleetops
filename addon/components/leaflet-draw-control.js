@@ -1,6 +1,5 @@
 import BaseLayer from 'ember-leaflet/components/base-layer';
 import { computed } from '@ember/object';
-import { assign } from '@ember/polyfills';
 import { scheduleOnce } from '@ember/runloop';
 import { classify, camelize } from '@ember/string';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
@@ -75,8 +74,8 @@ export default class LeafletDrawControl extends BaseLayer {
         const showDrawingLayer = getWithDefault(this.args, 'showDrawingLayer', true);
 
         if (this.map && this._layer && this.L.drawLocal) {
-            this.options.edit = assign({ featureGroup: this._layer }, this.options.edit);
-            this.options.draw = assign({}, this.L.drawLocal.draw, this.options.draw);
+            this.options.edit = Object.assign({ featureGroup: this._layer }, this.options.edit);
+            this.options.draw = Object.assign({}, this.L.drawLocal.draw, this.options.draw);
 
             // create draw control
             const drawControl = new this.L.Control.Draw(this.options);

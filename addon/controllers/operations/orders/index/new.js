@@ -1,4 +1,5 @@
-import Controller, { inject as controller } from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import { inject as controller } from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, computed, setProperties, set, get } from '@ember/object';
@@ -13,6 +14,7 @@ import isNotEmpty from '@fleetbase/ember-core/utils/is-not-empty';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import groupBy from '@fleetbase/ember-core/utils/macros/group-by';
 import extractCoordinates from '@fleetbase/ember-core/utils/extract-coordinates';
+import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 L.Bounds.prototype.intersects = function (bounds) {
     var min = this.min,
@@ -25,10 +27,7 @@ L.Bounds.prototype.intersects = function (bounds) {
     return xIntersects && yIntersects;
 };
 
-export default class OperationsOrdersIndexNewController extends Controller {
-    @controller('management.places.index') placesController;
-    @controller('management.contacts.index') contactsController;
-    @controller('management.vendors.index') vendorsController;
+export default class OperationsOrdersIndexNewController extends BaseController {
     @controller('operations.orders.index') ordersController;
 
     /**
@@ -88,6 +87,13 @@ export default class OperationsOrdersIndexNewController extends Controller {
     @service store;
 
     /**
+     * Inject the `contextPanel` service
+     *
+     * @var {Service}
+     */
+    @service contextPanel;
+
+    /**
      * Inject the `universe` service
      *
      * @var {Service}
@@ -132,7 +138,6 @@ export default class OperationsOrdersIndexNewController extends Controller {
     @tracked routeProfile = 'driving';
     @tracked routeProfileOptions = ['driving', 'bycicle', 'walking'];
     @tracked podOptions = ['scan', 'signature'];
-    @tracked isViewingRoutePreview = false;
     @tracked isCsvImportedOrder = false;
     @tracked routePreviewArray = [];
     @tracked previewRouteControl;
@@ -229,11 +234,6 @@ export default class OperationsOrdersIndexNewController extends Controller {
 
             if (importId) {
                 const entities = this.entities.filter((entity) => entity._import_id === importId);
-
-                // if (entities.length === 0) {
-                //     return;
-                // }
-
                 const group = {
                     importId,
                     waypoint,
@@ -289,8 +289,15 @@ export default class OperationsOrdersIndexNewController extends Controller {
                     // trigger event that fleet-ops created an order
                     this.universe.trigger('fleet-ops.order.created', order);
 
+                    // get engine route prefix
+                    let engineMountPoint = this.universe.getEngineMountPoint('@fleetbase/fleetops-engine');
+
+                    if (!engineMountPoint.endsWith('.')) {
+                        engineMountPoint = engineMountPoint + '.';
+                    }
+
                     // transition to order view
-                    return this.transitionToRoute('operations.orders.index.view', order).then(() => {
+                    return this.hostRouter.transitionTo(`${engineMountPoint}operations.orders.index.view`, order).then(() => {
                         this.notifications.success(`New Order ${order.public_id} Created`);
                         this.loader.removeLoader();
                         this.resetForm();
@@ -337,11 +344,7 @@ export default class OperationsOrdersIndexNewController extends Controller {
                 { name: 'Type', valuePath: 'extension', key: 'type' },
                 { name: 'File Name', valuePath: 'name', key: 'fileName' },
                 { name: 'File Size', valuePath: 'size', key: 'fileSize' },
-                {
-                    name: 'Upload Date',
-                    valuePath: 'blob.lastModifiedDate',
-                    key: 'uploadDate',
-                },
+                { name: 'Upload Date', valuePath: 'file.lastModifiedDate', key: 'uploadDate' },
                 { name: '', valuePath: '', key: 'delete' },
             ],
             acceptedFileTypes: ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'],
@@ -367,7 +370,7 @@ export default class OperationsOrdersIndexNewController extends Controller {
                         this.fetch.uploadFile.perform(
                             file,
                             {
-                                path: `uploads/order-imports/${this.currentUser.companyId}`,
+                                path: `uploads/fleet-ops/order-imports/${this.currentUser.companyId}`,
                                 type: `order_import`,
                             },
                             (uploadedFile) => {
@@ -396,7 +399,6 @@ export default class OperationsOrdersIndexNewController extends Controller {
                 this.modalsManager.setOption('isProcessing', true);
 
                 const files = uploadedFiles.map((file) => file.id);
-
                 let results;
 
                 try {
@@ -405,28 +407,21 @@ export default class OperationsOrdersIndexNewController extends Controller {
                     return this.notifications.serverError(error);
                 }
 
-                // import places
-                if (isArray(results?.places)) {
+                const places = get(results, 'places');
+                const entities = get(results, 'entities');
+
+                if (isArray(places)) {
                     this.isMultipleDropoffOrder = true;
-
-                    // map into place models
-                    const waypoints = results.places.map((_place) => {
+                    this.waypoints = places.map((_place) => {
                         const place = this.store.createRecord('place', _place);
-
                         return this.store.createRecord('waypoint', { place });
                     });
-
-                    this.waypoints = waypoints;
                 }
 
-                // import entities
-                if (isArray(results?.entities)) {
-                    // map into entity models
-                    const entities = results.entities.map((entity) => {
+                if (isArray(entities)) {
+                    this.entities = entities.map((entity) => {
                         return this.store.createRecord('entity', entity);
                     });
-
-                    this.entities = entities;
                 }
 
                 this.notifications.success('Import completed.');
@@ -436,8 +431,6 @@ export default class OperationsOrdersIndexNewController extends Controller {
             },
             decline: (modal) => {
                 this.modalsManager.setOption('uploadQueue', []);
-                this.fileQueue.flush();
-
                 modal.done();
             },
         });
@@ -448,7 +441,7 @@ export default class OperationsOrdersIndexNewController extends Controller {
 
         if (on) {
             const company = this.store.peekRecord('company', this.currentUser.companyId);
-            this.order.adhoc_distance = company?.options?.fleetops?.adhoc_distance ?? defaultDistanceInMeters;
+            this.order.adhoc_distance = getWithDefault(company, 'options.fleetops.adhoc_distance', defaultDistanceInMeters);
         } else {
             this.order.adhoc_distance = defaultDistanceInMeters;
         }
@@ -493,10 +486,13 @@ export default class OperationsOrdersIndexNewController extends Controller {
         }
     }
 
-    @action newPlace() {
-        if (this.placesController) {
-            return this.placesController.createPlace();
-        }
+    @action createPlace() {
+        const place = this.store.createRecord('place');
+        this.contextPanel.focus(place, 'editing');
+    }
+
+    @action editPlace(place) {
+        this.contextPanel.focus(place, 'editing');
     }
 
     @action async getQuotes(service) {
@@ -1293,11 +1289,23 @@ export default class OperationsOrdersIndexNewController extends Controller {
         const type = await this.modalsManager.userSelectOption('Select facilitator type', ['contact', 'vendor']);
 
         if (type === 'vendor') {
-            return this.vendorsController.createVendor();
+            const vendor = this.store.createRecord('vendor', { type: 'facilitator', status: 'active' });
+            return this.contextPanel.focus(vendor, 'editing', {
+                onAfterSave: (vendor) => {
+                    this.setOrderFacilitator(vendor);
+                    this.contextPanel.clear();
+                },
+            });
         }
 
         if (type === 'contact') {
-            return this.contactsController.createContact();
+            const contact = this.store.createRecord('contact', { type: 'facilitator', status: 'active' });
+            return this.contextPanel.focus(contact, 'editing', {
+                onAfterSave: (contact) => {
+                    this.setOrderFacilitator(contact);
+                    this.contextPanel.clear();
+                },
+            });
         }
     }
 
@@ -1305,11 +1313,23 @@ export default class OperationsOrdersIndexNewController extends Controller {
         const type = await this.modalsManager.userSelectOption('Select customer type', ['contact', 'vendor']);
 
         if (type === 'vendor') {
-            return this.vendorsController.createVendor();
+            const vendor = this.store.createRecord('vendor', { type: 'customer', status: 'active' });
+            return this.contextPanel.focus(vendor, 'editing', {
+                onAfterSave: (vendor) => {
+                    this.setOrderCustomer(vendor);
+                    this.contextPanel.clear();
+                },
+            });
         }
 
         if (type === 'contact') {
-            return this.contactsController.createContact();
+            const contact = this.store.createRecord('contact', { type: 'customer', status: 'active' });
+            return this.contextPanel.focus(contact, 'editing', {
+                onAfterSave: (contact) => {
+                    this.setOrderCustomer(contact);
+                    this.contextPanel.clear();
+                },
+            });
         }
     }
 

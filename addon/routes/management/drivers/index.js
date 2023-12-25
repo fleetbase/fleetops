@@ -1,9 +1,10 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { action, set } from '@ember/object';
+import isNestedRouteTransition from '@fleetbase/ember-core/utils/is-nested-route-transition';
 
 export default class ManagementDriversIndexRoute extends Route {
     @service store;
-    @service intl;
 
     queryParams = {
         page: { refreshModel: true },
@@ -28,8 +29,11 @@ export default class ManagementDriversIndexRoute extends Route {
         'within[where]': { refreshModel: true, replace: true },
     };
 
-    beforeModel() {
-        this.intl.setLocale(['en-us']);
+    @action willTransition(transition) {
+        if (isNestedRouteTransition(transition)) {
+            set(this.queryParams, 'page.refreshModel', false);
+            set(this.queryParams, 'sort.refreshModel', false);
+        }
     }
 
     model(params) {

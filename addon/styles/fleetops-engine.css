@@ -1,18 +1,19 @@
 .scheduler-left-sidebar {
-    border-right: 1px rgba(229, 231, 235, 1) solid;
+    border-right: 1px rgb(229 231 235 / 100%) solid;
     height: 100vh;
     overflow-y: scroll;
 }
 
-body[data-theme="dark"] .scheduler-left-sidebar {
-    border-right: 1px rgba(55, 65, 81, 1) solid;
+body[data-theme='dark'] .scheduler-left-sidebar {
+    border-right: 1px rgb(55 65 81 / 100%) solid;
 }
 
-.scheduler-left-sidebar > .next-content-panel-wrapper  > .next-content-panel-container  > .next-content-panel > .next-content-panel-header.next-content-panel-is-closed {
+.scheduler-left-sidebar > .next-content-panel-wrapper > .next-content-panel-container > .next-content-panel > .next-content-panel-header.next-content-panel-is-closed {
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
 }
-.scheduler-left-sidebar > .next-content-panel-wrapper  > .next-content-panel-container  > .next-content-panel > .next-content-panel-header {
+
+.scheduler-left-sidebar > .next-content-panel-wrapper > .next-content-panel-container > .next-content-panel > .next-content-panel-header {
     border-top-left-radius: 0;
     border-top-right-radius: 0;
     border-top: 0;
@@ -20,9 +21,15 @@ body[data-theme="dark"] .scheduler-left-sidebar {
     border-right: 0;
 }
 
-.scheduler-left-sidebar > .next-content-panel-wrapper  > .next-content-panel-container  > .next-content-panel > .next-content-panel-body {
+.scheduler-left-sidebar > .next-content-panel-wrapper > .next-content-panel-container > .next-content-panel > .next-content-panel-body {
     border-left: 0;
     border-right: 0;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
+}
+
+.fleetbase-console.console-fleet-ops-operations-orders-index-new,
+.fleetbase-console.console-fleet-ops-operations-orders-index-view,
+.fleetbase-console .dragSortList {
+    overflow: visible !important;
 }

@@ -205,7 +205,7 @@ class Entity extends Model
      */
     public function supplier()
     {
-        return $this->belongsTo(Vendor::class, 'supplier_uuid');
+        return $this->belongsTo(Vendor::class, 'supplier_uuid', 'uuid');
     }
 
     /**

@@ -1,10 +1,10 @@
-<Overlay @position="right" @noBackdrop={{true}} @width="700px" @fullHeight={{true}} @isResizable={{true}} @isMaximizable={{true}} @isMinimizable={{true}} @onLoad={{this.setupInterface}} as |overlay|>
+<Overlay @position="right" @noBackdrop={{true}} @width="570px" @fullHeight={{true}} @isResizable={{true}} @onLoad={{this.setupInterface}} as |overlay|>
     <Overlay::Header @overlay={{overlay}} @title={{@model.public_id}} @status={{@model.status}} @dispatched={{@model.dispatched}} @createdAt={{@model.createdAt}} @onPressCancel={{this.transitionBack}}>
         {{#if @model.canBeDispatched}}
             <Button @type="primary" @icon="paper-plane" @text="Dispatch" class="mr-2" @onClick={{fn this.dispatchOrder @model}} />
         {{/if}}
         <DropdownButton @icon="ellipsis-h" @size="sm" @iconPrefix="fas" as |dd|>
-            <div class="next-dd-menu mt-1 mx-0" aria-orientation="vertical" aria-labelledby="user-menu">
+            <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                 <div class="px-1">
                     <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-800 dark:text-gray-300">
                         Order Actions
@@ -83,20 +83,21 @@
     <Overlay::Body @wrapperClass="new-order-overlay-body" @increaseInnerBodyHeightBy={{1000}}>
         <ContentPanel @title="Activity" @open={{true}} @pad={{false}} @isLoading={{this.isLoadingAdditionalData}} @panelBodyWrapperClass="px-0 py-4" @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if @model.tracking_statuses}}
-                <Timeline @activity={{@model.tracking_statuses}} @wrapperClass="space-x-4 px-2" @arrowClass="bg-gray-600 border border-gray-900 shadow-md" as |TimelineItem|>
-                    <TimelineItem class="flex flex-col w-40 px-3 py-2 rounded text-sm leading-4 truncate space-y-2 bg-gray-100 dark:bg-gray-900 dark:text-white" as |trackingStatus|>
-                        <div class="font-semibold truncate">
-                            {{trackingStatus.status}}
+                <Timeline @activity={{@model.tracking_statuses}} @arrowClass="bg-gray-600 border border-gray-900 shadow-md" as |TimelineItem|>
+                    <TimelineItem @activeStatus={{@model.status}} as |trackingStatus|>
+                        <div class="flex flex-col px-3 py-2 rounded text-sm leading-4 space-y-2 bg-gray-100 dark:bg-gray-900 dark:text-white">
+                            <div class="flex flex-col space-y-1">
+                                <div class="text-xs font-semibold truncate">{{trackingStatus.status}}</div>
+                                <div class="text-xs truncate">{{n-a trackingStatus.details}}</div>
+                                <div class="text-xs">{{trackingStatus.createdAtShortWithTime}}</div>
+                            </div>
+                            <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                                <InputInfo>
+                                    <div class="text-xs">{{or trackingStatus.details trackingStatus.status}}</div>
+                                    <div class="text-xs">{{trackingStatus.createdAtShortWithTime}}</div>
+                                </InputInfo>
+                            </Attach::Tooltip>
                         </div>
-                        <div class="truncate">
-                            {{trackingStatus.details}}
-                        </div>
-                        <div class="truncate">
-                            {{trackingStatus.createdAt}}
-                        </div>
-                        <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
-                            <InputInfo @text={{trackingStatus.details}} />
-                        </Attach::Tooltip>
                     </TimelineItem>
                 </Timeline>
             {{else}}
@@ -351,7 +352,7 @@
                                     </div>
                                     <div class="flex items-start">
                                         <DropdownButton @triggerClass="mr-2" @iconClass="icon-text-height" @buttonSize="sm" @icon="ellipsis-h" @iconPrefix="fas" @contentClass="dropdown-menu" as |dd|>
-                                            <div class="next-dd-menu mt-1 mx-0" aria-orientation="vertical" aria-labelledby="user-menu">
+                                            <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                                                 <div class="px-1">
                                                     <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-300">
                                                         Waypoint Actions

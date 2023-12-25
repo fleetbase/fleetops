@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -80,8 +81,8 @@ class TrackingStatus extends Model
      * @var array
      */
     protected $casts = [
-        'meta' => Json::class,
-        // 'location' => Point::class,
+        'meta'     => Json::class,
+        'location' => Point::class,
     ];
 
     /**
@@ -133,10 +134,15 @@ class TrackingStatus extends Model
         $this->attributes['code'] = static::prepareCode($code);
     }
 
+    public function setStatusAttribute($status)
+    {
+        $this->attributes['status'] = Str::title($status);
+    }
+
     public static function prepareCode($string)
     {
         $string = str_replace(' ', '_', $string);
-        $string = preg_replace('/[^A-Za-z0-9\-]/', '', $string);
+        $string = preg_replace('/[^A-Za-z0-9\-_]/', '', $string);
         $string = strtoupper($string);
 
         return $string;

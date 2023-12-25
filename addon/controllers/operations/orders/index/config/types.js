@@ -1,8 +1,8 @@
-import Controller from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { tracked } from '@glimmer/tracking';
 import { action, computed } from '@ember/object';
 
-export default class OperationsOrdersIndexConfigTypesController extends Controller {
+export default class OperationsOrdersIndexConfigTypesController extends BaseController {
     @tracked configurations = [];
     @tracked isLoaded = false;
 

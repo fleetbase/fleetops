@@ -81,8 +81,8 @@ export default class VendorFormPanelComponent extends Component {
     constructor() {
         super(...arguments);
         this.vendor = this.args.vendor;
-        this.isEditing = typeof this.vendor.id === 'string';
         applyContextComponentArguments(this);
+        this.isEditing = this.vendor && typeof this.vendor.id === 'string';
     }
 
     /**

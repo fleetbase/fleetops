@@ -1,10 +1,10 @@
-import Controller from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, computed } from '@ember/object';
 import { isBlank } from '@ember/utils';
 
-export default class OperationsServiceRatesIndexNewController extends Controller {
+export default class OperationsServiceRatesIndexNewController extends BaseController {
     /**
      * Inject the `currentUser` service
      *
@@ -296,27 +296,21 @@ export default class OperationsServiceRatesIndexNewController extends Controller
         this.isCreatingServiceRate = true;
         this.loader.showLoader('.overlay-inner-content', { loadingMessage: 'Creating service rate...' });
 
-        try {
-            return serviceRate
-                .save()
-                .then((serviceRate) => {
-                    return this.transitionToRoute('operations.service-rates.index').then(() => {
-                        this.notifications.success(`New Service Rate ${serviceRate.service_name} Created`);
-                        this.resetForm();
-                        this.hostRouter.refresh();
-                    });
-                })
-                .catch((error) => {
-                    this.notifications.serverError(error);
-                })
-                .finally(() => {
-                    this.isCreatingServiceRate = false;
-                    this.loader.removeLoader();
+        return serviceRate
+            .save()
+            .then((serviceRate) => {
+                return this.transitionToRoute('operations.service-rates.index').then(() => {
+                    this.notifications.success(`New Service Rate ${serviceRate.service_name} Created`);
+                    this.resetForm();
                 });
-        } catch (error) {
-            this.isCreatingServiceRate = false;
-            this.loader.removeLoader();
-        }
+            })
+            .catch((error) => {
+                this.notifications.serverError(error);
+            })
+            .finally(() => {
+                this.isCreatingServiceRate = false;
+                this.loader.removeLoader();
+            });
     }
 
     /**

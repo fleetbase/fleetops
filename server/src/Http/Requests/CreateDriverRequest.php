@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
+use Fleetbase\FleetOps\Rules\ResolvablePoint;
 use Fleetbase\Http\Requests\FleetbaseRequest;
 use Illuminate\Validation\Rule;
 
@@ -37,6 +38,7 @@ class CreateDriverRequest extends FleetbaseRequest
             'status'   => 'nullable|string|in:active,inactive',
             'vendor'   => 'nullable|exists:vendors,public_id',
             'job'      => 'nullable|exists:orders,public_id',
+            'location' => ['nullable', new ResolvablePoint()],
         ];
     }
 

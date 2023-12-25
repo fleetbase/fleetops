@@ -46,8 +46,16 @@ class CreateOrderRequest extends FleetbaseRequest
 
             if ($this->isArray('payload')) {
                 $validations['payload']         = 'required';
-                $validations['payload.pickup']  = 'required';
-                $validations['payload.dropoff'] = 'required';
+
+                if ($this->missing('payload.waypoints')) {
+                    $validations['payload.pickup']  = 'required';
+                    $validations['payload.dropoff'] = 'required';
+                }
+
+                if ($this->missing(['payload.pickup', 'payload.dropoff'])) {
+                    $validations['payload.waypoints'] = 'required|array|min:2';
+                }
+
                 $validations['payload.return']  = 'nullable';
             }
 
@@ -57,8 +65,14 @@ class CreateOrderRequest extends FleetbaseRequest
         }
 
         if ($this->missing('payload') && $this->isMethod('POST')) {
-            $validations['pickup']  = 'required';
-            $validations['dropoff'] = 'required';
+            if ($this->missing('waypoints')) {
+                $validations['pickup']  = 'required';
+                $validations['dropoff'] = 'required';
+            }
+
+            if ($this->missing(['pickup', 'dropoff'])) {
+                $validations['waypoints'] = 'required|array|min:2';
+            }
         }
 
         return $validations;

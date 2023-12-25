@@ -6,9 +6,11 @@ use Fleetbase\FleetOps\Http\Requests\CreateTrackingStatusRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateTrackingStatusRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\TrackingStatus as TrackingStatusResource;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 
 class TrackingStatusController extends Controller
@@ -23,7 +25,24 @@ class TrackingStatusController extends Controller
     public function create(CreateTrackingStatusRequest $request)
     {
         // get request input
-        $input = $request->only(['status', 'details', 'code', 'city', 'province', 'postal_code', 'country', 'latitude', 'longitude']);
+        $input = $request->only(['status', 'details', 'code', 'city', 'province', 'postal_code', 'country', 'location', 'latitude', 'longitude']);
+
+        // if no location provided but latitude/longitude
+        if (empty($input['location']) && isset($input['latitude']) && isset($input['longitude'])) {
+            $latitude  = data_get($input, 'latitude');
+            $longitude = data_get($input, 'longitude');
+
+            // unset latitude and longitude
+            unset($input['latitude'], $input['longitude']);
+
+            // create location
+            $input['location'] = new Point($latitude, $longitude);
+        }
+
+        // if no code set create a code from the status
+        if (empty($input['code'])) {
+            $input['code'] = TrackingStatus::prepareCode($input['status']);
+        }
 
         // make sure company is set
         $input['company_uuid'] = session('company');
@@ -34,6 +53,11 @@ class TrackingStatusController extends Controller
                 'public_id'    => $request->input('tracking_number'),
                 'company_uuid' => session('company'),
             ]);
+        }
+
+        // tracking number assignment
+        if ($request->has('order')) {
+            $input['tracking_number_uuid'] = Order::where('public_id', $request->input('order'))->value('tracking_number_uuid');
         }
 
         // create the trackingStatus
@@ -66,7 +90,24 @@ class TrackingStatusController extends Controller
         }
 
         // get request input
-        $input = $request->only(['status', 'details', 'code', 'city', 'province', 'postal_code', 'country', 'latitude', 'longitude']);
+        $input = $request->only(['status', 'details', 'code', 'city', 'province', 'postal_code', 'country', 'location', 'latitude', 'longitude']);
+
+        // if no location provided but latitude/longitude
+        if (empty($input['location']) && isset($input['latitude']) && isset($input['longitude'])) {
+            $latitude  = data_get($input, 'latitude');
+            $longitude = data_get($input, 'longitude');
+
+            // unset latitude and longitude
+            unset($input['latitude'], $input['longitude']);
+
+            // create location
+            $input['location'] = new Point($latitude, $longitude);
+        }
+
+        // if no code set create a code from the status
+        if (empty($input['code'])) {
+            $input['code'] = TrackingStatus::prepareCode($input['status']);
+        }
 
         // update the trackingStatus
         $trackingStatus->update($input);

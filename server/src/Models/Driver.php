@@ -23,6 +23,7 @@ use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
+use WebSocket\Message\Ping;
 
 class Driver extends Model
 {
@@ -87,6 +88,7 @@ class Driver extends Model
         'online',
         'slug',
         'status',
+        'meta,',
     ];
 
     /**
@@ -109,8 +111,9 @@ class Driver extends Model
      * @var array
      */
     protected $casts = [
-        'location' => Point::class,
-        'online'   => 'boolean',
+        'location'   => Point::class,
+        'online'     => 'boolean',
+        'meta'       => Json::class,
     ];
 
     /**

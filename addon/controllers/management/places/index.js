@@ -1,11 +1,11 @@
-import Controller from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { task, timeout } from 'ember-concurrency';
 
-export default class ManagementPlacesIndexController extends Controller {
+export default class ManagementPlacesIndexController extends BaseController {
     /**
      * Inject the `notifications` service
      *

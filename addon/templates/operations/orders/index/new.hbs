@@ -1,7 +1,7 @@
-<Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @isMaximizable={{true}} @isMinimizable={{true}} @width="700px" @fullHeight={{true}} @onLoad={{this.setupInterface}} as |overlay|>
+<Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @width="570px" @fullHeight={{true}} @onLoad={{this.setupInterface}} as |overlay|>
     <Overlay::Header @overlay={{overlay}} @title="New Order" @onPressCancel={{this.transitionBack}}>
         <DropdownButton @icon="ellipsis-h" @size="sm" @iconPrefix="fas" @triggerClass="mr-2 hidden md:flex" as |dd|>
-            <div class="next-dd-menu mt-1 mx-0" aria-orientation="vertical" aria-labelledby="user-menu">
+            <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                 <div class="p-1">
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newCustomer)}}>
                         <div class="w-6">
@@ -15,7 +15,7 @@
                         </div>
                         <span>Create new facilitator</span>
                     </a>
-                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newPlace)}}>
+                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.createPlace)}}>
                         <div class="w-6">
                             <FaIcon @icon="map-pin" />
                         </div>
@@ -162,7 +162,7 @@
                         {{#each group.items as |metaField|}}
                             <div class="input-group {{if (eq metaField.type "boolean") "col-span-2 items-center" ""}}">
                                 <div class="flex items-center justify-between">
-                                    {{#if (not (eq metaField.type "boolean"))}}
+                                    {{#if (not-eq metaField.type "boolean")}}
                                         <InputLabel @labelText={{metaField.label}} @required={{metaField.required}} />
                                     {{/if}}
 
@@ -223,8 +223,8 @@
                                 </label>
                             </div>
 
-                            <div class="flex-1 px-4">
-                                <ModelSelect @modelName="place" @selectedModel={{waypoint.place}} @placeholder={{concat "Select Waypoint " (add index 1)}} @triggerClass="form-select form-input truncate" @wrapperClass="w-96" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}} @renderInPlace={{true}} @onChange={{fn this.setWaypointPlace index}} as |model|>
+                            <div class="flex-1 px-3">
+                                <ModelSelect @modelName="place" @selectedModel={{waypoint.place}} @placeholder={{concat "Select Waypoint " (add index 1)}} @triggerClass="form-select form-input truncate max-w-300px" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}} @renderInPlace={{true}} @onChange={{fn this.setWaypointPlace index}} as |model|>
                                     {{model.address}}
                                 </ModelSelect>
 
@@ -241,7 +241,7 @@
 
                             <div class="flex items-center">
                                 {{#if waypoint.place}}
-                                    <Button class="mr-2" @icon="edit" @size="sm" @onClick={{fn this.placesController.editPlace waypoint.place}} />
+                                    <Button class="mr-2" @icon="edit" @size="sm" @onClick={{fn this.editPlace waypoint.place}} />
                                 {{/if}}
                                 <Button @type="danger" @icon="trash" @size="sm" @onClick={{fn this.removeWaypoint waypoint}} />
                             </div>

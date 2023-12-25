@@ -1,4 +1,5 @@
-import Controller, { inject as controller } from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import { inject as controller } from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, computed } from '@ember/object';
@@ -10,7 +11,7 @@ import groupBy from '@fleetbase/ember-core/utils/macros/group-by';
 import findClosestWaypoint from '@fleetbase/ember-core/utils/find-closest-waypoint';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 
-export default class OperationsOrdersIndexViewController extends Controller {
+export default class OperationsOrdersIndexViewController extends BaseController {
     /**
      * Inject the `operations.orders.index` controller
      *
@@ -220,7 +221,7 @@ export default class OperationsOrdersIndexViewController extends Controller {
         this.ordersController.setLayoutMode('map');
 
         // create initial setup function which runs 600ms after invoked
-        const setup = (ms = 500) => {
+        const setup = (ms = 600) => {
             return later(
                 this,
                 () => {
@@ -237,7 +238,13 @@ export default class OperationsOrdersIndexViewController extends Controller {
 
         // create a display order route only function
         const displayOrderRoute = () => {
-            return this.displayOrderRoute();
+            return later(
+                this,
+                () => {
+                    return this.displayOrderRoute();
+                },
+                300
+            );
         };
 
         // re-display order routes when livemap has coordinates

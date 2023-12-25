@@ -1,4 +1,4 @@
-import Controller from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -8,7 +8,7 @@ import { task } from 'ember-concurrency-decorators';
 import getIssueTypes from '../../../utils/get-issue-types';
 import getIssueCategories from '../../../utils/get-issue-categories';
 
-export default class ManagementIssuesIndexController extends Controller {
+export default class ManagementIssuesIndexController extends BaseController {
     /**
      * Inject the `notifications` service
      *
@@ -116,13 +116,6 @@ export default class ManagementIssuesIndexController extends Controller {
      * @var {Array|String}
      */
     @tracked priority;
-
-    /**
-     * The filterable param `priority`
-     *
-     * @var {Array|String}
-     */
-    @tracked status;
 
     /**
      * The filterable param `type`

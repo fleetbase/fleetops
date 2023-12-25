@@ -1,9 +1,9 @@
-import Controller from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 
-export default class ManagementContactsIndexNewController extends Controller {
+export default class ManagementContactsIndexNewController extends BaseController {
     /**
      * Inject the `store` service
      *

@@ -1,7 +1,8 @@
 import Route from '@ember/routing/route';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
+import { action, set } from '@ember/object';
+import isNestedRouteTransition from '@fleetbase/ember-core/utils/is-nested-route-transition';
 
 export default class OperationsOrdersIndexRoute extends Route {
     @service store;
@@ -32,6 +33,11 @@ export default class OperationsOrdersIndexRoute extends Route {
 
         if (this.controller && shouldReset) {
             this.controller.resetView(transition);
+        }
+
+        if (isNestedRouteTransition(transition)) {
+            set(this.queryParams, 'page.refreshModel', false);
+            set(this.queryParams, 'sort.refreshModel', false);
         }
     }
 

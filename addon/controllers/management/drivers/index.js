@@ -1,4 +1,4 @@
-import Controller from '@ember/controller';
+import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -9,7 +9,7 @@ import { task } from 'ember-concurrency-decorators';
 import extractCoordinates from '@fleetbase/ember-core/utils/extract-coordinates';
 import leafletIcon from '@fleetbase/ember-core/utils/leaflet-icon';
 
-export default class ManagementDriversIndexController extends Controller {
+export default class ManagementDriversIndexController extends BaseController {
     /**
      * Inject the `notifications` service
      *
@@ -133,13 +133,6 @@ export default class ManagementDriversIndexController extends Controller {
     @tracked internal_id;
 
     /**
-     * The filterable param `drivers_license_number`
-     *
-     * @var {String}
-     */
-    @tracked drivers_license_number;
-
-    /**
      * The filterable param `name`
      *
      * @var {String}
@@ -257,7 +250,13 @@ export default class ManagementDriversIndexController extends Controller {
         {
             label: 'Vendor',
             cellComponent: 'table/cell/anchor',
-            action: this.viewDriverVendor,
+            onClick: async (driver) => {
+                const vendor = await driver.loadVendor();
+
+                if (vendor) {
+                    this.contextPanel.focus(vendor);
+                }
+            },
             valuePath: 'vendor.name',
             modelNamePath: 'name',
             width: '180px',
@@ -510,6 +509,7 @@ export default class ManagementDriversIndexController extends Controller {
     @action viewDriver(driver) {
         return this.transitionToRoute('management.drivers.index.details', driver);
     }
+
     /**
      * Create a new `driver` in modal
      *
@@ -530,6 +530,7 @@ export default class ManagementDriversIndexController extends Controller {
     @action editDriver(driver) {
         return this.transitionToRoute('management.drivers.index.edit', driver);
     }
+
     /**
      * Delete a `driver` via confirm prompt
      *
@@ -654,19 +655,5 @@ export default class ManagementDriversIndexController extends Controller {
             }),
             ...options,
         });
-    }
-
-    /**
-     * View information about the driver vendor
-     *
-     * @param {DriverModel} driver
-     * @void
-     */
-    @action async viewDriverVendor(driver) {
-        const vendor = await driver.loadVendor();
-
-        if (vendor) {
-            this.contextPanel.focus(vendor);
-        }
     }
 }
