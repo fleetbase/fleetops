@@ -81,7 +81,7 @@ class TrackingStatus extends Model
      * @var array
      */
     protected $casts = [
-        'meta' => Json::class,
+        'meta'     => Json::class,
         'location' => Point::class,
     ];
 

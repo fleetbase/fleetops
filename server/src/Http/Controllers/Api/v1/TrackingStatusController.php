@@ -12,7 +12,6 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class TrackingStatusController extends Controller
 {
@@ -30,7 +29,7 @@ class TrackingStatusController extends Controller
 
         // if no location provided but latitude/longitude
         if (empty($input['location']) && isset($input['latitude']) && isset($input['longitude'])) {
-            $latitude = data_get($input, 'latitude');
+            $latitude  = data_get($input, 'latitude');
             $longitude = data_get($input, 'longitude');
 
             // unset latitude and longitude
@@ -95,7 +94,7 @@ class TrackingStatusController extends Controller
 
         // if no location provided but latitude/longitude
         if (empty($input['location']) && isset($input['latitude']) && isset($input['longitude'])) {
-            $latitude = data_get($input, 'latitude');
+            $latitude  = data_get($input, 'latitude');
             $longitude = data_get($input, 'longitude');
 
             // unset latitude and longitude

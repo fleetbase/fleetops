@@ -33,7 +33,7 @@ export default class FleetOpsEngine extends Engine {
                     title: 'Navigator Apps',
                     icon: 'key',
                     component: NavigatorAppControlsComponent,
-                }
+                },
             ],
             {
                 slug: 'fleet-ops',

@@ -10,30 +10,32 @@ class NavigatorController extends Controller
 {
     public function linkApp()
     {
-        $adminUser = User::where("type", "admin")->first();
+        $adminUser = User::where('type', 'admin')->first();
 
         if ($adminUser->company) {
             $apiCredential = ApiCredential::firstOrCreate(
                 [
-                    "user_uuid" => $adminUser->uuid,
-                    "company_uuid" => $adminUser->company_uuid,
-                    "name" => "NavigationAppLinker",
+                    'user_uuid'    => $adminUser->uuid,
+                    'company_uuid' => $adminUser->company_uuid,
+                    'name'         => 'NavigationAppLinker',
                 ],
                 [
-                    "user_uuid" => $adminUser->uuid,
-                    "company_uuid" => $adminUser->company->uuid,
-                    "name" => "NavigationAppLinker",
+                    'user_uuid'    => $adminUser->uuid,
+                    'company_uuid' => $adminUser->company->uuid,
+                    'name'         => 'NavigationAppLinker',
                 ]
             );
+
             return redirect()->away('flbnavigator://configure?key=' . $apiCredential->key . '&host=' . url()->secure('/'));
         }
-        return response()->error("Company not found for the admin user");
+
+        return response()->error('Company not found for the admin user');
     }
 
     public function getLinkAppUrl()
     {
         return response()->json([
-            "linkUrl" => url("int/v1/fleet-ops/navigator/link-app"),
+            'linkUrl' => url('int/v1/fleet-ops/navigator/link-app'),
         ]);
     }
 }

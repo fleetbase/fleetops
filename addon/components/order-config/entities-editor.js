@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { action, computed, set, get } from '@ember/object';
+import { action, computed, set } from '@ember/object';
 import { isArray } from '@ember/array';
 import { underscore } from '@ember/string';
 import generateUuid from '@fleetbase/ember-core/utils/generate-uuid';
@@ -100,7 +100,7 @@ export default class OrderConfigEntitiesEditorComponent extends Component {
         const { value } = target;
 
         // console.log(value, get(orderConfig, `meta.entities.${index}.meta.${key}`));
-        // set(orderConfig, `meta.entities.${index}.meta.${key}`, value);
+        set(orderConfig, `meta.entities.${index}.meta.${key}`, value);
 
         if (typeof this.args.onEntitiesChanged === 'function') {
             this.args.onEntitiesChanged(orderConfig.meta.entities);

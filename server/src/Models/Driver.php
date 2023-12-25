@@ -88,7 +88,7 @@ class Driver extends Model
         'online',
         'slug',
         'status',
-        'meta,'
+        'meta,',
     ];
 
     /**
@@ -111,8 +111,8 @@ class Driver extends Model
      * @var array
      */
     protected $casts = [
-        'location' => Point::class,
-        'online'   => 'boolean',
+        'location'   => Point::class,
+        'online'     => 'boolean',
         'meta'       => Json::class,
     ];
 

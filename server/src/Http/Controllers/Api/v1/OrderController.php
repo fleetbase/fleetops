@@ -63,28 +63,28 @@ class OrderController extends Controller
         if ($request->has('payload') && $request->isArray('payload')) {
             $payload      = new Payload();
             $payloadInput = $request->input('payload');
-            $entities = data_get($payloadInput, 'entities', []);            
-            $waypoints = data_get($payloadInput, 'waypoints', []);            
-            $pickup = data_get($payloadInput, 'pickup');            
-            $dropoff = data_get($payloadInput, 'dropoff');
-            $return = data_get($payloadInput, 'return');
+            $entities     = data_get($payloadInput, 'entities', []);
+            $waypoints    = data_get($payloadInput, 'waypoints', []);
+            $pickup       = data_get($payloadInput, 'pickup');
+            $dropoff      = data_get($payloadInput, 'dropoff');
+            $return       = data_get($payloadInput, 'return');
 
             // if no pickup and dropoff extract from waypoints
             if (empty($pickup) && empty($dropoff) && count($waypoints)) {
-                $pickup = array_shift($waypoints);
+                $pickup  = array_shift($waypoints);
                 $dropoff = array_pop($waypoints);
             }
 
             $payload->setPickup($pickup, [
                 'callback' => function ($pickup, $payload) {
                     $payload->setCurrentWaypoint($pickup);
-                }
+                },
             ]);
             $payload->setDropoff($dropoff);
             if ($return) {
                 $payload->setReturn($return);
             }
-            
+
             $payload->save();
 
             // set waypoints and entities after payload is saved
@@ -104,28 +104,28 @@ class OrderController extends Controller
         if ($request->missing('payload')) {
             $payload      = new Payload();
             $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
-            $entities = data_get($payloadInput, 'entities', []);            
-            $waypoints = data_get($payloadInput, 'waypoints', []);            
-            $pickup = data_get($payloadInput, 'pickup');            
-            $dropoff = data_get($payloadInput, 'dropoff');
-            $return = data_get($payloadInput, 'return');
-            
+            $entities     = data_get($payloadInput, 'entities', []);
+            $waypoints    = data_get($payloadInput, 'waypoints', []);
+            $pickup       = data_get($payloadInput, 'pickup');
+            $dropoff      = data_get($payloadInput, 'dropoff');
+            $return       = data_get($payloadInput, 'return');
+
             // if no pickup and dropoff extract from waypoints
             if (empty($pickup) && empty($dropoff) && count($waypoints)) {
-                $pickup = array_shift($waypoints);
+                $pickup  = array_shift($waypoints);
                 $dropoff = array_pop($waypoints);
             }
 
             $payload->setPickup($pickup, [
                 'callback' => function ($pickup, $payload) {
                     $payload->setCurrentWaypoint($pickup);
-                }
+                },
             ]);
             $payload->setDropoff($dropoff);
             if ($return) {
                 $payload->setReturn($return);
             }
-            
+
             $payload->save();
 
             // set waypoints and entities after payload is saved
@@ -259,15 +259,15 @@ class OrderController extends Controller
         if ($request->isArray('payload')) {
             $payload      = data_get($order, 'payload', new Payload());
             $payloadInput = $request->input('payload');
-            $entities = data_get($payloadInput, 'entities', []);            
-            $waypoints = data_get($payloadInput, 'waypoints', []);            
-            $pickup = data_get($payloadInput, 'pickup');            
-            $dropoff = data_get($payloadInput, 'dropoff');
-            $return = data_get($payloadInput, 'return');
+            $entities     = data_get($payloadInput, 'entities', []);
+            $waypoints    = data_get($payloadInput, 'waypoints', []);
+            $pickup       = data_get($payloadInput, 'pickup');
+            $dropoff      = data_get($payloadInput, 'dropoff');
+            $return       = data_get($payloadInput, 'return');
 
             // if no pickup and dropoff extract from waypoints
             if (empty($pickup) && empty($dropoff) && count($waypoints)) {
-                $pickup = array_shift($waypoints);
+                $pickup  = array_shift($waypoints);
                 $dropoff = array_pop($waypoints);
             }
 
@@ -282,7 +282,7 @@ class OrderController extends Controller
             if ($return) {
                 $payload->setReturn($return);
             }
-            
+
             $payload->save();
 
             // set waypoints and entities after payload is saved
@@ -307,15 +307,15 @@ class OrderController extends Controller
         if ($request->missing('payload')) {
             $payload      = data_get($order, 'payload', new Payload());
             $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
-            $entities = data_get($payloadInput, 'entities', []);            
-            $waypoints = data_get($payloadInput, 'waypoints', []);            
-            $pickup = data_get($payloadInput, 'pickup');            
-            $dropoff = data_get($payloadInput, 'dropoff');
-            $return = data_get($payloadInput, 'return');
-            
+            $entities     = data_get($payloadInput, 'entities', []);
+            $waypoints    = data_get($payloadInput, 'waypoints', []);
+            $pickup       = data_get($payloadInput, 'pickup');
+            $dropoff      = data_get($payloadInput, 'dropoff');
+            $return       = data_get($payloadInput, 'return');
+
             // if no pickup and dropoff extract from waypoints
             if (empty($pickup) && empty($dropoff) && count($waypoints)) {
-                $pickup = array_shift($waypoints);
+                $pickup  = array_shift($waypoints);
                 $dropoff = array_pop($waypoints);
             }
 
@@ -330,7 +330,7 @@ class OrderController extends Controller
             if ($return) {
                 $payload->setReturn($return);
             }
-            
+
             $payload->save();
 
             // set waypoints and entities after payload is saved

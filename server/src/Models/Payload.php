@@ -563,7 +563,7 @@ class Payload extends Model
 
         $attr     = $property . '_uuid';
         $instance = Place::createFromMixed($place);
-        $save = data_get($options, 'save', false);
+        $save     = data_get($options, 'save', false);
         $callback = data_get($options, 'callback', false);
 
         if ($instance) {
@@ -592,6 +592,7 @@ class Payload extends Model
         // if using the special [driver] value, set the meta `pickup_is_driver_location`
         if ($place === '[driver]') {
             $this->setMeta('pickup_is_driver_location', true);
+
             return;
         }
 

@@ -51,7 +51,7 @@ class CreateOrderRequest extends FleetbaseRequest
                     $validations['payload.pickup']  = 'required';
                     $validations['payload.dropoff'] = 'required';
                 }
-    
+
                 if ($this->missing(['payload.pickup', 'payload.dropoff'])) {
                     $validations['payload.waypoints'] = 'required|array|min:2';
                 }

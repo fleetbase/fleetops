@@ -566,8 +566,8 @@ class Place extends Model
             'latitude'      => ['alias' => ['lat', 'x']],
             'longitude'     => ['alias' => ['lon', 'lng', 'long', 'y']],
         ];
-        $address = '';
-        $latitude = null;
+        $address   = '';
+        $latitude  = null;
         $longitude = null;
 
         foreach ($addressFields as $field => $options) {

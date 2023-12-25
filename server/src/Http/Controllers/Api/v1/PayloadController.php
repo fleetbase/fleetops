@@ -7,8 +7,6 @@ use Fleetbase\FleetOps\Http\Requests\UpdatePayloadRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Payload as PayloadResource;
 use Fleetbase\FleetOps\Models\Payload;
-use Fleetbase\FleetOps\Models\Place;
-use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -26,12 +24,12 @@ class PayloadController extends Controller
      */
     public function create(CreatePayloadRequest $request)
     {
-        $input = $request->all();
-        $entities = data_get($input, 'entities', []);            
-        $waypoints = data_get($input, 'waypoints', []);            
-        $pickup = data_get($input, 'pickup');            
-        $dropoff = data_get($input, 'dropoff');
-        $return = data_get($input, 'return');
+        $input     = $request->all();
+        $entities  = data_get($input, 'entities', []);
+        $waypoints = data_get($input, 'waypoints', []);
+        $pickup    = data_get($input, 'pickup');
+        $dropoff   = data_get($input, 'dropoff');
+        $return    = data_get($input, 'return');
 
         // make sure company is set
         $input['company_uuid'] = session('company');
@@ -41,7 +39,7 @@ class PayloadController extends Controller
 
         // if no pickup and dropoff extract from waypoints
         if (empty($pickup) && empty($dropoff) && count($waypoints)) {
-            $pickup = array_shift($waypoints);
+            $pickup  = array_shift($waypoints);
             $dropoff = array_pop($waypoints);
         }
 
@@ -90,12 +88,12 @@ class PayloadController extends Controller
         }
 
         // get request input
-        $input = $request->all();
-        $entities = data_get($input, 'entities', []);            
-        $waypoints = data_get($input, 'waypoints', []);            
-        $pickup = data_get($input, 'pickup');            
-        $dropoff = data_get($input, 'dropoff');
-        $return = data_get($input, 'return');
+        $input     = $request->all();
+        $entities  = data_get($input, 'entities', []);
+        $waypoints = data_get($input, 'waypoints', []);
+        $pickup    = data_get($input, 'pickup');
+        $dropoff   = data_get($input, 'dropoff');
+        $return    = data_get($input, 'return');
 
         // pickup assignment
         if ($pickup) {

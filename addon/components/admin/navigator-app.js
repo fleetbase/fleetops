@@ -1,6 +1,5 @@
-import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
 import Component from '@glimmer/component';
+import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
 export default class NavigatorAppControlsComponent extends Component {

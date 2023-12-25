@@ -39,12 +39,12 @@ class MorphController extends Controller
 
         // Get total count for pagination
         $totalContacts = $contactsQuery->count();
-        $totalVendors = $vendorsQuery->count();
-        $total = $totalContacts + $totalVendors;
+        $totalVendors  = $vendorsQuery->count();
+        $total         = $totalContacts + $totalVendors;
 
         // Get paginated items
         $contacts = $contactsQuery->limit($limit)->get();
-        $vendors = $vendorsQuery->limit($limit)->get();
+        $vendors  = $vendorsQuery->limit($limit)->get();
 
         $results = collect([...$contacts, ...$vendors])
             ->sortBy('name')
@@ -91,17 +91,17 @@ class MorphController extends Controller
 
         // Manually structure the response
         $response = [
-            $type => $results->items(),
+            $type  => $results->items(),
             'meta' => [
-                'total' => $results->total(),
-                'per_page' => $results->perPage(),
-                'current_page' => $results->currentPage(),
-                'last_page' => $results->lastPage(),
+                'total'         => $results->total(),
+                'per_page'      => $results->perPage(),
+                'current_page'  => $results->currentPage(),
+                'last_page'     => $results->lastPage(),
                 'next_page_url' => $results->nextPageUrl(),
                 'prev_page_url' => $results->previousPageUrl(),
-                'from' => $results->firstItem(),
-                'to' => $results->lastItem()
-            ]
+                'from'          => $results->firstItem(),
+                'to'            => $results->lastItem(),
+            ],
         ];
 
         return response()->json($response);
