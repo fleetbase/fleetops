@@ -29,7 +29,7 @@ class NavigatorController extends Controller
             return redirect()->away('flbnavigator://configure?key=' . $apiCredential->key . '&host=' . url()->secure('/'));
         }
 
-        return response()->error('Company not found for the admin user');
+        return response()->error('Organization for linking not found.');
     }
 
     public function getLinkAppUrl()
