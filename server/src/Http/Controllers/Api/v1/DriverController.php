@@ -353,10 +353,10 @@ class DriverController extends Controller
             return response()->error('Authentication failed using password provided.', 401);
         }
 
-        // get the current company session
+        // Get the company session for the user
         $company = Flow::getCompanySessionForUser($user);
 
-        // get driver record
+        // Get driver record
         $driver = Driver::firstOrCreate(
             [
                 'user_uuid'    => $user->uuid,
@@ -365,9 +365,10 @@ class DriverController extends Controller
             [
                 'user_uuid'    => $user->uuid,
                 'company_uuid' => $company->uuid,
-                'name'         => $attrs['name'] ?? $user->name,
-                'phone'        => $attrs['phone'] ?? $user->phone,
-                'email'        => $attrs['email'] ?? $user->email,
+                'name'         => data_get($attrs, 'name', $user->name),
+                'phone'        => data_get($attrs, 'phone', $user->phone),
+                'email'        => data_get($attrs, 'email', $user->email),
+                'location'     => new Point(0, 0),
             ]
         );
 
@@ -443,7 +444,7 @@ class DriverController extends Controller
         // find and verify code
         $verificationCode = VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
 
-        if (!$verificationCode && $code !== '999000') {
+        if (!$verificationCode && $code !== config('fleetops.navigator.bypass_verification_code')) {
             return response()->error('Invalid verification code!');
         }
 

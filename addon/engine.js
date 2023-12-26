@@ -4,7 +4,7 @@ import Resolver from 'ember-resolver';
 import config from './config/environment';
 import services from '@fleetbase/ember-core/exports/services';
 import AdminVisibilityControlsComponent from './components/admin/visibility-controls';
-import NavigatorAppControlsComponent from './components/admin/navigator-app';
+import NavigatorAppConfigComponent from './components/admin/navigator-app';
 
 const { modulePrefix } = config;
 const externalRoutes = ['console', 'extensions'];
@@ -30,9 +30,9 @@ export default class FleetOpsEngine extends Engine {
                     component: AdminVisibilityControlsComponent,
                 },
                 {
-                    title: 'Navigator Apps',
-                    icon: 'key',
-                    component: NavigatorAppControlsComponent,
+                    title: 'Navigator App',
+                    icon: 'location-arrow',
+                    component: NavigatorAppConfigComponent,
                 },
             ],
             {

@@ -1,5 +1,8 @@
 <ContentPanel @title="Navigator App" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-    <InputGroup @name="URL">
-        <ClickToCopy>{{this.url}}</ClickToCopy>
+    <InputGroup @name="Instance Linking URL">
+        <ClickToCopy class="px-4 py-2 border rounded-md bg-gray-100 shadow-sm dark:bg-gray-700 border-gray-200 dark:border-gray-800" @value={{this.url}}>{{this.url}}</ClickToCopy>
+        <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+            <InputInfo>Use this URL to link the official Navigator app to this {{t "app.name"}} instance. Opening this URL on a mobile device will open the Navigator app and update it's configuration and branding.</InputInfo>
+        </Attach::Tooltip>
     </InputGroup>
 </ContentPanel>
