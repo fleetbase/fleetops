@@ -4,14 +4,18 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\Exceptions\FleetbaseRequestValidationException;
 use Fleetbase\FleetOps\Exports\DriverExport;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController as ApiDriverController;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Http\Requests\Internal\AssignOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\Internal\CreateDriverRequest;
 use Fleetbase\FleetOps\Http\Requests\Internal\UpdateDriverRequest;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Models\Invite;
 use Fleetbase\Models\User;
+use Fleetbase\Models\VerificationCode;
 use Fleetbase\Notifications\UserInvited;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -266,5 +270,149 @@ class DriverController extends FleetOpsController
         $fileName = trim(Str::slug('drivers-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new DriverExport(), $fileName);
+    }
+
+    /**
+     * Assigns a driver to a specified order.
+     *
+     * @param Fleetbase\FleetOps\Http\Requests\Internal\AssignOrderRequest $request
+     *
+     * @return \Illuminate\Http\Response $response
+     */
+    public function assignOrder(AssignOrderRequest $request)
+    {
+        $driver = Driver::where('public_id', $request->driver)->first();
+        $order  = Order::where('public_id', $request->order)->first();
+
+        if ($order->hasDriverAssigned) {
+            return response()->error('A driver is already assigned to this order.');
+        }
+
+        if ($order->isDriver($driver)) {
+            return response()->error('The driver is already assigned to this order.');
+        }
+
+        $order->assignDriver($driver);
+
+        return response()->json([
+            'status'  => 'ok',
+            'message' => 'Driver assigned',
+        ]);
+    }
+
+    /**
+     * Update drivers geolocation data.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function track(string $id, Request $request)
+    {
+        return app(ApiDriverController::class)->track($id, $request);
+    }
+
+    /**
+     * Query for Storefront Customer orders.
+     *
+     * @return \Fleetbase\Http\Resources\Storefront\Customer
+     */
+    public function registerDevice(Request $request)
+    {
+        return app(ApiDriverController::class)->registerDevice($request);
+    }
+
+    /**
+     * Authenticates customer using login credentials and returns with auth token.
+     *
+     * @return \Fleetbase\Http\Resources\Storefront\Customer
+     */
+    public function login(Request $request)
+    {
+        return app(ApiDriverController::class)->login($request);
+    }
+
+    /**
+     * Attempts authentication with phone number via SMS verification.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function loginWithPhone()
+    {
+        $phone = static::phone();
+
+        // Check if user exists
+        $user = User::where('phone', $phone)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+
+        if (!$user) {
+            return response()->error('No driver with this phone # found.');
+        }
+
+        // Generate verification token
+        VerificationCode::generateSmsVerificationFor($user, 'driver_login', function ($verification) {
+            return 'Your ' . config('app.name') . ' verification code is ' . $verification->code;
+        });
+
+        return response()->json(['status' => 'OK']);
+    }
+
+    /**
+     * Verifys SMS code and sends auth token with driver resource.
+     *
+     * @return \Fleetbase\Http\Resources\FleetOps\Driver
+     */
+    public function verifyCode(Request $request)
+    {
+        $identity = Utils::isEmail($request->identity) ? $request->identity : static::phone($request->identity);
+        $code     = $request->input('code');
+        $for      = $request->input('for', 'driver_login');
+        $attrs    = $request->input(['name', 'phone', 'email']);
+
+        if ($for === 'create_driver') {
+            return app(ApiDriverController::class)->create($request);
+        }
+
+        // Check if user exists
+        $user = User::where('phone', $identity)->orWhere('email', $identity)->first();
+        if (!$user) {
+            return response()->error('Unable to verify code.');
+        }
+
+        // Find and verify code
+        $verificationCode = VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
+        if (!$verificationCode && $code !== config('fleetops.navigator.bypass_verification_code')) {
+            return response()->error('Invalid verification code!');
+        }
+
+        // Get driver record
+        $driver = Driver::where('user_uuid', $user->uuid)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+        if (!$driver) {
+            return response()->error('No driver/agent record found for login.');
+        }
+
+        // Generate auth token
+        try {
+            $token = $user->createToken($driver->uuid);
+        } catch (\Exception $e) {
+            return response()->error($e->getMessage());
+        }
+
+        $driver->token = $token->plainTextToken;
+
+        return new $this->resource($driver);
+    }
+
+    /**
+     * Patches phone number with international code.
+     */
+    public static function phone(string $phone = null): string
+    {
+        if ($phone === null) {
+            $phone = request()->input('phone');
+        }
+
+        if (!Str::startsWith($phone, '+')) {
+            $phone = '+' . $phone;
+        }
+
+        return $phone;
     }
 }
