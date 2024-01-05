@@ -201,17 +201,32 @@ class Utils extends FleetbaseUtils
         if ($coordinates instanceof \Grimzy\LaravelMysqlSpatial\Types\Point) {
             $latitude  = $coordinates->getLat();
             $longitude = $coordinates->getLng();
-        } elseif (static::isGeoJson($coordinates)) {
+        } else if (static::isGeoJson($coordinates)) {
             $coordinatesJson = null;
+            $coordinatesInGeoJson = null;
+            $coordinatesInGeoJsonFeature = null;
 
             if (is_array($coordinates) || is_object($coordinates)) {
                 $coordinatesJson = json_encode($coordinates);
             }
 
+            $coordinatesInGeoJson = data_get($coordinates, 'coordinates');
+            $coordinatesInGeoJsonFeature = data_get($coordinates, 'geometry.coordinates');
+
             if (static::isJson($coordinatesJson)) {
-                $coordinates = \Grimzy\LaravelMysqlSpatial\Types\Point::fromJson($coordinatesJson);
+                try {
+                    $coordinates = \Grimzy\LaravelMysqlSpatial\Types\Point::fromJson($coordinatesJson);
+                } catch (\Throwable $e) {
+                    if ($coordinatesInGeoJson) {
+                        return static::getPointFromMixed($coordinatesInGeoJson);
+                    }
+                    
+                    if ($coordinatesInGeoJsonFeature) {
+                        return static::getPointFromMixed($coordinatesInGeoJsonFeature);
+                    }
+                }
             }
-        } elseif (is_array($coordinates) || is_object($coordinates)) {
+        } else if (is_array($coordinates) || is_object($coordinates)) {
             // if known location based record
             if (static::exists($coordinates, 'public_id')) {
                 if (Str::startsWith(data_get($coordinates, 'public_id'), ['place', 'driver'])) {
