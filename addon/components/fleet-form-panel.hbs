@@ -7,30 +7,30 @@
     @width={{or this.width @width "600px"}}
 >
     <Overlay::Header
-        @title={{if this.fleet.public_id this.fleet.name "New Fleet"}}
+        @title={{if this.fleet.public_id this.fleet.name {{t "fleet-ops.component.fleet-form-panel.title"}} }}
         @status={{this.fleet.public_id}}
         @hideStatusDot={{true}}
         @createdAt={{this.fleet.createdAt}}
         @titleWrapperClass="leading-5"
     >
         <div class="flex flex-1 justify-end">
-            <Button @icon={{if this.fleet.id "save" "check"}} @type="primary" @text={{if this.fleet.id "Save Fleet" "Create Fleet"}} @onClick={{this.save}} @wrapperClass="mr-2" />
+            <Button @icon={{if this.fleet.id "save" "check"}} @type="primary" @text={{if this.fleet.id {{t "fleet-ops.component.fleet-form-panel.save-fleet"}}{{t "fleet-ops.component.fleet-form-panel.create-fleet"}} }} @onClick={{this.save}} @wrapperClass="mr-2" />
             {{#if this.fleet.id}}
-                <Button @type="default" @icon="id-card" @helpText="View fleet details" @onClick={{this.onViewDetails}} @wrapperClass="mr-2" />
+                <Button @type="default" @icon="id-card" @helpText={{t "fleet-ops.component.fleet-form-panel.view-details"}} @onClick={{this.onViewDetails}} @wrapperClass="mr-2" />
             {{/if}}
-            <Button @type="default" @icon="times" @helpText={{if this.fleet.id "Cancel edit fleet" "Cancel new fleet"}} @onClick={{this.onPressCancel}} />
+            <Button @type="default" @icon="times" @helpText={{if this.fleet.id {{t "fleet-ops.component.fleet-form-panel.cancel-edit-fleet"}}{{t "fleet-ops.component.fleet-form-panel.cancel-new-fleet"}} }} @onClick={{this.onPressCancel}} />
         </div>
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
         <div class="modal-body-container">
             <div class="flex flex-col text-xs dark:text-gray-100">
-                <InputGroup @name="Fleet Name" @value={{this.fleet.name}} />
-                <InputGroup @name="Parent Fleet" @value={{this.fleet.parent_fleet}}>
+                <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.fleet-name"}} @value={{this.fleet.name}} />
+                <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.parent-fleet"}} @value={{this.fleet.parent_fleet}}>
                     <ModelSelect
                         @modelName="fleet"
                         @selectedModel={{this.fleet.parent_fleet}}
-                        @placeholder="Select parent fleet to assign fleet to"
+                        @placeholder={{t "fleet-ops.component.fleet-form-panel.select-parent-fleet"}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}
@@ -41,11 +41,11 @@
                         {{model.name}}
                     </ModelSelect>
                 </InputGroup>
-                <InputGroup @name="Vendor" @value={{this.fleet.vendor}}>
+                <InputGroup @name={{t "fleet-ops.common.vendor"}} @value={{this.fleet.vendor}}>
                     <ModelSelect
                         @modelName="vendor"
                         @selectedModel={{this.fleet.vendor}}
-                        @placeholder="Select vendor to assign fleet to"
+                        @placeholder={{t "fleet-ops.component.fleet-form-panel.select-vendor"}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}
@@ -56,11 +56,11 @@
                         {{model.name}}
                     </ModelSelect>
                 </InputGroup>
-                <InputGroup @name="Assign to Service Area" @value={{this.fleet.service_area}}>
+                <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.service-title"}} @value={{this.fleet.service_area}}>
                     <ModelSelect
                         @modelName="service-area"
                         @selectedModel={{this.fleet.service_area}}
-                        @placeholder="Select service area to assign fleet to"
+                        @placeholder={{t "fleet-ops.component.fleet-form-panel.select-service"}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}
@@ -72,12 +72,12 @@
                     </ModelSelect>
                 </InputGroup>
                 {{#if this.fleet.service_area}}
-                    <InputGroup @name="Assign to Zone" @value={{this.fleet.zone}}>
+                    <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.zone-title"}} @value={{this.fleet.zone}}>
                         <ModelSelect
                             @modelName="zone"
                             @selectedModel={{this.fleet.zone}}
                             @query={{hash service_area_uuid=this.fleet.service_area.id}}
-                            @placeholder="Select zone to assign fleet to"
+                            @placeholder={{t "fleet-ops.component.fleet-form-panel.select-zone"}}
                             @triggerClass="form-select form-input"
                             @infiniteScroll={{false}}
                             @renderInPlace={{true}}
@@ -89,10 +89,10 @@
                         </ModelSelect>
                     </InputGroup>
                 {{/if}}
-                <InputGroup @name="Status" @helpText="Select the status of the fleet.">
-                    <Select @options={{this.statusOptions}} @value={{this.fleet.status}} @onSelect={{fn (mut this.fleet.status)}} @placeholder="Select status" class="w-full" />
+                <InputGroup @name={{t "fleet-ops.common.status"}} @helpText={{t "fleet-ops.component.fleet-form-panel.select-status-fleet"}}>
+                    <Select @options={{this.statusOptions}} @value={{this.fleet.status}} @onSelect={{fn (mut this.fleet.status)}} @placeholder={{t "fleet-ops.component.fleet-form-panel.select-status"}} class="w-full" />
                 </InputGroup>
-                <InputGroup @name="Task/ Mission" @helpText="Give a description of this fleet's primary task or mission if applicable." @value={{this.fleet.task}} />
+                <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.task-mission-title"}} @helpText={{t "fleet-ops.component.fleet-form-panel.task-text"}} @value={{this.fleet.task}} />
             </div>
         </div>
         {{yield}}
