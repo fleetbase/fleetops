@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -289,6 +290,27 @@ class Place extends Model
         }
 
         return static::createFromGoogleAddress($results->first(), $saveInstance);
+    }
+
+    /**
+     * Create a new Place instance from a geocoding lookup.
+     *
+     * @param bool $saveInstance
+     */
+    public static function createFromReverseGeocodingLookup(\Grimzy\LaravelMysqlSpatial\Types\Point $point, $saveInstance = false): Place
+    {
+        $results = Geocoding::reverseFromCoordinates($point->getLat(), $point->getLng());
+        $place = $results->first();
+
+        if (!$place) {
+            $place = (new static())->newInstance(['location' => $point]);
+        }
+
+        if ($saveInstance) {
+            $place->save();
+        }
+
+        return $place;
     }
 
     /**
