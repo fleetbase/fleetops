@@ -18,7 +18,7 @@ class DeletedResource extends FleetbaseResource
      */
     public function toArray($request)
     {
-        $deleted = [
+        return [
             'id'        => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'uuid'      => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id' => $this->when(Http::isInternalRequest(), $this->public_id),
@@ -26,12 +26,6 @@ class DeletedResource extends FleetbaseResource
             'time'      => $this->deleted_at,
             'deleted'   => true,
         ];
-
-        if (Http::isInternalRequest()) {
-            $deleted = Arr::insertAfterKey($deleted, ['uuid' => $this->uuid, 'public_id' => $this->public_id], 'id');
-        }
-
-        return $deleted;
     }
 
     /**
@@ -56,6 +50,6 @@ class DeletedResource extends FleetbaseResource
      */
     public function getObjectType()
     {
-        return strtolower(Utils::getClassName($this->resource));
+        return Utils::getTypeFromClassName($this->resource);
     }
 }
