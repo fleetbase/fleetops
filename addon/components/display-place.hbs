@@ -4,9 +4,9 @@
             <div class={{@noAddressClass}}>
                 <span class="text-red-500">
                     {{#if @type}}
-                        No {{@type}} address!
+                        {{t "fleet-ops.component.display-panel.no-address" htmlSafe=true type=@type}}
                     {{else}}
-                        No address!
+                        {{t "fleet-ops.component.display-panel.no-address-message"}}
                     {{/if}}
                 </span>
             </div>

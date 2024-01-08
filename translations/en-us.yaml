@@ -1,9 +1,72 @@
 fleet-ops:
   extension-name: Fleet-Ops
+  common: 
+    reload: Reload data
+    new: New
+    export: Export
+    bulk-action: Bulk Action
+    manage-message: Manage your vendors
+    name: Name
+    driver: Driver
+    driver-license: Driver License
+    email: Email
+    phone: Phone
+    vehicle: Vehicle
+    city: City
+    country: Country
+    status: Status
+    coordinates: Coordinates
+    photos: photos
+
+  component:
+    driver-form-panel:
+        driver-detail: View driver details
+        save-driver: Save Driver
+        create-driver: Create Driver
+        cancel-edit-driver: Cancel edit driver
+        cancel-new-driver: Cancel new driver
+        upload-new-photo: Upload new photo
+        new-driver: New Driver
+        vendor: Vendor
+
+    driver-panel:
+      locate-button-text: Locate driver
+      edit-button-text: Edit driver
+      close-button-text: Close driver details
+      no-vehicle-message: No vehicle assigned
+      assign-vehicle-button: Assign a vehicle to driver
+
   management:
+    contact:
+      index:
+        title: Contacts
+        delete-contacts: Delete Contacts
     drivers:
       index:
         title: Drivers
-        fields:
-          search: 
-            placeholder: Search Drivers
+        delete-drivers: Delete Drivers   
+    fleets:
+      index:
+        title: Fleets
+        delete-fleets: Delete Fleets
+    fuel-reports:
+      index:
+        title: Fuel Reports
+        delete-fuel-reports: Delete Fuel Reports
+    issues:
+      index:
+        title: Issues
+        delete-issues: Delete Issues
+    places:
+      index:
+        title: Places
+        delete-places: Delete Places
+    vehicles:
+      index:
+        title: Vehicles
+        delete-vehicles: Delete Vehicles
+    vendors:
+      index:
+        title: Vendors
+        delete-vendors: Delete Vendors
+    

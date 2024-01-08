@@ -17,7 +17,7 @@
                         {{#each @driver.fleets as |fleet|}}
                             <span class="driver-fleet-name truncate horizontal-li-item text-xs">{{fleet.name}}</span>
                         {{else}}
-                            <span class="text-xs text-muted">No fleets</span>
+                            <span class="text-xs text-muted">{{t "fleet-ops.component.driver-card.no-fleets"}}</span>
                         {{/each}}
                     </div>
                 </div>
