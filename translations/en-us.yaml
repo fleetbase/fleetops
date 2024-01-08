@@ -1,24 +1,44 @@
 fleet-ops:
   extension-name: Fleet-Ops
   common: 
-    reload: Reload data
-    new: New
-    export: Export
     bulk-action: Bulk Action
+    city: City
+    coordinates: Coordinates
+    country: Country
+    driver-license: Driver License
+    driver: Driver
+    email: Email
+    export: Export
+    internal-id: Internal ID
     manage-message: Manage your vendors
     name: Name
-    driver: Driver
-    driver-license: Driver License
-    email: Email
+    new: New
     phone: Phone
-    vehicle: Vehicle
-    city: City
-    country: Country
-    status: Status
-    coordinates: Coordinates
     photos: photos
+    reload: Reload data
+    remove: Remove
+    reporter: Reporter
+    status: Status
+    title: Title
+    type: Type
+    vehicle: Vehicle
+    vendor: Vendor
 
   component:
+    contact-form-panel:
+      view-contact-button: View contact details
+      save-contact: Save Contact
+      create-contact: Create Contact
+      cancel-edit-contact: Cancel edit contact
+      cancel-new-contact: Cancel new contact
+      new-contact: New Contact
+    contact-panel:
+      edit-button-text: Edit contact
+    display-panel:
+      no-address: No {type} address!
+      no-address-message: No address!
+    driver-card:
+      no-fleets: No fleets
     driver-form-panel:
         driver-detail: View driver details
         save-driver: Save Driver
@@ -28,13 +48,57 @@ fleet-ops:
         upload-new-photo: Upload new photo
         new-driver: New Driver
         vendor: Vendor
-
+        select-vehicle: Select Vehicle
+        driver-status: Select driver status
     driver-panel:
       locate-button-text: Locate driver
       edit-button-text: Edit driver
       close-button-text: Close driver details
       no-vehicle-message: No vehicle assigned
       assign-vehicle-button: Assign a vehicle to driver
+    fleet-driver-listing:
+      search-driver: Search drivers in fleet
+      add-driver: Add driver to fleet
+      loading-message: Loading fleet drivers...
+    fleet-form-panel:
+      title: New Fleet
+      save-fleet: Save Fleet
+      create-fleet: Create Fleet
+      view-details: View fleet details
+      cancel-edit-fleet: Cancel edit fleet
+      cancel-new-fleet: Cancel new fleet
+      fleet-name: Fleet Name
+      parent-fleet: Parent Fleet
+      select-parent-fleet: Select parent fleet to assign fleet to
+      select-vendor: Select vendor to assign fleet to
+      service-title: Assign to Service Area
+      select-service: Select service area to assign fleet to
+      zone-title: Assign to Zone
+      select-zone: Select zone to assign fleet to
+      select-status-fleet: Select the status of the fleet.
+      select-status: Select status
+      task-mission-title: Task/ Mission
+      task-text: Give a description of this fleet's primary task or mission if applicable.
+    fleet-vehicle-listing:
+      search-vehicle: Search vehicle in fleet
+      add-vehicle: Add vehicle to fleet
+      loading-message: Loading fleet vehicle...
+    fuel-report-form-panel:
+      fuel-report: New Fuel Report
+      save-fuel-report: Save Fuel Report
+      create-fuel-report: Create Fuel Report
+      view-details: View fuel report details
+      cancel-edit-fuel-report: Cancel edit fuel report
+      cancel-new-fuel-report: Cancel new fuel report
+      select-reporter: Select Reporter
+      select-driver: Select Driver
+      select-vehicle: Select Vehicle
+      select-fuel-report: Select fuel-report status
+      odometer: Odometer
+      cost: Cost
+      volume: Volume
+      select-volume-text: Select the metric unit and volume of fuel to report.
+
 
   management:
     contact:
