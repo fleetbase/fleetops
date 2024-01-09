@@ -1,30 +1,86 @@
 fleet-ops:
   extension-name: Fleet-Ops
   common: 
+    amount: Amount
     bulk-action: Bulk Action
     city: City
     coordinates: Coordinates
     country: Country
+    cost: Cost
+    date-created: Date Created
+    details: Details
+    destination: Destination
+    distance: Distance
     driver-license: Driver License
     driver: Driver
     email: Email
     export: Export
+    id: ID
     internal-id: Internal ID
+    item: Item
+    key: Key
+    loading: Loading...
     manage-message: Manage your vendors
     name: Name
     new: New
+    odometer: Odometer
     phone: Phone
     photos: photos
     reload: Reload data
     remove: Remove
     reporter: Reporter
+    save-changes: Save changes
+    service-area: Service area
     status: Status
+    task: Task
     title: Title
     type: Type
+    value: Value
     vehicle: Vehicle
     vendor: Vendor
+    zone: Zone
 
   component:
+    admin:
+      navigator-app:
+        title: Navigator App
+        name: Instance Linking URL
+        message: Use this URL to link the official Navigator app to this {companyName} instance. Opening this URL on a mobile device will open the Navigator app and update it's configuration and branding.
+      visibility-controls:
+        title: Visibility Controls
+        message: Visibility controls allow you to disable sections of Fleet-Ops. Toggle the checkbox to enable or disable sections to hide in Fleet-ops.
+        checkbox-text: Enable or disable visibility for this section in Fleet-Ops.
+    cell:
+      driver-name:
+        not-assigned: No driver assigned
+    contact-panel:
+      details:
+        web-url: Website URL
+    fleet-panel:
+      details:
+        active-manpower: Active Manpower
+      driver-listing:
+        search-driver: Search drivers in fleet
+        add-driver: Add driver to fleet
+        loading-driver: Loading fleet drivers...
+      vehicle-listing:
+        search-vehicle: Search vehicle's in fleet
+        add-vehicle: Add vehicle to fleet
+        loading-vehicle: Loading fleet vehicles...
+    fuel-report-panel:
+      details:
+        fuel: Fuel/ Volume
+    issue-panel:
+      details:
+        assigned: Assigned To
+        type: Issue Type
+        category: Issue Category
+        priority: Issue Priority
+        report: Report
+    
+
+
+
     contact-form-panel:
       view-contact-button: View contact details
       save-contact: Save Contact
@@ -98,6 +154,142 @@ fleet-ops:
       cost: Cost
       volume: Volume
       select-volume-text: Select the metric unit and volume of fuel to report.
+    fuel-report-panel:
+      title: Fuel Report Details
+      edit-button: Edit fuel report
+      cancel-edit-fuel-report: Cancel edit fuel report
+      cancel-new-fuel-report: Cancel new fuel report
+    global-search:
+      search: Search by keyword...
+    integrated-order-details:
+      order-id: Order ID
+      quotation-id: Quotation ID
+      driver-id: Driver ID
+      link: Shareable Link
+      price-breakdown: Price Breakdown
+      metadata: Metadata
+    issue-form-panel:
+      issue: New Issue
+      save-issue: Save Issue
+      create-issue: Create Issue
+      view-details: View issue details
+      cancel-edit-issue: Cancel edit issue
+      cancel-new-issue: Cancel new issue
+      reported-by: Reported By
+      assigned: Assigned To
+      select-assign: Select Assignee
+      select-reporter: Select Reporter
+      select-driver: Select Driver
+      select-vehicle: Select Vehicle
+      type: Issue Type
+      select-type: Select issue type
+      category: Issue Category
+      select-category: Select issue category
+      report: Issue Report
+      tags: Issue Tags
+      add-tags: Add tags
+      priority: Issue Priority
+      select-priority: Select issue priority
+      select-status: Select issue status
+    issue-panel:
+      title: Issue Details
+      edit-issue: Edit Issue
+      cancel-edit-issue: Cancel edit issue
+      cancel-new-issue: Cancel new issue
+    live-map:
+      service-area: Service Area
+      zone: Zone
+    order-config:
+      select-message: Select an order configuration to modify, or click "New Config" to create a new order configuration.
+      new-config: New Config
+      loading-configuration: Loading your order configurations...
+      select-order: Select order configuration
+      save-changes: Save Changes
+      details: Details
+      fields: Custom Fields
+      flow: Activity Flow
+      entities: Entities
+    order-list-overlay:
+      search: Search orders...
+      selected: Selected
+      assign: Assign to driver...
+      cancel: Cancel orders...
+      delete: Delete orders...
+      actions: Actions
+      create-order: Create new order...
+      create-fleet: Create new fleet...
+      active-order: Active orders
+      unassigned-order: Unassigned orders  
+    place-form-panel:
+      place: New Place
+      save-place: Save Place
+      create-place: Create Place
+      view-details: View place details
+      cancel-edit-place: Cancel edit place
+      cancel-new-place: Cancel new place
+      street-1: Street 1
+      street-2: Street 2
+      neighborhood: Neighborhood
+      building: Building
+      security-code: Security Access Code
+      postal-code: Postal Code
+      state: State
+    place-panel:
+      edit-place: Edit place
+      cancel-edit-place: Cancel edit place
+      cancel-new-place: Cancel new place
+    route-list:
+      expand: Tap to expand
+      collapse: Tap to collapse
+      more-waypoints: more waypoints
+    settings-window:
+      title: FleetOps Settings
+      save: Save Changes
+      name: Default Adhoc Ping Distance
+      name-text: This setting determines the default distance in meters adhoc orders should ping drivers within vicinity of the order pickup point.
+      message: Distance must be in meters
+    vehicle-form-panel:
+      view-details: View vehicle details
+      save-vehicle: Save Vehicle
+      create-vehicle: Create Vehicle      
+      cancel-edit-vehicle: Cancel edit vehicle
+      cancel-new-vehicle: Cancel new vehicle
+      upload-photo: Upload new photo
+      new-vehicle: New Vehicle
+      not-assigned: No driver assigned
+      plate-number: Plate Number
+      vin-number: VIN Number
+      make: Make
+      vehicle-make: Vehicle make
+      model: Model
+      vehicle-model: Vehicle model
+      year: Year
+      vehicle-year: Vehicle year
+      driver-assigned: Driver Assigned
+      select-driver: Select Driver
+      select-vehicle: Select vehicle status
+      avatar: Avatar
+      select-map-avatar: Select map avatar
+      select-avatar-rendering: Select an avatar to be used for rendering on maps when using geolocation tracking features.
+      select-avatar: Select avatar
+    vehicle-panel:
+      edit: Edit vehicle
+      close: Close vehicle details
+      not-assigned: No driver assigned
+      assign-driver: Assign a driver to vehicle
+    vendor-form-panel:
+      view-details: View vendor details
+      save-vendor: Save Vendor
+      create-vendor: Create Vendor      
+      cancel-edit-vendor: Cancel edit vendor
+      cancel-new-vendor: Cancel new vendor
+      upload-photo: Upload new photo
+      new-vendor: New Vendor
+    vendor-panel:
+      edit: Edit vendor
+      close: Close vendor details
+      new-vendor: New Vendor
+
 
 
   management:

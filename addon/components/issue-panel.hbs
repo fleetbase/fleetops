@@ -6,9 +6,9 @@
     @isResizable={{or this.isResizable @isResizable}}
     @width={{or this.width @width "600px"}}
 >
-    <Overlay::Header @title="Issue Details" @status={{this.issue.public_id}} @hideStatusDot={{true}} @createdAt={{this.issue.createdAt}}>
-        <Button @type="default" @icon="pen" @helpText="Edit Issue" @onClick={{this.onEdit}} @wrapperClass="mr-2" />
-        <Button @type="default" @icon="times" @helpText={{if this.issue.id "Cancel edit Issue" "Cancel new Issue"}} @onClick={{this.onPressCancel}} />
+    <Overlay::Header @title={{t "fleet-ops.component.issue-panel.title"}} @status={{this.issue.public_id}} @hideStatusDot={{true}} @createdAt={{this.issue.createdAt}}>
+        <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.issue-panel.edit-issue"}} @onClick={{this.onEdit}} @wrapperClass="mr-2" />
+        <Button @type="default" @icon="times" @helpText={{if this.issue.id {{t "fleet-ops.component.issue-panel.cancel-edit-issue"}} {{t "fleet-ops.component.issue-panel.cancel-new-issue"}} }} @onClick={{this.onPressCancel}} />
     </Overlay::Header>
     <Overlay::Body class="no-padding" @increaseInnerBodyHeightBy={{1000}}>
         <div class="section-header-actions w-full overflow-x-scroll lg:overflow-x-auto">

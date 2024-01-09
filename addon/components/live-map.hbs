@@ -72,12 +72,12 @@
 
         {{#each this.activeServiceAreas as |serviceArea|}}
             <layers.polygon @id={{serviceArea.id}} @record={{serviceArea}} @locations={{serviceArea.bounds}} @fillColor={{serviceArea.color}} @color={{serviceArea.stroke_color}} @onAdd={{fn this.triggerAction "onServiceAreaLayerAdded" serviceArea}} as |polygon|>
-                <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{serviceArea.name}} Service Area</polygon.tooltip>
+                <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{serviceArea.name}} {{t "fleet-ops.component.live-map.service-area"}}</polygon.tooltip>
             </layers.polygon>
 
             {{#each serviceArea.zones as |zone|}}
                 <layers.polygon @id={{zone.id}} @record={{zone}} @locations={{zone.locations}} @fillColor={{zone.color}} @color={{zone.stroke_color}} @onAdd={{fn this.triggerAction "onZoneLayerAdd" zone}} as |polygon|>
-                    <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{zone.name}} Zone</polygon.tooltip>
+                    <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{zone.name}} {{t "fleet-ops.component.live-map.zone"}}</polygon.tooltip>
                 </layers.polygon>
             {{/each}}
         {{/each}}
