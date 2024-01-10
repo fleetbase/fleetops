@@ -7,15 +7,15 @@
     @width={{or this.width @width "600px"}}
 >
     <Overlay::Header
-        @title={{if this.place.public_id this.place.name {{t "fleet-ops.component.place-form-panel.place"}} }}
+        @title={{if this.place.public_id this.place.name (t "fleet-ops.component.place-form-panel.place") }}
         @status={{this.place.public_id}}
         @hideStatusDot={{true}}
         @createdAt={{this.place.createdAt}}
         @titleWrapperClass="leading-5"
     >
         <div class="flex flex-1 justify-end">
-            <Button @icon={{if this.place.id "save" "check"}} @type="primary" @text={{if this.place.id {{t "fleet-ops.component.place-form-panel.save-place"}} {{t "fleet-ops.component.place-form-panel.create-place"}} }} @onClick={{this.save}} @wrapperClass="mr-2" />
-            <Button @type="default" @icon="times" @helpText={{if this.place.id {{t "fleet-ops.component.place-form-panel.cancel-edit-place"}} {{t "fleet-ops.component.place-form-panel.cancel-new-place"}} }} @onClick={{this.onPressCancel}} />
+            <Button @icon={{if this.place.id "save" "check"}} @type="primary" @text={{if this.place.id (t "fleet-ops.component.place-form-panel.save-place")(t "fleet-ops.component.place-form-panel.create-place") }} @onClick={{this.save}} @wrapperClass="mr-2" />
+            <Button @type="default" @icon="times" @helpText={{if this.place.id (t "fleet-ops.component.place-form-panel.cancel-edit-place")(t "fleet-ops.component.place-form-panel.cancel-new-place") }} @onClick={{this.onPressCancel}} />
         </div>
     </Overlay::Header>
 

@@ -7,18 +7,18 @@
     @width={{or this.width @width "600px"}}
 >
     <Overlay::Header
-        @title={{if this.issue.public_id this.issue.name {{t "fleet-ops.component.issue-form-panel.issue"}} }}
+        @title={{if this.issue.public_id this.issue.name (t "fleet-ops.component.issue-form-panel.issue") }}
         @status={{this.issue.public_id}}
         @hideStatusDot={{true}}
         @createdAt={{this.issue.createdAt}}
         @titleWrapperClass="leading-5"
     >
         <div class="flex flex-1 justify-end">
-            <Button @icon={{if this.issue.id "save" "check"}} @type="primary" @text={{if this.issue.id {{t "fleet-ops.component.issue-form-panel.save-issue"}} {{t "fleet-ops.component.issue-form-panel.create-issue"}} }} @onClick={{this.save}} @wrapperClass="mr-2" />
+            <Button @icon={{if this.issue.id "save" "check"}} @type="primary" @text={{if this.issue.id (t "fleet-ops.component.issue-form-panel.save-issue")(t "fleet-ops.component.issue-form-panel.create-issue") }} @onClick={{this.save}} @wrapperClass="mr-2" />
             {{#if this.issue.id}}
                 <Button @type="default" @icon="circle-exclamation" @helpText={{t "fleet-ops.component.issue-form-panel.view-details"}} @onClick={{this.onViewDetails}} @wrapperClass="mr-2" />
             {{/if}}
-            <Button @type="default" @icon="times" @helpText={{if this.issue.id {{t "fleet-ops.component.issue-form-panel.cancel-edit-issue"}} {{t "fleet-ops.component.issue-form-panel.cancel-new-issue"}} }} @onClick={{this.onPressCancel}} />
+            <Button @type="default" @icon="times" @helpText={{if this.issue.id (t "fleet-ops.component.issue-form-panel.cancel-edit-issue")(t "fleet-ops.component.issue-form-panel.cancel-new-issue") }} @onClick={{this.onPressCancel}} />
         </div>
     </Overlay::Header>
 

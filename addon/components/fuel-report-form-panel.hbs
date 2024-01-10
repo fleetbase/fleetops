@@ -7,7 +7,7 @@
     @width={{or this.width @width "600px"}}
 >
     <Overlay::Header
-        @title={{if this.fuelReport.public_id this.fuelReport.name {{t "fleet-ops.component.fuel-report-form-panel.fuel-report"}} }}
+        @title={{if this.fuelReport.public_id this.fuelReport.name (t "fleet-ops.component.fuel-report-form-panel.fuel-report") }}
         @status={{this.fuelReport.public_id}}
         @hideStatusDot={{true}}
         @createdAt={{this.fuelReport.createdAt}}
@@ -17,14 +17,14 @@
             <Button
                 @icon={{if this.fuelReport.id "save" "check"}}
                 @type="primary"
-                @text={{if this.fuelReport.id {{t "fleet-ops.component.fuel-report-form-panel.save-fuel-report"}}{{t "fleet-ops.component.fuel-report-form-panel.create-fuel-report"}} }}
+                @text={{if this.fuelReport.id (t "fleet-ops.component.fuel-report-form-panel.save-fuel-report")(t "fleet-ops.component.fuel-report-form-panel.create-fuel-report") }}
                 @onClick={{this.save}}
                 @wrapperClass="mr-2"
             />
             {{#if this.fuelReport.id}}
                 <Button @type="default" @icon="gas-pump" @helpText={{t "fleet-ops.component.fuel-report-form-panel.view-details"}} @onClick={{this.onViewDetails}} @wrapperClass="mr-2" />
             {{/if}}
-            <Button @type="default" @icon="times" @helpText={{if this.fuelReport.id {{t "fleet-ops.component.fuel-report-form-panel.cancel-edit-fuel-report"}}{{t "fleet-ops.component.fuel-report-form-panel.cancel-new-fuel-report"}} }} @onClick={{this.onPressCancel}} />
+            <Button @type="default" @icon="times" @helpText={{if this.fuelReport.id (t "fleet-ops.component.fuel-report-form-panel.cancel-edit-fuel-report")(t "fleet-ops.component.fuel-report-form-panel.cancel-new-fuel-report") }} @onClick={{this.onPressCancel}} />
         </div>
     </Overlay::Header>
 

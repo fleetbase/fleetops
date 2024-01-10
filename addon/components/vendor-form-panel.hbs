@@ -15,9 +15,9 @@
             </div>
             <div class="flex flex-1 justify-end">
                 <div class="mr-2">
-                    <Button @icon={{if this.vendor.id "save" "check"}} @type="primary" @text={{if this.vendor.id {{t "fleet-ops.component.vendor-form-panel.save-vendor"}}{{t "fleet-ops.component.vendor-form-panel.create-vendor"}} }} @onClick={{this.save}} />
+                    <Button @icon={{if this.vendor.id "save" "check"}} @type="primary" @text={{if this.vendor.id (t "fleet-ops.component.vendor-form-panel.save-vendor")(t "fleet-ops.component.vendor-form-panel.create-vendor") }} @onClick={{this.save}} />
                 </div>
-                <Button @type="default" @icon="times" @helpText={{if this.vendor.id {{t "fleet-ops.component.vendor-form-panel.canel-edit-vendor"}}{{t "fleet-ops.component.vendor-form-panel.cancel-new-vendor"}} }} @onClick={{this.onPressCancel}} />
+                <Button @type="default" @icon="times" @helpText={{if this.vendor.id (t "fleet-ops.component.vendor-form-panel.canel-edit-vendor")(t "fleet-ops.component.vendor-form-panel.cancel-new-vendor") }} @onClick={{this.onPressCancel}} />
             </div>
         </div>
         <div class="flex flex-row justify-between w-full">

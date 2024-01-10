@@ -1,6 +1,6 @@
 <Overlay @onLoad={{this.onLoad}} @isOpen={{@isOpen}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{true}} @isMaximizable={{true}} @isMinimizable={{true}} @width="600px" as |overlay|>
     <Overlay::Header @overlay={{overlay}} @title={{t "fleet-ops.component.settings-window.title"}} @onPressCancel={{@onPressCancel}}>
-        <Button @icon="save" @type="primary" @text={{if (media 'isMobile') "" {{t "fleet-ops.component.settings-window.save"}} }} @onClick={{this.saveSettings}} @isLoading={{this.isSaving}} @disabled={{or this.isLoading this.isSaving}} />
+        <Button @icon="save" @type="primary" @text={{if (media 'isMobile') "" (t "fleet-ops.component.settings-window.save") }} @onClick={{this.saveSettings}} @isLoading={{this.isSaving}} @disabled={{or this.isLoading this.isSaving}} />
     </Overlay::Header>
 
     <Overlay::Body>

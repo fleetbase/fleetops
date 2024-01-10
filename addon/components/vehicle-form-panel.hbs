@@ -18,7 +18,7 @@
                     <Button
                         @icon={{if this.vehicle.id "save" "check"}}
                         @type="primary"
-                        @text={{if this.vehicle.id {{t "fleet-ops.component.vehicle-form-panel.save-vehicle"}}{{t "fleet-ops.component.vehicle-form-panel.create-vehicle"}} }}
+                        @text={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.save-vehicle")(t "fleet-ops.component.vehicle-form-panel.create-vehicle") }}
                         @onClick={{this.save}}
                         @isLoading={{this.isLoading}}
                     />
@@ -26,7 +26,7 @@
                 <Button
                     @type="default"
                     @icon="times"
-                    @helpText={{if this.vehicle.id {{t "fleet-ops.component.vehicle-form-panel.cancel-edit-vehicle"}}{{t "fleet-ops.component.vehicle-form-panel.cancel-new-vehicle"}} }}
+                    @helpText={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.cancel-edit-vehicle")(t "fleet-ops.component.vehicle-form-panel.cancel-new-vehicle") }}
                     @onClick={{this.onPressCancel}}
                     @disabled={{this.isLoading}}
                 />

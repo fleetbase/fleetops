@@ -5,7 +5,7 @@
                 <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.contact-panel.edit-button-text"}} @onClick={{this.onEdit}} />
             </div>
             <div class="flex flex-1 justify-end">
-                <Button @type="default" @icon="times" @helpText={{if this.contact.id {{t "fleet-ops.component.contact-panel.cancel-edit-button"}}{{t "fleet-ops.component.contact-panel.cancel-new-button"}} }} @onClick={{this.onPressCancel}} />
+                <Button @type="default" @icon="times" @helpText={{if this.contact.id (t "fleet-ops.component.contact-panel.cancel-edit-button")(t "fleet-ops.component.contact-panel.cancel-new-button") }} @onClick={{this.onPressCancel}} />
             </div>
         </div>
         <div class="flex flex-row justify-between w-full">

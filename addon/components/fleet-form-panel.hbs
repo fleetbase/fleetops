@@ -7,18 +7,18 @@
     @width={{or this.width @width "600px"}}
 >
     <Overlay::Header
-        @title={{if this.fleet.public_id this.fleet.name {{t "fleet-ops.component.fleet-form-panel.title"}} }}
+        @title={{if this.fleet.public_id this.fleet.name (t "fleet-ops.component.fleet-form-panel.title") }}
         @status={{this.fleet.public_id}}
         @hideStatusDot={{true}}
         @createdAt={{this.fleet.createdAt}}
         @titleWrapperClass="leading-5"
     >
         <div class="flex flex-1 justify-end">
-            <Button @icon={{if this.fleet.id "save" "check"}} @type="primary" @text={{if this.fleet.id {{t "fleet-ops.component.fleet-form-panel.save-fleet"}}{{t "fleet-ops.component.fleet-form-panel.create-fleet"}} }} @onClick={{this.save}} @wrapperClass="mr-2" />
+            <Button @icon={{if this.fleet.id "save" "check"}} @type="primary" @text={{if this.fleet.id (t "fleet-ops.component.fleet-form-panel.save-fleet")(t "fleet-ops.component.fleet-form-panel.create-fleet") }} @onClick={{this.save}} @wrapperClass="mr-2" />
             {{#if this.fleet.id}}
                 <Button @type="default" @icon="id-card" @helpText={{t "fleet-ops.component.fleet-form-panel.view-details"}} @onClick={{this.onViewDetails}} @wrapperClass="mr-2" />
             {{/if}}
-            <Button @type="default" @icon="times" @helpText={{if this.fleet.id {{t "fleet-ops.component.fleet-form-panel.cancel-edit-fleet"}}{{t "fleet-ops.component.fleet-form-panel.cancel-new-fleet"}} }} @onClick={{this.onPressCancel}} />
+            <Button @type="default" @icon="times" @helpText={{if this.fleet.id (t "fleet-ops.component.fleet-form-panel.cancel-edit-fleet")(t "fleet-ops.component.fleet-form-panel.cancel-new-fleet") }} @onClick={{this.onPressCancel}} />
         </div>
     </Overlay::Header>
 

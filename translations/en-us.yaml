@@ -53,9 +53,6 @@ fleet-ops:
     cell:
       driver-name:
         not-assigned: No driver assigned
-    contact-panel:
-      details:
-        web-url: Website URL
     fleet-panel:
       details:
         active-manpower: Active Manpower
@@ -67,29 +64,16 @@ fleet-ops:
         search-vehicle: Search vehicle's in fleet
         add-vehicle: Add vehicle to fleet
         loading-vehicle: Loading fleet vehicles...
-    fuel-report-panel:
-      details:
-        fuel: Fuel/ Volume
-    issue-panel:
-      details:
-        assigned: Assigned To
-        type: Issue Type
-        category: Issue Category
-        priority: Issue Priority
-        report: Report
-    
-
-
-
     contact-form-panel:
       view-contact-button: View contact details
       save-contact: Save Contact
       create-contact: Create Contact
-      cancel-button:
       cancel-edit-button: Cancel edit contact
       cancel-new-button: Cancel new contact
       new-contact: New Contact
     contact-panel:
+      details:
+        web-url: Website URL
       edit-button: Edit contact
       cancel-edit-button: Cancel edit contact
       cancel-new-button: Cancel new contact
@@ -143,6 +127,8 @@ fleet-ops:
       add-vehicle: Add vehicle to fleet
       loading-message: Loading fleet vehicle...
     fuel-report-form-panel:
+      details:
+        fuel: Fuel/ Volume
       fuel-report: New Fuel Report
       save-fuel-report: Save Fuel Report
       create-fuel-report: Create Fuel Report
@@ -195,6 +181,12 @@ fleet-ops:
       select-priority: Select issue priority
       select-status: Select issue status
     issue-panel:
+      details:
+        assigned: Assigned To
+        type: Issue Type
+        category: Issue Category
+        priority: Issue Priority
+        report: Report
       title: Issue Details
       edit-issue: Edit Issue
       cancel-edit-issue: Cancel edit issue
