@@ -85,11 +85,14 @@ fleet-ops:
       view-contact-button: View contact details
       save-contact: Save Contact
       create-contact: Create Contact
-      cancel-edit-contact: Cancel edit contact
-      cancel-new-contact: Cancel new contact
+      cancel-button:
+      cancel-edit-button: Cancel edit contact
+      cancel-new-button: Cancel new contact
       new-contact: New Contact
     contact-panel:
-      edit-button-text: Edit contact
+      edit-button: Edit contact
+      cancel-edit-button: Cancel edit contact
+      cancel-new-button: Cancel new contact
     display-panel:
       no-address: No {type} address!
       no-address-message: No address!
