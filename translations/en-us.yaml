@@ -1,18 +1,21 @@
 fleet-ops:
   extension-name: Fleet-Ops
   common: 
+    active-manpower: Active Manpower
     amount: Amount
     bulk-action: Bulk Action
     city: City
     coordinates: Coordinates
-    country: Country
     cost: Cost
+    country: Country
     date-created: Date Created
-    details: Details
+    delete: Delete
     destination: Destination
+    details: Details
     distance: Distance
     driver-license: Driver License
     driver: Driver
+    edit: Edit
     email: Email
     export: Export
     id: ID
@@ -30,6 +33,7 @@ fleet-ops:
     remove: Remove
     reporter: Reporter
     save-changes: Save changes
+    search: Search
     service-area: Service area
     status: Status
     task: Task
@@ -38,6 +42,7 @@ fleet-ops:
     value: Value
     vehicle: Vehicle
     vendor: Vendor
+    website-url: Website URL
     zone: Zone
 
   component:
@@ -64,6 +69,127 @@ fleet-ops:
         search-vehicle: Search vehicle's in fleet
         add-vehicle: Add vehicle to fleet
         loading-vehicle: Loading fleet vehicles...
+    layout:
+      fleet-ops-sidebar:
+        title: Create new order
+        settings: Settings
+    live-map-drawer:
+      driver-listing:
+        message: Filter drivers by keyword...
+      place-listing: 
+        message: Filter places by keyword...
+      vehicle-listing:
+        message: Filter vehicles by keyword...
+    map-container:
+      visibility-control-panel:
+        title: Visibility Controls
+        hide-places: Hide all places...
+        show-places: Show all places...
+        vehicles: Vehicles
+        vehicle-controls: Vehicle Visibility Controls...
+        hide-vehicles: Hide all vehicles...
+        show-vehicles: Show all vehicles...
+        online-vehicls: Only show online vehicles...
+        offline-vehicles: Only show offline vehicles...
+      zones-panel:
+        title: Service Areas
+        create-service: Create new service area...
+        show: Show all service areas
+        hide: Hide all service areas
+        action: Actions...
+        focus: Focus
+        blur: Blur service area...
+        create-zone: Create zone inside...
+      toolbar:
+        create: Create Order
+        view: View Orders
+        service: Service Areas
+        visibility: Visibility Controls
+        scope: Scope
+    modals:
+      assign-driver:
+        select-driver: Sselect Driver
+        select-assign: Select Driver to Assign
+      clone-config-form:
+        name: Config Name
+        description: Config Description
+      driver-assign-order:
+        order: Select Order
+        assign-order: Select Order to Assign
+      driver-assign-vehicle:
+        vehicle: Select Vehicle
+        assign-vehicle: Select Vehicle to Assign
+      driver-assign-vendor:
+        vendor: Select Vendor
+      driver-details:
+        job: Current Job
+        view: View on map
+      driver-form:
+        select-vendor: Select Vendor
+        select-vehicle: Select Vehicle
+      edit-meta-form:
+        add: Add metafield
+      entity-form:
+        name-text: Name of item or entity.
+        id-text: Use this field to optionally set a custom identifier or internal identifier for the entity.
+        sku: SKU
+        sku-text: Stock keeping unit number if applicable.
+        description: Description
+        description-text: Additional description text of entity.
+        price-title: Pricing & Value
+        price: Price
+        price-text: Price of entity.
+        sale-price: Sale Price
+        sale-price-text: Sale price or discounted price of entity.
+        declare: Declared Value
+        declare-text: Declared value of entity, useful is insurable.
+        measurement-title: Measurements & Weight
+        length: Length
+        length-text: The length of the entity.
+        width: Width
+        width-text: The width of the entity.
+        height: Height
+        height-text: The height of the entity.
+        weight: Weight
+        weight-text: The weight of the entity.
+      entity-meta-field-prompt:
+        name: Meta Field Key
+      fleet-form:
+        title: Fleet Name
+        assign: Assign to Service Area
+        assign-text: Select service area to assign fleet to
+        zone: Assign to Zone
+        zone-text: Select zone to assign fleet to
+        task: Task/ Mission
+        task-text: Give a description of this fleet's primary task or mission if applicable.
+        status-text: Select the status of the fleet.
+        select-status: Select status
+      fuel-report-details:
+        fuel: Fuel/ Volume
+      fuel-report-form:
+        select-driver: Select Driver
+        select-vehicle: Select Vehicle
+        volume: Volume
+        volume-text: Select the metric unit and volume of fuel to report.
+      group-details:
+        name: Group Name
+        member: Members
+        address: Address
+      group-form:
+        title: Group Name
+        users-add: Select users to add to group
+        search: Search and select users to add to this group.
+        select-user: Select user to add to group
+        no-users: No users added to group
+      install-prompt:
+        message: You are attempting to install the extension {extensionName}. Are you sure you wish to proceed with this installation?
+        sub-message: Some extensions require access to your resources.
+      issue-details:
+        assigned: Assigned To
+        type: Issue Type
+        category: Issue Category
+
+
     contact-form-panel:
       view-contact-button: View contact details
       save-contact: Save Contact

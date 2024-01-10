@@ -2,27 +2,27 @@
     <div class="modal-body-container">
         <div class="grid grid-cols-2 flex-col md:flex-row gap-2 mb-6">
             <div class="field-info-container">
-                <div class="field-name">Name</div>
+                <div class="field-name">{{t "fleet-ops.common.name"}}</div>
                 <div class="field-value">{{n-a @options.fleet.name}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Service Area</div>
+                <div class="field-name">{{t "fleet-ops.common.service-area"}}</div>
                 <div class="field-value">{{n-a @options.fleet.serviceArea.name}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Zone</div>
+                <div class="field-name">{{t "fleet-ops.common.zone"}}</div>
                 <div class="field-value">{{n-a @options.fleet.zone.name}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Task</div>
+                <div class="field-name">{{t "fleet-ops.common.task"}}</div>
                 <div class="field-value">{{n-a @options.fleet.task}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Active Manpower</div>
+                <div class="field-name">{{t "fleet-ops.common.active-manpower"}}</div>
                 <div class="field-value">{{@options.fleet.drivers_online_count}} of {{@options.fleet.drivers_count}} Online</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Date Created</div>
+                <div class="field-name">{{t "fleet-ops.common.date-created"}}</div>
                 <div class="field-value">{{@options.fleet.createdAtShort}}</div>
             </div>
         </div>
