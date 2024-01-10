@@ -22,7 +22,6 @@ class Vehicle extends FleetbaseResource
             'uuid'                   => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'              => $this->when(Http::isInternalRequest(), $this->public_id),
             'photo_uuid'             => $this->when(Http::isInternalRequest(), $this->photo_uuid),
-            'internal_id'            => $this->internal_id,
             'name'                   => $this->display_name,
             'display_name'           => $this->when(Http::isInternalRequest(), $this->display_name),
             'vin'                    => $this->vin ?? null,
@@ -59,9 +58,8 @@ class Vehicle extends FleetbaseResource
     {
         return [
             'id'                         => $this->public_id,
-            'internal_id'                => $this->internal_id,
             'name'                       => $this->name,
-            'vin'                        => $this->vin ?? null,
+            'vin'                        => $this->vin,
             'driver'                     => $this->whenLoaded('driver', new Driver($this->driver)),
             'photo_url'                  => $this->photoUrl,
             'avatar_url'                 => $this->avatar_url,

@@ -2,8 +2,11 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Grimzy\LaravelMysqlSpatial\Types\MultiPolygon;
+use Grimzy\LaravelMysqlSpatial\Types\Point;
 
 class ServiceArea extends FleetbaseResource
 {
@@ -22,7 +25,7 @@ class ServiceArea extends FleetbaseResource
             'public_id'  => $this->when(Http::isInternalRequest(), $this->public_id),
             'name'       => $this->name,
             'type'       => $this->type,
-            'location'   => $this->location,
+            'center'   => $this->location,
             'border'     => $this->border,
             'zones'      => $this->whenLoaded('zones', Zone::collection($this->zones)),
             'status'     => $this->status,
@@ -42,7 +45,7 @@ class ServiceArea extends FleetbaseResource
             'id'         => $this->public_id,
             'name'       => $this->name,
             'type'       => $this->type,
-            'location'   => $this->location,
+            'center'   => $this->location,
             'border'     => $this->border,
             'status'     => $this->status,
             'updated_at' => $this->updated_at,

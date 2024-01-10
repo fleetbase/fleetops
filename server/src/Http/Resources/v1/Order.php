@@ -50,7 +50,7 @@ class Order extends FleetbaseResource
             'pod_method'           => $this->pod_method,
             'pod_required'         => (bool) data_get($this, 'pod_required', false),
             'dispatched'           => (bool) data_get($this, 'dispatched', false),
-            'adhoc'                => $this->adhoc,
+            'adhoc'                => (bool) data_get($this, 'adhoc', false),
             'adhoc_distance'       => (int) $this->getAdhocDistance(),
             'distance'             => (int) $this->distance,
             'time'                 => (int) $this->time,

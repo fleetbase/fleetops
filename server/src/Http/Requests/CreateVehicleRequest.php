@@ -28,7 +28,9 @@ class CreateVehicleRequest extends FleetbaseRequest
             'status'   => 'nullable|in:operational,maintenance,decommissioned',
             'vendor'   => 'nullable|exists:vendors,public_id',
             'driver'   => 'nullable|exists:drivers,public_id',
-            'location' => ['nullable', new ResolvablePoint()],
+            'location'  => ['nullable', new ResolvablePoint()],
+            'latitude'  => ['nullable', 'required_with:longitude'],
+            'longitude' => ['nullable', 'required_with:latitude'],
         ];
     }
 }

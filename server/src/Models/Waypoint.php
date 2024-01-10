@@ -147,16 +147,6 @@ class Waypoint extends Model
     }
 
     /**
-     * Waypoint has completed instance.
-     *
-     * @var Model
-     */
-    public function completed()
-    {
-        return $this->hasOne(WaypointCompleted::class, 'place_uuid', 'place_uuid')->where('payload_uuid', $this->payload_uuid);
-    }
-
-    /**
      * The tracking number for waypoint.
      */
     public function getTrackingAttribute()

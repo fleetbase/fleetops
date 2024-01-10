@@ -81,10 +81,10 @@ class ServiceRate extends Model
      * @var array
      */
     protected $casts = [
-        'base_fee'                => Money::class . ':currency',
-        'per_meter_flat_rate_fee' => Money::class . ':currency',
-        'cod_flat_fee'            => Money::class . ':currency',
-        'peak_hours_flat_fee'     => Money::class . ':currency',
+        'base_fee'                => Money::class,
+        'per_meter_flat_rate_fee' => Money::class,
+        'cod_flat_fee'            => Money::class,
+        'peak_hours_flat_fee'     => Money::class,
     ];
 
     /**

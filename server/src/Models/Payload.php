@@ -12,6 +12,7 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
 use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Payload extends Model
@@ -184,16 +185,6 @@ class Payload extends Model
     }
 
     /**
-     * Waypoints between start and end.
-     *
-     * @return \Illuminate\Database\Eloquent\Concerns\HasManyThrough
-     */
-    public function waypointsCompleted()
-    {
-        return $this->hasManyThrough(Place::class, WaypointCompleted::class, 'payload_uuid', 'uuid', 'uuid', 'place_uuid')->withoutGlobalScopes();
-    }
-
-    /**
      * Always convert fee and rate to integer before insert.
      */
     public function setCodAmountAttribute($value)
@@ -213,6 +204,59 @@ class Payload extends Model
 
                 if ($waypoint) {
                     $attributes['destination_uuid'] = $waypoint->uuid;
+                }
+            }
+
+            // if a destination or waypoint is explicitly set
+            $destinationKey = Utils::or($attributes, ['waypoint', 'destination']);
+
+            // set destination by waypoint
+            if ($destinationKey !== null) {
+                // if waypoint index provided
+                if (is_numeric($destinationKey)) {
+                    $waypoint = $this->waypoints->values()->get($destinationKey);
+
+                    if ($waypoint) {
+                        $attributes['destination_uuid'] = $waypoint->uuid;
+                    }
+                }
+
+                // if explicitly set to pickup
+                if ($destinationKey === 'pickup' && $this->pickup) {
+                    $attributes['destination_uuid'] = $this->pickup->uuid;
+                }
+
+                // if explicitly set todropoff
+                if ($destinationKey === 'dropoff' && $this->dropoff) {
+                    $attributes['destination_uuid'] = $this->dropoff->uuid;
+                }
+
+                // if waypoint public_id
+                if (Utils::isPublicId($destinationKey)) {
+                    $waypoint = $this->waypoints->firstWhere('public_id', $destinationKey);
+
+                    // if no waypoint found from public_id check pickup/dropoff
+                    if (!$waypoint) {
+                        $waypoint = collect([$this->pickup, $this->dropoff])->firstWhere('public_id', $destinationKey);
+                    }
+
+                    if ($waypoint) {
+                        $attributes['destination_uuid'] = $waypoint->uuid;
+                    }
+                }
+
+                // if waypoint uuid
+                if (Str::isUuid($destinationKey)) {
+                    $waypoint = $this->waypoints->firstWhere('uuid', $destinationKey);
+
+                    // if no waypoint found from uuid check pickup/dropoff
+                    if (!$waypoint) {
+                        $waypoint = collect([$this->pickup, $this->dropoff])->firstWhere('uuid', $destinationKey);
+                    }
+
+                    if ($waypoint) {
+                        $attributes['destination_uuid'] = $waypoint->uuid;
+                    }
                 }
             }
 
@@ -253,6 +297,59 @@ class Payload extends Model
                 }
             }
 
+            // if a destination or waypoint is explicitly set
+            $destinationKey = Utils::or($attributes, ['waypoint', 'destination']);
+
+            // set destination by waypoint
+            if ($destinationKey !== null) {
+                // if waypoint index provided
+                if (is_numeric($destinationKey)) {
+                    $waypoint = $this->waypoints->values()->get($destinationKey);
+
+                    if ($waypoint) {
+                        $attributes['destination_uuid'] = $waypoint->uuid;
+                    }
+                }
+
+                // if explicitly set to pickup
+                if ($destinationKey === 'pickup' && $this->pickup) {
+                    $attributes['destination_uuid'] = $this->pickup->uuid;
+                }
+
+                // if explicitly set todropoff
+                if ($destinationKey === 'dropoff' && $this->dropoff) {
+                    $attributes['destination_uuid'] = $this->dropoff->uuid;
+                }
+
+                // if waypoint public id
+                if (Utils::isPublicId($destinationKey)) {
+                    $waypoint = $this->waypoints->firstWhere('public_id', $destinationKey);
+
+                    // if no waypoint found from public_id check pickup/dropoff
+                    if (!$waypoint) {
+                        $waypoint = collect([$this->pickup, $this->dropoff])->firstWhere('public_id', $destinationKey);
+                    }
+
+                    if ($waypoint) {
+                        $attributes['destination_uuid'] = $waypoint->uuid;
+                    }
+                }
+
+                // if waypoint uuid
+                if (Str::isUuid($destinationKey)) {
+                    $waypoint = $this->waypoints->firstWhere('uuid', $destinationKey);
+
+                    // if no waypoint found from uuid check pickup/dropoff
+                    if (!$waypoint) {
+                        $waypoint = collect([$this->pickup, $this->dropoff])->firstWhere('uuid', $destinationKey);
+                    }
+
+                    if ($waypoint) {
+                        $attributes['destination_uuid'] = $waypoint->uuid;
+                    }
+                }
+            }
+
             // confirm destination_uuid is indeed a place record
             if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
                 // search waypoints for search_uuid if any
@@ -277,8 +374,8 @@ class Payload extends Model
     {
         $this->current_waypoint_uuid = $destination->uuid;
 
-        if ($this->save) {
-            $this->save();
+        if ($save) {
+            DB::table($this->getTable())->where('uuid', $this->uuid)->update(['current_waypoint_uuid' => $destination->uuid]);
         }
 
         return $this;
@@ -429,7 +526,7 @@ class Payload extends Model
         }
 
         if ($this->waypoints()->count()) {
-            return $this->waypoints->first();
+            return $this->waypoints->last();
         }
 
         return null;
@@ -449,7 +546,7 @@ class Payload extends Model
         }
 
         if ($this->waypoints()->count()) {
-            return $this->waypoints->last();
+            return $this->waypoints->first();
         }
 
         return null;
@@ -557,10 +654,6 @@ class Payload extends Model
 
     public function setPlace($property, Place $place, array $options = [])
     {
-        if (!$place) {
-            return;
-        }
-
         $attr     = $property . '_uuid';
         $instance = Place::createFromMixed($place);
         $save     = data_get($options, 'save', false);
@@ -596,16 +689,28 @@ class Payload extends Model
             return;
         }
 
+        if (!$place instanceof Place) {
+            $place = Place::createFromMixed($place);
+        }
+
         return $this->setPlace('pickup', $place, $options);
     }
 
     public function setDropoff($place, array $options = [])
     {
+        if (!$place instanceof Place) {
+            $place = Place::createFromMixed($place);
+        }
+
         return $this->setPlace('dropoff', $place, $options);
     }
 
     public function setReturn($place, array $options = [])
     {
+        if (!$place instanceof Place) {
+            $place = Place::createFromMixed($place);
+        }
+
         return $this->setPlace('return', $place, $options);
     }
 

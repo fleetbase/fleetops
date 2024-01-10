@@ -163,7 +163,7 @@ class PlaceController extends Controller
         try {
             $place = Place::findRecordOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->error('Place resource not found.');
+            return response()->apiError('Place resource not found.');
         }
 
         // get request input
@@ -329,7 +329,7 @@ class PlaceController extends Controller
         try {
             $place = Place::findRecordOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->error('Place resource not found.');
+            return response()->apiError('Place resource not found.');
         }
 
         return new PlaceResource($place);
@@ -345,7 +345,7 @@ class PlaceController extends Controller
         try {
             $place = Place::findRecordOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->error('Place resource not found.');
+            return response()->apiError('Place resource not found.');
         }
 
         $place->delete();

@@ -4,7 +4,7 @@ namespace Fleetbase\FleetOps\Http\Requests;
 
 use Fleetbase\Http\Requests\FleetbaseRequest;
 
-class CancelOrderRequest extends FleetbaseRequest
+class ScheduleOrderRequest extends FleetbaseRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,7 +24,9 @@ class CancelOrderRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'order' => 'required|exists:orders,uuid',
+            'date' => 'required|date_format:Y-m-d',
+            'time' => 'nullable',
+            'timezone' => 'nullable|timezone'
         ];
     }
 }
