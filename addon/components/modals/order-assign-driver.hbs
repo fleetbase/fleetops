@@ -1,7 +1,7 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
-        <InputGroup @name="Select Driver">
-            <ModelSelect @modelName="driver" @selectedModel={{@options.order.driver_assigned}} @placeholder="Select Driver to Assign" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut @options.order.driver_assigned)}} as |model|>
+        <InputGroup @name={{t "fleet-ops.component.modals.order-assign-driver.select-driver"}}>
+            <ModelSelect @modelName="driver" @selectedModel={{@options.order.driver_assigned}} @placeholder={{t "fleet-ops.component.modals.order-assign-driver.select-assign"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut @options.order.driver_assigned)}} as |model|>
                 <div class="flex items-center">
                     <div class="w-7">
                         <FaIcon @icon="id-card-alt" />

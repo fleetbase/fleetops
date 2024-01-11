@@ -2,7 +2,9 @@ fleet-ops:
   extension-name: Fleet-Ops
   common: 
     active-manpower: Active Manpower
+    avatar: Avatar
     amount: Amount
+    building: Building
     bulk-action: Bulk Action
     city: City
     coordinates: Coordinates
@@ -18,31 +20,57 @@ fleet-ops:
     edit: Edit
     email: Email
     export: Export
+    height: Height
+    host: Host
     id: ID
     internal-id: Internal ID
     item: Item
     key: Key
+    label: Label
+    length: Length
     loading: Loading...
+    make: Make
     manage-message: Manage your vendors
+    model: Model
     name: Name
+    namespace: Namespace
+    neighborhood: Neighborhood
     new: New
     odometer: Odometer
+    options: Options
     phone: Phone
     photos: photos
+    plate-number: Plate number
+    postal-code: Postal code
+    priority: Priority
     reload: Reload data
     remove: Remove
     reporter: Reporter
+    sandbox: Sandbox
     save-changes: Save changes
+    schedule: Schedule
     search: Search
+    security-access-code: Security access code
     service-area: Service area
+    state: State
     status: Status
+    street-1: Street 1
+    street-2: Street 2
+    street: Street
     task: Task
     title: Title
     type: Type
+    unit: Unit
+    upload-new: Upload new
+    uploading: Uploading...
     value: Value
     vehicle: Vehicle
     vendor: Vendor
+    vin-number: VIN number
     website-url: Website URL
+    website: Website
+    width: Width
+    year: Year
     zone: Zone
 
   component:
@@ -188,6 +216,294 @@ fleet-ops:
         assigned: Assigned To
         type: Issue Type
         category: Issue Category
+      issue-form:
+        reported: Reported By
+        select-reporter: Select Reporter
+        assigned: Assigned To
+        select-assginee: Select Assignee
+        select-driver: Select Driver
+        select-vehicle: Select Vehicle
+        type: Issue Type
+        type-text: Select issue type
+        category: Issue Category
+        category-text: Select issue category
+        report: Issue Report
+        tags: Issue tags
+        add-tags: Add tags
+        select-status: Select issue status
+      map-layer-form:
+        layer-type: Layer Type
+        layer-type-text: Select the type of layer you wish to create.
+        select-layer-type: Select layer type...
+        service-area: Service Area
+        service-area-text: Select the Service Area to attribute this Zone to.
+        select-service-area: Select service area to assign fleet to
+        set-name: Set a display name for the {options}.
+        service-type: Service Area Type
+        service-type-text: Select the type definition for this service area .
+        select-service-type: Select service area type...
+        customize-border: Customize the border color for this {options}.
+        customize-fill-color: Customize the fill color for this {options}.
+        service-area-country: Service Area Country
+        service-area-country-text: Optionally set the country in which this Service Area is located or based in.
+      new-order-config:
+        name: Config Name
+        description: Config Description
+        tags: Config Tags
+        add-tags: Add tags
+      order-assign-driver:
+        select-driver: Select Driver
+        select-assign: Select Driver to Assign
+      order-config-new-status:
+        new-status: New Status
+        status-text: Enter a new activity status to add to the flow
+      order-event:
+        schedule: Schedule
+        unschedule: Unschedule
+      order-form:
+        id-text: Use this field to optionally set a custom identifier or internal identifier for the order.
+        schedule-text: The date and time the order will be dispatched. If no driver is assigned at time of dispatch, the dispatch will fail. If the order is Ad-Hoc the order will be pinged to drivers in vicinity of pickup.
+        customer: Customer
+        customer-text: Optionally assign the customer of this order. If it's a new customer, use the 'New Customer' button above.
+        select-customer: Select Customer
+        facilitator: Facilitator
+        facilitator-text: Optionally assign a facilitator for this order, a facilitator can be a 3rd party subcontractor or service that will facilitate the transport of this order.
+        select-facilitator: Select Facilitator
+        assign-driver: Assign Driver
+        assign-driver-text: Assign the driver this order will be dispatched to.
+        select-driver: Select Driver
+      order-import:
+        loading-message: Processing import...
+        drop-upload: Drop to upload
+        invalid: Invalid
+        ready-upload: ready for upload.
+        upload-spreadsheets: Upload Spreadsheets
+        drag-drop: Drag and drop spreadsheet files onto this dropzone
+        button-text: or select spreadsheets to upload
+        spreadsheets: spreadsheets
+        upload-queue: Upload Queue
+      order-label:
+        loading: Loading Label...
+      order-new-activity:
+        select-message: Select an activity status to update order tracking activity, or input a custom activity.
+        order-currently-message: This order is currently {options}, additional activity will overwrite this status.
+        not-recommend-message: Fleetbase does not recommend this unless you absolutely know what you're doing.
+        activity-options: Activity Options
+        activity: activity
+        dispatch: This will trigger the order to dispatch.
+        status: Custom activity status
+        details: Custom activity details
+        code: Custom activity code
+      order-route-form:
+        toggle: Toggle Multiple Dropoff's
+        optimize: Optimize Route
+        optimize-text: Fleetbase will automatically optimize the route.
+        add: Add Waypoint
+        add-text: Use the `Add Waypoint` button to add more stops for this order. The Fleetbase routing engine will automatically optimize the route as each stop is added or removed.
+        select-waypoint: Select Waypoint 
+        pickup: Pickup
+        edit-address: Edit Address
+        select-pickup: Select Pickup
+        invalid: Invalid coordinates!
+        dropoff: Dropoff
+        select-dropoff: Select Dropoff
+        return: Return
+        select-return: Select Return
+      place-assign-vendor:
+        select-vendor: Select Vendor
+      place-details:
+        view: View on map
+      policy-form:
+        name: Policy Name
+        name-text: Enter a name for your policy
+        description: Policy Description
+        description-text: Enter a description for your policy
+        permissions: Select Permissions
+      role-form:
+        name: Role name
+        name-text: Enter a name for this role
+        permissions: Select Permissions
+      select-payment-method:
+        card-ending: Card ending in {method}
+      service-area-form:
+        name: Service Area Name
+        name-text: Set a display name for the service area.
+        type: Service Area Type
+        type-text: Select the type definition for this service area .
+        select-type: Select service area type...
+        border-color: Service Area Border Color
+        customize-border-color: Customize the border color for this service area.
+        area-color: Service Area Color
+        customize-area-color: Customize the fill color for this service area.
+        country: Service Area Country
+        country-text: Optionally set the country in which this service area is located or based in.
+      set-password:
+        message: Welcome to Fleetbase! Before you get started, set a new password to continue below.
+        new-password: New Password
+        confirm-password: Confirm Password
+        help-text: Enter a password at-least 8 characters to continue.
+      uninstall-prompt:
+        message: You are attempting to uninstall the extension "{options}". Are you sure you wish to proceed with this uninstallation?
+        sub-message: All configuration and customized settings will be lost.
+      vehicle-details:
+        make: Make
+        model: Model
+        year: Year
+        driver-assigned: Driver Assigned
+        no-driver-assigned: No driver assigned
+        avatar: Avatar
+        model-information: Model Information
+        acceleration: 0 to 100 Kph
+        body: Body
+        doors: Doors
+        length: Length (mm)
+        seats: Seats
+        top-speed: Top Speed (kph)
+        transmission: Transmission Type
+        weight: Weight (kg)
+        wheelbase: Wheelbase (mm)
+        width: Width (mm)
+        engine-information: Engine Information
+        engine-bore: Engine Bore (mm)
+        cc: CC
+        compression: Compression
+        cylinder: Cylinders
+        position: Position
+        power-ps: Power (ps)
+        power-rpm: Power (rpm)
+        stroke: Stroke (mm)
+        torque-nm: Torque (nm)
+        torque-rpm: Torque (rpm)
+        valves: Valves Per Cylinder
+        fuel-information: Fuel Information
+        fuel: Fuel
+        fuel-cap: Fuel Cap (l)
+        liters-city: Liters Per km City
+        liters-highway: Liters Per km Highway
+        liters-mixed: Liters Per km Mixed
+      vehicle-form:
+        map-avatar: Select map avatar
+        map-avatar-text: Select an avatar to be used for rendering on maps when using geolocation tracking features.
+        select-avatar: Select avatar
+        make: Vehicle Make
+        model: Vehicle Model
+        year: Vehicle Year
+        select-driver: Select Driver
+        body: Vehicle Body Type
+        doors: Number of Doors
+        type: Vehicle Drive Type
+        length: Vehicle Length (mm)
+        seats: Number of Seats
+        top-speed: Vehicle Top Speed (kph)
+        transmission: Vehicle Transmission Type
+        weight: Vehicle Weight (kg)
+        wheelbase: Vehicle Wheelbase (mm)
+        width: Vehicle Width (mm)
+        engine-bore: Engine Bore (mm)
+        cc: CC
+        compression: Engine Compression
+        cylinder: Engine Cylinders
+        position: Engine Position
+        power-ps: Engine Power (ps)
+        power-rpm: Engine Power (rpm)
+        stroke: Stroke Length (mm)
+        torque-nm: Engine Torque (nm)
+        torque-rpm: Engine Torque (rpm)
+        fuel-type: Fuel Type
+        fuel-cap: Fuel Cap Volume (L)
+      vendor-details:
+        sandbox: Sandbox
+        host: Host
+        namespace: Namespace
+      vendor-form:
+        choose-vendor: Choose Integrated Vendor
+        create-vendor: Create Custom Vendor
+        credentials: Credentials
+        options: Options
+        hide-advanced: Hide Advanced
+        show-advanced: Show Advanced
+        custom-host: Custom Host
+        host-text: Optionally provide a custom host that should be used for this integration.
+        custom-namespace: Custom Namespace
+        namespace-text: Optionally provide a custom namespace or api version that should be used for the integration.
+        webhook: Webhook URL
+        webhook-text: Integrated vendors will typically require this so that Fleetbase can receive activity updates on the order. Do not change unless you know what you are doing! Changing this may break your order updates!
+        cancel-credentials: Cancel credentials reset
+        reset-message: Sensitive credentials can only be reset, to update credentials you must re-enter the credentials.
+        optionally: Optionally supply your own 
+        configure-vendor: to configure this vendor.
+        select: "Select "
+        sandbox: Sandbox
+        name-text: The vendor's name, typically the name of a business.
+        email-text: The vendor's email, this can be used to trigger emails to the vendor.
+        phone-text: "The vendor's phone #, this can be used to trigger SMS or messages to the vendor."
+        website-text: The vendor's website, optionally add the vendors website for reference.
+        select-address: Select Address
+      zone-form:
+        name: Zone Name
+        name-text: Set a display name for the zone.
+        border-color: Zone Border Color
+        customize-border: Customize the border color for this zone.
+        zone-color: Zone color
+        customize-fill-color: Customize the fill color for this zone.
+        optionally: Optionally give the zone a description.
+        description-zone: Description of Zone
+    order:
+      header:
+        dispatched-order: Dispatched at {order}
+        dispatched: Dispatched
+        dispatched-at: Dispatched at
+        edit: Edit Details
+        update: Update Activity
+        assign: Assign Driver
+        get-order: Get Order Label
+        split-order: Split Order
+        reschedule: Reschedule Order
+        cancel-order: Cancel Order
+      place-card:
+        show-less: Show less details
+        show-more: Show more details
+      schedule-card:
+        date: Date scheduled
+        driver-assigned: Driver Assigned
+        no-driver: No Driver Assigned
+        select-driver: Select Driver
+        vehicle-assigned: Vehicle Assigned
+        no-vehicle: No Vehicle Assigned
+    widget:
+      fleet-ops-quickstart:
+        message: Let's see what you can do to jumpstart operations...
+        start-task: Start Task
+      key-metrics:
+        earnings: Earnings
+        fuel-expenses: Fuel Expenses
+        traveled: Distance Traveled
+        total-time: Total Time
+        order-scheduled: Orders Scheduled
+        order-completed: Orders Completed
+        order-progress: Orders In Progress
+        order-canceled: Orders Canceled
+        driver-online: Drivers Online
+        customers: Customers
+        open-issues: Open Issue
+        closed-issues: Closed Issues
+      live-order-map:
+        loading: Loading orders in progress...
+        assigned: Driver Assigned
+        no-order: No orders in progress
+        message: When orders are in progress they will display in this widget and show real time activity.
+      recent-orders:
+        title: Recent Orders
+        loading: Loading recent orders...
+        no-orders: No orders for this week
+        message-part-1: There hasn't been any orders this week, get movement going by
+        message-part-2: creating a new order
+        message-part-3: or allow your customers to submit orders via API.
+      transactions:
+        title: Recent Transactions
+        loading: Loading recent transactions...
+        no-transactions: No transactions this week
+        message: When orders are going through with service rates, Fleetbase tracks transactions automatically.
 
 
     contact-form-panel:
@@ -321,6 +637,47 @@ fleet-ops:
       service-area: Service Area
       zone: Zone
     order-config:
+      activity-flow-editor:
+        title: Activity Flow
+        message: Activity flow configuration will allow you to define the different types of tracking status activities that apply for this order type. Logic of the activity flow can also be configured.
+        order-flow: Order Flow
+        waypoint-flow: Waypoint Flow
+        new-activity: New Activity
+        activity-details: Activity Details
+        logic-stack: Logic Stack
+        add-logic: Add logic condition
+        select-field: Select field
+        select-operator: Select operator
+        enter-value: Enter value to compare
+        no-logic: No logic conditions applied
+      details-editor:
+        success: Installed
+        key-text: Pass this key into your order type to configure the order using this config.
+        namespace-text: Unique namespace for this extension.
+        id: Extension ID
+        id-text: Unique ID for this extension.
+        version: Extension Version
+        version-text: Version of this extension.
+        clone: Clone Configuration
+        uninstall: Uninstall Configuration
+        delete: Delete Configuration
+      entities-editor:
+        title: Entities
+        message: Entities configuration will allow you to define the different type of entities that should be selectable for this order type. These should be used like templates to make manual order creation faster.
+        type: Entity Type
+        add-meta: Add meta field
+      fields-editor:
+        field: Meta Fields
+        new-field: New Custom Field
+        new-custom-field: New Custom Fields Group
+        field-text: Meta fields configuration will allow you to define custom input fields that will be applied to orders.
+        custom-field-group: "Custom Fields Group:"
+        default-field: Default Fields
+        custom-field: "Custom Field:"
+        type: Field Type
+        select-type: Select field type
+        add-option: Add Option
+
       select-message: Select an order configuration to modify, or click "New Config" to create a new order configuration.
       new-config: New Config
       loading-configuration: Loading your order configurations...
@@ -399,6 +756,40 @@ fleet-ops:
       not-assigned: No driver assigned
       assign-driver: Assign a driver to vehicle
     vendor-form-panel:
+      create-form:
+        title: Setup
+        select-vendor-type: Select vendor type
+        choose-vendor: Choose integrated vendor provider
+        provider: Provider
+        credentials: Credentials
+        advanced-options: Advanced Options
+        hide-advanced-options: Hide Advanced Options
+        show-advanced-options: Show Advanced Options
+        host: Custom Host
+        host-text: Optionally provide a custom host that should be used for this integration.
+        namespace: Custom Namespace
+        namespace-text: Optionally provide a custom namespace or api version that should be used for the integration.
+        webhook: Webhook URL
+        webhook-text: Integrated vendors will typically require this so that Fleetbase can receive activity updates on the order. Do not change unless you know what you are doing! Changing this may break your order updates!
+        select-integrated: Select an integrated vendor provider.
+        vendor-details: Vendor Details
+        select-vendor-status: Select vendor status
+        select-address: Select Address
+        edit: Edit
+        new-address: New Address
+        optionally: "Optionally supply your own "
+        configure-vendor: " to configure this vendor."
+        select: "Select "
+        name-text: The vendor's name, typically the name of a business.
+        email-text: The vendor's email, this can be used to trigger emails to the vendor.
+        phone-text: "The vendor's phone #, this can be used to trigger SMS or messages to the vendor."
+        website-text: The vendor's website, optionally add the vendors website for reference.
+      edit-form:
+        cancel-credentials: Cancel credentials reset
+        sensitive-credentials: Sensitive credentials can only be reset, to update credentials you must re-enter the credentials.
+        reset-credentials: Click here to reset credentials
+        select-address: Select Address
+
       view-details: View vendor details
       save-vendor: Save Vendor
       create-vendor: Create Vendor      
