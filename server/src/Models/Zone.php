@@ -92,7 +92,7 @@ class Zone extends Model
     }
 
     /**
-     * The type of area
+     * The type of area.
      *
      * @return string
      */
@@ -104,18 +104,19 @@ class Zone extends Model
     /**
      * Retrieves the location attribute as a point.
      *
-     * @return \Grimzy\LaravelMysqlSpatial\Types\Point Returns the centroid of the border as a Point object.
+     * @return \Grimzy\LaravelMysqlSpatial\Types\Point returns the centroid of the border as a Point object
      */
     public function getLocationAttribute(): Point
     {
         $centroid = $this->getCentroid();
+
         return new Point($centroid->x(), $centroid->y());
     }
 
     /**
      * Retrieves the latitude component of the location attribute.
      *
-     * @return float Returns the latitude value.
+     * @return float returns the latitude value
      */
     public function getLatitudeAttribute(): float
     {
@@ -125,7 +126,7 @@ class Zone extends Model
     /**
      * Retrieves the longitude component of the location attribute.
      *
-     * @return float Returns the longitude value.
+     * @return float returns the longitude value
      */
     public function getLongitudeAttribute(): float
     {
@@ -135,11 +136,11 @@ class Zone extends Model
     /**
      * Calculates the centroid of the border as a \Brick\Geo\Point.
      *
-     * @return \Brick\Geo\Point The centroid of the border as a \Brick\Geo\Point object.
+     * @return \Brick\Geo\Point the centroid of the border as a \Brick\Geo\Point object
      */
     public function getCentroid(): \Brick\Geo\Point
     {
-        $geometryEngine = new \Brick\Geo\Engine\GEOSEngine();
+        $geometryEngine  = new \Brick\Geo\Engine\GEOSEngine();
         $borderAsPolygon = $this->toGeosPolygon();
 
         if ($borderAsPolygon instanceof \Brick\Geo\Geometry) {
@@ -152,7 +153,7 @@ class Zone extends Model
     /**
      * Converts the border's coordinates to an array of \Brick\Geo\LineString objects.
      *
-     * @return \Brick\Geo\LineString[] An array of \Brick\Geo\LineString objects.
+     * @return \Brick\Geo\LineString[] an array of \Brick\Geo\LineString objects
      */
     public function toGeosLineStrings(): array
     {
@@ -178,7 +179,7 @@ class Zone extends Model
     /**
      * Converts the first LineString from the border into a \Brick\Geo\Polygon.
      *
-     * @return \Brick\Geo\Polygon A \Brick\Geo\Polygon object created from the first line string of the border.
+     * @return \Brick\Geo\Polygon a \Brick\Geo\Polygon object created from the first line string of the border
      */
     public function toGeosPolygon(): ?\Brick\Geo\Polygon
     {
@@ -194,9 +195,10 @@ class Zone extends Model
     /**
      * Creates a polygon from a given point and radius.
      *
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $point The central point from which to create the polygon.
-     * @param int $meters The radius in meters for the polygon. Default is 500 meters.
-     * @return \Grimzy\LaravelMysqlSpatial\Types\Polygon Returns a Polygon object.
+     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the polygon
+     * @param int                                     $meters The radius in meters for the polygon. Default is 500 meters.
+     *
+     * @return \Grimzy\LaravelMysqlSpatial\Types\Polygon returns a Polygon object
      */
     public static function createPolygonFromPoint(Point $point, int $meters = 500): Polygon
     {

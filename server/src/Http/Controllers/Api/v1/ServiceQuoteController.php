@@ -72,7 +72,7 @@ class ServiceQuoteController extends Controller
         }
 
         // get all waypoints
-        $waypoints = $payload->getAllStops()->mapInto(Place::class);
+        $waypoints = $payload->getAllStops();
 
         // if quote for single service
         if ($service && $service !== 'all') {

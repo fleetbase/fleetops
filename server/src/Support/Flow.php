@@ -235,11 +235,8 @@ class Flow
 
     /**
      * Returns a order type configuration by key.
-     * 
-     * @param \Fleetbase\FleetOps\Models\Order $order
+     *
      * @param bool $force - If this method should always return dispatch activity
-     * 
-     * @return null|array
      */
     public static function getDispatchActivity(Order $order, bool $force = true): ?array
     {
@@ -247,9 +244,9 @@ class Flow
 
         if ($force === true) {
             return [
-                'status' => 'Order dispatched',
+                'status'  => 'Order dispatched',
                 'details' => 'Order has been dispatched',
-                'code' => 'dispatched',
+                'code'    => 'dispatched',
             ];
         }
 

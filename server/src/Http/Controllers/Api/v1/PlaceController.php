@@ -68,8 +68,8 @@ class PlaceController extends Controller
 
         // if we have only latitude/longitude or location BUT no street1 do a reverse lookup
         $requestHasCoordinates = $request->filled(['latitude', 'longitude']);
-        $requestHasLocation = $request->filled(['location']);
-        $requestMissingStreet = $request->missing('street1');
+        $requestHasLocation    = $request->filled(['location']);
+        $requestMissingStreet  = $request->missing('street1');
         if ($requestMissingStreet && ($requestHasCoordinates || $requestHasLocation)) {
             if ($requestHasLocation) {
                 $point = Utils::getPointFromMixed($request->input('location'));

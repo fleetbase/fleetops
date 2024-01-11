@@ -39,8 +39,8 @@ class TrackingNumberController extends Controller
             );
 
             if (is_array($owner)) {
-                $input['owner_uuid'] = Utils::get($owner, 'uuid');
-                $input['type']       = Utils::getModelClassName(Utils::get($owner, 'table'));
+                $input['owner_uuid']       = Utils::get($owner, 'uuid');
+                $input['owner_type']       = Utils::getModelClassName(Utils::get($owner, 'table'));
             }
         }
 

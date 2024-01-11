@@ -24,9 +24,9 @@ class ScheduleOrderRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'date' => 'required|date_format:Y-m-d',
-            'time' => 'nullable',
-            'timezone' => 'nullable|timezone'
+            'date'     => 'required|date_format:Y-m-d',
+            'time'     => 'nullable',
+            'timezone' => 'nullable|timezone',
         ];
     }
 }

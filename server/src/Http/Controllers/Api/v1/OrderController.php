@@ -687,11 +687,10 @@ class OrderController extends Controller
     }
 
     /**
-     * Schedules an order using date and time
+     * Schedules an order using date and time.
      *
-     * @param string $id
      * @param \Fleetbase\FleetOps\Http\Requests\ScheduleOrderRequest
-     * 
+     *
      * @return \Fleetbase\Http\Resources\v1\Order
      */
     public function scheduleOrder(string $id, ScheduleOrderRequest $request)
@@ -700,8 +699,8 @@ class OrderController extends Controller
         $timeInput = $request->input('time');
 
         // get the default tz
-        $company = Auth::getCompany();
-        $defaultTz = data_get($company, 'timezone', config('app.timezone'));
+        $company       = Auth::getCompany();
+        $defaultTz     = data_get($company, 'timezone', config('app.timezone'));
         $timezoneInput = $request->input('timezone', $defaultTz);
 
         try {
@@ -824,15 +823,13 @@ class OrderController extends Controller
     /**
      * Update an order activity.
      *
-     * @param \Fleetbase\Models\Order|string $order
-     *
      * @return \Fleetbase\Http\Resources\v1\Order
      */
     public function updateActivity($id, Request $request)
     {
         $skipDispatch = $request->or(['skip_dispatch', 'skipDispatch'], false);
         $proof        = $request->input('proof', null);
-        $order = null;
+        $order        = null;
 
         // if instance of order is passed directly to this method
         if ($id instanceof Order) {
@@ -1186,12 +1183,12 @@ class OrderController extends Controller
      */
     public function captureSignature(string $id, string $subjectId = null, Request $request)
     {
-        $disk      = $request->input('disk', config('filesystems.default'));
-        $bucket    = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
-        $signature = $request->input('signature');
-        $data      = $request->input('data', []);
+        $disk         = $request->input('disk', config('filesystems.default'));
+        $bucket       = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
+        $signature    = $request->input('signature');
+        $data         = $request->input('data', []);
         $remarks      = $request->input('remarks', 'Verified by Signature');
-        $type      = $subjectId ? strtok($subjectId, '_') : null;
+        $type         = $subjectId ? strtok($subjectId, '_') : null;
 
         try {
             $order = Order::findRecordOrFail($id);

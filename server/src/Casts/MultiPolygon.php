@@ -44,7 +44,7 @@ class MultiPolygon implements CastsAttributes
         }
 
         if (Utils::isGeoJson($value)) {
-            $value = Utils::createGeometryObjectFromGeoJson($value);
+            $value                   = Utils::createGeometryObjectFromGeoJson($value);
             $model->geometries[$key] = $value;
 
             return $value;
@@ -52,6 +52,7 @@ class MultiPolygon implements CastsAttributes
 
         if ($value instanceof SpatialExpression) {
             $model->geometries[$key] = $value;
+
             return $value;
         }
 

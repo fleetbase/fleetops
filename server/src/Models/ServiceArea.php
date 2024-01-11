@@ -18,7 +18,7 @@ use Grimzy\LaravelMysqlSpatial\Types\Polygon;
 use Illuminate\Support\Arr;
 
 /**
- * @var \Grimzy\LaravelMysqlSpatial\Types\Point $location
+ * @var \Grimzy\LaravelMysqlSpatial\Types\Point        $location
  * @var \Grimzy\LaravelMysqlSpatial\Types\MultiPolygon $border
  */
 class ServiceArea extends Model
@@ -107,6 +107,7 @@ class ServiceArea extends Model
      * Sets the status attribute for the model.
      *
      * @param string|null $status the status value, defaults to 'active' if not provided
+     *
      * @return void
      */
     public function setStatusAttribute(?string $status = 'active')
@@ -118,6 +119,7 @@ class ServiceArea extends Model
      * Sets the type attribute for the model.
      *
      * @param string|null $type the type value, defaults to 'country' if not provided
+     *
      * @return void
      */
     public function setTypeAttribute(?string $type = 'country')
@@ -128,9 +130,10 @@ class ServiceArea extends Model
     /**
      * Creates a polygon from a given point and radius.
      *
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $point The central point from which to create the polygon.
-     * @param int $meters The radius in meters for the polygon. Default is 500 meters.
-     * @return \Grimzy\LaravelMysqlSpatial\Types\Polygon Returns a Polygon object.
+     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the polygon
+     * @param int                                     $meters The radius in meters for the polygon. Default is 500 meters.
+     *
+     * @return \Grimzy\LaravelMysqlSpatial\Types\Polygon returns a Polygon object
      */
     public static function createPolygonFromPoint(Point $point, int $meters = 500): Polygon
     {
@@ -147,9 +150,10 @@ class ServiceArea extends Model
     /**
      * Creates a multi-polygon from a given point and radius.
      *
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $point The central point from which to create the multi-polygon.
-     * @param int $meters The radius in meters for the multi-polygon. Default is 500 meters.
-     * @return \Grimzy\LaravelMysqlSpatial\Types\MultiPolygon Returns a MultiPolygon object.
+     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the multi-polygon
+     * @param int                                     $meters The radius in meters for the multi-polygon. Default is 500 meters.
+     *
+     * @return \Grimzy\LaravelMysqlSpatial\Types\MultiPolygon returns a MultiPolygon object
      */
     public static function createMultiPolygonFromPoint(Point $point, int $meters = 500): MultiPolygon
     {
@@ -169,24 +173,26 @@ class ServiceArea extends Model
         );
 
         $polygon = new Polygon([new LineString($coordinates)]);
+
         return new MultiPolygon([$polygon]);
     }
 
     /**
      * Retrieves the location attribute as a point.
      *
-     * @return \Grimzy\LaravelMysqlSpatial\Types\Point Returns the centroid of the border as a Point object.
+     * @return \Grimzy\LaravelMysqlSpatial\Types\Point returns the centroid of the border as a Point object
      */
     public function getLocationAttribute(): Point
     {
         $centroid = $this->getCentroid();
+
         return new Point($centroid->x(), $centroid->y());
     }
 
     /**
      * Retrieves the latitude component of the location attribute.
      *
-     * @return float Returns the latitude value.
+     * @return float returns the latitude value
      */
     public function getLatitudeAttribute(): float
     {
@@ -196,7 +202,7 @@ class ServiceArea extends Model
     /**
      * Retrieves the longitude component of the location attribute.
      *
-     * @return float Returns the longitude value.
+     * @return float returns the longitude value
      */
     public function getLongitudeAttribute(): float
     {
@@ -207,18 +213,20 @@ class ServiceArea extends Model
      * Creates a polygon from the center point of the current object.
      *
      * @param int $meters The radius in meters for the polygon. Default is 500 meters.
-     * @return \League\Geotools\Polygon\Polygon Returns a Polygon object.
+     *
+     * @return \League\Geotools\Polygon\Polygon returns a Polygon object
      */
     public function createPolygonFromCenter(int $meters = 500): \League\Geotools\Polygon\Polygon
     {
         $coordinates = Utils::coordsToCircle($this->latitude, $this->longitude, $meters);
+
         return new \League\Geotools\Polygon\Polygon($coordinates);
     }
 
     /**
      * Converts the border attribute to a MultiPolygon object.
      *
-     * @return \League\Geotools\Polygon\MultiPolygon Returns a MultiPolygon object representing the border.
+     * @return \League\Geotools\Polygon\MultiPolygon returns a MultiPolygon object representing the border
      */
     public function asMultiPolygon(): \League\Geotools\Polygon\MultiPolygon
     {
@@ -249,7 +257,7 @@ class ServiceArea extends Model
     /**
      * Converts the border's coordinates to an array of \Brick\Geo\Point objects.
      *
-     * @return \Brick\Geo\Point[] An array of \Brick\Geo\Point objects representing the coordinates.
+     * @return \Brick\Geo\Point[] an array of \Brick\Geo\Point objects representing the coordinates
      */
     public function toGeosCoordinates(): array
     {
@@ -271,7 +279,7 @@ class ServiceArea extends Model
     /**
      * Converts the border's coordinates to an array of \Brick\Geo\LineString objects.
      *
-     * @return \Brick\Geo\LineString[] An array of \Brick\Geo\LineString objects.
+     * @return \Brick\Geo\LineString[] an array of \Brick\Geo\LineString objects
      */
     public function toGeosLineStrings(): array
     {
@@ -298,7 +306,7 @@ class ServiceArea extends Model
     /**
      * Converts the first LineString from the border into a \Brick\Geo\Polygon.
      *
-     * @return \Brick\Geo\Polygon A \Brick\Geo\Polygon object created from the first line string of the border.
+     * @return \Brick\Geo\Polygon a \Brick\Geo\Polygon object created from the first line string of the border
      */
     public function toGeosPolygon(): ?\Brick\Geo\Polygon
     {
@@ -314,7 +322,7 @@ class ServiceArea extends Model
     /**
      * Converts the border's coordinates to a \Brick\Geo\MultiPolygon object.
      *
-     * @return \Brick\Geo\MultiPolygon A \Brick\Geo\MultiPolygon object representing the border.
+     * @return \Brick\Geo\MultiPolygon a \Brick\Geo\MultiPolygon object representing the border
      */
     public function toGeosMultiPolygon(): ?\Brick\Geo\MultiPolygon
     {
@@ -345,11 +353,11 @@ class ServiceArea extends Model
     /**
      * Calculates the centroid of the border as a \Brick\Geo\Point.
      *
-     * @return \Brick\Geo\Point The centroid of the border as a \Brick\Geo\Point object.
+     * @return \Brick\Geo\Point the centroid of the border as a \Brick\Geo\Point object
      */
     public function getCentroid(): \Brick\Geo\Point
     {
-        $geometryEngine = new \Brick\Geo\Engine\GEOSEngine();
+        $geometryEngine       = new \Brick\Geo\Engine\GEOSEngine();
         $borderAsMultiPolygon = $this->toGeosMultiPolygon();
 
         if ($borderAsMultiPolygon instanceof \Brick\Geo\Geometry) {
@@ -362,7 +370,7 @@ class ServiceArea extends Model
     /**
      * Converts the border attribute to a Polygon object.
      *
-     * @return \League\Geotools\Polygon\Polygon Returns the first Polygon object from the border.
+     * @return \League\Geotools\Polygon\Polygon returns the first Polygon object from the border
      */
     public function asPolygon(): ?\League\Geotools\Polygon\Polygon
     {
@@ -384,13 +392,14 @@ class ServiceArea extends Model
     /**
      * Checks if a given point is included within the border.
      *
-     * @param Point $point The point to check.
-     * @return bool Returns true if the point is inside the polygon, false otherwise.
+     * @param Point $point the point to check
+     *
+     * @return bool returns true if the point is inside the polygon, false otherwise
      */
     public function includesPoint(Point $point): bool
     {
-        $latitude = $point->getLat();
-        $longitude = $point->getLng();
+        $latitude   = $point->getLat();
+        $longitude  = $point->getLng();
         $coordinate = new \League\Geotools\Coordinate\Coordinate([$latitude, $longitude]);
 
         return $this->asPolygon()->pointInPolygon($coordinate);
@@ -399,13 +408,14 @@ class ServiceArea extends Model
     /**
      * Checks if a set of points are all included within the border.
      *
-     * @param array $coordinates An array of coordinates to check.
-     * @return bool Returns true if all points are inside the polygon, false otherwise.
+     * @param array $coordinates an array of coordinates to check
+     *
+     * @return bool returns true if all points are inside the polygon, false otherwise
      */
     public function includesPoints(array $coordinates = []): bool
     {
         foreach ($coordinates as $coord) {
-            $point = Utils::getPointFromMixed($coord);
+            $point         = Utils::getPointFromMixed($coord);
             $includesPoint = $this->includesPoint($point);
 
             if (!$includesPoint) {

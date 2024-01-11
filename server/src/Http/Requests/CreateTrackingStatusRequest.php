@@ -30,14 +30,15 @@ class CreateTrackingStatusRequest extends FleetbaseRequest
     {
         $validations = [
             'tracking_number' => array_filter([
-                'required',
+                Rule::requiredIf($this->isMethod('POST')),
                 $this->isMethod('POST') ? Rule::exists('tracking_numbers', 'public_id') : null,
                 $this->isMethod('POST') ? static::uniqueStatus($this) : null,
             ]),
-            'location' => [new ResolvablePoint()],
-            'code'     => 'nullable|string|min:3',
-            'status'   => ['required', 'string', 'min:3'],
-            'details'  => 'nullable|string',
+            'location' => [Rule::requiredIf($this->isMethod('POST')), new ResolvablePoint()],
+            'country'  => ['nullable', 'string', 'size:2'],
+            'code'     => [Rule::requiredIf($this->isMethod('POST')), 'string', 'min:3'],
+            'status'   => [Rule::requiredIf($this->isMethod('POST')), 'string', 'min:3'],
+            'details'  => [Rule::requiredIf($this->isMethod('POST')), 'string', 'min:3'],
         ];
 
         if ($this->isMethod('POST') && $this->missing('tracking_number') && $this->has('order')) {
@@ -50,10 +51,10 @@ class CreateTrackingStatusRequest extends FleetbaseRequest
         }
 
         if ($this->missing(['latitude', 'longitude'])) {
-            $validations['location'] = ['required', new ResolvablePoint()];
+            $validations['location'] = [Rule::requiredIf($this->isMethod('POST')), new ResolvablePoint()];
         } elseif ($this->missing('location')) {
-            $validations['latitude']  = 'required';
-            $validations['longitude'] = 'required';
+            $validations['latitude']  = [Rule::requiredIf($this->isMethod('POST'))];
+            $validations['longitude'] = [Rule::requiredIf($this->isMethod('POST'))];
         }
 
         return $validations;

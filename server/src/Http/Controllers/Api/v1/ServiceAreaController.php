@@ -35,7 +35,7 @@ class ServiceAreaController extends Controller
         // if parent service area set
         if ($request->filled('parent')) {
             $input['parent_uuid'] = Utils::getUuid('service_areas', [
-                'public_id' => $request->input('parent'),
+                'public_id'    => $request->input('parent'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -43,9 +43,9 @@ class ServiceAreaController extends Controller
         // if latitude and longitude is provided
         if ($request->has(['latitude', 'longitude'])) {
             // create a polygon given the radius
-            $latitude = $request->input('latitude');
+            $latitude  = $request->input('latitude');
             $longitude = $request->input('longitude');
-            $point = new Point($latitude, $longitude);
+            $point     = new Point($latitude, $longitude);
 
             if ($point instanceof Point) {
                 $input['border'] = ServiceArea::createMultiPolygonFromPoint($point, $radius);
@@ -55,7 +55,7 @@ class ServiceAreaController extends Controller
         // if a location is provided
         if ($request->has('location')) {
             $location = $request->input('location');
-            $point = Utils::getPointFromMixed($location);
+            $point    = Utils::getPointFromMixed($location);
 
             if ($point instanceof Point) {
                 $input['border'] = ServiceArea::createMultiPolygonFromPoint($point, $radius);
@@ -104,7 +104,7 @@ class ServiceAreaController extends Controller
         // if parent service area set
         if ($request->filled('parent')) {
             $input['parent_uuid'] = Utils::getUuid('service_areas', [
-                'public_id' => $request->input('parent'),
+                'public_id'    => $request->input('parent'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -112,9 +112,9 @@ class ServiceAreaController extends Controller
         // if latitude and longitude is provided
         if ($request->has(['latitude', 'longitude'])) {
             // create a polygon given the radius
-            $latitude = $request->input('latitude');
+            $latitude  = $request->input('latitude');
             $longitude = $request->input('longitude');
-            $point = new Point($latitude, $longitude);
+            $point     = new Point($latitude, $longitude);
 
             if ($point instanceof Point) {
                 $input['border'] = ServiceArea::createMultiPolygonFromPoint($point, $radius);
@@ -124,7 +124,7 @@ class ServiceAreaController extends Controller
         // if a location is provided
         if ($request->has('location')) {
             $location = $request->input('location');
-            $point = Utils::getPointFromMixed($location);
+            $point    = Utils::getPointFromMixed($location);
 
             if ($point instanceof Point) {
                 $input['border'] = ServiceArea::createMultiPolygonFromPoint($point, $radius);

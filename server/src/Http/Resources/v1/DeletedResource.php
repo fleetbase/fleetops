@@ -5,7 +5,6 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
-use Illuminate\Support\Arr;
 
 class DeletedResource extends FleetbaseResource
 {

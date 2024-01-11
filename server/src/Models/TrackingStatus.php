@@ -110,9 +110,7 @@ class TrackingStatus extends Model
     protected $hidden = [];
 
     /**
-     * The tracking number.
-     *
-     * @var Model
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function trackingNumber()
     {
@@ -120,9 +118,7 @@ class TrackingStatus extends Model
     }
 
     /**
-     * The proof if any.
-     *
-     * @var Model
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function proof()
     {

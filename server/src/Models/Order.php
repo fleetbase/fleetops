@@ -14,7 +14,6 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\Transaction;
-use Fleetbase\Storefront\Http\Filter\OrderFilter;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -968,11 +967,11 @@ class Order extends Model
         }
     }
 
-    public function updateActivity(?array $activity = null, $proof = null): Order
+    public function updateActivity(array $activity = null, $proof = null): Order
     {
-        $status = data_get($activity, 'status');
-        $details = data_get($activity, 'details', '');
-        $code = data_get($activity, 'code', 'dispatched');
+        $status   = data_get($activity, 'status');
+        $details  = data_get($activity, 'details', '');
+        $code     = data_get($activity, 'code', 'dispatched');
         $location = $this->getLastLocation();
 
         // insert dispatch activity
@@ -998,9 +997,9 @@ class Order extends Model
     public function setCustomerTypeAttribute($type)
     {
         if (is_string($type)) {
-            $isNotNamespace = !Str::contains($type, '\\');
+            $isNotNamespace           = !Str::contains($type, '\\');
             $doesNotStartWithFleetOps = !Str::startsWith($type, 'fleet-ops');
-            $isValidType = $type === 'customer' || $type === 'vendor';
+            $isValidType              = $type === 'customer' || $type === 'vendor';
 
             // preprend fleet-ops IF not a namespace and does not start with fleet-ops
             // this is for handling ember style registry spacing
@@ -1015,9 +1014,9 @@ class Order extends Model
     public function setFacilitatorTypeAttribute($type)
     {
         if (is_string($type)) {
-            $isNotNamespace = !Str::contains($type, '\\');
+            $isNotNamespace           = !Str::contains($type, '\\');
             $doesNotStartWithFleetOps = !Str::startsWith($type, 'fleet-ops');
-            $isValidType = $type === 'customer' || $type === 'vendor';
+            $isValidType              = $type === 'customer' || $type === 'vendor';
 
             // preprend fleet-ops IF not a namespace and does not start with fleet-ops
             // this is for handling ember style registry spacing

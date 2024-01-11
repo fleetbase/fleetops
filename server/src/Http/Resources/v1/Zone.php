@@ -2,12 +2,8 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialExpression;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
-use Grimzy\LaravelMysqlSpatial\Types\Polygon;
 
 class Zone extends FleetbaseResource
 {

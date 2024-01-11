@@ -461,7 +461,11 @@ class ServiceRate extends Model
         $serviceRates = $serviceRatesQuery->get();
 
         $waypoints = collect($places)->map(function ($place) {
-            return $place->getLocationAsPoint();
+            $place = Place::createFromMixed($place);
+
+            if ($place instanceof Place) {
+                return $place->getLocationAsPoint();
+            }
         });
 
         foreach ($serviceRates as $serviceRate) {
@@ -726,7 +730,7 @@ class ServiceRate extends Model
         ]);
 
         // Prepare all waypoints and origin and destination
-        $waypoints    = $payload->getAllStops()->mapInto(Place::class);
+        $waypoints    = $payload->getAllStops();
         $origin       = $waypoints->first();
         $destinations = $waypoints->skip(1)->toArray();
 

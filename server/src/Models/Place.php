@@ -252,6 +252,7 @@ class Place extends Model
 
     /**
      * Create a new Place instance from a Google Address instance and optionally save it to the database.
+     *
      * @return \Fleetbase\Models\Place|null
      */
     public static function createFromGoogleAddress(\Geocoder\Provider\GoogleMaps\Model\GoogleAddress $address, bool $saveInstance = false): ?Place
@@ -281,6 +282,7 @@ class Place extends Model
      * Create a new Place instance from a geocoding lookup.
      *
      * @param bool $saveInstance
+     *
      * @return \Fleetbase\Models\Place|null
      */
     public static function createFromGeocodingLookup(string $address, $saveInstance = false): ?Place
@@ -298,12 +300,13 @@ class Place extends Model
      * Create a new Place instance from a geocoding lookup.
      *
      * @param bool $saveInstance
+     *
      * @return \Fleetbase\Models\Place|null
      */
     public static function createFromReverseGeocodingLookup(\Grimzy\LaravelMysqlSpatial\Types\Point $point, $saveInstance = false): ?Place
     {
         $results = Geocoding::reverseFromCoordinates($point->getLat(), $point->getLng());
-        $place = $results->first();
+        $place   = $results->first();
 
         if (!$place) {
             $place = (new static())->newInstance(['location' => $point]);
@@ -320,15 +323,14 @@ class Place extends Model
      * Creates a new Place instance from given coordinates.
      *
      * @param \Grimzy\LaravelMysqlSpatial\Types\Point|array $coordinates
-     * @param array $attributes
-     * @param bool  $saveInstance
+     * @param bool                                          $saveInstance
      *
      * @return \Fleetbase\Models\Place|null
      */
     public static function createFromCoordinates($coordinates, array $attributes = [], $saveInstance = false): ?Place
     {
         $instance = new Place();
-        $point = Utils::getPointFromMixed($coordinates);
+        $point    = Utils::getPointFromMixed($coordinates);
 
         if ($coordinates instanceof \Grimzy\LaravelMysqlSpatial\Types\Point) {
             $latitude               = $coordinates->getLat();
@@ -359,7 +361,7 @@ class Place extends Model
     /**
      * Inserts a new place into the database using latitude and longitude coordinates.
      *
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point|array $coordinates
+     * @param \Grimzy\LaravelMysqlSpatial\Types\Point|array        $coordinates
      * @param \Grimzy\LaravelMysqlSpatial\Types\Point|string|array $coordinates the coordinates to use for the new place
      *
      * @return mixed returns the UUID of the new place on success or false on failure
@@ -367,7 +369,7 @@ class Place extends Model
     public static function insertFromCoordinates($coordinates, array $attributes = [])
     {
         $attributes = array_merge([], $attributes);
-        $point = Utils::getPointFromMixed($coordinates);
+        $point      = Utils::getPointFromMixed($coordinates);
 
         if ($coordinates instanceof \Grimzy\LaravelMysqlSpatial\Types\Point) {
             $attributes['location'] = $coordinates;
@@ -435,7 +437,7 @@ class Place extends Model
             return static::createFromGeocodingLookup($place, $saveInstance);
         }
         // If $place is an array of coordinates
-        else if (Utils::isCoordinatesStrict($place)) {
+        elseif (Utils::isCoordinatesStrict($place)) {
             return static::createFromCoordinates($place, $attributes, $saveInstance);
         }
         // If $place is an array

@@ -43,9 +43,9 @@ class ZoneController extends Controller
         // if latitude and longitude is provided
         if ($request->has(['latitude', 'longitude'])) {
             // create a polygon given the radius
-            $latitude = $request->input('latitude');
+            $latitude  = $request->input('latitude');
             $longitude = $request->input('longitude');
-            $point = new Point($latitude, $longitude);
+            $point     = new Point($latitude, $longitude);
 
             if ($point instanceof Point) {
                 $input['border'] = Zone::createPolygonFromPoint($point, $radius);
@@ -55,14 +55,14 @@ class ZoneController extends Controller
         // if a location is provided
         if ($request->has('location')) {
             $location = $request->input('location');
-            $point = Utils::getPointFromMixed($location);
+            $point    = Utils::getPointFromMixed($location);
 
             if ($point instanceof Point) {
                 $input['border'] = Zone::createPolygonFromPoint($point, $radius);
             }
         }
 
-        /** 
+        /**
          * @todo if missing location, latitude, longitude and border
          * then create a zone from the center of the service area provided
          */
@@ -113,9 +113,9 @@ class ZoneController extends Controller
         // if latitude and longitude is provided
         if ($request->has(['latitude', 'longitude'])) {
             // create a polygon given the radius
-            $latitude = $request->input('latitude');
+            $latitude  = $request->input('latitude');
             $longitude = $request->input('longitude');
-            $point = new Point($latitude, $longitude);
+            $point     = new Point($latitude, $longitude);
 
             if ($point instanceof Point) {
                 $input['border'] = Zone::createPolygonFromPoint($point, $radius);
@@ -125,7 +125,7 @@ class ZoneController extends Controller
         // if a location is provided
         if ($request->has('location')) {
             $location = $request->input('location');
-            $point = Utils::getPointFromMixed($location);
+            $point    = Utils::getPointFromMixed($location);
 
             if ($point instanceof Point) {
                 $input['border'] = Zone::createPolygonFromPoint($point, $radius);

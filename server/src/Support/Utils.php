@@ -201,16 +201,16 @@ class Utils extends FleetbaseUtils
         if ($coordinates instanceof \Grimzy\LaravelMysqlSpatial\Types\Point) {
             $latitude  = $coordinates->getLat();
             $longitude = $coordinates->getLng();
-        } else if (static::isGeoJson($coordinates)) {
-            $coordinatesJson = null;
-            $coordinatesInGeoJson = null;
+        } elseif (static::isGeoJson($coordinates)) {
+            $coordinatesJson             = null;
+            $coordinatesInGeoJson        = null;
             $coordinatesInGeoJsonFeature = null;
 
             if (is_array($coordinates) || is_object($coordinates)) {
                 $coordinatesJson = json_encode($coordinates);
             }
 
-            $coordinatesInGeoJson = data_get($coordinates, 'coordinates');
+            $coordinatesInGeoJson        = data_get($coordinates, 'coordinates');
             $coordinatesInGeoJsonFeature = data_get($coordinates, 'geometry.coordinates');
 
             if (static::isJson($coordinatesJson)) {
@@ -226,7 +226,7 @@ class Utils extends FleetbaseUtils
                     }
                 }
             }
-        } else if (is_array($coordinates) || is_object($coordinates)) {
+        } elseif (is_array($coordinates) || is_object($coordinates)) {
             // if known location based record
             if (static::exists($coordinates, 'public_id')) {
                 if (Str::startsWith(data_get($coordinates, 'public_id'), ['place', 'driver'])) {
@@ -1024,6 +1024,7 @@ class Utils extends FleetbaseUtils
      * Calculates the centroid (geometric center) of the provided coordinates.
      *
      * @param array $coordinates an array of coordinates
+     *
      * @return array the centroid of the coordinates as an array [latitude, longitude]
      */
     public static function getCentroid(array $coordinates = []): array
@@ -1033,8 +1034,8 @@ class Utils extends FleetbaseUtils
             return [0, 0];
         }
 
-        $sumX = 0;
-        $sumY = 0;
+        $sumX             = 0;
+        $sumY             = 0;
         $validCoordsCount = 0;
 
         foreach ($coordinates as $coord) {
@@ -1058,37 +1059,42 @@ class Utils extends FleetbaseUtils
     /**
      * Calculates the centroid of a given GEOS polygon.
      *
-     * @param \Brick\Geo\Polygon $polygon The GEOS Polygon from which to calculate the centroid.
-     * @return \Brick\Geo\Point Returns the centroid of the polygon as a GEOS Point object.
+     * @param \Brick\Geo\Polygon $polygon the GEOS Polygon from which to calculate the centroid
+     *
+     * @return \Brick\Geo\Point returns the centroid of the polygon as a GEOS Point object
      */
     public static function getCentroidFromGeosPolygon(\Brick\Geo\Polygon $polygon): \Brick\Geo\Point
     {
         $geometryEngine = new \Brick\Geo\Engine\GEOSEngine();
+
         return $geometryEngine->centroid($polygon);
     }
 
     /**
      * Calculates the centroid of a given GEOS multi-polygon.
      *
-     * @param \Brick\Geo\MultiPolygon $multiPolygon The GEOS MultiPolygon from which to calculate the centroid.
-     * @return \Brick\Geo\Point Returns the centroid of the multi-polygon as a GEOS Point object.
+     * @param \Brick\Geo\MultiPolygon $multiPolygon the GEOS MultiPolygon from which to calculate the centroid
+     *
+     * @return \Brick\Geo\Point returns the centroid of the multi-polygon as a GEOS Point object
      */
     public static function getCentroidFromGeosMultiPolygon(\Brick\Geo\MultiPolygon $multiPolygon): \Brick\Geo\Point
     {
         $geometryEngine = new \Brick\Geo\Engine\GEOSEngine();
+
         return $geometryEngine->centroid($multiPolygon);
     }
 
     /**
      * Calculates the centroid of a polygon using the Grimzy Laravel MySQL spatial type.
      *
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Polygon $polygon The Polygon object from which to calculate the centroid.
-     * @return array Returns the centroid of the polygon as an array of coordinates.
+     * @param \Grimzy\LaravelMysqlSpatial\Types\Polygon $polygon the Polygon object from which to calculate the centroid
+     *
+     * @return array returns the centroid of the polygon as an array of coordinates
      */
     public static function getPolygonCentroid(\Grimzy\LaravelMysqlSpatial\Types\Polygon $polygon)
     {
         $polygonArray = $polygon->jsonSerialize()->getCoordinates();
-        $coordinates = array_merge(...$polygonArray);
+        $coordinates  = array_merge(...$polygonArray);
 
         return static::getCentroid($coordinates);
     }
@@ -1096,13 +1102,14 @@ class Utils extends FleetbaseUtils
     /**
      * Calculates the centroid of a multi-polygon using the Grimzy Laravel MySQL spatial type.
      *
-     * @param \Grimzy\LaravelMysqlSpatial\Types\MultiPolygon $multiPolygon The MultiPolygon object from which to calculate the centroid.
-     * @return array Returns the centroid of the multi-polygon as an array of coordinates.
+     * @param \Grimzy\LaravelMysqlSpatial\Types\MultiPolygon $multiPolygon the MultiPolygon object from which to calculate the centroid
+     *
+     * @return array returns the centroid of the multi-polygon as an array of coordinates
      */
     public static function getMultiPolygonCentroid(\Grimzy\LaravelMysqlSpatial\Types\MultiPolygon $multiPolygon)
     {
         $multiPolygonArray = $multiPolygon->jsonSerialize()->getCoordinates();
-        $coordinates = [];
+        $coordinates       = [];
 
         foreach ($multiPolygonArray as $polygonArray) {
             foreach ($polygonArray as $lineStringArray) {
@@ -1116,7 +1123,8 @@ class Utils extends FleetbaseUtils
     /**
      * Extracts and returns the first set of coordinates from a given polygon.
      *
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Polygon|null $polygon The Polygon object from which to extract coordinates.
+     * @param \Grimzy\LaravelMysqlSpatial\Types\Polygon|null $polygon the Polygon object from which to extract coordinates
+     *
      * @return array Returns an array of the first set of coordinates in the polygon. Returns an empty array if the polygon is null.
      */
     public static function getCoordinatesFromPolygon(?\Grimzy\LaravelMysqlSpatial\Types\Polygon $polygon): array
@@ -1228,6 +1236,7 @@ class Utils extends FleetbaseUtils
 
         // Convert the value to JSON and create a Geometry object
         $json = json_encode($geoJson);
+
         return \Grimzy\LaravelMysqlSpatial\Types\Geometry::fromJson($json);
     }
 

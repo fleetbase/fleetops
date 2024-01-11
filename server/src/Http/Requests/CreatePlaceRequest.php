@@ -31,10 +31,10 @@ class CreatePlaceRequest extends FleetbaseRequest
         return [
             'name'      => [
                 Rule::requiredIf(function () {
-                    $isCreating = $this->isMethod('POST');
+                    $isCreating     = $this->isMethod('POST');
                     $hasCoordiantes = $this->filled('latitude') && $this->filled('longitude');
-                    $hasLocation = $this->filled('location');
-                    $hasStreet = $this->filled('street1');
+                    $hasLocation    = $this->filled('location');
+                    $hasStreet      = $this->filled('street1');
 
                     // if creating then it's required
                     if ($isCreating) {
@@ -52,13 +52,13 @@ class CreatePlaceRequest extends FleetbaseRequest
                     }
 
                     return false;
-                })
+                }),
             ],
             'street1'   => [
                 Rule::requiredIf(function () {
-                    $isCreating = $this->isMethod('POST');
+                    $isCreating     = $this->isMethod('POST');
                     $hasCoordiantes = $this->filled('latitude') && $this->filled('longitude');
-                    $hasLocation = $this->filled('location');
+                    $hasLocation    = $this->filled('location');
 
                     // if creating then it's required
                     if ($isCreating) {
@@ -71,7 +71,7 @@ class CreatePlaceRequest extends FleetbaseRequest
                     }
 
                     return false;
-                })
+                }),
             ],
             'customer'  => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
             'contact'   => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
