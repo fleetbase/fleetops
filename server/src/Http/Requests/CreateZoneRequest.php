@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
+use Fleetbase\FleetOps\Rules\ResolvablePoint;
 use Fleetbase\Http\Requests\FleetbaseRequest;
 use Illuminate\Validation\Rule;
 
@@ -25,11 +26,29 @@ class CreateZoneRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'name' => [Rule::requiredIf($this->isMethod('POST')), 'string'],
-            // @todo properly validate boundary param
-            'boundary'     => 'required|array',
-            'service_area' => 'required|exists:service_areas,public_id',
-            'status'       => 'nullable|in:active,inactive',
+            'name'         => [Rule::requiredIf($this->isMethod('POST')), 'string'],
+            'service_area' => [Rule::requiredIf($this->isMethod('POST')), 'exists:service_areas,public_id'],
+            'border'       => ['nullable', Rule::requiredIf(function () {
+                $isCreating     = $this->isMethod('POST');
+                $hasCoordiantes = $this->filled('latitude') && $this->filled('longitude');
+                $hasLocation    = $this->filled('location');
+
+                // if creating then it's required
+                if ($isCreating) {
+                    // if either has coordinated or location then it's not required
+                    if ($hasCoordiantes || $hasLocation) {
+                        return false;
+                    }
+
+                    return true;
+                }
+
+                return false;
+            })],
+            'location'     => ['nullable', new ResolvablePoint()],
+            'latitude'     => ['nullable', 'required_with:longitude'],
+            'longitude'    => ['nullable', 'required_with:latitude'],
+            'status'       => ['nullable', 'in:active,inactive'],
         ];
     }
 }

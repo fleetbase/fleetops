@@ -5,7 +5,7 @@ namespace Fleetbase\FleetOps\Casts;
 use Fleetbase\FleetOps\Support\Utils;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialExpression;
 use Grimzy\LaravelMysqlSpatial\Types\GeometryInterface;
-use Grimzy\LaravelMysqlSpatial\Types\Polygon as PolygonType;
+use Grimzy\LaravelMysqlSpatial\Types\Polygon as SpatialPolygon;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 
 class Polygon implements CastsAttributes
@@ -34,13 +34,28 @@ class Polygon implements CastsAttributes
         if ($value instanceof GeometryInterface) {
             $model->geometries[$key] = $value;
 
-            return new SpatialExpression($value);
+            return $value;
+        }
+
+        if ($value instanceof SpatialPolygon) {
+            $model->geometries[$key] = $value;
+
+            return $value;
         }
 
         if (Utils::isGeoJson($value)) {
-            return Utils::createSpatialExpressionFromGeoJson($value);
+            $value                   = Utils::createGeometryObjectFromGeoJson($value);
+            $model->geometries[$key] = $value;
+
+            return $value;
         }
 
-        return new SpatialExpression(new PolygonType([]));
+        if ($value instanceof SpatialExpression) {
+            $model->geometries[$key] = $value;
+
+            return $value;
+        }
+
+        throw new \Exception('Invalid Polygon provided for ' . $key);
     }
 }

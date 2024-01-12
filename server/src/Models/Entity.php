@@ -197,7 +197,7 @@ class Entity extends Model
      */
     public function payload()
     {
-        return $this->belongsTo(Payload::class);
+        return $this->belongsTo(Payload::class)->without(['entities']);
     }
 
     /**
@@ -273,7 +273,7 @@ class Entity extends Model
     /**
      * The length the entity belongs to.
      *
-     * @var PhpUnitsOfMeasure\PhysicalQuantity\Length
+     * @var \PhpUnitsOfMeasure\PhysicalQuantity\Length
      */
     public function getLengthUnitAttribute()
     {
@@ -283,7 +283,7 @@ class Entity extends Model
     /**
      * The width the entity belongs to.
      *
-     * @var PhpUnitsOfMeasure\PhysicalQuantity\Length
+     * @var \PhpUnitsOfMeasure\PhysicalQuantity\Length
      */
     public function getWidthUnitAttribute()
     {
@@ -350,6 +350,72 @@ class Entity extends Model
         return data_get($this, 'trackingNumber.last_status');
     }
 
+    public function setDestination($destinationKey, Payload $payload, bool $save = true): Entity
+    {
+        // if waypoint index provided
+        if (is_numeric($destinationKey)) {
+            $waypoint = $payload->waypoints->values()->get($destinationKey);
+
+            if ($waypoint) {
+                $this->destination_uuid = $waypoint->uuid;
+            }
+        }
+
+        // if explicitly set to pickup
+        if ($destinationKey === 'pickup' && $payload->pickup) {
+            $this->destination_uuid = $payload->pickup->uuid;
+        }
+
+        // if explicitly set to dropoff
+        if ($destinationKey === 'dropoff' && $payload->dropoff) {
+            $this->destination_uuid = $payload->dropoff->uuid;
+        }
+
+        // if waypoint public_id
+        if (Utils::isPublicId($destinationKey)) {
+            $waypoint = $payload->waypoints->firstWhere('public_id', $destinationKey);
+
+            // if no waypoint found from public_id check pickup/dropoff
+            if (!$waypoint) {
+                $waypoint = collect([$this->pickup, $this->dropoff])->firstWhere('public_id', $destinationKey);
+            }
+
+            if ($waypoint) {
+                $this->destination_uuid = $waypoint->uuid;
+            }
+        }
+
+        // if waypoint uuid
+        if (Str::isUuid($destinationKey)) {
+            $waypoint = $payload->waypoints->firstWhere('uuid', $destinationKey);
+
+            // if no waypoint found from uuid check pickup/dropoff
+            if (!$waypoint) {
+                $waypoint = collect([$payload->pickup, $payload->dropoff])->firstWhere('uuid', $destinationKey);
+            }
+
+            if ($waypoint) {
+                $this->destination_uuid = $waypoint->uuid;
+            }
+        }
+
+        // confirm destination_uuid is indeed a place record
+        if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
+            // search waypoints for search_uuid if any
+            $destination = Place::where('meta->search_uuid', $attributes['destination_uuid'])->first();
+
+            if ($destination instanceof Place) {
+                $this->destination_uuid = $destination->uuid;
+            }
+        }
+
+        if ($save) {
+            $this->save();
+        }
+
+        return $this;
+    }
+
     public static function insertGetUuid($values = [], Payload $payload = null)
     {
         if (is_array($values) && isset($values['uuid'])) {
@@ -407,5 +473,35 @@ class Entity extends Model
     {
         $this->customer_uuid = $model->uuid;
         $this->customer_type = Utils::getMutationType($model);
+    }
+
+    public function getPayload(): ?Payload
+    {
+        $this->load('payload');
+
+        if ($this->payload instanceof Payload) {
+            return $this->payload;
+        }
+
+        if (Str::isUuid($this->payload_uuid)) {
+            return Payload::where('uuid', $this->payload_uuid)->first();
+        }
+
+        return null;
+    }
+
+    public function getTrashedPayload(): ?Payload
+    {
+        $payload = $this->payload()->withoutGlobalScopes()->first();
+
+        if ($payload instanceof Payload) {
+            return $payload;
+        }
+
+        if (Str::isUuid($this->payload_uuid)) {
+            return Payload::where('uuid', $this->payload_uuid)->withoutGlobalScopes()->first();
+        }
+
+        return null;
     }
 }

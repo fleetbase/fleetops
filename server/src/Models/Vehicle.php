@@ -49,7 +49,7 @@ class Vehicle extends Model
      *
      * @var array
      */
-    protected $searchableColumns = ['make', 'model', 'year', 'plate_number', 'internal_id', 'vin', 'public_id'];
+    protected $searchableColumns = ['make', 'model', 'year', 'plate_number', 'vin', 'public_id'];
 
     /**
      * Attributes that is filterable on this model.
@@ -233,7 +233,7 @@ class Vehicle extends Model
         $nameSegments = [];
 
         // Populate the nameSegments array with the values of the attributes
-        $keys = ['year', 'make', 'model', 'trim', 'plate_number', 'internal_id'];
+        $keys = ['year', 'make', 'model', 'trim', 'plate_number'];
         foreach ($keys as $key) {
             if (!empty($this->{$key})) {
                 $nameSegments[] = $this->{$key};

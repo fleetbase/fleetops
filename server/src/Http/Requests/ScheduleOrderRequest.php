@@ -3,10 +3,8 @@
 namespace Fleetbase\FleetOps\Http\Requests;
 
 use Fleetbase\Http\Requests\FleetbaseRequest;
-use Fleetbase\Rules\ExistsInAny;
-use Illuminate\Validation\Rule;
 
-class CreatePurchaseRateRequest extends FleetbaseRequest
+class ScheduleOrderRequest extends FleetbaseRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -26,9 +24,9 @@ class CreatePurchaseRateRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'service_quote' => ['required', Rule::exists('service_quotes', 'public_id')->whereNull('deleted_at')],
-            'order'         => ['nullable', Rule::exists('orders', 'public_id')->whereNull('deleted_at')],
-            'customer'      => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
+            'date'     => 'required|date_format:Y-m-d',
+            'time'     => 'nullable',
+            'timezone' => 'nullable|timezone',
         ];
     }
 }

@@ -2,7 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\FleetbaseRequest;
 
 class CancelOrderRequest extends FleetbaseRequest
@@ -14,7 +13,7 @@ class CancelOrderRequest extends FleetbaseRequest
      */
     public function authorize()
     {
-        return Utils::notEmpty(session('user'));
+        return request()->session()->has('api_credential');
     }
 
     /**

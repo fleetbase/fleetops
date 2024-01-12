@@ -7,6 +7,8 @@ use Fleetbase\FleetOps\Http\Requests\UpdateEntityRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Entity as EntityResource;
 use Fleetbase\FleetOps\Models\Entity;
+use Fleetbase\FleetOps\Models\Payload;
+use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -74,6 +76,23 @@ class EntityController extends Controller
                 'public_id'    => $request->input('driver'),
                 'company_uuid' => session('company'),
             ]);
+        }
+
+        // if destination is set
+        if ($request->has('destination') || $request->has('waypoint')) {
+            $destinationKey = $request->or(['destination', 'waypoint']);
+
+            if ($request->has('payload')) {
+                $payload = Payload::where('public_id', $request->input('payload'))->first();
+
+                if ($payload) {
+                    // if a destination or waypoint is explicitly set
+                    $destination = $payload->findDestinationFromKey($destinationKey);
+                    if ($destination instanceof Place) {
+                        $input['destination_uuid'] = $destination->uuid;
+                    }
+                }
+            }
         }
 
         // make sure company is set
@@ -161,9 +180,25 @@ class EntityController extends Controller
             ]);
         }
 
+        // if destination is set
+        if ($request->has('destination') || $request->has('waypoint')) {
+            $destinationKey = $request->or(['destination', 'waypoint']);
+
+            if ($request->has('payload')) {
+                $payload = Payload::where('public_id', $request->input('payload'))->first();
+
+                if ($payload) {
+                    // if a destination or waypoint is explicitly set
+                    $destination = $payload->findDestinationFromKey($destinationKey);
+                    if ($destination instanceof Place) {
+                        $attributes['destination_uuid'] = $destination->uuid;
+                    }
+                }
+            }
+        }
+
         // update the entity
         $entity->update($input);
-        // $entity->flushAttributesCache();
 
         // response the entity resource
         return new EntityResource($entity);

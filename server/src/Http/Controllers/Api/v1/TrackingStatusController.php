@@ -105,8 +105,8 @@ class TrackingStatusController extends Controller
         }
 
         // if no code set create a code from the status
-        if (empty($input['code'])) {
-            $input['code'] = TrackingStatus::prepareCode($input['status']);
+        if (empty($trackingStatus->code)) {
+            $input['code'] = TrackingStatus::prepareCode(data_get($input, 'status', $trackingStatus->status));
         }
 
         // update the trackingStatus

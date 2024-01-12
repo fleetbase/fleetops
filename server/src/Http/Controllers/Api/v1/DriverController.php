@@ -80,9 +80,14 @@ class DriverController extends Controller
             ]);
         }
 
-        // default location
-        if ($request->missing('location')) {
-            $input['location'] = new Point(0, 0);
+        // set default online
+        if (!isset($input['online'])) {
+            $input['online'] = 0;
+        }
+
+        // latitude / longitude
+        if ($request->has(['latitude', 'longitude'])) {
+            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
         }
 
         // create the driver
@@ -148,6 +153,16 @@ class DriverController extends Controller
                 'public_id'    => $request->input('job'),
                 'company_uuid' => session('company'),
             ]);
+        }
+
+        // set default online
+        if (!isset($input['online'])) {
+            $input['online'] = 0;
+        }
+
+        // latitude / longitude
+        if ($request->has(['latitude', 'longitude'])) {
+            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
         }
 
         // create the driver
@@ -311,11 +326,11 @@ class DriverController extends Controller
         $platform = $request->or(['platform', 'os']);
 
         if (!$token) {
-            return response()->error('Token is required to register device.');
+            return response()->apiError('Token is required to register device.');
         }
 
         if (!$platform) {
-            return response()->error('Platform is required to register device.');
+            return response()->apiError('Platform is required to register device.');
         }
 
         $device = UserDevice::firstOrCreate(
@@ -350,7 +365,7 @@ class DriverController extends Controller
         $user = User::where('email', $identity)->orWhere('phone', static::phone($identity))->first();
 
         if (!Hash::check($password, $user->password)) {
-            return response()->error('Authentication failed using password provided.', 401);
+            return response()->apiError('Authentication failed using password provided.', 401);
         }
 
         // Get the company session for the user
@@ -376,7 +391,7 @@ class DriverController extends Controller
         try {
             $token = $user->createToken($driver->uuid);
         } catch (\Exception $e) {
-            return response()->error($e->getMessage());
+            return response()->apiError($e->getMessage());
         }
 
         $driver->token = $token->plainTextToken;
@@ -397,7 +412,7 @@ class DriverController extends Controller
         $user = User::where('phone', $phone)->whereNull('deleted_at')->withoutGlobalScopes()->first();
 
         if (!$user) {
-            return response()->error('No driver with this phone # found.');
+            return response()->apiError('No driver with this phone # found.');
         }
 
         // get the current company session
@@ -409,7 +424,7 @@ class DriverController extends Controller
                 return "Your {$company->name} verification code is {$verification->code}";
             });
         } catch (\Throwable $e) {
-            return response()->error($e->getMessage());
+            return response()->apiError($e->getMessage());
         }
 
         return response()->json(['status' => 'OK']);
@@ -438,14 +453,14 @@ class DriverController extends Controller
         })->first();
 
         if (!$user) {
-            return response()->error('Unable to verify code.');
+            return response()->apiError('Unable to verify code.');
         }
 
         // find and verify code
         $verificationCode = VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
 
         if (!$verificationCode && $code !== config('fleetops.navigator.bypass_verification_code')) {
-            return response()->error('Invalid verification code!');
+            return response()->apiError('Invalid verification code!');
         }
 
         // get the current company session
@@ -471,7 +486,7 @@ class DriverController extends Controller
         try {
             $token = $user->createToken($driver->uuid);
         } catch (\Exception $e) {
-            return response()->error($e->getMessage());
+            return response()->apiError($e->getMessage());
         }
 
         // $driver->update(['auth_token' => $token->plainTextToken]);

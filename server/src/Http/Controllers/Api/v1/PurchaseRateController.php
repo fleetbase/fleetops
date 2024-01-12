@@ -97,7 +97,7 @@ class PurchaseRateController extends Controller
             try {
                 $integratedVendorOrder = $serviceQuote->integratedVendor->api()->createOrderFromServiceQuote($serviceQuote, $request);
             } catch (\Exception $e) {
-                return response()->error($e->getMessage());
+                return response()->apiError($e->getMessage());
             }
         }
 

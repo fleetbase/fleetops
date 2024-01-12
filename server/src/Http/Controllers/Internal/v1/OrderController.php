@@ -62,6 +62,16 @@ class OrderController extends FleetOpsController
 
                         $input['integrated_vendor_order'] = $integratedVendorOrder;
                     }
+
+                    // if no type is set its default to default
+                    if (!isset($input['type'])) {
+                        $input['type'] = 'default';
+                    }
+
+                    // if no status is set its default to `created`
+                    if (!isset($input['status'])) {
+                        $input['status'] = 'created';
+                    }
                 },
                 function (&$request, Order &$order, &$requestInput) {
                     $input                   = $request->input('order');
@@ -101,7 +111,7 @@ class OrderController extends FleetOpsController
                     $order->purchaseServiceQuote($serviceQuote);
 
                     // dispatch if flagged true
-                    $order->firstDispatch();
+                    $order->firstDispatchWithActivity();
 
                     // load tracking number
                     $order->load(['trackingNumber']);

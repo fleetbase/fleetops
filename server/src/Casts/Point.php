@@ -50,13 +50,23 @@ class Point implements CastsAttributes
         }
 
         if (Utils::isGeoJson($value)) {
-            return Utils::createSpatialExpressionFromGeoJson($value);
+            $value                   = Utils::createSpatialExpressionFromGeoJson($value);
+            $model->geometries[$key] = $value;
+
+            return $value;
         }
 
         if (Utils::isCoordinates($value)) {
-            $point = Utils::getPointFromCoordinates($value);
+            $point                   = Utils::getPointFromCoordinates($value);
+            $model->geometries[$key] = $point;
 
             return $point;
+        }
+
+        if ($value instanceof SpatialExpression) {
+            $model->geometries[$key] = $value;
+
+            return $value;
         }
 
         return static::createEmptySpatialExpression();

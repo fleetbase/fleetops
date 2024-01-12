@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Events\OrderReady;
 use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
+use Fleetbase\FleetOps\Http\Requests\ScheduleOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateOrderRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
@@ -23,6 +24,7 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\File;
+use Fleetbase\Support\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -55,7 +57,7 @@ class OrderController extends Controller
             try {
                 $integratedVendorOrder = $serviceQuote->integratedVendor->api()->createOrderFromServiceQuote($serviceQuote, $request);
             } catch (\Exception $e) {
-                return response()->error($e->getMessage());
+                return response()->apiError($e->getMessage());
             }
         }
 
@@ -69,18 +71,18 @@ class OrderController extends Controller
             $dropoff      = data_get($payloadInput, 'dropoff');
             $return       = data_get($payloadInput, 'return');
 
-            // if no pickup and dropoff extract from waypoints
-            if (empty($pickup) && empty($dropoff) && count($waypoints)) {
-                $pickup  = array_shift($waypoints);
-                $dropoff = array_pop($waypoints);
+            if ($pickup) {
+                $payload->setPickup($pickup, [
+                    'callback' => function ($pickup, $payload) {
+                        $payload->setCurrentWaypoint($pickup);
+                    },
+                ]);
             }
 
-            $payload->setPickup($pickup, [
-                'callback' => function ($pickup, $payload) {
-                    $payload->setCurrentWaypoint($pickup);
-                },
-            ]);
-            $payload->setDropoff($dropoff);
+            if ($dropoff) {
+                $payload->setDropoff($dropoff);
+            }
+
             if ($return) {
                 $payload->setReturn($return);
             }
@@ -90,6 +92,12 @@ class OrderController extends Controller
             // set waypoints and entities after payload is saved
             $payload->setWaypoints($waypoints);
             $payload->setEntities($entities);
+
+            // set the first / current waypoint
+            $firstWaypoint = $payload->getPickupOrFirstWaypoint();
+            if ($firstWaypoint instanceof Place) {
+                $payload->setCurrentWaypoint($firstWaypoint);
+            }
 
             $input['payload_uuid'] = $payload->uuid;
         } elseif ($request->isString('payload')) {
@@ -110,18 +118,18 @@ class OrderController extends Controller
             $dropoff      = data_get($payloadInput, 'dropoff');
             $return       = data_get($payloadInput, 'return');
 
-            // if no pickup and dropoff extract from waypoints
-            if (empty($pickup) && empty($dropoff) && count($waypoints)) {
-                $pickup  = array_shift($waypoints);
-                $dropoff = array_pop($waypoints);
+            if ($pickup) {
+                $payload->setPickup($pickup, [
+                    'callback' => function ($pickup, $payload) {
+                        $payload->setCurrentWaypoint($pickup);
+                    },
+                ]);
             }
 
-            $payload->setPickup($pickup, [
-                'callback' => function ($pickup, $payload) {
-                    $payload->setCurrentWaypoint($pickup);
-                },
-            ]);
-            $payload->setDropoff($dropoff);
+            if ($dropoff) {
+                $payload->setDropoff($dropoff);
+            }
+
             if ($return) {
                 $payload->setReturn($return);
             }
@@ -135,7 +143,10 @@ class OrderController extends Controller
             $input['payload_uuid'] = $payload->uuid;
 
             // set the first / current waypoint
-            $payload->setCurrentWaypoint($payload->pickup);
+            $firstWaypoint = $payload->getPickupOrFirstWaypoint();
+            if ($firstWaypoint instanceof Place) {
+                $payload->setCurrentWaypoint($firstWaypoint);
+            }
         }
 
         // driver assignment
@@ -186,13 +197,18 @@ class OrderController extends Controller
             $input['type'] = 'default';
         }
 
+        // if no status is set its default to `created`
+        if (!isset($input['status'])) {
+            $input['status'] = 'created';
+        }
+
         // if adhoc set convert to sql ready boolean value 1 or 0
         if (isset($input['adhoc']) && $integratedVendorOrder === null) {
             $input['adhoc'] = Utils::isTrue($input['adhoc']) ? 1 : 0;
         }
 
         if (!isset($input['payload_uuid'])) {
-            return response()->error('Attempted to attach invalid payload to order.');
+            return response()->apiError('Attempted to attach invalid payload to order.');
         }
 
         // create the order
@@ -217,7 +233,7 @@ class OrderController extends Controller
 
         // dispatch if flagged true
         if ($request->boolean('dispatch') && $integratedVendorOrder === null) {
-            $order->dispatch();
+            $order->dispatchWithActivity();
         }
 
         // load required relations
@@ -657,14 +673,61 @@ class OrderController extends Controller
         }
 
         if (!$order->hasDriverAssigned && !$order->adhoc) {
-            return response()->error('No driver assigned to dispatch!');
+            return response()->apiError('No driver assigned to dispatch!');
         }
 
         if ($order->dispatched) {
-            return response()->error('Order has already been dispatched!');
+            return response()->apiError('Order has already been dispatched!');
         }
 
         $order->dispatch();
+        $order->insertDispatchActivity();
+
+        return new OrderResource($order);
+    }
+
+    /**
+     * Schedules an order using date and time.
+     *
+     * @param \Fleetbase\FleetOps\Http\Requests\ScheduleOrderRequest
+     *
+     * @return \Fleetbase\Http\Resources\v1\Order
+     */
+    public function scheduleOrder(string $id, ScheduleOrderRequest $request)
+    {
+        $dateInput = $request->input('date');
+        $timeInput = $request->input('time');
+
+        // get the default tz
+        $company       = Auth::getCompany();
+        $defaultTz     = data_get($company, 'timezone', config('app.timezone'));
+        $timezoneInput = $request->input('timezone', $defaultTz);
+
+        try {
+            $order = Order::findRecordOrFail($id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return response()->json(
+                [
+                    'error' => 'Order resource not found.',
+                ],
+                404
+            );
+        }
+
+        // Parse date and time
+        $date = Carbon::parse($dateInput);
+        if ($timeInput) {
+            $time = Carbon::parse($timeInput);
+            // Combine date and time
+            $date->setTime($time->hour, $time->minute, $time->second);
+        }
+
+        // Set the timezone
+        $date->shiftTimezone($timezoneInput);
+
+        // Update order with new date and time
+        $order->scheduled_at = $date;
+        $order->save();
 
         return new OrderResource($order);
     }
@@ -692,7 +755,7 @@ class OrderController extends Controller
         }
 
         if ($order->started) {
-            return response()->error('Order has already started.');
+            return response()->apiError('Order has already started.');
         }
 
         // if the order is adhoc and the parameter of `assign` is set with a valid driver id, assign the driver and continue
@@ -707,11 +770,11 @@ class OrderController extends Controller
         $payload = Payload::where('uuid', $order->payload_uuid)->withoutGlobalScopes()->with(['waypoints', 'waypointMarkers', 'entities'])->first();
 
         if ($order->adhoc && !$driver) {
-            return response()->error('You must send driver to accept adhoc order.');
+            return response()->apiError('You must send driver to accept adhoc order.');
         }
 
         if (!$driver) {
-            return response()->error('No driver assigned to order.');
+            return response()->apiError('No driver assigned to order.');
         }
 
         // get the next order activity
@@ -723,7 +786,7 @@ class OrderController extends Controller
         // if order is not dispatched yet $activity['code'] === 'dispatched' || $order->dispatched === true
         // and not skipping throw order not dispatched error
         if ($isNotDispatched && !$skipDispatch) {
-            return response()->error('Order has not been dispatched yet and cannot be started.');
+            return response()->apiError('Order has not been dispatched yet and cannot be started.');
         }
 
         // if we're going to skip the dispatch get the next activity status and flow and continue
@@ -760,30 +823,48 @@ class OrderController extends Controller
     /**
      * Update an order activity.
      *
-     * @param \Fleetbase\Models\Order|string $order
-     *
      * @return \Fleetbase\Http\Resources\v1\Order
      */
-    public function updateActivity($order, Request $request)
+    public function updateActivity($id, Request $request)
     {
         $skipDispatch = $request->or(['skip_dispatch', 'skipDispatch'], false);
         $proof        = $request->input('proof', null);
+        $order        = null;
 
-        /** @var \Fleetbase\FleetOps\Models\Order $order */
-        $order = ($order instanceof Order) ? $order : Order::withoutGlobalScopes()
-            ->where('public_id', $order)
-            ->whereNull('deleted_at')
-            ->with(['driverAssigned', 'payload.entities', 'payload.currentWaypoint', 'payload.waypoints'])
-            ->first();
-
-        if (!$order) {
-            return response()->error('No resource not found.');
+        // if instance of order is passed directly to this method
+        if ($id instanceof Order) {
+            /** @var \Fleetbase\FleetOps\Models\Order $order */
+            $order = $id;
         }
 
-        // if orser is created trigger started flag
+        // if string $id
+        if (!$order) {
+            try {
+                $order = Order::findRecordOrFail($id, ['driverAssigned', 'payload.entities', 'payload.currentWaypoint', 'payload.waypoints']);
+            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+                return response()->json(
+                    [
+                        'error' => 'Order resource not found.',
+                    ],
+                    404
+                );
+            }
+        }
+
+        // if no order found
+        if (!$order) {
+            return response()->apiError('No resource not found.');
+        }
+
+        // if order is still status of `created` trigger started flag
         if ($order->status === 'created') {
             $order->started    = true;
             $order->started_at = now();
+        }
+
+        // if order is already completed
+        if ($order->status === 'completed') {
+            return response()->apiError('Order is already completed.');
         }
 
         $activity = $request->input('activity', Flow::getNextActivity($order));
@@ -799,7 +880,7 @@ class OrderController extends Controller
             if (!$order->hasDriverAssigned && !$order->adhoc) {
                 event(new OrderDispatchFailed($order, 'No driver assigned for order to dispatch to.'));
 
-                return response()->error('No driver assigned for order to dispatch to.');
+                return response()->apiError('No driver assigned for order to dispatch to.');
             }
 
             $order->dispatch();
@@ -844,8 +925,7 @@ class OrderController extends Controller
             $order->notifyCompleted();
         }
 
-        $order->setStatus($activity['code']);
-        $order->insertActivity($activity['status'], $activity['details'] ?? '', $location, $activity['code'], $proof);
+        $order->updateActivity($activity, $proof);
 
         // also update for each order entities if not multiple drop order
         // all entities will share the same activity status as is one drop order
@@ -925,7 +1005,7 @@ class OrderController extends Controller
 
         // if not completed respond with error
         if (!$isCompleted) {
-            return response()->error('Not all waypoints completed for order.');
+            return response()->apiError('Not all waypoints completed for order.');
         }
 
         $activity = [
@@ -994,11 +1074,10 @@ class OrderController extends Controller
         $place = $order->payload->waypoints->firstWhere('public_id', $placeId);
 
         if (!$place) {
-            return response()->error('Place resource is not a valid destination.');
+            return response()->apiError('Place resource is not a valid destination.');
         }
 
-        $order->payload->update(['current_waypoint_uuid' => $place->uuid]);
-        $order->payload->refresh();
+        $order->payload->setCurrentWaypoint($place);
 
         return new OrderResource($order);
     }
@@ -1050,7 +1129,7 @@ class OrderController extends Controller
         }
 
         if (!$code) {
-            return response()->error('No QR code data to capture.');
+            return response()->apiError('No QR code data to capture.');
         }
 
         $subject = $type === null ? $order : null;
@@ -1075,7 +1154,7 @@ class OrderController extends Controller
         }
 
         if (!$subject) {
-            return response()->error('Unable to capture QR code data.');
+            return response()->apiError('Unable to capture QR code data.');
         }
 
         // validate
@@ -1094,7 +1173,7 @@ class OrderController extends Controller
             return new ProofResource($proof);
         }
 
-        return response()->error('Unable to validate QR code data.');
+        return response()->apiError('Unable to validate QR code data.');
     }
 
     /**
@@ -1104,11 +1183,12 @@ class OrderController extends Controller
      */
     public function captureSignature(string $id, string $subjectId = null, Request $request)
     {
-        $disk      = $request->input('disk', config('filesystems.default'));
-        $bucket    = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
-        $signature = $request->input('signature');
-        $data      = $request->input('data', []);
-        $type      = $subjectId ? strtok($subjectId, '_') : null;
+        $disk         = $request->input('disk', config('filesystems.default'));
+        $bucket       = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
+        $signature    = $request->input('signature');
+        $data         = $request->input('data', []);
+        $remarks      = $request->input('remarks', 'Verified by Signature');
+        $type         = $subjectId ? strtok($subjectId, '_') : null;
 
         try {
             $order = Order::findRecordOrFail($id);
@@ -1122,7 +1202,7 @@ class OrderController extends Controller
         }
 
         if (!$signature) {
-            return response()->error('No signature data to capture.');
+            return response()->apiError('No signature data to capture.');
         }
 
         $subject = $type === null ? $order : null;
@@ -1147,7 +1227,7 @@ class OrderController extends Controller
         }
 
         if (!$subject) {
-            return response()->error('Unable to capture signature data.');
+            return response()->apiError('Unable to capture signature data.');
         }
 
         // create proof instance
@@ -1156,7 +1236,7 @@ class OrderController extends Controller
             'order_uuid'   => $order->uuid,
             'subject_uuid' => $subject->uuid,
             'subject_type' => Utils::getModelClassName($subject),
-            'remarks'      => 'Verified by Signature',
+            'remarks'      => $remarks,
             'raw_data'     => $signature,
             'data'         => $data,
         ]);

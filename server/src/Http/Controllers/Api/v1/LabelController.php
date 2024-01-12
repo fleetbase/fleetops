@@ -36,7 +36,7 @@ class LabelController extends Controller
         }
 
         if (!$subject) {
-            return response()->error('Unable to render label.');
+            return response()->apiError('Unable to render label.');
         }
 
         switch ($format) {
@@ -58,6 +58,6 @@ class LabelController extends Controller
                 return response()->json(['data' => mb_convert_encoding($base64, 'UTF-8', 'UTF-8')]);
         }
 
-        return response()->error('Unable to render label.');
+        return response()->apiError('Unable to render label.');
     }
 }

@@ -30,7 +30,8 @@ class ServiceRateController extends Controller
             'rate_calculation_method',
             'currency',
             'base_fee',
-            'per_km_flat_rate_fee',
+            'per_meter_unit',
+            'per_meter_flat_rate_fee',
             'meter_fees',
             'meter_fees.*.distance',
             'meter_fees.*.fee',
@@ -77,7 +78,7 @@ class ServiceRateController extends Controller
                 ServiceRateFee::create([
                     'service_rate_uuid' => $serviceRate->uuid,
                     'distance'          => Utils::get($meterFee, 'distance'),
-                    'distance_unit'     => 'm',
+                    'distance_unit'     => $request->input('per_meter_unit', 'm'),
                     'fee'               => Utils::get($meterFee, 'fee'),
                     'currency'          => $serviceRate->currency,
                 ]);

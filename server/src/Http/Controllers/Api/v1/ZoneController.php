@@ -9,6 +9,7 @@ use Fleetbase\FleetOps\Http\Resources\v1\Zone as ZoneResource;
 use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 
 class ZoneController extends Controller
@@ -23,7 +24,10 @@ class ZoneController extends Controller
     public function create(CreateZoneRequest $request)
     {
         // get request input
-        $input = $request->only(['name', 'boundary', 'status', 'description', 'color', 'stroke_color']);
+        $input = $request->only(['name', 'border', 'status', 'description', 'color', 'stroke_color']);
+
+        // get radius for creating zone border - default to 500 meters
+        $radius = $request->input('radius', 500);
 
         // make sure company is set
         $input['company_uuid'] = session('company');
@@ -36,10 +40,37 @@ class ZoneController extends Controller
             ]);
         }
 
+        // if latitude and longitude is provided
+        if ($request->has(['latitude', 'longitude'])) {
+            // create a polygon given the radius
+            $latitude  = $request->input('latitude');
+            $longitude = $request->input('longitude');
+            $point     = new Point($latitude, $longitude);
+
+            if ($point instanceof Point) {
+                $input['border'] = Zone::createPolygonFromPoint($point, $radius);
+            }
+        }
+
+        // if a location is provided
+        if ($request->has('location')) {
+            $location = $request->input('location');
+            $point    = Utils::getPointFromMixed($location);
+
+            if ($point instanceof Point) {
+                $input['border'] = Zone::createPolygonFromPoint($point, $radius);
+            }
+        }
+
+        /**
+         * @todo if missing location, latitude, longitude and border
+         * then create a zone from the center of the service area provided
+         */
+
         // create the zone
         $zone = Zone::create($input);
 
-        // response the driver resource
+        // response the zone resource
         return new ZoneResource($zone);
     }
 
@@ -66,7 +97,10 @@ class ZoneController extends Controller
         }
 
         // get request input
-        $input = $request->only(['name', 'boundary', 'status', 'description', 'color', 'stroke_color']);
+        $input = $request->only(['name', 'border', 'status', 'description', 'color', 'stroke_color']);
+
+        // get radius for creating zone border - default to 500 meters
+        $radius = $request->input('radius', 500);
 
         // service area assignment
         if ($request->has('service_area')) {
@@ -74,6 +108,28 @@ class ZoneController extends Controller
                 'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
+        }
+
+        // if latitude and longitude is provided
+        if ($request->has(['latitude', 'longitude'])) {
+            // create a polygon given the radius
+            $latitude  = $request->input('latitude');
+            $longitude = $request->input('longitude');
+            $point     = new Point($latitude, $longitude);
+
+            if ($point instanceof Point) {
+                $input['border'] = Zone::createPolygonFromPoint($point, $radius);
+            }
+        }
+
+        // if a location is provided
+        if ($request->has('location')) {
+            $location = $request->input('location');
+            $point    = Utils::getPointFromMixed($location);
+
+            if ($point instanceof Point) {
+                $input['border'] = Zone::createPolygonFromPoint($point, $radius);
+            }
         }
 
         // update the zone

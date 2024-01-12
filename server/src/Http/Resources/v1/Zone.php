@@ -2,10 +2,8 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
-use Grimzy\LaravelMysqlSpatial\Types\Polygon;
 
 class Zone extends FleetbaseResource
 {
@@ -24,7 +22,7 @@ class Zone extends FleetbaseResource
             'public_id'    => $this->when(Http::isInternalRequest(), $this->public_id),
             'name'         => $this->name,
             'description'  => $this->description,
-            'coordinates'  => $this->when($this->border instanceof Polygon, Utils::getCoordinatesFromPolygon($this->border), []),
+            'center'       => $this->location,
             'border'       => $this->border,
             'color'        => $this->color,
             'stroke_color' => $this->stroke_color,
@@ -45,7 +43,7 @@ class Zone extends FleetbaseResource
             'id'           => $this->public_id,
             'name'         => $this->name,
             'description'  => $this->description,
-            'coordinates'  => data_get($this->border, 'coordinates', []),
+            'center'       => $this->location,
             'border'       => $this->border,
             'color'        => $this->color,
             'stroke_color' => $this->stroke_color,

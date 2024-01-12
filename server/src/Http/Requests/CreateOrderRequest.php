@@ -26,11 +26,11 @@ class CreateOrderRequest extends FleetbaseRequest
     {
         $validations = [
             'adhoc'          => 'in:true,false,1,0',
-            'dispatch'       => 'boolean',
+            'dispatch'       => ['nullable', 'boolean'],
             'adhoc_distance' => 'numeric',
             'pod_required'   => 'in:true,false,1,0',
             'pod_method'     => 'in:' . config('api.pod_methods'),
-            'scheduled_at'   => 'date',
+            'scheduled_at'   => ['nullable', 'date'],
             'driver'         => 'nullable|exists:drivers,public_id',
             'service_quote'  => 'nullable|exists:service_quotes,public_id',
             'purchase_rate'  => 'nullable|exists:purchase_rates,public_id',

@@ -81,10 +81,10 @@ class ServiceRate extends Model
      * @var array
      */
     protected $casts = [
-        'base_fee'                => Money::class . ':currency',
-        'per_meter_flat_rate_fee' => Money::class . ':currency',
-        'cod_flat_fee'            => Money::class . ':currency',
-        'peak_hours_flat_fee'     => Money::class . ':currency',
+        'base_fee'                => Money::class,
+        'per_meter_flat_rate_fee' => Money::class,
+        'cod_flat_fee'            => Money::class,
+        'peak_hours_flat_fee'     => Money::class,
     ];
 
     /**
@@ -461,7 +461,11 @@ class ServiceRate extends Model
         $serviceRates = $serviceRatesQuery->get();
 
         $waypoints = collect($places)->map(function ($place) {
-            return $place->getLocationAsPoint();
+            $place = Place::createFromMixed($place);
+
+            if ($place instanceof Place) {
+                return $place->getLocationAsPoint();
+            }
         });
 
         foreach ($serviceRates as $serviceRate) {
@@ -726,7 +730,7 @@ class ServiceRate extends Model
         ]);
 
         // Prepare all waypoints and origin and destination
-        $waypoints    = $payload->getAllStops()->mapInto(Place::class);
+        $waypoints    = $payload->getAllStops();
         $origin       = $waypoints->first();
         $destinations = $waypoints->skip(1)->toArray();
 

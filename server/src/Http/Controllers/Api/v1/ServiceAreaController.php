@@ -7,7 +7,9 @@ use Fleetbase\FleetOps\Http\Requests\UpdateServiceAreaRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\ServiceArea as ServiceAreaResource;
 use Fleetbase\FleetOps\Models\ServiceArea;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 
 class ServiceAreaController extends Controller
@@ -24,13 +26,48 @@ class ServiceAreaController extends Controller
         // get request input
         $input = $request->only(['name', 'type', 'status']);
 
+        // get radius for creating service area border - default to 500 meters
+        $radius = (int) $request->input('radius', 500);
+
         // make sure company is set
         $input['company_uuid'] = session('company');
 
-        // @todo some geocoding here
+        // if parent service area set
+        if ($request->filled('parent')) {
+            $input['parent_uuid'] = Utils::getUuid('service_areas', [
+                'public_id'    => $request->input('parent'),
+                'company_uuid' => session('company'),
+            ]);
+        }
+
+        // if latitude and longitude is provided
+        if ($request->has(['latitude', 'longitude'])) {
+            // create a polygon given the radius
+            $latitude  = $request->input('latitude');
+            $longitude = $request->input('longitude');
+            $point     = new Point($latitude, $longitude);
+
+            if ($point instanceof Point) {
+                $input['border'] = ServiceArea::createMultiPolygonFromPoint($point, $radius);
+            }
+        }
+
+        // if a location is provided
+        if ($request->has('location')) {
+            $location = $request->input('location');
+            $point    = Utils::getPointFromMixed($location);
+
+            if ($point instanceof Point) {
+                $input['border'] = ServiceArea::createMultiPolygonFromPoint($point, $radius);
+            }
+        }
 
         // create the serviceArea
-        $serviceArea = ServiceArea::create($input);
+        try {
+            $serviceArea = ServiceArea::create($input);
+        } catch (\Throwable $e) {
+            dd($e->getMessage());
+        }
 
         // response the driver resource
         return new ServiceAreaResource($serviceArea);
@@ -61,7 +98,38 @@ class ServiceAreaController extends Controller
         // get request input
         $input = $request->only(['name', 'type', 'status']);
 
-        // @todo some geocoding here
+        // get radius for creating service area border - default to 500 meters
+        $radius = $request->input('radius', 500);
+
+        // if parent service area set
+        if ($request->filled('parent')) {
+            $input['parent_uuid'] = Utils::getUuid('service_areas', [
+                'public_id'    => $request->input('parent'),
+                'company_uuid' => session('company'),
+            ]);
+        }
+
+        // if latitude and longitude is provided
+        if ($request->has(['latitude', 'longitude'])) {
+            // create a polygon given the radius
+            $latitude  = $request->input('latitude');
+            $longitude = $request->input('longitude');
+            $point     = new Point($latitude, $longitude);
+
+            if ($point instanceof Point) {
+                $input['border'] = ServiceArea::createMultiPolygonFromPoint($point, $radius);
+            }
+        }
+
+        // if a location is provided
+        if ($request->has('location')) {
+            $location = $request->input('location');
+            $point    = Utils::getPointFromMixed($location);
+
+            if ($point instanceof Point) {
+                $input['border'] = ServiceArea::createMultiPolygonFromPoint($point, $radius);
+            }
+        }
 
         // update the serviceArea
         $serviceArea->update($input);

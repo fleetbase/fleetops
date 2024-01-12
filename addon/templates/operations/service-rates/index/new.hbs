@@ -1,4 +1,4 @@
-<Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @fullHeight={{true}} @width="800px">
+<Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @fullHeight={{true}} @width="570px">
     <Overlay::Header @title={{if this.serviceRate.id this.serviceRate.service_name "New service rate"}} @status={{this.serviceRate.public_id}} @hideStatusDot={{true}} @createdAt={{this.serviceRate.createdAt}} @onPressCancel={{this.transitionBack}}>
         {{#if this.serviceRate.id}}
             <Button @icon="save" @type="primary" @text="Save Service Rate" @onClick={{this.updateServiceRate}} @isLoading={{this.isUpdatingServiceRate}} />

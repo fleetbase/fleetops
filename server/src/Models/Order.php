@@ -604,12 +604,12 @@ class Order extends Model
 
     public function getIsAssignedNotDispatchedAttribute(): bool
     {
-        return !empty($this->driver_assigned_uuid) && !$this->dispatched_at;
+        return !empty($this->driver_assigned_uuid) && $this->dispatched_at === null;
     }
 
     public function getIsNotDispatchedAttribute(): bool
     {
-        return !$this->dispatched_at;
+        return $this->dispatched_at === null;
     }
 
     public function getIsIntegratedVendorOrderAttribute()
@@ -894,7 +894,7 @@ class Order extends Model
         return !$this->dispatched && Carbon::fromString($this->scheduled_at)->between($min, $max);
     }
 
-    public function dispatch($save = false)
+    public function dispatch($save = true)
     {
         $this->dispatched    = true;
         $this->dispatched_at = now();
@@ -907,11 +907,42 @@ class Order extends Model
         return event(new OrderDispatched($this));
     }
 
-    public function firstDispatch()
+    public function insertDispatchActivity(): Order
+    {
+        // get dispatch activity if any and apply to order
+        $dispatchActivity = Flow::getDispatchActivity($this);
+
+        if ($dispatchActivity) {
+            $this->updateActivity($dispatchActivity);
+        }
+
+        return $this;
+    }
+
+    public function dispatchWithActivity(): Order
+    {
+        $this->dispatch();
+        $this->insertDispatchActivity();
+
+        return $this;
+    }
+
+    public function firstDispatch(): Order
     {
         if ($this->dispatched) {
             $this->dispatch();
         }
+
+        return $this;
+    }
+
+    public function firstDispatchWithActivity(): Order
+    {
+        if ($this->dispatched) {
+            $this->dispatchWithActivity();
+        }
+
+        return $this;
     }
 
     public function cancel()
@@ -936,6 +967,22 @@ class Order extends Model
         }
     }
 
+    public function updateActivity(array $activity = null, $proof = null): Order
+    {
+        $status   = data_get($activity, 'status');
+        $details  = data_get($activity, 'details', '');
+        $code     = data_get($activity, 'code', 'dispatched');
+        $location = $this->getLastLocation();
+
+        // insert dispatch activity
+        $this->insertActivity($status, $details, $location, $code, $proof);
+
+        // update status using code
+        $this->setStatus($code, true);
+
+        return $this;
+    }
+
     public function notifyCompleted()
     {
         return event(new OrderCompleted($this));
@@ -950,7 +997,13 @@ class Order extends Model
     public function setCustomerTypeAttribute($type)
     {
         if (is_string($type)) {
-            if ($type === 'customer' || $type === 'vendor' || !Str::startsWith($type, 'fleet-ops')) {
+            $isNotNamespace           = !Str::contains($type, '\\');
+            $doesNotStartWithFleetOps = !Str::startsWith($type, 'fleet-ops');
+            $isValidType              = $type === 'customer' || $type === 'vendor';
+
+            // preprend fleet-ops IF not a namespace and does not start with fleet-ops
+            // this is for handling ember style registry spacing
+            if ($isNotNamespace && $doesNotStartWithFleetOps && $isValidType) {
                 $type = 'fleet-ops:' . $type;
             }
 
@@ -961,7 +1014,13 @@ class Order extends Model
     public function setFacilitatorTypeAttribute($type)
     {
         if (is_string($type)) {
-            if ($type === 'customer' || $type === 'vendor' || !Str::startsWith($type, 'fleet-ops')) {
+            $isNotNamespace           = !Str::contains($type, '\\');
+            $doesNotStartWithFleetOps = !Str::startsWith($type, 'fleet-ops');
+            $isValidType              = $type === 'customer' || $type === 'vendor';
+
+            // preprend fleet-ops IF not a namespace and does not start with fleet-ops
+            // this is for handling ember style registry spacing
+            if ($isNotNamespace && $doesNotStartWithFleetOps && $isValidType) {
                 $type = 'fleet-ops:' . $type;
             }
 
@@ -1087,7 +1146,16 @@ class Order extends Model
     public function getCurrentOriginPosition()
     {
         if ($this->hasDriverAssigned) {
-            return $this->driverAssigned->location;
+            $this->load(['driverAssigned']);
+            $driverAssigned = $this->driverAssigned;
+
+            if (!$driverAssigned) {
+                $driverAssigned = Driver::where('uuid', $this->driver_assigned_uuid)->first();
+            }
+
+            if ($driverAssigned instanceof Driver) {
+                return $driverAssigned->location;
+            }
         }
 
         $origin = null;

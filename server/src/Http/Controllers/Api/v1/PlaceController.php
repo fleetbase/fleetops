@@ -66,6 +66,28 @@ class PlaceController extends Controller
             }
         }
 
+        // if we have only latitude/longitude or location BUT no street1 do a reverse lookup
+        $requestHasCoordinates = $request->filled(['latitude', 'longitude']);
+        $requestHasLocation    = $request->filled(['location']);
+        $requestMissingStreet  = $request->missing('street1');
+        if ($requestMissingStreet && ($requestHasCoordinates || $requestHasLocation)) {
+            if ($requestHasLocation) {
+                $point = Utils::getPointFromMixed($request->input('location'));
+            }
+
+            if ($requestHasCoordinates) {
+                $point = Utils::getPointFromMixed($request->only(['latitude', 'longitude']));
+            }
+
+            if ($point instanceof Point) {
+                $place = Place::createFromReverseGeocodingLookup($point);
+
+                if ($place instanceof Place) {
+                    $input = $place->toArray();
+                }
+            }
+        }
+
         // latitude / longitude
         if ($request->has(['latitude', 'longitude'])) {
             $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
@@ -141,7 +163,7 @@ class PlaceController extends Controller
         try {
             $place = Place::findRecordOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->error('Place resource not found.');
+            return response()->apiError('Place resource not found.');
         }
 
         // get request input
@@ -307,7 +329,7 @@ class PlaceController extends Controller
         try {
             $place = Place::findRecordOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->error('Place resource not found.');
+            return response()->apiError('Place resource not found.');
         }
 
         return new PlaceResource($place);
@@ -323,7 +345,7 @@ class PlaceController extends Controller
         try {
             $place = Place::findRecordOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->error('Place resource not found.');
+            return response()->apiError('Place resource not found.');
         }
 
         $place->delete();
