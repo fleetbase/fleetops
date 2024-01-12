@@ -75,7 +75,7 @@ export default class OrderConfigEntitiesEditorComponent extends Component {
                 const keyName = modal.getOption('keyName');
 
                 if (!keyName) {
-                    return this.notifications.warning('No meta field key name entered.');
+                    return this.notifications.warning(this.intl.t('fleet-ops.component.order-config.entities-editor.warning-message'));
                 }
 
                 modal.startLoading();

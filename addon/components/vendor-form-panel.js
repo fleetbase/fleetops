@@ -114,7 +114,7 @@ export default class VendorFormPanelComponent extends Component {
             return vendor
                 .save()
                 .then((vendor) => {
-                    this.notifications.success(`Vendor (${vendor.displayName}) saved successfully.`);
+                    this.notifications.success(this.intl.t('fleet-ops.component.vendor-form-panel.success-message', {vendorName: vendor.displayName}));
                     contextComponentCallback(this, 'onAfterSave', vendor);
                 })
                 .catch((error) => {

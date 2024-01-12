@@ -98,9 +98,9 @@ export default class ManagementDriversIndexEditController extends BaseController
      */
     confirmContinueWithUnsavedChanges(driver, options = {}) {
         return this.modalsManager.confirm({
-            title: 'Continue Without Saving?',
-            body: 'Unsaved changes to this driver will be lost. Click continue to proceed.',
-            acceptButtonText: 'Continue without saving',
+            title: this.intl.t('fleet-ops.controllers.management.drivers.index.edit.title'),
+            body: this.intl.t('fleet-ops.controllers.management.drivers.index.edit.body'),
+            acceptButtonText: this.intl.t('fleet-ops.controllers.management.drivers.index.edit.button'),
             confirm: () => {
                 driver.rollbackAttributes();
                 return this.transitionToRoute('management.drivers.index.details', driver);

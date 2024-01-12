@@ -98,9 +98,9 @@ export default class ManagementVendorsIndexEditController extends BaseController
      */
     confirmContinueWithUnsavedChanges(vendor, options = {}) {
         return this.modalsManager.confirm({
-            title: 'Continue Without Saving?',
-            body: 'Unsaved changes to this vendor will be lost. Click continue to proceed.',
-            acceptButtonText: 'Continue without saving',
+            title: this.intl.t('fleet-ops.controllers.management.drivers.index.edit.title'),
+            body: this.intl.t('fleet-ops.controllers.management.vendors.index.edit.body'),
+            acceptButtonText: this.intl.t('fleet-ops.controllers.management.drivers.index.edit.button'),
             confirm: () => {
                 vendor.rollbackAttributes();
                 return this.transitionToRoute('management.vendors.index.details', vendor);

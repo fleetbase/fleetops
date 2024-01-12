@@ -89,9 +89,9 @@ export default class OrderScheduleCardComponent extends Component {
 
         if (isBlank(driver)) {
             return this.modalsManager.confirm({
-                title: 'Unassign Driver?',
-                body: `You are about to unassign the driver for Order ${order.public_id}. Click continue to confirm removal of driver.`,
-                acceptButtonText: 'Continue and unassign driver',
+                title: this.intl.t('fleet-ops.component.order.schedule-card.unassign-driver'),
+                body: this.intl.t('fleet-ops.component.order.schedule-card.unassign-text', {orderID: order.public_id}),
+                acceptButtonText: this.intl.t('fleet-ops.component.order.schedule-card.unassign-button'),
                 confirm: () => {
                     order.setProperties({
                         driver_assigned: null,
@@ -115,9 +115,9 @@ export default class OrderScheduleCardComponent extends Component {
         }
 
         return this.modalsManager.confirm({
-            title: 'Assign New Driver?',
-            body: `You are about to assign a new driver (${driver.name}) to Order ${order.public_id}. Click continue to confirm driver.`,
-            acceptButtonText: 'Continue and assign driver',
+            title: this.intl.t('fleet-ops.component.order.schedule-card.assign-driver'),
+            body: this.intl.t('fleet-ops.component.order.schedule-card.assign-text', {driverName: driver.name, orderID: order.public_id}),
+            acceptButtonText: this.intl.t('fleet-ops.component.order.schedule-card.assign-button'),
             confirm: () => {
                 order.set('driver_assigned_uuid', driver.id);
                 return order

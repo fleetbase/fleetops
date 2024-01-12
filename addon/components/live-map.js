@@ -776,8 +776,8 @@ export default class LiveMapComponent extends Component {
         const toggle = !this.isVisible('drawControls');
 
         this.leafletContextmenuManager.toggleContextMenuItem('map', 'draw controls', {
-            onText: 'Hide draw controls...',
-            offText: 'Enable draw controls...',
+            onText: this.intl.t('fleet-ops.component.live-map.onText'),
+            offText: this.intl.t('fleet-ops.component.live-map.offText'),
             toggle,
             callback: (isToggled) => {
                 if (isToggled) {
@@ -1439,27 +1439,27 @@ export default class LiveMapComponent extends Component {
     @action createMapContextMenu(map) {
         const contextmenuItems = [
             {
-                text: 'Show coordinates...',
+                text: this.intl.t('fleet-ops.component.live-map.show-coordinates'),
                 callback: this.showCoordinates,
                 index: 0,
             },
             {
-                text: 'Center map here...',
+                text: this.intl.t('fleet-ops.component.live-map.center-map'),
                 callback: this.centerMap,
                 index: 1,
             },
             {
-                text: 'Zoom in...',
+                text: this.intl.t('fleet-ops.component.live-map.zoom-in'),
                 callback: this.zoomIn,
                 index: 2,
             },
             {
-                text: 'Zoom out...',
+                text: this.intl.t('fleet-ops.component.live-map.zoom-out'),
                 callback: this.zoomOut,
                 index: 3,
             },
             {
-                text: this.isVisible('drawControls') ? `Hide draw controls...` : `Enable draw controls...`,
+                text: this.isVisible('drawControls') ? this.intl.t('fleet-ops.component.live-map.hide-draw') : this.intl.t('fleet-ops.component.live-map.enable-draw'),
                 callback: this.toggleDrawControlContextMenuItem.bind(this),
                 index: 4,
             },
@@ -1467,7 +1467,7 @@ export default class LiveMapComponent extends Component {
                 separator: true,
             },
             {
-                text: 'Create new Service Area...',
+                text: this.intl.t('fleet-ops.component.live-map.create-new-service'),
                 callback: this.serviceAreas.createServiceArea,
                 index: 5,
             },
@@ -1487,7 +1487,7 @@ export default class LiveMapComponent extends Component {
                 const nextIndex = contextmenuItems.length + 2;
 
                 contextmenuItems.pushObject({
-                    text: `Focus Service Area: ${serviceArea.name}`,
+                    text: this.intl.t('fleet-ops.component.live-map.focus-service', {serviceName: serviceArea.name}),
                     callback: () => this.focusServiceArea(serviceArea),
                     index: nextIndex,
                 });
@@ -1525,19 +1525,19 @@ export default class LiveMapComponent extends Component {
                 separator: true,
             },
             {
-                text: `View Driver: ${driver.name}`,
+                text: this.intl.t('fleet-ops.component.live-map.view-driver', {driverName: driver.name}),
                 callback: () => this.contextPanel.focus(driver),
             },
             {
-                text: `Edit Driver: ${driver.name}`,
+                text: this.intl.t('fleet-ops.component.live-map.edit-driver', {driverName: driver.name}),
                 callback: () => this.contextPanel.focus(driver, 'editing'),
             },
             {
-                text: `Delete Driver: ${driver.name}`,
+                text: this.intl.t('fleet-ops.component.live-map.delete-driver', {driverName: driver.name}),
                 callback: () => this.crud.delete(driver),
             },
             {
-                text: `View Vehicle for: ${driver.name}`,
+                text: this.intl.t('fleet-ops.component.live-map.view-vehicle-for', {driverName: driver.name}),
                 callback: () => this.contextPanel.focus(driver.vehicle),
             },
         ];
@@ -1586,15 +1586,15 @@ export default class LiveMapComponent extends Component {
                 separator: true,
             },
             {
-                text: `View Vehicle: ${vehicle.displayName}`,
+                text: this.intl.t('fleet-ops.component.live-map.view-vehicle', {vehicleName: vehicle.displayName}),
                 callback: () => this.contextPanel.focus(vehicle),
             },
             {
-                text: `Edit Vehicle: ${vehicle.displayName}`,
+                text: this.intl.t('fleet-ops.component.live-map.edit-vehicle', {vehicleName: vehicle.displayName}),
                 callback: () => this.contextPanel.focus(vehicle, 'editing'),
             },
             {
-                text: `Delete Vehicle: ${vehicle.displayName}`,
+                text: this.intl.t('fleet-ops.component.live-map.delete-vehicle', {vehicleName: vehicle.displayName}),
                 callback: () => this.crud.delete(vehicle),
             },
         ];
@@ -1643,11 +1643,11 @@ export default class LiveMapComponent extends Component {
                 separator: true,
             },
             {
-                text: `Edit Zone: ${zone.name}`,
+                text: this.intl.t('fleet-ops.component.live-map.edit-zone', {zoneName: zone.name}),
                 callback: () => this.serviceAreas.editZone(zone),
             },
             {
-                text: `Delete Zone: ${zone.name}`,
+                text: this.intl.t('fleet-ops.component.live-map.delete-zone', {zoneName: zone.name}),
                 callback: () =>
                     this.serviceAreas.deleteZone(zone, {
                         onFinish: () => {
@@ -1656,7 +1656,7 @@ export default class LiveMapComponent extends Component {
                     }),
             },
             {
-                text: `Assign Fleet to Zone: (${zone.name})`,
+                text: this.intl.t('fleet-ops.component.live-map.assign-zone', {zoneName: zone.name}),                
                 callback: () => {},
             },
         ];
@@ -1683,23 +1683,23 @@ export default class LiveMapComponent extends Component {
                 separator: true,
             },
             {
-                text: `Blur Service Area: ${serviceArea.name}`,
+                text: this.intl.t('fleet-ops.component.live-map.blur-service', {serviceName: serviceArea.name}),
                 callback: () => this.blurServiceArea(serviceArea),
             },
             {
-                text: `Create Zone within: ${serviceArea.name}`,
+                text: this.intl.t('fleet-ops.component.live-map.create-zone', {serviceName: serviceArea.name}),
                 callback: () => this.serviceAreas.createZone(serviceArea),
             },
             {
-                text: `Assign Fleet to Service Area: ${serviceArea.name}`,
+                text: this.intl.t('fleet-ops.component.live-map.assign-fleet', {serviceName: serviceArea.name}),
                 callback: () => {},
             },
             {
-                text: `Edit Service Area: ${serviceArea.name}`,
+                text: this.intl.t('fleet-ops.component.live-map.edit-service', {serviceName: serviceArea.name}),
                 callback: () => this.serviceAreas.editServiceAreaDetails(serviceArea),
             },
             {
-                text: `Delete Service Area: ${serviceArea.name}`,
+                text: this.intl.t('fleet-ops.component.live-map.delete-service', {serviceName: serviceArea.name}),
                 callback: () =>
                     this.serviceAreas.deleteServiceArea(serviceArea, {
                         onFinish: () => {

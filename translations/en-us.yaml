@@ -28,8 +28,10 @@ fleet-ops:
     key: Key
     label: Label
     length: Length
+    license: License
     loading: Loading...
     make: Make
+    manpower: Manpower
     manage-message: Manage your vendors
     model: Model
     name: Name
@@ -72,6 +74,9 @@ fleet-ops:
     width: Width
     year: Year
     zone: Zone
+    updated-at: Updated At
+    created-at: Created At
+    parent-fleet: Parent Fleet
 
   component:
     admin:
@@ -99,14 +104,47 @@ fleet-ops:
         loading-vehicle: Loading fleet vehicles...
     layout:
       fleet-ops-sidebar:
+        dashboard: Dashboard
+        service-rates: Service Rates
+        scheduler: Scheduler
+        drivers: Drivers
+        vehicles: Vehicles
+        fleets: Fleets
+        vendors: Vendors
+        contacts: Contacts
+        places: Places
+        fuel-reports: Fuel Reports
+        issues: Issues
         title: Create new order
         settings: Settings
     live-map-drawer:
       driver-listing:
+        location: Location
+        current-job: Current Job
+        last-seen: Last Seen
+        view-driver: View driver details...
+        edit-driver: Edit driver...
+        locate-driver: Locate driver...
+        delete-driver: Delete driver...
+        warning-message: Unable to locate driver.
         message: Filter drivers by keyword...
-      place-listing: 
+      place-listing:
+        location: Location
+        place: Place
+        view-place: View place details...
+        edit-place: Edit place...
+        locate-place: Locate place...
+        delete-place: Delete place...
+        warning-message: Unable to locate place.
         message: Filter places by keyword...
       vehicle-listing:
+        location: Location
+        last-seen: Last Seen
+        view-vehicle: View vehicle details...
+        edit-vehicle: Edit vehicle...
+        locate-vehicle: Locate vehicle...
+        delete-vehicle: Delete vehicle...
+        warning-message: Unable to locate vehicle.
         message: Filter vehicles by keyword...
     map-container:
       visibility-control-panel:
@@ -464,6 +502,12 @@ fleet-ops:
         show-less: Show less details
         show-more: Show more details
       schedule-card:
+        unassign-driver: Unassign Driver?
+        unassign-text: You are about to unassign the driver for Order {orderId}. Click continue to confirm removal of driver.
+        unassign-button: Continue and unassign driver
+        assign-driver: Assign New Driver?
+        assign-text: You are about to assign a new driver ({driverName}) to Order {orderId}. Click continue to confirm driver.
+        assign-button: Continue and assign driver
         date: Date scheduled
         driver-assigned: Driver Assigned
         no-driver: No Driver Assigned
@@ -504,8 +548,6 @@ fleet-ops:
         loading: Loading recent transactions...
         no-transactions: No transactions this week
         message: When orders are going through with service rates, Fleetbase tracks transactions automatically.
-
-
     contact-form-panel:
       view-contact-button: View contact details
       save-contact: Save Contact
@@ -525,6 +567,7 @@ fleet-ops:
     driver-card:
       no-fleets: No fleets
     driver-form-panel:
+        success-message: Driver ({driverName}) saved successfully.
         driver-detail: View driver details
         save-driver: Save Driver
         create-driver: Create Driver
@@ -546,6 +589,7 @@ fleet-ops:
       add-driver: Add driver to fleet
       loading-message: Loading fleet drivers...
     fleet-form-panel:
+      success-message: Fleet ({fleetName}) saved successfully.
       title: New Fleet
       save-fleet: Save Fleet
       create-fleet: Create Fleet
@@ -569,6 +613,7 @@ fleet-ops:
       add-vehicle: Add vehicle to fleet
       loading-message: Loading fleet vehicle...
     fuel-report-form-panel:
+      success-message: Fuel report saved successfully.
       details:
         fuel: Fuel/ Volume
       fuel-report: New Fuel Report
@@ -600,6 +645,7 @@ fleet-ops:
       price-breakdown: Price Breakdown
       metadata: Metadata
     issue-form-panel:
+      success-message: Issue ({publicID}) saved successfully.
       issue: New Issue
       save-issue: Save Issue
       create-issue: Create Issue
@@ -634,10 +680,56 @@ fleet-ops:
       cancel-edit-issue: Cancel edit issue
       cancel-new-issue: Cancel new issue
     live-map:
+      onText: Hide draw controls...
+      offText: Enable draw controls...
+      show-coordinates: Show coordinates...
+      center-map: Center map here...
+      zoom-in: Zoom in...
+      zoom-out: Zoom out...
+      hide-draw: Hide draw controls...
+      enable-draw: Enable draw controls...
+      create-new-service: Create new Service Area...
+      focus-service: 'Focus Service Area: {serviceName}'
+      view-driver: 'View Driver: {driverName}'
+      edit-driver: 'Edit Driver: {driverName}'
+      delete-driver: 'Delete Driver: {driverName}'
+      view-vehicle-for: 'View Vehicle for: {driverName}'
+      view-vehicle: 'View vehicle: {vehicleName}'
+      edit-vehicle: 'Edit vehicle: {vehicleName}'
+      delete-vehicle: 'Delete vehicle: {vehicleName}'
+      edit-zone: 'Edit zone: {zoneName}'
+      delete-zone: 'Delete zone: {zoneName}'
+      assign-zone: 'Assign Fleet to Zone: {zoneName}'
+      blur-service: 'Blur Service Area: {serviceName}'
+      create-zone: 'Create Zone within: {serviceName}'
+      assign-fleet: 'Assign Fleet to Service Area: {serviceName}'
+      edit-service: 'Edit Service Area: {serviceName}'
+      delete-service: 'Delete Service Area: {serviceName}'
       service-area: Service Area
       zone: Zone
     order-config:
+      create-new-title: Create a new order configuration
+      warning-message: Order configuration requires a name
+      success-message: New order config created successfully.
+      no-order-warning: No order configuration selected.
+      saved-success: '{orderName} order configuration saved.'
+      enter-name-title: Enter name of cloned configuration
+      no-config-warning: No config name entered.
+      cloned-success: Order config successfully cloned.
+      body: Once this order configuration is deleted you will not be able to create orders using it anymore. Are you sure?
+      uninstall-title: Uninstall Configuration
+      uninstall-success: Extension {extensionName} uninstalled.
       activity-flow-editor:
+        add-status: Add new status to flow
+        no-status: No status entered.
+        overwrite: This will overwrite an existing status!
+        overwrite-text: There is another {statusName} status already existing in this flow, if you continue this status will be overwritten. Would you like to overwrite the previous {statusName} status?
+        overwrite-button: Yes, overwrite!
+        remove: Remove status
+        remove-text: Are you sure you wish to delete this status? All related activites and logic will be deleted along with the status.
+        delete-button: Yes, delete
+        unable-warning: The {format} must be in this order of sequence, unable to shift.
+        order-warning: The created status must always be the first sequence of an order flow.
         title: Activity Flow
         message: Activity flow configuration will allow you to define the different types of tracking status activities that apply for this order type. Logic of the activity flow can also be configured.
         order-flow: Order Flow
@@ -662,11 +754,24 @@ fleet-ops:
         uninstall: Uninstall Configuration
         delete: Delete Configuration
       entities-editor:
+        warning-message: No meta field key name entered.
         title: Entities
         message: Entities configuration will allow you to define the different type of entities that should be selectable for this order type. These should be used like templates to make manual order creation faster.
         type: Entity Type
         add-meta: Add meta field
       fields-editor:
+        text-field: Text Field
+        boolean: Boolean
+        boolean-text: Allows user to toggle a true or false property by checkbox
+        dropdown: Dropdown Select
+        dropdown-text: Allows user to select an option from a dropdown of options
+        datetime: Datetime Selector
+        datetime-text: Allows user to select a date & time
+        port: Port Selector
+        port-text: Allows user to select a port
+        vessel: Vessel Selector
+        vessel-text: Allows user to select a vessel
+        warning-message: No group name entered.
         field: Meta Fields
         new-field: New Custom Field
         new-custom-field: New Custom Fields Group
@@ -677,7 +782,6 @@ fleet-ops:
         type: Field Type
         select-type: Select field type
         add-option: Add Option
-
       select-message: Select an order configuration to modify, or click "New Config" to create a new order configuration.
       new-config: New Config
       loading-configuration: Loading your order configurations...
@@ -699,6 +803,7 @@ fleet-ops:
       active-order: Active orders
       unassigned-order: Unassigned orders  
     place-form-panel:
+      success-message: place ({placeAddress}) saved successfully.
       place: New Place
       save-place: Save Place
       create-place: Create Place
@@ -721,12 +826,14 @@ fleet-ops:
       collapse: Tap to collapse
       more-waypoints: more waypoints
     settings-window:
+      success-message: Settings successfully saved.
       title: FleetOps Settings
       save: Save Changes
       name: Default Adhoc Ping Distance
       name-text: This setting determines the default distance in meters adhoc orders should ping drivers within vicinity of the order pickup point.
       message: Distance must be in meters
     vehicle-form-panel:
+      success-message: Vehicle ({vehicleName}) saved successfully.
       view-details: View vehicle details
       save-vehicle: Save Vehicle
       create-vehicle: Create Vehicle      
@@ -756,7 +863,10 @@ fleet-ops:
       not-assigned: No driver assigned
       assign-driver: Assign a driver to vehicle
     vendor-form-panel:
+      success-message: Vendor ({vendorName}) saved successfully.
       create-form:
+        integrated-vendor: Choose a integrated vendor
+        custom-vendor: Create a custom vendor
         title: Setup
         select-vendor-type: Select vendor type
         choose-vendor: Choose integrated vendor provider
@@ -789,7 +899,6 @@ fleet-ops:
         sensitive-credentials: Sensitive credentials can only be reset, to update credentials you must re-enter the credentials.
         reset-credentials: Click here to reset credentials
         select-address: Select Address
-
       view-details: View vendor details
       save-vendor: Save Vendor
       create-vendor: Create Vendor      
@@ -801,9 +910,96 @@ fleet-ops:
       edit: Edit vendor
       close: Close vendor details
       new-vendor: New Vendor
-
-
-
+  controllers:
+    management:
+      contacts:
+        index:
+          delete-button: Delete Contacts
+          updated: Updated At
+          created: Created At
+          view-contact: View Contact Details
+          edit-contact: Edit Contact
+          delete-contact: Delete Contact
+          edit:
+            title: Continue Without Saving?
+            body: Unsaved changes to this contact will be lost. Click continue to proceed.
+            button: Continue without saving
+      drivers:
+        index:
+          view-details: View driver details...
+          edit-details: Edit driver details...
+          assign-order-driver: Assign order to driver...
+          assign-vehicle-driver: Assign vehicle to driver...
+          locate-driver-map: Locate driver on map...
+          delete-driver: Delete driver...
+          delete-button: Delete Drivers
+          order-driver: Assign Order to this Driver
+          assign-order: Assign Order
+          no-order-warning: No order selected!
+          assign-success: '{driverName} assigned to order.'
+          title-vehicle: Assign Vehicle to this Driver
+          confirm-button: Confirm & Create
+          assign-vehicle: '{driverName} assigned to vehicle.'
+          locate-driver: Location of {driverName}
+          edit:
+            title: Continue Without Saving?
+            body: Unsaved changes to this driver will be lost. Click continue to proceed.
+            button: Continue without saving
+      fleets:
+        index:
+          view-fleet: View fleet details...
+          edit-fleet: Edit fleet details...
+          assign-driver: Assign driver to fleet...
+          delete-fleet: Delete fleet...
+          delete-button: Delete Fleets
+          edit:
+            body: Unsaved changes to this fleet will be lost. Click continue to proceed.
+      fuel-reports:
+        index:
+          view: View Details
+          edit-fuel: Edit Fuel Report
+          delete: Delete Fuel Report
+          delete-button: Delete Fuel Reports
+          edit:
+            body: Unsaved changes to this fuel-report will be lost. Click continue to proceed.
+      issues:
+        index:
+          view: View Details
+          edit-issues: Edit Issues
+          delete: Delete Issues
+          delete-button: Delete Issues
+          edit:
+            body: Unsaved changes to this issue will be lost. Click continue to proceed.
+      places:
+        index:
+          view-details: View Place Details
+          edit-place: Edit Place
+          view-place: View Place on Map
+          delete: Delete Place
+          title: Assign this Place to a Vendor
+          confirm-button: Confirm & Create
+          delete-button: Delete Places
+          success-message: '{placeName} details has been updated.'
+          locate-title: Location of {placeName}
+          edit:
+            body: Unsaved changes to this place will be lost. Click continue to proceed.
+      vehicles:
+        index:
+          view-vehicle: View vehicle details...
+          edit-vehicle: Edit vehicle details...        
+          delete-vehicle: Delete vehicle...
+          delete-button: Delete Vehicles
+          locate-title: Location of {placeName}
+          edit:
+            body: Unsaved changes to this vehicle will be lost. Click continue to proceed.
+      vendors:
+        index:
+          delete-button: Delete Vendors
+          view-vendor: View vendor Details
+          edit-vendor: Edit vendor
+          delete-vendor: Delete vendor
+          edit:
+            body: Unsaved changes to this vendor will be lost. Click continue to proceed.
   management:
     contact:
       index:

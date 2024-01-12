@@ -53,7 +53,7 @@ export default class SettingsWindowComponent extends Component {
         return this.company
             .save()
             .then(() => {
-                this.notifications.success('Settings successfully saved.');
+                this.notifications.success(this.intl.t('fleet-ops.component.settings-window.success-message'));
             })
             .finally(() => {
                 this.isSaving = false;

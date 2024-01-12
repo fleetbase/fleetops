@@ -101,7 +101,7 @@ export default class PlaceFormPanelComponent extends Component {
             return place
                 .save()
                 .then((place) => {
-                    this.notifications.success(`place (${place.address}) saved successfully.`);
+                    this.notifications.success(this.intl.t('fleet-ops.component.place-form-panel.success-message', {placeAddress: place.address}));
                     contextComponentCallback(this, 'onAfterSave', place);
                 })
                 .catch((error) => {

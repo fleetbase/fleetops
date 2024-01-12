@@ -126,7 +126,7 @@ export default class IssueFormPanelComponent extends Component {
             return issue
                 .save()
                 .then((issue) => {
-                    this.notifications.success(`Issue (${issue.public_id}) saved successfully.`);
+                    this.notifications.success(this.intl.t(`fleet-ops.component.issue-form-panel.success-message`), {publidID: issue.public_id} );
                     contextComponentCallback(this, 'onAfterSave', issue);
                 })
                 .catch((error) => {

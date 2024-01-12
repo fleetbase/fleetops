@@ -98,9 +98,9 @@ export default class ManagementContactsIndexEditController extends BaseControlle
      */
     confirmContinueWithUnsavedChanges(contact, options = {}) {
         return this.modalsManager.confirm({
-            title: 'Continue Without Saving?',
-            body: 'Unsaved changes to this contact will be lost. Click continue to proceed.',
-            acceptButtonText: 'Continue without saving',
+            title: this.intl.t('fleet-ops.controllers.management.contacts.index.edit.title'),
+            body: this.intl.t('fleet-ops.controllers.management.contacts.index.edit.body'),
+            acceptButtonText: this.intl.t('fleet-ops.controllers.management.contacts.index.edit.button'),
             confirm: () => {
                 contact.rollbackAttributes();
                 return this.transitionToRoute('management.contacts.index.details', contact);
