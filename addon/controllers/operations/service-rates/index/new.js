@@ -300,7 +300,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
             .save()
             .then((serviceRate) => {
                 return this.transitionToRoute('operations.service-rates.index').then(() => {
-                    this.notifications.success(`New Service Rate ${serviceRate.service_name} Created`);
+                    this.notifications.success(this.intl.t('fleet-ops.controllers.operations.service-rates.index.new.success-message', {serviceName: serviceRate.service_name}));
                     this.resetForm();
                 });
             })

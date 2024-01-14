@@ -363,7 +363,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         options = options === null ? {} : options;
 
         this.modalsManager.show('modals/order-form', {
-            title: 'Edit Order Details',
+            title: this.intl.t('fleet-ops.controllers.operations.orders.index.view.edit-order-title'),
             acceptButtonText: 'Save Changes',
             acceptButtonIcon: 'save',
             setOrderFacilitator: (model) => {
@@ -396,7 +396,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             confirm: (modal) => {
                 modal.startLoading();
                 return order.save().then(() => {
-                    this.notifications.success(options.successNotification || `'${order.public_id}' details has been updated.`);
+                    this.notifications.success(options.successNotification || this.intl.t('fleet-ops.controllers.operations.orders.index.view.update-success', {orderId: order.public_id}));
                 });
             },
             decline: () => {
@@ -415,7 +415,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
      */
     @action viewOrderMeta(order) {
         this.modalsManager.show('modals/order-meta', {
-            title: 'Order Metadata',
+            title: this.intl.t('fleet-ops.controllers.operations.orders.index.view.order-metadata'),
             acceptButtonText: 'Done',
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
@@ -426,8 +426,8 @@ export default class OperationsOrdersIndexViewController extends BaseController 
 
     @action unassignDriver(order, options = {}) {
         this.modalsManager.confirm({
-            title: `Are you sure you wish to unassing the driver (${order.driver_assigned.name}) from this order?`,
-            body: `Once the driver is unassigned, the driver will no longer have access to this orders details.`,
+            title: this.intl.t('fleet-ops.controllers.operations.orders.index.view.edit-order-title', {driverName: order.driver_assigned.name}),
+            body: this.intl.t('fleet-ops.controllers.operations.orders.index.view.unassign-body'),
             order,
             confirm: (modal) => {
                 modal.startLoading();
@@ -440,7 +440,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                 return order
                     .save()
                     .then(() => {
-                        this.notifications.success(`Driver has been unassigned from this order.`);
+                        this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.view.unassign-success'));
                     })
                     .catch((error) => {
                         this.notifications.serverError(error);
@@ -463,7 +463,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         await this.modalsManager.done();
 
         this.modalsManager.show('modals/order-route-form', {
-            title: 'Edit Order Route',
+            title: this.intl.t('fleet-ops.controllers.operations.orders.index.view.edit-route-title'),
             acceptButtonText: 'Save Changes',
             acceptButtonIcon: 'save',
             order,
@@ -525,7 +525,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                 const routingHost = getRoutingHost(order.payload, order.payload.waypoints);
 
                 const response = await this.fetch.routing(coordinates, { source: 'any', destination: 'any', annotations: true }, { host: routingHost }).catch(() => {
-                    this.notifications.error('Route optimization failed, check route entry and try again.');
+                    this.notifications.error(this.intl.t('fleet-ops.controllers.operations.orders.index.view.route-error'));
                     this.modalsManager.setOption('isOptimizingRoute', false);
                 });
 
@@ -546,7 +546,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                         order.payload.waypoints = sortedWaypoints;
                     }
                 } else {
-                    this.notifications.error('Route optimization failed, check route entry and try again.');
+                    this.notifications.error(this.intl.t('fleet-ops.controllers.operations.orders.index.view.route-error'));
                 }
 
                 this.modalsManager.setOption('isOptimizingRoute', false);
@@ -555,7 +555,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                 modal.startLoading();
 
                 return order.payload.save().then(() => {
-                    this.notifications.success(options.successNotification ?? `'${order.public_id}' route details updated.`);
+                    this.notifications.success(options.successNotification ?? this.intl.t('fleet-ops.controllers.operations.orders.index.view.route-update-success', {orderId: order.public_id}));
                 });
             },
             decline: () => {
@@ -631,7 +631,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         await this.modalsManager.done();
 
         this.modalsManager.show(`modals/order-new-activity`, {
-            title: 'Add new activity to order',
+            title: this.intl.t('fleet-ops.controllers.operations.orders.index.view.add-activity-title'),
             acceptButton: false,
             selected: null,
             custom: {
@@ -651,7 +651,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                     if (!custom.status || !custom.details || !custom.code) {
                         modal.stopLoading();
 
-                        return this.notifications.warning('Invalid custom status entry.');
+                        return this.notifications.warning(this.intl.t('fleet-ops.controllers.operations.orders.index.view.invalid-warning'));
                     }
 
                     activity = custom;
@@ -694,13 +694,13 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         }
 
         this.modalsManager.show(`modals/order-assign-driver`, {
-            title: order.driver_uuid ? 'Change order driver' : 'Assign driver to order',
+            title: order.driver_uuid ? this.intl.t('fleet-ops.controllers.operations.orders.index.view.change-order') : this.intl.t('fleet-ops.controllers.operations.orders.index.view.assing-order'),
             acceptButtonText: 'Save Changes',
             order,
             confirm: (modal) => {
                 modal.startLoading();
                 return order.save().then(() => {
-                    this.notifications.success(`${order.public_id} assigned driver updated.`);
+                    this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.view.assign-success', {orderId: order.public_id}));
                 });
             },
         });

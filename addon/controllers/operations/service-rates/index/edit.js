@@ -40,7 +40,7 @@ export default class OperationsServiceRatesIndexEditController extends Operation
             .save()
             .then((serviceRate) => {
                 return this.transitionToRoute('operations.service-rates.index').then(() => {
-                    this.notifications.success(`Service rate '${serviceRate.service_name}' updated`);
+                    this.notifications.success(this.intl.t('fleet-ops.controllers.operations.service-rates.index.edit.success-message', {serviceName: serviceRate.service_name}));
                     this.resetForm();
                 });
             })

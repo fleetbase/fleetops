@@ -2,14 +2,15 @@ fleet-ops:
   extension-name: Fleet-Ops
   common: 
     active-manpower: Active Manpower
-    avatar: Avatar
     amount: Amount
+    avatar: Avatar
     building: Building
     bulk-action: Bulk Action
     city: City
     coordinates: Coordinates
     cost: Cost
     country: Country
+    created-at: Created At
     date-created: Date Created
     delete: Delete
     destination: Destination
@@ -31,8 +32,8 @@ fleet-ops:
     license: License
     loading: Loading...
     make: Make
-    manpower: Manpower
     manage-message: Manage your vendors
+    manpower: Manpower
     model: Model
     name: Name
     namespace: Namespace
@@ -40,6 +41,7 @@ fleet-ops:
     new: New
     odometer: Odometer
     options: Options
+    parent-fleet: Parent Fleet
     phone: Phone
     photos: photos
     plate-number: Plate number
@@ -53,6 +55,7 @@ fleet-ops:
     schedule: Schedule
     search: Search
     security-access-code: Security access code
+    service: Service
     service-area: Service area
     state: State
     status: Status
@@ -63,6 +66,7 @@ fleet-ops:
     title: Title
     type: Type
     unit: Unit
+    updated-at: Updated At
     upload-new: Upload new
     uploading: Uploading...
     value: Value
@@ -74,9 +78,6 @@ fleet-ops:
     width: Width
     year: Year
     zone: Zone
-    updated-at: Updated At
-    created-at: Created At
-    parent-fleet: Parent Fleet
 
   component:
     admin:
@@ -1000,6 +1001,72 @@ fleet-ops:
           delete-vendor: Delete vendor
           edit:
             body: Unsaved changes to this vendor will be lost. Click continue to proceed.
+    operations:
+      orders:
+        index:
+          payload: Payload
+          customer: Customer
+          facilitator: Facilitator
+          pickup: Pickup
+          dropoff: Dropoff
+          scheduled-at: Scheduled At
+          items: '# Items'
+          transaction: Transaction Total
+          tracking: Tracking Number
+          driver-assigned: Driver Assigned
+          created-by: Created By
+          updated-by: Updated By
+          view-order: View Order
+          cancel-order: Cancel Order
+          delete-order: Delete Order
+          cancel-title: Are you sure you wish to cancel this order?
+          cancel-body: Once this order is canceled, the order record will still be visible but activity cannot be added to this order.
+          cancel-success: Order {orderId} has been canceled.
+          dispatch-title: Are you sure you want to dispatch this order?
+          dispatch-body: Once this order is dispatched the assigned driver will be notified.
+          dispatch-success: Order {orderId} has been dispatched.          
+          new:
+            success-message: New Order {orderId} Created
+            warning-message: No files in queue to upload!
+            import-success: Import completed.
+            service-warning: Failed to fetch service quotes for this order.
+            no-route-warning: No route to preview.
+            route-error: Route optimization failed, check route entry and try again.
+            custom-field-title: Add custom field to order
+            label-warning: Custom field must have a label
+            value-warning: Custom field must have a value
+            edit-field-title: Edit custom field
+            edit-metatada: Edit Metadata
+            edit-item: Edit Item
+          view:
+            edit-order-title: Edit Order Details
+            update-success: '{orderId} details has been updated.'
+            order-metadata: Order Metadata
+            unassign-title: Are you sure you wish to unassing the driver ({driverName}) from this order?
+            unassign-body: Once the driver is unassigned, the driver will no longer have access to this orders details.
+            unassign-success: Driver has been unassigned from this order.
+            edit-route-title: Edit Order Route
+            route-error: Route optimization failed, check route entry and try again.
+            route-update-success: '{orderId} route details updated.'
+            add-activity-title: Add new activity to order
+            invalid-warning: Invalid custom status entry.
+            change-order: Change order driver
+            assign-order: Assign driver to order
+            assign-success: '{orderId} assigned driver updated.'
+            order-title: Order Label
+            waypoint-title: Waypoint Label
+      scheduler:
+        index:
+          success-message: Order {orderId} has been scheduled at {orderAt}.
+          info-message: Order {orderId} has been unscheduled.
+      service-rates:
+        index:
+          edit-service: Edit Service Rate
+          delete-service: Delete Service Rate
+          edit:
+            success-message: Service rate {serviceName} updated
+          new:
+            success-message: New Service Rate {serviceName} Created
   management:
     contact:
       index:
