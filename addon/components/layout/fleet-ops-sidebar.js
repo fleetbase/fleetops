@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
-// import FleetListingComponent from './fleet-ops-sidebar/fleet-listing';
+import FleetListingComponent from './fleet-ops-sidebar/fleet-listing';
 
 /**
  * LayoutFleetOpsSidebarComponent
@@ -43,7 +43,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         const resourcesItems = [
             { title: 'Drivers', icon: 'id-card', route: 'management.drivers' },
             { title: 'Vehicles', icon: 'truck', route: 'management.vehicles' },
-            { title: 'Fleets', icon: 'user-group', route: 'management.fleets' },
+            { title: 'Fleets', icon: 'user-group', route: 'management.fleets', renderComponentInPlace: true, component: FleetListingComponent },
             { title: 'Vendors', icon: 'warehouse', route: 'management.vendors' },
             { title: 'Contacts', icon: 'address-book', route: 'management.contacts' },
             { title: 'Places', icon: 'location-dot', route: 'management.places' },
