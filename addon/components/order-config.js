@@ -9,6 +9,7 @@ export default class OrderConfigComponent extends Component {
     @service modalsManager;
     @service fetch;
     @service socket;
+    @service intl;
     @service store;
     @service notifications;
     @service crud;

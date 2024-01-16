@@ -19,6 +19,11 @@ export default class VendorFormPanelComponent extends Component {
     @service fetch;
 
     /**
+     * @service intl
+     */
+    @service intl;
+
+    /**
      * @service currentUser
      */
     @service currentUser;

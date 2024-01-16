@@ -16,7 +16,11 @@ export default class OrderScheduleCardComponent extends Component {
      * @memberof OrderScheduleCardComponent
      */
     @service contextPanel;
-
+    /**
+     * Service for intl.
+     * @service
+     */
+    @service intl;
     /**
      * Service for managing modals.
      * @service

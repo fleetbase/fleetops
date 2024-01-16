@@ -11,7 +11,7 @@ import getLengthUnits from '@fleetbase/ember-core/utils/get-length-units';
 export default class OrderConfigEntitiesEditorComponent extends Component {
     @service modalsManager;
     @service notifications;
-
+    @service intl;
     @tracked weightUnits = getWeightUnits();
     @tracked lengthUnits = getLengthUnits();
     @tracked _orderConfig = null;

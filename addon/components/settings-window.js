@@ -7,6 +7,7 @@ export default class SettingsWindowComponent extends Component {
     @service currentUser;
     @service store;
     @service notifications;
+    @service intl;
 
     @tracked isSaving = false;
     @tracked isLoading = false;

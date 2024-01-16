@@ -62,6 +62,13 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @service notifications;
 
     /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+    @service intl;
+
+    /**
      * Inject the `currentUser` service
      *
      * @var {Service}

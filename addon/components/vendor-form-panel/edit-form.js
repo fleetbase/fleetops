@@ -5,6 +5,7 @@ import { action } from '@ember/object';
 
 export default class VendorFormPanelEditFormComponent extends Component {
     @service store;
+    @service intl;
     @service contextPanel;
     @tracked isIntegratedVendor;
     @tracked isEditingCredentials = false;

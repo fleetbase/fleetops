@@ -16,6 +16,10 @@ export default class DriverFormPanelComponent extends Component {
      * @service fetch
      */
     @service fetch;
+    /**
+     * @service intl
+     */
+    @service intl;
 
     /**
      * @service currentUser

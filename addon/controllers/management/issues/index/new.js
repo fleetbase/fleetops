@@ -17,6 +17,13 @@ export default class ManagementIssuesIndexNewController extends BaseController {
      */
     @service hostRouter;
 
+     /**
+     * Inject the `intl` service
+     *
+     * @memberof intl
+     */
+     @service intl;
+
     /**
      * Inject the `currentUser` service
      *

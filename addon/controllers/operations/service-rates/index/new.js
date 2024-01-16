@@ -20,6 +20,13 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
     @service notifications;
 
     /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+    @service intl;
+
+    /**
      * Inject the `loader` service
      *
      * @var {Service}

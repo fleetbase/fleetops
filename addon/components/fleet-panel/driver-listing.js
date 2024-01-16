@@ -23,6 +23,12 @@ export default class FleetPanelDriverListingComponent extends Component {
     @service fetch;
 
     /**
+     * Service for intl.
+     * @service
+     */
+    @service intl;
+
+    /**
      * The universe service.
      *
      * @type {Service}

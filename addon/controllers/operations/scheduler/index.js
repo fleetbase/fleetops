@@ -9,6 +9,7 @@ export default class OperationsSchedulerIndexController extends BaseController {
     @service modalsManager;
     @service notifications;
     @service store;
+    @service intl;
     @service hostRouter;
     @tracked scheduledOrders = [];
     @tracked unscheduledOrders = [];

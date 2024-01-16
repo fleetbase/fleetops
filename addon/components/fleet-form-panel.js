@@ -21,6 +21,10 @@ export default class FleetFormPanelComponent extends Component {
      * @service hostRouter
      */
     @service hostRouter;
+    /**
+     * @service intl
+     */
+    @service intl;
 
     /**
      * @service loader

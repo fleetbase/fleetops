@@ -17,6 +17,7 @@ export default class OrderConfigFieldsEditorComponent extends Component {
         }
     }
 
+    @service intl;
     @service modalsManager;
     @service notifications;
 

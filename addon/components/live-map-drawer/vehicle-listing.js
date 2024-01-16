@@ -26,6 +26,12 @@ export default class LiveMapDrawerVehicleListingComponent extends Component {
     @service notifications;
 
     /**
+     * Service for intl.
+     * @service
+     */
+    @service intl;
+
+    /**
      * Service for CRUD operations.
      * @service
      */
@@ -71,7 +77,7 @@ export default class LiveMapDrawerVehicleListingComponent extends Component {
             showOnlineIndicator: true,
         },
         {
-            label: this.intl.t('fleet-ops.component.live-map-drawer.vehicle-listing.locate'),
+            label: this.intl.t('fleet-ops.component.live-map-drawer.vehicle-listing.location'),
             valuePath: 'location',
             width: '80px',
             cellComponent: 'table/cell/point',

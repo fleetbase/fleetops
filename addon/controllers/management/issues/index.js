@@ -23,6 +23,13 @@ export default class ManagementIssuesIndexController extends BaseController {
      */
     @service modalsManager;
 
+     /**
+     * Inject the `intl` service
+     *
+     * @var intl
+     */
+     @service intl;
+
     /**
      * Inject the `crud` service
      *

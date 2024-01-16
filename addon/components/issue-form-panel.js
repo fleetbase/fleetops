@@ -19,6 +19,11 @@ export default class IssueFormPanelComponent extends Component {
      * @service fetch
      */
     @service fetch;
+    
+    /**
+     * @service intl
+     */
+    @service intl;
 
     /**
      * @service notifications

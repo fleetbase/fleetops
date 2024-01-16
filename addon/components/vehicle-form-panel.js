@@ -13,9 +13,14 @@ export default class VehicleFormPanelComponent extends Component {
     @service store;
 
     /**
-     * @service store
+     * @service fetch
      */
     @service fetch;
+
+    /**
+     * @service intl
+     */
+    @service intl;
 
     /**
      * @service currentUser

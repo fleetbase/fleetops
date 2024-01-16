@@ -18,6 +18,13 @@ export default class ManagementPlacesIndexEditController extends BaseController 
      */
     @service modalsManager;
 
+     /**
+     * Inject the `intl` service
+     *
+     * @memberof intl
+     */
+     @service intl;
+
     /**
      * The overlay component context.
      *

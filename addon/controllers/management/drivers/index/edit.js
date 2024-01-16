@@ -19,6 +19,13 @@ export default class ManagementDriversIndexEditController extends BaseController
     @service modalsManager;
 
     /**
+     * Inject the `intl` service
+     *
+     * @memberof intl
+     */
+    @service intl;
+
+    /**
      * The overlay component context.
      *
      * @memberof ManagementDriversIndexEditController

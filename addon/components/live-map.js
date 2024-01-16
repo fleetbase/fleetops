@@ -27,6 +27,11 @@ export default class LiveMapComponent extends Component {
     @service store;
 
     /**
+     * @service intl
+     */
+    @service intl;
+
+    /**
      * Inject the `fetch` service.
      *
      * @memberof LiveMapComponent

@@ -73,6 +73,13 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @service fileQueue;
 
     /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+    @service intl;
+
+    /**
      * Inject the `fetch` service
      *
      * @var {Service}

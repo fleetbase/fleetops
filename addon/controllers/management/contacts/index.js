@@ -22,6 +22,13 @@ export default class ManagementContactsIndexController extends BaseController {
     @service notifications;
 
     /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+    @service intl;
+
+    /**
      * Inject the `modals-manager` service
      *
      * @var {Service}

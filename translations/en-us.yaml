@@ -1,15 +1,19 @@
 fleet-ops:
   extension-name: Fleet-Ops
-  common: 
+  common:
     active-manpower: Active Manpower
+    address: Address 
     amount: Amount
+    assignee: Assignee
     avatar: Avatar
     building: Building
     bulk-action: Bulk Action
+    category: Category
     city: City
     coordinates: Coordinates
     cost: Cost
     country: Country
+    config: Config
     created-at: Created At
     date-created: Date Created
     delete: Delete
@@ -41,6 +45,7 @@ fleet-ops:
     new: New
     odometer: Odometer
     options: Options
+    orders: Orders
     parent-fleet: Parent Fleet
     phone: Phone
     photos: photos
@@ -55,8 +60,8 @@ fleet-ops:
     schedule: Schedule
     search: Search
     security-access-code: Security access code
-    service: Service
     service-area: Service area
+    service: Service
     state: State
     status: Status
     street-1: Street 1
@@ -73,6 +78,7 @@ fleet-ops:
     vehicle: Vehicle
     vendor: Vendor
     vin-number: VIN number
+    volume: Volume
     website-url: Website URL
     website: Website
     width: Width
@@ -550,6 +556,7 @@ fleet-ops:
         no-transactions: No transactions this week
         message: When orders are going through with service rates, Fleetbase tracks transactions automatically.
     contact-form-panel:
+      success-message: contact {contactName} saved successfully.
       view-contact-button: View contact details
       save-contact: Save Contact
       create-contact: Create Contact
@@ -1063,6 +1070,7 @@ fleet-ops:
         index:
           edit-service: Edit Service Rate
           delete-service: Delete Service Rate
+          accept-button: Delete Service's
           edit:
             success-message: Service rate {serviceName} updated
           new:
@@ -1075,7 +1083,8 @@ fleet-ops:
     drivers:
       index:
         title: Drivers
-        delete-drivers: Delete Drivers   
+        delete-drivers: Delete Drivers  
+        search-placeholder: Search Drivers 
     fleets:
       index:
         title: Fleets
@@ -1100,4 +1109,246 @@ fleet-ops:
       index:
         title: Vendors
         delete-vendors: Delete Vendors
+  operations:
+    orders:
+      index:
+        map: Map
+        table: Table
+        cancel-orders: Cancel Orders
+        delete-orders: Delete Orders
+        new:
+          create-new-customer: Create new customer
+          create-new-facilitator: Create new facilitator
+          create-new-place: Create new place
+          add-order: Add entity to order
+          edit-order: Edit order metadata
+          add-field: Add custom field
+          order-type: Order Type
+          order-type-help-text: Selecting the order type will tell fleetbase what order configurations to use.
+          order-type-placeholder: Select Order Type
+          internal-id: Internal ID
+          internal-id-help-text: Use this field to optionally set a custom identifier or internal identifier for the order.
+          schedule: Schedule
+          schedule-help-text: The date and time the order will be dispatched. If no driver is assigned at time of dispatch, the dispatch will fail. If the order is Ad-Hoc the order will be pinged to drivers in vicinity of pickup.
+          customer: Customer
+          customer-help-text: Optionally assign the customer of this order. If it's a new customer, use the 'New Customer' button above.
+          customer-placehholder: Select Customer
+          facilitator: Facilitator
+          facilitator-help-text: Optionally assign a facilitator for this order, a facilitator can be a 3rd party subcontractor or service that will facilitate the transport of this order.
+          facilitator-placeholder: Select Facilitator
+          service-type: Service Type
+          service-type-placeholder: Select service Type
+          service-type-help-text: Select the service type you wish to use for 
+          assign-driver: Assign Driver
+          assign-driver-hep-text: Assign the driver this order will be dispatched to.
+          assign-driver-placeholder: Select Driver
+          proof-delivery: Proof of Delivery
+          proof-delivery-help-text: Select the type of proof of delivery to require. This can either be QR code scan or Signature method.
+          proof-delivery-placeholder: Select Proof of Delivery Method
+          adhoc-ping: Adhoc Ping Distance
+          adhoc-ping-help-text: This setting determines the adhoc distance to ping for this order, if unset it will fallback to the default setting.
+          adhoc-ping-message: Distance must be in meters
+          ad-hoc: Ad-Hoc
+          ad-hoc-help-text: Toggling Ad-Hoc will enable the order to intelligently ping drivers within the order pickup vicinity about the order allowing the first available driver to accept the order. This is an alternative to manually assigning the driver for real-time orders.
+          dispatch: Dispatch Immediately
+          dispatch-help-text: Toggling dispatch will dispatch this order immediatley following creation.
+          require-proof: Require Proof of Delivery
+          require-proof-help-text: Toggling this will require driver to complete a proof of delivery.
+          additional-details: Additional Details
+          metadata: Metadata
+          route: Route
+          route-label: Multiple Dropoff's
+          optimize-route: Optimize Route
+          optimize-route-help-text: Fleetbase will automatically optimize the route.
+          add-waypoint: Add Waypoint
+          add-waypoint-help-text: Use the `Add Waypoint` button to add more stops for this order. The Fleetbase routing engine will automatically optimize the route as each stop is added or removed.
+          select-waypoint-placeholder: Select Waypoint
+          infoblock-text: is not able to support this location.
+          invalid-coordinates: Invalid coordinates!
+          pickup: Pickup
+          select-pickup: Select Pickup
+          dropoff: Dropoff
+          select-dropoff: Select Dropoff
+          return: Return
+          edit-address: Edit Address
+          select-return: Select Return
+          payload-entities: Payload / Entities
+          add-item-order: Add Item to Order
+          items-drop: Items drop at
+          add-item-button: Add Item
+          sku: SKU
+          select-destination: Select Destination
+          edit-item: Edit Item
+          apply-service-rate: Apply service rate
+          service-help-text: Select a defined service rate to generate real time service quotations to apply to this order.
+          service-quotes: Service Quotes
+          service-quotes-help-text: Select which service rate to fetch quotes for.
+          select-service-rate: Select Service Rate
+          refresh-button: Refresh
+          loading-message: Loading service quotes...
+          info-text: Select a real time service quote to apply to this order. Once a quote is applied to the order, it will become a purchased rate. Transactions will be tracked within the Fleetbase ledger.
+          breakdown: Breakdown
+          no-service-info-text: No service quotes.
+          input-order-info-text: Input order route to view service quotes.
+          notes-title: Notes
+          notes-placeholder: Enter order notes here....
+        view:
+          dispatch: Dispatch
+          order-actions: Order Actions
+          edit-details: Edit Details
+          update-activity: Update Activity
+          unassign-driver: Unassign Driver
+          assign-driver: Assign Driver
+          get-order-label: Get Order Label
+          listen-socket-channel: Listen to socket channel
+          view-metadata: View metadata
+          cancel-order: Cancel Order
+          delete-order: Delete Order
+          activity: Activity
+          unable-load-order-activity: Unable to load order activity
+          ad-hoc: Ad-Hoc
+          customer: Customer
+          facilitator: Facilitator
+          driver-assigned: Driver Assigned
+          change-driver: Change Driver
+          tracking-number: Tracking Number
+          date-scheduled: Date Scheduled
+          date-dispatched: Date Dispatched
+          date-started: Date Started
+          order-details-title: Order Details
+          additional-details-title: Additional Details
+          route: Route
+          pickup: Pickup
+          dropoff: Dropoff
+          return: Return
+          order-summary: Order Summary
+          subtotal: Subtotal
+          delivery-fee: Delivery fee
+          tip: Tip
+          delivery-tip: Delivery Tip
+          total: Total
+          payload: Payload
+          items-drop: Items drop at
+          tracking: Tracking
+          waypoint-actions: Waypoint Actions
+          get-label: Get Label
+          view-activity: View Activity
+          add-item-button: Add Item
+          edit-item-button: Edit Item
+        config:
+          title: Orders Configuration
+          message: Order configurations allow you to define dynamic configurations which will tell Fleetbase how different types of orders should be executed.
+          configuration: Configuration
+          types:
+            no-order-installed: No order configurations installed!
+            you-have-no-configs: You currently have no order configs installed, check at the extensions to install an order configuration to get started.
+            view-extensions: View extensions
+    scheduler:
+      index:
+        title: Scheduler
+        unscheduled-orders: Unscheduled Orders
+        scheduled-orders: Scheduled Orders
+    service-rates:
+      index:
+        title: Service Rates
+        reload-data: Reload data
+        delete-service-rates: Delete Service Rates
+        new:
+          new-service-rate-title: New service rate
+          save-service-button: Save Service Rate
+          create-service-button: Create Service Rate
+          service-name: Service Name
+          service-name-help-text: Display name for this service.
+          service-order-label: Service Order Type
+          service-order-help-text: Restrict this service rate to an explicit `order type`.
+          service-order-placeholder: Select order type to restrict service to
+          base-fee-label: Base Fee
+          base-fee-help-text: Set a base fee which represents the minimum cost for this serice.
+          rate-calculation-label: Rate Calculation Method
+          rate-calculation-help-text: The method this service will use to calculate rates when queried.
+          rate-calculation-placeholder: Select rate calculation method
+          estimated-days: Estimated Delivery Days
+          estimated-days-help-text: The estimated number of days this service will take. For a same-day service use `0`.
+          duration-terms-label: Duration Terms
+          duration-terms-help-text: Add additional terms of service regarding duration for this serice rate.
+          duration-terms-placeholder: Duration terms if applicable
+          fixed-meter: Fixed Meter Options
+          fixed-meter-text: This option defines a fixed fee per kilometer.
+          fixed-meter-example-text: "For example: Every 1 kilometer a fixed fee is defined. If the distance traveled by the order is 3,300 meters the fixed fee for the 3rd kilometer will be added to the sum of the base fee."
+          maximum-distance: Maximum Distance
+          maximum-distance-help-text: The maximum distance servicable.
+          distance: Distance
+          fee: Fee
+          per-drop-off-title: Per Drop-off Options
+          per-drop-off-text: This option defines a fixed fee per drop-offs.
+          per-drop-off-example-text: "For example: 1-5 dropoffs in the order will cost $x amount, 5-10 dropoffs per order will cost $x amount. This will be added to the sum of the base fee."
+          add-drop-off-button: Add drop-off range
+          min-drop: Min Drop
+          max-drop: Max Drop
+          min: Min
+          max: Max
+          per-meter: Per Meter
+          per-meter-text: This option allows the service to be calculated per kilometer or meter, that means you define a flat fee which is then multiplied by the distance which can be either meter or kilometer.
+          per-meter-example-text: "For example: {fee} * {distance} + {baseFee}"
+          per-meter-rate-fee: Per Meter Flat Rate Fee
+          per-meter-rate-fee-help-text: The single flat fee which will be multipled by the distance.
+          distance-unit: Distance Unit
+          distance-unit-help-text: The unit of distance can be either per kilometer or meter.
+          distance-unit-placeholder: Select distance unit.
+          custom-algorithm-title: Custom Algorithm
+          custom-algorithm-info-message: This option is to define a custom calculation for this service's fee with variables.
+          custom-algorithm-info-second-message: Note that variables must be wrapped in a single curly brace.
+          distance-message: distance
+          distance-continue-message: "- the distance in meters from the order route."
+          time-message: time
+          time-continue-message: "- the route ETA in seconds."
+          example: Example
+          example-message: If the order request is a distance of 2,200 meters with an ETA of 30 minutes.
+          example-second-message: Then the following formula will calculate a service fee of $2.50, which will be added to the base fee.
+          algorithm-label: Algorithm
+          algorithm-help-text: Define a formula to be evaluated for this service rate calculation.
+          algorithm-placeholder: (( {distance} / 50 ) * .05 ) + (( {time} / 60 ) * .01)
+          percel-fee-title: Parcel Fee's
+          length-label: Length
+          length-placeholder: Length in {parcelFeeDimension}
+          width-label: Width
+          width-placeholder: Width in {parcelFeeDimension}
+          height-label: Height
+          height-placeholder: Height in {parcelFeeDimension}
+          weight-label: Weight
+          weight-placeholder: Weight in {parcelFeeWeight}
+          deminsions-unit: Dimensions Unit
+          select-unit-placeholder: Select unit
+          weight-unit: Weight Unit
+          additional-fee: Additional Fee
+          cash-delivery-title: Cash on Delivery
+          cash-delivery-label: Enable additional fee for `cash on delivery` orders?
+          calculation-method-label: Cash on Delivery Fee Calculation Method
+          calculation-method-help-text: Method used to calculate the COD fee.
+          calculation-method-placeholder: Select COD fee calculation method
+          delivery-flat-fee: Cash on Delivery Flat Fee 
+          delivery-flat-fee-help-text: Defines a flat fee to be added during peak hours.
+          fee-percentage: Cash on Delivery Fee Percentage
+          fee-percentage-help-text: Defines a percentage based fee from the service rate subtotal to be added as the COD fee.
+          percentage-placeholder: Percentage
+          peak-hours-title: Peak Hours
+          peak-hours-label: Enable additional fee for order made during service defined `peak hours`?
+          peak-hours-start-label: Peak Hours Start
+          peak-hous-start-help-text: Defines the what time the peak hour fee starts.
+          peak-hours-end-label: Peak Hours End
+          peak-hours-end-help-text: Defines the what time the peak hour fee ends.
+          peak-hours-fee-label: Peak Hours Fee Calculation Method
+          peak-hours-fee-help-text: Method used to calculate the peak hours fee.
+          peak-hours-fee-placeholder: Select peak hours fee calculation method
+          flat-fee-label: Peak Hours Flat Fee
+          flat-fee-help-text: Defines a flat fee to be added during peak hours.
+          peak-hours-percentage-label: Peak Hours Fee Percentage
+          peak-hours-percentage-help-text: Defines a percentage based fee from the service rate subtotal to be added during peak hours.
+          restrict-service-title: Restrict Service
+          service-area-label: Service Area
+          service-area-help-text: Restrict this service to order request originating from a service area.
+          service-area-placeholder: Restrict to service area
+          zone-label: Zone
+          zone-help-text: Restrict this service to order request originating from a specific zone.
+          zone-placeholder: Restrict to zone
     

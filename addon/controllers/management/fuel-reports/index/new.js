@@ -18,6 +18,13 @@ export default class ManagementFuelReportsIndexNewController extends BaseControl
      */
     @service currentUser;
 
+     /**
+     * Inject the `intl` service
+     *
+     * @memberof intl
+     */
+     @service intl;
+
     /**
      * Inject the `hostRouter` service
      *

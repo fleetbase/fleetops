@@ -15,6 +15,10 @@ export default class FuelReportFormPanelComponent extends Component {
      * @service notifications
      */
     @service notifications;
+    /**
+     * @service intl
+     */
+    @service intl;
 
     /**
      * @service hostRouter

@@ -13,6 +13,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     @service universe;
     @service contextPanel;
     @service store;
+    @service intl;
     @tracked routePrefix = 'console.fleet-ops.';
     @tracked menuPanels = [];
     @tracked universeMenuItems = [];

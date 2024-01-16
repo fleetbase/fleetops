@@ -20,6 +20,13 @@ export default class ManagementPlacesIndexController extends BaseController {
      */
     @service modalsManager;
 
+     /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+     @service intl;
+
     /**
      * Inject the `store` service
      *
@@ -280,14 +287,14 @@ export default class ManagementPlacesIndexController extends BaseController {
                     fn: this.viewPlace,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.places.index.edit-places'),
+                    label: this.intl.t('fleet-ops.controllers.management.places.index.edit-place'),
                     fn: this.editPlace,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.places.index.view-places'),
+                    label: this.intl.t('fleet-ops.controllers.management.places.index.view-place'),
                     fn: this.viewOnMap,
                 },
                 {

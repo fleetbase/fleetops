@@ -19,6 +19,11 @@ export default class PlaceFormPanelComponent extends Component {
     @service fetch;
 
     /**
+     * @service intl
+     */
+    @service intl;
+
+    /**
      * @service notifications
      */
     @service notifications;

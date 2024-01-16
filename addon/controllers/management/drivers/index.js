@@ -25,6 +25,13 @@ export default class ManagementDriversIndexController extends BaseController {
     @service modalsManager;
 
     /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+    @service intl;
+
+    /**
      * Inject the `crud` service
      *
      * @var {Service}
@@ -392,33 +399,33 @@ export default class ManagementDriversIndexController extends BaseController {
             width: '10%',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.view-details'),
+                    label: this.intl.t('fleet-ops.controllers.management.drivers.index.view-details'),
                     fn: this.viewDriver,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.edit-details'),
+                    label: this.intl.t('fleet-ops.controllers.management.drivers.index.edit-details'),
                     fn: this.editDriver,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.assign-order-driver'),
+                    label: this.intl.t('fleet-ops.controllers.management.drivers.index.assign-order-driver'),
                     fn: this.assignOrder,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.assign-vehicle-driver'),
+                    label: this.intl.t('fleet-ops.controllers.management.drivers.index.assign-vehicle-driver'),
                     fn: this.assignVehicle,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.locate-driver-map'),
+                    label: this.intl.t('fleet-ops.controllers.management.drivers.index.locate-driver-map'),
                     fn: this.viewOnMap,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.delete-driver'),
+                    label: this.intl.t('fleet-ops.controllers.management.drivers.index.delete-driver'),
                     fn: this.deleteDriver,
                 },
             ],
@@ -481,7 +488,7 @@ export default class ManagementDriversIndexController extends BaseController {
 
         this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
-            acceptButtonText: this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.delete-button'),
+            acceptButtonText: this.intl.t('fleet-ops.controllers.management.drivers.index.delete-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },
@@ -556,8 +563,8 @@ export default class ManagementDriversIndexController extends BaseController {
      */
     @action assignOrder(driver, options = {}) {
         this.modalsManager.show('modals/driver-assign-order', {
-            title: this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.order-driver'),
-            acceptButtonText: this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.assign-order'),
+            title: this.intl.t('fleet-ops.controllers.management.drivers.index.order-driver'),
+            acceptButtonText: this.intl.t('fleet-ops.controllers.management.drivers.index.assign-order'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             acceptButtonDisabled: true,
@@ -572,7 +579,7 @@ export default class ManagementDriversIndexController extends BaseController {
                 const selectedOrder = modal.getOption('selectedOrder');
 
                 if (!selectedOrder) {
-                    this.notifications.warning(this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.no-order-warning'));
+                    this.notifications.warning(this.intl.t('fleet-ops.controllers.management.drivers.index.no-order-warning'));
                     return;
                 }
 
@@ -583,7 +590,7 @@ export default class ManagementDriversIndexController extends BaseController {
                 return driver
                     .save()
                     .then(() => {
-                        this.notifications.success(this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.assign-driver', {driverName: driver.name}));
+                        this.notifications.success(this.intl.t('fleet-ops.controllers.management.drivers.index.assign-driver', {driverName: driver.name}));
                     })
                     .catch((error) => {
                         driver.rollbackAttributes();
@@ -604,8 +611,8 @@ export default class ManagementDriversIndexController extends BaseController {
      */
     @action assignVehicle(driver, options = {}) {
         this.modalsManager.show('modals/driver-assign-vehicle', {
-            title: this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.title-vehicle'),
-            acceptButtonText: this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.confirm-button'),
+            title: this.intl.t('fleet-ops.controllers.management.drivers.index.title-vehicle'),
+            acceptButtonText: this.intl.t('fleet-ops.controllers.management.drivers.index.confirm-button'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             hideDeclineButton: true,
@@ -616,7 +623,7 @@ export default class ManagementDriversIndexController extends BaseController {
                 return driver
                     .save()
                     .then((driver) => {
-                        this.notifications.success(this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.assign-vehicle', {driverName: driver.name}));
+                        this.notifications.success(this.intl.t('fleet-ops.controllers.management.drivers.index.assign-vehicle', {driverName: driver.name}));
                     })
                     .catch((error) => {
                         driver.rollbackAttributes();
@@ -639,7 +646,7 @@ export default class ManagementDriversIndexController extends BaseController {
         const [latitude, longitude] = extractCoordinates(location.coordinates);
 
         this.modalsManager.show('modals/point-map', {
-            title: this.intl.t('fleet-ops.controllers.management.contacts.drivers.index.locate-driver', {driverName: driver.name}),
+            title: this.intl.t('fleet-ops.controllers.management.drivers.index.locate-driver', {driverName: driver.name}),
             acceptButtonText: 'Done',
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',

@@ -22,7 +22,7 @@ export default class OrderConfigActivityFlowEditorComponent extends Component {
     @service modalsManager;
     @service notifications;
     @service fetch;
-
+    @service intl;
     @tracked drake;
     @tracked orderConfig = {};
     @tracked flow = {};

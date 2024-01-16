@@ -24,6 +24,13 @@ export default class OperationsOrdersIndexController extends BaseController {
     @service fetch;
 
     /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+    @service intl;
+
+    /**
      * Inject the `filters` service
      *
      * @var {Service}
