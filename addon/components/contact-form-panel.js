@@ -109,7 +109,7 @@ export default class ContactFormPanelComponent extends Component {
             return contact
                 .save()
                 .then((contact) => {
-                    this.notifications.success(this.intl.t('fleet-ops.component.contact-form-panel.success-message', {contactName: contact.name}));
+                    this.notifications.success(this.intl.t('fleet-ops.component.contact-form-panel.success-message', { contactName: contact.name }));
                     contextComponentCallback(this, 'onAfterSave', contact);
                 })
                 .catch((error) => {

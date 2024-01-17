@@ -98,7 +98,7 @@ export default class FleetFormPanelComponent extends Component {
             return fleet
                 .save()
                 .then((fleet) => {
-                    this.notifications.success(this.intl.t('fleet-ops.component.fleet-form-panel.success-message', {fleetName: fleet.name}));
+                    this.notifications.success(this.intl.t('fleet-ops.component.fleet-form-panel.success-message', { fleetName: fleet.name }));
                     contextComponentCallback(this, 'onAfterSave', fleet);
                 })
                 .catch((error) => {

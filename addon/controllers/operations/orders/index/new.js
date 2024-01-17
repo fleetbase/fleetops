@@ -305,7 +305,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
                     // transition to order view
                     return this.hostRouter.transitionTo(`${engineMountPoint}operations.orders.index.view`, order).then(() => {
-                        this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.new.success-message', {orderID: order.public_id}));
+                        this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.new.success-message', { orderID: order.public_id }));
                         this.loader.removeLoader();
                         this.resetForm();
                         later(

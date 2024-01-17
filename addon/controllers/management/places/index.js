@@ -20,12 +20,12 @@ export default class ManagementPlacesIndexController extends BaseController {
      */
     @service modalsManager;
 
-     /**
+    /**
      * Inject the `intl` service
      *
      * @var {Service}
      */
-     @service intl;
+    @service intl;
 
     /**
      * Inject the `store` service
@@ -433,7 +433,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             confirm: (modal) => {
                 modal.startLoading();
                 return place.save().then(() => {
-                    this.notifications.success(this.intl.t('fleet-ops.controllers.management.places.index.success-message', {placeName: place.name}));
+                    this.notifications.success(this.intl.t('fleet-ops.controllers.management.places.index.success-message', { placeName: place.name }));
                 });
             },
             ...options,
@@ -451,7 +451,7 @@ export default class ManagementPlacesIndexController extends BaseController {
         const { latitude, longitude } = place;
 
         this.modalsManager.show('modals/point-map', {
-            title: this.intl.t('fleet-ops.controllers.management.places.index.locate-title', {placeName: place.name}),
+            title: this.intl.t('fleet-ops.controllers.management.places.index.locate-title', { placeName: place.name }),
             acceptButtonText: 'Done',
             hideDeclineButton: true,
             latitude,

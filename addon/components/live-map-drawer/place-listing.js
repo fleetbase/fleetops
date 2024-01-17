@@ -30,7 +30,7 @@ export default class LiveMapDrawerPlaceListingComponent extends Component {
      * @service
      */
     @service crud;
-    
+
     /**
      * Service for intl.
      * @service

@@ -28,12 +28,12 @@ export default class ManagementVehiclesIndexController extends BaseController {
      */
     @service modalsManager;
 
-     /**
+    /**
      * Inject the `intl` service
      *
      * @var {Service}
      */
-     @service intl;
+    @service intl;
 
     /**
      * Inject the `store` service
@@ -539,7 +539,7 @@ export default class ManagementVehiclesIndexController extends BaseController {
         const { latitude, longitude } = place;
 
         this.modalsManager.show('modals/point-map', {
-            title: this.intl.t('fleet-ops.controllers.management.vehicles.index.locate-title', {placeName: place.name}),
+            title: this.intl.t('fleet-ops.controllers.management.vehicles.index.locate-title', { placeName: place.name }),
             acceptButtonText: 'Done',
             hideDeclineButton: true,
             latitude,

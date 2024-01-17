@@ -12,6 +12,7 @@ fleet-ops:
     city: City
     coordinates: Coordinates
     cost: Cost
+    code: Code
     country: Country
     config: Config
     created-at: Created At
@@ -19,6 +20,7 @@ fleet-ops:
     delete: Delete
     destination: Destination
     details: Details
+    description: Description
     distance: Distance
     driver-license: Driver License
     driver: Driver
@@ -53,7 +55,8 @@ fleet-ops:
     plate-number: Plate number
     postal-code: Postal code
     priority: Priority
-    reload: Reload data
+    reload: Reload
+    reload-data: Reload data
     remove: Remove
     reporter: Reporter
     sandbox: Sandbox
@@ -78,13 +81,15 @@ fleet-ops:
     value: Value
     vehicle: Vehicle
     vendor: Vendor
-    vin-number: VIN number
+    vin-number: VIN Number
     volume: Volume
+    weight: Weight
     website-url: Website URL
     website: Website
     width: Width
     year: Year
     zone: Zone
+    fleet: Fleet
 
   component:
     admin:
@@ -163,7 +168,7 @@ fleet-ops:
         vehicle-controls: Vehicle Visibility Controls...
         hide-vehicles: Hide all vehicles...
         show-vehicles: Show all vehicles...
-        online-vehicls: Only show online vehicles...
+        online-vehicles: Only show online vehicles...
         offline-vehicles: Only show offline vehicles...
       zones-panel:
         title: Service Areas
@@ -478,11 +483,11 @@ fleet-ops:
         reset-message: Sensitive credentials can only be reset, to update credentials you must re-enter the credentials.
         optionally: Optionally supply your own 
         configure-vendor: to configure this vendor.
-        select: "Select "
+        select: Select
         sandbox: Sandbox
         name-text: The vendor's name, typically the name of a business.
         email-text: The vendor's email, this can be used to trigger emails to the vendor.
-        phone-text: "The vendor's phone #, this can be used to trigger SMS or messages to the vendor."
+        phone-text: The vendor's phone \#, this can be used to trigger SMS or messages to the vendor.
         website-text: The vendor's website, optionally add the vendors website for reference.
         select-address: Select Address
       zone-form:
@@ -623,8 +628,6 @@ fleet-ops:
       loading-message: Loading fleet vehicle...
     fuel-report-form-panel:
       success-message: Fuel report saved successfully.
-      details:
-        fuel: Fuel/ Volume
       fuel-report: New Fuel Report
       save-fuel-report: Save Fuel Report
       create-fuel-report: Create Fuel Report
@@ -644,6 +647,8 @@ fleet-ops:
       edit-button: Edit fuel report
       cancel-edit-fuel-report: Cancel edit fuel report
       cancel-new-fuel-report: Cancel new fuel report
+      details: 
+        fuel: Fuel/ Volume
     global-search:
       search: Search by keyword...
     integrated-order-details:
@@ -654,7 +659,7 @@ fleet-ops:
       price-breakdown: Price Breakdown
       metadata: Metadata
     issue-form-panel:
-      success-message: Issue ({publicID}) saved successfully.
+      success-message: Issue ({publicId}) saved successfully.
       issue: New Issue
       save-issue: Save Issue
       create-issue: Create Issue
@@ -737,7 +742,7 @@ fleet-ops:
         remove: Remove status
         remove-text: Are you sure you wish to delete this status? All related activites and logic will be deleted along with the status.
         delete-button: Yes, delete
-        unable-warning: The {format} must be in this order of sequence, unable to shift.
+        unable-warning: The {status} must be in this order of sequence, unable to shift.
         order-warning: The created status must always be the first sequence of an order flow.
         title: Activity Flow
         message: Activity flow configuration will allow you to define the different types of tracking status activities that apply for this order type. Logic of the activity flow can also be configured.
@@ -785,9 +790,9 @@ fleet-ops:
         new-field: New Custom Field
         new-custom-field: New Custom Fields Group
         field-text: Meta fields configuration will allow you to define custom input fields that will be applied to orders.
-        custom-field-group: "Custom Fields Group:"
+        custom-field-group: Custom Fields Group
         default-field: Default Fields
-        custom-field: "Custom Field:"
+        custom-field: Custom Field
         type: Field Type
         select-type: Select field type
         add-option: Add Option
@@ -896,12 +901,13 @@ fleet-ops:
         select-address: Select Address
         edit: Edit
         new-address: New Address
-        optionally: "Optionally supply your own "
-        configure-vendor: " to configure this vendor."
-        select: "Select "
+        optionally: Optionally supply your own
+        configure-vendor: to configure this vendor.
+        select: Select
         name-text: The vendor's name, typically the name of a business.
         email-text: The vendor's email, this can be used to trigger emails to the vendor.
-        phone-text: "The vendor's phone #, this can be used to trigger SMS or messages to the vendor."
+        phone-text: >-
+          The vendor's phone #, this can be used to trigger SMS or messages to the vendor.
         website-text: The vendor's website, optionally add the vendors website for reference.
       edit-form:
         cancel-credentials: Cancel credentials reset
@@ -1275,14 +1281,16 @@ fleet-ops:
           duration-terms-placeholder: Duration terms if applicable
           fixed-meter: Fixed Meter Options
           fixed-meter-text: This option defines a fixed fee per kilometer.
-          fixed-meter-example-text: "For example: Every 1 kilometer a fixed fee is defined. If the distance traveled by the order is 3,300 meters the fixed fee for the 3rd kilometer will be added to the sum of the base fee."
+          fixed-meter-example-text: >-
+            For example: Every 1 kilometer a fixed fee is defined. If the distance traveled by the order is 3,300 meters the fixed fee for the 3rd kilometer will be added to the sum of the base fee.
           maximum-distance: Maximum Distance
           maximum-distance-help-text: The maximum distance servicable.
           distance: Distance
           fee: Fee
           per-drop-off-title: Per Drop-off Options
           per-drop-off-text: This option defines a fixed fee per drop-offs.
-          per-drop-off-example-text: "For example: 1-5 dropoffs in the order will cost $x amount, 5-10 dropoffs per order will cost $x amount. This will be added to the sum of the base fee."
+          per-drop-off-example-text: >-
+            For example: 1-5 dropoffs in the order will cost $x amount, 5-10 dropoffs per order will cost $x amount. This will be added to the sum of the base fee.
           add-drop-off-button: Add drop-off range
           min-drop: Min Drop
           max-drop: Max Drop
@@ -1290,7 +1298,8 @@ fleet-ops:
           max: Max
           per-meter: Per Meter
           per-meter-text: This option allows the service to be calculated per kilometer or meter, that means you define a flat fee which is then multiplied by the distance which can be either meter or kilometer.
-          per-meter-example-text: "For example: {fee} * {distance} + {baseFee}"
+          per-meter-example-text: >-
+            For example: '{fee}' * '{distance}' + '{baseFee}'
           per-meter-rate-fee: Per Meter Flat Rate Fee
           per-meter-rate-fee-help-text: The single flat fee which will be multipled by the distance.
           distance-unit: Distance Unit
@@ -1300,9 +1309,11 @@ fleet-ops:
           custom-algorithm-info-message: This option is to define a custom calculation for this service's fee with variables.
           custom-algorithm-info-second-message: Note that variables must be wrapped in a single curly brace.
           distance-message: distance
-          distance-continue-message: "- the distance in meters from the order route."
+          distance-continue-message: >- 
+            - the distance in meters from the order route.
           time-message: time
-          time-continue-message: "- the route ETA in seconds."
+          time-continue-message: >-
+            - the route ETA in seconds.
           example: Example
           example-message: If the order request is a distance of 2,200 meters with an ETA of 30 minutes.
           example-second-message: Then the following formula will calculate a service fee of $2.50, which will be added to the base fee.

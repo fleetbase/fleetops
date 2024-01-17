@@ -91,7 +91,7 @@ export default class FuelReportFormPanelComponent extends Component {
             return fuelReport
                 .save()
                 .then((fuelReport) => {
-                    this.notifications.success(this.intl.t("fleet-ops.component.fuel-report-form-panel.success-message"));
+                    this.notifications.success(this.intl.t('fleet-ops.component.fuel-report-form-panel.success-message'));
                     contextComponentCallback(this, 'onAfterSave', fuelReport);
                 })
                 .catch((error) => {

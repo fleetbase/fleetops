@@ -107,7 +107,6 @@ export default class DriverFormPanelComponent extends Component {
         return driver
             .save()
             .then((driver) => {
-                
                 this.notifications.success(this.intl.t('fleet-ops.component.driver-form-panel.success-message', { driverName: driver.name }));
                 contextComponentCallback(this, 'onAfterSave', driver);
             })

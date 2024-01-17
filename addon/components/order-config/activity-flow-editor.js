@@ -166,7 +166,7 @@ export default class OrderConfigActivityFlowEditorComponent extends Component {
                     // prompt to confirm overwrite
                     return this.modalsManager.confirm({
                         title: this.intl.t('fleet-ops.component.order-config.activity-flow-editor.overwrite'),
-                        body: this.intl.t('fleet-ops.component.order-config.activity-flow-editor.overwrite-text', {statusName: statusName}),
+                        body: this.intl.t('fleet-ops.component.order-config.activity-flow-editor.overwrite-text', { statusName: statusName }),
                         acceptButtonText: this.intl.t('fleet-ops.component.order-config.activity-flow-editor.overwrite-button'),
                         confirm: (modal) => {
                             this.insertNewStatus(status);
@@ -231,7 +231,7 @@ export default class OrderConfigActivityFlowEditorComponent extends Component {
 
         // if status is created or dispatched prevent from dragging
         if (['created', 'dispatched', 'completed'].includes(format(status))) {
-            this.notifications.warning(this.intl.t('fleet-ops.component.order-config.activity-flow-editor.unable-warning', {format: format(status)}));
+            this.notifications.warning(this.intl.t('fleet-ops.component.order-config.activity-flow-editor.unable-warning', { status: format(status) }));
             this.drake.cancel(true);
             return;
         }

@@ -403,7 +403,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             confirm: (modal) => {
                 modal.startLoading();
                 return order.save().then(() => {
-                    this.notifications.success(options.successNotification || this.intl.t('fleet-ops.controllers.operations.orders.index.view.update-success', {orderId: order.public_id}));
+                    this.notifications.success(options.successNotification || this.intl.t('fleet-ops.controllers.operations.orders.index.view.update-success', { orderId: order.public_id }));
                 });
             },
             decline: () => {
@@ -433,7 +433,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
 
     @action unassignDriver(order, options = {}) {
         this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.controllers.operations.orders.index.view.edit-order-title', {driverName: order.driver_assigned.name}),
+            title: this.intl.t('fleet-ops.controllers.operations.orders.index.view.edit-order-title', { driverName: order.driver_assigned.name }),
             body: this.intl.t('fleet-ops.controllers.operations.orders.index.view.unassign-body'),
             order,
             confirm: (modal) => {
@@ -562,7 +562,9 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                 modal.startLoading();
 
                 return order.payload.save().then(() => {
-                    this.notifications.success(options.successNotification ?? this.intl.t('fleet-ops.controllers.operations.orders.index.view.route-update-success', {orderId: order.public_id}));
+                    this.notifications.success(
+                        options.successNotification ?? this.intl.t('fleet-ops.controllers.operations.orders.index.view.route-update-success', { orderId: order.public_id })
+                    );
                 });
             },
             decline: () => {
@@ -701,13 +703,15 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         }
 
         this.modalsManager.show(`modals/order-assign-driver`, {
-            title: order.driver_uuid ? this.intl.t('fleet-ops.controllers.operations.orders.index.view.change-order') : this.intl.t('fleet-ops.controllers.operations.orders.index.view.assing-order'),
+            title: order.driver_uuid
+                ? this.intl.t('fleet-ops.controllers.operations.orders.index.view.change-order')
+                : this.intl.t('fleet-ops.controllers.operations.orders.index.view.assing-order'),
             acceptButtonText: 'Save Changes',
             order,
             confirm: (modal) => {
                 modal.startLoading();
                 return order.save().then(() => {
-                    this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.view.assign-success', {orderId: order.public_id}));
+                    this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.view.assign-success', { orderId: order.public_id }));
                 });
             },
         });

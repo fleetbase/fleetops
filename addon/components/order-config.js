@@ -151,7 +151,7 @@ export default class OrderConfigComponent extends Component {
                 data: orderConfig,
             })
             .then(() => {
-                this.notifications.success(this.intl.t('fleet-ops.component.order-config.saved-success', {orderName: orderConfig.name}));
+                this.notifications.success(this.intl.t('fleet-ops.component.order-config.saved-success', { orderName: orderConfig.name }));
                 this.isSaving = false;
             })
             .catch((error) => {
@@ -237,7 +237,7 @@ export default class OrderConfigComponent extends Component {
                     .uninstall()
                     .then(() => {
                         this.closeUninstallChannel();
-                        this.notifications.success(this.intl.t('fleet-ops.component.order-config.uninstall-success', {extensionName: extensionName}));
+                        this.notifications.success(this.intl.t('fleet-ops.component.order-config.uninstall-success', { extensionName: extensionName }));
                         this.configurations.removeObject(extension);
                         this.selected = undefined;
                         done();
