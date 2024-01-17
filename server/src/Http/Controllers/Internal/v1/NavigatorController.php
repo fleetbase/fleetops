@@ -30,7 +30,7 @@ class NavigatorController extends Controller
                 ]
             );
 
-            return redirect()->away('flbnavigator://configure?key=' . $apiCredential->key . '&host=' . url()->secure('/'));
+            return redirect()->away('flbnavigator://configure?key=' . $apiCredential->key . '&host=' . url()->secure('/') . '&socketcluster_host=' . env('SOCKETCLUSTER_HOST', 'socket') . '&socketcluster_port=' . env('SOCKETCLUSTER_PORT', 8000));
         }
 
         return response()->error('Organization for linking not found.');
