@@ -103,7 +103,7 @@ export default class VehicleFormPanelComponent extends Component {
             return vehicle
                 .save()
                 .then((vehicle) => {
-                    this.notifications.success(this.intl.t('fleet-ops.component.vehicle-form-panel.success-message', {vehicleName: vehicle.displayName}));
+                    this.notifications.success(this.intl.t('fleet-ops.component.vehicle-form-panel.success-message', { vehicleName: vehicle.displayName }));
                     contextComponentCallback(this, 'onAfterSave', vehicle);
                 })
                 .catch((error) => {

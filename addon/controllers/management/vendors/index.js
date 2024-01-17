@@ -22,12 +22,12 @@ export default class ManagementVendorsIndexController extends BaseController {
      */
     @service modalsManager;
 
-     /**
+    /**
      * Inject the `intl` service
      *
      * @var {Service}
      */
-     @service intl;
+    @service intl;
 
     /**
      * Inject the `crud` service

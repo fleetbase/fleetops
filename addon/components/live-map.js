@@ -1492,7 +1492,7 @@ export default class LiveMapComponent extends Component {
                 const nextIndex = contextmenuItems.length + 2;
 
                 contextmenuItems.pushObject({
-                    text: this.intl.t('fleet-ops.component.live-map.focus-service', {serviceName: serviceArea.name}),
+                    text: this.intl.t('fleet-ops.component.live-map.focus-service', { serviceName: serviceArea.name }),
                     callback: () => this.focusServiceArea(serviceArea),
                     index: nextIndex,
                 });
@@ -1530,19 +1530,19 @@ export default class LiveMapComponent extends Component {
                 separator: true,
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.view-driver', {driverName: driver.name}),
+                text: this.intl.t('fleet-ops.component.live-map.view-driver', { driverName: driver.name }),
                 callback: () => this.contextPanel.focus(driver),
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.edit-driver', {driverName: driver.name}),
+                text: this.intl.t('fleet-ops.component.live-map.edit-driver', { driverName: driver.name }),
                 callback: () => this.contextPanel.focus(driver, 'editing'),
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.delete-driver', {driverName: driver.name}),
+                text: this.intl.t('fleet-ops.component.live-map.delete-driver', { driverName: driver.name }),
                 callback: () => this.crud.delete(driver),
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.view-vehicle-for', {driverName: driver.name}),
+                text: this.intl.t('fleet-ops.component.live-map.view-vehicle-for', { driverName: driver.name }),
                 callback: () => this.contextPanel.focus(driver.vehicle),
             },
         ];
@@ -1591,15 +1591,15 @@ export default class LiveMapComponent extends Component {
                 separator: true,
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.view-vehicle', {vehicleName: vehicle.displayName}),
+                text: this.intl.t('fleet-ops.component.live-map.view-vehicle', { vehicleName: vehicle.displayName }),
                 callback: () => this.contextPanel.focus(vehicle),
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.edit-vehicle', {vehicleName: vehicle.displayName}),
+                text: this.intl.t('fleet-ops.component.live-map.edit-vehicle', { vehicleName: vehicle.displayName }),
                 callback: () => this.contextPanel.focus(vehicle, 'editing'),
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.delete-vehicle', {vehicleName: vehicle.displayName}),
+                text: this.intl.t('fleet-ops.component.live-map.delete-vehicle', { vehicleName: vehicle.displayName }),
                 callback: () => this.crud.delete(vehicle),
             },
         ];
@@ -1648,11 +1648,11 @@ export default class LiveMapComponent extends Component {
                 separator: true,
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.edit-zone', {zoneName: zone.name}),
+                text: this.intl.t('fleet-ops.component.live-map.edit-zone', { zoneName: zone.name }),
                 callback: () => this.serviceAreas.editZone(zone),
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.delete-zone', {zoneName: zone.name}),
+                text: this.intl.t('fleet-ops.component.live-map.delete-zone', { zoneName: zone.name }),
                 callback: () =>
                     this.serviceAreas.deleteZone(zone, {
                         onFinish: () => {
@@ -1661,7 +1661,7 @@ export default class LiveMapComponent extends Component {
                     }),
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.assign-zone', {zoneName: zone.name}),                
+                text: this.intl.t('fleet-ops.component.live-map.assign-zone', { zoneName: zone.name }),
                 callback: () => {},
             },
         ];
@@ -1688,23 +1688,23 @@ export default class LiveMapComponent extends Component {
                 separator: true,
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.blur-service', {serviceName: serviceArea.name}),
+                text: this.intl.t('fleet-ops.component.live-map.blur-service', { serviceName: serviceArea.name }),
                 callback: () => this.blurServiceArea(serviceArea),
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.create-zone', {serviceName: serviceArea.name}),
+                text: this.intl.t('fleet-ops.component.live-map.create-zone', { serviceName: serviceArea.name }),
                 callback: () => this.serviceAreas.createZone(serviceArea),
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.assign-fleet', {serviceName: serviceArea.name}),
+                text: this.intl.t('fleet-ops.component.live-map.assign-fleet', { serviceName: serviceArea.name }),
                 callback: () => {},
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.edit-service', {serviceName: serviceArea.name}),
+                text: this.intl.t('fleet-ops.component.live-map.edit-service', { serviceName: serviceArea.name }),
                 callback: () => this.serviceAreas.editServiceAreaDetails(serviceArea),
             },
             {
-                text: this.intl.t('fleet-ops.component.live-map.delete-service', {serviceName: serviceArea.name}),
+                text: this.intl.t('fleet-ops.component.live-map.delete-service', { serviceName: serviceArea.name }),
                 callback: () =>
                     this.serviceAreas.deleteServiceArea(serviceArea, {
                         onFinish: () => {

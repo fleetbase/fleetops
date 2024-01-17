@@ -36,7 +36,7 @@ export default class LiveMapDrawerDriverListingComponent extends Component {
      * @service
      */
     @service crud;
-    
+
     /**
      * Service for intl.
      * @service

@@ -18,12 +18,12 @@ export default class ManagementVendorsIndexNewController extends BaseController 
      */
     @service hostRouter;
 
-     /**
+    /**
      * Inject the `intl` service
      *
      * @memberof intl
      */
-     @service intl;
+    @service intl;
 
     /**
      * Inject the `hostRouter` service

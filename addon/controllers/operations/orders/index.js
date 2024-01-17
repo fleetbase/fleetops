@@ -829,7 +829,7 @@ export default class OperationsOrdersIndexController extends BaseController {
 
                 return this.fetch.patch(`orders/cancel`, { order: order.id }).then(() => {
                     order.set('status', 'canceled');
-                    this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.cancel-success', {orderId: order.public_id}));
+                    this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.cancel-success', { orderId: order.public_id }));
                 });
             },
             ...options,
@@ -858,7 +858,7 @@ export default class OperationsOrdersIndexController extends BaseController {
                     .patch(`orders/dispatch`, { order: order.id })
                     .then(() => {
                         order.set('status', 'dispatched');
-                        this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.dispatch-success', {orderId: order.public_id}));
+                        this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.dispatch-success', { orderId: order.public_id }));
                     })
                     .catch((error) => {
                         modal.stopLoading();

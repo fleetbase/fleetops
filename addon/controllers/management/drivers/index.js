@@ -590,7 +590,7 @@ export default class ManagementDriversIndexController extends BaseController {
                 return driver
                     .save()
                     .then(() => {
-                        this.notifications.success(this.intl.t('fleet-ops.controllers.management.drivers.index.assign-driver', {driverName: driver.name}));
+                        this.notifications.success(this.intl.t('fleet-ops.controllers.management.drivers.index.assign-driver', { driverName: driver.name }));
                     })
                     .catch((error) => {
                         driver.rollbackAttributes();
@@ -623,7 +623,7 @@ export default class ManagementDriversIndexController extends BaseController {
                 return driver
                     .save()
                     .then((driver) => {
-                        this.notifications.success(this.intl.t('fleet-ops.controllers.management.drivers.index.assign-vehicle', {driverName: driver.name}));
+                        this.notifications.success(this.intl.t('fleet-ops.controllers.management.drivers.index.assign-vehicle', { driverName: driver.name }));
                     })
                     .catch((error) => {
                         driver.rollbackAttributes();
@@ -646,7 +646,7 @@ export default class ManagementDriversIndexController extends BaseController {
         const [latitude, longitude] = extractCoordinates(location.coordinates);
 
         this.modalsManager.show('modals/point-map', {
-            title: this.intl.t('fleet-ops.controllers.management.drivers.index.locate-driver', {driverName: driver.name}),
+            title: this.intl.t('fleet-ops.controllers.management.drivers.index.locate-driver', { driverName: driver.name }),
             acceptButtonText: 'Done',
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
