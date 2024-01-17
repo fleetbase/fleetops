@@ -248,14 +248,14 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         };
 
         // re-display order routes when livemap has coordinates
-        this.universe.on('fleetops.livemap.has_coordinates', this, displayOrderRoute);
+        this.universe.on('fleet-ops.live-map.has_coordinates', this, displayOrderRoute);
 
         // when transitioning away kill event listener
         this.hostRouter.on('routeWillChange', () => {
-            const isListening = this.universe.has('fleetops.livemap.has_coordinates');
+            const isListening = this.universe.has('fleet-ops.live-map.has_coordinates');
 
             if (isListening) {
-                this.universe.off('fleetops.livemap.has_coordinates', this, displayOrderRoute);
+                this.universe.off('fleet-ops.live-map.has_coordinates', this, displayOrderRoute);
             }
         });
 

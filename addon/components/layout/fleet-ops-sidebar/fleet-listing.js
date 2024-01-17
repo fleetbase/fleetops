@@ -19,45 +19,47 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         this.listenForFleetChanges();
     }
 
-    @action transitionHome() {
-        return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } });
+    @action transitionToRoute(toggleApiContext) {
+        if (typeof this.args.route === 'string') {
+            if (typeof this.hostRouter.currentRouteName === 'string' && this.hostRouter.currentRouteName.startsWith('console.fleet-ops.management.fleets.index')) {
+                if (typeof toggleApiContext.toggle === 'function') {
+                    toggleApiContext.toggle();
+                }
+            }
+
+            this.hostRouter.transitionTo(this.args.route);
+        }
     }
 
-    @action async onFocusVehicle(vehicle) {
+    @action async onClickVehicle(vehicle) {
         const { onFocusVehicle } = this.args;
-        // const { currentRouteName } = this.hostRouter;
-        // const isOperationsRouteActive = typeof currentRouteName === 'string' && currentRouteName.includes('fleet-ops.operations.orders');
 
         // transition to dashboard/map display
-        try {
-            await this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } });
-        } catch (error) {
-            // silent
-        }
-
-        // focus vehicle on live map
-        this.focusVehicleOnLiveMap(vehicle);
-
-        if (typeof onFocusVehicle === 'function') {
-            onFocusVehicle(vehicle);
-        }
+        return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } }).then((transition) => {
+            console.log(transition);
+            // focus vehicle on live map
+            this.focusVehicleOnLiveMap(vehicle);
+            if (typeof onFocusVehicle === 'function') {
+                onFocusVehicle(vehicle);
+            }
+        });
     }
 
     @action focusVehicleOnLiveMap(vehicle) {
-        const FleetOpsLiveMap = this.universe.get('FleetOpsLiveMap');
+        const liveMap = this.universe.get('component:fleet-ops:live-map');
 
-        if (FleetOpsLiveMap) {
-            if (FleetOpsLiveMap.contextPanel) {
-                FleetOpsLiveMap.contextPanel.clear();
+        if (liveMap) {
+            if (liveMap.contextPanel) {
+                liveMap.contextPanel.clear();
             }
 
-            FleetOpsLiveMap.showAll();
-            FleetOpsLiveMap.focusLayerByRecord(vehicle, 16, {
+            liveMap.showAll();
+            liveMap.focusLayerByRecord(vehicle, 16, {
                 onAfterFocusWithRecord: function () {
                     later(
                         this,
                         () => {
-                            FleetOpsLiveMap.onVehicleClicked(vehicle);
+                            liveMap.onVehicleClicked(vehicle);
                         },
                         600 * 2
                     );
@@ -93,7 +95,7 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
             });
     }
 
-    @action resolveFleetVehicles(fleet) {
+    resolveFleetVehicles(fleet) {
         fleet.vehicles = isArray(fleet.vehicles) ? fleet.vehicles.toArray() : [];
         return fleet;
     }

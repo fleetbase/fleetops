@@ -43,8 +43,8 @@ body[data-theme='dark'] .scheduler-left-sidebar {
 }
 
 .next-fleet-summary {
-    --fleet-summary-toggle-base-padding: 2rem;
-    --fleet-summary-nav-item-base-padding: 1.75rem;
+    --fleet-summary-toggle-base-padding: 1.5rem;
+    --fleet-summary-nav-item-base-padding: 1.5rem;
 }
 
 .next-sidebar .next-sidebar-panel-container.next-fleet-summary > .next-sidebar-panel > .next-content-panel > .next-sidebar-panel-toggle {
