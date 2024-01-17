@@ -89,7 +89,6 @@ fleet-ops:
     width: Width
     year: Year
     zone: Zone
-    fleet: Fleet
 
   component:
     admin:
@@ -786,7 +785,7 @@ fleet-ops:
         vessel: Vessel Selector
         vessel-text: Allows user to select a vessel
         warning-message: No group name entered.
-        field: Meta Fields
+        field-title: Meta Fields
         new-field: New Custom Field
         new-custom-field: New Custom Fields Group
         field-text: Meta fields configuration will allow you to define custom input fields that will be applied to orders.
@@ -925,200 +924,136 @@ fleet-ops:
       edit: Edit vendor
       close: Close vendor details
       new-vendor: New Vendor
-  controllers:
-    management:
-      contacts:
-        index:
-          delete-button: Delete Contacts
-          updated: Updated At
-          created: Created At
-          view-contact: View Contact Details
-          edit-contact: Edit Contact
-          delete-contact: Delete Contact
-          edit:
-            title: Continue Without Saving?
-            body: Unsaved changes to this contact will be lost. Click continue to proceed.
-            button: Continue without saving
-      drivers:
-        index:
-          view-details: View driver details...
-          edit-details: Edit driver details...
-          assign-order-driver: Assign order to driver...
-          assign-vehicle-driver: Assign vehicle to driver...
-          locate-driver-map: Locate driver on map...
-          delete-driver: Delete driver...
-          delete-button: Delete Drivers
-          order-driver: Assign Order to this Driver
-          assign-order: Assign Order
-          no-order-warning: No order selected!
-          assign-success: '{driverName} assigned to order.'
-          title-vehicle: Assign Vehicle to this Driver
-          confirm-button: Confirm & Create
-          assign-vehicle: '{driverName} assigned to vehicle.'
-          locate-driver: Location of {driverName}
-          edit:
-            title: Continue Without Saving?
-            body: Unsaved changes to this driver will be lost. Click continue to proceed.
-            button: Continue without saving
-      fleets:
-        index:
-          view-fleet: View fleet details...
-          edit-fleet: Edit fleet details...
-          assign-driver: Assign driver to fleet...
-          delete-fleet: Delete fleet...
-          delete-button: Delete Fleets
-          edit:
-            body: Unsaved changes to this fleet will be lost. Click continue to proceed.
-      fuel-reports:
-        index:
-          view: View Details
-          edit-fuel: Edit Fuel Report
-          delete: Delete Fuel Report
-          delete-button: Delete Fuel Reports
-          edit:
-            body: Unsaved changes to this fuel-report will be lost. Click continue to proceed.
-      issues:
-        index:
-          view: View Details
-          edit-issues: Edit Issues
-          delete: Delete Issues
-          delete-button: Delete Issues
-          edit:
-            body: Unsaved changes to this issue will be lost. Click continue to proceed.
-      places:
-        index:
-          view-details: View Place Details
-          edit-place: Edit Place
-          view-place: View Place on Map
-          delete: Delete Place
-          title: Assign this Place to a Vendor
-          confirm-button: Confirm & Create
-          delete-button: Delete Places
-          success-message: '{placeName} details has been updated.'
-          locate-title: Location of {placeName}
-          edit:
-            body: Unsaved changes to this place will be lost. Click continue to proceed.
-      vehicles:
-        index:
-          view-vehicle: View vehicle details...
-          edit-vehicle: Edit vehicle details...        
-          delete-vehicle: Delete vehicle...
-          delete-button: Delete Vehicles
-          locate-title: Location of {placeName}
-          edit:
-            body: Unsaved changes to this vehicle will be lost. Click continue to proceed.
-      vendors:
-        index:
-          delete-button: Delete Vendors
-          view-vendor: View vendor Details
-          edit-vendor: Edit vendor
-          delete-vendor: Delete vendor
-          edit:
-            body: Unsaved changes to this vendor will be lost. Click continue to proceed.
-    operations:
-      orders:
-        index:
-          payload: Payload
-          customer: Customer
-          facilitator: Facilitator
-          pickup: Pickup
-          dropoff: Dropoff
-          scheduled-at: Scheduled At
-          items: '# Items'
-          transaction: Transaction Total
-          tracking: Tracking Number
-          driver-assigned: Driver Assigned
-          created-by: Created By
-          updated-by: Updated By
-          view-order: View Order
-          cancel-order: Cancel Order
-          delete-order: Delete Order
-          cancel-title: Are you sure you wish to cancel this order?
-          cancel-body: Once this order is canceled, the order record will still be visible but activity cannot be added to this order.
-          cancel-success: Order {orderId} has been canceled.
-          dispatch-title: Are you sure you want to dispatch this order?
-          dispatch-body: Once this order is dispatched the assigned driver will be notified.
-          dispatch-success: Order {orderId} has been dispatched.          
-          new:
-            success-message: New Order {orderId} Created
-            warning-message: No files in queue to upload!
-            import-success: Import completed.
-            service-warning: Failed to fetch service quotes for this order.
-            no-route-warning: No route to preview.
-            route-error: Route optimization failed, check route entry and try again.
-            custom-field-title: Add custom field to order
-            label-warning: Custom field must have a label
-            value-warning: Custom field must have a value
-            edit-field-title: Edit custom field
-            edit-metatada: Edit Metadata
-            edit-item: Edit Item
-          view:
-            edit-order-title: Edit Order Details
-            update-success: '{orderId} details has been updated.'
-            order-metadata: Order Metadata
-            unassign-title: Are you sure you wish to unassing the driver ({driverName}) from this order?
-            unassign-body: Once the driver is unassigned, the driver will no longer have access to this orders details.
-            unassign-success: Driver has been unassigned from this order.
-            edit-route-title: Edit Order Route
-            route-error: Route optimization failed, check route entry and try again.
-            route-update-success: '{orderId} route details updated.'
-            add-activity-title: Add new activity to order
-            invalid-warning: Invalid custom status entry.
-            change-order: Change order driver
-            assign-order: Assign driver to order
-            assign-success: '{orderId} assigned driver updated.'
-            order-title: Order Label
-            waypoint-title: Waypoint Label
-      scheduler:
-        index:
-          success-message: Order {orderId} has been scheduled at {orderAt}.
-          info-message: Order {orderId} has been unscheduled.
-      service-rates:
-        index:
-          edit-service: Edit Service Rate
-          delete-service: Delete Service Rate
-          accept-button: Delete Service's
-          edit:
-            success-message: Service rate {serviceName} updated
-          new:
-            success-message: New Service Rate {serviceName} Created
   management:
     contact:
       index:
+        delete-button: Delete Contacts
+        updated: Updated At
+        created: Created At
+        view-contact: View Contact Details
+        edit-contact: Edit Contact
+        delete-contact: Delete Contact
+        edit:
+          title: Continue Without Saving?
+          body: Unsaved changes to this contact will be lost. Click continue to proceed.
+          button: Continue without saving
         title: Contacts
         delete-contacts: Delete Contacts
     drivers:
       index:
+        view-details: View driver details...
+        edit-details: Edit driver details...
+        assign-order-driver: Assign order to driver...
+        assign-vehicle-driver: Assign vehicle to driver...
+        locate-driver-map: Locate driver on map...
+        delete-driver: Delete driver...
+        delete-button: Delete Drivers
+        order-driver: Assign Order to this Driver
+        assign-order: Assign Order
+        no-order-warning: No order selected!
+        assign-success: '{driverName} assigned to order.'
+        title-vehicle: Assign Vehicle to this Driver
+        confirm-button: Confirm & Create
+        assign-vehicle: '{driverName} assigned to vehicle.'
+        locate-driver: Location of {driverName}
+        edit:
+          title: Continue Without Saving?
+          body: Unsaved changes to this driver will be lost. Click continue to proceed.
+          button: Continue without saving
         title: Drivers
         delete-drivers: Delete Drivers  
         search-placeholder: Search Drivers 
     fleets:
       index:
+        view-fleet: View fleet details...
+        edit-fleet: Edit fleet details...
+        assign-driver: Assign driver to fleet...
+        delete-fleet: Delete fleet...
+        delete-button: Delete Fleets
+        edit:
+          body: Unsaved changes to this fleet will be lost. Click continue to proceed.
         title: Fleets
         delete-fleets: Delete Fleets
     fuel-reports:
       index:
+        view: View Details
+        edit-fuel: Edit Fuel Report
+        delete: Delete Fuel Report
+        delete-button: Delete Fuel Reports
+        edit:
+          body: Unsaved changes to this fuel-report will be lost. Click continue to proceed.
         title: Fuel Reports
         delete-fuel-reports: Delete Fuel Reports
     issues:
       index:
+        view: View Details
+        edit-issues: Edit Issues
+        delete: Delete Issues
+        delete-button: Delete Issues
+        edit:
+          body: Unsaved changes to this issue will be lost. Click continue to proceed.
         title: Issues
         delete-issues: Delete Issues
     places:
       index:
-        title: Places
+        view-details: View Place Details
+        edit-place: Edit Place
+        view-place: View Place on Map
+        delete: Delete Place
+        title: Assign this Place to a Vendor
+        confirm-button: Confirm & Create
+        delete-button: Delete Places
+        success-message: '{placeName} details has been updated.'
+        locate-title: Location of {placeName}
+        edit:
+          body: Unsaved changes to this place will be lost. Click continue to proceed.
+        places-title: Places
         delete-places: Delete Places
     vehicles:
       index:
+        view-vehicle: View vehicle details...
+        edit-vehicle: Edit vehicle details...        
+        delete-vehicle: Delete vehicle...
+        delete-button: Delete Vehicles
+        locate-title: Location of {placeName}
+        edit:
+          body: Unsaved changes to this vehicle will be lost. Click continue to proceed.
         title: Vehicles
         delete-vehicles: Delete Vehicles
     vendors:
       index:
+        delete-button: Delete Vendors
+        view-vendor: View vendor Details
+        edit-vendor: Edit vendor
+        delete-vendor: Delete vendor
+        edit:
+          body: Unsaved changes to this vendor will be lost. Click continue to proceed.
         title: Vendors
         delete-vendors: Delete Vendors
   operations:
     orders:
       index:
+        payload: Payload
+        customer: Customer
+        facilitator: Facilitator
+        pickup: Pickup
+        dropoff: Dropoff
+        scheduled-at: Scheduled At
+        items: Items
+        transaction: Transaction Total
+        tracking: Tracking Number
+        driver-assigned: Driver Assigned
+        created-by: Created By
+        updated-by: Updated By
+        view-order: View Order
+        cancel-order: Cancel Order
+        delete-order: Delete Order
+        cancel-title: Are you sure you wish to cancel this order?
+        cancel-body: Once this order is canceled, the order record will still be visible but activity cannot be added to this order.
+        cancel-success: Order {orderId} has been canceled.
+        dispatch-title: Are you sure you want to dispatch this order?
+        dispatch-body: Once this order is dispatched the assigned driver will be notified.
+        dispatch-success: Order {orderId} has been dispatched.          
         map: Map
         table: Table
         cancel-orders: Cancel Orders
@@ -1139,7 +1074,7 @@ fleet-ops:
           schedule-help-text: The date and time the order will be dispatched. If no driver is assigned at time of dispatch, the dispatch will fail. If the order is Ad-Hoc the order will be pinged to drivers in vicinity of pickup.
           customer: Customer
           customer-help-text: Optionally assign the customer of this order. If it's a new customer, use the 'New Customer' button above.
-          customer-placehholder: Select Customer
+          customer-placeholder: Select Customer
           facilitator: Facilitator
           facilitator-help-text: Optionally assign a facilitator for this order, a facilitator can be a 3rd party subcontractor or service that will facilitate the transport of this order.
           facilitator-placeholder: Select Facilitator
@@ -1147,7 +1082,7 @@ fleet-ops:
           service-type-placeholder: Select service Type
           service-type-help-text: Select the service type you wish to use for 
           assign-driver: Assign Driver
-          assign-driver-hep-text: Assign the driver this order will be dispatched to.
+          assign-driver-help-text: Assign the driver this order will be dispatched to.
           assign-driver-placeholder: Select Driver
           proof-delivery: Proof of Delivery
           proof-delivery-help-text: Select the type of proof of delivery to require. This can either be QR code scan or Signature method.
@@ -1199,6 +1134,17 @@ fleet-ops:
           input-order-info-text: Input order route to view service quotes.
           notes-title: Notes
           notes-placeholder: Enter order notes here....
+          uccess-message: New Order {orderId} Created
+          warning-message: No files in queue to upload!
+          import-success: Import completed.
+          service-warning: Failed to fetch service quotes for this order.
+          no-route-warning: No route to preview.
+          route-error: Route optimization failed, check route entry and try again.
+          custom-field-title: Add custom field to order
+          label-warning: Custom field must have a label
+          value-warning: Custom field must have a value
+          edit-field-title: Edit custom field
+          edit-metadata: Edit Metadata
         view:
           dispatch: Dispatch
           order-actions: Order Actions
@@ -1242,6 +1188,22 @@ fleet-ops:
           view-activity: View Activity
           add-item-button: Add Item
           edit-item-button: Edit Item
+          edit-order-title: Edit Order Details
+          update-success: '{orderId} details has been updated.'
+          order-metadata: Order Metadata
+          unassign-title: Are you sure you wish to unassing the driver ({driverName}) from this order?
+          unassign-body: Once the driver is unassigned, the driver will no longer have access to this orders details.
+          unassign-success: Driver has been unassigned from this order.
+          edit-route-title: Edit Order Route
+          route-error: Route optimization failed, check route entry and try again.
+          route-update-success: '{orderId} route details updated.'
+          add-activity-title: Add new activity to order
+          invalid-warning: Invalid custom status entry.
+          change-order: Change order driver
+          assign-order: Assign driver to order
+          assign-success: '{orderId} assigned driver updated.'
+          order-title: Order Label
+          waypoint-title: Waypoint Label
         config:
           title: Orders Configuration
           message: Order configurations allow you to define dynamic configurations which will tell Fleetbase how different types of orders should be executed.
@@ -1252,15 +1214,23 @@ fleet-ops:
             view-extensions: View extensions
     scheduler:
       index:
+        success-message: Order {orderId} has been scheduled at {orderAt}.
+        info-message: Order {orderId} has been unscheduled.
         title: Scheduler
         unscheduled-orders: Unscheduled Orders
         scheduled-orders: Scheduled Orders
     service-rates:
       index:
+        edit-service: Edit Service Rate
+        delete-service: Delete Service Rate
+        accept-button: Delete Service's
+        edit:
+          success-message: Service rate {serviceName} updated
         title: Service Rates
         reload-data: Reload data
         delete-service-rates: Delete Service Rates
         new:
+          success-message: New Service Rate {serviceName} Created
           new-service-rate-title: New service rate
           save-service-button: Save Service Rate
           create-service-button: Create Service Rate
@@ -1346,7 +1316,7 @@ fleet-ops:
           peak-hours-title: Peak Hours
           peak-hours-label: Enable additional fee for order made during service defined `peak hours`?
           peak-hours-start-label: Peak Hours Start
-          peak-hous-start-help-text: Defines the what time the peak hour fee starts.
+          peak-hours-start-help-text: Defines the what time the peak hour fee starts.
           peak-hours-end-label: Peak Hours End
           peak-hours-end-help-text: Defines the what time the peak hour fee ends.
           peak-hours-fee-label: Peak Hours Fee Calculation Method

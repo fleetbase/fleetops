@@ -313,18 +313,18 @@ export default class ManagementVendorsIndexController extends BaseController {
             width: '7%',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.vendors.index.view-vendor'),
+                    label: this.intl.t('fleet-ops.management.vendors.index.view-vendor'),
                     fn: this.viewVendor,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.vendors.index.edit-vendor'),
+                    label: this.intl.t('fleet-ops.management.vendors.index.edit-vendor'),
                     fn: this.editVendor,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.vendors.index.delete-vendor'),
+                    label: this.intl.t('fleet-ops.management.vendors.index.delete-vendor'),
                     fn: this.deleteVendor,
                 },
             ],
@@ -432,7 +432,7 @@ export default class ManagementVendorsIndexController extends BaseController {
 
         this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
-            acceptButtonText: this.intl.t('fleet-ops.controllers.management.vendors.index.delete-button'),
+            acceptButtonText: this.intl.t('fleet-ops.management.vendors.index.delete-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },

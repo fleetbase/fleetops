@@ -345,7 +345,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: this.intl.t('fleet-ops.controllers.operations.orders.index.payload'),
+            label: this.intl.t('fleet-ops.operations.orders.index.payload'),
             valuePath: 'payload.public_id',
             resizable: true,
             hidden: true,
@@ -356,7 +356,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: this.intl.t('fleet-ops.controllers.operations.orders.index.customer'),
+            label: this.intl.t('fleet-ops.operations.orders.index.customer'),
             valuePath: 'customer.name',
             cellComponent: 'table/cell/base',
             width: '125px',
@@ -370,7 +370,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             model: 'customer',
         },
         {
-            label: this.intl.t('fleet-ops.controllers.operations.orders.index.facilitator'),
+            label: this.intl.t('fleet-ops.operations.orders.index.facilitator'),
             valuePath: 'facilitator.name',
             cellComponent: 'table/cell/base',
             width: '125px',
@@ -384,7 +384,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             model: 'vendor',
         },
         {
-            label: this.intl.t('fleet-ops.controllers.operations.orders.index.pickup'),
+            label: this.intl.t('fleet-ops.operations.orders.index.pickup'),
             valuePath: 'pickupName',
             cellComponent: 'table/cell/base',
             width: '160px',
@@ -399,7 +399,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             model: 'place',
         },
         {
-            label: this.intl.t('fleet-ops.controllers.operations.orders.index.dropoff'),
+            label: this.intl.t('fleet-ops.operations.orders.index.dropoff'),
             valuePath: 'dropoffName',
             cellComponent: 'table/cell/base',
             width: '160px',
@@ -413,7 +413,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             model: 'place',
         },
         {
-            label: this.intl.t('fleet-ops.controllers.operations.orders.index.scheduled-at'),
+            label: this.intl.t('fleet-ops.operations.orders.index.scheduled-at'),
             valuePath: 'scheduledAt',
             sortParam: 'scheduled_at',
             filterParam: 'scheduled_at',
@@ -424,7 +424,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             filterComponent: 'filter/date',
         },
         {
-            label: this.intl.t('fleet-ops.controllers.operations.orders.index.items'),
+            label: this.intl.t('fleet-ops.operations.orders.index.items'),
             cellComponent: 'table/cell/base',
             valuePath: 'item_count',
             resizable: true,
@@ -432,7 +432,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             width: '50px',
         },
         {
-            label: this.intl.t('fleet-ops.controllers.operations.orders.index.transaction'),
+            label: this.intl.t('fleet-ops.operations.orders.index.transaction'),
             cellComponent: 'table/cell/base',
             valuePath: 'transaction_amount',
             width: '50px',
@@ -441,7 +441,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             sortable: true,
         },
         {
-            label: this.intl.t('fleet-ops.controllers.operations.orders.index.tracking'),
+            label: this.intl.t('fleet-ops.operations.orders.index.tracking'),
             cellComponent: 'table/cell/base',
             valuePath: 'tracking_number.tracking_number',
             width: '170px',
@@ -451,7 +451,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: this.intl.t('fleet-ops.controllers.operations.orders.index.driver-assigned'),
+            label: this.intl.t('fleet-ops.operations.orders.index.driver-assigned'),
             cellComponent: 'table/cell/driver-name',
             valuePath: 'driver_assigned',
             modelPath: 'driver_assigned',
@@ -513,7 +513,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             filterComponent: 'filter/date',
         },
         {
-            label: this.intl.t('fleet-ops.controllers.operations.orders.index.created-by'),
+            label: this.intl.t('fleet-ops.operations.orders.index.created-by'),
             valuePath: 'created_by_name',
             width: '125px',
             resizable: true,
@@ -525,7 +525,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             model: 'user',
         },
         {
-            label: this.intl.t('fleet-ops.controllers.operations.orders.index.updated-by'),
+            label: this.intl.t('fleet-ops.operations.orders.index.updated-by'),
             valuePath: 'updated_by_name',
             width: '125px',
             resizable: true,
@@ -548,12 +548,12 @@ export default class OperationsOrdersIndexController extends BaseController {
             width: '12%',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.controllers.operations.orders.index.view-order'),
+                    label: this.intl.t('fleet-ops.operations.orders.index.view-order'),
                     icon: 'eye',
                     fn: this.viewOrder,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.operations.orders.index.cancel-order'),
+                    label: this.intl.t('fleet-ops.operations.orders.index.cancel-order'),
                     icon: 'ban',
                     fn: this.cancelOrder,
                 },
@@ -561,7 +561,7 @@ export default class OperationsOrdersIndexController extends BaseController {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.operations.orders.index.delete-order'),
+                    label: this.intl.t('fleet-ops.operations.orders.index.delete-order'),
                     icon: 'trash',
                     fn: this.deleteOrder,
                 },
@@ -821,15 +821,15 @@ export default class OperationsOrdersIndexController extends BaseController {
      */
     @action cancelOrder(order, options = {}) {
         this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.controllers.operations.orders.index.cancel-title'),
-            body: this.intl.t('fleet-ops.controllers.operations.orders.index.cancel-body'),
+            title: this.intl.t('fleet-ops.operations.orders.index.cancel-title'),
+            body: this.intl.t('fleet-ops.operations.orders.index.cancel-body'),
             order,
             confirm: (modal) => {
                 modal.startLoading();
 
                 return this.fetch.patch(`orders/cancel`, { order: order.id }).then(() => {
                     order.set('status', 'canceled');
-                    this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.cancel-success', { orderId: order.public_id }));
+                    this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.cancel-success', { orderId: order.public_id }));
                 });
             },
             ...options,
@@ -845,8 +845,8 @@ export default class OperationsOrdersIndexController extends BaseController {
      */
     @action dispatchOrder(order, options = {}) {
         this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.controllers.operations.orders.index.dispatch-title'),
-            body: this.intl.t('fleet-ops.controllers.operations.orders.index.dispatch-body'),
+            title: this.intl.t('fleet-ops.operations.orders.index.dispatch-title'),
+            body: this.intl.t('fleet-ops.operations.orders.index.dispatch-body'),
             acceptButtonScheme: 'primary',
             acceptButtonText: 'Dispatch',
             acceptButtonIcon: 'paper-plane',
@@ -858,7 +858,7 @@ export default class OperationsOrdersIndexController extends BaseController {
                     .patch(`orders/dispatch`, { order: order.id })
                     .then(() => {
                         order.set('status', 'dispatched');
-                        this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.dispatch-success', { orderId: order.public_id }));
+                        this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.dispatch-success', { orderId: order.public_id }));
                     })
                     .catch((error) => {
                         modal.stopLoading();

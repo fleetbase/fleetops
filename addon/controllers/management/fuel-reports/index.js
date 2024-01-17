@@ -298,18 +298,18 @@ export default class ManagementFuelReportsIndexController extends BaseController
             width: '10%',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.fuel-reports.index.view'),
+                    label: this.intl.t('fleet-ops.management.fuel-reports.index.view'),
                     fn: this.viewFuelReport,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.fuel-reports.index.edit-fuel'),
+                    label: this.intl.t('fleet-ops.management.fuel-reports.index.edit-fuel'),
                     fn: this.editFuelReport,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.fuel-reports.index.delete'),
+                    label: this.intl.t('fleet-ops.management.fuel-reports.index.delete'),
                     fn: this.deleteFuelReport,
                 },
             ],
@@ -417,7 +417,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
 
         this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
-            acceptButtonText: this.intl.t('fleet-ops.controllers.management.fuel-reports.index.delete-button'),
+            acceptButtonText: this.intl.t('fleet-ops.management.fuel-reports.index.delete-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },

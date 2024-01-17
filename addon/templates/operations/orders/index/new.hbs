@@ -183,7 +183,7 @@
             {{/each}}
         {{/if}}
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.metadate"}} @open={{this.order.meta.length}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.metadataButtons}}>
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.metadata"}} @open={{this.order.meta.length}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.metadataButtons}}>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
                 {{#each this.order.meta as |metaField index|}}
                     <InputGroup>
@@ -224,7 +224,7 @@
                             </div>
 
                             <div class="flex-1 px-3">
-                                <ModelSelect @modelName="place" @selectedModel={{waypoint.place}} @placeholder={{concat (t "fleet-ops.operations.orders.index.new.add-waypoint-placeholder") (add index 1)}} @triggerClass="form-select form-input truncate max-w-300px" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}} @renderInPlace={{true}} @onChange={{fn this.setWaypointPlace index}} as |model|>
+                                <ModelSelect @modelName="place" @selectedModel={{waypoint.place}} @placeholder={{concat (t "fleet-ops.operations.orders.index.new.select-waypoint-placeholder") (add index 1)}} @triggerClass="form-select form-input truncate max-w-300px" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}} @renderInPlace={{true}} @onChange={{fn this.setWaypointPlace index}} as |model|>
                                     {{model.address}}
                                 </ModelSelect>
 

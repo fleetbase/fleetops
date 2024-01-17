@@ -196,11 +196,11 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
             width: '10%',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.controllers.operations.service-rates.index.edit-service'),
+                    label: this.intl.t('fleet-ops.operations.service-rates.index.edit-service'),
                     fn: this.editServiceRate,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.operations.service-rates.index.delete-service'),
+                    label: this.intl.t('fleet-ops.operations.service-rates.index.delete-service'),
                     fn: this.deleteServiceRate,
                 },
             ],
@@ -287,7 +287,7 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
     @action bulkDeleteServiceRates(selected) {
         this.crud.bulkDelete(selected, {
             modelNamePath: `public_id`,
-            acceptButtonText: this.intl.t('fleet-ops.controllers.operations.service-rates.index.accept-button'),
+            acceptButtonText: this.intl.t('fleet-ops.operations.service-rates.index.accept-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },

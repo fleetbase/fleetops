@@ -283,25 +283,25 @@ export default class ManagementPlacesIndexController extends BaseController {
             width: '10%',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.places.index.view-details'),
+                    label: this.intl.t('fleet-ops.management.places.index.view-details'),
                     fn: this.viewPlace,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.places.index.edit-place'),
+                    label: this.intl.t('fleet-ops.management.places.index.edit-place'),
                     fn: this.editPlace,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.places.index.view-place'),
+                    label: this.intl.t('fleet-ops.management.places.index.view-place'),
                     fn: this.viewOnMap,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.places.index.delete'),
+                    label: this.intl.t('fleet-ops.management.places.index.delete'),
                     fn: this.deletePlace,
                 },
             ],
@@ -410,7 +410,7 @@ export default class ManagementPlacesIndexController extends BaseController {
 
         this.crud.bulkDelete(selected, {
             modelNamePath: `address`,
-            acceptButtonText: this.intl.t('fleet-ops.controllers.management.places.index.delete-button'),
+            acceptButtonText: this.intl.t('fleet-ops.management.places.index.delete-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },
@@ -426,14 +426,14 @@ export default class ManagementPlacesIndexController extends BaseController {
      */
     @action assignVendor(place, options = {}) {
         this.modalsManager.show('modals/place-assign-vendor', {
-            title: this.intl.t('fleet-ops.controllers.management.places.index.title'),
-            acceptButtonText: this.intl.t('fleet-ops.controllers.management.places.index.confirm-button'),
+            title: this.intl.t('fleet-ops.management.places.index.title'),
+            acceptButtonText: this.intl.t('fleet-ops.management.places.index.confirm-button'),
             hideDeclineButton: true,
             place,
             confirm: (modal) => {
                 modal.startLoading();
                 return place.save().then(() => {
-                    this.notifications.success(this.intl.t('fleet-ops.controllers.management.places.index.success-message', { placeName: place.name }));
+                    this.notifications.success(this.intl.t('fleet-ops.management.places.index.success-message', { placeName: place.name }));
                 });
             },
             ...options,
@@ -451,7 +451,7 @@ export default class ManagementPlacesIndexController extends BaseController {
         const { latitude, longitude } = place;
 
         this.modalsManager.show('modals/point-map', {
-            title: this.intl.t('fleet-ops.controllers.management.places.index.locate-title', { placeName: place.name }),
+            title: this.intl.t('fleet-ops.management.places.index.locate-title', { placeName: place.name }),
             acceptButtonText: 'Done',
             hideDeclineButton: true,
             latitude,

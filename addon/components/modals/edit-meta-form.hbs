@@ -1,7 +1,7 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
         <div class="flex flex-row mb-5">
-            <Button @text={{t "fleet-ops.component.modals.edit.meta.form.add"}} @icon="plus" @iconPrefix="fas" @onClick={{fn @options.addMetaField @options.meta}} />
+            <Button @text={{t "fleet-ops.component.modals.edit-meta-form.add"}} @icon="plus" @iconPrefix="fas" @onClick={{fn @options.addMetaField @options.meta}} />
         </div>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
             {{#each @options.meta as |metaField index|}}

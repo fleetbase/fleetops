@@ -105,9 +105,9 @@ export default class ManagementFuelReportsIndexEditController extends BaseContro
      */
     confirmContinueWithUnsavedChanges(fuelReport, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.controllers.management.drivers.index.edit.title'),
-            body: this.intl.t('fleet-ops.controllers.management.fuel-reports.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.controllers.management.drivers.index.edit.button'),
+            title: this.intl.t('fleet-ops.management.drivers.index.edit.title'),
+            body: this.intl.t('fleet-ops.management.fuel-reports.index.edit.body'),
+            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.edit.button'),
             confirm: () => {
                 fuelReport.rollbackAttributes();
                 return this.transitionToRoute('management.fuel-reports.index.details', fuelReport);

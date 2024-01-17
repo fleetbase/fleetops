@@ -54,11 +54,11 @@ export default class OperationsSchedulerIndexController extends BaseController {
 
                     if (order.scheduled_at) {
                         // notify order has been scheduled
-                        this.notifications.success(this.intl.t('fleet-ops.controllers.operations.scheduler.index.info-message', { orderId: order.public_id, orderAt: order.scheduledAt }));
+                        this.notifications.success(this.intl.t('fleet-ops.operations.scheduler.index.info-message', { orderId: order.public_id, orderAt: order.scheduledAt }));
                         // add event to calendar
                         event = this.calendar.addEvent(createFullCalendarEventFromOrder(order));
                     } else {
-                        this.notifications.info(this.intl.t('fleet-ops.controllers.operations.scheduler.index.info-message', { orderId: order.public_id }));
+                        this.notifications.info(this.intl.t('fleet-ops.operations.scheduler.index.info-message', { orderId: order.public_id }));
                     }
 
                     // update event props

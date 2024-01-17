@@ -305,7 +305,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
                     // transition to order view
                     return this.hostRouter.transitionTo(`${engineMountPoint}operations.orders.index.view`, order).then(() => {
-                        this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.new.success-message', { orderID: order.public_id }));
+                        this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.new.success-message', { orderID: order.public_id }));
                         this.loader.removeLoader();
                         this.resetForm();
                         later(
@@ -390,7 +390,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 };
 
                 if (!uploadQueue.length) {
-                    return this.notifications.warning(this.intl.t('fleet-ops.controllers.operations.orders.index.new.warning-message'));
+                    return this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.warning-message'));
                 }
 
                 modal.startLoading();
@@ -431,7 +431,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                     });
                 }
 
-                this.notifications.success(this.intl.t('fleet-ops.controllers.operations.orders.index.new.import-success'));
+                this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.new.import-success'));
                 this.isCsvImportedOrder = true;
                 this.previewDraftOrderRoute(this.payload, this.waypoints, this.isMultipleDropoffOrder);
                 modal.done();
@@ -557,7 +557,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 }
             })
             .catch(() => {
-                this.notifications.warning(this.intl.t('fleet-ops.controllers.operations.orders.index.new.service-warning'));
+                this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.service-warning'));
             })
             .finally(() => {
                 this.isFetchingQuotes = false;
@@ -826,7 +826,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 });
             }
         } else {
-            this.notifications.warning(this.intl.t('fleet-ops.controllers.operations.orders.index.new.no-route-warning'));
+            this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.no-route-warning'));
         }
     }
 
@@ -854,7 +854,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         const routingHost = getRoutingHost(this.payload, this.waypoints);
 
         const response = await this.fetch.routing(coordinates, { source: 'any', destination: 'any', annotations: true }, { host: routingHost }).catch(() => {
-            this.notifications.error(this.intl.t('fleet-ops.controllers.operations.orders.index.new.route-error'));
+            this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.new.route-error'));
             this.isOptimizingRoute = false;
         });
 
@@ -909,7 +909,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 maxZoom: 13,
             });
         } else {
-            this.notifications.error(this.intl.t('fleet-ops.controllers.operations.orders.index.new.route-error'));
+            this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.new.route-error'));
             this.isOptimizingRoute = false;
         }
     }
@@ -1035,7 +1035,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         let label, value;
 
         this.modalsManager.show('modals/meta-field-form', {
-            title: this.intl.t('fleet-ops.controllers.operations.orders.index.new.custom-field-title'),
+            title: this.intl.t('fleet-ops.operations.orders.index.new.custom-field-title'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             acceptButtonText: 'Done',
@@ -1048,11 +1048,11 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 const value = modal.getOption('value');
 
                 if (!label) {
-                    return this.notifications.warning(this.intl.t('fleet-ops.controllers.operations.orders.index.new.label-warning'));
+                    return this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.label-warning'));
                 }
 
                 if (!value) {
-                    return this.notifications.warning(this.intl.t('fleet-ops.controllers.operations.orders.index.new.value-warning'));
+                    return this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.value-warning'));
                 }
 
                 modal.startLoading();
@@ -1073,7 +1073,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         const { label, value } = metaField;
 
         this.modalsManager.show('modals/meta-field-form', {
-            title: this.intl.t('fleet-ops.controllers.operations.orders.index.new.edit-field-title'),
+            title: this.intl.t('fleet-ops.operations.orders.index.new.edit-field-title'),
             acceptButtonIcon: 'save',
             acceptButtonText: 'Save Changes',
             label,
@@ -1083,11 +1083,11 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 const value = modal.getOption('value');
 
                 if (!label) {
-                    return this.notifications.warning(this.intl.t('fleet-ops.controllers.operations.orders.index.new.label-warning'));
+                    return this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.label-warning'));
                 }
 
                 if (!value) {
-                    return this.notifications.warning(this.intl.t('fleet-ops.controllers.operations.orders.index.new.value-warning'));
+                    return this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.value-warning'));
                 }
 
                 modal.startLoading();
@@ -1113,7 +1113,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         }
 
         this.modalsManager.show('modals/edit-meta-form', {
-            title: this.intl.t('fleet-ops.controllers.operations.orders.index.new.edit-metadata'),
+            title: this.intl.t('fleet-ops.operations.orders.index.new.edit-metadata'),
             hideDeclineButton: true,
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
@@ -1242,7 +1242,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
     @action editEntity(entity) {
         this.modalsManager.show('modals/entity-form', {
-            title: this.intl.t('fleet-ops.controllers.operations.orders.index.new.edit-item'),
+            title: this.intl.t('fleet-ops.operations.orders.index.new.edit-item'),
             acceptButtonText: 'Save Changes',
             entity,
             uploadNewPhoto: (file) => {

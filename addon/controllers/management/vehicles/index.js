@@ -386,11 +386,11 @@ export default class ManagementVehiclesIndexController extends BaseController {
             width: '90px',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.vehicles.index.view-vehicle'),
+                    label: this.intl.t('fleet-ops.management.vehicles.index.view-vehicle'),
                     fn: this.viewVehicle,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.vehicles.index.edit-vehicle'),
+                    label: this.intl.t('fleet-ops.management.vehicles.index.edit-vehicle'),
                     fn: this.editVehicle,
                 },
                 {
@@ -401,7 +401,7 @@ export default class ManagementVehiclesIndexController extends BaseController {
                 //     fn: this.assignDriver,
                 // },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.vehicles.index.delete-vehicle'),
+                    label: this.intl.t('fleet-ops.management.vehicles.index.delete-vehicle'),
                     fn: this.deleteVehicle,
                 },
             ],
@@ -430,7 +430,7 @@ export default class ManagementVehiclesIndexController extends BaseController {
 
         this.crud.bulkDelete(selectedRows, {
             modelNamePath: `display_name`,
-            acceptButtonText: this.intl.t('fleet-ops.controllers.management.vehicles.index.delete-button'),
+            acceptButtonText: this.intl.t('fleet-ops.management.vehicles.index.delete-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },
@@ -539,7 +539,7 @@ export default class ManagementVehiclesIndexController extends BaseController {
         const { latitude, longitude } = place;
 
         this.modalsManager.show('modals/point-map', {
-            title: this.intl.t('fleet-ops.controllers.management.vehicles.index.locate-title', { placeName: place.name }),
+            title: this.intl.t('fleet-ops.management.vehicles.index.locate-title', { placeName: place.name }),
             acceptButtonText: 'Done',
             hideDeclineButton: true,
             latitude,

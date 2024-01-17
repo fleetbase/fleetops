@@ -105,9 +105,9 @@ export default class ManagementFleetsIndexEditController extends BaseController 
      */
     confirmContinueWithUnsavedChanges(fleet, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.controllers.management.drivers.index.edit.title'),
-            body: this.intl.t('fleet-ops.controllers.management.fleets.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.controllers.management.drivers.index.edit.button'),
+            title: this.intl.t('fleet-ops.management.drivers.index.edit.title'),
+            body: this.intl.t('fleet-ops.management.fleets.index.edit.body'),
+            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.edit.button'),
             confirm: () => {
                 fleet.rollbackAttributes();
                 return this.transitionToRoute('management.fleets.index.details', fleet);

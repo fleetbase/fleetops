@@ -339,18 +339,18 @@ export default class ManagementIssuesIndexController extends BaseController {
             width: '10%',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.issues.index.view'),
+                    label: this.intl.t('fleet-ops.management.issues.index.view'),
                     fn: this.viewIssue,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.issues.index.edit-issues'),
+                    label: this.intl.t('fleet-ops.management.issues.index.edit-issues'),
                     fn: this.editIssue,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.controllers.management.issues.index.delete'),
+                    label: this.intl.t('fleet-ops.management.issues.index.delete'),
                     fn: this.deleteIssue,
                 },
             ],
@@ -459,7 +459,7 @@ export default class ManagementIssuesIndexController extends BaseController {
 
         this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
-            acceptButtonText: this.intl.t('fleet-ops.controllers.management.issues.index.delete-button'),
+            acceptButtonText: this.intl.t('fleet-ops.management.issues.index.delete-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },
