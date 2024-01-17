@@ -31,16 +31,14 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         }
     }
 
-    @action async onClickVehicle(vehicle) {
-        const { onFocusVehicle } = this.args;
-
-        // transition to dashboard/map display
+    @action onClickVehicle(vehicle) {
+        // Transition to dashboard/map display
         return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } }).then((transition) => {
-            console.log(transition);
-            // focus vehicle on live map
+            // Focus vehicle on live map
             this.focusVehicleOnLiveMap(vehicle);
-            if (typeof onFocusVehicle === 'function') {
-                onFocusVehicle(vehicle);
+            // Fire callback
+            if (typeof this.args.onFocusVehicle === 'function') {
+                this.args.onFocusVehicle(vehicle);
             }
         });
     }

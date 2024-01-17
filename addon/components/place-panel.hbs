@@ -4,7 +4,7 @@
     @noBackdrop={{true}}
     @fullHeight={{true}}
     @isResizable={{or this.isResizable @isResizable}}
-    @width={{or this.width @width "600px"}}
+    @width={{or this.width @width "570px"}}
 >
     <Overlay::Header @title={{this.place.name}} @status={{this.place.public_id}} @hideStatusDot={{true}} @createdAt={{this.place.createdAt}}>
         <Button @type="default" @icon="pen" @helpText="Edit place" @onClick={{this.onEdit}} @wrapperClass="mr-2" />
