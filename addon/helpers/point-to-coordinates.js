@@ -1,8 +1,12 @@
 import { helper } from '@ember/component/helper';
-import extractCoordinates from '../utils/extract-coordinates';
+import { isArray } from '@ember/array';
 
 export default helper(function pointToCoordinates([point, format = 'array']) {
-    const [latitude, longitude] = extractCoordinates(point?.coordinates);
+    let [longitude, latitude] = [0, 0];
+
+    if (point && isArray(point.coordinates)) {
+        [longitude, latitude] = point.coordinates;
+    }
 
     if (format === 'array') {
         return [latitude, longitude];

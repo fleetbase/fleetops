@@ -82,26 +82,19 @@ class LiveController extends Controller
     }
 
     /**
-     * Get online drivers with active jobs for the current company.
+     * Get drivers for the current company.
      *
      * @return \Illuminate\Http\JsonResponse
      */
     public function drivers()
     {
-        $drivers = Driver::where(['company_uuid' => session('company'), 'online' => 1])
-            ->whereHas(
-                'currentJob',
-                function ($q) {
-                    $q->whereNotIn('status', ['canceled', 'completed']);
-                }
-            )
-            ->get();
+        $drivers = Driver::where(['company_uuid' => session('company')])->get();
 
         return DriverResource::collection($drivers);
     }
 
     /**
-     * Get online vehicles for the current company.
+     * Get vehicles for the current company.
      *
      * @return \Illuminate\Http\JsonResponse
      */

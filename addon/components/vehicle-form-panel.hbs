@@ -1,10 +1,13 @@
 <Overlay
     @onLoad={{this.setOverlayContext}}
+    @onOpen={{this.onOpen}}
+    @onClose={{this.onClose}}
+    @onToggle={{this.onToggle}}
     @position="right"
     @noBackdrop={{true}}
     @fullHeight={{true}}
     @isResizeble={{or this.isResizable @isResizable}}
-    @width={{or this.width @width "600px"}}
+    @width={{or this.width @width "570px"}}
 >
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">

@@ -20,13 +20,6 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @controller('operations.orders.index') ordersController;
 
     /**
-     * Inject the `operations.orders.index` controller
-     *
-     * @var {Controller}
-     */
-    @controller('management.places.index') placesController;
-
-    /**
      * Inject the `management.contacts.index` controller
      *
      * @var {Controller}
@@ -248,14 +241,14 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         };
 
         // re-display order routes when livemap has coordinates
-        this.universe.on('fleetops.livemap.has_coordinates', this, displayOrderRoute);
+        this.universe.on('fleet-ops.live-map.has_coordinates', this, displayOrderRoute);
 
         // when transitioning away kill event listener
         this.hostRouter.on('routeWillChange', () => {
-            const isListening = this.universe.has('fleetops.livemap.has_coordinates');
+            const isListening = this.universe.has('fleet-ops.live-map.has_coordinates');
 
             if (isListening) {
-                this.universe.off('fleetops.livemap.has_coordinates', this, displayOrderRoute);
+                this.universe.off('fleet-ops.live-map.has_coordinates', this, displayOrderRoute);
             }
         });
 
@@ -472,9 +465,12 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             isOptimizingRoute: false,
             editPlace: async (place) => {
                 await this.modalsManager.done();
-                this.placesController.editPlace(place, {
-                    onFinish: () => {
-                        this.editOrderRoute(order);
+
+                this.contextPanel.focus(place, 'editing', {
+                    args: {
+                        onClose: () => {
+                            this.editOrderRoute(order);
+                        },
                     },
                 });
             },

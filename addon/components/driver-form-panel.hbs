@@ -1,4 +1,4 @@
-<Overlay @onLoad={{this.setOverlayContext}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "600px"}}>
+<Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "570px"}}>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
@@ -65,7 +65,7 @@
                 <InputGroup @name="Name" @wrapperClass="col-span-2">
                     <Input @value={{this.driver.name}} @type="text" class="w-full form-input" placeholder="Name" />
                 </InputGroup>
-                
+
                 <InputGroup @name="Internal ID">
                     <Input @value={{this.driver.internal_id}} @type="text" class="w-full form-input" placeholder="Internal ID" />
                 </InputGroup>
@@ -109,16 +109,9 @@
                         </PowerSelect>
                     </div>
                 </InputGroup>
-              <InputGroup @name="Coordinates" @wrapperClass="col-span-2">
-                <CoordinatesInput
-                    @value={{this.driver.location}}
-                    @onChange={{this.onCoordinatesChanged}}
-                    @onGeocode={{this.onAutocomplete}}
-                    @onUpdatedFromMap={{this.onCoordinatesChanged}}
-                    @onInit={{this.setCoordinatesInput}}
-                    @renderInPlace={{false}}
-                />
-            </InputGroup>
+                <InputGroup @name="Coordinates" @wrapperClass="col-span-2">
+                    <CoordinatesInput @value={{this.driver.location}} @onChange={{this.onCoordinatesChanged}} @onGeocode={{this.onAutocomplete}} @onUpdatedFromMap={{this.onCoordinatesChanged}} @onInit={{this.setCoordinatesInput}} @renderInPlace={{false}} />
+                </InputGroup>
             </div>
         </div>
     </Overlay::Body>

@@ -17,6 +17,7 @@ use Fleetbase\Models\Invite;
 use Fleetbase\Models\User;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Notifications\UserInvited;
+use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -79,6 +80,12 @@ class DriverController extends FleetOpsController
                     // if exists in organization create driver profile for user
                     $isOrganizationMember = $existingUser->companies()->where('company_uuid', session('company'))->exists();
 
+                    // Check if driver profile also already exists
+                    $existingDriverProfile = Driver::where(['company_uuid' => session('company'), 'user_uuid' => $existingUser->uuid])->first();
+                    if ($existingDriverProfile) {
+                        return ['driver' => new $this->resource($existingDriverProfile)];
+                    }
+
                     // create driver profile for user
                     $input = collect($input)
                         ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])
@@ -89,6 +96,11 @@ class DriverController extends FleetOpsController
                     $input['company_uuid'] = session('company');
                     $input['user_uuid']    = $existingUser->uuid;
                     $input['slug']         = $existingUser->slug;
+
+                    // If no location provided set
+                    if (empty($input['location'])) {
+                        $input['location'] = new Point(0, 0);
+                    }
 
                     // create the profile
                     $driverProfile = Driver::create($input);
@@ -109,7 +121,7 @@ class DriverController extends FleetOpsController
                         $existingUser->notify(new UserInvited($invitation));
                     }
 
-                    return response()->json(['driver' => $driverProfile]);
+                    return ['driver' => new $this->resource($driverProfile)];
                 }
             }
 
@@ -138,14 +150,18 @@ class DriverController extends FleetOpsController
                         ->filter()
                         ->toArray();
 
-                    if (!isset($input['password'])) {
-                        $input['password'] = data_get($userInput, 'phone', Str::random(14));
+                    // Make sure password is set
+                    if (empty($userInput['password'])) {
+                        $userInput['password'] = Str::random(14);
                     }
 
                     $userInput['company_uuid'] = session('company');
-                    $userInput['type']         = 'driver';
 
+                    // Create user account
                     $user = User::create($userInput);
+
+                    // Set user type as driver
+                    $user->setUserType('driver');
 
                     // send invitation to user
                     $invitation = Invite::create([
@@ -163,6 +179,11 @@ class DriverController extends FleetOpsController
 
                     $input['user_uuid'] = $user->uuid;
                     $input['slug']      = $user->slug;
+
+                    // If no location provided set
+                    if (empty($input['location'])) {
+                        $input['location'] = new Point(0, 0);
+                    }
                 },
                 function ($request, &$driver) {
                     $driver->load(['user']);
