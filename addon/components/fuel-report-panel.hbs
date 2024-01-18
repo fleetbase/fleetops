@@ -4,7 +4,7 @@
     @noBackdrop={{true}}
     @fullHeight={{true}}
     @isResizable={{or this.isResizable @isResizable}}
-    @width={{or this.width @width "600px"}}
+    @width={{or this.width @width "570px"}}
 >
     <Overlay::Header @title="Fuel Report Details" @status={{this.fuelReport.public_id}} @hideStatusDot={{true}} @createdAt={{this.fuelReport.createdAt}}>
         <Button @type="default" @icon="pen" @helpText="Edit fuel report" @onClick={{this.onEdit}} @wrapperClass="mr-2" />

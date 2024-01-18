@@ -34,19 +34,29 @@ body[data-theme='dark'] .scheduler-left-sidebar {
     overflow: visible !important;
 }
 
+.next-content-panel-body > .next-content-panel-body-inner > a.next-nav-item > .next-nav-item-icon-container > svg.online-status,
+.next-content-panel-body > .next-content-panel-body-inner > a.next-nav-item > .next-nav-item-icon-container > svg.text-green-500,
 .next-fleet-summary-fleet .next-content-panel-body > .next-content-panel-body-inner > a.next-nav-item > .next-nav-item-icon-container > svg.text-green-500 {
     color: rgb(34 197 94) !important;
 }
 
+.next-content-panel-body > .next-content-panel-body-inner > a.next-nav-item > .next-nav-item-icon-container > svg.idle-status,
+.next-content-panel-body > .next-content-panel-body-inner > a.next-nav-item > .next-nav-item-icon-container > svg.text-yellow-200,
 .next-fleet-summary-fleet .next-content-panel-body > .next-content-panel-body-inner > a.next-nav-item > .next-nav-item-icon-container > svg.text-yellow-200 {
     color: rgb(254 240 138) !important;
 }
 
 .next-fleet-summary {
-    --fleet-summary-toggle-base-padding: 2rem;
-    --fleet-summary-nav-item-base-padding: 1.25rem;
+    --fleet-summary-toggle-base-padding: 1.5rem;
+    --fleet-summary-nav-item-base-padding: 1.5rem;
 }
 
+.next-sidebar-panel-container.next-driver-listing > .next-sidebar-panel > .next-content-panel > .next-sidebar-panel-toggle,
 .next-sidebar .next-sidebar-panel-container.next-fleet-summary > .next-sidebar-panel > .next-content-panel > .next-sidebar-panel-toggle {
     padding-left: 2rem;
+}
+
+.next-sidebar-panel-container.next-driver-listing > .next-sidebar-panel > .next-content-panel > .next-content-panel-body .next-nav-item,
+.next-sidebar .next-sidebar-panel-container.next-driver-listing > .next-sidebar-panel > .next-content-panel > .next-sidebar-panel-body .next-nav-item.driver-nav-item {
+    padding-left: 3.5rem;
 }
