@@ -256,7 +256,7 @@
 
                             <div class="flex-row space-x-2 pr-0.5">
                                 {{#if this.payload.pickup}}
-                                    <a href="javascript:;" {{on "click" (fn this.placesController.editPlace this.payload.pickup)}}>
+                                    <a href="javascript:;" {{on "click" (fn this.editPlace this.payload.pickup)}}>
                                         <FaIcon @icon="edit" />
                                     </a>
                                     <a href="javascript:;" {{on "click" (fn this.setPayloadPlace "pickup" null)}}>
@@ -287,7 +287,7 @@
 
                             <div class="flex-row space-x-2 pr-0.5">
                                 {{#if this.payload.dropoff}}
-                                    <a href="javascript:;" {{on "click" (fn this.placesController.editPlace this.payload.dropoff)}}>
+                                    <a href="javascript:;" {{on "click" (fn this.editPlace this.payload.dropoff)}}>
                                         <FaIcon @icon="edit" />
                                     </a>
                                     <a href="javascript:;" {{on "click" (fn this.setPayloadPlace "dropoff" null)}}>
@@ -317,7 +317,7 @@
                             <label>Return</label>
 
                             {{#if this.payload.return}}
-                                <a href="javascript:;" {{on "click" (fn this.placesController.editPlace this.payload.return)}}>Edit Address</a>
+                                <a href="javascript:;" {{on "click" (fn this.editPlace this.payload.return)}}>Edit Address</a>
                             {{/if}}
                         </div>
 
