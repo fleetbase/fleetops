@@ -1928,7 +1928,6 @@ export default class LiveMapComponent extends Component {
                     }
 
                     // from the `get-active-order-coordinates` the responded coordinates will always be [longitude, latitude]
-                    // const [latitude, longitude] = extractCoordinates(coordinates.firstObject.coordinates);
                     const validCoordinates = coordinates.filter((point) => point.cordinates[0] !== 0);
                     const [longitude, latitude] = getWithDefault(validCoordinates, '0.coordiantes', [0, 0]);
 
