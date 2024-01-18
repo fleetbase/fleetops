@@ -6,8 +6,6 @@ import { isBlank } from '@ember/utils';
 import { equal } from '@ember/object/computed';
 import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
-import extractCoordinates from '@fleetbase/ember-core/utils/extract-coordinates';
-import leafletIcon from '@fleetbase/ember-core/utils/leaflet-icon';
 
 export default class ManagementDriversIndexController extends BaseController {
     /**

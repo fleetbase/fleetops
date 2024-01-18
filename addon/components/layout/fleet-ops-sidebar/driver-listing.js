@@ -82,7 +82,7 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
 
     @action onDriverClicked(driver) {
         // Transition to dashboard/map display
-        return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } }).then((transition) => {
+        return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } }).then(() => {
             // Focus vehicle on live map
             this.focusDriverOnMap(driver);
 

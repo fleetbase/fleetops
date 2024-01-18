@@ -2,7 +2,6 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency-decorators';
 
@@ -69,7 +68,7 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
 
     @action onVehicleClicked(vehicle) {
         // Transition to dashboard/map display
-        return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } }).then((transition) => {
+        return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } }).then(() => {
             // Focus vehicle on live map
             this.focusVehicleOnMap(vehicle);
 
