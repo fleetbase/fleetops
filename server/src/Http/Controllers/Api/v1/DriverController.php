@@ -447,9 +447,9 @@ class DriverController extends Controller
         }
 
         // check if user exists
-        $user = User::where('type', 'driver')->where(function ($query) use ($identity) {
+        $user = User::whereHas('driver')->where(function ($query) use ($identity) {
             $query->where('phone', $identity);
-            $query->orWhere('phone', $identity);
+            $query->orWhere('email', $identity);
         })->first();
 
         if (!$user) {
