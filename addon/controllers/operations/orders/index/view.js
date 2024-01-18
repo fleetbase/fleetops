@@ -20,13 +20,6 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @controller('operations.orders.index') ordersController;
 
     /**
-     * Inject the `operations.orders.index` controller
-     *
-     * @var {Controller}
-     */
-    @controller('management.places.index') placesController;
-
-    /**
      * Inject the `management.contacts.index` controller
      *
      * @var {Controller}
@@ -472,9 +465,12 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             isOptimizingRoute: false,
             editPlace: async (place) => {
                 await this.modalsManager.done();
-                this.placesController.editPlace(place, {
-                    onFinish: () => {
-                        this.editOrderRoute(order);
+
+                this.contextPanel.focus(place, 'editing', {
+                    args: {
+                        onClose: () => {
+                            this.editOrderRoute(order);
+                        },
                     },
                 });
             },
