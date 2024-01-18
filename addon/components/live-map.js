@@ -1065,7 +1065,16 @@ export default class LiveMapComponent extends Component {
      */
     @action onDriverClicked(driver) {
         this.contextPanel.clear();
-        this.contextPanel.focus(driver);
+        this.contextPanel.focus(driver, 'viewing', {
+            args: {
+                width: '450px',
+                onOpen: () => {
+                    this.leafletMap.once('moveend', () => {
+                        this.leafletMap.panBy([200, 0]);
+                    });
+                },
+            },
+        });
     }
 
     /**
@@ -1113,7 +1122,16 @@ export default class LiveMapComponent extends Component {
      */
     @action onVehicleClicked(vehicle) {
         this.contextPanel.clear();
-        this.contextPanel.focus(vehicle);
+        this.contextPanel.focus(vehicle, 'viewing', {
+            args: {
+                width: '450px',
+                onOpen: () => {
+                    this.leafletMap.once('moveend', () => {
+                        this.leafletMap.panBy([200, 0]);
+                    });
+                },
+            },
+        });
     }
 
     /**

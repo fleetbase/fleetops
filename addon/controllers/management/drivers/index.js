@@ -18,18 +18,18 @@ export default class ManagementDriversIndexController extends BaseController {
     @service notifications;
 
     /**
-     * Inject the `modals-manager` service
-     *
-     * @var {Service}
-     */
-    @service modalsManager;
-
-    /**
      * Inject the `crud` service
      *
      * @var {Service}
      */
     @service crud;
+
+    /**
+     * Inject the `driverActions` service
+     *
+     * @var {Service}
+     */
+    @service driverActions;
 
     /**
      * Inject the `store` service
@@ -412,7 +412,7 @@ export default class ManagementDriversIndexController extends BaseController {
                 },
                 {
                     label: 'Locate driver on map...',
-                    fn: this.viewOnMap,
+                    fn: this.locateDriver,
                 },
                 {
                     separator: true,
@@ -539,7 +539,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @void
      */
     @action deleteDriver(driver, options = {}) {
-        this.crud.delete(driver, {
+        this.driverActions.delete(driver, {
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },
@@ -555,44 +555,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @void
      */
     @action assignOrder(driver, options = {}) {
-        this.modalsManager.show('modals/driver-assign-order', {
-            title: `Assign Order to this Driver`,
-            acceptButtonText: 'Assign Order',
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            acceptButtonDisabled: true,
-            hideDeclineButton: true,
-            selectedOrder: null,
-            selectOrder: (order) => {
-                this.modalsManager.setOption('selectedOrder', order);
-                this.modalsManager.setOption('acceptButtonDisabled', false);
-            },
-            driver,
-            confirm: (modal) => {
-                const selectedOrder = modal.getOption('selectedOrder');
-
-                if (!selectedOrder) {
-                    this.notifications.warning('No order selected!');
-                    return;
-                }
-
-                modal.startLoading();
-
-                driver.set('current_job_uuid', selectedOrder.id);
-
-                return driver
-                    .save()
-                    .then(() => {
-                        this.notifications.success(`${driver.name} assigned to order.`);
-                    })
-                    .catch((error) => {
-                        driver.rollbackAttributes();
-                        modal.stopLoading();
-                        this.notifications.serverError(error);
-                    });
-            },
-            ...options,
-        });
+        this.driverActions.assignOrder(driver, options);
     }
 
     /**
@@ -603,29 +566,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @void
      */
     @action assignVehicle(driver, options = {}) {
-        this.modalsManager.show('modals/driver-assign-vehicle', {
-            title: `Assign Vehicle to this Driver`,
-            acceptButtonText: 'Confirm & Create',
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            hideDeclineButton: true,
-            driver,
-            confirm: (modal) => {
-                modal.startLoading();
-
-                return driver
-                    .save()
-                    .then((driver) => {
-                        this.notifications.success(`${driver.name} assigned to vehicle.`);
-                    })
-                    .catch((error) => {
-                        driver.rollbackAttributes();
-                        modal.stopLoading();
-                        this.notifications.serverError(error);
-                    });
-            },
-            ...options,
-        });
+        this.driverActions.assignVehicle(driver, options);
     }
 
     /**
@@ -634,26 +575,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @param {DriverModel} driver
      * @void
      */
-    @action viewOnMap(driver, options = {}) {
-        const { location } = driver;
-        const [latitude, longitude] = extractCoordinates(location.coordinates);
-
-        this.modalsManager.show('modals/point-map', {
-            title: `Location of ${driver.name}`,
-            acceptButtonText: 'Done',
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            modalClass: 'modal-lg',
-            hideDeclineButton: true,
-            latitude,
-            longitude,
-            location,
-            popupText: `${driver.name} (${driver.public_id})`,
-            icon: leafletIcon({
-                iconUrl: driver?.vehicle_avatar,
-                iconSize: [40, 40],
-            }),
-            ...options,
-        });
+    @action locateDriver(driver, options = {}) {
+        this.driverActions.locate(driver, options);
     }
 }

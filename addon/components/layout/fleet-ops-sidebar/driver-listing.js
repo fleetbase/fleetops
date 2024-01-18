@@ -2,55 +2,68 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency-decorators';
 
-export default class LayoutFleetOpsSidebarFleetListingComponent extends Component {
+export default class LayoutFleetOpsSidebarDriverListingComponent extends Component {
     @service store;
     @service universe;
     @service contextPanel;
-    @service vehicleActions;
+    @service driverActions;
     @service hostRouter;
-    @tracked fleets = [];
+    @tracked drivers = [];
 
     constructor() {
         super(...arguments);
-        this.fetchFleets.perform();
-        this.listenForChanges();
+        this.fetchDrivers.perform();
     }
 
     dropdownButtonActions = [
         {
-            label: 'View vehicle details...',
-            onClick: (vehicle) => {
-                this.contextPanel.focus(vehicle);
+            label: 'View driver details...',
+            onClick: (driver) => {
+                this.contextPanel.focus(driver);
             },
         },
         {
-            label: 'Edit vehicle...',
-            onClick: (vehicle) => {
-                this.contextPanel.focus(vehicle, 'editing');
-            },
-        },
-        {
-            label: 'Locate vehicle...',
-            onClick: (vehicle) => {
-                // If currently on the operations dashboard focus driver on the map
-                if (typeof this.hostRouter.currentRouteName === 'string' && this.hostRouter.currentRouteName.startsWith('console.fleet-ops.operations.orders')) {
-                    return this.onVehicleClicked(vehicle);
-                }
-
-                this.vehicleActions.locate(vehicle);
+            label: 'Edit driver details...',
+            onClick: (driver) => {
+                this.contextPanel.focus(driver, 'editing');
             },
         },
         {
             separator: true,
         },
         {
-            label: 'Delete vehicle...',
-            onClick: (vehicle) => {
-                this.vehicleActions.delete(vehicle);
+            label: 'Assign order to driver...',
+            onClick: (driver) => {
+                this.driverActions.assignOrder(driver);
+            },
+        },
+        {
+            label: 'Assign vehicle to driver...',
+            onClick: (driver) => {
+                this.driverActions.assignVehicle(driver);
+            },
+        },
+        {
+            label: 'Locate driver on map...',
+            onClick: (driver) => {
+                // If currently on the operations dashboard focus driver on the map
+                if (typeof this.hostRouter.currentRouteName === 'string' && this.hostRouter.currentRouteName.startsWith('console.fleet-ops.operations.orders')) {
+                    return this.onDriverClicked(driver);
+                }
+
+                this.driverActions.locate(driver);
+            },
+        },
+        {
+            separator: true,
+        },
+        {
+            label: 'Delete driver...',
+            onClick: (driver) => {
+                this.driverActions.delete(driver);
             },
         },
     ];
@@ -67,20 +80,20 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         }
     }
 
-    @action onVehicleClicked(vehicle) {
+    @action onDriverClicked(driver) {
         // Transition to dashboard/map display
         return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } }).then((transition) => {
             // Focus vehicle on live map
-            this.focusVehicleOnMap(vehicle);
+            this.focusDriverOnMap(driver);
 
             // Fire callback
-            if (typeof this.args.onFocusVehicle === 'function') {
-                this.args.onFocusVehicle(vehicle);
+            if (typeof this.args.onFocusDriver === 'function') {
+                this.args.onFocusDriver(driver);
             }
         });
     }
 
-    @action focusVehicleOnMap(vehicle) {
+    focusDriverOnMap(driver) {
         const liveMap = this.universe.get('component:fleet-ops:live-map');
 
         if (liveMap) {
@@ -89,33 +102,21 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
             }
 
             liveMap.showAll();
-            liveMap.focusLayerByRecord(vehicle, 16, {
+            liveMap.focusLayerByRecord(driver, 16, {
                 onAfterFocusWithRecord: function () {
                     later(
                         this,
                         () => {
-                            liveMap.onVehicleClicked(vehicle);
+                            liveMap.onDriverClicked(driver);
                         },
-                        600 * 2
+                        1200
                     );
                 },
             });
         }
     }
 
-    listenForChanges() {
-        // when a vehicle is assigned/ or unassigned reload
-        this.universe.on('fleet.vehicle.assigned', () => {
-            this.loadFleetsWithVehicles();
-        });
-
-        // when a vehicle is assigned/ or unassigned reload
-        this.universe.on('fleet.vehicle.unassigned', () => {
-            this.loadFleetsWithVehicles();
-        });
-    }
-
-    @task *fetchFleets() {
-        this.fleets = yield this.store.query('fleet', { with: ['vehicles', 'subfleets'], parents_only: true });
+    @task *fetchDrivers() {
+        this.drivers = yield this.store.query('driver', { limit: 20 });
     }
 }
