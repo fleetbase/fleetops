@@ -13,7 +13,6 @@ import findClosestWaypoint from '@fleetbase/ember-core/utils/find-closest-waypoi
 import isNotEmpty from '@fleetbase/ember-core/utils/is-not-empty';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import groupBy from '@fleetbase/ember-core/utils/macros/group-by';
-import extractCoordinates from '@fleetbase/ember-core/utils/extract-coordinates';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 L.Bounds.prototype.intersects = function (bounds) {
@@ -213,7 +212,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         return (
             this.routePreviewArray
                 // .filter((place) => place.get('hasValidCoordinates'))
-                .map((place) => place.get('extractedLatLng'))
+                .map((place) => place.get('latlng'))
         );
     }
 
@@ -749,7 +748,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     }
 
     @action createCoordinatesFromRoutePlaceArray(array) {
-        return array.filter((place) => place.get('hasValidCoordinates')).map((place) => place.get('extractedLatLng'));
+        return array.filter((place) => place.get('hasValidCoordinates')).map((place) => place.get('latlng'));
     }
 
     @action previewDraftOrderRoute(payload, waypoints, isMultipleDropoffOrder = false) {
@@ -875,7 +874,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                     const waypointModel = findClosestWaypoint(optimizedWaypointLatitude, optimizedWaypointLongitude, this.waypoints);
                     // eslint-disable-next-line no-undef
                     // const optimizedWaypointMarker = new L.Marker(optimizedWaypoint.location.reverse()).addTo(leafletMap);
-                    const optimizedWaypointMarker = new L.Marker(extractCoordinates(optimizedWaypoint.location)).addTo(leafletMap);
+                    const [longitude, latitude] = getWithDefault(optimizedWaypoint.location, 'coordiantes', [0, 0]);
+                    const optimizedWaypointMarker = new L.Marker([latitude, longitude]).addTo(leafletMap);
 
                     sortedWaypoints.pushObject(waypointModel);
                     optimizedRouteMarkers.pushObject(optimizedWaypointMarker);

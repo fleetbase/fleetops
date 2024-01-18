@@ -1,3 +1,5 @@
+import { isBlank } from '@ember/utils';
+
 export default function flyToLeafletLayer(map, layer, zoom, options = {}) {
     if (!map || !layer) {
         return;
@@ -16,6 +18,11 @@ export default function flyToLeafletLayer(map, layer, zoom, options = {}) {
         } else if (layer.getBounds) {
             targetLatLng = layer.getBounds().getCenter();
         }
+    }
+
+    // set `flyTo` duration
+    if (isBlank(options.duration)) {
+        options.duration = 5.5;
     }
 
     // Check if we have a valid LatLng
