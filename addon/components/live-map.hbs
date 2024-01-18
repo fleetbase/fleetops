@@ -1,11 +1,8 @@
 <div class="live-map-component {{@wrapperClass}}" {{did-insert this.setupComponent}}>
     <LeafletMap id={{this.mapId}} class={{@mapClass}} @lat={{this.latitude}} @lng={{this.longitude}} @zoom={{this.zoom}} @zoomControl={{@zoomControl}} @contextmenu={{true}} @contextmenuWidth={{140}} @contextmenuItems={{this.contextMenuItems}} @onLoad={{this.setupMap}} {{will-destroy this.closeChannels}} ...attributes as |layers|>
         <layers.tile @url={{this.tileSourceUrl}} />
-        {{log "visibilityControls" this.visibilityControls}}
-        {{log "this.drivers" this.drivers}}
         {{#if this.visibilityControls.drivers}}
             {{#each this.drivers as |driver|}}
-                {{log "adding driver to live map" driver}}
                 <layers.drift-marker @id={{driver.id}} @rotationAngle={{driver.heading}} @duration={{300}} @icon={{icon iconUrl=driver.vehicle_avatar iconSize=(array 24 24)}} @location={{point-to-coordinates driver.location}} @publicId={{driver.public_id}} @onAdd={{fn this.triggerAction "onDriverAdded" driver}} @onClick={{fn this.triggerAction "onDriverClicked" driver}} as |marker|>
                     <marker.popup @maxWidth="500" @minWidth="225">
                         <DriverCard @driver={{driver}} @showCoordinates={{true}} @textClass="text-gray-900 dark:text-gray-100" />
