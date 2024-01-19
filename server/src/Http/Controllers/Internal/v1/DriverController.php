@@ -158,7 +158,7 @@ class DriverController extends FleetOpsController
                     }
 
                     // Get current session company
-                    $company = Auth::getCompany();
+                    $company                   = Auth::getCompany();
                     $userInput['company_uuid'] = $company ? $company->uuid : session('company');
 
                     // Create user account
