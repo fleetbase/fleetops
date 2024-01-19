@@ -42,7 +42,7 @@ class Driver extends FleetbaseResource
             'jobs'                          => $this->whenLoaded('jobs', CurrentJob::collection($this->jobs()->without(['driverAssigned'])->get())),
             'vendor'                        => $this->whenLoaded('vendor', new Vendor($this->vendor)),
             'fleets'                        => $this->whenLoaded('fleets', Fleet::collection($this->fleets()->without('drivers')->get())),
-            'location'                      => data_get($this, 'location', new Point(0, 0)),
+            'location'                      => $this->wasRecentlyCreated ? new Point(0, 0) : data_get($this, 'location', new Point(0, 0)),
             'heading'                       => (int) data_get($this, 'heading', 0),
             'altitude'                      => (int) data_get($this, 'altitude', 0),
             'speed'                         => (int) data_get($this, 'speed', 0),

@@ -360,32 +360,31 @@ class DriverController extends Controller
     {
         $identity = $request->input('identity');
         $password = $request->input('password');
-        $attrs    = $request->input(['name', 'phone', 'email']);
+        // $attrs    = $request->input(['name', 'phone', 'email']);
 
-        $user = User::where('email', $identity)->orWhere('phone', static::phone($identity))->first();
+        // Get driver attempting to authenticate via phone
+        $user = User::where(
+            function ($query) use ($identity) {
+                $query->where('phone', static::phone($identity));
+                $query->owWhere('email', $identity);
+            }
+        )->whereHas('driver')->first();
 
+        // Check password to authenticate driver
         if (!Hash::check($password, $user->password)) {
             return response()->apiError('Authentication failed using password provided.', 401);
         }
 
-        // Get the company session for the user
-        $company = Flow::getCompanySessionForUser($user);
+        // Get the user's company for this driver profile
+        $company = $this->_getDriverCompanyFromUser($user);
 
         // Get driver record
-        $driver = Driver::firstOrCreate(
+        $driver = Driver::where(
             [
                 'user_uuid'    => $user->uuid,
                 'company_uuid' => $company->uuid,
-            ],
-            [
-                'user_uuid'    => $user->uuid,
-                'company_uuid' => $company->uuid,
-                'name'         => data_get($attrs, 'name', $user->name),
-                'phone'        => data_get($attrs, 'phone', $user->phone),
-                'email'        => data_get($attrs, 'email', $user->email),
-                'location'     => new Point(0, 0),
             ]
-        );
+        )->first();
 
         // generate auth token
         try {
@@ -409,19 +408,18 @@ class DriverController extends Controller
         $phone = static::phone();
 
         // check if user exists
-        $user = User::where('phone', $phone)->whereNull('deleted_at')->withoutGlobalScopes()->first();
-
+        $user = User::where('phone', $phone)->whereHas('driver')->whereNull('deleted_at')->withoutGlobalScopes()->first();
         if (!$user) {
             return response()->apiError('No driver with this phone # found.');
         }
 
-        // get the current company session
-        $company = Flow::getCompanySessionForUser($user);
+        // Get the user's company for this driver profile
+        $company = $this->_getDriverCompanyFromUser($user);
 
         // generate verification token
         try {
             VerificationCode::generateSmsVerificationFor($user, 'driver_login', function ($verification) use ($company) {
-                return "Your {$company->name} verification code is {$verification->code}";
+                return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
             });
         } catch (\Throwable $e) {
             return response()->apiError($e->getMessage());
@@ -458,29 +456,20 @@ class DriverController extends Controller
 
         // find and verify code
         $verificationCode = VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
-
         if (!$verificationCode && $code !== config('fleetops.navigator.bypass_verification_code')) {
             return response()->apiError('Invalid verification code!');
         }
 
-        // get the current company session
-        $company = Flow::getCompanySessionForUser($user);
+        // Get the user's company for this driver profile
+        $company = $this->_getDriverCompanyFromUser($user);
 
         // get driver record
-        $driver = Driver::firstOrCreate(
+        $driver = Driver::where(
             [
                 'user_uuid'    => $user->uuid,
                 'company_uuid' => $company->uuid,
-            ],
-            [
-                'user_uuid'    => $user->uuid,
-                'company_uuid' => $company->uuid,
-                'name'         => data_get($attrs, 'name', $user->name),
-                'phone'        => data_get($attrs, 'phone', $user->phone),
-                'email'        => data_get($attrs, 'email', $user->email),
-                'location'     => new Point(0, 0),
             ]
-        );
+        )->first();
 
         // generate auth token
         try {
@@ -706,5 +695,25 @@ class DriverController extends Controller
         }
 
         return response()->json($route);
+    }
+
+    private function _getDriverCompanyFromUser(User $user): ?Company
+    {
+        // company defaults to null
+        $company = null;
+
+        // Load the driver profile to get the company
+        $driverProfile = Driver::where('user_uuid', $user->uuid)->first();
+        if ($driverProfile) {
+            // get company from driver profile
+            $company = Company::where('uuid', $driverProfile->company_uuid)->first();
+        }
+
+        // If unable to find company from driver profile, fallback to session flow
+        if (!$company) {
+            $company = Flow::getCompanySessionForUser($user);
+        }
+
+        return $company;
     }
 }
