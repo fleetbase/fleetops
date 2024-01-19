@@ -1134,7 +1134,7 @@ fleet-ops:
           input-order-info-text: Input order route to view service quotes.
           notes-title: Notes
           notes-placeholder: Enter order notes here....
-          uccess-message: New Order {orderId} Created
+          success-message: New Order {orderId} Created
           warning-message: No files in queue to upload!
           import-success: Import completed.
           service-warning: Failed to fetch service quotes for this order.
