@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\Models\Company;
+use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\Extension;
 use Fleetbase\Models\ExtensionInstall;
 use Fleetbase\Models\User;
@@ -550,9 +551,25 @@ class Flow
         return Company::currentSession();
     }
 
-    public static function getCompanySessionForUser(User $user)
+    public static function getCompanySessionForUser(User $user): ?Company
     {
-        return Company::where('uuid', $user->company_uuid)->first();
+        if (Str::isUuid($user->company_uuid)) {
+            $company = Company::where('uuid', $user->company_uuid)->first();
+            if ($company) {
+                return $company;
+            }
+        }
+
+        // fallback to get user's first company
+        $userCompany = CompanyUser::where('user_uuid', $user->uuid)->first();
+        if ($userCompany) {
+            $company = Company::where('uuid', $userCompany->company_uuid)->first();
+            if ($company) {
+                return $company;
+            }
+        }
+
+        return null;
     }
 
     public static function getDefaultOrderFlow()

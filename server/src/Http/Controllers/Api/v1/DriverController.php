@@ -409,13 +409,21 @@ class DriverController extends Controller
 
         // check if user exists
         $user = User::where('phone', $phone)->whereHas('driver')->whereNull('deleted_at')->withoutGlobalScopes()->first();
-
         if (!$user) {
             return response()->apiError('No driver with this phone # found.');
         }
 
-        // get the current company session
-        $company = Flow::getCompanySessionForUser($user);
+        // Load the driver profile to get the company
+        $driverProfile = Driver::where('user_uuid', $user->uuid)->first();
+        if ($driverProfile) {
+            // get company from driver profile
+            $company = Company::where('uuid', $driverProfile->company_uuid)->first();
+        }
+
+        // If unable to find company from driver profile, fallback to session flow
+        if (!$company) {
+            $company = Flow::getCompanySessionForUser($user);
+        }
 
         // generate verification token
         try {
