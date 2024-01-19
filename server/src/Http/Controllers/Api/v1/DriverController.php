@@ -363,7 +363,14 @@ class DriverController extends Controller
         // $attrs    = $request->input(['name', 'phone', 'email']);
 
         // Get driver attempting to authenticate via phone
-        $user = User::where('phone', static::phone($identity))->whereHas('driver')->first();
+        $user = User::where(
+            function ($query) use ($identity) {
+                $query->where('phone', static::phone($identity));
+                $query->owWhere('email', $identity);
+            }
+        )->whereHas('driver')->first();
+
+        // Check password to authenticate driver
         if (!Hash::check($password, $user->password)) {
             return response()->apiError('Authentication failed using password provided.', 401);
         }
@@ -401,7 +408,7 @@ class DriverController extends Controller
         $phone = static::phone();
 
         // check if user exists
-        $user = User::where('phone', $phone)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+        $user = User::where('phone', $phone)->whereHas('driver')->whereNull('deleted_at')->withoutGlobalScopes()->first();
 
         if (!$user) {
             return response()->apiError('No driver with this phone # found.');
