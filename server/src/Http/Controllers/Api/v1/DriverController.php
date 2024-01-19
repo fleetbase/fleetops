@@ -360,10 +360,10 @@ class DriverController extends Controller
     {
         $identity = $request->input('identity');
         $password = $request->input('password');
-        $attrs    = $request->input(['name', 'phone', 'email']);
+        // $attrs    = $request->input(['name', 'phone', 'email']);
 
-        $user = User::where('email', $identity)->orWhere('phone', static::phone($identity))->first();
-
+        // Get driver attempting to authenticate via phone
+        $user = User::where('phone', static::phone($identity))->whereHas('driver')->first();
         if (!Hash::check($password, $user->password)) {
             return response()->apiError('Authentication failed using password provided.', 401);
         }
@@ -372,20 +372,12 @@ class DriverController extends Controller
         $company = Flow::getCompanySessionForUser($user);
 
         // Get driver record
-        $driver = Driver::firstOrCreate(
+        $driver = Driver::where(
             [
                 'user_uuid'    => $user->uuid,
                 'company_uuid' => $company->uuid,
-            ],
-            [
-                'user_uuid'    => $user->uuid,
-                'company_uuid' => $company->uuid,
-                'name'         => data_get($attrs, 'name', $user->name),
-                'phone'        => data_get($attrs, 'phone', $user->phone),
-                'email'        => data_get($attrs, 'email', $user->email),
-                'location'     => new Point(0, 0),
             ]
-        );
+        )->first();
 
         // generate auth token
         try {
