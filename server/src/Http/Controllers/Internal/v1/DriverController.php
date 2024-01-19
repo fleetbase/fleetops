@@ -13,10 +13,12 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
+use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\Invite;
 use Fleetbase\Models\User;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Notifications\UserInvited;
+use Fleetbase\Support\Auth;
 use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -155,10 +157,24 @@ class DriverController extends FleetOpsController
                         $userInput['password'] = Str::random(14);
                     }
 
-                    $userInput['company_uuid'] = session('company');
+                    // Get current session company
+                    $company = Auth::getCompany();
+                    $userInput['company_uuid'] = $company ? $company->uuid : session('company');
 
                     // Create user account
                     $user = User::create($userInput);
+
+                    // Assign user to company
+                    if ($company) {
+                        $user->assignCompany($company);
+
+                        // create company user
+                        CompanyUser::create([
+                            'user_uuid'    => $user->uuid,
+                            'company_uuid' => $company->uuid,
+                            'status'       => 'active',
+                        ]);
+                    }
 
                     // Set user type as driver
                     $user->setUserType('driver');
