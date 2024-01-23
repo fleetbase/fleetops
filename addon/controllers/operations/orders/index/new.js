@@ -123,6 +123,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @tracked meta = [];
     @tracked entities = [];
     @tracked waypoints = [];
+    @tracked payloadCoordinates = [];
     @tracked types = [];
     @tracked serviceRates = [];
     @tracked selectedServiceRate;
@@ -191,8 +192,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         return isOrderTypeSet && isPickupSet && isDropoffSet;
     }
 
-    @computed('payload.{dropoff,pickup,waypoints}', 'waypoints.[]')
-    get payloadCoordinates() {
+    updatePayloadCoordinates() {
         let waypoints = [];
         let coordinates = [];
 
@@ -207,8 +207,29 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             }
         });
 
-        return coordinates;
+        this.payloadCoordinates = coordinates;
     }
+
+    // @computed('payload.{dropoff,pickup,waypoints}', 'waypoints.[]')
+    // get payloadCoordinates() {
+    //     let waypoints = [];
+    //     let coordinates = [];
+
+    //     console.log('[this.waypoints]', this.waypoints);
+
+    //     waypoints.pushObjects([this.payload.pickup, ...this.waypoints.map((waypoint) => waypoint.place), this.payload.dropoff]);
+    //     waypoints.forEach((place) => {
+    //         if (place && place.get('longitude') && place.get('latitude')) {
+    //             if (place.hasInvalidCoordinates) {
+    //                 return;
+    //             }
+
+    //             coordinates.pushObject([place.get('longitude'), place.get('latitude')]);
+    //         }
+    //     });
+
+    //     return coordinates;
+    // }
 
     @computed('payloadCoordinates.length', 'waypoints.[]') get isServicable() {
         return this.payloadCoordinates.length >= 2;
@@ -304,7 +325,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
                     // transition to order view
                     return this.hostRouter.transitionTo(`${engineMountPoint}operations.orders.index.view`, order).then(() => {
-                        this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.new.success-message', { orderID: order.public_id }));
+                        this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.new.success-message', { orderId: order.public_id }));
                         this.loader.removeLoader();
                         this.resetForm();
                         later(
@@ -506,8 +527,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
         let payload = this.payload.serialize();
         let route = this.getRoute();
-        let distance = get(route, 'payload.summary.totalDistance');
-        let time = get(route, 'payload.summary.totalTime');
+        let distance = get(route, 'details.summary.totalDistance');
+        let time = get(route, 'details.summary.totalTime');
         let service_type = this.order.type;
         let scheduled_at = this.order.scheduled_at;
         let facilitator = this.order.facilitator?.get('public_id');
@@ -549,6 +570,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 is_route_optimized,
             })
             .then((serviceQuotes) => {
+                console.log('[serviceQuotes]', serviceQuotes);
                 set(this, 'serviceQuotes', isArray(serviceQuotes) ? serviceQuotes : []);
 
                 if (this.serviceQuotes.length && this.isUsingIntegratedVendor) {
@@ -943,9 +965,33 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @action toggleMultiDropOrder(isMultipleDropoffOrder) {
         this.isMultipleDropoffOrder = isMultipleDropoffOrder;
 
+        const { pickup, dropoff } = this.payload;
+
         if (isMultipleDropoffOrder) {
-            this.addWaypoint();
+            if (pickup) {
+                this.addWaypoint({ place: pickup });
+
+                if (dropoff) {
+                    this.addWaypoint({ place: dropoff });
+                }
+
+                // clear pickup and dropoff
+                this.payload.setProperties({ pickup: null, dropoff: null });
+            } else {
+                this.addWaypoint();
+            }
         } else {
+            const pickup = get(this.waypoints, '0.place');
+            const dropoff = get(this.waypoints, '1.place');
+
+            if (pickup) {
+                this.setPayloadPlace('pickup', pickup);
+            }
+
+            if (dropoff) {
+                this.setPayloadPlace('dropoff', dropoff);
+            }
+
             this.clearWaypoints();
         }
     }
@@ -1153,6 +1199,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         if (this.isUsingIntegratedVendor) {
             this.getQuotes();
         }
+
+        this.updatePayloadCoordinates();
     }
 
     @action sortWaypoints({ sourceList, sourceIndex, targetList, targetIndex }) {
@@ -1170,10 +1218,10 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         }
     }
 
-    @action addWaypoint() {
-        const waypoint = this.store.createRecord('waypoint');
-
+    @action addWaypoint(properties = {}) {
+        const waypoint = this.store.createRecord('waypoint', properties);
         this.waypoints.pushObject(waypoint);
+        this.updatePayloadCoordinates();
     }
 
     @action setWaypointPlace(index, place) {
@@ -1190,6 +1238,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         if (this.isUsingIntegratedVendor) {
             this.getQuotes();
         }
+
+        this.updatePayloadCoordinates();
     }
 
     @action removeWaypoint(waypoint) {
@@ -1204,6 +1254,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         } else {
             this.previewDraftOrderRoute(this.payload, this.waypoints, this.isMultipleDropoffOrder);
         }
+
+        this.updatePayloadCoordinates();
     }
 
     @action clearWaypoints() {

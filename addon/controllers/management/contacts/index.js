@@ -226,7 +226,7 @@ export default class ManagementContactsIndexController extends BaseController {
             filterOptions: ['contact', 'customer'],
         },
         {
-            label: this.intl.t('fleet-ops.management.contact.index.created'),
+            label: this.intl.t('fleet-ops.management.contacts.index.created'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
             width: '130px',
@@ -236,7 +236,7 @@ export default class ManagementContactsIndexController extends BaseController {
             filterComponent: 'filter/date',
         },
         {
-            label: this.intl.t('fleet-ops.management.contact.index.updated'),
+            label: this.intl.t('fleet-ops.management.contacts.index.updated'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
             width: '130px',
@@ -258,18 +258,18 @@ export default class ManagementContactsIndexController extends BaseController {
             width: '10%',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.management.contact.index.view-contact'),
+                    label: this.intl.t('fleet-ops.management.contacts.index.view-contact'),
                     fn: this.viewContact,
                 },
                 {
-                    label: this.intl.t('fleet-ops.management.contact.index.edit-contact'),
+                    label: this.intl.t('fleet-ops.management.contacts.index.edit-contact'),
                     fn: this.editContact,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.management.contact.index.delete-contact'),
+                    label: this.intl.t('fleet-ops.management.contacts.index.delete-contact'),
                     fn: this.deleteContact,
                 },
             ],
@@ -377,7 +377,7 @@ export default class ManagementContactsIndexController extends BaseController {
 
         this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
-            acceptButtonText: this.intl.t('fleet-ops.management.contact.index.delete-button'),
+            acceptButtonText: this.intl.t('fleet-ops.management.contacts.index.delete-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },

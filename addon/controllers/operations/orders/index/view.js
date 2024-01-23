@@ -6,6 +6,7 @@ import { action, computed } from '@ember/object';
 import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { not, notEmpty, alias } from '@ember/object/computed';
+import { task } from 'ember-concurrency-decorators';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import groupBy from '@fleetbase/ember-core/utils/macros/group-by';
 import findClosestWaypoint from '@fleetbase/ember-core/utils/find-closest-waypoint';
@@ -41,7 +42,14 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @controller('management.drivers.index') driversController;
 
     /**
-     * Inject the `modals-manager` service
+     * Inject the `store` service
+     *
+     * @var {Service}
+     */
+    @service store;
+
+    /**
+     * Inject the `modalsManager` service
      *
      * @var {Service}
      */
@@ -149,7 +157,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
 
         // create groups
         this.model.payload.waypoints.forEach((waypoint) => {
-            const destinationId = waypoint.id || null;
+            const destinationId = waypoint.id;
 
             if (destinationId) {
                 const entities = this.model.payload.entities.filter((entity) => entity.destination_uuid === destinationId);
@@ -169,6 +177,15 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         });
 
         return groups;
+    }
+
+    @task *loadOrderRelations(order) {
+        yield order.loadPayload();
+        yield order.loadDriver();
+        yield order.loadTrackingNumber();
+        yield order.loadCustomer();
+        yield order.loadTrackingActivity();
+        yield order.loadOrderConfig();
     }
 
     @action resetView() {
@@ -701,7 +718,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         this.modalsManager.show(`modals/order-assign-driver`, {
             title: order.driver_uuid
                 ? this.intl.t('fleet-ops.operations.orders.index.view.change-order')
-                : this.intl.t('fleet-ops.operations.orders.index.view.assing-order'),
+                : this.intl.t('fleet-ops.operations.orders.index.view.assign-order'),
             acceptButtonText: 'Save Changes',
             order,
             confirm: (modal) => {

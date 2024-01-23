@@ -104,7 +104,7 @@
 
                 <InputGroup @name={{t "fleet-ops.common.status"}}>
                     <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                        <PowerSelect @options={{this.driverStatusOptions}} @selected={{this.driver.status}} @onChange={{fn (mut this.driver.status)}} @placeholder={{t "fleet-ops.common.driver-status"}} @triggerClass="form-select form-input" as |status|>
+                        <PowerSelect @options={{this.driverStatusOptions}} @selected={{this.driver.status}} @onChange={{fn (mut this.driver.status)}} @placeholder={{t "fleet-ops.common.status"}} @triggerClass="form-select form-input" as |status|>
                             {{smart-humanize status}}
                         </PowerSelect>
                     </div>

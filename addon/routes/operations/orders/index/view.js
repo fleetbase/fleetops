@@ -25,9 +25,7 @@ export default class OperationsOrdersIndexViewRoute extends Route {
         return this.transitionTo('operations.orders.index');
     }
 
-    model(order) {
-        const { public_id } = order;
-
+    model({ public_id }) {
         return this.store.queryRecord('order', {
             public_id,
             single: true,
@@ -80,16 +78,6 @@ export default class OperationsOrdersIndexViewRoute extends Route {
 
     async setupController(controller, model) {
         super.setupController(controller, model);
-
-        controller.isLoadingAdditionalData = true;
-
-        await model.loadPayload();
-        await model.loadDriver();
-        await model.loadTrackingNumber();
-        await model.loadCustomer();
-        await model.loadTrackingActivity();
-        await model.loadOrderConfig();
-
-        controller.isLoadingAdditionalData = false;
+        controller.loadOrderRelations.perform(model);
     }
 }

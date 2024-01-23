@@ -89,6 +89,8 @@ fleet-ops:
     width: Width
     year: Year
     zone: Zone
+    total: Total
+    back: Back
 
   component:
     admin:
@@ -188,7 +190,7 @@ fleet-ops:
         scope: Scope
     modals:
       assign-driver:
-        select-driver: Sselect Driver
+        select-driver: Select Driver
         select-assign: Select Driver to Assign
       clone-config-form:
         name: Config Name
@@ -242,6 +244,7 @@ fleet-ops:
         zone-text: Select zone to assign fleet to
         task: Task/ Mission
         task-text: Give a description of this fleet's primary task or mission if applicable.
+        select-task: Select task
         status-text: Select the status of the fleet.
         select-status: Select status
       fuel-report-details:
@@ -272,9 +275,11 @@ fleet-ops:
         reported: Reported By
         select-reporter: Select Reporter
         assigned: Assigned To
-        select-assginee: Select Assignee
+        select-assignee: Select Assignee
         select-driver: Select Driver
         select-vehicle: Select Vehicle
+        select-type: Select Type
+        select-category: Select Category
         type: Issue Type
         type-text: Select issue type
         category: Issue Category
@@ -346,6 +351,7 @@ fleet-ops:
         status: Custom activity status
         details: Custom activity details
         code: Custom activity code
+        fleetbase-message: Fleetbase does not recommend this unless you absolutely know what you're doing.
       order-route-form:
         toggle: Toggle Multiple Dropoff's
         optimize: Optimize Route
@@ -543,7 +549,7 @@ fleet-ops:
         order-canceled: Orders Canceled
         driver-online: Drivers Online
         customers: Customers
-        open-issues: Open Issue
+        open-issue: Open Issue
         closed-issues: Closed Issues
       live-order-map:
         loading: Loading orders in progress...
@@ -927,7 +933,7 @@ fleet-ops:
       close: Close vendor details
       new-vendor: New Vendor
   management:
-    contact:
+    contacts:
       index:
         delete-button: Delete Contacts
         updated: Updated At
@@ -943,6 +949,7 @@ fleet-ops:
         delete-contacts: Delete Contacts
     drivers:
       index:
+        assign-driver: Assign Driver
         view-details: View driver details...
         edit-details: Edit driver details...
         assign-order-driver: Assign order to driver...

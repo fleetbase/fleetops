@@ -10,7 +10,7 @@
     />
     <VisibleColumnPicker @columns={{this.columns}} @onChange={{fn (mut this.columns)}} class="mr-2" />
     {{#if (safe-has this.table "selectedRows")}}
-        <DropdownButton @icon="layer-group" @text={{t "fleet-ops.common.bulk-actions"}} @type="magic" @size="sm" @buttonWrapperClass="mr-2" @contentClass="dropdown-menu" as |dd|>
+        <DropdownButton @icon="layer-group" @text={{t "fleet-ops.common.bulk-action"}} @type="magic" @size="sm" @buttonWrapperClass="mr-2" @contentClass="dropdown-menu" as |dd|>
             <div class="next-dd-menu mt-2 mx-0">
                 <div class="px-1">
                     <a href="#" class="text-red-500 next-dd-item" {{on "click" (dropdown-fn dd this.bulkDeleteServiceRates this.selectedServiceRates)}}>
