@@ -2,7 +2,7 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Fleetbase\FleetOps\Casts\MultiPolygon;
+use Fleetbase\FleetOps\Casts\MultiPolygon as MultiPolygonCast;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -11,7 +11,16 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
 use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Grimzy\LaravelMysqlSpatial\Types\LineString;
+use Grimzy\LaravelMysqlSpatial\Types\MultiPolygon;
+use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Grimzy\LaravelMysqlSpatial\Types\Polygon;
+use Illuminate\Support\Arr;
 
+/**
+ * @var \Grimzy\LaravelMysqlSpatial\Types\Point        $location
+ * @var \Grimzy\LaravelMysqlSpatial\Types\MultiPolygon $border
+ */
 class ServiceArea extends Model
 {
     use HasUuid;
@@ -83,7 +92,7 @@ class ServiceArea extends Model
      * @var array
      */
     protected $casts = [
-        'border' => MultiPolygon::class,
+        'border' => MultiPolygonCast::class,
     ];
 
     /**
@@ -119,39 +128,297 @@ class ServiceArea extends Model
     }
 
     /**
-     * Creates a 100m polygon from the coorddinates.
+     * Creates a polygon from a given point and radius.
      *
-     * @var Polygon
+     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the polygon
+     * @param int                                     $meters The radius in meters for the polygon. Default is 500 meters.
+     *
+     * @return \Grimzy\LaravelMysqlSpatial\Types\Polygon returns a Polygon object
      */
-    public function polygon($meters = 100)
+    public static function createPolygonFromPoint(Point $point, int $meters = 500): Polygon
     {
-        return new \League\Geotools\Polygon\Polygon(Utils::coordsToCircle($this->latitude, $this->longitude, $meters));
+        $coordinates = array_map(
+            function ($coord) {
+                return new Point(...$coord);
+            },
+            Utils::coordsToCircle($point->getLat(), $point->getLng(), $meters)
+        );
+
+        return new Polygon([new LineString($coordinates)]);
     }
 
     /**
-     * Determines if coordinates fall within zone.
+     * Creates a multi-polygon from a given point and radius.
      *
-     * @param int $latitude
-     * @param int $longitude
+     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the multi-polygon
+     * @param int                                     $meters The radius in meters for the multi-polygon. Default is 500 meters.
      *
-     * @return bool
+     * @return \Grimzy\LaravelMysqlSpatial\Types\MultiPolygon returns a MultiPolygon object
      */
-    public function inZone($latitude, $longitude)
+    public static function createMultiPolygonFromPoint(Point $point, int $meters = 500): MultiPolygon
     {
-        return $this->polygon()->pointInPolygon(new \League\Geotools\Coordinate\Coordinate([$latitude, $longitude]));
+        $coordinates = Utils::coordsToCircle($point->getLat(), $point->getLng(), $meters);
+
+        // first and last positions should be equivalent
+        if (Arr::first($coordinates) !== Arr::last($coordinates)) {
+            $coordinates[] = Arr::first($coordinates);
+        }
+
+        // conver the coordinate pairs to points
+        $coordinates = array_map(
+            function ($coord) {
+                return new Point(...$coord);
+            },
+            $coordinates
+        );
+
+        $polygon = new Polygon([new LineString($coordinates)]);
+
+        return new MultiPolygon([$polygon]);
     }
 
     /**
-     * Determines if multiple coordinates fall within zone.
+     * Retrieves the location attribute as a point.
      *
-     * @param array $coords
-     *
-     * @return bool
+     * @return \Grimzy\LaravelMysqlSpatial\Types\Point returns the centroid of the border as a Point object
      */
-    public function pointsInZone($coords)
+    public function getLocationAttribute(): Point
     {
-        foreach ($coords as $coord) {
-            if (!$this->polygon()->pointInPolygon(new \League\Geotools\Coordinate\Coordinate([$coord[0], $coord[1]]))) {
+        $centroid = $this->getCentroid();
+
+        return new Point($centroid->x(), $centroid->y());
+    }
+
+    /**
+     * Retrieves the latitude component of the location attribute.
+     *
+     * @return float returns the latitude value
+     */
+    public function getLatitudeAttribute(): float
+    {
+        return $this->location->getLat();
+    }
+
+    /**
+     * Retrieves the longitude component of the location attribute.
+     *
+     * @return float returns the longitude value
+     */
+    public function getLongitudeAttribute(): float
+    {
+        return $this->location->getLng();
+    }
+
+    /**
+     * Creates a polygon from the center point of the current object.
+     *
+     * @param int $meters The radius in meters for the polygon. Default is 500 meters.
+     *
+     * @return \League\Geotools\Polygon\Polygon returns a Polygon object
+     */
+    public function createPolygonFromCenter(int $meters = 500): \League\Geotools\Polygon\Polygon
+    {
+        $coordinates = Utils::coordsToCircle($this->latitude, $this->longitude, $meters);
+
+        return new \League\Geotools\Polygon\Polygon($coordinates);
+    }
+
+    /**
+     * Converts the border attribute to a MultiPolygon object.
+     *
+     * @return \League\Geotools\Polygon\MultiPolygon returns a MultiPolygon object representing the border
+     */
+    public function asMultiPolygon(): \League\Geotools\Polygon\MultiPolygon
+    {
+        $polygons = [];
+
+        if (is_iterable($this->border)) {
+            foreach ($this->border as $polygon) {
+                $coordinates = [];
+                foreach ($polygon as $lineString) {
+                    foreach ($lineString as $point) {
+                        $coordinates[] = [$point->getLat(), $point->getLng()];
+                    }
+                }
+
+                if (count($coordinates)) {
+                    $polygons[] = new \League\Geotools\Polygon\Polygon($coordinates);
+                }
+            }
+        }
+
+        if (empty($polygons)) {
+            return null;
+        }
+
+        return new \League\Geotools\Polygon\MultiPolygon($polygons);
+    }
+
+    /**
+     * Converts the border's coordinates to an array of \Brick\Geo\Point objects.
+     *
+     * @return \Brick\Geo\Point[] an array of \Brick\Geo\Point objects representing the coordinates
+     */
+    public function toGeosCoordinates(): array
+    {
+        $coordinates = [];
+
+        if (is_iterable($this->border)) {
+            foreach ($this->border as $polygon) {
+                foreach ($polygon as $lineString) {
+                    foreach ($lineString as $point) {
+                        $coordinates[] = \Brick\Geo\Point::fromText('POINT (' . $point->getLat() . ' ' . $point->getLng() . ')');
+                    }
+                }
+            }
+        }
+
+        return $coordinates;
+    }
+
+    /**
+     * Converts the border's coordinates to an array of \Brick\Geo\LineString objects.
+     *
+     * @return \Brick\Geo\LineString[] an array of \Brick\Geo\LineString objects
+     */
+    public function toGeosLineStrings(): array
+    {
+        $lineStrings = [];
+        if (is_iterable($this->border)) {
+            foreach ($this->border as $polygon) {
+                $points = [];
+
+                foreach ($polygon as $lineString) {
+                    foreach ($lineString as $point) {
+                        $points[] = \Brick\Geo\Point::fromText('POINT (' . $point->getLat() . ' ' . $point->getLng() . ')');
+                    }
+                }
+
+                if ($points) {
+                    $lineStrings[] = \Brick\Geo\LineString::of(...$points);
+                }
+            }
+        }
+
+        return $lineStrings;
+    }
+
+    /**
+     * Converts the first LineString from the border into a \Brick\Geo\Polygon.
+     *
+     * @return \Brick\Geo\Polygon a \Brick\Geo\Polygon object created from the first line string of the border
+     */
+    public function toGeosPolygon(): ?\Brick\Geo\Polygon
+    {
+        $lineString = Arr::first($this->toGeosLineStrings());
+
+        if (empty($lineString)) {
+            return null;
+        }
+
+        return \Brick\Geo\Polygon::of($lineString);
+    }
+
+    /**
+     * Converts the border's coordinates to a \Brick\Geo\MultiPolygon object.
+     *
+     * @return \Brick\Geo\MultiPolygon a \Brick\Geo\MultiPolygon object representing the border
+     */
+    public function toGeosMultiPolygon(): ?\Brick\Geo\MultiPolygon
+    {
+        $polygons = [];
+
+        if (is_iterable($this->border)) {
+            foreach ($this->border as $polygon) {
+                $points = [];
+
+                foreach ($polygon as $lineString) {
+                    foreach ($lineString as $point) {
+                        $points[] = \Brick\Geo\Point::fromText('POINT (' . $point->getLat() . ' ' . $point->getLng() . ')');
+                    }
+                }
+
+                $lineString = \Brick\Geo\LineString::of(...$points);
+                $polygons[] = \Brick\Geo\Polygon::of($lineString);
+            }
+        }
+
+        if (empty($polygons)) {
+            return null;
+        }
+
+        return \Brick\Geo\MultiPolygon::of(...$polygons);
+    }
+
+    /**
+     * Calculates the centroid of the border as a \Brick\Geo\Point.
+     *
+     * @return \Brick\Geo\Point the centroid of the border as a \Brick\Geo\Point object
+     */
+    public function getCentroid(): \Brick\Geo\Point
+    {
+        $geometryEngine       = new \Brick\Geo\Engine\GEOSEngine();
+        $borderAsMultiPolygon = $this->toGeosMultiPolygon();
+
+        if ($borderAsMultiPolygon instanceof \Brick\Geo\Geometry) {
+            return $geometryEngine->centroid($borderAsMultiPolygon);
+        }
+
+        return \Brick\Geo\Point::fromText('POINT (0 0)');
+    }
+
+    /**
+     * Converts the border attribute to a Polygon object.
+     *
+     * @return \League\Geotools\Polygon\Polygon returns the first Polygon object from the border
+     */
+    public function asPolygon(): ?\League\Geotools\Polygon\Polygon
+    {
+        $polygons = [];
+
+        if (is_iterable($this->border)) {
+            foreach ($this->border as $polygon) {
+                $coordinates = [];
+                foreach ($polygon as $point) {
+                    $coordinates[] = [$point->getLat(), $point->getLng()];
+                }
+                $polygons[] = new \League\Geotools\Polygon\Polygon($coordinates);
+            }
+        }
+
+        return Arr::first($polygons);
+    }
+
+    /**
+     * Checks if a given point is included within the border.
+     *
+     * @param Point $point the point to check
+     *
+     * @return bool returns true if the point is inside the polygon, false otherwise
+     */
+    public function includesPoint(Point $point): bool
+    {
+        $latitude   = $point->getLat();
+        $longitude  = $point->getLng();
+        $coordinate = new \League\Geotools\Coordinate\Coordinate([$latitude, $longitude]);
+
+        return $this->asPolygon()->pointInPolygon($coordinate);
+    }
+
+    /**
+     * Checks if a set of points are all included within the border.
+     *
+     * @param array $coordinates an array of coordinates to check
+     *
+     * @return bool returns true if all points are inside the polygon, false otherwise
+     */
+    public function includesPoints(array $coordinates = []): bool
+    {
+        foreach ($coordinates as $coord) {
+            $point         = Utils::getPointFromMixed($coord);
+            $includesPoint = $this->includesPoint($point);
+
+            if (!$includesPoint) {
                 return false;
             }
         }

@@ -25,10 +25,12 @@ class CreateVehicleRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'status'   => 'nullable|in:operational,maintenance,decommissioned',
-            'vendor'   => 'nullable|exists:vendors,public_id',
-            'driver'   => 'nullable|exists:drivers,public_id',
-            'location' => ['nullable', new ResolvablePoint()],
+            'status'    => 'nullable|in:operational,maintenance,decommissioned',
+            'vendor'    => 'nullable|exists:vendors,public_id',
+            'driver'    => 'nullable|exists:drivers,public_id',
+            'location'  => ['nullable', new ResolvablePoint()],
+            'latitude'  => ['nullable', 'required_with:longitude'],
+            'longitude' => ['nullable', 'required_with:latitude'],
         ];
     }
 }

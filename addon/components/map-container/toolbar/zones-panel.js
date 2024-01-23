@@ -2,8 +2,10 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { later } from '@ember/runloop';
 import { classify } from '@ember/string';
 import { calculateInPlacePosition } from 'ember-basic-dropdown/utils/calculate-position';
+import { task } from 'ember-concurrency-decorators';
 
 /**
  * @class MapContainerToolbarZonesPanelComponent
@@ -66,10 +68,18 @@ export default class MapContainerToolbarZonesPanelComponent extends Component {
      */
     constructor() {
         super(...arguments);
+
         this.map = this.args.map;
         this.liveMap = this.args.liveMap;
-        this.fetchServiceAreas();
         this.serviceAreas.setMapInstance(this.args.map);
+
+        later(
+            this,
+            () => {
+                this.fetchServiceAreas.perform();
+            },
+            100
+        );
     }
 
     /**
@@ -115,21 +125,14 @@ export default class MapContainerToolbarZonesPanelComponent extends Component {
      * Fetch service areas and update state.
      * @memberof MapContainerToolbarZonesPanelComponent
      */
-    fetchServiceAreas() {
-        this.isLoading = true;
-
+    @task *fetchServiceAreas() {
         if (this.appCache.has('serviceAreas')) {
             this.serviceAreaRecords = this.appCache.getEmberData('serviceAreas', 'service-area');
         }
 
-        return this.store
-            .query('service-area', { with: ['zones'] })
-            .then((serviceAreaRecords) => {
-                this.serviceAreaRecords = serviceAreaRecords;
-                this.appCache.setEmberData('serviceAreas', serviceAreaRecords);
-            })
-            .finally(() => {
-                this.isLoading = false;
-            });
+        const serviceAreas = yield this.store.query('service-area', { with: ['zones'] });
+
+        this.serviceAreaRecords = serviceAreas;
+        this.appCache.setEmberData('serviceAreas', serviceAreas);
     }
 }

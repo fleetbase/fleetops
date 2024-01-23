@@ -2,6 +2,7 @@ import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
+import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 /**
  * Service for managing the state and interactions of the context panel.
@@ -19,81 +20,81 @@ export default class ContextPanelService extends Service {
         driver: {
             viewing: {
                 component: 'driver-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
             editing: {
                 component: 'driver-form-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
         vehicle: {
             viewing: {
                 component: 'vehicle-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
             editing: {
                 component: 'vehicle-form-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
         fleet: {
             viewing: {
                 component: 'fleet-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
             editing: {
                 component: 'fleet-form-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
         fuelReport: {
             viewing: {
                 component: 'fuel-report-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
             editing: {
                 component: 'fuel-report-form-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
         vendor: {
             viewing: {
                 component: 'vendor-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
             editing: {
                 component: 'vendor-form-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
         contact: {
             viewing: {
                 component: 'contact-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
             editing: {
                 component: 'contact-form-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
         place: {
             viewing: {
                 component: 'place-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
             editing: {
                 component: 'place-form-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
         issue: {
             viewing: {
                 component: 'issue-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
             editing: {
                 component: 'issue-form-panel',
-                componentArguments: [{ isResizable: true }, { width: '600px' }],
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
     };
@@ -137,11 +138,12 @@ export default class ContextPanelService extends Service {
     @action focus(model, intent = 'viewing', options = {}) {
         const modelName = getModelName(model);
         const registry = this.registry[modelName];
+        const dynamicArgs = getWithDefault(options, 'args', {});
 
         if (registry && registry[intent]) {
             this.currentContext = model;
             this.currentContextRegistry = registry[intent];
-            this.currentContextComponentArguments = this.createDynamicArgsFromRegistry(registry[intent], model);
+            this.currentContextComponentArguments = this.createDynamicArgsFromRegistry(registry[intent], model, dynamicArgs);
             this.contextOptions = options;
         }
     }
@@ -212,7 +214,7 @@ export default class ContextPanelService extends Service {
      * @param {Object} model - The model object.
      * @returns {Object} The dynamic arguments.
      */
-    createDynamicArgsFromRegistry(registry, model) {
+    createDynamicArgsFromRegistry(registry, model, additionalArgs = {}) {
         // Generate dynamic arguments object
         const dynamicArgs = {};
         const componentArguments = registry.componentArguments || [];
@@ -227,6 +229,9 @@ export default class ContextPanelService extends Service {
                 dynamicArgs[`arg${index}`] = arg;
             }
         });
+
+        // Merge additional args
+        Object.assign(dynamicArgs, additionalArgs);
 
         return dynamicArgs;
     }

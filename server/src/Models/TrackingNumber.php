@@ -88,7 +88,9 @@ class TrackingNumber extends Model
      */
     public function getLastStatusAttribute()
     {
-        return $this->status->status;
+        $this->load('status');
+
+        return data_get($this, 'status.status');
     }
 
     /**
@@ -96,7 +98,9 @@ class TrackingNumber extends Model
      */
     public function getLastStatusCodeAttribute()
     {
-        return $this->status->code;
+        $this->load('status');
+
+        return data_get($this, 'status.code');
     }
 
     /**
@@ -104,13 +108,13 @@ class TrackingNumber extends Model
      */
     public function getLastStatusUpdatedAtAttribute()
     {
-        return $this->status->created_at;
+        $this->load('status');
+
+        return data_get($this, 'status.created_at');
     }
 
     /**
-     * Get the service details.
-     *
-     * @var Model
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function status()
     {
@@ -118,9 +122,7 @@ class TrackingNumber extends Model
     }
 
     /**
-     * Tracking statuses by this tracking number.
-     *
-     * @var Model
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function statuses()
     {
@@ -128,9 +130,7 @@ class TrackingNumber extends Model
     }
 
     /**
-     * Get the order status belongss to.
-     *
-     * @var Model
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function order()
     {
@@ -138,9 +138,7 @@ class TrackingNumber extends Model
     }
 
     /**
-     * Get the entity tracking number belongss to.
-     *
-     * @var Model
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function entity()
     {
@@ -148,9 +146,7 @@ class TrackingNumber extends Model
     }
 
     /**
-     * Get the tracking number owner, could be order or entity.
-     *
-     * @var Model
+     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
      */
     public function owner()
     {
@@ -158,9 +154,7 @@ class TrackingNumber extends Model
     }
 
     /**
-     * Get the tracking number type.
-     *
-     * @var Model
+     * @return string
      */
     public function getTypeAttribute()
     {
@@ -170,9 +164,9 @@ class TrackingNumber extends Model
     /**
      * Generates a fleetbase tracking number.
      *
-     * @var array
+     * @var string
      */
-    public static function generateTrackingNumber($region = 'SG', $length = 10)
+    public static function generateTrackingNumber($region = 'SG', $length = 10): string
     {
         $company     = \Fleetbase\Models\Company::where('uuid', session('company'))->withoutGlobalScopes()->first();
         $companyName = $company ? strtoupper(substr($company->name, 0, 3)) : null;
@@ -188,7 +182,7 @@ class TrackingNumber extends Model
     /**
      * Generates a unique fleetbase tracking number.
      *
-     * @var array
+     * @var string
      */
     public static function generateNumber($region = 'SG', $length = 10)
     {

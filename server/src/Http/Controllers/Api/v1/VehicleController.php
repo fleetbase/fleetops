@@ -24,12 +24,17 @@ class VehicleController extends Controller
     public function create(CreateVehicleRequest $request)
     {
         // get request input
-        $input = $request->only(['status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin', 'meta', 'location', 'altitude', 'heading', 'speed']);
+        $input = $request->only(['status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin', 'meta', 'online', 'location', 'altitude', 'heading', 'speed']);
         // make sure company is set
         $input['company_uuid'] = session('company');
 
         // create instance of vehicle model
         $vehicle = new Vehicle();
+
+        // set default online
+        if (!isset($input['online'])) {
+            $input['online'] = 0;
+        }
 
         // vendor assignment
         if ($request->has('vendor')) {
@@ -37,6 +42,11 @@ class VehicleController extends Controller
                 'public_id'    => $request->input('vendor'),
                 'company_uuid' => session('company'),
             ]);
+        }
+
+        // latitude / longitude
+        if ($request->has(['latitude', 'longitude'])) {
+            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
         }
 
         // apply user input to vehicle
@@ -90,7 +100,7 @@ class VehicleController extends Controller
         }
 
         // get request input
-        $input = $request->only(['status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin', 'meta', 'location', 'altitude', 'heading', 'speed']);
+        $input = $request->only(['status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin', 'meta', 'location', 'online', 'altitude', 'heading', 'speed']);
 
         // vendor assignment
         if ($request->has('vendor')) {
@@ -98,6 +108,16 @@ class VehicleController extends Controller
                 'public_id'    => $request->input('vendor'),
                 'company_uuid' => session('company'),
             ]);
+        }
+
+        // set default online
+        if (!isset($input['online'])) {
+            $input['online'] = 0;
+        }
+
+        // latitude / longitude
+        if ($request->has(['latitude', 'longitude'])) {
+            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
         }
 
         // update the vehicle w/ user input

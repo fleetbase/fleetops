@@ -1,10 +1,13 @@
 <Overlay
     @onLoad={{this.setOverlayContext}}
+    @onOpen={{this.onOpen}}
+    @onClose={{this.onClose}}
+    @onToggle={{this.onToggle}}
     @position="right"
     @noBackdrop={{true}}
     @fullHeight={{true}}
     @isResizeble={{or this.isResizable @isResizable}}
-    @width={{or this.width @width "600px"}}
+    @width={{or this.width @width "570px"}}
 >
     <Overlay::Header
         @title={{if this.fuelReport.public_id this.fuelReport.name (t "fleet-ops.component.fuel-report-form-panel.fuel-report") }}

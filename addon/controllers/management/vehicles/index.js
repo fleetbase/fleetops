@@ -22,11 +22,11 @@ export default class ManagementVehiclesIndexController extends BaseController {
     @service notifications;
 
     /**
-     * Inject the `modals-manager` service
+     * Inject the `vehicleActions` service
      *
      * @var {Service}
      */
-    @service modalsManager;
+    @service vehicleActions;
 
     /**
      * Inject the `intl` service
@@ -394,12 +394,12 @@ export default class ManagementVehiclesIndexController extends BaseController {
                     fn: this.editVehicle,
                 },
                 {
+                    label: this.intl.t('fleet-ops.management.vehicles.index.locate-action-title'),
+                    fn: this.locateVehicle,
+                },
+                {
                     separator: true,
                 },
-                // {
-                //     label: 'Assign driver to vehicle...',
-                //     fn: this.assignDriver,
-                // },
                 {
                     label: this.intl.t('fleet-ops.management.vehicles.index.delete-vehicle'),
                     fn: this.deleteVehicle,
@@ -510,7 +510,7 @@ export default class ManagementVehiclesIndexController extends BaseController {
      * @void
      */
     @action deleteVehicle(vehicle, options = {}) {
-        this.crud.delete(vehicle, {
+        this.vehicleActions.delete(vehicle, {
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },
@@ -529,23 +529,13 @@ export default class ManagementVehiclesIndexController extends BaseController {
     @action assignDriver() {}
 
     /**
-     * View a place location on map
+     * View a vehicle location on map
      *
-     * @param {PlaceModel} place
+     * @param {VehicleModel} vehicle
      * @param {Object} options
      * @void
      */
-    @action viewOnMap(place, options = {}) {
-        const { latitude, longitude } = place;
-
-        this.modalsManager.show('modals/point-map', {
-            title: this.intl.t('fleet-ops.management.vehicles.index.locate-title', { placeName: place.name }),
-            acceptButtonText: 'Done',
-            hideDeclineButton: true,
-            latitude,
-            longitude,
-            location: [latitude, longitude],
-            ...options,
-        });
+    @action locateVehicle(vehicle, options = {}) {
+        this.vehicleActions.locate(vehicle, options);
     }
 }

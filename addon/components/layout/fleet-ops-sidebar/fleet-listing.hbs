@@ -1,1 +1,5 @@
-<FleetListingPanel ...attributes />
+<Layout::Sidebar::Panel @open={{true}} @title={{@title}} @titleIcon={{@icon}} @hideCaret={{true}} @toggleOnCaretOnly={{true}} @onClickPanelTitle={{this.transitionToRoute}} @wrapperClass="next-fleet-summary">
+    {{#each this.fleets as |fleet|}}
+        <FleetListingPanel @fleet={{fleet}} @onVehicleClicked={{this.onVehicleClicked}} @depth={{1}} @open={{true}} @itemDropdownButton={{true}} @itemDropdownButtonActions={{this.dropdownButtonActions}} />
+    {{/each}}
+</Layout::Sidebar::Panel>

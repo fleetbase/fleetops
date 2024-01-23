@@ -65,13 +65,14 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->get('/', 'OrderController@query');
                     $router->get('{id}', 'OrderController@find');
                     $router->get('{id}/distance-and-time', 'OrderController@getDistanceMatrix');
-                    $router->post('{id}/dispatch', 'OrderController@dispatchOrder');
+                    $router->match(['post', 'patch'], '{id}/schedule', 'OrderController@scheduleOrder');
+                    $router->match(['post', 'patch'], '{id}/dispatch', 'OrderController@dispatchOrder');
                     $router->post('{id}/start', 'OrderController@startOrder');
                     $router->delete('{id}/cancel', 'OrderController@cancelOrder');
-                    $router->post('{id}/update-activity', 'OrderController@updateActivity');
+                    $router->match(['post', 'patch'], '{id}/update-activity', 'OrderController@updateActivity');
                     $router->post('{id}/complete', 'OrderController@completeOrder');
                     $router->get('{id}/next-activity', 'OrderController@getNextActivity');
-                    $router->post('{id}/set-destination/{placeId}', 'OrderController@setDestination');
+                    $router->match(['post', 'patch'], '{id}/set-destination/{placeId}', 'OrderController@setDestination');
                     $router->post('{id}/capture-signature/{subjectId?}', 'OrderController@captureSignature');
                     $router->post('{id}/capture-qr/{subjectId?}', 'OrderController@captureQrScan');
                     $router->put('{id}', 'OrderController@update');

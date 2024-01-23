@@ -6,8 +6,6 @@ import { isBlank } from '@ember/utils';
 import { equal } from '@ember/object/computed';
 import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
-import extractCoordinates from '@fleetbase/ember-core/utils/extract-coordinates';
-import leafletIcon from '@fleetbase/ember-core/utils/leaflet-icon';
 
 export default class ManagementDriversIndexController extends BaseController {
     /**
@@ -37,6 +35,13 @@ export default class ManagementDriversIndexController extends BaseController {
      * @var {Service}
      */
     @service crud;
+
+    /**
+     * Inject the `driverActions` service
+     *
+     * @var {Service}
+     */
+    @service driverActions;
 
     /**
      * Inject the `store` service
@@ -419,7 +424,7 @@ export default class ManagementDriversIndexController extends BaseController {
                 },
                 {
                     label: this.intl.t('fleet-ops.management.drivers.index.locate-driver-map'),
-                    fn: this.viewOnMap,
+                    fn: this.locateDriver,
                 },
                 {
                     separator: true,
@@ -546,7 +551,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @void
      */
     @action deleteDriver(driver, options = {}) {
-        this.crud.delete(driver, {
+        this.driverActions.delete(driver, {
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },
@@ -562,44 +567,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @void
      */
     @action assignOrder(driver, options = {}) {
-        this.modalsManager.show('modals/driver-assign-order', {
-            title: this.intl.t('fleet-ops.management.drivers.index.order-driver'),
-            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.assign-order'),
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            acceptButtonDisabled: true,
-            hideDeclineButton: true,
-            selectedOrder: null,
-            selectOrder: (order) => {
-                this.modalsManager.setOption('selectedOrder', order);
-                this.modalsManager.setOption('acceptButtonDisabled', false);
-            },
-            driver,
-            confirm: (modal) => {
-                const selectedOrder = modal.getOption('selectedOrder');
-
-                if (!selectedOrder) {
-                    this.notifications.warning(this.intl.t('fleet-ops.management.drivers.index.no-order-warning'));
-                    return;
-                }
-
-                modal.startLoading();
-
-                driver.set('current_job_uuid', selectedOrder.id);
-
-                return driver
-                    .save()
-                    .then(() => {
-                        this.notifications.success(this.intl.t('fleet-ops.management.drivers.index.assign-driver', { driverName: driver.name }));
-                    })
-                    .catch((error) => {
-                        driver.rollbackAttributes();
-                        modal.stopLoading();
-                        this.notifications.serverError(error);
-                    });
-            },
-            ...options,
-        });
+        this.driverActions.assignOrder(driver, options);
     }
 
     /**
@@ -610,29 +578,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @void
      */
     @action assignVehicle(driver, options = {}) {
-        this.modalsManager.show('modals/driver-assign-vehicle', {
-            title: this.intl.t('fleet-ops.management.drivers.index.title-vehicle'),
-            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.confirm-button'),
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            hideDeclineButton: true,
-            driver,
-            confirm: (modal) => {
-                modal.startLoading();
-
-                return driver
-                    .save()
-                    .then((driver) => {
-                        this.notifications.success(this.intl.t('fleet-ops.management.drivers.index.assign-vehicle', { driverName: driver.name }));
-                    })
-                    .catch((error) => {
-                        driver.rollbackAttributes();
-                        modal.stopLoading();
-                        this.notifications.serverError(error);
-                    });
-            },
-            ...options,
-        });
+        this.driverActions.assignVehicle(driver, options);
     }
 
     /**
@@ -641,26 +587,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @param {DriverModel} driver
      * @void
      */
-    @action viewOnMap(driver, options = {}) {
-        const { location } = driver;
-        const [latitude, longitude] = extractCoordinates(location.coordinates);
-
-        this.modalsManager.show('modals/point-map', {
-            title: this.intl.t('fleet-ops.management.drivers.index.locate-driver', { driverName: driver.name }),
-            acceptButtonText: 'Done',
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            modalClass: 'modal-lg',
-            hideDeclineButton: true,
-            latitude,
-            longitude,
-            location,
-            popupText: `${driver.name} (${driver.public_id})`,
-            icon: leafletIcon({
-                iconUrl: driver?.vehicle_avatar,
-                iconSize: [40, 40],
-            }),
-            ...options,
-        });
+    @action locateDriver(driver, options = {}) {
+        this.driverActions.locate(driver, options);
     }
 }

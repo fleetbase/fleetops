@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Requests;
 
 use Fleetbase\Http\Requests\FleetbaseRequest;
+use Illuminate\Validation\Rules\RequiredIf;
 
 class CreateContactRequest extends FleetbaseRequest
 {
@@ -24,10 +25,10 @@ class CreateContactRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'name'  => 'required',
-            'type'  => 'required',
-            'email' => 'nullable|email',
-            'phone' => 'nullable',
+            'name'  => ['required'],
+            'type'  => [new RequiredIf($this->isMethod('POST'))],
+            'email' => ['nullable', 'email'],
+            'phone' => ['nullable'],
         ];
     }
 }

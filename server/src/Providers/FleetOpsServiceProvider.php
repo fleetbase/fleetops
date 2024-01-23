@@ -44,6 +44,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders::class,
         \Fleetbase\FleetOps\Console\Commands\DispatchOrders::class,
         \Fleetbase\FleetOps\Console\Commands\TrackOrderDistanceAndTime::class,
+        \Fleetbase\FleetOps\Console\Commands\FixDriverCompanies::class,
     ];
 
     /**

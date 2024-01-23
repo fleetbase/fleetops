@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Http\Requests\UpdatePayloadRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Payload as PayloadResource;
 use Fleetbase\FleetOps\Models\Payload;
+use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -37,29 +38,33 @@ class PayloadController extends Controller
         // create the payload
         $payload = new Payload(Arr::only($input, ['type', 'provider', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method']));
 
-        // if no pickup and dropoff extract from waypoints
-        if (empty($pickup) && empty($dropoff) && count($waypoints)) {
-            $pickup  = array_shift($waypoints);
-            $dropoff = array_pop($waypoints);
+        // set pickup point
+        if ($pickup) {
+            $payload->setPickup($pickup);
         }
 
-        // set pickup point
-        $payload->setPickup($pickup);
-
         // set dropoff point
-        $payload->setDropoff($dropoff);
+        if ($dropoff) {
+            $payload->setDropoff($dropoff);
+        }
 
         // set return point
-        $payload->setReturn($return);
+        if ($return) {
+            $payload->setReturn($return);
+        }
 
         // save payload
         $payload->save();
 
-        // set waypoints
+        // set waypoints and entities after payload is saved
         $payload->setWaypoints($waypoints);
-
-        // set entities
         $payload->setEntities($entities);
+
+        // set the first / current waypoint
+        $firstWaypoint = $payload->getPickupOrFirstWaypoint();
+        if ($firstWaypoint instanceof Place) {
+            $payload->setCurrentWaypoint($firstWaypoint);
+        }
 
         // response the driver resource
         return new PayloadResource($payload);
@@ -125,6 +130,9 @@ class PayloadController extends Controller
 
         // save the payload
         $payload->save();
+
+        // make sure entities and waypoints is loaded
+        $payload->load(['entities', 'waypoints', 'pickup', 'dropoff', 'return']);
 
         // response the payload resource
         return new PayloadResource($payload);

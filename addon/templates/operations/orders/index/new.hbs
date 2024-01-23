@@ -256,7 +256,7 @@
 
                             <div class="flex-row space-x-2 pr-0.5">
                                 {{#if this.payload.pickup}}
-                                    <a href="javascript:;" {{on "click" (fn this.placesController.editPlace this.payload.pickup)}}>
+                                    <a href="javascript:;" {{on "click" (fn this.editPlace this.payload.pickup)}}>
                                         <FaIcon @icon="edit" />
                                     </a>
                                     <a href="javascript:;" {{on "click" (fn this.setPayloadPlace "pickup" null)}}>
@@ -287,7 +287,7 @@
 
                             <div class="flex-row space-x-2 pr-0.5">
                                 {{#if this.payload.dropoff}}
-                                    <a href="javascript:;" {{on "click" (fn this.placesController.editPlace this.payload.dropoff)}}>
+                                    <a href="javascript:;" {{on "click" (fn this.editPlace this.payload.dropoff)}}>
                                         <FaIcon @icon="edit" />
                                     </a>
                                     <a href="javascript:;" {{on "click" (fn this.setPayloadPlace "dropoff" null)}}>
@@ -317,7 +317,7 @@
                             <label>{{t "fleet-ops.operations.orders.index.new.return"}}</label>
 
                             {{#if this.payload.return}}
-                                <a href="javascript:;" {{on "click" (fn this.placesController.editPlace this.payload.return)}}>{{t "fleet-ops.operations.orders.index.new.edit-address"}}</a>
+                                <a href="javascript:;" {{on "click" (fn this.editPlace this.payload.return)}}>{{t "fleet-ops.operations.orders.index.new.edit-address"}}</a>
                             {{/if}}
                         </div>
 

@@ -302,7 +302,7 @@ export default class LiveMapComponent extends Component {
      */
     @action setupComponent() {
         // trigger that initial coordinates have been set
-        this.universe.trigger('fleetops.livemap.loaded', this);
+        this.universe.trigger('fleet-ops.live-map.loaded', this);
 
         // set initial coordinates
         this.setInitialCoordinates();
@@ -368,7 +368,7 @@ export default class LiveMapComponent extends Component {
 
     /**
      * Marks the LiveMapComponent as ready by setting the "isReady" property and triggering
-     * the "onReady" action and a "fleetops.livemap.ready" event.
+     * the "onReady" action and a "fleetops.live-map.ready" event.
      *
      * @memberof LiveMapComponent
      * @function
@@ -376,7 +376,7 @@ export default class LiveMapComponent extends Component {
     ready() {
         this.isReady = true;
         this.triggerAction('onReady');
-        this.universe.trigger('fleetops.livemap.ready', this);
+        this.universe.trigger('fleet-ops.live-map.ready', this);
     }
 
     /**
@@ -401,7 +401,7 @@ export default class LiveMapComponent extends Component {
                 this.isReady = true;
 
                 // trigger that initial coordinates is set to livemap component
-                this.universe.trigger('fleetops.livemap.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
+                this.universe.trigger('fleet-ops.live-map.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
 
                 return [this.latitude, this.longitude];
             }
@@ -418,7 +418,7 @@ export default class LiveMapComponent extends Component {
             this.isReady = true;
 
             // trigger that initial coordinates is set to livemap component
-            this.universe.trigger('fleetops.livemap.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
+            this.universe.trigger('fleet-ops.live-map.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
 
             return [this.latitude, this.longitude];
         }
@@ -430,7 +430,7 @@ export default class LiveMapComponent extends Component {
      * Sets up the LiveMap component and the Leaflet map instance.
      *
      * This function initializes the LiveMap component, associates it with the Leaflet map instance,
-     * triggers the "fleetops.livemap.leaflet_ready" event, and performs additional setup tasks like
+     * triggers the "fleetops.live-map.leaflet_ready" event, and performs additional setup tasks like
      * configuring context menus, hiding draw controls, and associating the map with the "serviceAreas"
      * service. It also triggers the "onLoad" action with the provided event and target.
      *
@@ -448,13 +448,13 @@ export default class LiveMapComponent extends Component {
         this.leafletMap = target;
 
         // trigger liveMap ready through universe
-        this.universe.trigger('fleetops.livemap.leaflet_ready', event, target);
+        this.universe.trigger('fleet-ops.live-map.leaflet_ready', event, target);
 
         // make fleetops map globally available on the window
         window.FleetOpsLeafletMap = target;
 
         // store this component to universe
-        this.universe.set('FleetOpsLiveMap', this);
+        this.universe.set('component:fleet-ops:live-map', this);
 
         // setup context menu
         this.createMapContextMenu(target);
@@ -1070,7 +1070,16 @@ export default class LiveMapComponent extends Component {
      */
     @action onDriverClicked(driver) {
         this.contextPanel.clear();
-        this.contextPanel.focus(driver);
+        this.contextPanel.focus(driver, 'viewing', {
+            args: {
+                width: '450px',
+                onOpen: () => {
+                    this.leafletMap.once('moveend', () => {
+                        this.leafletMap.panBy([200, 0]);
+                    });
+                },
+            },
+        });
     }
 
     /**
@@ -1118,7 +1127,16 @@ export default class LiveMapComponent extends Component {
      */
     @action onVehicleClicked(vehicle) {
         this.contextPanel.clear();
-        this.contextPanel.focus(vehicle);
+        this.contextPanel.focus(vehicle, 'viewing', {
+            args: {
+                width: '450px',
+                onOpen: () => {
+                    this.leafletMap.once('moveend', () => {
+                        this.leafletMap.panBy([200, 0]);
+                    });
+                },
+            },
+        });
     }
 
     /**
@@ -1915,7 +1933,6 @@ export default class LiveMapComponent extends Component {
                     }
 
                     // from the `get-active-order-coordinates` the responded coordinates will always be [longitude, latitude]
-                    // const [latitude, longitude] = extractCoordinates(coordinates.firstObject.coordinates);
                     const validCoordinates = coordinates.filter((point) => point.cordinates[0] !== 0);
                     const [longitude, latitude] = getWithDefault(validCoordinates, '0.coordiantes', [0, 0]);
 

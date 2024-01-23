@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\Models\Company;
+use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\Extension;
 use Fleetbase\Models\ExtensionInstall;
 use Fleetbase\Models\User;
@@ -177,7 +178,7 @@ class Flow
     {
         $config = static::getOrderConfig($order);
         $vars   = static::getOrderFlowVars($order);
-        $code   = strtolower($order->status);
+        $code   = strtolower(data_get($order, 'status'));
         $status = data_get($config, 'meta.flow.' . $code . '.events');
 
         $flow = static::bindVariablesToFlow($status, $vars);
@@ -235,10 +236,20 @@ class Flow
 
     /**
      * Returns a order type configuration by key.
+     *
+     * @param bool $force - If this method should always return dispatch activity
      */
-    public static function getDispatchActivity(Order $order): ?array
+    public static function getDispatchActivity(Order $order, bool $force = true): ?array
     {
         $flow = static::getOrderFlow($order);
+
+        if ($force === true) {
+            return [
+                'status'  => 'Order dispatched',
+                'details' => 'Order has been dispatched',
+                'code'    => 'dispatched',
+            ];
+        }
 
         return collect($flow)->first(function ($activity) {
             return isset($activity['code']) && $activity['code'] === 'dispatched';
@@ -285,7 +296,7 @@ class Flow
     public static function getOrderFlowVars(Order $order, Waypoint $currentWaypoint = null): ?array
     {
         $vars         = [];
-        $allWaypoints = $order->payload->waypoints ?? collect();
+        $allWaypoints = data_get($order, 'payload.waypoints', collect());
 
         // set order vars
         $vars['order'] = ['public_id' => $order->public_id, 'internal_id' => $order->internal_id, 'tracking_number' => $order->tracking, 'meta' => $order->meta];
@@ -316,6 +327,10 @@ class Flow
         }
 
         // // storefront order add store or network about
+        // should patch with hook system
+        // storefront extension should register hook to add $vars
+        // Hook::register('\Fleetbase\FleetOps\Support\Flow@getOrderFlowVars', addStorefrontVars);
+        // here we will run Hook::run(__CLASS__ . '@' . __METHOD__);
         // if ($order->type === 'storefront' && $order->hasMeta('storefront_id')) {
         //     $storefront = Storefront::findAbout($order->getMeta('storefront_id'));
 
@@ -536,9 +551,25 @@ class Flow
         return Company::currentSession();
     }
 
-    public static function getCompanySessionForUser(User $user)
+    public static function getCompanySessionForUser(User $user): ?Company
     {
-        return Company::where('uuid', $user->company_uuid)->first();
+        if (Str::isUuid($user->company_uuid)) {
+            $company = Company::where('uuid', $user->company_uuid)->first();
+            if ($company) {
+                return $company;
+            }
+        }
+
+        // fallback to get user's first company
+        $userCompany = CompanyUser::where('user_uuid', $user->uuid)->first();
+        if ($userCompany) {
+            $company = Company::where('uuid', $userCompany->company_uuid)->first();
+            if ($company) {
+                return $company;
+            }
+        }
+
+        return null;
     }
 
     public static function getDefaultOrderFlow()

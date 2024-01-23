@@ -116,6 +116,8 @@ fleet-ops:
         loading-vehicle: Loading fleet vehicles...
     layout:
       fleet-ops-sidebar:
+        resources: Resources
+        operations: Operations
         dashboard: Dashboard
         service-rates: Service Rates
         scheduler: Scheduler
@@ -955,7 +957,7 @@ fleet-ops:
         title-vehicle: Assign Vehicle to this Driver
         confirm-button: Confirm & Create
         assign-vehicle: '{driverName} assigned to vehicle.'
-        locate-driver: Location of {driverName}
+        locate-driver: Current Location of {driverName}
         edit:
           title: Continue Without Saving?
           body: Unsaved changes to this driver will be lost. Click continue to proceed.
@@ -1015,7 +1017,8 @@ fleet-ops:
         edit-vehicle: Edit vehicle details...        
         delete-vehicle: Delete vehicle...
         delete-button: Delete Vehicles
-        locate-title: Location of {placeName}
+        locate-action-title: Locate Vehicles
+        locate-title: Current Location of {vehicleName}
         edit:
           body: Unsaved changes to this vehicle will be lost. Click continue to proceed.
         title: Vehicles

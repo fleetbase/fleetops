@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Requests;
 
 use Fleetbase\Http\Requests\FleetbaseRequest;
 use Fleetbase\Rules\ExistsInAny;
+use Illuminate\Validation\Rule;
 
 class QueryServiceQuotesRequest extends FleetbaseRequest
 {
@@ -25,17 +26,17 @@ class QueryServiceQuotesRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'payload'      => 'nullable|exists:payloads,public_id',
-            'service_type' => 'nullable|exists:service_rates,service_type',
-            'pickup'       => 'nullable|required_without:payload,waypoints',
-            'dropoff'      => 'nullable|required_without:payload,waypoints',
-            'waypoints'    => 'nullable|array',
+            'payload'      => ['nullable', 'required_without_all:waypoints,pickup,dropoff', Rule::exists('payloads', 'public_id')->whereNull('deleted_at')],
+            'service_type' => ['nullable', Rule::exists('service_rates', 'service_type')->whereNull('deleted_at')],
+            'pickup'       => ['nullable', 'required_without_all:payload,waypoints'],
+            'dropoff'      => ['nullable', 'required_without_all:payload,waypoints'],
+            'waypoints'    => ['nullable', 'array', 'required_without_all:payload,pickup,dropoff'],
             'facilitator'  => ['nullable', new ExistsInAny(['vendors', 'integrated_vendors', 'contacts'], ['public_id', 'provider'])],
-            'scheduled_at' => 'nullable|date',
-            'cod'          => 'nullable',
-            'currency'     => 'nullable',
-            'distance'     => 'nullable',
-            'time'         => 'nullable',
+            'scheduled_at' => ['nullable', 'date'],
+            'cod'          => ['nullable'],
+            'currency'     => ['nullable', 'string', 'size:3'],
+            'distance'     => ['nullable'],
+            'time'         => ['nullable'],
         ];
     }
 }
