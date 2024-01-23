@@ -16,6 +16,10 @@ export default class VendorFormPanelCreateFormComponent extends Component {
      * @service fetch
      */
     @service fetch;
+    /**
+     * @service intl
+     */
+    @service intl;
 
     /**
      * @service contextPanel
@@ -38,8 +42,8 @@ export default class VendorFormPanelCreateFormComponent extends Component {
      * @type {Array}
      */
     @tracked vendorTypes = [
-        { label: 'Choose a integrated vendor', value: 'integrated-vendor' },
-        { label: 'Create a custom vendor', value: 'vendor' },
+        { label: this.intl.t('fleet-ops.component.vendor-form-panel.create-form.integrated-vendor'), value: 'integrated-vendor' },
+        { label: this.intl.t('fleet-ops.component.vendor-form-panel.create-form.custom-vendor'), value: 'vendor' },
     ];
 
     /**

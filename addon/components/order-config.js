@@ -9,6 +9,7 @@ export default class OrderConfigComponent extends Component {
     @service modalsManager;
     @service fetch;
     @service socket;
+    @service intl;
     @service store;
     @service notifications;
     @service crud;
@@ -95,7 +96,7 @@ export default class OrderConfigComponent extends Component {
         const tags = [];
 
         this.modalsManager.show('modals/new-order-config', {
-            title: 'Create a new order configuration',
+            title: this.intl.t('fleet-ops.component.order-config.create-new-title'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             declineButtonIcon: 'times',
@@ -116,7 +117,7 @@ export default class OrderConfigComponent extends Component {
 
                 if (!name) {
                     modal.stopLoading();
-                    return this.notifications.warning('Order configuration requires a name');
+                    return this.notifications.warning(this.intl.t('fleet-ops.component.order-config.warning-message'));
                 }
 
                 return this.fetch
@@ -125,7 +126,7 @@ export default class OrderConfigComponent extends Component {
                         const newConfigExtension = this.fetch.jsonToModel(newConfig, 'extension');
 
                         this.configurations.pushObject(newConfigExtension);
-                        this.notifications.success('New order config created successfully.');
+                        this.notifications.success(this.intl.t('fleet-ops.component.order-config.success-message'));
                         this.selectConfig(newConfigExtension.namespace);
                     })
                     .catch((error) => {
@@ -139,7 +140,7 @@ export default class OrderConfigComponent extends Component {
         const { orderConfig } = this;
 
         if (!orderConfig) {
-            this.notifications.warning('No order configuration selected.');
+            this.notifications.warning(this.intl.t('fleet-ops.component.order-config.no-order-warning'));
 
             return;
         }
@@ -150,7 +151,7 @@ export default class OrderConfigComponent extends Component {
                 data: orderConfig,
             })
             .then(() => {
-                this.notifications.success(`${orderConfig.name} order configuration saved.`);
+                this.notifications.success(this.intl.t('fleet-ops.component.order-config.saved-success', { orderName: orderConfig.name }));
                 this.isSaving = false;
             })
             .catch((error) => {
@@ -164,7 +165,7 @@ export default class OrderConfigComponent extends Component {
         const description = extension.description;
 
         this.modalsManager.show('modals/clone-config-form', {
-            title: 'Enter name of cloned configuration',
+            title: this.intl.t('fleet-ops.component.order-config.enter-name-title'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             declineButtonIcon: 'times',
@@ -177,7 +178,7 @@ export default class OrderConfigComponent extends Component {
                 const { name, description } = modal.getOptions();
 
                 if (!name) {
-                    return this.notifications.warning('No config name entered.');
+                    return this.notifications.warning(this.intl.t('fleet-ops.component.order-config.no-config-warning'));
                 }
 
                 return this.fetch
@@ -190,7 +191,7 @@ export default class OrderConfigComponent extends Component {
                     .then((newConfig) => {
                         const clone = this.fetch.jsonToModel(newConfig, 'extension');
                         this.configurations.pushObject(clone);
-                        this.notifications.success('Order config successfully cloned.');
+                        this.notifications.success(this.intl.t('fleet-ops.component.order-config.cloned-success'));
                         this.selectConfig(clone.namespace);
                     })
                     .catch((error) => {
@@ -204,7 +205,7 @@ export default class OrderConfigComponent extends Component {
         const uninstall = isModel(extension) ? extension : this.fetch.jsonToModel(extension, 'extension');
 
         return this.crud.delete(uninstall, {
-            body: 'Once this order configuration is deleted you will not be able to create orders using it anymore. Are you sure?',
+            body: this.intl.t('fleet-ops.component.order-config.body'),
             acceptButtonIcon: 'trash',
             declineButtonIcon: 'times',
             declineButtonIconPrefix: 'fas',
@@ -221,7 +222,7 @@ export default class OrderConfigComponent extends Component {
         this.listenForUninstallProgress(extension);
 
         this.modalsManager.show('modals/uninstall-prompt', {
-            title: 'Uninstall Configuration',
+            title: this.intl.t('fleet-ops.component.order-config.uninstall-title'),
             acceptButtonText: 'Uninstall',
             acceptButtonScheme: 'danger',
             extension,
@@ -236,7 +237,7 @@ export default class OrderConfigComponent extends Component {
                     .uninstall()
                     .then(() => {
                         this.closeUninstallChannel();
-                        this.notifications.success(`Extension '${extensionName}' uninstalled.`);
+                        this.notifications.success(this.intl.t('fleet-ops.component.order-config.uninstall-success', { extensionName: extensionName }));
                         this.configurations.removeObject(extension);
                         this.selected = undefined;
                         done();

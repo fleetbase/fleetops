@@ -8,14 +8,14 @@
                     </svg>
                 </div>
                 <div class="ml-3 flex items-center">
-                    <span class="font-extrabold text-xl text-yellow-800">No order configurations installed!</span>
+                    <span class="font-extrabold text-xl text-yellow-800">{{t "fleet-ops.operations.orders.index.config.types.no-order-installed"}}</span>
                 </div>
             </div>
             <div class="pt-3">
-                <p class="text-yellow-700">You currently have no order configs installed, check at the extensions to install an order configuration to get started.</p>
+                <p class="text-yellow-700">{{t "fleet-ops.operations.orders.index.config.types.you-have-no-configs"}}</p>
                 <div class="flex items-center mt-4">
                     <span class="btn-wrapper inline-flex rounded-md shadow-sm">
-                        <LinkToExternal @tagName="button" class="btn btn-warning" @route="extensions">View extensions</LinkToExternal>
+                        <LinkToExternal @tagName="button" class="btn btn-warning" @route="extensions">{{t "fleet-ops.operations.orders.index.config.types.view-extensions"}}</LinkToExternal>
                     </span>
                 </div>
             </div>

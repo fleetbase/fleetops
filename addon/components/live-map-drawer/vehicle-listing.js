@@ -26,6 +26,12 @@ export default class LiveMapDrawerVehicleListingComponent extends Component {
     @service notifications;
 
     /**
+     * Service for intl.
+     * @service
+     */
+    @service intl;
+
+    /**
      * Service for CRUD operations.
      * @service
      */
@@ -62,7 +68,7 @@ export default class LiveMapDrawerVehicleListingComponent extends Component {
      */
     @tracked columns = [
         {
-            label: 'Vehicle',
+            label: this.intl.t('fleet-ops.common.vehicle'),
             valuePath: 'display_name',
             photoPath: 'avatar_url',
             width: '100px',
@@ -71,20 +77,20 @@ export default class LiveMapDrawerVehicleListingComponent extends Component {
             showOnlineIndicator: true,
         },
         {
-            label: 'Location',
+            label: this.intl.t('fleet-ops.component.live-map-drawer.vehicle-listing.location'),
             valuePath: 'location',
             width: '80px',
             cellComponent: 'table/cell/point',
             onClick: this.locate,
         },
         {
-            label: 'Status',
+            label: this.intl.t('fleet-ops.common.status'),
             valuePath: 'status',
             cellComponent: 'table/cell/status',
             width: '60px',
         },
         {
-            label: 'Last Seen',
+            label: this.intl.t('fleet-ops.component.live-map-drawer.vehicle-listing.last-seen'),
             valuePath: 'updatedAgo',
             width: '60px',
         },
@@ -100,21 +106,21 @@ export default class LiveMapDrawerVehicleListingComponent extends Component {
             width: '90px',
             actions: [
                 {
-                    label: 'View vehicle details...',
+                    label: this.intl.t('fleet-ops.component.live-map-drawer.vehicle-listing.view-vehicle'),
                     fn: this.focus,
                 },
                 {
-                    label: 'Edit vehicle...',
+                    label: this.intl.t('fleet-ops.component.live-map-drawer.vehicle-listing.edit-vehicle'),
                     fn: (vehicle) => {
                         return this.focus(vehicle, 'editing');
                     },
                 },
                 {
-                    label: 'Locate vehicle...',
+                    label: this.intl.t('fleet-ops.component.live-map-drawer.vehicle-listing.locate-vehicle'),
                     fn: this.locate,
                 },
                 {
-                    label: 'Delete vehicle...',
+                    label: this.intl.t('fleet-ops.component.live-map-drawer.vehicle-listing.delete-vehicle'),
                     fn: this.delete,
                 },
             ],
@@ -194,7 +200,7 @@ export default class LiveMapDrawerVehicleListingComponent extends Component {
         if (this.liveMap) {
             this.liveMap.focusLayerByRecord(vehicle, 18);
         } else {
-            this.notifications.warning('Unable to locate vehicle.');
+            this.notifications.warning(this.intl.t('fleet-ops.component.live-map-drawer.vehicle-listing.warning-message'));
         }
     }
 

@@ -26,6 +26,13 @@ export default class ManagementVehiclesIndexNewController extends BaseController
     @service modalsManager;
 
     /**
+     * Inject the `intl` service
+     *
+     * @memberof intl
+     */
+    @service intl;
+
+    /**
      * The overlay component context.
      *
      * @memberof ManagementVehiclesIndexNewController

@@ -2,23 +2,23 @@
     <div class="space-y-1">
         <div class="px-5 mt-6 flex">
             <div class="flex-1">
-                <InfoBlock class="px-3 py-2">Select an order configuration to modify, or click "New Config" to create a new order configuration.</InfoBlock>
+                <InfoBlock class="px-3 py-2">{{t "fleet-ops.component.order-config.select-message"}}</InfoBlock>
             </div>
             <div>
-                <Button class="ml-6" @icon="plus" @iconPrefix="fas" @text="New Config" @size="md" @onClick={{this.createNewOrderConfig}} />
+                <Button class="ml-6" @icon="plus" @iconPrefix="fas" @text={{t "fleet-ops.component.order-config.new-config"}} @size="md" @onClick={{this.createNewOrderConfig}} />
             </div>
         </div>
         <div class="flex items-center justify-between p-4">
             {{#if this.isLoading}}
                 <div class="flex text-center items-center justify-center p-4">
                     <Spinner class="mr-2 dark:text-gray-100" />
-                    <span class="dark:text-gray-100">Loading your order configurations...</span>
+                    <span class="dark:text-gray-100">{{t "fleet-ops.component.order-config.loading-configuration"}}</span>
                 </div>
             {{else}}
-                <Select class="w-full flex-1" @value={{this.selected}} @options={{this.configurations}} @optionLabel="name" @optionValue="namespace" @placeholder="Select order configuration" @onSelect={{this.selectConfig}} />
+                <Select class="w-full flex-1" @value={{this.selected}} @options={{this.configurations}} @optionLabel="name" @optionValue="namespace" @placeholder={{t "fleet-ops.component.order-config.select-order"}} @onSelect={{this.selectConfig}} />
                 {{#if this.selected}}
                     <div class="pl-6">
-                        <Button @type="primary" @icon="save" @text="Save Changes" @size="md" @isLoading={{this.isSaving}} @onClick={{this.saveConfig}} />
+                        <Button @type="primary" @icon="save" @text={{t "fleet-ops.component.order-config.save-changes"}} @size="md" @isLoading={{this.isSaving}} @onClick={{this.saveConfig}} />
                     </div>
                 {{/if}}
             {{/if}}
@@ -30,19 +30,19 @@
                     <nav>
                         <a href="javascript:;" class="ui-tab {{if (eq this.activeTab 'details') 'active'}}" {{on "click" (fn
                             (mut this.activeTab) "details" )}}>
-                            Details
+                            {{t "fleet-ops.component.order-config.details"}}
                         </a>
                         <a href="javascript:;" class="ui-tab  {{if (eq this.activeTab 'meta') 'active'}}" {{on "click" (fn
                             (mut this.activeTab) "meta" )}}>
-                            Custom Fields
+                            {{t "fleet-ops.component.order-config.fields"}}
                         </a>
                         <a href="javascript:;" class="ui-tab  {{if (eq this.activeTab 'activity') 'active'}}" {{on "click"
                             (fn (mut this.activeTab) "activity" )}}>
-                            Activity Flow
+                            {{t "fleet-ops.component.order-config.flow"}}
                         </a>
                         <a href="javascript:;" class="ui-tab  {{if (eq this.activeTab 'entities') 'active'}}" {{on "click"
                             (fn (mut this.activeTab) "entities" )}}>
-                            Entities
+                            {{t "fleet-ops.component.order-config.entities"}}
                         </a>
                     </nav>
                 </div>

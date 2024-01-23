@@ -1,7 +1,7 @@
 <div class="next-dd-menu overflow-visible">
     <div class="px-1">
         <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1 text-gray-800 dark:text-gray-300">
-            Visibility Controls
+            {{t "fleet-ops.component.map-container.visibility-control-panel.title"}}
         </div>
     </div>
     <div class="next-dd-menu-seperator"></div>
@@ -13,9 +13,9 @@
                 </div>
                 <span>
                     {{#if (is-visibility-control-visible this.liveMap "places")}}
-                        Hide all places...
+                        {{t "fleet-ops.component.map-container.visibility-control-panel.hide-places"}}
                     {{else}}
-                        Show all places...
+                        {{t "fleet-ops.component.map-container.visibility-control-panel.show-places"}}
                     {{/if}}
                 </span>
             </div>
@@ -29,7 +29,7 @@
                     <div class="w-6">
                         <FaIcon @icon="car" />
                     </div>
-                    <span>Vehicles</span>
+                    <span>{{t "fleet-ops.component.map-container.visibility-control-panel.vehicles"}}</span>
                 </div>
                 <div>
                     <Badge @status="info" @hideStatusDot={{true}} @spanClass="rounded-full -mr-2">{{this.liveMap.originalResources.vehicles.length}}</Badge>
@@ -40,23 +40,23 @@
                     <div class="px-1">
                         <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1 text-gray-800 dark:text-gray-300 truncate">
                             <FaIcon @icon="binoculars" class="mr-2" />
-                            <span>Vehicle Visibility Controls...</span>
+                            <span>{{t "fleet-ops.component.map-container.visibility-control-panel.vehicle-controls"}}</span>
                         </div>
                     </div>
                     <div class="next-dd-menu-seperator"></div>
                     <div class="px-1">
                         <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.triggerCallback "toggleAllOnlineOffline" "vehicles")}}>
                             {{#if (is-visibility-control-visible this.liveMap "vehicles")}}
-                                Hide all vehicles...
+                                {{t "fleet-ops.component.map-container.visibility-control-panel.hide-vehicles"}}
                             {{else}}
-                                Show all vehicles...
+                                {{t "fleet-ops.component.map-container.visibility-control-panel.show-vehicles"}}
                             {{/if}}
                         </a>
                         <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.triggerCallback "showOnline" "vehicles")}}>
-                            Only show online vehicles...
+                            {{t "fleet-ops.component.map-container.visibility-control-panel.online-vehicles"}}
                         </a>
                         <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.triggerCallback "showOffline" "vehicles")}}>
-                            Only show offline vehicles...
+                            {{t "fleet-ops.component.map-container.visibility-control-panel.offline-vehicles"}}
                         </a>
                     </div>
                 </div>

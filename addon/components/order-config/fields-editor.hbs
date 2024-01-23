@@ -2,16 +2,16 @@
     <div class="content-panel">
         <div class="content-panel-header items-center">
             <h3 class="text-lg font-semibold dark:text-gray-100">
-                Meta Fields
+                {{t "fleet-ops.component.order-config.fields-editor.field-title"}}
             </h3>
             <div>
-                <Button @icon="plus" @iconPrefix="fas" @text="New Custom Field" @size="sm" @onClick={{this.addField}} />
-                <Button @icon="plus" @iconPrefix="fas" @text="New Custom Fields Group" @size="sm" @onClick={{this.addMetaFieldGroup}} />
+                <Button @icon="plus" @iconPrefix="fas" @text={{t "fleet-ops.component.order-config.fields-editor.new-field"}} @size="sm" @onClick={{this.addField}} />
+                <Button @icon="plus" @iconPrefix="fas" @text={{t "fleet-ops.component.order-config.fields-editor.new-custom-field"}} @size="sm" @onClick={{this.addMetaFieldGroup}} />
             </div>
         </div>
         <div class="content-panel-body">
             <div class="mb-6">
-                <p>Meta fields configuration will allow you to define custom input fields that will be applied to orders.</p>
+                <p>{{t "fleet-ops.component.order-config.fields-editor.field-text"}}</p>
             </div>
 
             <Dragula @onDrop={{this.moveMetaField}} as |Container|>
@@ -19,16 +19,16 @@
                     <div class="content-panel">
                         <div class="content-panel-header items-center">
                             <div class="font-semibold dark:text-gray-100">
-                                <span class="mr-1">Custom Fields Group:</span>
+                                <span class="mr-1">{{t "fleet-ops.component.order-config.fields-editor.custom-field-group"}}:</span>
                                 {{#if group.value}}
                                     <span>{{smart-humanize group.value}}</span>
                                 {{else}}
-                                    <span>Default Fields</span>
+                                    <span>{{t "fleet-ops.component.order-config.fields-editor.default-field"}}</span>
                                 {{/if}}
                             </div>
 
                             <div>
-                                <Button @icon="plus" @iconPrefix="fas" @text="New Custom Field" @size="sm" @onClick={{fn this.addField group.value}} />
+                                <Button @icon="plus" @iconPrefix="fas" @text={{t "fleet-ops.component.order-config.fields-editor.new-field"}} @size="sm" @onClick={{fn this.addField group.value}} />
                                 {{#if group.value}}
                                     <Button @type="danger" @icon="times" @iconPrefix="fas" @size="sm" @onClick={{fn this.removeGroup group.value}} />
                                 {{/if}}
@@ -41,7 +41,7 @@
                                     <div class="content-panel cursor-move">
                                         <div class="content-panel-header items-center">
                                             <div class="font-semibold dark:text-gray-100">
-                                                <span class="mr-1">Custom Field:</span>
+                                                <span class="mr-1">{{t "fleet-ops.component.order-config.fields-editor.custom-field"}}:</span>
                                                 <span>{{metaField.label}}</span>
                                             </div>
                                             <a href="javascript:;" {{on "click" (fn this.removeField metaField)}} class="btn btn-danger btn-sm">
@@ -53,10 +53,10 @@
                                                 <InputGroup @name="Label" @value={{metaField.label}} {{on "keyup" (fn this.setFieldLabel metaField)}} />
                                                 <div class="input-group {{if (eq metaField.type "select") 'col-span-2'}}">
                                                     <div class="flex items-center justify-between">
-                                                        <label class="font-medium flex-1">Field Type</label>
+                                                        <label class="font-medium flex-1">{{t "fleet-ops.component.order-config.fields-editor.type"}}</label>
                                                     </div>
                                                     <div class="flex items-center justify-between">
-                                                        <Select class="w-full" @value={{metaField.type}} @options={{this.metaFieldTypes}} @optionLabel="label" @optionValue="key" @placeholder="Select field type" @onSelect={{fn (mut metaField.type)}} />
+                                                        <Select class="w-full" @value={{metaField.type}} @options={{this.metaFieldTypes}} @optionLabel="label" @optionValue="key" @placeholder={{t "fleet-ops.component.order-config.fields-editor.select-type"}} @onSelect={{fn (mut metaField.type)}} />
                                                         {{#if (eq metaField.type "select")}}
                                                             <div class="pl-2">
                                                                 <BasicDropdown @renderInPlace={{false}} as |dd|>
@@ -67,7 +67,7 @@
                                                                         <div class="w-80 mt-2 rounded shadow-md be-white dark:bg-gray-800">
                                                                             <div class="border border-gray-300 shdaow-sm rounded dark:border-gray-900">
                                                                                 <div class="flex items-start justify-between mb-1 p-3">
-                                                                                    <Button @type="primary" @size="xs" @text="Add Option" @onClick={{fn this.addMetaFieldOption metaField}} />
+                                                                                    <Button @type="primary" @size="xs" @text={{t "fleet-ops.component.order-config.fields-editor.add-option"}} @onClick={{fn this.addMetaFieldOption metaField}} />
                                                                                     <div class="flex flex-col space-y-3">
                                                                                         <Toggle @label="Key-Value" @isToggled={{metaField.useKvOptions}} @onToggle={{fn this.toggleMetaFieldKv metaField}} />
                                                                                         {{#unless metaField.useKvOptions}}
@@ -84,9 +84,9 @@
                                                                                                     <div class="flex items-start flex-1">
                                                                                                         <div class="space-y-3 flex flex-col pr-2 flex-1">
                                                                                                             {{#if metaField.useKvOptions}}
-                                                                                                                <Input @type="text" @value={{option.key}} class="form-input form-input-sm" placeholder="Key" />
+                                                                                                                <Input @type="text" @value={{option.key}} class="form-input form-input-sm" placeholder={{t "fleet-ops.common.key"}} />
                                                                                                             {{/if}}
-                                                                                                            <Input @type="text" @value={{option.value}} class="form-input form-input-sm" placeholder="Value" />
+                                                                                                            <Input @type="text" @value={{option.value}} class="form-input form-input-sm" placeholder={{t "fleet-ops.common.value"}} />
                                                                                                         </div>
                                                                                                         <Button @size="xs" @type="danger" @icon="trash" @onClick={{fn this.removeMetaFieldOption metaField option}} />
                                                                                                     </div>
@@ -103,7 +103,7 @@
                                                         {{/if}}
                                                     </div>
                                                 </div>
-                                                <InputGroup @name="Description" @value={{metaField.description}} />
+                                                <InputGroup @name={{t "fleet-ops.common.description"}} @value={{metaField.description}} />
                                                 <div class="input-group">
                                                     <Checkbox @label="Required" @onToggle={{fn (mut metaField.required)}} @value={{metaField.required}} />
                                                 </div>

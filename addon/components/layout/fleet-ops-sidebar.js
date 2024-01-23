@@ -15,6 +15,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     @service universe;
     @service contextPanel;
     @service store;
+    @service intl;
     @tracked routePrefix = 'console.fleet-ops.';
     @tracked menuPanels = [];
     @tracked universeMenuItems = [];
@@ -36,20 +37,20 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
      */
     createMenuPanels() {
         const operationsItems = [
-            { title: 'Dashboard', icon: 'home', route: 'operations.orders' },
-            { title: 'Service Rates', icon: 'file-invoice-dollar', route: 'operations.service-rates' },
-            { title: 'Scheduler', icon: 'calendar-day', route: 'operations.scheduler' },
+            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.dashboard'), icon: 'home', route: 'operations.orders' },
+            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.service-rates'), icon: 'file-invoice-dollar', route: 'operations.service-rates' },
+            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.scheduler'), icon: 'calendar-day', route: 'operations.scheduler' },
         ];
 
         const resourcesItems = [
-            { title: 'Drivers', icon: 'id-card', route: 'management.drivers', renderComponentInPlace: true, component: DriverListingComponent },
-            { title: 'Vehicles', icon: 'truck', route: 'management.vehicles' },
-            { title: 'Fleets', icon: 'user-group', route: 'management.fleets', renderComponentInPlace: true, component: FleetListingComponent },
-            { title: 'Vendors', icon: 'warehouse', route: 'management.vendors' },
-            { title: 'Contacts', icon: 'address-book', route: 'management.contacts' },
-            { title: 'Places', icon: 'location-dot', route: 'management.places' },
-            { title: 'Fuel Reports', icon: 'gas-pump', route: 'management.fuel-reports' },
-            { title: 'Issues', icon: 'triangle-exclamation', route: 'management.issues' },
+            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.drivers'), icon: 'id-card', route: 'management.drivers', renderComponentInPlace: true, component: DriverListingComponent },
+            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.vehicles'), icon: 'truck', route: 'management.vehicles' },
+            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.fleets'), icon: 'user-group', route: 'management.fleets', renderComponentInPlace: true, component: FleetListingComponent },
+            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.vendors'), icon: 'warehouse', route: 'management.vendors' },
+            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.contacts'), icon: 'address-book', route: 'management.contacts' },
+            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.places'), icon: 'location-dot', route: 'management.places' },
+            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.fuel-reports'), icon: 'gas-pump', route: 'management.fuel-reports' },
+            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.issues'), icon: 'triangle-exclamation', route: 'management.issues' },
         ];
 
         const createPanel = (title, routePrefix, items = []) => ({
@@ -64,7 +65,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 .filter((item) => item.visible),
         });
 
-        this.menuPanels = [createPanel('Operations', 'operations', operationsItems), createPanel('Resources', 'management', resourcesItems)].filter((panel) => {
+        this.menuPanels = [createPanel(this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.operations'), 'operations', operationsItems), createPanel(this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.resources'), 'management', resourcesItems)].filter((panel) => {
             const isVisible = panel.visible && panel.items.length > 0;
             return isVisible;
         });

@@ -15,9 +15,9 @@
             <div class="px-3 py-2 w-full bg-yellow-200 text-yellow-900 rounded shadow-sm flex flex-col justify-center items-start mb-3">
                 <div class="flex flex-row items-center">
                     <FaIcon @icon="eye" class="mr-2 text-yellow-900" />
-                    <span class="font-bold">{{if this.isWaypointsCollapsed "Tap to expand" "Tap to collapse"}}</span>
+                    <span class="font-bold">{{if this.isWaypointsCollapsed (t "fleet-ops.component.route-list.expand")(t "fleet-ops.component.route-list.collapse") }}</span>
                 </div>
-                <div>{{@order.payload.middleWaypoints.length}} more waypoints</div>
+                <div>{{@order.payload.middleWaypoints.length}} {{t "fleet-ops.component.route-list.more-waypoints"}}</div>
             </div>
         </Button>
         {{#unless this.isWaypointsCollapsed}}

@@ -3,48 +3,48 @@
         <div class="flex">
             <div class="w-32 mb-6 mr-6">
                 <Image src={{@options.contact.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} alt={{@options.contact.name}} height="128" width="128" class="h-32 w-32 rounded-md" />
-                <UploadButton @name="photos" @accept="image/*" @onFileAdded={{@options.uploadNewPhoto}} class="w-32" />
+                <UploadButton @name={{t "fleet-ops.common.photos"}} @accept="image/*" @onFileAdded={{@options.uploadNewPhoto}} class="w-32" />
             </div>
             <div class="flex-1">
                 <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
                     <div class="input-group">
                         <label>
-                            Name
+                            {{t "fleet-ops.common.name"}}
                         </label>
-                        <Input @value={{@options.contact.name}}  @type="text" class="w-full form-input" placeholder="Name" />
+                        <Input @value={{@options.contact.name}}  @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} />
                     </div>
 
                     <div class="input-group">
                         <label>
-                            Title
+                            {{t "fleet-ops.common.title"}}
                         </label>
-                        <Input @value={{@options.contact.title}}  @type="text" class="w-full form-input" placeholder="Title" />
+                        <Input @value={{@options.contact.title}}  @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.title"}} />
                     </div>
 
                     <div class="input-group">
                         <label>
-                            Internal ID
+                            {{t "fleet-ops.common.internal-id"}}
                         </label>
-                        <Input @value={{@options.contact.internal_id}}  @type="text" class="w-full form-input" placeholder="Internal ID" />
+                        <Input @value={{@options.contact.internal_id}}  @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.internal-id"}} />
                     </div>
 
                     <div class="input-group">
                         <label>
-                            Email
+                            {{t "fleet-ops.common.email"}}
                         </label>
-                        <Input @value={{@options.contact.email}}  @type="text" class="w-full form-input" placeholder="Email" />
+                        <Input @value={{@options.contact.email}}  @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.email"}} />
                     </div>
 
                     <div class="input-group">
                         <label>
-                            Phone
+                            {{t "fleet-ops.common.phone"}}
                         </label>
                         <PhoneInput @value={{@options.contact.phone}} @onInput={{fn (mut @options.contact.phone)}} class="form-input w-full" />
                     </div>
 
                     <div class="input-group">
                         <label>
-                            Type
+                            {{t "fleet-ops.common.type"}}
                         </label>
                         <Select @options={{@options.contactTypes}} @value={{@options.contact.type}} @onSelect={{fn (mut @options.contact.type)}} class="form-input w-full" />
                     </div>

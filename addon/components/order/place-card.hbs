@@ -29,9 +29,9 @@
     {{#if @place.metadata}}
         <Button @size="xs" @onClick={{this.showMeta}} class="my-2">
             {{#if this.showingMeta}}
-                Show less details
+                {{t "fleet-ops.component.order.place-card.show-less"}}
             {{else}}
-                Show more details
+                {{t "fleet-ops.component.order.place-card.show-more"}}
             {{/if}}
         </Button>
         {{#if this.showingMeta}}

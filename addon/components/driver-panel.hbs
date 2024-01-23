@@ -12,11 +12,11 @@
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
-                {{!-- <Button @type="default" @icon="location-arrow" @helpText="Locate driver" @onClick={{@onPressCancel}} /> --}}
-                <Button @type="default" @icon="pen" @helpText="Edit driver" @onClick={{this.onEdit}} />
+                {{!-- <Button @type="default" @icon="location-arrow" @helpText={{t "fleet-ops.component.driver-panel.locate-button-text"}} @onClick={{@onPressCancel}} /> --}}
+                <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.driver-panel.edit-button-text"}} @onClick={{this.onEdit}} />
             </div>
             <div class="flex flex-1 justify-end">
-                <Button @type="default" @icon="times" @helpText="Close driver details" @onClick={{this.onPressCancel}} />
+                <Button @type="default" @icon="times" @helpText={{t "fleet-ops.component.driver-panel.close-button-text"}} @onClick={{this.onPressCancel}} />
             </div>
         </div>
         <div class="flex flex-row justify-between w-full">
@@ -50,8 +50,8 @@
                                 </div>
                             {{else}}
                                 <div class="flex flex-row items-center">
-                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">No vehicle assigned</span>
-                                    {{! <Button @icon="plus" @size="xs" @helpText="Assign a vehicle to driver" /> }}
+                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{t "fleet-ops.component.driver-panel.no-vehicle-message"}}</span>
+                                    {{!-- <Button @icon="plus" @size="xs" @helpText={{t "fleet-ops.component.driver-panel.assign-vehicle-button"}} /> --}}
                                 </div>
                             {{/if}}
                         </div>

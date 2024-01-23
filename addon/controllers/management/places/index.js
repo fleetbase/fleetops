@@ -21,6 +21,13 @@ export default class ManagementPlacesIndexController extends BaseController {
     @service modalsManager;
 
     /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+    @service intl;
+
+    /**
      * Inject the `store` service
      *
      * @var {Service}
@@ -139,7 +146,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      */
     @tracked columns = [
         {
-            label: 'Name',
+            label: this.intl.t('fleet-ops.common.name'),
             valuePath: 'name',
             width: '200px',
             cellComponent: 'table/cell/anchor',
@@ -151,7 +158,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Address',
+            label: this.intl.t('fleet-ops.common.address'),
             valuePath: 'address',
             cellComponent: 'table/cell/anchor',
             action: this.viewPlace,
@@ -163,7 +170,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'State',
+            label: this.intl.t('fleet-ops.common.state'),
             valuePath: 'state',
             cellComponent: 'table/cell/anchor',
             action: this.viewPlace,
@@ -175,7 +182,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'City',
+            label: this.intl.t('fleet-ops.common.city'),
             valuePath: 'city',
             cellComponent: 'table/cell/anchor',
             action: this.viewPlace,
@@ -187,7 +194,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'ID',
+            label: this.intl.t('fleet-ops.common.id'),
             valuePath: 'public_id',
             width: '120px',
             cellComponent: 'click-to-copy',
@@ -197,7 +204,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Phone',
+            label: this.intl.t('fleet-ops.common.phone'),
             valuePath: 'phone',
             cellComponent: 'table/cell/base',
             width: '120px',
@@ -208,7 +215,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Country',
+            label: this.intl.t('fleet-ops.common.country'),
             valuePath: 'country_name',
             cellComponent: 'table/cell/base',
             cellClassNames: 'uppercase',
@@ -220,7 +227,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             filterParam: 'country',
         },
         {
-            label: 'Neighborhood',
+            label: this.intl.t('fleet-ops.common.neighborhood'),
             valuePath: 'neighborhood',
             cellComponent: 'table/cell/anchor',
             action: this.viewPlace,
@@ -232,7 +239,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Postal Code',
+            label: this.intl.t('fleet-ops.common.postal-code'),
             valuePath: 'postal_code',
             cellComponent: 'table/cell/anchor',
             action: this.viewPlace,
@@ -243,7 +250,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Created At',
+            label: this.intl.t('fleet-ops.common.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
             width: '10%',
@@ -253,7 +260,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             filterComponent: 'filter/date',
         },
         {
-            label: 'Updated At',
+            label: this.intl.t('fleet-ops.common.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
             width: '10%',
@@ -276,25 +283,25 @@ export default class ManagementPlacesIndexController extends BaseController {
             width: '10%',
             actions: [
                 {
-                    label: 'View Place Details',
+                    label: this.intl.t('fleet-ops.management.places.index.view-details'),
                     fn: this.viewPlace,
                 },
                 {
-                    label: 'Edit Place',
+                    label: this.intl.t('fleet-ops.management.places.index.edit-place'),
                     fn: this.editPlace,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: 'View Place on Map',
+                    label: this.intl.t('fleet-ops.management.places.index.view-place'),
                     fn: this.viewOnMap,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: 'Delete Place',
+                    label: this.intl.t('fleet-ops.management.places.index.delete'),
                     fn: this.deletePlace,
                 },
             ],
@@ -403,7 +410,7 @@ export default class ManagementPlacesIndexController extends BaseController {
 
         this.crud.bulkDelete(selected, {
             modelNamePath: `address`,
-            acceptButtonText: 'Delete Places',
+            acceptButtonText: this.intl.t('fleet-ops.management.places.index.delete-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },
@@ -419,14 +426,14 @@ export default class ManagementPlacesIndexController extends BaseController {
      */
     @action assignVendor(place, options = {}) {
         this.modalsManager.show('modals/place-assign-vendor', {
-            title: `Assign this Place to a Vendor`,
-            acceptButtonText: 'Confirm & Create',
+            title: this.intl.t('fleet-ops.management.places.index.title'),
+            acceptButtonText: this.intl.t('fleet-ops.management.places.index.confirm-button'),
             hideDeclineButton: true,
             place,
             confirm: (modal) => {
                 modal.startLoading();
                 return place.save().then(() => {
-                    this.notifications.success(`'${place.name}' details has been updated.`);
+                    this.notifications.success(this.intl.t('fleet-ops.management.places.index.success-message', { placeName: place.name }));
                 });
             },
             ...options,
@@ -444,7 +451,7 @@ export default class ManagementPlacesIndexController extends BaseController {
         const { latitude, longitude } = place;
 
         this.modalsManager.show('modals/point-map', {
-            title: `Location of ${place.name}`,
+            title: this.intl.t('fleet-ops.management.places.index.locate-title', { placeName: place.name }),
             acceptButtonText: 'Done',
             hideDeclineButton: true,
             latitude,

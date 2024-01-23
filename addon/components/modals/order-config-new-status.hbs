@@ -1,5 +1,5 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
-        <InputGroup @name="New Status" @value={{@options.statusName}} @helpText="Enter a new activity status to add to the flow" />
+        <InputGroup @name={{t "fleet-ops.component.modals.order-config-new-status.new-status"}} @value={{@options.statusName}} @helpText={{t "fleet-ops.component.modals.order-config-new-status.status-text"}} />
     </div>
 </Modal::Default>

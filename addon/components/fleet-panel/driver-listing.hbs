@@ -3,7 +3,7 @@
         <div class="mb-3 flex items-center justify-between">
             <div class="flex items-center">
                 <div class="fleet-driver-listing-search">
-                    <Input @type="text" {{on "input" this.onInput}} placeholder="Search drivers in fleet" class="w-64 form-input form-input-sm" />
+                    <Input @type="text" {{on "input" this.onInput}} placeholder={{t "fleet-ops.component.fleet-panel.driver-listing.search-driver"}} class="w-64 form-input form-input-sm" />
                 </div>
                 {{#if this.search.isRunning}}
                     <div class="mx-2">
@@ -12,7 +12,7 @@
                 {{/if}}
             </div>
             <div class="w-56">
-                <ModelSelect @modelName="driver" @selectedModel={{this.selectedDriver}} @placeholder="Add driver to fleet" @triggerClass="form-select form-input form-select-sm form-input-sm" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{this.onAddDriver}} as |model|>
+                <ModelSelect @modelName="driver" @selectedModel={{this.selectedDriver}} @placeholder={{t "fleet-ops.component.fleet-panel.driver-listing.add-driver"}} @triggerClass="form-select form-input form-select-sm form-input-sm" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{this.onAddDriver}} as |model|>
                     {{model.name}}
                 </ModelSelect>
             </div>
@@ -23,7 +23,7 @@
                     {{#if this.selectable}}
                         <div></div>
                     {{/if}}
-                    <div class="col-span-4 flex items-center">Driver</div>
+                    <div class="col-span-4 flex items-center">{{t "fleet-ops.common.driver"}}</div>
                     <div class="col-span-7 flex items-center"></div>
                 </div>
             </div>
@@ -33,7 +33,7 @@
                         <div class="mr-2">
                             <Spinner @iconClass="text-sky-500" />
                         </div>
-                        <span>Loading fleet drivers...</span>
+                        <span>{{t "fleet-ops.component.fleet-panel.driver-listing.loading-driver"}}</span>
                     </div>
                 {{/if}}
                 {{#each this.drivers as |driver|}}
@@ -61,7 +61,7 @@
                         <div class="flex items-center justify-end">
                             <a href="javascript:;" class="text-danger text-opacity-75" {{on "click" (fn this.onRemoveDriver driver)}}>
                                 <FaIcon @icon="times" @prefix="fas" class="mr-1" />
-                                <span>Remove</span>
+                                <span>{{t "fleet-ops.common.remove"}}</span>
                             </a>
                         </div>
                     </div>

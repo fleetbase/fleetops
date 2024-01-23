@@ -23,6 +23,13 @@ export default class ManagementVendorsIndexController extends BaseController {
     @service modalsManager;
 
     /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+    @service intl;
+
+    /**
      * Inject the `crud` service
      *
      * @var {Service}
@@ -162,7 +169,7 @@ export default class ManagementVendorsIndexController extends BaseController {
      */
     @tracked columns = [
         {
-            label: 'Name',
+            label: this.intl.t('fleet-ops.common.name'),
             valuePath: 'name',
             width: '180px',
             cellComponent: 'table/cell/media-name',
@@ -174,7 +181,7 @@ export default class ManagementVendorsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'ID',
+            label: this.intl.t('fleet-ops.common.id'),
             valuePath: 'public_id',
             cellComponent: 'click-to-copy',
             width: '110px',
@@ -184,7 +191,7 @@ export default class ManagementVendorsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Internal ID',
+            label: this.intl.t('fleet-ops.common.internal-id'),
             valuePath: 'internal_id',
             cellComponent: 'click-to-copy',
             width: '100px',
@@ -194,7 +201,7 @@ export default class ManagementVendorsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Email',
+            label: this.intl.t('fleet-ops.common.email'),
             valuePath: 'email',
             cellComponent: 'click-to-copy',
             width: '80px',
@@ -205,7 +212,7 @@ export default class ManagementVendorsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Website URL',
+            label: this.intl.t('fleet-ops.common.website-url'),
             valuePath: 'website_url',
             cellComponent: 'click-to-copy',
             width: '80px',
@@ -216,7 +223,7 @@ export default class ManagementVendorsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Phone',
+            label: this.intl.t('fleet-ops.common.phone'),
             valuePath: 'phone',
             cellComponent: 'click-to-copy',
             width: '80px',
@@ -227,7 +234,7 @@ export default class ManagementVendorsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Address',
+            label: this.intl.t('fleet-ops.common.address'),
             valuePath: 'address',
             cellComponent: 'table/cell/anchor',
             action: this.viewVendorPlace,
@@ -239,7 +246,7 @@ export default class ManagementVendorsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Type',
+            label: this.intl.t('fleet-ops.common.type'),
             valuePath: 'type',
             cellComponent: 'table/cell/anchor',
             action: this.viewVendorPlace,
@@ -251,7 +258,7 @@ export default class ManagementVendorsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Country',
+            label: this.intl.t('fleet-ops.common.country'),
             valuePath: 'country',
             cellComponent: 'table/cell/base',
             cellClassNames: 'uppercase',
@@ -263,7 +270,7 @@ export default class ManagementVendorsIndexController extends BaseController {
             filterParam: 'country',
         },
         {
-            label: 'Created At',
+            label: this.intl.t('fleet-ops.common.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
             width: '150px',
@@ -273,7 +280,7 @@ export default class ManagementVendorsIndexController extends BaseController {
             filterComponent: 'filter/date',
         },
         {
-            label: 'Updated At',
+            label: this.intl.t('fleet-ops.common.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
             width: '130px',
@@ -284,7 +291,7 @@ export default class ManagementVendorsIndexController extends BaseController {
             filterComponent: 'filter/date',
         },
         {
-            label: 'Status',
+            label: this.intl.t('fleet-ops.common.status'),
             valuePath: 'status',
             cellComponent: 'table/cell/status',
             width: '130px',
@@ -306,18 +313,18 @@ export default class ManagementVendorsIndexController extends BaseController {
             width: '7%',
             actions: [
                 {
-                    label: 'View Vendor Details',
+                    label: this.intl.t('fleet-ops.management.vendors.index.view-vendor'),
                     fn: this.viewVendor,
                 },
                 {
-                    label: 'Edit Vendor',
+                    label: this.intl.t('fleet-ops.management.vendors.index.edit-vendor'),
                     fn: this.editVendor,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: 'Delete Vendor',
+                    label: this.intl.t('fleet-ops.management.vendors.index.delete-vendor'),
                     fn: this.deleteVendor,
                 },
             ],
@@ -425,7 +432,7 @@ export default class ManagementVendorsIndexController extends BaseController {
 
         this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
-            acceptButtonText: 'Delete Vendors',
+            acceptButtonText: this.intl.t('fleet-ops.management.vendors.index.delete-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },

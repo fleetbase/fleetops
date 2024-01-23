@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 import { action, computed } from '@ember/object';
 
 export default class WidgetFleetOpsQuickstartComponent extends Component {
+    @service intl;
     @service fetch;
     @service hostRouter;
     @tracked tasks = {};

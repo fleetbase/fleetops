@@ -2,10 +2,10 @@
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
-                <Button @type="default" @icon="pen" @helpText="Edit contact" @onClick={{this.onEdit}} />
+                <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.contact-panel.edit-button"}} @onClick={{this.onEdit}} />
             </div>
             <div class="flex flex-1 justify-end">
-                <Button @type="default" @icon="times" @helpText={{if this.contact.id "Cancel edit contact" "Cancel new contact"}} @onClick={{this.onPressCancel}} />
+                <Button @type="default" @icon="times" @helpText={{if this.contact.id (t "fleet-ops.component.contact-panel.cancel-edit-button")(t "fleet-ops.component.contact-panel.cancel-new-button") }} @onClick={{this.onPressCancel}} />
             </div>
         </div>
         <div class="flex flex-row justify-between w-full">

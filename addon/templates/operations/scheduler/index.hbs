@@ -1,11 +1,11 @@
-<Layout::Section::Header @title="Scheduler" />
+<Layout::Section::Header @title={{t "fleet-ops.operations.scheduler.index.title"}} />
 
 <Layout::Section::Body class="overflow-y-scroll h-screen">
     <div class="h-screen">
         <div class="grid grid-cols-1 lg:grid-cols-3">
             <div class="scheduler-left-sidebar">
                 <ContentPanel
-                    @title="Unscheduled Orders"
+                    @title={{t "fleet-ops.operations.scheduler.index.unscheduled-orders"}}
                     @titleStatuRight={{this.unscheduledOrders.length}}
                     @titleStatuRightClass="info-status-badge"
                     @hideStatusDot={{true}}
@@ -22,7 +22,7 @@
                     </div>
                 </ContentPanel>
                 <ContentPanel
-                    @title="Scheduled Orders"
+                    @title={{t "fleet-ops.operations.scheduler.index.scheduled-orders"}}
                     @titleStatuRight={{this.scheduledOrders.length}}
                     @titleStatusRightClass="info-status-badge"
                     @hideStatusDot={{true}}

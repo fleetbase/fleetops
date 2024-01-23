@@ -32,6 +32,11 @@ export default class LiveMapDrawerPlaceListingComponent extends Component {
     @service crud;
 
     /**
+     * Service for intl.
+     * @service
+     */
+    @service intl;
+    /**
      * The list of places to display, tracked for reactivity.
      * @tracked
      */
@@ -62,7 +67,7 @@ export default class LiveMapDrawerPlaceListingComponent extends Component {
      */
     @tracked columns = [
         {
-            label: 'Place',
+            label: this.intl.t('fleet-ops.component.live-map-drawer.place-listing.place'),
             valuePath: 'address',
             width: '200px',
             cellComponent: 'table/cell/anchor',
@@ -70,7 +75,7 @@ export default class LiveMapDrawerPlaceListingComponent extends Component {
             showOnlineIndicator: true,
         },
         {
-            label: 'Location',
+            label: this.intl.t('fleet-ops.component.live-map-drawer.place-listing.location'),
             valuePath: 'location',
             width: '80px',
             cellComponent: 'table/cell/point',
@@ -88,21 +93,21 @@ export default class LiveMapDrawerPlaceListingComponent extends Component {
             width: '90px',
             actions: [
                 {
-                    label: 'View place details...',
+                    label: this.intl.t('fleet-ops.component.live-map-drawer.place-listing.view-place'),
                     fn: this.focus,
                 },
                 {
-                    label: 'Edit place...',
+                    label: this.intl.t('fleet-ops.component.live-map-drawer.place-listing.edit-place'),
                     fn: (place) => {
                         return this.focus(place, 'editing');
                     },
                 },
                 {
-                    label: 'Locate place...',
+                    label: this.intl.t('fleet-ops.component.live-map-drawer.place-listing.locate-place'),
                     fn: this.locate,
                 },
                 {
-                    label: 'Delete place...',
+                    label: this.intl.t('fleet-ops.component.live-map-drawer.place-listing.delete-place'),
                     fn: this.delete,
                 },
             ],
@@ -182,7 +187,7 @@ export default class LiveMapDrawerPlaceListingComponent extends Component {
         if (this.liveMap) {
             this.liveMap.focusLayerByRecord(place, 18);
         } else {
-            this.notifications.warning('Unable to locate place.');
+            this.notifications.warning(this.intl.t('fleet-ops.component.live-map-drawer.place-listing.warning-message'));
         }
     }
 

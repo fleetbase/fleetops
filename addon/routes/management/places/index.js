@@ -26,7 +26,7 @@ export default class ManagementPlacesIndexRoute extends Route {
 
     @action willTransition(transition) {
         if (isNestedRouteTransition(transition)) {
-            set(this.queryParams, 'page.refreshModel', false);
+            // set(this.queryParams, 'page.refreshModel', false);
             set(this.queryParams, 'sort.refreshModel', false);
         }
     }

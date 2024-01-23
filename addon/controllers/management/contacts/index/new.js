@@ -19,6 +19,13 @@ export default class ManagementContactsIndexNewController extends BaseController
     @service hostRouter;
 
     /**
+     * Inject the `intl` service
+     *
+     * @memberof intl
+     */
+    @service intl;
+
+    /**
      * Inject the `hostRouter` service
      *
      * @memberof ManagementcontactsIndexNewController

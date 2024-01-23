@@ -13,7 +13,7 @@
                         <div class="notch">
                             {{#if (eq location.uuid this.destination.uuid)}}
                                 <Attach::Tooltip @class="clean" @animation="scale" @placement="top" @showOn="mouseenter focus">
-                                    <InputInfo @text="Destination" @iconClass="text-green-400" class="flex items-center" @spanClass="flex items-start justify-start text-left ml-1" />
+                                    <InputInfo @text={{t "fleet-ops.common.destination"}} @iconClass="text-green-400" class="flex items-center" @spanClass="flex items-start justify-start text-left ml-1" />
                                 </Attach::Tooltip>
                             {{/if}}
                         </div>

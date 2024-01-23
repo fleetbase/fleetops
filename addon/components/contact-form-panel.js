@@ -10,6 +10,10 @@ export default class ContactFormPanelComponent extends Component {
      * @service store
      */
     @service store;
+    /**
+     * @service intl
+     */
+    @service intl;
 
     /**
      * @service fetch
@@ -105,7 +109,7 @@ export default class ContactFormPanelComponent extends Component {
             return contact
                 .save()
                 .then((contact) => {
-                    this.notifications.success(`contact (${contact.name}) saved successfully.`);
+                    this.notifications.success(this.intl.t('fleet-ops.component.contact-form-panel.success-message', { contactName: contact.name }));
                     contextComponentCallback(this, 'onAfterSave', contact);
                 })
                 .catch((error) => {

@@ -12,10 +12,10 @@
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
-                <Button @type="default" @icon="pen" @helpText="Edit vehicle" @onClick={{this.onEdit}} />
+                <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.vehicle-panel.edit"}} @onClick={{this.onEdit}} />
             </div>
             <div class="flex flex-1 justify-end">
-                <Button @type="default" @icon="times" @helpText="Close vehicle details" @onClick={{this.onPressCancel}} />
+                <Button @type="default" @icon="times" @helpText={{t "fleet-ops.component.vehicle-panel.close"}} @onClick={{this.onPressCancel}} />
             </div>
         </div>
         <div class="flex flex-row justify-between w-full">
@@ -45,8 +45,8 @@
                                 </div>
                             {{else}}
                                 <div class="flex flex-row items-center">
-                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">No driver assigned</span>
-                                    {{! <Button @icon="user-plus" @size="xs" @helpText="Assign a driver to vehicle" /> }}
+                                    <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{t "fleet-ops.component.vehicle-panel.not-assigned"}}</span>
+                                    {{!-- <Button @icon="user-plus" @size="xs" @helpText={{t "fleet-ops.component.vehicle-panel.assign-driver"}} /> --}}
                                 </div>
                             {{/if}}
                         </div>
