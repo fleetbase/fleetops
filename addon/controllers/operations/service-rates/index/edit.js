@@ -1,6 +1,7 @@
 import OperationsServiceRatesIndexNewController from './new';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { inject as service } from '@ember/object';
 
 export default class OperationsServiceRatesIndexEditController extends OperationsServiceRatesIndexNewController {
     /**

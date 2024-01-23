@@ -43,9 +43,21 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         ];
 
         const resourcesItems = [
-            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.drivers'), icon: 'id-card', route: 'management.drivers', renderComponentInPlace: true, component: DriverListingComponent },
+            {
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.drivers'),
+                icon: 'id-card',
+                route: 'management.drivers',
+                renderComponentInPlace: true,
+                component: DriverListingComponent,
+            },
             { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.vehicles'), icon: 'truck', route: 'management.vehicles' },
-            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.fleets'), icon: 'user-group', route: 'management.fleets', renderComponentInPlace: true, component: FleetListingComponent },
+            {
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.fleets'),
+                icon: 'user-group',
+                route: 'management.fleets',
+                renderComponentInPlace: true,
+                component: FleetListingComponent,
+            },
             { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.vendors'), icon: 'warehouse', route: 'management.vendors' },
             { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.contacts'), icon: 'address-book', route: 'management.contacts' },
             { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.places'), icon: 'location-dot', route: 'management.places' },
@@ -65,7 +77,10 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 .filter((item) => item.visible),
         });
 
-        this.menuPanels = [createPanel(this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.operations'), 'operations', operationsItems), createPanel(this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.resources'), 'management', resourcesItems)].filter((panel) => {
+        this.menuPanels = [
+            createPanel(this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.operations'), 'operations', operationsItems),
+            createPanel(this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.resources'), 'management', resourcesItems),
+        ].filter((panel) => {
             const isVisible = panel.visible && panel.items.length > 0;
             return isVisible;
         });
