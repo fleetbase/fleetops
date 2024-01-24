@@ -93,6 +93,9 @@ devDependencies:
   '@embroider/test-setup':
     specifier: ^3.0.2
     version: 3.0.2
+  '@fleetbase/intl-lint':
+    specifier: ^0.0.1
+    version: 0.0.1
   '@glimmer/component':
     specifier: ^1.1.2
     version: 1.1.2(@babel/core@7.23.2)
@@ -2536,6 +2539,14 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: false
+
+  /@fleetbase/intl-lint@0.0.1:
+    resolution: {integrity: sha512-LkjxJr15hSiGmqh3JwixcpjmkhXNieNAEgQUVv1Duo50jTr/D5WXEyOaeI8wuVnVFhT+FS/DMqm403DgSKlsEg==}
+    hasBin: true
+    dependencies:
+      js-yaml: 4.1.0
+      yargs: 17.7.2
+    dev: true
 
   /@fleetbase/leaflet-routing-machine@3.2.16:
     resolution: {integrity: sha512-af0mKH3VKIGEfYEGXS9cedhgniwgkNwjC/Gp9ZEzXGTX2/13PyMdd1XOQTamaItPbh5x2uK2/n1BP0vIJ7ObEQ==}
