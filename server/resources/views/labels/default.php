@@ -162,7 +162,17 @@ use Fleetbase\Support\Utils; ?>
 				<div style="padding: 15px;" class="group" style="border-bottom: 1px #414141 solid; padding: 15px;">
 					<div style="float: left; display: inline-block; margin-right: 15px">
 						<?php foreach ($entities as $entity) { ?>
-							<div class="line"><strong>PRODUCT-<?= $entity['internal_id'] ?? '' ?></strong></div>
+							<div class="line">
+								<strong>
+									<?php
+									if (isset($entity['name']) && !empty($entity['name'])) {
+										echo strtoupper($entity['name']) . ' - ' . ($entity['internal_id'] ?? '');
+									} else {
+										echo 'ITEM -' . ($entity['internal_id'] ?? '');
+									}
+									?>
+								</strong>
+							</div>
 						<?php } ?>
 					</div>
 				</div>
