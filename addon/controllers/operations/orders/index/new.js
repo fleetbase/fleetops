@@ -589,9 +589,9 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     _getSerializedPayload(payload) {
         const serialized = {
             pickup: payload.pickup,
-            dropoff: payload.dropoff
+            dropoff: payload.dropoff,
         };
-        
+
         if (isModel(payload.pickup)) {
             serialized.pickup = payload.pickup.toJSON();
         }
