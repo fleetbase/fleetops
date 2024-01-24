@@ -216,6 +216,14 @@ class Payload extends Model
                 }
             }
 
+            // Validate destination actually exists
+            if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
+                $validDestination = $this->_findCorrectDestinationForEntity($attributes);
+                if ($validDestination) {
+                    $attributes['destination_uuid'] = $validDestination->uuid;
+                }
+            }
+
             $entity = new Entity($attributes);
             $this->entities()->save($entity);
         }
@@ -246,6 +254,14 @@ class Payload extends Model
                 $destination    = $this->findDestinationFromKey($destinationKey);
                 if ($destination instanceof Place) {
                     $attributes['destination_uuid'] = $destination->uuid;
+                }
+            }
+
+            // Validate destination actually exists
+            if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
+                $validDestination = $this->_findCorrectDestinationForEntity($attributes);
+                if ($validDestination) {
+                    $attributes['destination_uuid'] = $validDestination->uuid;
                 }
             }
 
@@ -334,7 +350,9 @@ class Payload extends Model
                 if (Str::isUuid($placeUuid) && isset($attributes['uuid']) && $placeUuid !== $attributes['uuid']) {
                     $place = Place::where('uuid', $placeUuid)->first();
 
+                    // set the original destination uuid in meta
                     if ($place instanceof Place) {
+                        $place->updateMeta('_console_destination_uuid', $attributes['uuid']);
                         $place->updateMeta('search_uuid', $attributes['uuid']);
                     }
                 }
@@ -397,6 +415,18 @@ class Payload extends Model
         }
 
         return $this->refresh()->load(['waypoints']);
+    }
+
+    public function _findCorrectDestinationForEntity($entityAttributes = []): ?Place
+    {
+        $destinationId = Utils::get($entityAttributes, 'destination_uuid');
+
+        $destination = Place::where('meta->search_uuid', $destinationId)->first();
+        if (!$destination) {
+            $destination = Place::where('meta->_console_destination_uuid', $destinationId)->first();
+        }
+
+        return $destination;
     }
 
     /**
@@ -777,6 +807,15 @@ class Payload extends Model
         if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
             // search waypoints for search_uuid if any
             $destination = Place::where('meta->search_uuid', $attributes['destination_uuid'])->first();
+
+            if ($destination instanceof Place) {
+                return $destination;
+            }
+        }
+
+        // Validate destination actually exists
+        if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
+            $destination = $this->_findCorrectDestinationForEntity($attributes);
 
             if ($destination instanceof Place) {
                 return $destination;
