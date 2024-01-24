@@ -10,7 +10,7 @@
     @width={{or this.width @width "570px"}}
 >
     <Overlay::Header
-        @title={{if this.fuelReport.public_id this.fuelReport.name "New Fuel Report"}}
+        @title={{if this.fuelReport.public_id this.fuelReport.name (t "fleet-ops.component.fuel-report-form-panel.fuel-report") }}
         @status={{this.fuelReport.public_id}}
         @hideStatusDot={{true}}
         @createdAt={{this.fuelReport.createdAt}}
@@ -20,24 +20,24 @@
             <Button
                 @icon={{if this.fuelReport.id "save" "check"}}
                 @type="primary"
-                @text={{if this.fuelReport.id "Save Fuel Report" "Create Fuel Report"}}
+                @text={{if this.fuelReport.id (t "fleet-ops.component.fuel-report-form-panel.save-fuel-report")(t "fleet-ops.component.fuel-report-form-panel.create-fuel-report") }}
                 @onClick={{this.save}}
                 @wrapperClass="mr-2"
             />
             {{#if this.fuelReport.id}}
-                <Button @type="default" @icon="gas-pump" @helpText="View fuel report details" @onClick={{this.onViewDetails}} @wrapperClass="mr-2" />
+                <Button @type="default" @icon="gas-pump" @helpText={{t "fleet-ops.component.fuel-report-form-panel.view-details"}} @onClick={{this.onViewDetails}} @wrapperClass="mr-2" />
             {{/if}}
-            <Button @type="default" @icon="times" @helpText={{if this.fuelReport.id "Cancel edit fuel report" "Cancel new fuel report"}} @onClick={{this.onPressCancel}} />
+            <Button @type="default" @icon="times" @helpText={{if this.fuelReport.id (t "fleet-ops.component.fuel-report-form-panel.cancel-edit-fuel-report")(t "fleet-ops.component.fuel-report-form-panel.cancel-new-fuel-report") }} @onClick={{this.onPressCancel}} />
         </div>
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
         <div class="grid grid-cols-1 text-xs dark:text-gray-100">
-            <InputGroup @name="Reporter">
+            <InputGroup @name={{t "fleet-ops.common.reporter"}}>
                 <ModelSelect
                     @modelName="user"
                     @selectedModel={{this.fuelReport.reporter}}
-                    @placeholder="Select Reporter"
+                    @placeholder={{t "fleet-ops.component.fuel-report-form-panel.select-reporter"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -48,11 +48,11 @@
                     {{model.name}}
                 </ModelSelect>
             </InputGroup>
-            <InputGroup @name="Driver">
+            <InputGroup @name={{t "fleet-ops.common.driver"}}>
                 <ModelSelect
                     @modelName="driver"
                     @selectedModel={{this.fuelReport.driver}}
-                    @placeholder="Select Driver"
+                    @placeholder={{t "fleet-ops.component.fuel-report-form-panel.select-driver"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -63,11 +63,11 @@
                     {{model.name}}
                 </ModelSelect>
             </InputGroup>
-            <InputGroup @name="Vehicle">
+            <InputGroup @name={{t "fleet-ops.common.vehicle"}}>
                 <ModelSelect
                     @modelName="vehicle"
                     @selectedModel={{this.fuelReport.vehicle}}
-                    @placeholder="Select Vehicle"
+                    @placeholder={{t "fleet-ops.component.fuel-report-form-panel.select-vehicle"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -78,13 +78,13 @@
                     {{model.display_name}}
                 </ModelSelect>
             </InputGroup>
-            <InputGroup @name="Status">
+            <InputGroup @name={{t "fleet-ops.common.status"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.statusOptions}}
                         @selected={{this.fuelReport.status}}
                         @onChange={{fn (mut this.fuelReport.status)}}
-                        @placeholder="Select fuel-report status"
+                        @placeholder={{t "fleet-ops.component.fuel-report-form-panel.select-fuel-report"}}
                         @triggerClass="form-select form-input"
                         as |status|
                     >
@@ -92,8 +92,8 @@
                     </PowerSelect>
                 </div>
             </InputGroup>
-            <InputGroup @name="Odometer" @type="number" @value={{this.fuelReport.odometer}} />
-            <InputGroup @name="Cost">
+            <InputGroup @name={{t "fleet-ops.component.fuel-report-form-panel.odometer"}} @type="number" @value={{this.fuelReport.odometer}} />
+            <InputGroup @name={{t "fleet-ops.component.fuel-report-form-panel.cost"}}>
                 <MoneyInput
                     class="w-full"
                     @value={{this.fuelReport.amount}}
@@ -102,7 +102,7 @@
                     @onCurrencyChange={{fn (mut this.fuelReport.currency)}}
                 />
             </InputGroup>
-            <InputGroup @name="Volume" @helpText="Select the metric unit and volume of fuel to report." @wrapperClass="w-full">
+            <InputGroup @name={{t "fleet-ops.component.fuel-report-form-panel.volume"}} @helpText={{t "fleet-ops.component.fuel-report-form-panel.select-volume-text"}} @wrapperClass="w-full">
                 <UnitInput
                     class="w-full"
                     @measurement="volume"
@@ -112,7 +112,7 @@
                     @onUnitChange={{fn (mut this.fuelReport.metric_unit)}}
                 />
             </InputGroup>
-            <InputGroup @name="Coordinates">
+            <InputGroup @name={{t "fleet-ops.common.coordinates"}}>
                 <CoordinatesInput @value={{this.fuelReport.location}} @onChange={{fn (mut this.fuelReport.location)}} />
             </InputGroup>
         </div>

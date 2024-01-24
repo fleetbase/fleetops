@@ -21,6 +21,10 @@ export default class FleetFormPanelComponent extends Component {
      * @service hostRouter
      */
     @service hostRouter;
+    /**
+     * @service intl
+     */
+    @service intl;
 
     /**
      * @service loader
@@ -94,7 +98,7 @@ export default class FleetFormPanelComponent extends Component {
             return fleet
                 .save()
                 .then((fleet) => {
-                    this.notifications.success(`Fleet (${fleet.name}) saved successfully.`);
+                    this.notifications.success(this.intl.t('fleet-ops.component.fleet-form-panel.success-message', { fleetName: fleet.name }));
                     contextComponentCallback(this, 'onAfterSave', fleet);
                 })
                 .catch((error) => {

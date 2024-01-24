@@ -2,6 +2,7 @@ import BaseController from '@fleetbase/fleetops-engine/controllers/base-controll
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+
 export default class ManagementIssuesIndexNewController extends BaseController {
     /**
      * Inject the `store` service
@@ -16,6 +17,13 @@ export default class ManagementIssuesIndexNewController extends BaseController {
      * @memberof ManagementissuesIndexNewController
      */
     @service hostRouter;
+
+    /**
+     * Inject the `intl` service
+     *
+     * @memberof intl
+     */
+    @service intl;
 
     /**
      * Inject the `currentUser` service

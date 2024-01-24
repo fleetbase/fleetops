@@ -12,20 +12,20 @@
         </div>
         <div class="content-panel-body">
 
-            <InputGroup @name="Name" @value={{@orderConfig.name}} />
-            <InputGroup @name="Description" @value={{@orderConfig.description}} />
-            <InputGroup @name="Key" @value={{@orderConfig.key}} @disabled={{true}} readonly={{true}} @helpText="Pass this key into your order type to configure the order using this config." />
-            <InputGroup @name="Namespace" @value={{@orderConfig.namespace}} @disabled={{true}} readonly={{true}} @helpText="Unique namespace for this extension." />
-            <InputGroup @name="Extension ID" @value={{@orderConfig.extension_id}} @disabled={{true}} readonly={{true}} @helpText="Unique ID for this extension." />
-            <InputGroup @name="Extension Version" @value={{@orderConfig.version}} @disabled={{true}} readonly={{true}} @helpText="Version of this extension." />
+            <InputGroup @name={{t "fleet-ops.common.name"}} @value={{@orderConfig.name}} />
+            <InputGroup @name={{t "fleet-ops.common.description"}} @value={{@orderConfig.description}} />
+            <InputGroup @name={{t "fleet-ops.common.key"}} @value={{@orderConfig.key}} @disabled={{true}} readonly={{true}} @helpText={{t "fleet-ops.component.order-config.details-editor.key-text"}} />
+            <InputGroup @name={{t "fleet-ops.common.namespace"}} @value={{@orderConfig.namespace}} @disabled={{true}} readonly={{true}} @helpText={{t "fleet-ops.component.order-config.details-editor.namespace-text"}} />
+            <InputGroup @name={{t "fleet-ops.component.order-config.details-editor.id"}} @value={{@orderConfig.extension_id}} @disabled={{true}} readonly={{true}} @helpText={{t "fleet-ops.component.order-config.details-editor.id-text"}} />
+            <InputGroup @name={{t "fleet-ops.component.order-config.details-editor.version"}} @value={{@orderConfig.version}} @disabled={{true}} readonly={{true}} @helpText={{t "fleet-ops.component.order-config.details-editor.version-text"}} />
         </div>
     </div>
     <div class="flex items-center justify-end">
-        <Button @type="default" @icon="clone" @text="Clone Configuration" @size="sm" @wrapperClass="mr-2" @onClick={{fn this.sendAction "clone" @orderConfig}} />
+        <Button @type="default" @icon="clone" @text={{t "fleet-ops.component.order-config.details-editor.clone"}} @size="sm" @wrapperClass="mr-2" @onClick={{fn this.sendAction "clone" @orderConfig}} />
         {{#if @orderConfig.installed}}
-            <Button @type="danger" @icon="trash" @text="Uninstall Configuration" @size="sm" @onClick={{fn this.sendAction "uninstall" @orderConfig}} />
+            <Button @type="danger" @icon="trash" @text={{t "fleet-ops.component.order-config.details-editor.uninstall"}} @size="sm" @onClick={{fn this.sendAction "uninstall" @orderConfig}} />
         {{else}}
-            <Button @type="danger" @icon="trash" @text="Delete Configuration" @size="sm" @onClick={{fn this.sendAction "delete" @orderConfig}} />
+            <Button @type="danger" @icon="trash" @text={{t "fleet-ops.component.order-config.details-editor.delete"}} @size="sm" @onClick={{fn this.sendAction "delete" @orderConfig}} />
         {{/if}}
     </div>
     {{yield}}

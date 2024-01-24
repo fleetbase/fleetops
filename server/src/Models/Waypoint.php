@@ -84,15 +84,27 @@ class Waypoint extends Model
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function entities() 
+    {
+        return $this->hasMany(Entity::class, 'destination_uuid', 'place_uuid')->where('payload_uuid', $this->payload_uuid);
+    }
+
+    /**
      * The html for the shipment label.
      */
     public function label()
     {
-        $this->load(['trackingNumber', 'company', 'place']);
+        $this->load(['trackingNumber', 'company', 'place', 'entities']);
+        
+        // $entities = Entity::where(['payload_uuid' => $this->payload_uuid, 'destination_uuid' => $this->place_uuid])->get();
+        // dd($entities, );
 
-        return view('labels/default', [
-            'order'          => $this,
+        return view('fleetops::labels/waypoint-label', [
+            'waypoint'          => $this,
             'dropoff'        => $this->place,
+            'entities'        => $this->entities()->get(),
             'trackingNumber' => $this->trackingNumber,
             'company'        => $this->company,
         ])->render();

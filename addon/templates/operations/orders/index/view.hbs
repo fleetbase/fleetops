@@ -1,13 +1,20 @@
 <Overlay @position="right" @noBackdrop={{true}} @width="570px" @fullHeight={{true}} @isResizable={{true}} @onLoad={{this.setupInterface}} as |overlay|>
-    <Overlay::Header @overlay={{overlay}} @title={{@model.public_id}} @status={{@model.status}} @dispatched={{@model.dispatched}} @createdAt={{@model.createdAt}} @onPressCancel={{this.transitionBack}}>
+    <Overlay::Header
+        @overlay={{overlay}}
+        @title={{@model.public_id}}
+        @status={{@model.status}}
+        @dispatched={{@model.dispatched}}
+        @createdAt={{@model.createdAt}}
+        @onPressCancel={{this.transitionBack}}
+    >
         {{#if @model.canBeDispatched}}
-            <Button @type="primary" @icon="paper-plane" @text="Dispatch" class="mr-2" @onClick={{fn this.dispatchOrder @model}} />
+            <Button @type="primary" @icon="paper-plane" @text={{t "fleet-ops.operations.orders.index.view.dispatch"}} class="mr-2" @onClick={{fn this.dispatchOrder @model}} />
         {{/if}}
         <DropdownButton @icon="ellipsis-h" @size="sm" @iconPrefix="fas" as |dd|>
             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                 <div class="px-1">
                     <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-800 dark:text-gray-300">
-                        Order Actions
+                        {{t "fleet-ops.operations.orders.index.view.order-actions"}}
                     </div>
                 </div>
                 <div class="next-dd-menu-seperator"></div>
@@ -16,35 +23,35 @@
                         <div class="w-6">
                             <FaIcon @icon="edit" />
                         </div>
-                        <span>Edit Details</span>
+                        <span>{{t "fleet-ops.operations.orders.index.view.edit-details"}}</span>
                     </a>
                     {{#unless @model.isIntegratedVendorOrder}}
                         <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.createNewActivity @model)}}>
                             <div class="w-6">
                                 <FaIcon @icon="signal" />
                             </div>
-                            <span>Update Activity</span>
+                            <span>{{t "fleet-ops.operations.orders.index.view.update-activity"}}</span>
                         </a>
                         {{#if @model.driver_assigned_uuid}}
                             <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.unassignDriver @model)}}>
                                 <div class="w-6">
                                     <FaIcon @icon="user-xmark" />
                                 </div>
-                                <span>Unassign Driver</span>
+                                <span>{{t "fleet-ops.operations.orders.index.view.unassign-driver"}}</span>
                             </a>
                         {{else}}
                             <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.assignDriver @model)}}>
                                 <div class="w-6">
                                     <FaIcon @icon="user-check" />
                                 </div>
-                                <span>Assign Driver</span>
+                                <span>{{t "fleet-ops.operations.orders.index.view.assign-driver"}}</span>
                             </a>
                         {{/if}}
                         <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.viewOrderLabel @model)}}>
                             <div class="w-6">
                                 <FaIcon @icon="file-invoice" />
                             </div>
-                            <span>Get Order Label</span>
+                            <span>{{t "fleet-ops.operations.orders.index.view.get-order-label"}}</span>
                         </a>
                     {{/unless}}
                     <div class="next-dd-menu-seperator"></div>
@@ -52,13 +59,13 @@
                         <div class="w-6">
                             <FaIcon @icon="headphones" />
                         </div>
-                        <span>Listen to socket channel</span>
+                        <span>{{t "fleet-ops.operations.orders.index.view.listen-socket-channel"}}</span>
                     </a>
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.viewOrderMeta @model)}}>
                         <div class="w-6">
                             <FaIcon @icon="table" />
                         </div>
-                        <span>View metadata</span>
+                        <span>{{t "fleet-ops.operations.orders.index.view.view-metadata"}}</span>
                     </a>
                     {{#unless @model.isCanceled}}
                         <div class="next-dd-menu-seperator"></div>
@@ -66,14 +73,14 @@
                             <div class="w-6">
                                 <FaIcon @icon="ban" class="text-danger" />
                             </div>
-                            <span>Cancel Order</span>
+                            <span>{{t "fleet-ops.operations.orders.index.view.cancel-order"}}</span>
                         </a>
                     {{/unless}}
                     <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (dropdown-fn dd this.deleteOrder @model)}}>
                         <div class="w-6">
                             <FaIcon @icon="trash" class="text-danger" />
                         </div>
-                        <span>Delete Order</span>
+                        <span>{{t "fleet-ops.operations.orders.index.view.delete-order"}}</span>
                     </a>
                 </div>
             </div>
@@ -81,7 +88,14 @@
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="new-order-overlay-body" @increaseInnerBodyHeightBy={{1000}}>
-        <ContentPanel @title="Activity" @open={{true}} @pad={{false}} @isLoading={{this.isLoadingAdditionalData}} @panelBodyWrapperClass="px-0 py-4" @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel
+            @title={{t "fleet-ops.operations.orders.index.view.activity"}}
+            @open={{true}}
+            @pad={{false}}
+            @isLoading={{not this.loadOrderRelations.isIdle}}
+            @panelBodyWrapperClass="px-0 py-4"
+            @panelBodyClass="bg-white dark:bg-gray-800"
+        >
             {{#if @model.tracking_statuses}}
                 <Timeline @activity={{@model.tracking_statuses}} @arrowClass="bg-gray-600 border border-gray-900 shadow-md" as |TimelineItem|>
                     <TimelineItem @activeStatus={{@model.status}} as |trackingStatus|>
@@ -102,7 +116,7 @@
                 </Timeline>
             {{else}}
                 <div class="px-10 py-2 flex items-center justify-center">
-                    <p class="text-red-600 dark:text-red-100">Unable to load order activity</p>
+                    <p class="text-red-600 dark:text-red-100">{{t "fleet-ops.operations.orders.index.view.unable-load-order-activity"}}</p>
                 </div>
             {{/if}}
         </ContentPanel>
@@ -113,15 +127,20 @@
                     <Badge @hideStatusDot={{false}} @status="Dispatched" />
                 {{/if}}
                 {{#if @model.adhoc}}
-                    <Badge @hideStatusDot={{false}} @disableHumanize={{true}} @status="success">Ad-Hoc</Badge>
+                    <Badge @hideStatusDot={{false}} @disableHumanize={{true}} @status="success">{{t "fleet-ops.operations.orders.index.view.ad-hoc"}}</Badge>
                 {{/if}}
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-3 field-info-containers-darker gap-4 lg:gap-2">
                 <div class="field-info-container space-y-2">
-                    <div class="field-name">Customer</div>
+                    <div class="field-name">{{t "fleet-ops.operations.orders.index.view.customer"}}</div>
                     <div class="flex flex-row">
                         <div>
-                            <Image src={{avatar-url @model.customer.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} class="w-8 h-8 rounded-md shadow-sm mr-2" alt={{@model.customer.name}} />
+                            <Image
+                                src={{avatar-url @model.customer.photo_url}}
+                                @fallbackSrc={{config "defaultValues.contactImage"}}
+                                class="w-8 h-8 rounded-md shadow-sm mr-2"
+                                alt={{@model.customer.name}}
+                            />
                         </div>
                         <div>
                             <div class="field-value">{{n-a @model.customer.name "No Customer"}}</div>
@@ -132,11 +151,16 @@
                     </div>
                 </div>
                 <div class="field-info-container space-y-2">
-                    <div class="field-name">Facilitator</div>
+                    <div class="field-name">{{t "fleet-ops.operations.orders.index.view.facilitator"}}</div>
                     {{#if @model.facilitator.isIntegratedVendor}}
                         <div class="flex flex-row">
                             <div>
-                                <Image src={{avatar-url @model.facilitator.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} class="w-8 h-8 rounded-md border border-gray-200 dark:border-gray-900 shadow-sm mr-2" alt={{@model.facilitator.name}} />
+                                <Image
+                                    src={{avatar-url @model.facilitator.photo_url}}
+                                    @fallbackSrc={{config "defaultValues.contactImage"}}
+                                    class="w-8 h-8 rounded-md border border-gray-200 dark:border-gray-900 shadow-sm mr-2"
+                                    alt={{@model.facilitator.name}}
+                                />
                             </div>
                             <div>
                                 <div class="field-value">{{n-a @model.facilitator.name}}</div>
@@ -148,12 +172,19 @@
                 </div>
                 <div class="field-info-container space-y-2">
                     <div class="field-name flex flex-row items-center justify-between">
-                        <span>Driver Assigned</span>
+                        <span>{{t "fleet-ops.operations.orders.index.view.driver-assigned"}}</span>
                     </div>
                     <div>
                         <a href="javascript:;" class="flex flex-row" {{on "click" (fn this.focusOrderAssignedDriver @model)}}>
                             <div>
-                                <Image src={{avatar-url @model.driver_assigned.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} width="32" height="32" class="w-8 h-8 rounded-md shadow-sm mr-3 lg:mr-2" alt={{@model.driver_assigned.name}} />
+                                <Image
+                                    src={{avatar-url @model.driver_assigned.photo_url}}
+                                    @fallbackSrc={{config "defaultValues.driverImage"}}
+                                    width="32"
+                                    height="32"
+                                    class="w-8 h-8 rounded-md shadow-sm mr-3 lg:mr-2"
+                                    alt={{@model.driver_assigned.name}}
+                                />
                             </div>
                             <div class="field-value">
                                 <div>{{n-a @model.driver_assigned.name "No Driver"}}</div>
@@ -163,48 +194,70 @@
                             </div>
                         </a>
                         <div class="mt-1">
-                            <Button @size="xs" @type="default" @icon="edit" @text={{if @model.has_driver_assigned "Change Driver" "Assign Driver"}} @onClick={{fn this.assignDriver @model}} />
+                            <Button
+                                @size="xs"
+                                @type="default"
+                                @icon="edit"
+                                @text={{if @model.has_driver_assigned (t "fleet-ops.operations.orders.index.view.change-driver") (t "fleet-ops.operations.orders.index.view.assign-driver")}}
+                                @onClick={{fn this.assignDriver @model}}
+                            />
                         </div>
                     </div>
                 </div>
                 <div class="field-info-container space-y-2">
-                    <div class="field-name">Internal ID</div>
+                    <div class="field-name">{{t "fleet-ops.common.internal-id"}}</div>
                     <div class="field-value">{{n-a @model.internal_id}}</div>
                 </div>
                 <div class="field-info-container space-y-2">
-                    <div class="field-name">Tracking Number</div>
+                    <div class="field-name">{{t "fleet-ops.operations.orders.index.view.tracking-number"}}</div>
                     <div class="field-value">{{n-a @model.tracking_number.tracking_number}}</div>
                 </div>
                 <div class="field-info-container space-y-2">
-                    <div class="field-name">Type</div>
+                    <div class="field-name">{{t "fleet-ops.common.type"}}</div>
                     <div class="field-value">
                         <Badge @status="default">{{n-a (humanize @model.type)}}</Badge>
                     </div>
                 </div>
                 <div class="field-info-container space-y-2">
-                    <div class="field-name">Date Scheduled</div>
+                    <div class="field-name">{{t "fleet-ops.operations.orders.index.view.date-scheduled"}}</div>
                     <div class="field-value">{{n-a @model.scheduledAt}}</div>
                 </div>
                 <div class="field-info-container space-y-2">
-                    <div class="field-name">Date Dispatched</div>
+                    <div class="field-name">{{t "fleet-ops.operations.orders.index.view.date-dispatched"}}</div>
                     <div class="field-value">{{n-a @model.dispatchedAt}}</div>
                 </div>
                 <div class="field-info-container space-y-2">
-                    <div class="field-name">Date Started</div>
+                    <div class="field-name">{{t "fleet-ops.operations.orders.index.view.date-started"}}</div>
                     <div class="field-value">{{n-a @model.startedAt}}</div>
                 </div>
+                {{#if @model.pod_required}}
+                    <div class="field-info-container space-y-2">
+                        <div class="field-name">{{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}}</div>
+                        <div class="field-value">{{n-a (smart-humanize @model.pod_method)}}</div>
+                    </div>
+                {{/if}}
             </div>
         </ContentPanel>
 
         {{#if @model.isIntegratedVendorOrder}}
-            <ContentPanel @title={{concat @model.facilitator.name " Order Details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel
+                @title={{concat @model.facilitator.name (t "fleet-ops.operations.orders.index.view.order-details-title")}}
+                @open={{true}}
+                @pad={{true}}
+                @panelBodyClass="bg-white dark:bg-gray-800"
+            >
                 <IntegratedOrderDetails @integratedVendor={{@model.facilitator}} @details={{@model.meta.integrated_vendor_order}} />
             </ContentPanel>
         {{/if}}
 
         {{#if @model.order_config}}
             {{#each @model.groupedMetaFields as |group|}}
-                <ContentPanel @title={{if group.value (humanize group.value) "Additional Details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <ContentPanel
+                    @title={{if group.value (humanize group.value) (t "fleet-ops.operations.orders.index.view.additional-details-title")}}
+                    @open={{true}}
+                    @pad={{true}}
+                    @panelBodyClass="bg-white dark:bg-gray-800"
+                >
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
                         {{#each group.items as |metaField|}}
                             <div class="field-info-container space-y-2">
@@ -220,7 +273,14 @@
         {{/if}}
 
         {{#if @model.tracking_number}}
-            <ContentPanel @title="Tracking" @prefixTitleRight={{@model.tracking}} @isLoading={{this.isLoadingAdditionalData}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel
+                @title={{t "fleet-ops.operations.orders.index.view.tracking"}}
+                @prefixTitleRight={{@model.tracking}}
+                @isLoading={{not this.loadOrderRelations.isIdle}}
+                @open={{true}}
+                @pad={{true}}
+                @panelBodyClass="bg-white dark:bg-gray-800"
+            >
                 <div class="mb-4 flex justify-end">
                     <Button @size="xs" @type="default" @icon="barcode" @text="Get Order Label" @onClick={{fn this.viewOrderLabel @model}} />
                 </div>
@@ -243,15 +303,15 @@
             {{else}}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
                     <div class="field-info-container">
-                        <label class="field-name">Pickup</label>
+                        <label class="field-name">{{t "fleet-ops.operations.orders.index.view.pickup"}}</label>
                         <DisplayPlace @place={{@model.payload.pickup}} />
                     </div>
                     <div class="field-info-container">
-                        <label class="field-name">Dropoff</label>
+                        <label class="field-name">{{t "fleet-ops.operations.orders.index.view.dropoff"}}</label>
                         <DisplayPlace @place={{@model.payload.dropoff}} />
                     </div>
                     <div class="field-info-container">
-                        <label class="field-name">Return</label>
+                        <label class="field-name">{{t "fleet-ops.operations.orders.index.view.return"}}</label>
                         <DisplayPlace @place={{@model.payload.return}} />
                     </div>
                 </div>
@@ -259,7 +319,14 @@
         </ContentPanel>
 
         {{#if @model.isStorefrontOrder}}
-            <ContentPanel @title="Order Summary" @prefixTitleRight={{if @model.payload.cod_amount "Cash" ""}} @prefixTitleRightClass="text-green-400" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel
+                @title={{t "fleet-ops.operations.orders.index.view.order-summary"}}
+                @prefixTitleRight={{if @model.payload.cod_amount "Cash" ""}}
+                @prefixTitleRightClass="text-green-400"
+                @open={{true}}
+                @pad={{true}}
+                @panelBodyClass="bg-white dark:bg-gray-800"
+            >
                 <div class="flex flex-col space-y-4 p-2 overflow-hidden">
                     {{#each @model.payload.entities as |entity|}}
                         <div class="flex flex-1">
@@ -301,49 +368,50 @@
                 </div>
                 <div class="p-2 space-y-2 border-t border-b dark:border-gray-800">
                     <div class="flex items-center justify-between">
-                        <span class="dark:text-gray-50 text-sm">Subtotal</span>
+                        <span class="dark:text-gray-50 text-sm">{{t "fleet-ops.operations.orders.index.view.subtotal"}}</span>
                         <span class="dark:text-gray-50 text-sm">{{format-currency @model.meta.subtotal @model.meta.currency}}</span>
                     </div>
                     {{#unless @model.meta.is_pickup}}
                         <div class="flex items-center justify-between">
-                            <span class="dark:text-gray-50 text-sm">Delivery fee</span>
+                            <span class="dark:text-gray-50 text-sm">{{t "fleet-ops.operations.orders.index.view.delivery-fee"}}</span>
                             <span class="dark:text-gray-50 text-sm">{{format-currency @model.meta.delivery_fee @model.meta.currency}}</span>
                         </div>
                     {{/unless}}
                     {{#if @model.meta.tip}}
                         <div class="flex items-center justify-between">
-                            <span class="dark:text-gray-50 text-sm">Tip</span>
+                            <span class="dark:text-gray-50 text-sm">{{t "fleet-ops.operations.orders.index.view.tip"}}</span>
                             <span class="dark:text-gray-50 text-sm">{{get-tip-amount @model.meta.tip @model.meta.subtotal @model.meta.currency}}</span>
                         </div>
                     {{/if}}
                     {{#if @model.meta.delivery_tip}}
                         <div class="flex items-center justify-between">
-                            <span class="dark:text-gray-50 text-sm">Delivery Tip</span>
+                            <span class="dark:text-gray-50 text-sm">{{t "fleet-ops.operations.orders.index.view.delivery-tip"}}</span>
                             <span class="dark:text-gray-50 text-sm">{{get-tip-amount @model.meta.delivery_tip @model.meta.subtotal @model.meta.currency}}</span>
                         </div>
                     {{/if}}
                 </div>
                 <div class="p-2">
                     <div class="flex items-center justify-between">
-                        <span class="dark:text-gray-50 font-bold text-sm">Total</span>
+                        <span class="dark:text-gray-50 font-bold text-sm">{{t "fleet-ops.operations.orders.index.view.total"}}</span>
                         <span class="dark:text-gray-50 font-bold text-sm">{{format-currency @model.meta.total @model.meta.currency}}</span>
                     </div>
                 </div>
             </ContentPanel>
         {{/if}}
 
-        <ContentPanel @title="Payload" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.payload"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if this.isMultiDropOrder}}
                 <div class="space-y-2">
                     {{#each this.entitiesByDestination as |group|}}
                         <div class="rounded-md border border-gray-200 dark:border-gray-900 p-3">
                             <div class="mb-3 flex justify-between items-start">
                                 <div class="flex-1">
-                                    <div class="dark:text-gray-100 text-sm mb-1 font-mono">Items drop at</div>
+                                    <div class="dark:text-gray-100 text-sm mb-1 font-mono">{{t "fleet-ops.operations.orders.index.view.items-drop"}}</div>
                                     {{!-- <h4 class="font-bold dark:text-gray-100">{{group.waypoint.address}}</h4> --}}
                                     <DisplayPlace @place={{group.waypoint}} @addressClass="text-sm font-mono" />
                                     <div class="my-2">
-                                        <span class="rounded-md bg-yellow-300 text-yellow-900 px-2 py-1 text-sm">Tracking: {{group.waypoint.tracking}}</span>
+                                        <span class="rounded-md bg-yellow-300 text-yellow-900 px-2 py-1 text-sm">{{t "fleet-ops.operations.orders.index.view.tracking"}}
+                                            {{group.waypoint.tracking}}</span>
                                     </div>
                                 </div>
                                 <div>
@@ -351,25 +419,39 @@
                                         <Badge @status={{group.waypoint.status_code}} />
                                     </div>
                                     <div class="flex items-start">
-                                        <DropdownButton @triggerClass="mr-2" @iconClass="icon-text-height" @buttonSize="sm" @icon="ellipsis-h" @iconPrefix="fas" @contentClass="dropdown-menu" as |dd|>
+                                        <DropdownButton
+                                            @triggerClass="mr-2"
+                                            @iconClass="icon-text-height"
+                                            @buttonSize="sm"
+                                            @icon="ellipsis-h"
+                                            @iconPrefix="fas"
+                                            @contentClass="dropdown-menu"
+                                            as |dd|
+                                        >
                                             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                                                 <div class="px-1">
                                                     <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-300">
-                                                        Waypoint Actions
+                                                        {{t "fleet-ops.operations.orders.index.view.waypoint-actions"}}
                                                     </div>
                                                 </div>
                                                 <div class="next-dd-menu-seperator"></div>
                                                 <div class="px-1">
                                                     <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.viewWaypointLabel group.waypoint dd)}}>
-                                                        Get Label
+                                                        {{t "fleet-ops.operations.orders.index.view.get-label"}}
                                                     </a>
-                                                    <a href="javascript:;" class="next-dd-item">
-                                                        View Activity
-                                                    </a>
+                                                    {{!-- <a href="javascript:;" class="next-dd-item">
+                                                        {{t "fleet-ops.operations.orders.index.view.view-activity"}}
+                                                    </a> --}}
                                                 </div>
                                             </div>
                                         </DropdownButton>
-                                        <Button @icon="plus" @iconPrefix="fas" @text="Add Item" @size="sm" @onClick={{fn this.addEntity group.waypoint}} />
+                                        <Button
+                                            @icon="plus"
+                                            @iconPrefix="fas"
+                                            @text={{t "fleet-ops.operations.orders.index.view.add-item-button"}}
+                                            @size="sm"
+                                            @onClick={{fn this.addEntity group.waypoint}}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -387,7 +469,12 @@
                                                 <div class="dark:text-gray-100 truncate mb-2">
                                                     {{entity.tracking}}
                                                 </div>
-                                                <Button @icon="pencil" @text="Edit Item" @size="xs" @onClick={{fn this.editEntity entity}} />
+                                                <Button
+                                                    @icon="pencil"
+                                                    @text={{t "fleet-ops.operations.orders.index.view.edit-item-button"}}
+                                                    @size="xs"
+                                                    @onClick={{fn this.editEntity entity}}
+                                                />
                                             </div>
                                             <div class="absolute top-0 right-0 p-2">
                                                 <Button @icon="times" @iconPrefix="fas" @type="danger" @size="xs" @onClick={{fn this.removeEntity entity}} />
@@ -414,10 +501,17 @@
                                     <div class="dark:text-gray-100 truncate mb-2">
                                         {{entity.tracking}}
                                     </div>
-                                    <Button @icon="pencil" @text="Edit Item" @size="sm" @onClick={{fn this.editEntity entity}} />
+                                    <Button @icon="pencil" @text={{t "fleet-ops.operations.orders.index.view.edit-item-button"}} @size="sm" @onClick={{fn this.editEntity entity}} />
                                 </div>
                                 <div class="absolute top-0 right-0 p-2">
-                                    <Button @icon="times" @iconPrefix="fas" @type="danger" @size="xs" @onClick={{fn this.removeEntity entity}} @wrapperClass={{if (eq index 0) "invisible"}} />
+                                    <Button
+                                        @icon="times"
+                                        @iconPrefix="fas"
+                                        @type="danger"
+                                        @size="xs"
+                                        @onClick={{fn this.removeEntity entity}}
+                                        @wrapperClass={{if (eq index 0) "invisible"}}
+                                    />
                                 </div>
                             </div>
                         </div>

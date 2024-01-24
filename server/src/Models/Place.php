@@ -447,9 +447,12 @@ class Place extends Model
                 return static::createFromCoordinates($place, $attributes, $saveInstance);
             }
 
+            // Get uuid if set
+            $uuid = data_get($place, 'uuid');
+
             // If $place has a valid uuid and a matching Place object exists, return the uuid
-            if (isset($place['uuid']) && Str::isUuid($place['uuid']) && Place::where('uuid', $place['uuid'])->exists()) {
-                return $place['uuid'];
+            if (Str::isUuid($uuid) && $place = Place::where('uuid', $uuid)->first()) {
+                return $place;
             }
 
             // Otherwise, create a new Place object with the given attributes

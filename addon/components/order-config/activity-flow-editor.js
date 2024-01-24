@@ -22,7 +22,7 @@ export default class OrderConfigActivityFlowEditorComponent extends Component {
     @service modalsManager;
     @service notifications;
     @service fetch;
-
+    @service intl;
     @tracked drake;
     @tracked orderConfig = {};
     @tracked flow = {};
@@ -149,13 +149,13 @@ export default class OrderConfigActivityFlowEditorComponent extends Component {
         const { flow } = this;
 
         this.modalsManager.show('modals/order-config-new-status', {
-            title: 'Add new status to flow',
+            title: this.intl.t('fleet-ops.component.order-config.activity-flow-editor.add-status'),
             statusName: null,
             confirm: async (modal) => {
                 const statusName = modal.getOption('statusName');
 
                 if (!statusName) {
-                    return this.notifications.warning('No status entered.');
+                    return this.notifications.warning(this.intl.t('fleet-ops.component.order-config.activity-flow-editor.no-status'));
                 }
 
                 const format = (status) => underscore(status.toLowerCase());
@@ -165,9 +165,9 @@ export default class OrderConfigActivityFlowEditorComponent extends Component {
                     await modal.done();
                     // prompt to confirm overwrite
                     return this.modalsManager.confirm({
-                        title: 'This will overwrite an existing status!',
-                        body: `There is another '${statusName}' status already existing in this flow, if you continue this status will be overwritten. Would you like to overwrite the previous '${statusName}' status?`,
-                        acceptButtonText: 'Yes, overwrite!',
+                        title: this.intl.t('fleet-ops.component.order-config.activity-flow-editor.overwrite'),
+                        body: this.intl.t('fleet-ops.component.order-config.activity-flow-editor.overwrite-text', { statusName: statusName }),
+                        acceptButtonText: this.intl.t('fleet-ops.component.order-config.activity-flow-editor.overwrite-button'),
                         confirm: (modal) => {
                             this.insertNewStatus(status);
                             modal.done();
@@ -204,9 +204,9 @@ export default class OrderConfigActivityFlowEditorComponent extends Component {
     @action removeStatus(status) {
         const { flow } = this;
         this.modalsManager.confirm({
-            title: 'Remove status',
-            body: `Are you sure you wish to delete this status? All related activites and logic will be deleted along with the status.`,
-            acceptButtonText: 'Yes, delete',
+            title: this.intl.t('fleet-ops.component.order-config.activity-flow-editor.remove'),
+            body: this.intl.t('fleet-ops.component.order-config.activity-flow-editor.remove-text'),
+            acceptButtonText: this.intl.t('fleet-ops.component.order-config.activity-flow-editor.delete-button'),
             confirm: (modal) => {
                 delete flow[status];
                 set(this, 'flow', flow);
@@ -231,7 +231,7 @@ export default class OrderConfigActivityFlowEditorComponent extends Component {
 
         // if status is created or dispatched prevent from dragging
         if (['created', 'dispatched', 'completed'].includes(format(status))) {
-            this.notifications.warning(`The '${format(status)}' must be in this order of sequence, unable to shift.`);
+            this.notifications.warning(this.intl.t('fleet-ops.component.order-config.activity-flow-editor.unable-warning', { status: format(status) }));
             this.drake.cancel(true);
             return;
         }
@@ -241,7 +241,7 @@ export default class OrderConfigActivityFlowEditorComponent extends Component {
 
         // if is not created but attempt to move to sequence 0
         if (format(status) !== 'created' && sequence === 0) {
-            this.notifications.warning(`The created status must always be the first sequence of an order flow.`);
+            this.notifications.warning(this.intl.t('fleet-ops.component.order-config.activity-flow-editor.order-warning'));
             this.drake.cancel(true);
             return;
         }

@@ -8,12 +8,12 @@
                         {{#if queue.files.length}}
                             <Spinner class="mr-1" />
                             <span>
-                                Uploading...
+                                {{t "fleet-ops.common.uploading"}}
                             </span>
                         {{else}}
                             <FaIcon @icon="image" class="mr-1" />
                             <span>
-                                Upload new
+                                {{t "fleet-ops.common.upload-new"}}
                             </span>
                         {{/if}}
                     </a>
@@ -23,30 +23,30 @@
                 <div class="grid grid-cols-2 gap-3 text-xs dark:text-gray-100">
                     <div class="input-group">
                         <label>
-                            Name
+                            {{t "fleet-ops.common.name"}}
                         </label>
-                        <Input @value={{@options.user.name}}  @type="text" class="w-full form-input" placeholder="Name" />
+                        <Input @value={{@options.user.name}}  @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} />
                     </div>
 
                     <div class="input-group">
                         <label>
-                            Email
+                            {{t "fleet-ops.common.email"}}
                         </label>
-                        <Input @value={{@options.user.email}}  @type="text" class="w-full form-input" placeholder="Email" />
+                        <Input @value={{@options.user.email}}  @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.email"}} />
                     </div>
 
                     <div class="input-group">
                         <label>
-                            Phone
+                            {{t "fleet-ops.common.phone"}}
                         </label>
                         <PhoneInput @value={{@options.user.phone}} @onInput={{fn (mut @options.user.phone)}} class="form-input w-full" />
                     </div>
 
                     <div class="input-group">
                         <label>
-                            Country
+                            {{t "fleet-ops.common.country"}}
                         </label>
-                        <CountrySelect class="w-full form-input form-select form-datalist" @value={{@options.user.country}} @onChange={{fn (mut @options.user.country)}} placeholder="Country" />
+                        <CountrySelect class="w-full form-input form-select form-datalist" @value={{@options.user.country}} @onChange={{fn (mut @options.user.country)}} placeholder={{t "fleet-ops.common.country"}} />
                     </div>
                 </div>
             </div>

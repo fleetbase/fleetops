@@ -9,7 +9,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <FaIcon @icon="calendar" class="mr-2" />
-                <span class="font-semibold">Date scheduled</span>
+                <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.date"}}</span>
             </div>
             <span class={{unless @order.scheduled_at "dark:text-gray-600 text-gray-400"}}>{{n-a @order.scheduledAt "Not Scheduled"}}</span>
         </div>
@@ -23,7 +23,7 @@
         <div class="flex items-center justify-between">
             <div class="flex flex-row items-center">
                 <FaIcon @icon="calendar" class="mr-2" />
-                <span class="font-semibold">Driver Assigned</span>
+                <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.driver-assigned"}}</span>
                 <div class="ml-2">
                     <a href="javascript:;" class="text-blue-400 hover:opacity-75" {{on "click" this.startAssignDriver}}>
                         <FaIcon @icon="edit" @size="xs" />
@@ -32,7 +32,7 @@
             </div>
             <div>
                 {{#if this.isAssigningDriver}}
-                    <ModelSelect @modelName="driver" @selectedModel={{@order.driver_assigned}} @placeholder="Select Driver" @triggerClass="form-select form-input form-input-sm w-48" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @disabled={{@model.isLoading}} @onChange={{this.assignDriver}} as |model|>
+                    <ModelSelect @modelName="driver" @selectedModel={{@order.driver_assigned}} @placeholder={{t "fleet-ops.component.order.schedule-card.select-driver"}} @triggerClass="form-select form-input form-input-sm w-48" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @disabled={{@model.isLoading}} @onChange={{this.assignDriver}} as |model|>
                         <div class="flex items-center">
                             <div class="w-5">
                                 <FaIcon @icon="id-card-alt" @size="xs" />
@@ -44,16 +44,16 @@
                         </div>
                     </ModelSelect>
                 {{else}}
-                    <a href="javascript:;" disabled={{not @order.driver_assigned}} class={{unless @order.driver_assigned "dark:text-gray-600 text-gray-400"}} {{on "click" (fn this.onClickDriver @order.driver_assigned)}}>{{n-a @order.driver_assigned.name "No Driver Assigned"}}</a>
+                    <a href="javascript:;" disabled={{not @order.driver_assigned}} class={{unless @order.driver_assigned "dark:text-gray-600 text-gray-400"}} {{on "click" (fn this.onClickDriver @order.driver_assigned)}}>{{n-a @order.driver_assigned.name (t "fleet-ops.component.order.schedule-card.no-driver")}}</a>
                 {{/if}}
             </div>
         </div>
         <div class="flex items-center justify-between">
             <div class="flex flex-row items-center">
                 <FaIcon @icon="calendar" class="mr-2" />
-                <span class="font-semibold">Vehicle Assigned</span>
+                <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.vehicle-assigned"}}</span>
             </div>
-            <a href="javascript:;" disabled={{not @order.driver_assigned.vehicle}} class={{unless @order.driver_assigned.vehicle_uuid "dark:text-gray-600 text-gray-400"}} {{on "click" (fn this.onClickVehicle @order.driver_assigned.vehicle)}}>{{n-a @order.driver_assigned.vehicle_name "No Vehicle Assigned"}}</a>
+            <a href="javascript:;" disabled={{not @order.driver_assigned.vehicle}} class={{unless @order.driver_assigned.vehicle_uuid "dark:text-gray-600 text-gray-400"}} {{on "click" (fn this.onClickVehicle @order.driver_assigned.vehicle)}}>{{n-a @order.driver_assigned.vehicle_name (t "fleet-ops.component.order.schedule-card.no-vehicle")}}</a>
         </div>
         {{!-- <div class="z-20 relative">
             <RouteList @order={{@order}} />

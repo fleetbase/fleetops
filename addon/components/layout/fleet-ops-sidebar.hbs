@@ -1,5 +1,5 @@
 <div id="create-order-button-menu-wrapper" class="create-order-menu-button-wrapper mb-2">
-    <Button @text="Create new order" @type="primary" @size="xs" @icon="paper-plane" @iconPrefix="fas" @iconSize="sm" @wrapperClass="w-full create-order-button-wrapper" class="w-full create-order-button" @onClick={{this.onClickCreateOrder}} />
+    <Button @text={{t "fleet-ops.component.layout.fleet-ops-sidebar.title"}} @type="primary" @size="xs" @icon="paper-plane" @iconPrefix="fas" @iconSize="sm" @wrapperClass="w-full create-order-button-wrapper" class="w-full create-order-button" @onClick={{this.onClickCreateOrder}} />
 </div>
 {{#each this.universeMenuItems as |menuItem|}}
     {{#if menuItem.renderComponentInPlace}}
@@ -26,5 +26,5 @@
         {{/each}}
     </Layout::Sidebar::Panel>
 {{/each}}
-<Layout::Sidebar::Item @onClick={{this.onClickSettings}} @icon="cogs">Settings</Layout::Sidebar::Item>
+<Layout::Sidebar::Item @onClick={{this.onClickSettings}} @icon="cogs">{{t "fleet-ops.component.layout.fleet-ops-sidebar.settings"}}</Layout::Sidebar::Item>
 {{yield}}

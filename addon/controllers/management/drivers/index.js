@@ -16,6 +16,20 @@ export default class ManagementDriversIndexController extends BaseController {
     @service notifications;
 
     /**
+     * Inject the `modals-manager` service
+     *
+     * @var {Service}
+     */
+    @service modalsManager;
+
+    /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+    @service intl;
+
+    /**
      * Inject the `crud` service
      *
      * @var {Service}
@@ -214,7 +228,7 @@ export default class ManagementDriversIndexController extends BaseController {
      */
     @tracked columns = [
         {
-            label: 'Name',
+            label: this.intl.t('fleet-ops.common.name'),
             valuePath: 'name',
             width: '200px',
             cellComponent: 'table/cell/driver-name',
@@ -225,7 +239,7 @@ export default class ManagementDriversIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'ID',
+            label: this.intl.t('fleet-ops.common.id'),
             valuePath: 'public_id',
             width: '130px',
             cellComponent: 'click-to-copy',
@@ -236,7 +250,7 @@ export default class ManagementDriversIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Internal ID',
+            label: this.intl.t('fleet-ops.common.internal-id'),
             valuePath: 'internal_id',
             cellComponent: 'click-to-copy',
             width: '130px',
@@ -246,7 +260,7 @@ export default class ManagementDriversIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Vendor',
+            label: this.intl.t('fleet-ops.common.vendor'),
             cellComponent: 'table/cell/anchor',
             onClick: async (driver) => {
                 const vendor = await driver.loadVendor();
@@ -266,7 +280,7 @@ export default class ManagementDriversIndexController extends BaseController {
             model: 'vendor',
         },
         {
-            label: 'Vehicle',
+            label: this.intl.t('fleet-ops.common.vehicle'),
             cellComponent: 'table/cell/anchor',
             onClick: (driver) => {
                 return driver
@@ -289,7 +303,7 @@ export default class ManagementDriversIndexController extends BaseController {
             model: 'vehicle',
         },
         {
-            label: 'Fleets',
+            label: this.intl.t('fleet-ops.common.fleet'),
             cellComponent: 'table/cell/link-list',
             cellComponentLabelPath: 'name',
             action: (fleet) => {
@@ -306,7 +320,7 @@ export default class ManagementDriversIndexController extends BaseController {
             model: 'fleet',
         },
         {
-            label: 'License',
+            label: this.intl.t('fleet-ops.common.license'),
             valuePath: 'drivers_license_number',
             cellComponent: 'table/cell/base',
             width: '150px',
@@ -316,7 +330,7 @@ export default class ManagementDriversIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Phone',
+            label: this.intl.t('fleet-ops.common.phone'),
             valuePath: 'phone',
             cellComponent: 'table/cell/base',
             width: '150px',
@@ -327,7 +341,7 @@ export default class ManagementDriversIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Country',
+            label: this.intl.t('fleet-ops.common.country'),
             valuePath: 'country',
             cellComponent: 'table/cell/country',
             cellClassNames: 'uppercase',
@@ -345,7 +359,7 @@ export default class ManagementDriversIndexController extends BaseController {
             multiOptionSearchPlaceholder: 'Search countries...',
         },
         {
-            label: 'Status',
+            label: this.intl.t('fleet-ops.common.status'),
             valuePath: 'status',
             cellComponent: 'table/cell/status',
             width: '10%',
@@ -356,7 +370,7 @@ export default class ManagementDriversIndexController extends BaseController {
             filterFetchOptions: 'drivers/statuses',
         },
         {
-            label: 'Created At',
+            label: this.intl.t('fleet-ops.common.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
             filterParam: 'created_at',
@@ -367,7 +381,7 @@ export default class ManagementDriversIndexController extends BaseController {
             filterComponent: 'filter/date',
         },
         {
-            label: 'Updated At',
+            label: this.intl.t('fleet-ops.common.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
             filterParam: 'updated_at',
@@ -390,33 +404,33 @@ export default class ManagementDriversIndexController extends BaseController {
             width: '10%',
             actions: [
                 {
-                    label: 'View driver details...',
+                    label: this.intl.t('fleet-ops.management.drivers.index.view-details'),
                     fn: this.viewDriver,
                 },
                 {
-                    label: 'Edit driver details...',
+                    label: this.intl.t('fleet-ops.management.drivers.index.edit-details'),
                     fn: this.editDriver,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: 'Assign order to driver...',
+                    label: this.intl.t('fleet-ops.management.drivers.index.assign-order-driver'),
                     fn: this.assignOrder,
                 },
                 {
-                    label: 'Assign vehicle to driver...',
+                    label: this.intl.t('fleet-ops.management.drivers.index.assign-vehicle-driver'),
                     fn: this.assignVehicle,
                 },
                 {
-                    label: 'Locate driver on map...',
+                    label: this.intl.t('fleet-ops.management.drivers.index.locate-driver-map'),
                     fn: this.locateDriver,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: 'Delete driver...',
+                    label: this.intl.t('fleet-ops.management.drivers.index.delete-driver'),
                     fn: this.deleteDriver,
                 },
             ],
@@ -479,7 +493,7 @@ export default class ManagementDriversIndexController extends BaseController {
 
         this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
-            acceptButtonText: 'Delete Drivers',
+            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.delete-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },

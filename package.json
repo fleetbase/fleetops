@@ -1,6 +1,6 @@
 {
     "name": "@fleetbase/fleetops-engine",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "fleetbase": {
         "route": "fleet-ops",
@@ -33,6 +33,7 @@
         "lint:hbs:fix": "ember-template-lint . --fix",
         "lint:js": "eslint . --cache",
         "lint:js:fix": "eslint . --fix",
+        "lint:intl": "fleetbase-intl-lint",
         "start": "ember serve",
         "test": "concurrently \"npm:lint\" \"npm:test:*\" --names \"lint,test:\"",
         "test:ember": "ember test",
@@ -68,6 +69,7 @@
         "leaflet-rotatedmarker": "^0.2.0"
     },
     "devDependencies": {
+        "@fleetbase/intl-lint": "^0.0.1",
         "@babel/eslint-parser": "^7.22.15",
         "@babel/plugin-proposal-decorators": "^7.23.2",
         "@ember/optional-features": "^2.0.0",

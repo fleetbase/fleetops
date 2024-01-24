@@ -22,6 +22,13 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
     @service currentUser;
 
     /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+    @service intl;
+
+    /**
      * Inject the `fetch` service
      *
      * @var {Service}
@@ -112,7 +119,7 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
      */
     @tracked columns = [
         {
-            label: 'ID',
+            label: this.intl.t('fleet-ops.common.id'),
             valuePath: 'public_id',
             width: '150px',
             cellComponent: 'table/cell/anchor',
@@ -123,7 +130,7 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
             filterComponent: 'filter/string',
         },
         {
-            label: 'Service',
+            label: this.intl.t('fleet-ops.common.service'),
             valuePath: 'service_name',
             cellComponent: 'table/cell/base',
             width: '125px',
@@ -132,7 +139,7 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
             filterable: false,
         },
         {
-            label: 'Service Area',
+            label: this.intl.t('fleet-ops.common.service-area'),
             valuePath: 'service_area.name',
             cellComponent: 'table/cell/base',
             width: '125px',
@@ -145,7 +152,7 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
             model: 'service-area',
         },
         {
-            label: 'Zone',
+            label: this.intl.t('fleet-ops.common.zone'),
             valuePath: 'zone.name',
             cellComponent: 'table/cell/base',
             width: '125px',
@@ -158,7 +165,7 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
             model: 'zone',
         },
         {
-            label: 'Created At',
+            label: this.intl.t('fleet-ops.common.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
             width: '125px',
@@ -168,7 +175,7 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
             filterComponent: 'filter/date',
         },
         {
-            label: 'Updated At',
+            label: this.intl.t('fleet-ops.common.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
             width: '125px',
@@ -189,11 +196,11 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
             width: '10%',
             actions: [
                 {
-                    label: 'Edit Service Rate',
+                    label: this.intl.t('fleet-ops.operations.service-rates.index.edit-service'),
                     fn: this.editServiceRate,
                 },
                 {
-                    label: 'Delete Service Rate',
+                    label: this.intl.t('fleet-ops.operations.service-rates.index.delete-service'),
                     fn: this.deleteServiceRate,
                 },
             ],
@@ -280,7 +287,7 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
     @action bulkDeleteServiceRates(selected) {
         this.crud.bulkDelete(selected, {
             modelNamePath: `public_id`,
-            acceptButtonText: "Delete Service's",
+            acceptButtonText: this.intl.t('fleet-ops.operations.service-rates.index.accept-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },

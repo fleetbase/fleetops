@@ -15,13 +15,13 @@
         <button type="button" id="map-toolbar-create-order-button" class="toolbar-button is-action" {{on "click" (fn this.onAction "onPressCreateOrder")}}>
             <FaIcon @icon="paper-plane" />
             <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
-                <InputInfo @text="Create Order" @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+                <InputInfo @text={{t "fleet-ops.component.map-container.toolbar.create"}} @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
             </Attach::Tooltip>
         </button>
         <button type="button" id="map-toolbar-search-button" class="toolbar-button" {{on "click" (fn this.onAction "onPressSearch")}}>
             <FaIcon @icon="search" />
             <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
-                <InputInfo @text="Search" @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+                <InputInfo @text={{t "fleet-ops.common.search"}} @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
             </Attach::Tooltip>
         </button>
         <button type="button" id="map-toolbar-view-orders-button" class="toolbar-button relative" {{on "click" (fn this.onAction "onPressViewOrders")}}>
@@ -33,14 +33,14 @@
             </div>
             <FaIcon @icon="layer-group" />
             <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
-                <InputInfo @text="View Orders" @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+                <InputInfo @text={{t "fleet-ops.component.map-container.toolbar.view"}} @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
             </Attach::Tooltip>
         </button>
         <BasicDropdown id="map-toolbar-service-areas-button" @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
             <dd.Trigger class="toolbar-button">
                 <FaIcon @icon="map-marked-alt" />
                 <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
-                    <InputInfo @text="Service Areas" @iconClass="hidden" class="{{if dd.isOpen 'hidden'}} py-1 px-2 bg-gray-900 -mt-1" />
+                    <InputInfo @text={{t "fleet-ops.component.map-container.toolbar.view"}} @iconClass="hidden" class="{{if dd.isOpen 'hidden'}} py-1 px-2 bg-gray-900 -mt-1" />
                 </Attach::Tooltip>
             </dd.Trigger>
             <dd.Content>
@@ -51,7 +51,7 @@
             <dd.Trigger class="toolbar-button">
                 <FaIcon @icon="eye" />
                 <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
-                    <InputInfo @text="Visibility Controls" @iconClass="hidden" class="{{if dd.isOpen 'hidden'}} py-1 px-2 bg-gray-900 -mt-1" />
+                    <InputInfo @text={{t "fleet-ops.component.map-container.toolbar.visibility"}} @iconClass="hidden" class="{{if dd.isOpen 'hidden'}} py-1 px-2 bg-gray-900 -mt-1" />
                 </Attach::Tooltip>
             </dd.Trigger>
             <dd.Content>
@@ -61,7 +61,7 @@
         <button type="button" id="map-toolbar-live-map-drawer-button" class="toolbar-button is-action mb-0i" {{on "click" (fn this.onAction "onPressLiveMapDrawerToggle")}}>
             <FaIcon @icon="binoculars" />
             <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
-                <InputInfo @text="Scope" @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+                <InputInfo @text={{t "fleet-ops.component.map-container.toolbar.scope"}} @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
             </Attach::Tooltip>
         </button>
     </div>

@@ -11,7 +11,7 @@ import getLengthUnits from '@fleetbase/ember-core/utils/get-length-units';
 export default class OrderConfigEntitiesEditorComponent extends Component {
     @service modalsManager;
     @service notifications;
-
+    @service intl;
     @tracked weightUnits = getWeightUnits();
     @tracked lengthUnits = getLengthUnits();
     @tracked _orderConfig = null;
@@ -75,7 +75,7 @@ export default class OrderConfigEntitiesEditorComponent extends Component {
                 const keyName = modal.getOption('keyName');
 
                 if (!keyName) {
-                    return this.notifications.warning('No meta field key name entered.');
+                    return this.notifications.warning(this.intl.t('fleet-ops.component.order-config.entities-editor.warning-message'));
                 }
 
                 modal.startLoading();

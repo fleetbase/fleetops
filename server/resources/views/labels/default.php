@@ -1,6 +1,6 @@
 <?php
 
-use Fleetbase\Models\Order;
+use Fleetbase\Fleetops\Models\Order;
 use Fleetbase\Support\Utils; ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -43,32 +43,33 @@ use Fleetbase\Support\Utils; ?>
 
 <body bgcolor="#f7f7f7">
 	<div style="width: 420px; border: 2px #414141 solid; margin: auto;">
-		<div class="group" style="border-bottom: 1px #414141 solid;">
-			<div style="float:left; display:inline-block; width: 100px; height: 90px; border-right: 1px #414141 solid; text-align: center; padding: 10px;">
-				<img src="data:image/png;base64,<?= Utils::notEmpty($trackingNumber) ? $trackingNumber->qr_code : $order->trackingNumber->qr_code ?>" style="width: 100%; height: 90px;">
+		<div class="group" style="border-bottom: 1px #414141 solid; overflow: hidden;">
+			<div style="float: left; width: 130px; height: 120px; border-right: 1px #414141 solid; text-align: center; padding: 10px; box-sizing: border-box;">
+				<img src="data:image/png;base64,<?= Utils::notEmpty($trackingNumber) ? $trackingNumber->qr_code : $order->trackingNumber->qr_code ?>" style="width: 100%; height: 100%; object-fit: cover;">
 			</div>
-			<div style="display: inline-block; height: 90px;">
-				<div style="padding: 10px; font-size: 20px;">
-					<span style="display: block; margin-top: 15px;"><?= $company->name ?></span>
-					<span style="display: block;">
-						<?php
-						if ($order && $order instanceof Order) {
-							$order->load('purchaseRate.serviceQuote.serviceRate');
-							if (isset($order->purchaseRate->serviceQuote->serviceRate)) {
-								echo strtoupper($order->purchaseRate->serviceQuote->serviceRate->name);
-							}
+			<div style="margin-top: 10px; padding-left: 10px;">
+				<div style="font-size: 18px; font-weight: bold;"><?= strtoupper($company->name) ?></div>
+				<div style="font-size: 16px; font-weight: 300; color: #000;">
+					<?php
+					if ($order && $order instanceof Order) {
+						$order->load('purchaseRate.serviceQuote.serviceRate');
+						$serviceName = data_get($order, 'purchaseRate.serviceQuote.serviceRate.service_name');
+						if ($serviceName) {
+							echo strtoupper($serviceName);
 						}
-						?>
-					</span>
+					}
+					?>
 				</div>
 			</div>
 		</div>
+
 		<?php
 		// load payload locations
 		if ($order) {
-			$order->load('payload.pickup', 'payload.dropoff');
+			$order->load('payload.pickup', 'payload.dropoff', 'payload.entities');
 			$pickup = $pickup ?? $order->payload->pickup;
 			$dropoff = $dropoff ?? $order->payload->dropoff;
+			$entities = $entities ?? ($order->payload['entities'] ?? []);
 		}
 		?>
 		<?php if ($pickup) { ?>
@@ -114,7 +115,7 @@ use Fleetbase\Support\Utils; ?>
 		<?php } ?>
 		<?php if ($dropoff) { ?>
 			<div class="group">
-				<div style="padding: 15px;" class="group">
+				<div style="padding: 15px;" class="group" style="border-bottom: 1px #414141 solid; padding: 15px;">
 					<div style="float: left; display: inline-block; margin-right: 15px; font-weight: bold;">
 						DROPOFF:
 					</div>
@@ -148,6 +149,27 @@ use Fleetbase\Support\Utils; ?>
 						</div>
 						<?php if (!empty($dropoff->phone_number)) { ?>
 							<div class="line"><?= $dropoff->phone_number ?></div>
+						<?php } ?>
+					</div>
+				</div>
+			</div>
+		<?php } ?>
+		<?php if ($entities) { ?>
+			<div class="group">
+				<div style="padding: 15px;" class="group" style="border-bottom: 1px #414141 solid; padding: 15px;">
+					<div style="float: left; display: inline-block; margin-right: 15px">
+						<?php foreach ($entities as $entity) { ?>
+							<div class="line">
+								<strong>
+									<?php
+									if (isset($entity['name']) && !empty($entity['name'])) {
+										echo strtoupper($entity['name']) . ' - ' . ($entity['internal_id'] ?? '');
+									} else {
+										echo 'ITEM -' . ($entity['internal_id'] ?? '');
+									}
+									?>
+								</strong>
+							</div>
 						<?php } ?>
 					</div>
 				</div>

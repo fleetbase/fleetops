@@ -9,6 +9,7 @@ export default class OperationsSchedulerIndexController extends BaseController {
     @service modalsManager;
     @service notifications;
     @service store;
+    @service intl;
     @service hostRouter;
     @tracked scheduledOrders = [];
     @tracked unscheduledOrders = [];
@@ -53,11 +54,11 @@ export default class OperationsSchedulerIndexController extends BaseController {
 
                     if (order.scheduled_at) {
                         // notify order has been scheduled
-                        this.notifications.success(`Order '${order.public_id}' has been scheduled at ${order.scheduledAt}.`);
+                        this.notifications.success(this.intl.t('fleet-ops.operations.scheduler.index.info-message', { orderId: order.public_id, orderAt: order.scheduledAt }));
                         // add event to calendar
                         event = this.calendar.addEvent(createFullCalendarEventFromOrder(order));
                     } else {
-                        this.notifications.info(`Order '${order.public_id}' has been unscheduled.`);
+                        this.notifications.info(this.intl.t('fleet-ops.operations.scheduler.index.info-message', { orderId: order.public_id }));
                     }
 
                     // update event props

@@ -2,7 +2,7 @@
     <div class="next-map-search-bar-container {{if @visible "is-visible"}}" {{did-insert this.setupComponent}}>
         <div class="next-map-search-bar">
             <FaIcon @icon="search" class="ml-4" />
-            <Input @value={{@value}} {{on "input" this.search}} placeholder="Search by keyword..." />
+            <Input @value={{@value}} {{on "input" this.search}} placeholder={{t "fleet-ops.component.global-search.search"}} />
             <div class="pr-4 flex items-center justify-center">
                 {{#if this.isLoading}}
                     <Spinner class="text-sky-400" />

@@ -38,6 +38,12 @@ export default class LiveMapDrawerDriverListingComponent extends Component {
     @service crud;
 
     /**
+     * Service for intl.
+     * @service
+     */
+    @service intl;
+
+    /**
      * The list of drivers to display, tracked for reactivity.
      * @tracked
      */
@@ -68,7 +74,7 @@ export default class LiveMapDrawerDriverListingComponent extends Component {
      */
     @tracked columns = [
         {
-            label: 'Driver',
+            label: this.intl.t('fleet-ops.common.driver'),
             valuePath: 'name',
             photoPath: 'photo_url',
             width: '100px',
@@ -76,27 +82,27 @@ export default class LiveMapDrawerDriverListingComponent extends Component {
             onClick: this.focus,
         },
         {
-            label: 'Location',
+            label: this.intl.t('fleet-ops.component.live-map-drawer.driver-listing.location'),
             valuePath: 'location',
             width: '80px',
             cellComponent: 'table/cell/point',
             onClick: this.locate,
         },
         {
-            label: 'Current Job',
+            label: this.intl.t('fleet-ops.component.live-map-drawer.driver-listing.current-job'),
             valuePath: 'current_job_id',
             width: '80px',
             cellComponent: 'table/cell/anchor',
             onClick: this.job,
         },
         {
-            label: 'Status',
+            label: this.intl.t('fleet-ops.common.status'),
             valuePath: 'status',
             cellComponent: 'table/cell/status',
             width: '60px',
         },
         {
-            label: 'Last Seen',
+            label: this.intl.t('fleet-ops.component.live-map-drawer.driver-listing.last-seen'),
             valuePath: 'updatedAgo',
             width: '60px',
         },
@@ -112,21 +118,21 @@ export default class LiveMapDrawerDriverListingComponent extends Component {
             width: '90px',
             actions: [
                 {
-                    label: 'View driver details...',
+                    label: this.intl.t('fleet-ops.component.live-map-drawer.driver-listing.view-driver'),
                     fn: this.focus,
                 },
                 {
-                    label: 'Edit driver...',
+                    label: this.intl.t('fleet-ops.component.live-map-drawer.driver-listing.edit-driver'),
                     fn: (driver) => {
                         return this.focus(driver, 'editing');
                     },
                 },
                 {
-                    label: 'Locate driver...',
+                    label: this.intl.t('fleet-ops.component.live-map-drawer.driver-listing.locate-driver'),
                     fn: this.locate,
                 },
                 {
-                    label: 'Delete driver...',
+                    label: this.intl.t('fleet-ops.component.live-map-drawer.driver-listing.delete-driver'),
                     fn: this.delete,
                 },
             ],
@@ -206,7 +212,7 @@ export default class LiveMapDrawerDriverListingComponent extends Component {
         if (this.liveMap) {
             this.liveMap.focusLayerByRecord(driver, 18);
         } else {
-            this.notifications.warning('Unable to locate driver.');
+            this.notifications.warning(this.intl.t('fleet-ops.component.live-map-drawer.driver-listing.warning-message'));
         }
     }
 

@@ -24,6 +24,13 @@ export default class ManagementIssuesIndexController extends BaseController {
     @service modalsManager;
 
     /**
+     * Inject the `intl` service
+     *
+     * @var intl
+     */
+    @service intl;
+
+    /**
      * Inject the `crud` service
      *
      * @var {Service}
@@ -166,7 +173,7 @@ export default class ManagementIssuesIndexController extends BaseController {
      */
     @tracked columns = [
         {
-            label: 'ID',
+            label: this.intl.t('fleet-ops.common.id'),
             valuePath: 'public_id',
             cellComponent: 'table/cell/anchor',
             action: this.viewIssue,
@@ -175,7 +182,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             sortable: true,
         },
         {
-            label: 'Priority',
+            label: this.intl.t('fleet-ops.common.priority'),
             valuePath: 'priority',
             cellComponent: 'table/cell/status',
             width: '100px',
@@ -186,7 +193,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             filterOptions: ['low', 'medium', 'high', 'critical', 'scheduled-maintenance', 'operational-suggestion'],
         },
         {
-            label: 'Type',
+            label: this.intl.t('fleet-ops.common.type'),
             valuePath: 'type',
             width: '100px',
             resizable: true,
@@ -197,7 +204,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             placeholder: 'Select issue type',
         },
         {
-            label: 'Category',
+            label: this.intl.t('fleet-ops.common.category'),
             valuePath: 'category',
             width: '120px',
             resizable: true,
@@ -208,7 +215,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             placeholder: 'Select issue category',
         },
         {
-            label: 'Reporter',
+            label: this.intl.t('fleet-ops.common.reporter'),
             valuePath: 'reporter_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
@@ -228,7 +235,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             model: 'user',
         },
         {
-            label: 'Assignee',
+            label: this.intl.t('fleet-ops.common.assignee'),
             valuePath: 'assignee_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
@@ -248,7 +255,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             model: 'user',
         },
         {
-            label: 'Driver',
+            label: this.intl.t('fleet-ops.common.driver'),
             valuePath: 'driver_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
@@ -268,7 +275,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             model: 'driver',
         },
         {
-            label: 'Vehicle',
+            label: this.intl.t('fleet-ops.common.vehicle'),
             valuePath: 'vehicle_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
@@ -289,7 +296,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             modelNamePath: 'displayName',
         },
         {
-            label: 'Status',
+            label: this.intl.t('fleet-ops.common.status'),
             valuePath: 'status',
             cellComponent: 'table/cell/status',
             width: '120px',
@@ -300,7 +307,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             filterOptions: ['pending', 'in-progress', 'backlogged', 'requires-update', 'in-review', 're-opened', 'duplicate', 'pending-review', 'escalated', 'completed', 'canceled'],
         },
         {
-            label: 'Created At',
+            label: this.intl.t('fleet-ops.common.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
             width: '120px',
@@ -310,7 +317,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             filterComponent: 'filter/date',
         },
         {
-            label: 'Updated At',
+            label: this.intl.t('fleet-ops.common.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
             width: '120px',
@@ -332,18 +339,18 @@ export default class ManagementIssuesIndexController extends BaseController {
             width: '10%',
             actions: [
                 {
-                    label: 'View Details',
+                    label: this.intl.t('fleet-ops.management.issues.index.view'),
                     fn: this.viewIssue,
                 },
                 {
-                    label: 'Edit Issue',
+                    label: this.intl.t('fleet-ops.management.issues.index.edit-issues'),
                     fn: this.editIssue,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: 'Delete Issue',
+                    label: this.intl.t('fleet-ops.management.issues.index.delete'),
                     fn: this.deleteIssue,
                 },
             ],
@@ -452,7 +459,7 @@ export default class ManagementIssuesIndexController extends BaseController {
 
         this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
-            acceptButtonText: 'Delete Issues',
+            acceptButtonText: this.intl.t('fleet-ops.management.issues.index.delete-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },

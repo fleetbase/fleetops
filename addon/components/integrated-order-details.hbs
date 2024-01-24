@@ -2,38 +2,38 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
         {{#if this.isLalamove}}
             <div class="field-info-container space-y-2">
-                <div class="field-name">Order ID</div>
+                <div class="field-name">{{t "fleet-ops.component.integrated-order-details.order-id"}}</div>
                 <div class="field-value">
                     {{n-a @details.orderId}}
                 </div>
             </div>
             <div class="field-info-container space-y-2">
-                <div class="field-name">Quotation ID</div>
+                <div class="field-name">{{t "fleet-ops.component.integrated-order-details.quotation-id"}}</div>
                 <div class="field-value">
                     {{n-a @details.quotationId}}
                 </div>
             </div>
 
             <div class="field-info-container space-y-2">
-                <div class="field-name">Driver ID</div>
+                <div class="field-name">{{t "fleet-ops.component.integrated-order-details.driver-id"}}</div>
                 <div class="field-value">
                     {{n-a @details.driverId "No Driver Assigned"}}
                 </div>
             </div>
             <div class="field-info-container space-y-2">
-                <div class="field-name">Status</div>
+                <div class="field-name">{{t "fleet-ops.common.status"}}</div>
                 <div class="field-value">
                     {{smart-humanize @details.status}}
                 </div>
             </div>
             <div class="field-info-container space-y-2">
-                <div class="field-name">Distance</div>
+                <div class="field-name">{{t "fleet-ops.common.distance"}}</div>
                 <div class="field-value">
                     {{format-meters @details.distance.value}}
                 </div>
             </div>
             <div class="field-info-container space-y-2">
-                <div class="field-name">Shareable Link</div>
+                <div class="field-name">{{t "fleet-ops.component.integrated-order-details.link"}}</div>
                 <div class="field-value">
                     <a href={{@details.shareLink}} class="break-words anchor-button" target="_lalamove_link">
                         <div>
@@ -44,14 +44,14 @@
                 </div>
             </div>
             <div class="field-info-container space-y-2 lg:col-span-2">
-                <div class="field-name">Price Breakdown</div>
+                <div class="field-name">{{t "fleet-ops.component.integrated-order-details.price-breakdown"}}</div>
                 <div class="field-value">
                     <div class="next-table-wrapper">
                         <table class="table table-fixed w-full">
                             <thead>
                                 <tr>
-                                    <th class="text-left">Item</th>
-                                    <th class="text-left">Amount</th>
+                                    <th class="text-left">{{t "fleet-ops.common.item"}}</th>
+                                    <th class="text-left">{{t "fleet-ops.common.amount"}}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -64,7 +64,7 @@
                                     {{/if}}
                                 {{/each-in}}
                                 <tr>
-                                    <td class="font-bold">Total</td>
+                                    <td class="font-bold">{{t "fleet-ops.common.total"}}</td>
                                     <td class="font-bold">{{format-currency (mult @details.priceBreakdown.total 100) @details.priceBreakdown.currency}}</td>
                                 </tr>
                             </tbody>
@@ -73,14 +73,14 @@
                 </div>
             </div>
             <div class="field-info-container space-y-2 lg:col-span-2">
-                <div class="field-name">Metadata</div>
+                <div class="field-name">{{t "fleet-ops.component.integrated-order-details.metadata"}}</div>
                 <div class="field-value">
                     <div class="next-table-wrapper">
                         <table class="table table-fixed w-full">
                             <thead>
                                 <tr>
-                                    <th class="text-left">Key</th>
-                                    <th class="text-left">Value</th>
+                                    <th class="text-left">{{t "fleet-ops.common.key"}}</th>
+                                    <th class="text-left">{{t "fleet-ops.common.value"}}</th>
                                 </tr>
                             </thead>
                             <tbody>

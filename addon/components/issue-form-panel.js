@@ -21,6 +21,11 @@ export default class IssueFormPanelComponent extends Component {
     @service fetch;
 
     /**
+     * @service intl
+     */
+    @service intl;
+
+    /**
      * @service notifications
      */
     @service notifications;
@@ -126,7 +131,7 @@ export default class IssueFormPanelComponent extends Component {
             return issue
                 .save()
                 .then((issue) => {
-                    this.notifications.success(`Issue (${issue.public_id}) saved successfully.`);
+                    this.notifications.success(this.intl.t('fleet-ops.component.issue-form-panel.success-message', { publicId: issue.public_id }));
                     contextComponentCallback(this, 'onAfterSave', issue);
                 })
                 .catch((error) => {

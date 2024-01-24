@@ -1,5 +1,5 @@
-<Layout::Section::Header @title="Service Rates" @searchQuery={{this.query}} @onSearch={{perform this.search}}>
-    <Button @icon="refresh" @onClick={{this.reload}} @helpText="Reload data" class="mr-2" />
+<Layout::Section::Header @title={{t "fleet-ops.operations.service-rates.index.title"}} @searchQuery={{this.query}} @onSearch={{perform this.search}}>
+    <Button @icon="refresh" @onClick={{this.reload}} @helpText={{t "fleet-ops.operations.service-rates.index.reload-data"}} class="mr-2" />
     <FiltersPicker
         @columns={{this.columns}}
         @onApply={{fn this.filters.apply this}}
@@ -10,18 +10,18 @@
     />
     <VisibleColumnPicker @columns={{this.columns}} @onChange={{fn (mut this.columns)}} class="mr-2" />
     {{#if (safe-has this.table "selectedRows")}}
-        <DropdownButton @icon="layer-group" @text="Bulk Action" @type="magic" @size="sm" @buttonWrapperClass="mr-2" @contentClass="dropdown-menu" as |dd|>
+        <DropdownButton @icon="layer-group" @text={{t "fleet-ops.common.bulk-action"}} @type="magic" @size="sm" @buttonWrapperClass="mr-2" @contentClass="dropdown-menu" as |dd|>
             <div class="next-dd-menu mt-2 mx-0">
                 <div class="px-1">
                     <a href="#" class="text-red-500 next-dd-item" {{on "click" (dropdown-fn dd this.bulkDeleteServiceRates this.selectedServiceRates)}}>
-                        Delete Service Rates
+                        {{t "fleet-ops.operations.service-rates.index.delete-service-rates"}}
                     </a>
                 </div>
             </div>
         </DropdownButton>
     {{/if}}
-    <Button @icon="plus" @iconPrefix="fas" @type="primary" @text="New" class="mr-2" @onClick={{transition-to "operations.service-rates.index.new"}} />
-    <Button @icon="long-arrow-up" @iconClass="rotate-icon-45" @text="Export" />
+    <Button @icon="plus" @iconPrefix="fas" @type="primary" @text={{t "fleet-ops.common.new"}} class="mr-2" @onClick={{transition-to "operations.service-rates.index.new"}} />
+    <Button @icon="long-arrow-up" @iconClass="rotate-icon-45" @text={{t "fleet-ops.common.export"}} />
 </Layout::Section::Header>
 
 <Layout::Section::Body>

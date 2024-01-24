@@ -12,7 +12,7 @@
     <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-4">
         <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
-                Earnings
+                {{t "fleet-ops.component.widget.key-metrics.earnings"}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {{format-currency this.metrics.earnings}}
@@ -21,7 +21,7 @@
 
         <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
-                Fuel Expenses
+                {{t "fleet-ops.component.widget.key-metrics.fuel-expenses"}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {{format-currency this.metrics.fuel_cost}}
@@ -30,7 +30,7 @@
 
         <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
-                Distance Traveled
+                {{t "fleet-ops.component.widget.key-metrics.traveled"}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {{format-meters this.metrics.distance_traveled}}
@@ -39,7 +39,7 @@
 
         <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
-                Total Time
+                {{t "fleet-ops.component.widget.key-metrics.total-time"}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {{format-duration this.metrics.total_time_traveled}}
@@ -48,7 +48,7 @@
 
         <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
-                Orders Scheduled
+                {{t "fleet-ops.component.widget.key-metrics.order-scheduled"}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {{this.metrics.orders_scheduled}}
@@ -57,7 +57,7 @@
 
         <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
-                Orders Completed
+                {{t "fleet-ops.component.widget.key-metrics.order-completed"}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {{this.metrics.orders_completed}}
@@ -66,7 +66,7 @@
 
         <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
-                Orders In Progress
+                {{t "fleet-ops.component.widget.key-metrics.order-progress"}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {{this.metrics.orders_in_progress}}
@@ -75,7 +75,7 @@
 
         <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
-                Orders Canceled
+                {{t "fleet-ops.component.widget.key-metrics.order-canceled"}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {{this.metrics.orders_canceled}}
@@ -84,7 +84,7 @@
 
         <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
-                Drivers Online
+                {{t "fleet-ops.component.widget.key-metrics.driver-online"}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {{this.metrics.drivers_online}}
@@ -93,7 +93,7 @@
 
         <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
-                Customers
+                {{t "fleet-ops.component.widget.key-metrics.customers"}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {{this.metrics.customers}}
@@ -102,7 +102,7 @@
 
         <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
-                Open Issue
+                {{t "fleet-ops.component.widget.key-metrics.open-issue"}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {{this.metrics.open_issues}}
@@ -111,7 +111,7 @@
 
         <div class="px-4 py-5 bg-white dark:bg-gray-900 shadow rounded-lg overflow-hidden sm:p-6">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-100 truncate">
-                Closed Issues
+                {{t "fleet-ops.component.widget.key-metrics.closed-issues"}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {{this.metrics.resolved_issues}}

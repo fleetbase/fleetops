@@ -2,13 +2,13 @@
     <div class="shadow-sm content-panel">
         <div class="content-panel-header">
             <h3 class="text-sm font-bold dark:text-gray-100">
-                Recent Orders
+                {{t "fleet-ops.component.widget.recent-orders.title"}}
             </h3>
         </div>
         <div class="text-sm content-panel-body no-padding dark:text-gray-100">
             {{#if this.isLoading}}
                 <div class="flex text-center items-center justify-center p-4">
-                    Loading recent orders...
+                    {{t "fleet-ops.component.widget.recent-orders.loading"}}
                 </div>
             {{else}}
                 {{#each this.recentOrders as |order|}}
@@ -24,8 +24,8 @@
                             <FaIcon @icon="calendar-exclamation" @size="3x" />
                         </div>
                         <div class="dark:text-gray-100 text-center">
-                            <div class="font-semibold text-lg mb-2">No orders for this week</div>
-                            <p class="">There hasn't been any orders this week, get movement going by <LinkTo @route="operations.orders.index.new">creating a new order</LinkTo> or allow your customers to submit orders via API.</p>
+                            <div class="font-semibold text-lg mb-2">{{t "fleet-ops.component.widget.recent-orders.no-orders"}}</div>
+                            <p class="">{{t "fleet-ops.component.widget.recent-orders.message-part-1"}} <LinkTo @route="operations.orders.index.new">{{t "fleet-ops.component.widget.recent-orders.message-part-2"}}</LinkTo> {{t "fleet-ops.component.widget.recent-orders.message-part-3"}}</p>
                         </div>
                     </div>
                 {{/each}}

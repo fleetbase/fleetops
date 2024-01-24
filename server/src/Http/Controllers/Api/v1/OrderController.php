@@ -1114,7 +1114,7 @@ class OrderController extends Controller
     {
         $code    = $request->input('code');
         $data    = $request->input('data', []);
-        $rawData = $request->input('raw_data', []);
+        $rawData = $request->input('raw_data');
         $type    = $subjectId ? strtok($subjectId, '_') : null;
 
         try {

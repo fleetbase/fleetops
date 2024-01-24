@@ -7,11 +7,12 @@ export default class DriverActionsService extends Service {
     @service modalsManager;
     @service universe;
     @service crud;
+    @service intl;
 
     assignOrder(driver, options = {}) {
         this.modalsManager.show('modals/driver-assign-order', {
-            title: `Assign Order to this Driver`,
-            acceptButtonText: 'Assign Order',
+            title: this.intl.t('fleet-ops.management.drivers.index.order-driver'),
+            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.assign-order'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             acceptButtonDisabled: true,
@@ -25,7 +26,7 @@ export default class DriverActionsService extends Service {
             confirm: (modal) => {
                 const selectedOrder = modal.getOption('selectedOrder');
                 if (!selectedOrder) {
-                    this.notifications.warning('No order selected!');
+                    this.notifications.warning(this.intl.t('fleet-ops.management.drivers.index.no-order-warning'));
                     return;
                 }
 
@@ -35,7 +36,7 @@ export default class DriverActionsService extends Service {
                 return driver
                     .save()
                     .then(() => {
-                        this.notifications.success(`${driver.name} assigned to order.`);
+                        this.notifications.success(this.intl.t('fleet-ops.management.drivers.index.assign-driver', { driverName: driver.name }));
                     })
                     .catch((error) => {
                         driver.rollbackAttributes();
@@ -49,8 +50,8 @@ export default class DriverActionsService extends Service {
 
     assignVehicle(driver, options = {}) {
         this.modalsManager.show('modals/driver-assign-vehicle', {
-            title: `Assign Vehicle to this Driver`,
-            acceptButtonText: 'Confirm & Create',
+            title: this.intl.t('fleet-ops.management.drivers.index.title-vehicle'),
+            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.confirm-button'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             hideDeclineButton: true,
@@ -61,7 +62,7 @@ export default class DriverActionsService extends Service {
                 return driver
                     .save()
                     .then((driver) => {
-                        this.notifications.success(`${driver.name} assigned to vehicle.`);
+                        this.notifications.success(this.intl.t('fleet-ops.management.drivers.index.assign-vehicle', { driverName: driver.name }));
                     })
                     .catch((error) => {
                         driver.rollbackAttributes();
@@ -78,7 +79,7 @@ export default class DriverActionsService extends Service {
         const [latitude, longitude] = location.coordinates;
 
         this.modalsManager.show('modals/point-map', {
-            title: `Current Location of ${driver.name}`,
+            title: this.intl.t('fleet-ops.management.drivers.index.locate-driver', { driverName: driver.name }),
             acceptButtonText: 'Done',
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',

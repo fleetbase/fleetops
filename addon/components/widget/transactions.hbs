@@ -2,14 +2,14 @@
     <div class="shadow-sm content-panel">
         <div class="content-panel-header">
             <h3 class="text-sm font-bold dark:text-gray-100">
-                Recent Transactions
+                {{t "fleet-ops.component.widget.transactions.title"}}
             </h3>
         </div>
         <div class="text-sm content-panel-body no-padding dark:text-gray-100">
             {{#if this.isLoading}}
                 <div class="flex text-center items-center justify-center p-4">
                     <Spinner class="mr-2" />
-                    <span>Loading recent transactions...</span>
+                    <span>{{t "fleet-ops.component.widget.transactions.loading"}}</span>
                 </div>
             {{else}}
                 {{#each this.recentTransactions as |transaction|}}
@@ -25,8 +25,8 @@
                             <FaIcon @icon="funnel-dollar" @size="3x" />
                         </div>
                         <div class="dark:text-gray-100 text-center">
-                            <div class="font-semibold text-lg mb-2">No transactions this week</div>
-                            <p class="">When orders are going through with service rates, Fleetbase tracks transactions automatically.</p>
+                            <div class="font-semibold text-lg mb-2">{{t "fleet-ops.component.widget.transactions.no-transactions"}}</div>
+                            <p class="">{{t "fleet-ops.component.widget.transactions.message"}}</p>
                         </div>
                     </div>
                 {{/each}}

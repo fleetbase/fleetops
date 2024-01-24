@@ -22,6 +22,13 @@ export default class ManagementContactsIndexController extends BaseController {
     @service notifications;
 
     /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+    @service intl;
+
+    /**
      * Inject the `modals-manager` service
      *
      * @var {Service}
@@ -147,7 +154,7 @@ export default class ManagementContactsIndexController extends BaseController {
      */
     @tracked columns = [
         {
-            label: 'Name',
+            label: this.intl.t('fleet-ops.common.name'),
             valuePath: 'name',
             width: '170px',
             cellComponent: 'table/cell/media-name',
@@ -158,7 +165,7 @@ export default class ManagementContactsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'ID',
+            label: this.intl.t('fleet-ops.common.id'),
             valuePath: 'public_id',
             cellComponent: 'click-to-copy',
             width: '120px',
@@ -168,7 +175,7 @@ export default class ManagementContactsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Internal ID',
+            label: this.intl.t('fleet-ops.common.internal-id'),
             valuePath: 'internal_id',
             cellComponent: 'click-to-copy',
             width: '130px',
@@ -178,7 +185,7 @@ export default class ManagementContactsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Title',
+            label: this.intl.t('fleet-ops.common.title'),
             valuePath: 'title',
             cellComponent: 'click-to-copy',
             width: '160px',
@@ -188,7 +195,7 @@ export default class ManagementContactsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Email',
+            label: this.intl.t('fleet-ops.common.email'),
             valuePath: 'email',
             cellComponent: 'click-to-copy',
             width: '160px',
@@ -198,7 +205,7 @@ export default class ManagementContactsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Phone',
+            label: this.intl.t('fleet-ops.common.phone'),
             valuePath: 'phone',
             cellComponent: 'click-to-copy',
             width: '140px',
@@ -208,7 +215,7 @@ export default class ManagementContactsIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Type',
+            label: this.intl.t('fleet-ops.common.type'),
             valuePath: 'type',
             cellComponent: 'table/cell/status',
             width: '100px',
@@ -219,7 +226,7 @@ export default class ManagementContactsIndexController extends BaseController {
             filterOptions: ['contact', 'customer'],
         },
         {
-            label: 'Created At',
+            label: this.intl.t('fleet-ops.management.contacts.index.created'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
             width: '130px',
@@ -229,7 +236,7 @@ export default class ManagementContactsIndexController extends BaseController {
             filterComponent: 'filter/date',
         },
         {
-            label: 'Updated At',
+            label: this.intl.t('fleet-ops.management.contacts.index.updated'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
             width: '130px',
@@ -251,18 +258,18 @@ export default class ManagementContactsIndexController extends BaseController {
             width: '10%',
             actions: [
                 {
-                    label: 'View Contact Details',
+                    label: this.intl.t('fleet-ops.management.contacts.index.view-contact'),
                     fn: this.viewContact,
                 },
                 {
-                    label: 'Edit Contact',
+                    label: this.intl.t('fleet-ops.management.contacts.index.edit-contact'),
                     fn: this.editContact,
                 },
                 {
                     separator: true,
                 },
                 {
-                    label: 'Delete Contact',
+                    label: this.intl.t('fleet-ops.management.contacts.index.delete-contact'),
                     fn: this.deleteContact,
                 },
             ],
@@ -320,7 +327,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @void
      */
     @action viewContact(contact) {
-        return this.transitionToRoute('management.contacts.index.details', contact);
+        return this.transitionToRoute('management.contact.index.details', contact);
     }
 
     /**
@@ -329,7 +336,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @void
      */
     @action createContact() {
-        return this.transitionToRoute('management.contacts.index.new');
+        return this.transitionToRoute('management.contact.index.new');
     }
 
     /**
@@ -339,7 +346,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @void
      */
     @action editContact(contact) {
-        return this.transitionToRoute('management.contacts.index.edit', contact);
+        return this.transitionToRoute('management.contact.index.edit', contact);
     }
 
     /**
@@ -370,7 +377,7 @@ export default class ManagementContactsIndexController extends BaseController {
 
         this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
-            acceptButtonText: 'Delete Contacts',
+            acceptButtonText: this.intl.t('fleet-ops.management.contacts.index.delete-button'),
             onSuccess: () => {
                 return this.hostRouter.refresh();
             },

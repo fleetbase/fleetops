@@ -14,6 +14,7 @@ import isNotEmpty from '@fleetbase/ember-core/utils/is-not-empty';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import groupBy from '@fleetbase/ember-core/utils/macros/group-by';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
+import isModel from '@fleetbase/ember-core/utils/is-model';
 
 L.Bounds.prototype.intersects = function (bounds) {
     var min = this.min,
@@ -72,6 +73,13 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @service fileQueue;
 
     /**
+     * Inject the `intl` service
+     *
+     * @var {Service}
+     */
+    @service intl;
+
+    /**
      * Inject the `fetch` service
      *
      * @var {Service}
@@ -116,6 +124,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @tracked meta = [];
     @tracked entities = [];
     @tracked waypoints = [];
+    @tracked payloadCoordinates = [];
     @tracked types = [];
     @tracked serviceRates = [];
     @tracked selectedServiceRate;
@@ -184,8 +193,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         return isOrderTypeSet && isPickupSet && isDropoffSet;
     }
 
-    @computed('payload.{dropoff,pickup,waypoints}', 'waypoints.[]')
-    get payloadCoordinates() {
+    updatePayloadCoordinates() {
         let waypoints = [];
         let coordinates = [];
 
@@ -200,8 +208,29 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             }
         });
 
-        return coordinates;
+        this.payloadCoordinates = coordinates;
     }
+
+    // @computed('payload.{dropoff,pickup,waypoints}', 'waypoints.[]')
+    // get payloadCoordinates() {
+    //     let waypoints = [];
+    //     let coordinates = [];
+
+    //     console.log('[this.waypoints]', this.waypoints);
+
+    //     waypoints.pushObjects([this.payload.pickup, ...this.waypoints.map((waypoint) => waypoint.place), this.payload.dropoff]);
+    //     waypoints.forEach((place) => {
+    //         if (place && place.get('longitude') && place.get('latitude')) {
+    //             if (place.hasInvalidCoordinates) {
+    //                 return;
+    //             }
+
+    //             coordinates.pushObject([place.get('longitude'), place.get('latitude')]);
+    //         }
+    //     });
+
+    //     return coordinates;
+    // }
 
     @computed('payloadCoordinates.length', 'waypoints.[]') get isServicable() {
         return this.payloadCoordinates.length >= 2;
@@ -297,7 +326,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
                     // transition to order view
                     return this.hostRouter.transitionTo(`${engineMountPoint}operations.orders.index.view`, order).then(() => {
-                        this.notifications.success(`New Order ${order.public_id} Created`);
+                        this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.new.success-message', { orderId: order.public_id }));
                         this.loader.removeLoader();
                         this.resetForm();
                         later(
@@ -382,7 +411,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 };
 
                 if (!uploadQueue.length) {
-                    return this.notifications.warning('No files in queue to upload!');
+                    return this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.warning-message'));
                 }
 
                 modal.startLoading();
@@ -423,7 +452,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                     });
                 }
 
-                this.notifications.success('Import completed.');
+                this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.new.import-success'));
                 this.isCsvImportedOrder = true;
                 this.previewDraftOrderRoute(this.payload, this.waypoints, this.isMultipleDropoffOrder);
                 modal.done();
@@ -499,8 +528,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
         let payload = this.payload.serialize();
         let route = this.getRoute();
-        let distance = get(route, 'payload.summary.totalDistance');
-        let time = get(route, 'payload.summary.totalTime');
+        let distance = get(route, 'details.summary.totalDistance');
+        let time = get(route, 'details.summary.totalTime');
         let service_type = this.order.type;
         let scheduled_at = this.order.scheduled_at;
         let facilitator = this.order.facilitator?.get('public_id');
@@ -532,7 +561,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
         this.fetch
             .post('service-quotes/preliminary', {
-                payload,
+                payload: this._getSerializedPayload(payload),
                 distance,
                 time,
                 service,
@@ -542,6 +571,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 is_route_optimized,
             })
             .then((serviceQuotes) => {
+                console.log('[serviceQuotes]', serviceQuotes);
                 set(this, 'serviceQuotes', isArray(serviceQuotes) ? serviceQuotes : []);
 
                 if (this.serviceQuotes.length && this.isUsingIntegratedVendor) {
@@ -549,11 +579,36 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 }
             })
             .catch(() => {
-                this.notifications.warning('Failed to fetch service quotes for this order.');
+                this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.service-warning'));
             })
             .finally(() => {
                 this.isFetchingQuotes = false;
             });
+    }
+
+    _getSerializedPayload(payload) {
+        const serialized = {
+            pickup: payload.pickup,
+            dropoff: payload.dropoff,
+        };
+
+        if (isModel(payload.pickup)) {
+            serialized.pickup = payload.pickup.toJSON();
+        }
+
+        if (isModel(payload.dropoff)) {
+            serialized.dropoff = payload.dropoff.toJSON();
+        }
+
+        if (isArray(payload.entities)) {
+            serialized.entities = payload.entities.toArray();
+        }
+
+        if (isArray(payload.waypoints)) {
+            serialized.waypoints = payload.waypoints.toArray();
+        }
+
+        return serialized;
     }
 
     @action scheduleOrder(dateInstance) {
@@ -818,7 +873,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 });
             }
         } else {
-            this.notifications.warning('No route to preview.');
+            this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.no-route-warning'));
         }
     }
 
@@ -846,7 +901,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         const routingHost = getRoutingHost(this.payload, this.waypoints);
 
         const response = await this.fetch.routing(coordinates, { source: 'any', destination: 'any', annotations: true }, { host: routingHost }).catch(() => {
-            this.notifications.error('Route optimization failed, check route entry and try again.');
+            this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.new.route-error'));
             this.isOptimizingRoute = false;
         });
 
@@ -902,7 +957,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 maxZoom: 13,
             });
         } else {
-            this.notifications.error('Route optimization failed, check route entry and try again.');
+            this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.new.route-error'));
             this.isOptimizingRoute = false;
         }
     }
@@ -936,9 +991,33 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @action toggleMultiDropOrder(isMultipleDropoffOrder) {
         this.isMultipleDropoffOrder = isMultipleDropoffOrder;
 
+        const { pickup, dropoff } = this.payload;
+
         if (isMultipleDropoffOrder) {
-            this.addWaypoint();
+            if (pickup) {
+                this.addWaypoint({ place: pickup });
+
+                if (dropoff) {
+                    this.addWaypoint({ place: dropoff });
+                }
+
+                // clear pickup and dropoff
+                this.payload.setProperties({ pickup: null, dropoff: null });
+            } else {
+                this.addWaypoint();
+            }
         } else {
+            const pickup = get(this.waypoints, '0.place');
+            const dropoff = get(this.waypoints, '1.place');
+
+            if (pickup) {
+                this.setPayloadPlace('pickup', pickup);
+            }
+
+            if (dropoff) {
+                this.setPayloadPlace('dropoff', dropoff);
+            }
+
             this.clearWaypoints();
         }
     }
@@ -1028,7 +1107,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         let label, value;
 
         this.modalsManager.show('modals/meta-field-form', {
-            title: 'Add custom field to order',
+            title: this.intl.t('fleet-ops.operations.orders.index.new.custom-field-title'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             acceptButtonText: 'Done',
@@ -1041,11 +1120,11 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 const value = modal.getOption('value');
 
                 if (!label) {
-                    return this.notifications.warning('Custom field must have a label');
+                    return this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.label-warning'));
                 }
 
                 if (!value) {
-                    return this.notifications.warning('Custom field must have a value');
+                    return this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.value-warning'));
                 }
 
                 modal.startLoading();
@@ -1066,7 +1145,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         const { label, value } = metaField;
 
         this.modalsManager.show('modals/meta-field-form', {
-            title: 'Edit custom field',
+            title: this.intl.t('fleet-ops.operations.orders.index.new.edit-field-title'),
             acceptButtonIcon: 'save',
             acceptButtonText: 'Save Changes',
             label,
@@ -1076,11 +1155,11 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 const value = modal.getOption('value');
 
                 if (!label) {
-                    return this.notifications.warning('Custom field must have a label');
+                    return this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.label-warning'));
                 }
 
                 if (!value) {
-                    return this.notifications.warning('Custom field must have a value');
+                    return this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.value-warning'));
                 }
 
                 modal.startLoading();
@@ -1106,7 +1185,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         }
 
         this.modalsManager.show('modals/edit-meta-form', {
-            title: 'Edit Metadata',
+            title: this.intl.t('fleet-ops.operations.orders.index.new.edit-metadata'),
             hideDeclineButton: true,
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
@@ -1146,6 +1225,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         if (this.isUsingIntegratedVendor) {
             this.getQuotes();
         }
+
+        this.updatePayloadCoordinates();
     }
 
     @action sortWaypoints({ sourceList, sourceIndex, targetList, targetIndex }) {
@@ -1163,10 +1244,10 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         }
     }
 
-    @action addWaypoint() {
-        const waypoint = this.store.createRecord('waypoint');
-
+    @action addWaypoint(properties = {}) {
+        const waypoint = this.store.createRecord('waypoint', properties);
         this.waypoints.pushObject(waypoint);
+        this.updatePayloadCoordinates();
     }
 
     @action setWaypointPlace(index, place) {
@@ -1183,6 +1264,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         if (this.isUsingIntegratedVendor) {
             this.getQuotes();
         }
+
+        this.updatePayloadCoordinates();
     }
 
     @action removeWaypoint(waypoint) {
@@ -1197,6 +1280,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         } else {
             this.previewDraftOrderRoute(this.payload, this.waypoints, this.isMultipleDropoffOrder);
         }
+
+        this.updatePayloadCoordinates();
     }
 
     @action clearWaypoints() {
@@ -1235,7 +1320,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
     @action editEntity(entity) {
         this.modalsManager.show('modals/entity-form', {
-            title: 'Edit Item',
+            title: this.intl.t('fleet-ops.operations.orders.index.new.edit-item'),
             acceptButtonText: 'Save Changes',
             entity,
             uploadNewPhoto: (file) => {

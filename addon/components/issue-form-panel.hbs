@@ -10,28 +10,28 @@
     @width={{or this.width @width "570px"}}
 >
     <Overlay::Header
-        @title={{if this.issue.public_id this.issue.name "New Issue"}}
+        @title={{if this.issue.public_id this.issue.name (t "fleet-ops.component.issue-form-panel.issue") }}
         @status={{this.issue.public_id}}
         @hideStatusDot={{true}}
         @createdAt={{this.issue.createdAt}}
         @titleWrapperClass="leading-5"
     >
         <div class="flex flex-1 justify-end">
-            <Button @icon={{if this.issue.id "save" "check"}} @type="primary" @text={{if this.issue.id "Save Issue" "Create Issue"}} @onClick={{this.save}} @wrapperClass="mr-2" />
+            <Button @icon={{if this.issue.id "save" "check"}} @type="primary" @text={{if this.issue.id (t "fleet-ops.component.issue-form-panel.save-issue")(t "fleet-ops.component.issue-form-panel.create-issue") }} @onClick={{this.save}} @wrapperClass="mr-2" />
             {{#if this.issue.id}}
-                <Button @type="default" @icon="circle-exclamation" @helpText="View issue details" @onClick={{this.onViewDetails}} @wrapperClass="mr-2" />
+                <Button @type="default" @icon="circle-exclamation" @helpText={{t "fleet-ops.component.issue-form-panel.view-details"}} @onClick={{this.onViewDetails}} @wrapperClass="mr-2" />
             {{/if}}
-            <Button @type="default" @icon="times" @helpText={{if this.issue.id "Cancel edit issue" "Cancel new issue"}} @onClick={{this.onPressCancel}} />
+            <Button @type="default" @icon="times" @helpText={{if this.issue.id (t "fleet-ops.component.issue-form-panel.cancel-edit-issue")(t "fleet-ops.component.issue-form-panel.cancel-new-issue") }} @onClick={{this.onPressCancel}} />
         </div>
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
         <div class="grid grid-cols-1 text-xs dark:text-gray-100">
-            <InputGroup @name="Reported By">
+            <InputGroup @name={{t "fleet-ops.component.issue-form-panel.reported-by"}}>
                 <ModelSelect
                     @modelName="user"
                     @selectedModel={{this.issue.reporter}}
-                    @placeholder="Select Reporter"
+                    @placeholder={{t "fleet-ops.component.issue-form-panel.select-reporter"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -43,11 +43,11 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name="Assigned To">
+            <InputGroup @name={{t "fleet-ops.component.issue-form-panel.assigned"}}>
                 <ModelSelect
                     @modelName="user"
                     @selectedModel={{this.issue.assignee}}
-                    @placeholder="Select Assignee"
+                    @placeholder={{t "fleet-ops.component.issue-form-panel.select-assign"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -59,11 +59,11 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name="Driver">
+            <InputGroup @name={{t "fleet-ops.common.driver"}}>
                 <ModelSelect
                     @modelName="driver"
                     @selectedModel={{this.issue.driver}}
-                    @placeholder="Select Driver"
+                    @placeholder={{t "fleet-ops.component.issue-form-panel.select-driver"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -74,11 +74,11 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name="Vehicle">
+            <InputGroup @name={{t "fleet-ops.common.vehicle"}}>
                 <ModelSelect
                     @modelName="vehicle"
                     @selectedModel={{this.issue.vehicle}}
-                    @placeholder="Select Vehicle"
+                    @placeholder={{t "fleet-ops.component.issue-form-panel.select-vehicle"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -89,13 +89,13 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name="Issue Type">
+            <InputGroup @name={{t "fleet-ops.component.issue-form-panel.type"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.issueTypes}}
                         @selected={{this.issue.type}}
                         @onChange={{this.onSelectIssueType}}
-                        @placeholder="Select issue type"
+                        @placeholder={{t "fleet-ops.component.issue-form-panel.select-type"}}
                         @triggerClass="form-select form-input"
                         as |type|
                     >
@@ -104,13 +104,13 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Issue Category">
+            <InputGroup @name={{t "fleet-ops.component.issue-form-panel.category"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.issueCategories}}
                         @selected={{this.issue.category}}
                         @onChange={{fn (mut this.issue.category)}}
-                        @placeholder="Select issue category"
+                        @placeholder={{t "fleet-ops.component.issue-form-panel.select-category"}}
                         @triggerClass="form-select form-input"
                         @disabled={{not this.issueCategories}}
                         as |category|
@@ -120,14 +120,14 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Issue Report">
-                <Textarea @value={{this.issue.report}} aria-label="Issue Report" class="w-full form-input" placeholder="Issue Report" rows={{5}} />
+            <InputGroup @name={{t "fleet-ops.component.issue-form-panel.report"}}>
+                <Textarea @value={{this.issue.report}} aria-label="Issue Report" class="w-full form-input" placeholder={{t "fleet-ops.component.issue-form-panel.report"}} rows={{5}} />
             </InputGroup>
 
-            <InputGroup @name="Issue Tags">
+            <InputGroup @name={{t "fleet-ops.component.issue-form-panel.tags"}}>
                 <TagInput
                     class="form-input"
-                    @placeholder="Add tags"
+                    @placeholder={{t "fleet-ops.component.issue-form-panel.add-tags"}}
                     @allowSpacesInTags={{true}}
                     @tags={{this.issue.tags}}
                     @addTag={{this.addTag}}
@@ -138,13 +138,13 @@
                 </TagInput>
             </InputGroup>
 
-            <InputGroup @name="Issue Priority">
+            <InputGroup @name={{t "fleet-ops.component.issue-form-panel.priority"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.issuePriorityOptions}}
                         @selected={{this.issue.priority}}
                         @onChange={{fn (mut this.issue.priority)}}
-                        @placeholder="Select issue priority"
+                        @placeholder={{t "fleet-ops.component.issue-form-panel.select-priority"}}
                         @triggerClass="form-select form-input"
                         as |priority|
                     >
@@ -153,13 +153,13 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Status">
+            <InputGroup @name={{t "fleet-ops.common.status"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.issueStatusOptions}}
                         @selected={{this.issue.status}}
                         @onChange={{fn (mut this.issue.status)}}
-                        @placeholder="Select issue status"
+                        @placeholder={{t "fleet-ops.component.issue-form-panel.select-status"}}
                         @triggerClass="form-select form-input"
                         as |status|
                     >
@@ -168,7 +168,7 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Coordinates">
+            <InputGroup @name={{t "fleet-ops.common.coordinates"}}>
                 <CoordinatesInput @value={{this.issue.location}} @onChange={{fn (mut this.issue.location)}} />
             </InputGroup>
         </div>

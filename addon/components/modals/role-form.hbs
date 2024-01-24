@@ -2,13 +2,13 @@
     <div class="modal-body-container" ...attributes>
         <div class="input-group">
             <label>
-                Role Name
+                {{t "fleet-ops.component.modals.role-form.name"}}
             </label>
-            <Input @value={{@options.role.name}}  @type="text" class="w-full form-input" placeholder="Enter a name for this role" />
+            <Input @value={{@options.role.name}}  @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.role-form.name-text"}} />
         </div>
         <div class="input-group">
             <label>
-               Select Permissions
+               {{t "fleet-ops.component.modals.role-form.permissions"}}
             </label>
             <PermissionPicker @selected={{@options.role.permissions}} @onChange={{fn (mut @options.role.permissions)}} />
         </div>

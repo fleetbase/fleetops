@@ -10,7 +10,7 @@
                 {{#if this.isLoading}}
                     <div class="flex text-center items-center justify-center p-4">
                         <Spinner class="mr-2" />
-                        <span>Let's see what you can do to jumpstart operations...</span>
+                        <span>{{t "fleet-ops.component.widget.fleet-ops-quickstart.message"}}</span>
                     </div>
                 {{else}}
                     <div class="space-y-3">
@@ -27,7 +27,7 @@
                                 </div>
                                 <div>
                                     {{#if task.should}}
-                                        <a href="javascript:;" class="text-yellow-700 dark:text-yellow-700 hover:text-yellow-700 font-semibold underline" {{on "click" (fn this.startTask action)}}>Start Task</a>
+                                        <a href="javascript:;" class="text-yellow-700 dark:text-yellow-700 hover:text-yellow-700 font-semibold underline" {{on "click" (fn this.startTask action)}}>{{t "fleet-ops.component.widget.fleet-ops-quickstart.start-task"}}</a>
                                     {{/if}}
                                 </div>
                             </div>

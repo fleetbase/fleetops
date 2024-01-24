@@ -19,6 +19,13 @@ export default class ManagementVehiclesIndexEditController extends BaseControlle
     @service modalsManager;
 
     /**
+     * Inject the `intl` service
+     *
+     * @memberof intl
+     */
+    @service intl;
+
+    /**
      * The overlay component context.
      *
      * @memberof ManagementVehiclesIndexEditController
@@ -98,9 +105,9 @@ export default class ManagementVehiclesIndexEditController extends BaseControlle
      */
     confirmContinueWithUnsavedChanges(vehicle, options = {}) {
         return this.modalsManager.confirm({
-            title: 'Continue Without Saving?',
-            body: 'Unsaved changes to this vehicle will be lost. Click continue to proceed.',
-            acceptButtonText: 'Continue without saving',
+            title: this.intl.t('fleet-ops.management.drivers.index.edit.title'),
+            body: this.intl.t('fleet-ops.management.vehicles.index.edit.body'),
+            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.edit.button'),
             confirm: () => {
                 vehicle.rollbackAttributes();
                 return this.transitionToRoute('management.vehicles.index.details', vehicle);

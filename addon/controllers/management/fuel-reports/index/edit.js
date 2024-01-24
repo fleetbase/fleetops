@@ -19,6 +19,13 @@ export default class ManagementFuelReportsIndexEditController extends BaseContro
     @service modalsManager;
 
     /**
+     * Inject the `intl` service
+     *
+     * @memberof intl
+     */
+    @service intl;
+
+    /**
      * The overlay component context.
      *
      * @memberof ManagementFuelReportsIndexEditController
@@ -98,9 +105,9 @@ export default class ManagementFuelReportsIndexEditController extends BaseContro
      */
     confirmContinueWithUnsavedChanges(fuelReport, options = {}) {
         return this.modalsManager.confirm({
-            title: 'Continue Without Saving?',
-            body: 'Unsaved changes to this fuel-report will be lost. Click continue to proceed.',
-            acceptButtonText: 'Continue without saving',
+            title: this.intl.t('fleet-ops.management.drivers.index.edit.title'),
+            body: this.intl.t('fleet-ops.management.fuel-reports.index.edit.body'),
+            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.edit.button'),
             confirm: () => {
                 fuelReport.rollbackAttributes();
                 return this.transitionToRoute('management.fuel-reports.index.details', fuelReport);

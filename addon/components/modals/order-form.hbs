@@ -1,15 +1,15 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
         <div class="grid grid-cols-2 gap-3 text-xs dark:text-gray-100">
-            <InputGroup @name="Internal ID" @value={{@options.order.internal_id}} @helpText="Use this field to optionally set a custom identifier or internal identifier for the order." />
+            <InputGroup @name={{t "fleet-ops.common.internal-id"}} @value={{@options.order.internal_id}} @helpText={{t "fleet-ops.component.modals.order-form.id-text"}} />
 
             <div class="input-group">
-                <InputLabel @labelText="Schedule" @helpText="The date and time the order will be dispatched. If no driver is assigned at time of dispatch, the dispatch will fail. If the order is Ad-Hoc the order will be pinged to drivers in vicinity of pickup." />
+                <InputLabel @labelText={{t "fleet-ops.common.schedule"}} @helpText={{t "fleet-ops.component.modals.order-form.schedule-text"}} />
                 <DateTimeInput class="form-input" @value={{@options.order.scheduled_at}} @minDate={{format-date (now) "yyyy-MM-d"}} @minTime={{format-date (now) "HH:mm"}} @onUpdate={{@options.scheduleOrder}} @disabled={{@options.order.isIntegratedVendorOrder}} />
             </div>
 
-            <InputGroup @name="Customer" @helpText="Optionally assign the customer of this order. If it's a new customer, use the 'New Customer' button above.">
-                <ModelSelect @modelName="customer" @selectedModel={{@options.order.customer}} @placeholder="Select Customer" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @onChange={{@options.setOrderCustomer}} as |model|>
+            <InputGroup @name={{t "fleet-ops.component.modals.order-form.customer"}} @helpText={{t "fleet-ops.component.modals.order-form.customer-text"}}>
+                <ModelSelect @modelName="customer" @selectedModel={{@options.order.customer}} @placeholder={{t "fleet-ops.component.modals.order-form.select-customer"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @onChange={{@options.setOrderCustomer}} as |model|>
                     <div class="flex items-center">
                         <div class="w-7">
                             <FaIcon @icon={{if model.isVendor "warehouse" "user" }} />
@@ -21,8 +21,8 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name="Facilitator" @helpText="Optionally assign a facilitator for this order, a facilitator can be a 3rd party subcontractor or service that will facilitate the transport of this order.">
-                <ModelSelect @modelName="facilitator" @selectedModel={{@options.order.facilitator}} @placeholder="Select Facilitator" @triggerClass="form-select form-input" @allowClear={{true}} @infiniteScroll={{false}} @renderInPlace={{true}} @disabled={{@options.order.isIntegratedVendorOrder}} @onChange={{@options.setOrderFacilitator}} as |model|>
+            <InputGroup @name={{t "fleet-ops.component.modals.order-form.facilitator"}} @helpText={{t "fleet-ops.component.modals.order-form.facilitator-text"}}>
+                <ModelSelect @modelName="facilitator" @selectedModel={{@options.order.facilitator}} @placeholder={{t "fleet-ops.component.modals.order-form.select-facilitator"}} @triggerClass="form-select form-input" @allowClear={{true}} @infiniteScroll={{false}} @renderInPlace={{true}} @disabled={{@options.order.isIntegratedVendorOrder}} @onChange={{@options.setOrderFacilitator}} as |model|>
                     <div class="flex items-center">
                         <div class="w-7">
                             {{#if model.isIntegratedVendor}}
@@ -38,8 +38,8 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name="Assign Driver" @helpText="Assign the driver this order will be dispatched to.">
-                <ModelSelect @modelName="driver" @selectedModel={{@options.order.driver_assigned}} @query={{this.driversQuery}} @placeholder="Select Driver" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @disabled={{@options.order.isIntegratedVendorOrder}} @allowClear={{true}} @onChange={{@options.setDriver}} as |model|>
+            <InputGroup @name={{t "fleet-ops.component.modals.order-form.assign-driver"}} @helpText={{t "fleet-ops.component.modals.order-form.assign-driver-text"}}>
+                <ModelSelect @modelName="driver" @selectedModel={{@options.order.driver_assigned}} @query={{this.driversQuery}} @placeholder={{t "fleet-ops.component.modals.order-form.select-driver"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @disabled={{@options.order.isIntegratedVendorOrder}} @allowClear={{true}} @onChange={{@options.setDriver}} as |model|>
                     <div class="flex items-center">
                         <div class="w-7">
                             <FaIcon @icon="id-card-alt" />

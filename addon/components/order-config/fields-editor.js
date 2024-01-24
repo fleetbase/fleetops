@@ -17,6 +17,7 @@ export default class OrderConfigFieldsEditorComponent extends Component {
         }
     }
 
+    @service intl;
     @service modalsManager;
     @service notifications;
 
@@ -25,34 +26,34 @@ export default class OrderConfigFieldsEditorComponent extends Component {
     @tracked fields = [];
     @tracked metaFieldTypes = [
         {
-            label: 'Text Field',
+            label: this.intl.t('fleet-ops.component.order-config.fields-editor.text-field'),
             key: 'text',
         },
         {
-            label: 'Boolean',
-            description: 'Allows user to toggle a true or false property by checkbox',
+            label: this.intl.t('fleet-ops.component.order-config.fields-editor.boolean'),
+            description: this.intl.t('fleet-ops.component.order-config.fields-editor.boolean-text'),
             key: 'boolean',
         },
         {
-            label: 'Dropdown Select',
-            description: 'Allows user to select an option from a dropdown of options',
+            label: this.intl.t('fleet-ops.component.order-config.fields-editor.dropdown'),
+            description: this.intl.t('fleet-ops.component.order-config.fields-editor.dropdown-text'),
             key: 'select',
             hasOptions: true,
         },
         {
-            label: 'Datetime Selector',
-            description: 'Allows user to select a date & time',
+            label: this.intl.t('fleet-ops.component.order-config.fields-editor.datetime'),
+            description: this.intl.t('fleet-ops.component.order-config.fields-editor.datetime'),
             key: 'datetime',
         },
         {
-            label: 'Port Selector',
-            description: 'Allows user to select a port',
+            label: this.intl.t('fleet-ops.component.order-config.fields-editor.port'),
+            description: this.intl.t('fleet-ops.component.order-config.fields-editor.port-text'),
             serialize: 'model:port',
             key: 'port',
         },
         {
-            label: 'Vessel Selector',
-            description: 'Allows user to select a vessel',
+            label: this.intl.t('fleet-ops.component.order-config.fields-editor.vessel'),
+            description: this.intl.t('fleet-ops.component.order-config.fields-editor.vessel-text'),
             serialize: 'model:vessel',
             key: 'vessel',
         },
@@ -99,7 +100,7 @@ export default class OrderConfigFieldsEditorComponent extends Component {
                 const groupName = modal.getOption('groupName');
 
                 if (typeof groupName !== 'string') {
-                    return this.notifications.warning('No group name entered.');
+                    return this.notifications.warning(this.intl.t('fleet-ops.component.order-config.fields-editor.warning-message'));
                 }
 
                 const group = underscore(groupName.toLowerCase());

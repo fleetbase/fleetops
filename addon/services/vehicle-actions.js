@@ -7,13 +7,14 @@ export default class VehicleActionsService extends Service {
     @service modalsManager;
     @service universe;
     @service crud;
+    @service intl;
 
     locate(vehicle, options = {}) {
         const { location } = vehicle;
         const [latitude, longitude] = location.coordinates;
 
         this.modalsManager.show('modals/point-map', {
-            title: `Current Location of ${vehicle.displayName}`,
+            title: this.intl.t('fleet-ops.management.vehicles.index.locate-title', { vehicleName: vehicle.displayName }),
             acceptButtonText: 'Done',
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
