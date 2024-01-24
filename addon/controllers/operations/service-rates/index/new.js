@@ -309,6 +309,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
                 return this.transitionToRoute('operations.service-rates.index').then(() => {
                     this.notifications.success(this.intl.t('fleet-ops.operations.service-rates.index.new.success-message', { serviceName: serviceRate.service_name }));
                     this.resetForm();
+                    return this.hostRouter.refresh();
                 });
             })
             .catch((error) => {

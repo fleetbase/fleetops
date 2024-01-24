@@ -47,21 +47,18 @@ use Fleetbase\Support\Utils; ?>
 			<div style="float: left; width: 130px; height: 120px; border-right: 1px #414141 solid; text-align: center; padding: 10px; box-sizing: border-box;">
 				<img src="data:image/png;base64,<?= Utils::notEmpty($trackingNumber) ? $trackingNumber->qr_code : $order->trackingNumber->qr_code ?>" style="width: 100%; height: 100%; object-fit: cover;">
 			</div>
-			<div style="margin-top: 10px;">
-				<span style="padding-left: 10px; font-size: 18px; font-weight: bold;"><?= strtoupper($company->name) ?></span>
-			</div>
-			<div style="display: inline-block; height: 90px; box-sizing: border-box;">
-				<div style="padding: 10px;">
-					<span style="display: block; font-size: 16px;">
-						<?php
-						if ($order && $order instanceof Order) {
-							$order->load('purchaseRate.serviceQuote.serviceRate');
-							if (isset($order->purchaseRate->serviceQuote->serviceRate)) {
-								echo strtoupper($order->purchaseRate->serviceQuote->serviceRate->name);
-							}
+			<div style="margin-top: 10px; padding-left: 10px;">
+				<div style="font-size: 18px; font-weight: bold;"><?= strtoupper($company->name) ?></div>
+				<div style="font-size: 16px; font-weight: 300; color: #000;">
+					<?php
+					if ($order && $order instanceof Order) {
+						$order->load('purchaseRate.serviceQuote.serviceRate');
+						$serviceName = data_get($order, 'purchaseRate.serviceQuote.serviceRate.service_name');
+						if ($serviceName) {
+							echo strtoupper($serviceName);
 						}
-						?>
-					</span>
+					}
+					?>
 				</div>
 			</div>
 		</div>

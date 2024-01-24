@@ -14,6 +14,7 @@ import isNotEmpty from '@fleetbase/ember-core/utils/is-not-empty';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import groupBy from '@fleetbase/ember-core/utils/macros/group-by';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
+import isModel from '@fleetbase/ember-core/utils/is-model';
 
 L.Bounds.prototype.intersects = function (bounds) {
     var min = this.min,
@@ -560,7 +561,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
         this.fetch
             .post('service-quotes/preliminary', {
-                payload,
+                payload: this._getSerializedPayload(payload),
                 distance,
                 time,
                 service,
@@ -583,6 +584,31 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             .finally(() => {
                 this.isFetchingQuotes = false;
             });
+    }
+
+    _getSerializedPayload(payload) {
+        const serialized = {
+            pickup: payload.pickup,
+            dropoff: payload.dropoff
+        };
+        
+        if (isModel(payload.pickup)) {
+            serialized.pickup = payload.pickup.toJSON();
+        }
+
+        if (isModel(payload.dropoff)) {
+            serialized.dropoff = payload.dropoff.toJSON();
+        }
+
+        if (isArray(payload.entities)) {
+            serialized.entities = payload.entities.toArray();
+        }
+
+        if (isArray(payload.waypoints)) {
+            serialized.waypoints = payload.waypoints.toArray();
+        }
+
+        return serialized;
     }
 
     @action scheduleOrder(dateInstance) {
