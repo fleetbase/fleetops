@@ -60,3 +60,9 @@ body[data-theme='dark'] .scheduler-left-sidebar {
 .next-sidebar .next-sidebar-panel-container.next-driver-listing > .next-sidebar-panel > .next-content-panel > .next-sidebar-panel-body .next-nav-item.driver-nav-item {
     padding-left: 3.5rem;
 }
+
+.multi-drop-select-container .fleetbase-model-select.fleetbase-power-select.ember-model-select > .ember-model-select__loading {
+    background: none;
+    border: none;
+    box-shadow: none;
+}

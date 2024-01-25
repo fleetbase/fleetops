@@ -147,7 +147,7 @@ export default class VendorFormPanelComponent extends Component {
             {
                 path: `uploads/${this.currentUser.companyId}/vendors/${this.vendor.id}`,
                 subject_uuid: this.vendor.id,
-                subject_type: 'vendor',
+                subject_type: 'fleet-ops:vendor',
                 type: 'vendor_logo',
             },
             (uploadedFile) => {
