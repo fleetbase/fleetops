@@ -5,23 +5,6 @@ import { inject as service } from '@ember/object';
 
 export default class OperationsServiceRatesIndexEditController extends OperationsServiceRatesIndexNewController {
     /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
-    @service intl;
-
-    /**
-     * True if updating service rate.
-     *
-     * @var {Boolean}
-     */
-    @tracked isUpdatingServiceRate = false;
-
-    // @alias('@model.rate_fees') rateFees;
-    // @alias('@model.parcel_fees') parcelFees;
-
-    /**
      * Updates the service rate to server
      *
      * @void
