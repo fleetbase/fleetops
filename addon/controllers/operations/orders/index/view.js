@@ -894,8 +894,6 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                         this.modalsManager.stopLoading();
                     },
                     () => {
-                        entity.set('photo_url', 'https://flb-assets.s3-ap-southeast-1.amazonaws.com/static/parcels/medium.png');
-
                         // Stop loading
                         this.modalsManager.stopLoading();
                     }
