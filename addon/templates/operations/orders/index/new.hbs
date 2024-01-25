@@ -213,7 +213,7 @@
             </div>
 
             {{#if this.isMultipleDropoffOrder}}
-                <DragSortList class="overflow-visible" @items={{this.waypoints}} @dragEndAction={{this.sortWaypoints}} as |waypoint index|>
+                <DragSortList class="multi-drop-select-container overflow-visible" @items={{this.waypoints}} @dragEndAction={{this.sortWaypoints}} as |waypoint index|>
                     <div id={{concat "waypoint_" (add index 1)}} class="border rounded-md px-3 py-2 shadow-sm border-gray-300 dark:border-gray-900 mb-3">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center justify-between cursor-move">

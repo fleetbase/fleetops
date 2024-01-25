@@ -422,7 +422,10 @@ class DriverController extends Controller
                 return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
             });
         } catch (\Throwable $e) {
-            return response()->apiError($e->getMessage());
+            if (app()->bound('sentry')) {
+                app('sentry')->captureException($e);
+            }
+            return response()->apiError('Unable to send SMS Verification code.');
         }
 
         return response()->json(['status' => 'OK']);

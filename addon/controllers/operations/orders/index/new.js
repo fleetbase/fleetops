@@ -1324,24 +1324,30 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             acceptButtonText: 'Save Changes',
             entity,
             uploadNewPhoto: (file) => {
+                const fileUrl = URL.createObjectURL(file.file);
+
                 if (entity.get('isNew')) {
                     const { queue } = file;
-                    const fileUrl = URL.createObjectURL(file.blob);
 
                     this.modalsManager.setOption('pendingFileUpload', file);
                     entity.set('photo_url', fileUrl);
-                    // entity.set('photo_upload', fileUrl);
                     queue.remove(file);
                     return;
+                } else {
+                    entity.set('photo_url', fileUrl);
                 }
 
+                // Indicate loading
+                this.modalsManager.startLoading();
+
+                // Perform upload
                 return this.fetch.uploadFile.perform(
                     file,
                     {
                         path: `uploads/${this.currentUser.companyId}/entities/${entity.id}`,
                         subject_uuid: entity.id,
-                        subject_type: `entity`,
-                        type: `entity_photo`,
+                        subject_type: 'fleet-ops:entity',
+                        type: 'entity_photo',
                     },
                     (uploadedFile) => {
                         entity.setProperties({
@@ -1349,6 +1355,13 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                             photo_url: uploadedFile.url,
                             photo: uploadedFile,
                         });
+
+                        // Stop loading
+                        this.modalsManager.stopLoading();
+                    },
+                    () => {
+                        // Stop loading
+                        this.modalsManager.stopLoading();
                     }
                 );
             },
@@ -1356,7 +1369,6 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 modal.startLoading();
 
                 const pendingFileUpload = modal.getOption('pendingFileUpload');
-
                 return entity.save().then(() => {
                     if (pendingFileUpload) {
                         return modal.invoke('uploadNewPhoto', pendingFileUpload);
