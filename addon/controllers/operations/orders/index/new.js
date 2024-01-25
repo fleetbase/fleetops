@@ -571,7 +571,6 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 is_route_optimized,
             })
             .then((serviceQuotes) => {
-                console.log('[serviceQuotes]', serviceQuotes);
                 set(this, 'serviceQuotes', isArray(serviceQuotes) ? serviceQuotes : []);
 
                 if (this.serviceQuotes.length && this.isUsingIntegratedVendor) {
@@ -588,27 +587,21 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
     _getSerializedPayload(payload) {
         const serialized = {
-            pickup: payload.pickup,
-            dropoff: payload.dropoff,
+            pickup: this._seriailizeModel(payload.pickup),
+            dropoff: this._seriailizeModel(payload.dropoff),
+            entitities: this._serializeArray(payload.entities),
+            waypoints: this._serializeArray(payload.waypoint),
         };
 
-        if (isModel(payload.pickup)) {
-            serialized.pickup = payload.pickup.toJSON();
-        }
-
-        if (isModel(payload.dropoff)) {
-            serialized.dropoff = payload.dropoff.toJSON();
-        }
-
-        if (isArray(payload.entities)) {
-            serialized.entities = payload.entities.toArray();
-        }
-
-        if (isArray(payload.waypoints)) {
-            serialized.waypoints = payload.waypoints.toArray();
-        }
-
         return serialized;
+    }
+
+    _seriailizeModel(model) {
+        return isModel(model) ? model.toJSON() : model;
+    }
+
+    _serializeArray(array) {
+        return isArray(array) ? array.map((item) => this._seriailizeModel(item)) : array;
     }
 
     @action scheduleOrder(dateInstance) {
