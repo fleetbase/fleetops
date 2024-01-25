@@ -38,6 +38,7 @@ fleet-ops:
     length: Length
     license: License
     loading: Loading...
+    loading-resource: Loading {resourceName}...
     make: Make
     manage-message: Manage your vendors
     manpower: Manpower
