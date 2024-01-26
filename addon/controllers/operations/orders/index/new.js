@@ -597,7 +597,17 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     }
 
     _seriailizeModel(model) {
-        return isModel(model) ? model.toJSON() : model;
+        if (isModel(model)) {
+            if (typeof model.toJSON === 'function') {
+                return model.toJSON();
+            }
+
+            if (typeof model.serialize === 'function') {
+                return model.serialize();
+            }
+        }
+
+        return model;
     }
 
     _serializeArray(array) {
