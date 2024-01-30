@@ -239,6 +239,47 @@
             </div>
         </ContentPanel>
 
+        {{#if @model.purchase_rate}}
+            <ContentPanel @title="Purchase Rate" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <div class="next-table-wrapper h-auto table-fluid rounded-none">
+                    <table class="table table-fixed flex-1">
+                        <thead>
+                            <tr>
+                                <th class="text-left">{{t "fleet-ops.operations.orders.index.new.breakdown"}}</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b-0">
+                                <td class="border-b-0">
+                                    <span class="font-semibold">{{t "fleet-ops.common.total"}}</span>
+                                </td>
+                                <td class="border-b-0">
+                                    <span>{{format-currency @model.purchase_rate.service_quote.amount @model.purchase_rate.service_quote.currency}}</span>
+                                </td>
+                            </tr>
+                            <tr class="border-b-0">
+                                <td class="border-b-0">
+                                    <span class="font-semibold">{{"Currency"}}</span>
+                                </td>
+                                <td class="border-b-0">
+                                    <span>{{@model.purchase_rate.service_quote.currency}}</span>
+                                </td>
+                            </tr>
+                            <tr class="border-b-0">
+                                <td class="border-b-0">
+                                    <span class="font-semibold">{{"Created date at"}}</span>
+                                </td>
+                                <td class="border-b-0">
+                                    <span>{{@model.purchase_rate.createdAt}}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </ContentPanel>
+        {{/if}}
+
         {{#if @model.isIntegratedVendorOrder}}
             <ContentPanel
                 @title={{concat @model.facilitator.name (t "fleet-ops.operations.orders.index.view.order-details-title")}}

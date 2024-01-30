@@ -186,6 +186,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         yield order.loadCustomer();
         yield order.loadTrackingActivity();
         yield order.loadOrderConfig();
+        yield order.loadPurchaseRate();
     }
 
     @action resetView() {
