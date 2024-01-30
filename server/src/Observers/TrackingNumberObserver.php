@@ -4,7 +4,7 @@ namespace Fleetbase\FleetOps\Observers;
 
 use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Str;
 use Milon\Barcode\Facades\DNS2DFacade as DNS2D;
 

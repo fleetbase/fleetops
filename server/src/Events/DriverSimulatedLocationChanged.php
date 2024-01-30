@@ -3,7 +3,7 @@
 namespace Fleetbase\FleetOps\Events;
 
 use Fleetbase\FleetOps\Models\Driver;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;

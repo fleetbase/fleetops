@@ -12,9 +12,10 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
@@ -85,6 +86,16 @@ class Vehicle extends Model
      * @var string
      */
     protected static $logName = 'vehicle';
+
+    /**
+     * Get the activity log options for the model.
+     *
+     * @return \Spatie\Activitylog\LogOptions
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logOnlyDirty();
+    }
 
     /**
      * Get the options for generating the slug.

@@ -6,7 +6,7 @@ use Fleetbase\FleetOps\Models\Waypoint as WaypointModel;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 use Fleetbase\Support\Resolve;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 
 class Waypoint extends FleetbaseResource
 {

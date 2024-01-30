@@ -14,13 +14,14 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 use WebSocket\Message\Ping;
@@ -176,6 +177,16 @@ class Driver extends Model
      * @var string
      */
     protected static $logName = 'driver';
+
+    /**
+     * Get the activity log options for the model.
+     *
+     * @return \Spatie\Activitylog\LogOptions
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logOnlyDirty();
+    }
 
     /**
      * Get the options for generating the slug.

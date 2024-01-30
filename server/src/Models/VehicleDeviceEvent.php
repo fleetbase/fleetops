@@ -9,7 +9,7 @@ use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 
 class VehicleDeviceEvent extends Model
 {

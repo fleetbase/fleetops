@@ -12,7 +12,7 @@ use Fleetbase\Http\Controllers\Controller;
 use Geocoder\Laravel\Facades\Geocoder;
 use Geocoder\Provider\GoogleMapsPlaces\GoogleMapsPlaces;
 use Geocoder\Query\GeocodeQuery;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Http\Adapter\Guzzle7\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

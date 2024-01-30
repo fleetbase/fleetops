@@ -11,6 +11,7 @@ use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
@@ -74,6 +75,20 @@ class Fleet extends Model
      * @var string
      */
     protected static $logName = 'fleet';
+
+    /**
+     * Get the activity log options for the model.
+     *
+     * @return \Spatie\Activitylog\LogOptions
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly([
+                'name', 'task', 'service_area_uuid', 'zone_uuid'
+            ])
+            ->logOnlyDirty();
+    }
 
     /**
      * The flug options for this model.

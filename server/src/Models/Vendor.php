@@ -12,6 +12,7 @@ use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
@@ -132,6 +133,20 @@ class Vendor extends Model
      * @var string
      */
     protected static $logName = 'vendor';
+
+    /**
+     * Get the activity log options for the model.
+     *
+     * @return \Spatie\Activitylog\LogOptions
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly([
+                'name', 'email', 'website_url', 'phone', 'country', 'status', 'type', 'logo_uuid', 'company_uuid'
+            ])
+            ->logOnlyDirty();
+    }
 
     /**
      * Get the options for generating the slug.

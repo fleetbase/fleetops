@@ -9,7 +9,7 @@ use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Support\Str;
 
 class Issue extends Model

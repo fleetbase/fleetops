@@ -19,7 +19,7 @@ use Fleetbase\Models\User;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Notifications\UserInvited;
 use Fleetbase\Support\Auth;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;

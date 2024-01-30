@@ -23,10 +23,11 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Order extends Model
 {
@@ -220,6 +221,16 @@ class Order extends Model
      * @var string
      */
     protected static $logName = 'order';
+
+    /**
+     * Get the activity log options for the model.
+     *
+     * @return \Spatie\Activitylog\LogOptions
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logOnlyDirty();
+    }
 
     /**
      * @return \Barryvdh\DomPDF\PDF

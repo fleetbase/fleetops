@@ -11,7 +11,7 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 

@@ -24,7 +24,7 @@ use Fleetbase\Models\UserDevice;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Support\Auth;
 use Geocoder\Laravel\Facades\Geocoder;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;

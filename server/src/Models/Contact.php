@@ -15,6 +15,7 @@ use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
@@ -111,6 +112,16 @@ class Contact extends Model
      * @var string
      */
     protected static $logName = 'contact';
+
+    /**
+     * Get the activity log options for the model.
+     *
+     * @return \Spatie\Activitylog\LogOptions
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logOnlyDirty();
+    }
 
     /**
      * Get the options for generating the slug.

@@ -4,7 +4,7 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 
 class FuelReport extends FleetbaseResource
 {
