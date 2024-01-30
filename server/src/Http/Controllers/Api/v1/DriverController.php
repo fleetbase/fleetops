@@ -502,7 +502,14 @@ class DriverController extends Controller
             return response()->apiError('Driver resource not found.', 404);
         }
 
-        $company = static::getDriverCompanyFromUser($driver->user);
+        // Get the driver user account
+        $user = $driver->getUser();
+        if (!$user) {
+            return response()->apiError('Driver has not user account.');
+        }
+
+        // Get the user account company
+        $company = Flow::getCompanySessionForUser($user);
         if (!$company) {
             return response()->apiError('No company found for this driver.');
         }
@@ -555,7 +562,7 @@ class DriverController extends Controller
             );
         }
 
-        // get the next organization
+        // Get the next organization
         $company = Company::where('public_id', $nextOrganization)->first();
 
         if ($company->uuid === $driver->user->company_uuid) {
@@ -566,8 +573,15 @@ class DriverController extends Controller
             return response()->apiError('You do not belong to this organization');
         }
 
-        $driver->user->assignCompany($company);
-        Auth::setSession($driver->user);
+        // Get the driver user account
+        $user = $driver->getUser();
+        if (!$user) {
+            return response()->apiError('Driver has not user account.');
+        }
+
+        // Assign user to company and update their session
+        $user->assignCompany($company);
+        Auth::setSession($user);
 
         return new Organization($company);
     }
