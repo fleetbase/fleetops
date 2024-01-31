@@ -401,25 +401,83 @@ class Place extends Model
      *
      * @return \Fleetbase\Models\Place|null
      */
+    // public static function createFromMixed($place, $attributes = [], $saveInstance = true): ?Place
+    // {
+    //     // If place is already an instance
+    //     if ($place instanceof Place) {
+    //         return $place;
+    //     }
+
+    //     // If $place is a string
+    //     if (is_string($place)) {
+    //         // Check if $place is a valid public_id, return matching Place object if found
+    //         if (Utils::isPublicId($place)) {
+    //             return Place::where('public_id', $place)->first();
+    //         }
+
+    //         // Check if $place is a valid uuid, return matching Place object if found
+    //         if (Str::isUuid($place)) {
+    //             return Place::where('uuid', $place)->first();
+    //         }
+
+    //         // Attempt to find by address or name
+    //         $resolvedFromSearch = static::query()
+    //             ->where('company_uuid', session('company'))
+    //             ->where(function ($q) use ($place) {
+    //                 $q->where('street1', $place);
+    //                 $q->orWhere('name', $place);
+    //             })
+    //             ->first();
+
+    //         if ($resolvedFromSearch) {
+    //             return $resolvedFromSearch;
+    //         }
+
+    //         // Return a new Place object created from a geocoding lookup
+    //         return static::createFromGeocodingLookup($place, $saveInstance);
+    //     }
+    //     // If $place is an array of coordinates
+    //     elseif (Utils::isCoordinatesStrict($place)) {
+    //         return static::createFromCoordinates($place, $attributes, $saveInstance);
+    //     }
+    //     // If $place is an array
+    //     elseif (is_array($place)) {
+    //         // If $place is an array of coordinates, create a new Place object
+    //         if (Utils::isCoordinatesStrict($place)) {
+    //             return static::createFromCoordinates($place, $attributes, $saveInstance);
+    //         }
+
+    //         // Get uuid if set
+    //         $uuid = data_get($place, 'uuid');
+
+    //         // If $place has a valid uuid and a matching Place object exists, return the uuid
+    //         if (Str::isUuid($uuid) && $place = Place::where('uuid', $uuid)->first()) {
+    //             return $place;
+    //         }
+
+    //         // Otherwise, create a new Place object with the given attributes
+    //         return Place::create($place);
+    //     }
+    //     // If $place is a GoogleAddress object
+    //     elseif ($place instanceof \Geocoder\Provider\GoogleMaps\Model\GoogleAddress) {
+    //         return static::createFromGoogleAddress($place, $saveInstance);
+    //     }
+
+    //     return null;
+    // }
+
+    /**
+     * Creates a Place object from mixed input.
+     *
+     * @param array $attributes
+     * @param bool  $saveInstance
+     *
+     * @return \Fleetbase\Models\Place|null
+     */
     public static function createFromMixed($place, $attributes = [], $saveInstance = true): ?Place
     {
-        // If place is already an instance
-        if ($place instanceof Place) {
-            return $place;
-        }
-
         // If $place is a string
         if (is_string($place)) {
-            // Check if $place is a valid public_id, return matching Place object if found
-            if (Utils::isPublicId($place)) {
-                return Place::where('public_id', $place)->first();
-            }
-
-            // Check if $place is a valid uuid, return matching Place object if found
-            if (Str::isUuid($place)) {
-                return Place::where('uuid', $place)->first();
-            }
-
             // Attempt to find by address or name
             $resolvedFromSearch = static::query()
                 ->where('company_uuid', session('company'))
@@ -456,14 +514,16 @@ class Place extends Model
             }
 
             // Otherwise, create a new Place object with the given attributes
-            return Place::create($place);
+            if (is_array($place)) {
+                return Place::create($place);
+            } else {
+                return null;
+            }
         }
-        // If $place is a GoogleAddress object
-        elseif ($place instanceof \Geocoder\Provider\GoogleMaps\Model\GoogleAddress) {
-            return static::createFromGoogleAddress($place, $saveInstance);
+        // If $place is neither a string nor an array
+        else {
+            return null; // Add this line
         }
-
-        return null;
     }
 
     /**
