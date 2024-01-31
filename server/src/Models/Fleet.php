@@ -49,45 +49,13 @@ class Fleet extends Model
     protected $searchableColumns = ['name'];
 
     /**
-     * Properties which activity needs to be logged.
-     *
-     * @var array
-     */
-    protected static $logAttributes = ['name', 'task', 'service_area_uuid', 'zone_uuid'];
-
-    /**
-     * Do not log empty changed.
-     *
-     * @var bool
-     */
-    protected static $submitEmptyLogs = false;
-
-    /**
-     * We only want to log changed attributes.
-     *
-     * @var bool
-     */
-    protected static $logOnlyDirty = true;
-
-    /**
-     * The name of the subject to log.
-     *
-     * @var string
-     */
-    protected static $logName = 'fleet';
-
-    /**
      * Get the activity log options for the model.
      *
      * @return \Spatie\Activitylog\LogOptions
      */
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()
-            ->logOnly([
-                'name', 'task', 'service_area_uuid', 'zone_uuid'
-            ])
-            ->logOnlyDirty();
+        return LogOptions::defaults()->logOnly(['name', 'task', 'service_area_uuid', 'zone_uuid'])->logOnlyDirty();
     }
 
     /**

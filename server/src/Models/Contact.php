@@ -93,34 +93,13 @@ class Contact extends Model
     protected $filterParams = ['place_uuid', 'customer_type', 'facilitator_type', 'place'];
 
     /**
-     * Properties which activity needs to be logged.
-     *
-     * @var array
-     */
-    protected static $logAttributes = '*';
-
-    /**
-     * Do not log empty changed.
-     *
-     * @var bool
-     */
-    protected static $submitEmptyLogs = false;
-
-    /**
-     * The name of the subject to log.
-     *
-     * @var string
-     */
-    protected static $logName = 'contact';
-
-    /**
      * Get the activity log options for the model.
      *
      * @return \Spatie\Activitylog\LogOptions
      */
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logOnlyDirty();
+        return LogOptions::defaults()->logOnly(['*'])->logOnlyDirty();
     }
 
     /**

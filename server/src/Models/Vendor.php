@@ -107,34 +107,6 @@ class Vendor extends Model
     protected $with = ['place'];
 
     /**
-     * Properties which activity needs to be logged.
-     *
-     * @var array
-     */
-    protected static $logAttributes = ['name', 'email', 'website_url', 'phone', 'country', 'status', 'type', 'logo_uuid', 'company_uuid'];
-
-    /**
-     * Do not log empty changed.
-     *
-     * @var bool
-     */
-    protected static $submitEmptyLogs = false;
-
-    /**
-     * We only want to log changed attributes.
-     *
-     * @var bool
-     */
-    protected static $logOnlyDirty = true;
-
-    /**
-     * The name of the subject to log.
-     *
-     * @var string
-     */
-    protected static $logName = 'vendor';
-
-    /**
      * Get the activity log options for the model.
      *
      * @return \Spatie\Activitylog\LogOptions
@@ -142,9 +114,7 @@ class Vendor extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly([
-                'name', 'email', 'website_url', 'phone', 'country', 'status', 'type', 'logo_uuid', 'company_uuid'
-            ])
+            ->logOnly(['name', 'email', 'website_url', 'phone', 'country', 'status', 'type', 'logo_uuid', 'company_uuid'])
             ->logOnlyDirty();
     }
 

@@ -202,34 +202,13 @@ class Order extends Model
     ];
 
     /**
-     * Properties which activity needs to be logged.
-     *
-     * @var array
-     */
-    protected static $logAttributes = '*';
-
-    /**
-     * Do not log empty changed.
-     *
-     * @var bool
-     */
-    protected static $submitEmptyLogs = false;
-
-    /**
-     * The name of the subject to log.
-     *
-     * @var string
-     */
-    protected static $logName = 'order';
-
-    /**
      * Get the activity log options for the model.
      *
      * @return \Spatie\Activitylog\LogOptions
      */
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logOnlyDirty();
+        return LogOptions::defaults()->logOnly(['*'])->logOnlyDirty();
     }
 
     /**
