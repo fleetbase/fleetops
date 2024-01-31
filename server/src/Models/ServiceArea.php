@@ -4,17 +4,17 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\FleetOps\Casts\MultiPolygon as MultiPolygonCast;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Types\LineString;
+use Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Polygon;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
-use Fleetbase\LaravelMysqlSpatial\Types\LineString;
-use Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon;
-use Fleetbase\LaravelMysqlSpatial\Types\Point;
-use Fleetbase\LaravelMysqlSpatial\Types\Polygon;
 use Illuminate\Support\Arr;
 
 /**
@@ -131,7 +131,7 @@ class ServiceArea extends Model
      * Creates a polygon from a given point and radius.
      *
      * @param \Fleetbase\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the polygon
-     * @param int                                     $meters The radius in meters for the polygon. Default is 500 meters.
+     * @param int                                        $meters The radius in meters for the polygon. Default is 500 meters.
      *
      * @return \Fleetbase\LaravelMysqlSpatial\Types\Polygon returns a Polygon object
      */
@@ -151,7 +151,7 @@ class ServiceArea extends Model
      * Creates a multi-polygon from a given point and radius.
      *
      * @param \Fleetbase\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the multi-polygon
-     * @param int                                     $meters The radius in meters for the multi-polygon. Default is 500 meters.
+     * @param int                                        $meters The radius in meters for the multi-polygon. Default is 500 meters.
      *
      * @return \Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon returns a MultiPolygon object
      */

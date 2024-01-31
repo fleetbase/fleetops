@@ -27,6 +27,9 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y libzip-dev libgd-dev libfreetype6-dev libjpeg-dev libpng-dev imagemagick libmagickwand-dev libmemcached-dev libgeos-dev libgmp-dev default-mysql-client libicu-dev
+      
+    - name: Configure Composer
+      run: composer config --global --auth http-basic.repo.packagist.com token ${{ secrets._GITHUB_AUTH_TOKEN }}
 
     - name: Validate composer.json and composer.lock
       run: composer validate

@@ -43,6 +43,7 @@ class Payload extends FleetbaseResource
     {
         return $this->waypoints->map(function ($waypoint) {
             $waypoint->payload_uuid = $this->uuid;
+
             return $waypoint;
         });
     }

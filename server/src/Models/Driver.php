@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Scopes\DriverScope;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Support\Utils as FleetOpsUtils;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
@@ -14,14 +15,13 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Activitylog\LogOptions;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 use WebSocket\Message\Ping;
@@ -159,8 +159,6 @@ class Driver extends Model
 
     /**
      * Get the activity log options for the model.
-     *
-     * @return \Spatie\Activitylog\LogOptions
      */
     public function getActivitylogOptions(): LogOptions
     {

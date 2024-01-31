@@ -6,6 +6,7 @@ use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -14,7 +15,6 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -323,7 +323,7 @@ class Place extends Model
      * Creates a new Place instance from given coordinates.
      *
      * @param \Fleetbase\LaravelMysqlSpatial\Types\Point|array $coordinates
-     * @param bool                                          $saveInstance
+     * @param bool                                             $saveInstance
      *
      * @return \Fleetbase\Models\Place|null
      */

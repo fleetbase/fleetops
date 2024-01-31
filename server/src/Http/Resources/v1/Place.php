@@ -3,9 +3,9 @@
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\Http\Resources\FleetbaseResource;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
 use Fleetbase\Support\Resolve;
-use Fleetbase\LaravelMysqlSpatial\Types\Point;
 
 class Place extends FleetbaseResource
 {

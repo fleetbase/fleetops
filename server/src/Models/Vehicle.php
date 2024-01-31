@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -12,10 +13,9 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
-use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Support\Str;
-use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
@@ -68,8 +68,6 @@ class Vehicle extends Model
 
     /**
      * Get the activity log options for the model.
-     *
-     * @return \Spatie\Activitylog\LogOptions
      */
     public function getActivitylogOptions(): LogOptions
     {
