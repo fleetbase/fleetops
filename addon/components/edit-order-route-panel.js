@@ -6,6 +6,7 @@ import { isArray } from '@ember/array';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
+import Point from '@fleetbase/fleetops-data/utils/geojson/point';
 
 export default class EditOrderRoutePanelComponent extends Component {
     /**
@@ -64,6 +65,7 @@ export default class EditOrderRoutePanelComponent extends Component {
      * @tracked
      */
     @tracked order;
+    
 
     /**
      * Initializes the vehicle panel component.
@@ -106,7 +108,7 @@ export default class EditOrderRoutePanelComponent extends Component {
                 });
         }
     }
-   
+
     /**
      * Handles the cancel action.
      *
@@ -116,6 +118,7 @@ export default class EditOrderRoutePanelComponent extends Component {
      */
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.order);
+
     }
 
     @action async editPlace(place) {
@@ -124,18 +127,30 @@ export default class EditOrderRoutePanelComponent extends Component {
         this.contextPanel.focus(place, 'editing', {
             args: {
                 onClose: () => {
-                    this.editOrderRoute(order);
+                    this.editOrderRoute(this.order);
                 },
             },
         });
     }
 
-    @action toggleMultiDropOrder() {
-        if (this.order.payload.isMultiDrop) {
-            this.order.payload.waypoints.clear();
+    @action toggleMultiDropOrder(isMultiDrop) {
+        const { pickup, dropoff } = this.order.payload;
+
+        if (isMultiDrop) {
+            // if pickup move it to multipdrop
+            if (pickup) {
+                this.addWaypointFromExistingPlace(pickup);
+            }
+
+            // if pickup move it to multipdrop
+            if (dropoff) {
+                this.addWaypointFromExistingPlace(dropoff);
+            }
+
+            
             this.order.payload.setProperties({
-                pickup_uuid: '#',
-                dropoff_uuid: '#',
+                pickup_uuid: null,
+                dropoff_uuid: null,
             });
         } else {
             const waypoint = this.store.createRecord('waypoint');
@@ -148,17 +163,34 @@ export default class EditOrderRoutePanelComponent extends Component {
                 dropoff: null,
             });
         }
+
+        contextComponentCallback(this, 'onRouteChanged');
+    }
+
+    addWaypointFromExistingPlace(place) {
+        const waypoint = this.store.createRecord('waypoint', { place, location: place.location });
+        this.order.payload.waypoints.pushObject(waypoint);
+
+        // fire callback
+        contextComponentCallback(this, 'onWaypointAdded', waypoint);
     }
 
     @action removeWaypoint(waypoint) {
         this.order.payload.waypoints.removeObject(waypoint);
+
+        // fire callback
+        contextComponentCallback(this, 'onWaypointRemoved', waypoint);
+        contextComponentCallback(this, 'onRouteChanged');
     }
 
-    @action addWaypoint(properties = {}) {
-        // const place = this.store.createRecord('place');
-        const waypoint = this.store.createRecord('waypoint', properties);
+    @action addWaypoint() {
+        const location = new Point(0, 0);
+        const place = this.store.createRecord('place', { location });
+        const waypoint = this.store.createRecord('waypoint', { place, location });
+
         this.order.payload.waypoints.pushObject(waypoint);
-        this.updatePayloadCoordinates();
+        // fire callback
+        contextComponentCallback(this, 'onWaypointAdded', waypoint);
     }
 
     @action setWaypointPlace(index, place) {
@@ -169,12 +201,21 @@ export default class EditOrderRoutePanelComponent extends Component {
         this.order.payload.waypoints.objectAt(index).setProperties({
             name: place.name,
             place_uuid: place.id,
+            location: place.location,
             place,
         });
+
+        // fire callback waypoint place selected
+        contextComponentCallback(this, 'onWaypointPlaceSelected', place);
+        contextComponentCallback(this, 'onRouteChanged');
     }
 
     @action setPayloadPlace(prop, place) {
         this.order.payload.set(prop, place);
+
+        // fire callback
+        contextComponentCallback(this, 'onPlaceSelected', place);
+        contextComponentCallback(this, 'onRouteChanged');
     }
 
     @action async optimizeRoute() {
@@ -182,6 +223,7 @@ export default class EditOrderRoutePanelComponent extends Component {
 
         const coordinates = this.order.payload.payloadCoordinates;
         const routingHost = getRoutingHost(this.order.payload, this.order.payload.waypoints);
+        let sortedWaypoints = [];
 
         const response = await this.fetch.routing(coordinates, { source: 'any', destination: 'any', annotations: true }, { host: routingHost }).catch(() => {
             this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.view.route-error'));
@@ -191,7 +233,6 @@ export default class EditOrderRoutePanelComponent extends Component {
         if (response && response.code === 'Ok') {
             if (response.waypoints && isArray(response.waypoints)) {
                 const responseWaypoints = response.waypoints.sortBy('waypoint_index');
-                const sortedWaypoints = [];
 
                 for (let i = 0; i < responseWaypoints.length; i++) {
                     const optimizedWaypoint = responseWaypoints.objectAt(i);
@@ -220,5 +261,7 @@ export default class EditOrderRoutePanelComponent extends Component {
 
         sourceList.removeAt(sourceIndex);
         targetList.insertAt(targetIndex, item);
+
+        contextComponentCallback(this, 'onRouteChanged');
     }
 }

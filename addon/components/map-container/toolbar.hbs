@@ -33,14 +33,14 @@
             </div>
             <FaIcon @icon="layer-group" />
             <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
-                <InputInfo @text={{t "fleet-ops.component.map-container.toolbar.view"}} @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+                <InputInfo @text={{t "fleet-ops.component.map-container.toolbar.view-order"}} @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
             </Attach::Tooltip>
         </button>
         <BasicDropdown id="map-toolbar-service-areas-button" @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
             <dd.Trigger class="toolbar-button">
                 <FaIcon @icon="map-marked-alt" />
                 <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
-                    <InputInfo @text={{t "fleet-ops.component.map-container.toolbar.view"}} @iconClass="hidden" class="{{if dd.isOpen 'hidden'}} py-1 px-2 bg-gray-900 -mt-1" />
+                    <InputInfo @text={{t "fleet-ops.component.map-container.toolbar.view-service-area"}} @iconClass="hidden" class="{{if dd.isOpen 'hidden'}} py-1 px-2 bg-gray-900 -mt-1" />
                 </Attach::Tooltip>
             </dd.Trigger>
             <dd.Content>
