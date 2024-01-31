@@ -10,7 +10,7 @@
     @width={{or this.width @width "570px"}}
 >
     <Overlay::Header @title={{concat "Edit order " this.order.public_id " route"}}>
-        <Button @type="default" @text="Save" @helpText="Save order route changes" @onClick={{this.onSave}} @wrapperClass="mr-2" />
+        <Button @type="primary" @icon="check" @text="Save" @helpText="Save order route changes" @onClick={{this.onSave}} @wrapperClass="mr-2" />
         <Button @type="default" @icon="times" @helpText={{t "fleet-ops.common.cancel"}} @onClick={{this.onPressCancel}} />
     </Overlay::Header>
 
@@ -61,12 +61,14 @@
                                     {{model.address}}
                                 </ModelSelect>
 
-                                {{#if waypoint.hasInvalidCoordinates}}
-                                    <div class="leading-5 text-sm text-red-400 mt-2">
-                                        <FaIcon @icon="exclamation-triangle" class="mr-1" />
-                                        {{t "fleet-ops.component.modals.order-route-form.invalid"}}
-                                    </div>
-                                {{/if}}
+                                {{#unless waypoint.isNew}}
+                                    {{#if waypoint.hasInvalidCoordinates}}
+                                        <div class="leading-5 text-sm text-red-400 mt-2">
+                                            <FaIcon @icon="exclamation-triangle" class="mr-1" />
+                                            {{t "fleet-ops.component.modals.order-route-form.invalid"}}
+                                        </div>
+                                    {{/if}}
+                                {{/unless}}
                             </div>
 
                             <div class="flex items-center">

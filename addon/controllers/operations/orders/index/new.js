@@ -161,6 +161,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             onClick: this.editMetaData,
         },
     ];
+    @tracked uploadQueue = [];
+    acceptedFileTypes = ['image/*', '.doc', ' .docs', ' .xls', '.xlsx', '.pdf'];
 
     @not('isServicable') isNotServicable;
     @alias('currentUser.latitude') userLatitude;
@@ -1451,4 +1453,80 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             }
         }
     }
+
+    /**
+     * Uploads a new photo for the driver.
+     *
+     * @param {File} file
+     * @memberof OrderConfigComponent
+     */
+    @action uploadDocs(file) {
+        // this.uploadQueue.pushObject(file);
+        this.fetch.uploadFile.perform(
+            file,
+            {
+                path: `uploads/${this.currentUser.companyId}/orders/${this.order.id}`,
+                subject_uuid: this.order.id,
+                subject_type: 'fleet-ops:order',
+                type: 'order_docs',
+            },
+            (uploadedFile) => {
+                this.order.setProperties({
+                    docs_uuid: uploadedFile.id,
+                    docs_url: uploadedFile.url,
+                    docs: uploadedFile,
+                });
+            }
+        );
+        console.log('id', this.order.docs_uuid);
+    }
+    // @action queueFile(file) {
+    //     this.uploadQueue.pushObject(file);
+    //     this.fetch.uploadFile.perform(
+    //         file,
+    //         {
+    //             path: `uploads/${this.currentUser.companyId}/orders/${getWithDefault(this.order, 'id', '~')}`,
+    //             subject_uuid: this.product.id,
+    //             subject_type: `fleet-ops:order`,
+    //             type: `order_docs`,
+    //         },
+    //         (uploadedFile) => {
+    //             this.order.files.pushObject(uploadedFile);
+
+    //             // if no main photo set it
+    //             if (!this.order.docs_uuid) {
+    //                 this.order.docs_uuid = uploadedFile.id;
+    //             }
+
+    //             this.uploadQueue.removeObject(file);
+    //         },
+    //         (error) => {
+    //             console.log('some error occurred', error);
+    //             this.uploadQueue.removeObject(file);
+    //         }
+    //     );
+    // }
+    // /**
+    //  * Uploads a file to the server for the product.
+    //  *
+    //  * @param {File} file
+    //  */
+    // uploadOrderFile(file) {
+    //     this.fetch.uploadFile.perform(
+    //         file,
+    //         {
+    //             path: `uploads/${this.order.companyId}/orders/${this.order.slug}`,
+    //             subject_uuid: this.order.id,
+    //             subject_type: 'fleet-ops:order',
+    //             type: 'order_docs',
+    //         },
+    //         (uploadedFile) => {
+    //             this.order.setProperties({
+    //                 docs_uuid: uploadedFile.id,
+    //                 docs_url: uploadedFile.url,
+    //                 docs: uploadedFile,
+    //             });
+    //         }
+    //     );
+    // }
 }

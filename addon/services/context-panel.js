@@ -97,6 +97,12 @@ export default class ContextPanelService extends Service {
                 componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
+        order: {
+            editingRoute: {
+                component: 'edit-order-route-panel',
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
+            },
+        },
     };
 
     /**
