@@ -250,6 +250,16 @@
                             </tr>
                         </thead>
                         <tbody>
+                            {{#each @model.purchase_rate.service_quote.items as |item|}}
+                                <tr>
+                                    <td>
+                                        <span class="font-semibold">{{smart-humanize item.details}}</span>
+                                    </td>
+                                    <td>
+                                        <span>{{format-currency item.amount @model.purchase_rate.service_quote.currency}}</span>
+                                    </td>
+                                </tr>
+                            {{/each}}
                             <tr class="border-b-0">
                                 <td class="border-b-0">
                                     <span class="font-semibold">{{t "fleet-ops.common.total"}}</span>
@@ -260,22 +270,22 @@
                             </tr>
                             <tr class="border-b-0">
                                 <td class="border-b-0">
-                                    <span class="font-semibold">{{"Currency"}}</span>
+                                    <span class="font-semibold">{{t "fleet-ops.operations.orders.index.view.currency"}}</span>
                                 </td>
                                 <td class="border-b-0">
                                     <span>{{@model.purchase_rate.service_quote.currency}}</span>
                                 </td>
                             </tr>
-                            <tr class="border-b-0">
-                                <td class="border-b-0">
-                                    <span class="font-semibold">{{"Created date at"}}</span>
-                                </td>
-                                <td class="border-b-0">
-                                    <span>{{@model.purchase_rate.createdAt}}</span>
-                                </td>
-                            </tr>
                         </tbody>
                     </table>
+                </div>
+            </ContentPanel>
+        {{/if}}
+
+        {{#if @model.notes}}
+            <ContentPanel @title="Notes" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <div class="p-4">
+                    <p class="text-gray-700 dark:text-gray-300 leading-6">{{@model.notes}}</p>
                 </div>
             </ContentPanel>
         {{/if}}
