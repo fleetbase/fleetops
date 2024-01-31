@@ -126,7 +126,6 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @tracked waypoints = [];
     @tracked payloadCoordinates = [];
     @tracked types = [];
-    @tracked comments = [];
     @tracked serviceRates = [];
     @tracked selectedServiceRate;
     @tracked selectedServiceQuote;
