@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Observers;
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\User;
 use Grimzy\LaravelMysqlSpatial\Types\Point;
 
@@ -41,7 +42,11 @@ class DriverObserver
     public function deleted(Driver $driver)
     {
         // if the driver is deleted, delete their user account assosciated as well
-        User::where(['uuid' => $driver->user_uuid, 'type' => 'driver'])->delete();
+        if ($driver->user->companies()->count() === 1) {
+            User::where(['uuid' => $driver->user_uuid, 'type' => 'driver'])->delete();
+        } else {
+            CompanyUser::where(['user_uuid' => $driver->user_uuid, 'company_uuid' => session('company')])->delete();
+        }
 
         // also unassign them from any order they are assigned to
         Order::where(['driver_assigned_uuid' => $driver->uuid])->update(['driver_assigned_uuid' => null]);
