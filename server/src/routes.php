@@ -40,7 +40,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->get('/', 'DriverController@query');
                     $router->get('{id}', 'DriverController@find');
                     $router->get('{id}/organizations', 'DriverController@listOrganizations');
-                    $router->get('{id}/current-organization', 'DriverController@currentOrganization');
                     $router->put('{id}', 'DriverController@update');
                     $router->delete('{id}', 'DriverController@delete');
                 });
@@ -185,9 +184,10 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
         | Internal routes specific for instance wide authentication/use for navigator app
         */
         Route::prefix('navigator/v1')
+            ->namespace('Api\v1')
             ->group(function ($router) {
                 // driver/auth routes
-                $router->group(['prefix' => 'drivers', 'namespace' => 'Internal\v1'], function () use ($router) {
+                $router->group(['prefix' => 'drivers'], function () use ($router) {
                     $router->post('login-with-sms', 'DriverController@loginWithPhone');
                     $router->post('verify-code', 'DriverController@verifyCode');
                     $router->post('login', 'DriverController@login');
@@ -196,37 +196,38 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 // auth:sanctum
                 $router->group(['middleware' => ['fleetbase.protected', \Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]], function () use ($router) {
                     $router->group(['prefix' => 'orders'], function () use ($router) {
-                        $router->post('/', 'Api\v1\OrderController@create');
-                        $router->get('/', 'Api\v1\OrderController@query');
-                        $router->get('{id}', 'Api\v1\OrderController@find');
-                        $router->get('{id}/distance-and-time', 'Api\v1\OrderController@getDistanceMatrix');
-                        $router->post('{id}/dispatch', 'Api\v1\OrderController@dispatchOrder');
-                        $router->post('{id}/start', 'Api\v1\OrderController@startOrder');
-                        $router->delete('{id}/cancel', 'Api\v1\OrderController@cancelOrder');
-                        $router->post('{id}/update-activity', 'Api\v1\OrderController@updateActivity');
-                        $router->post('{id}/complete', 'Api\v1\OrderController@completeOrder');
-                        $router->get('{id}/next-activity', 'Api\v1\OrderController@getNextActivity');
-                        $router->post('{id}/set-destination/{placeId}', 'Api\v1\OrderController@setDestination');
-                        $router->post('{id}/capture-signature/{subjectId?}', 'Api\v1\OrderController@captureSignature');
-                        $router->post('{id}/capture-qr/{subjectId?}', 'Api\v1\OrderController@captureQrScan');
-                        $router->put('{id}', 'Api\v1\OrderController@update');
-                        $router->delete('{id}', 'Api\v1\OrderController@delete');
+                        $router->post('/', 'OrderController@create');
+                        $router->get('/', 'OrderController@query');
+                        $router->get('{id}', 'OrderController@find');
+                        $router->get('{id}/distance-and-time', 'OrderController@getDistanceMatrix');
+                        $router->post('{id}/dispatch', 'OrderController@dispatchOrder');
+                        $router->post('{id}/start', 'OrderController@startOrder');
+                        $router->delete('{id}/cancel', 'OrderController@cancelOrder');
+                        $router->post('{id}/update-activity', 'OrderController@updateActivity');
+                        $router->post('{id}/complete', 'OrderController@completeOrder');
+                        $router->get('{id}/next-activity', 'OrderController@getNextActivity');
+                        $router->post('{id}/set-destination/{placeId}', 'OrderController@setDestination');
+                        $router->post('{id}/capture-signature/{subjectId?}', 'OrderController@captureSignature');
+                        $router->post('{id}/capture-qr/{subjectId?}', 'OrderController@captureQrScan');
+                        $router->put('{id}', 'OrderController@update');
+                        $router->delete('{id}', 'OrderController@delete');
                     });
 
                     $router->group(['prefix' => 'drivers'], function () use ($router) {
-                        $router->post('{id}/register-device', 'Api\v1\DriverController@registerDevice');
-                        $router->post('{id}/track', 'Api\v1\DriverController@track');
-                        $router->post('{id}/switch-organization', 'Api\v1\DriverController@switchOrganization');
-                        $router->post('/', 'Api\v1\DriverController@create');
-                        $router->get('/', 'Api\v1\DriverController@query');
-                        $router->get('{id}', 'Api\v1\DriverController@find');
-                        $router->get('{id}/organizations', 'Api\v1\DriverController@listOrganizations');
-                        $router->put('{id}', 'Api\v1\DriverController@update');
-                        $router->delete('{id}', 'Api\v1\DriverController@delete');
+                        $router->post('{id}/register-device', 'DriverController@registerDevice');
+                        $router->post('{id}/track', 'DriverController@track');
+                        $router->post('{id}/switch-organization', 'DriverController@switchOrganization');
+                        $router->post('/', 'DriverController@create');
+                        $router->get('/', 'DriverController@query');
+                        $router->get('{id}', 'DriverController@find');
+                        $router->get('{id}/organizations', 'DriverController@listOrganizations');
+                        $router->put('{id}', 'DriverController@update');
+                        $router->delete('{id}', 'DriverController@delete');
                     });
 
                     $router->group(['prefix' => 'organizations'], function ($router) {
-                        $router->get('current', 'Internal\v1\NavigatorController@getCurrentOrganization');
+                        $router->get('current', 'DriverController@currentOrganization');
+                        $router->get('{id}/organizations', 'DriverController@listOrganizations');
                     });
                 });
             });
