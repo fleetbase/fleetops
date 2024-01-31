@@ -328,7 +328,7 @@ class Order extends Model
      */
     public function comments()
     {
-        return $this->hasMany(Comment::class);
+        return $this->hasMany(\Fleetbase\Models\Comment::class, 'subject_uuid');
     }
 
     /**

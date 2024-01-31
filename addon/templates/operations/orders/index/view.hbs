@@ -282,13 +282,9 @@
             </ContentPanel>
         {{/if}}
 
-        {{#if @model.notes}}
-            <ContentPanel @title="Notes" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-                <div class="p-4">
-                    <p class="text-gray-700 dark:text-gray-300 leading-6">{{@model.notes}}</p>
-                </div>
-            </ContentPanel>
-        {{/if}}
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.notes-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <p class="text-gray-700 dark:text-gray-300 leading-5 text-sm">{{n-a @model.notes}}</p>
+        </ContentPanel>
 
         {{#if @model.isIntegratedVendorOrder}}
             <ContentPanel
@@ -450,7 +446,28 @@
             </ContentPanel>
         {{/if}}
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.payload"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.comments-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <div class="flex flex-col mb-4">
+                <Textarea @value={{this.newCommentContent}} class="form-input w-full" placeholder={{t "fleet-ops.operations.orders.index.view.comment-input-placeholder"}} rows={{3}} disabled={{not this.publishNewComment.isIdle}} />
+                <div class="flex flex-row items-center justify-end mt-2">
+                    <Button @type="primary" @buttonType="button" @icon="paper-plane" @text={{t "fleet-ops.operations.orders.index.view.publish-comment-button-text"}} @onClick={{perform this.publishNewComment}} @disabled={{not this.publishNewComment.isIdle}} />
+                </div>
+            </div>
+            <div class="space-x-2">
+                {{#each @model.comments as |comment|}}
+                    <div class="flex flex-row border border-blue-500 rounded-md px-4 py-2">
+                        <div>
+                            {{comment.author.name}}
+                        </div>
+                        <div>
+                            {{comment.content}}
+                        </div>
+                    </div>
+                {{/each}}
+            </div>
+        </ContentPanel>
+
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.payload"}} @open={{gt @model.payload.entities.length 0}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if this.isMultiDropOrder}}
                 <div class="space-y-2">
                     {{#each this.entitiesByDestination as |group|}}

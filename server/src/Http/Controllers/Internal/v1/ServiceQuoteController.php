@@ -199,9 +199,9 @@ class ServiceQuoteController extends FleetOpsController
         $requestId     = ServiceQuote::generatePublicId('request');
         $serviceQuotes = [];
 
-        // if (Utils::isNotScalar($pickup)) {
-        //     $pickup = Place::createFromMixed($pickup);
-        // }
+        if (Utils::isNotScalar($pickup)) {
+            $pickup = Place::createFromMixed($pickup);
+        }
 
         if (Utils::isNotScalar($dropoff)) {
             $dropoff = Place::createFromMixed($dropoff);

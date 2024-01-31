@@ -189,6 +189,20 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         yield order.loadPurchaseRate();
     }
 
+    @task *publishNewComment() {
+        let comment = this.store.createRecord('comment', {
+            content: this.newCommentContent,
+            subject_uuid: this.model.id,
+            subject_type: 'fleet-ops:order'
+        });
+
+        yield comment.save();
+        yield order.loadComments();
+
+        this.model.comments.pushObject(comment);
+        this.newCommentContent = '';
+    }
+
     @action resetView() {
         this.removeRoutingControlPreview();
         this.resetInterface();
