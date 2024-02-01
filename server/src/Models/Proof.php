@@ -81,7 +81,7 @@ class Proof extends Model
      */
     public function getFileUrlAttribute()
     {
-        return $this->fromCache('file.s3url', null);
+        return $this->fromCache('file.url', null);
     }
 
     /**

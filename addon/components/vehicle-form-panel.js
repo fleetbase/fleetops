@@ -131,7 +131,7 @@ export default class VehicleFormPanelComponent extends Component {
             {
                 path: `uploads/${this.currentUser.companyId}/vehicles/${this.vehicle.id}`,
                 subject_uuid: this.vehicle.id,
-                subject_type: 'vehicle',
+                subject_type: 'fleet-ops:vehicle',
                 type: 'vehicle_photo',
             },
             (uploadedFile) => {

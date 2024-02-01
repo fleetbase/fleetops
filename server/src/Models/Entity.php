@@ -247,7 +247,7 @@ class Entity extends Model
      */
     public function getPhotoUrlAttribute()
     {
-        return data_get($this, 'photo.s3url', 'https://s3.ap-southeast-1.amazonaws.com/flb-assets/static/parcels/medium.png');
+        return data_get($this, 'photo.url', 'https://s3.ap-southeast-1.amazonaws.com/flb-assets/static/parcels/medium.png');
     }
 
     /**

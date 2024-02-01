@@ -38,6 +38,7 @@ fleet-ops:
     length: Length
     license: License
     loading: Loading...
+    loading-resource: Loading {resourceName}...
     make: Make
     manage-message: Manage your vendors
     manpower: Manpower
@@ -1304,7 +1305,8 @@ fleet-ops:
           example-second-message: Then the following formula will calculate a service fee of $2.50, which will be added to the base fee.
           algorithm-label: Algorithm
           algorithm-help-text: Define a formula to be evaluated for this service rate calculation.
-          algorithm-placeholder: (( {distance} / 50 ) * .05 ) + (( {time} / 60 ) * .01)
+          algorithm-placeholder: >-
+            (( '{distance}' / 50 ) * .05 ) + (( '{time}' / 60 ) * .01)
           percel-fee-title: Parcel Fee's
           length-label: Length
           length-placeholder: Length in {parcelFeeDimension}
