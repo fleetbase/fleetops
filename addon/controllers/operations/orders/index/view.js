@@ -115,6 +115,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @tracked isWaypointsCollapsed;
     @tracked leafletRoute;
     @tracked routeControl;
+    @tracked commentInput = '';
 
     @alias('currentUser.latitude') userLatitude;
     @alias('currentUser.longitude') userLongitude;

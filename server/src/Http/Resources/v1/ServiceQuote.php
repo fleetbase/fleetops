@@ -25,6 +25,7 @@ class ServiceQuote extends FleetbaseResource
             'service_rate_name' => $this->when(Http::isInternalRequest(), data_get($this, 'serviceRate.name')),
             'service_rate'      => $this->when(Http::isPublicRequest(), data_get($this, 'serviceRate.public_id')),
             'facilitator'       => $this->when(Http::isPublicRequest(), data_get($this, 'integratedVendor.public_id')),
+            'items'             => ServiceQuoteItem::collection($this->items),
             'request_id'        => $this->request_id,
             'amount'            => $this->amount,
             'currency'          => $this->currency,

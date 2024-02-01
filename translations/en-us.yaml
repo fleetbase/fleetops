@@ -1158,6 +1158,9 @@ fleet-ops:
           edit-field-title: Edit custom field
           edit-metadata: Edit Metadata
         view:
+          currency: Currency
+          comments-title: Comments
+          notes-title: Notes
           dispatch: Dispatch
           order-actions: Order Actions
           edit-details: Edit Details
