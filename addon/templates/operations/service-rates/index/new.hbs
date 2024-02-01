@@ -7,7 +7,7 @@
         {{/if}}
     </Overlay::Header>
 
-    <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
+    <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4">
         <div>
             <div class="grid grid-cols-2 gap-2">
                 <div class="input-group">
@@ -302,5 +302,7 @@
                 </div>
             {{/if}}
         </ContentPanel>
+
+        <Spacer @height="300px" />
     </Overlay::Body>
 </Overlay>

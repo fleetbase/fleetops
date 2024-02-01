@@ -29,7 +29,7 @@ export default class OperationsOrdersIndexViewRoute extends Route {
         return this.store.queryRecord('order', {
             public_id,
             single: true,
-            with: ['payload', 'driverAssigned', 'customer', 'facilitator', 'trackingStatuses', 'trackingNumber'],
+            with: ['payload', 'driverAssigned', 'customer', 'facilitator', 'trackingStatuses', 'trackingNumber', 'purchaseRate', 'comments', 'files'],
         });
     }
 

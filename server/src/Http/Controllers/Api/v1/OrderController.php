@@ -422,6 +422,8 @@ class OrderController extends Controller
     public function query(Request $request)
     {
         $results = Order::queryWithRequest($request, function (&$query, $request) {
+            $query->where('company_uuid', session('company'));
+            
             if ($request->has('payload')) {
                 $query->whereHas('payload', function ($q) use ($request) {
                     $q->where('public_id', $request->input('payload'));

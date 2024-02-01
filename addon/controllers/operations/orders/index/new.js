@@ -161,6 +161,28 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             onClick: this.editMetaData,
         },
     ];
+    @tracked uploadQueue = [];
+    acceptedFileTypes = [
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/msword',
+        'application/pdf',
+        'application/x-pdf',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'video/mp4',
+        'video/quicktime',
+        'video/x-msvideo',
+        'video/x-flv',
+        'video/x-ms-wmv',
+        'audio/mpeg',
+        'video/x-msvideo',
+        'application/zip',
+        'application/x-tar',
+    ];
 
     @not('isServicable') isNotServicable;
     @alias('currentUser.latitude') userLatitude;
@@ -210,27 +232,6 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
         this.payloadCoordinates = coordinates;
     }
-
-    // @computed('payload.{dropoff,pickup,waypoints}', 'waypoints.[]')
-    // get payloadCoordinates() {
-    //     let waypoints = [];
-    //     let coordinates = [];
-
-    //     console.log('[this.waypoints]', this.waypoints);
-
-    //     waypoints.pushObjects([this.payload.pickup, ...this.waypoints.map((waypoint) => waypoint.place), this.payload.dropoff]);
-    //     waypoints.forEach((place) => {
-    //         if (place && place.get('longitude') && place.get('latitude')) {
-    //             if (place.hasInvalidCoordinates) {
-    //                 return;
-    //             }
-
-    //             coordinates.pushObject([place.get('longitude'), place.get('latitude')]);
-    //         }
-    //     });
-
-    //     return coordinates;
-    // }
 
     @computed('payloadCoordinates.length', 'waypoints.[]') get isServicable() {
         return this.payloadCoordinates.length >= 2;
@@ -597,7 +598,17 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     }
 
     _seriailizeModel(model) {
-        return isModel(model) ? model.toJSON() : model;
+        if (isModel(model)) {
+            if (typeof model.toJSON === 'function') {
+                return model.toJSON();
+            }
+
+            if (typeof model.serialize === 'function') {
+                return model.serialize();
+            }
+        }
+
+        return model;
     }
 
     _serializeArray(array) {
@@ -1440,5 +1451,38 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 });
             }
         }
+    }
+
+    @action queueFile(file) {
+        // since we have dropzone and upload button within dropzone validate the file state first
+        // as this method can be called twice from both functions
+        if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) {
+            return;
+        }
+
+        // Queue and upload immediatley
+        this.uploadQueue.pushObject(file);
+        this.fetch.uploadFile.perform(
+            file,
+            {
+                path: 'uploads/fleet-ops/order-files',
+                type: 'order_file',
+            },
+            (uploadedFile) => {
+                this.order.files.pushObject(uploadedFile);
+                this.uploadQueue.removeObject(file);
+            },
+            () => {
+                this.uploadQueue.removeObject(file);
+                // remove file from queue
+                if (file.queue && typeof file.queue.remove === 'function') {
+                    file.queue.remove(file);
+                }
+            }
+        );
+    }
+
+    @action removeFile(file) {
+        return file.destroyRecord();
     }
 }
