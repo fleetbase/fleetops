@@ -7,6 +7,7 @@ import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import Point from '@fleetbase/fleetops-data/utils/geojson/point';
+import findClosestWaypoint from '@fleetbase/ember-core/utils/find-closest-waypoint';
 
 export default class EditOrderRoutePanelComponent extends Component {
     /**
@@ -65,7 +66,6 @@ export default class EditOrderRoutePanelComponent extends Component {
      * @tracked
      */
     @tracked order;
-    
 
     /**
      * Initializes the vehicle panel component.
@@ -118,7 +118,6 @@ export default class EditOrderRoutePanelComponent extends Component {
      */
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.order);
-
     }
 
     @action async editPlace(place) {
@@ -147,7 +146,6 @@ export default class EditOrderRoutePanelComponent extends Component {
                 this.addWaypointFromExistingPlace(dropoff);
             }
 
-            
             this.order.payload.setProperties({
                 pickup_uuid: null,
                 dropoff_uuid: null,

@@ -203,7 +203,7 @@
         </ContentPanel>
 
         {{#if @model.purchase_rate}}
-            <ContentPanel @title="Purchase Rate" @open={{true}} @pad={{false}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.purchase-rate-panel-title"}} @open={{true}} @pad={{false}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="order-view-purchase-rate-table-wrapper next-table-wrapper h-auto table-fluid rounded-b-md">
                     <table id="order-view-purchase-rate-table" class="table table-fixed flex-1">
                         <thead>
@@ -282,7 +282,7 @@
             </ContentPanel>
         {{/if}}
 
-        <ContentPanel @title="Route" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.routePanelButtons}}>
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.route-panel-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.routePanelButtons}}>
             {{#if @model.payload.isMultiDrop}}
                 <div>
                     <RouteList @order={{@model}} />
@@ -473,15 +473,79 @@
                 </div>
             {{/if}}
         </ContentPanel>
-
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.comments-title"}} @open={{this.model.comments.length}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @wrapperClass="mb-20">
-            <CommentThread @subject={{this.model}} @subjectType="fleet-ops:order" />
-        </ContentPanel>
         
-        <ContentPanel @title="Documents" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-            <span>Uploaded Files and Documents</span><br />
-            {{!-- <img src={{this.order.docs_url}} alt={{this.order.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" /> --}}
-            <Button @size="xs" @type="default" @text="Get Order Docs" @onClick={{this.viewOrderDocuments}} />
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.documents-panel-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <div class="space-y-4">
+                {{#if this.isUploading}}
+                    <div
+                        class="dropzone w-full rounded-lg px-4 py-8 bg-gray-50 dark:bg-gray-900 bg-opacity-25 text-gray-900 dark:text-white text-center flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-indigo-500"
+                    >
+                        <div class="flex items-center justify-center py-5">
+                            <Spinner class="text-sm dar:text-gray-100" @loadingMessage={{t "fleet-ops.common.uploading"}} />
+                        </div>
+                    </div>
+                {{else}}
+                    {{#let (file-queue name="files" onFileAdded=this.queueFile accept=(join "," this.acceptedFileTypes)) as |queue|}}
+                        <FileDropzone @queue={{queue}} class="dropzone file-dropzone" as |dropzone|>
+                            {{#if dropzone.active}}
+                                {{#if dropzone.valid}}
+                                    {{t "component.dropzone.drop-to-upload"}}
+                                {{else}}
+                                    {{t "component.dropzone.invalid"}}
+                                {{/if}}
+                            {{else if queue.files.length}}
+                                <div class="my-2">
+                                    <FaIcon @icon="folder-open" class="text-indigo-500 mr-2" />
+                                    {{t "component.dropzone.files-ready-for-upload" numOfFiles=(pluralize queue.files.length (t "component.dropzone.file"))}}
+                                </div>
+                                <div class="my-2">({{queue.progress}}%)</div>
+                            {{else}}
+                                <h4 class="font-semibold">
+                                    <FaIcon @icon="folder-open" @size="lg" class="text-indigo-500 mr-2" />
+                                    {{t "component.dropzone.upload-documents-files"}}
+                                </h4>
+                                <div>
+                                    {{#if dropzone.supported}}
+                                        <p class="text-sm my-5">{{t "component.dropzone.dropzone-supported-files"}}</p>
+                                    {{/if}}
+                                    <FileUpload @name="files" @for="files" @accept={{join "," this.acceptedFileTypes}} @multiple={{true}} @onFileAdded={{this.queueFile}}>
+                                        <a tabindex={{0}} class="btn btn-magic cursor-pointer ml-1">{{t "component.dropzone.or-select-button-text"}}</a>
+                                    </FileUpload>
+                                </div>
+                            {{/if}}
+                        </FileDropzone>
+                    {{/let}}
+                    {{#if this.uploadQueue}}
+                        <div class="mx-4">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="leading-6 dark:text-gray-100">{{t "component.dropzone.upload-queue"}}</span>
+                            </div>
+                            <div class="space-y-2 mb-4">
+                                {{#each this.uploadQueue as |file|}}
+                                    <div class="flex items-center justify-between bg-blue-100 border border-blue-800 dark:border-blue-800 py-1.5 shadow-sm rounded-lg px-4">
+                                        <div class="text-xs text-blue-900 truncate">{{truncate-filename file.name 50}}</div>
+                                        <div class="flex items-center text-sm">
+                                            <Spinner class="text-blue-900 mr-2" />
+                                            <span class="font-bold text-blue-900">{{round file.progress}}%</span>
+                                        </div>
+                                    </div>
+                                {{/each}}
+                            </div>
+                        </div>
+                    {{/if}}
+                    <div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+                            {{#each @model.files as |file|}}
+                                <File @file={{file}} @onDelete={{this.removeFile}} />
+                            {{/each}}
+                        </div>
+                    </div>
+                {{/if}}
+            </div>
+        </ContentPanel>
+
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.comments-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @wrapperClass="mb-20">
+            <CommentThread @subject={{@model}} @subjectType="fleet-ops:order" />
         </ContentPanel>
 
         <Spacer @height="300px" />

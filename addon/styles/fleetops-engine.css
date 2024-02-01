@@ -67,7 +67,7 @@ body[data-theme='dark'] .scheduler-left-sidebar {
     box-shadow: none;
 }
 
-body[data-theme="dark"] .next-table-wrapper.order-view-purchase-rate-table-wrapper > table#order-view-purchase-rate-table tbody tr td {
-    background-color: rgba(31, 41, 55, 1);
-    color: rgba(249, 250, 251, 1);
+body[data-theme='dark'] .next-table-wrapper.order-view-purchase-rate-table-wrapper > table#order-view-purchase-rate-table tbody tr td {
+    background-color: rgb(31, 41, 55);
+    color: rgb(249, 250, 251);
 }

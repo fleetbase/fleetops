@@ -1158,6 +1158,9 @@ fleet-ops:
           edit-field-title: Edit custom field
           edit-metadata: Edit Metadata
         view:
+          purchase-rate-panel-title: Purchase Rate
+          documents-panel-title: Documents & Files
+          route-panel-title: Route
           currency: Currency
           comments-title: Comments
           notes-title: Notes

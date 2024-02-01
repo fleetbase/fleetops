@@ -29,7 +29,7 @@ export default class OperationsOrdersIndexViewRoute extends Route {
         return this.store.queryRecord('order', {
             public_id,
             single: true,
-            with: ['payload', 'driverAssigned', 'customer', 'facilitator', 'trackingStatuses', 'trackingNumber', 'purchaseRate', 'comments'],
+            with: ['payload', 'driverAssigned', 'customer', 'facilitator', 'trackingStatuses', 'trackingNumber', 'purchaseRate', 'comments', 'files'],
         });
     }
 
@@ -40,7 +40,6 @@ export default class OperationsOrdersIndexViewRoute extends Route {
      * @memberof OperationsOrdersIndexViewRoute
      */
     afterModel(model) {
-        console.log('[OrderModel]', model);
         this.listenForOrderEvents(model);
     }
 

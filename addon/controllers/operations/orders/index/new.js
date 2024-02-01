@@ -162,7 +162,27 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         },
     ];
     @tracked uploadQueue = [];
-    acceptedFileTypes = ['image/*', '.doc', ' .docs', ' .xls', '.xlsx', '.pdf'];
+    acceptedFileTypes = [
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/msword',
+        'application/pdf',
+        'application/x-pdf',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'video/mp4',
+        'video/quicktime',
+        'video/x-msvideo',
+        'video/x-flv',
+        'video/x-ms-wmv',
+        'audio/mpeg',
+        'video/x-msvideo',
+        'application/zip',
+        'application/x-tar',
+    ];
 
     @not('isServicable') isNotServicable;
     @alias('currentUser.latitude') userLatitude;
@@ -212,27 +232,6 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
         this.payloadCoordinates = coordinates;
     }
-
-    // @computed('payload.{dropoff,pickup,waypoints}', 'waypoints.[]')
-    // get payloadCoordinates() {
-    //     let waypoints = [];
-    //     let coordinates = [];
-
-    //     console.log('[this.waypoints]', this.waypoints);
-
-    //     waypoints.pushObjects([this.payload.pickup, ...this.waypoints.map((waypoint) => waypoint.place), this.payload.dropoff]);
-    //     waypoints.forEach((place) => {
-    //         if (place && place.get('longitude') && place.get('latitude')) {
-    //             if (place.hasInvalidCoordinates) {
-    //                 return;
-    //             }
-
-    //             coordinates.pushObject([place.get('longitude'), place.get('latitude')]);
-    //         }
-    //     });
-
-    //     return coordinates;
-    // }
 
     @computed('payloadCoordinates.length', 'waypoints.[]') get isServicable() {
         return this.payloadCoordinates.length >= 2;
@@ -1454,79 +1453,36 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         }
     }
 
-    /**
-     * Uploads a new photo for the driver.
-     *
-     * @param {File} file
-     * @memberof OrderConfigComponent
-     */
-    @action uploadDocs(file) {
-        // this.uploadQueue.pushObject(file);
+    @action queueFile(file) {
+        // since we have dropzone and upload button within dropzone validate the file state first
+        // as this method can be called twice from both functions
+        if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) {
+            return;
+        }
+
+        // Queue and upload immediatley
+        this.uploadQueue.pushObject(file);
         this.fetch.uploadFile.perform(
             file,
             {
-                path: `uploads/${this.currentUser.companyId}/orders/${this.order.id}`,
-                subject_uuid: this.order.id,
-                subject_type: 'fleet-ops:order',
-                type: 'order_docs',
+                path: 'uploads/fleet-ops/order-files',
+                type: 'order_file',
             },
             (uploadedFile) => {
-                this.order.setProperties({
-                    docs_uuid: uploadedFile.id,
-                    docs_url: uploadedFile.url,
-                    docs: uploadedFile,
-                });
+                this.order.files.pushObject(uploadedFile);
+                this.uploadQueue.removeObject(file);
+            },
+            () => {
+                this.uploadQueue.removeObject(file);
+                // remove file from queue
+                if (file.queue && typeof file.queue.remove === 'function') {
+                    file.queue.remove(file);
+                }
             }
         );
-        console.log('id', this.order.docs_uuid);
     }
-    // @action queueFile(file) {
-    //     this.uploadQueue.pushObject(file);
-    //     this.fetch.uploadFile.perform(
-    //         file,
-    //         {
-    //             path: `uploads/${this.currentUser.companyId}/orders/${getWithDefault(this.order, 'id', '~')}`,
-    //             subject_uuid: this.product.id,
-    //             subject_type: `fleet-ops:order`,
-    //             type: `order_docs`,
-    //         },
-    //         (uploadedFile) => {
-    //             this.order.files.pushObject(uploadedFile);
 
-    //             // if no main photo set it
-    //             if (!this.order.docs_uuid) {
-    //                 this.order.docs_uuid = uploadedFile.id;
-    //             }
-
-    //             this.uploadQueue.removeObject(file);
-    //         },
-    //         (error) => {
-    //             console.log('some error occurred', error);
-    //             this.uploadQueue.removeObject(file);
-    //         }
-    //     );
-    // }
-    // /**
-    //  * Uploads a file to the server for the product.
-    //  *
-    //  * @param {File} file
-    //  */
-    // uploadOrderFile(file) {
-    //     this.fetch.uploadFile.perform(
-    //         file,
-    //         {
-    //             path: `uploads/${this.order.companyId}/orders/${this.order.slug}`,
-    //             subject_uuid: this.order.id,
-    //             subject_type: 'fleet-ops:order',
-    //             type: 'order_docs',
-    //         },
-    //         (uploadedFile) => {
-    //             this.order.setProperties({
-    //                 docs_uuid: uploadedFile.id,
-    //                 docs_url: uploadedFile.url,
-    //                 docs: uploadedFile,
-    //             });
-    //         }
-    //     );
-    // }
+    @action removeFile(file) {
+        return file.destroyRecord();
+    }
 }

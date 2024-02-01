@@ -3,13 +3,11 @@ import { inject as controller } from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, computed } from '@ember/object';
-import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { not, notEmpty, alias } from '@ember/object/computed';
 import { task } from 'ember-concurrency-decorators';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import groupBy from '@fleetbase/ember-core/utils/macros/group-by';
-import findClosestWaypoint from '@fleetbase/ember-core/utils/find-closest-waypoint';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 
 export default class OperationsOrdersIndexViewController extends BaseController {
@@ -116,6 +114,28 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @tracked leafletRoute;
     @tracked routeControl;
     @tracked commentInput = '';
+    @tracked uploadQueue = [];
+    acceptedFileTypes = [
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/msword',
+        'application/pdf',
+        'application/x-pdf',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'video/mp4',
+        'video/quicktime',
+        'video/x-msvideo',
+        'video/x-flv',
+        'video/x-ms-wmv',
+        'audio/mpeg',
+        'video/x-msvideo',
+        'application/zip',
+        'application/x-tar',
+    ];
 
     @alias('currentUser.latitude') userLatitude;
     @alias('currentUser.longitude') userLongitude;
@@ -134,16 +154,16 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     ];
 
     @tracked routePanelButtons = [
-        {
-            type: 'default',
-            text: 'Edit',
-            icon: 'pencil',
-            iconPrefix: 'fas',
-            onClick: () => {
-                const order = this.model;
-                this.editOrderRoute(order);
-            },
-        },
+        // {
+        //     type: 'default',
+        //     text: 'Edit',
+        //     icon: 'pencil',
+        //     iconPrefix: 'fas',
+        //     onClick: () => {
+        //         const order = this.model;
+        //         this.editOrderRoute(order);
+        //     },
+        // },
     ];
 
     @not('isWaypointsCollapsed') waypointsIsNotCollapsed;
@@ -180,6 +200,25 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         return groups;
     }
 
+    @computed('model.payload.{dropoff,pickup,waypoints}') get routeWaypoints() {
+        const { payload } = this.model;
+        let waypoints = [];
+        let coordinates = [];
+
+        waypoints.pushObjects([payload.pickup, ...payload.waypoints.toArray(), payload.dropoff]);
+        waypoints.forEach((place) => {
+            if (place && place.get('longitude') && place.get('latitude')) {
+                if (place.hasInvalidCoordinates) {
+                    return;
+                }
+
+                coordinates.pushObject([place.get('latitude'), place.get('longitude')]);
+            }
+        });
+
+        return coordinates;
+    }
+
     @task *loadOrderRelations(order) {
         yield order.loadPayload();
         yield order.loadDriver();
@@ -188,6 +227,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         yield order.loadTrackingActivity();
         yield order.loadOrderConfig();
         yield order.loadPurchaseRate();
+        yield order.loadFiles();
     }
 
     @action resetView() {
@@ -280,25 +320,6 @@ export default class OperationsOrdersIndexViewController extends BaseController 
 
         // run setup
         setup();
-    }
-
-    @computed('model.payload.{dropoff,pickup,waypoints}') get routeWaypoints() {
-        const { payload } = this.model;
-        let waypoints = [];
-        let coordinates = [];
-
-        waypoints.pushObjects([payload.pickup, ...payload.waypoints.toArray(), payload.dropoff]);
-        waypoints.forEach((place) => {
-            if (place && place.get('longitude') && place.get('latitude')) {
-                if (place.hasInvalidCoordinates) {
-                    return;
-                }
-
-                coordinates.pushObject([place.get('latitude'), place.get('longitude')]);
-            }
-        });
-
-        return coordinates;
     }
 
     getPayloadCoordinates(payload) {
@@ -861,20 +882,38 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         });
     }
 
-    @action async viewOrderDocuments(order, dd){
-        if (dd && typeof dd.actions.close === 'function') {
-            dd.actions.close();
+    @action queueFile(file) {
+        // since we have dropzone and upload button within dropzone validate the file state first
+        // as this method can be called twice from both functions
+        if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) {
+            return;
         }
-        const fileReader = new FileReader();
-        const docsStream = await this.fetch.get(`orders/${this.order.id}?format=base64`).then((resp) => resp.data);
-        // eslint-disable-next-line no-undef
-        const base64 = await fetch(`data:image/*;base64,${docsStream}`);
-        const blob = await base64.blob();
-        // load into file reader
-        fileReader.onload = (event) => {
-            const data = event.target.result;
-            this.modalsManager.setOption('data', data);
-        };
-        fileReader.readAsDataURL(blob);
+
+        // Queue and upload immediatley
+        this.uploadQueue.pushObject(file);
+        this.fetch.uploadFile.perform(
+            file,
+            {
+                path: 'uploads/fleet-ops/order-files',
+                subject_uuid: this.model.id,
+                subject_type: 'fleet-ops:order',
+                type: 'order_file',
+            },
+            (uploadedFile) => {
+                this.model.files.pushObject(uploadedFile);
+                this.uploadQueue.removeObject(file);
+            },
+            () => {
+                this.uploadQueue.removeObject(file);
+                // remove file from queue
+                if (file.queue && typeof file.queue.remove === 'function') {
+                    file.queue.remove(file);
+                }
+            }
+        );
+    }
+
+    @action removeFile(file) {
+        return file.destroyRecord();
     }
 }
