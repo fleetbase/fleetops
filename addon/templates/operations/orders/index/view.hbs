@@ -242,7 +242,7 @@
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.notes-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <p class="text-gray-700 dark:text-gray-300 leading-5 text-sm">{{n-a @model.notes}}</p>
         </ContentPanel>
-
+        
         {{#if @model.isIntegratedVendorOrder}}
             <ContentPanel @title={{concat @model.facilitator.name (t "fleet-ops.operations.orders.index.view.order-details-title")}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <IntegratedOrderDetails @integratedVendor={{@model.facilitator}} @details={{@model.meta.integrated_vendor_order}} />
@@ -476,6 +476,12 @@
 
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.comments-title"}} @open={{this.model.comments.length}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @wrapperClass="mb-20">
             <CommentThread @subject={{this.model}} @subjectType="fleet-ops:order" />
+        </ContentPanel>
+        
+        <ContentPanel @title="Documents" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <span>Uploaded Files and Documents</span><br />
+            {{!-- <img src={{this.order.docs_url}} alt={{this.order.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" /> --}}
+            <Button @size="xs" @type="default" @text="Get Order Docs" @onClick={{this.viewOrderDocuments}} />
         </ContentPanel>
 
         <Spacer @height="300px" />

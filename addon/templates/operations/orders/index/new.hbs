@@ -762,5 +762,11 @@
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.notes-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <Textarea @value={{this.order.notes}} class="form-input w-full" placeholder={{t "fleet-ops.operations.orders.index.new.notes-placeholder"}} rows={{4}} />
         </ContentPanel>
+
+        <ContentPanel @title="Upload File or Documents" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">     
+                <span>Upload files or documents associated to order</span><br />
+                <img src={{this.order.docs_url}} alt={{this.order.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                <UploadButton @name="Upload File or Documents" @icon="plus" @onFileAdded={{this.uploadDocs}} @accept="image/*, .pdf, .doc, .docx, .xls, .xlsx" />
+        </ContentPanel>
     </Overlay::Body>
 </Overlay>

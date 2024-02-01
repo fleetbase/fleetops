@@ -2,7 +2,7 @@
     <div class="modal-body-container">
         <div class="flex flex-row justify-between mb-6">
             <div class="flex">
-                <ShortToggle @isToggled={{@options.order.payload.isMultiDrop}} @onToggle={{@options.toggleMultiDropOrder}} @label={{t "fleet-ops.component.modals.order-route-form.toggle"}} />
+                <Toggle @isToggled={{@options.order.payload.isMultiDrop}} @onToggle={{@options.toggleMultiDropOrder}} @label={{t "fleet-ops.component.modals.order-route-form.toggle"}} />
             </div>
             <div class="flex flex-1 justify-end space-x-2">
                 {{#if @options.order.payload.isMultiDrop}}

@@ -40,6 +40,7 @@ export default class OperationsOrdersIndexViewRoute extends Route {
      * @memberof OperationsOrdersIndexViewRoute
      */
     afterModel(model) {
+        console.log('[OrderModel]', model);
         this.listenForOrderEvents(model);
     }
 
