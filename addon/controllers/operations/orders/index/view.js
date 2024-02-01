@@ -115,6 +115,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @tracked isWaypointsCollapsed;
     @tracked leafletRoute;
     @tracked routeControl;
+    @tracked commentInput = '';
 
     @alias('currentUser.latitude') userLatitude;
     @alias('currentUser.longitude') userLongitude;
@@ -190,17 +191,35 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     }
 
     @task *publishNewComment() {
+        // validate input
+        const content = this.commentInput;
+        if (!content) {
+            return this.notification.warning(this.intl.t('fleet-ops.operations.orders.index.view.comment-input-empty-notification'));
+        }
+
+        // make sure comment is atleast 12 characters
+        if (typeof content === 'string' && content.length < 2) {
+            return this.notification.warning(this.intl.t('fleet-ops.operations.orders.index.view.comment-min-length-notification'));
+        }
+
         let comment = this.store.createRecord('comment', {
-            content: this.newCommentContent,
+            content: this.commentInput,
             subject_uuid: this.model.id,
-            subject_type: 'fleet-ops:order'
+            subject_type: 'fleet-ops:order',
         });
 
         yield comment.save();
-        yield order.loadComments();
+        yield this.model.loadComments();
 
-        this.model.comments.pushObject(comment);
-        this.newCommentContent = '';
+        this.commentInput = '';
+    }
+
+    @action replyComment(comment) {
+        // do some code
+    }
+
+    @action deleteComment(comment) {
+        return comment.destroyRecord();
     }
 
     @action resetView() {

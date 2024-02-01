@@ -328,7 +328,7 @@ class Order extends Model
      */
     public function comments()
     {
-        return $this->hasMany(\Fleetbase\Models\Comment::class, 'subject_uuid');
+        return $this->hasMany(\Fleetbase\Models\Comment::class, 'subject_uuid')->whereNull('parent_comment_uuid')->latest();
     }
 
     /**
