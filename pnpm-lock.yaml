@@ -25,6 +25,9 @@ dependencies:
   '@fortawesome/free-solid-svg-icons':
     specifier: ^6.4.0
     version: 6.4.0
+  '@joint/core':
+    specifier: ^4.0.1
+    version: 4.0.1
   '@terraformer/spatial':
     specifier: ^2.1.2
     version: 2.1.2
@@ -2991,6 +2994,10 @@ packages:
       strip-ansi-cjs: /strip-ansi@6.0.1
       wrap-ansi: 8.1.0
       wrap-ansi-cjs: /wrap-ansi@7.0.0
+    dev: false
+
+  /@joint/core@4.0.1:
+    resolution: {integrity: sha512-/nI64MhSUhTJ4rVT0UeaVBYyFYE8SLGbz1M6nB3lcE9pub1a8cudXG6+8MqhmQMMBOZ2SwNUpHebZXyl5gqDZg==}
     dev: false
 
   /@jridgewell/gen-mapping@0.3.3:
