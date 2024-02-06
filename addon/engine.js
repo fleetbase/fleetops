@@ -5,6 +5,7 @@ import config from './config/environment';
 import services from '@fleetbase/ember-core/exports/services';
 import AdminVisibilityControlsComponent from './components/admin/visibility-controls';
 import NavigatorAppConfigComponent from './components/admin/navigator-app';
+import WidgetKeyMetricsComponent from './components/widget/key-metrics';
 
 const { modulePrefix } = config;
 const externalRoutes = ['console', 'extensions'];
@@ -40,20 +41,25 @@ export default class FleetOpsEngine extends Engine {
             }
         );
 
-        // create primary registry for engine
-        universe.createRegistry('engine:fleet-ops');
+        // widgets for registry
+        const KeyMetricsWidgetDefinition = {
+            did: 'fleetops-metrics',
+            name: 'Fleet-Ops Metrics',
+            description: 'Key metrics from Fleet-Ops.',
+            icon: 'truck',
+            component: WidgetKeyMetricsComponent,
+            grid_options: { w: 12, h: 12, minW: 8, minH: 12 },
+            options: {
+                title: 'Fleet-Ops Metrics',
+            },
+        };
 
-        // register the vehicle panel
-        universe.createRegistry('component:vehicle-panel');
+        // register widgets
+        universe.registerDefaultDashboardWidgets([KeyMetricsWidgetDefinition]);
+        universe.registerDashboardWidgets([KeyMetricsWidgetDefinition]);
 
-        // register the driver panel
-        universe.createRegistry('component:driver-panel');
-
-        // register vehicle context menu
-        universe.createRegistry('contextmenu:vehicle');
-
-        // register driver context menu
-        universe.createRegistry('contextmenu:driver');
+        // create all registries necessary
+        universe.createRegistries(['engine:fleet-ops', 'component:vehicle-panel', 'component:driver-panel', 'contextmenu:vehicle', 'contextmenu:driver']);
     };
 }
 
