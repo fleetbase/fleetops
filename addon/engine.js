@@ -5,6 +5,7 @@ import config from './config/environment';
 import services from '@fleetbase/ember-core/exports/services';
 import AdminVisibilityControlsComponent from './components/admin/visibility-controls';
 import NavigatorAppConfigComponent from './components/admin/navigator-app';
+import AdminAvatarManagementComponent from './components/admin/avatar-management';
 
 const { modulePrefix } = config;
 const externalRoutes = ['console', 'extensions'];
@@ -33,6 +34,11 @@ export default class FleetOpsEngine extends Engine {
                     title: 'Navigator App',
                     icon: 'location-arrow',
                     component: NavigatorAppConfigComponent,
+                },
+                {
+                    title: 'Avatar Managemenet',
+                    icon: 'images',
+                    component: AdminAvatarManagementComponent,
                 },
             ],
             {
