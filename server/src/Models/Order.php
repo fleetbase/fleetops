@@ -340,6 +340,14 @@ class Order extends Model
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function customFields()
+    {
+        return $this->hasMany(\Fleetbase\Models\CustomField::class, 'subject_uuid')->orderBy('order');
+    }
+
+    /**
      * @return \Illuminate\Database\Eloquent\Relations\HasManyThrough
      */
     public function drivers()
