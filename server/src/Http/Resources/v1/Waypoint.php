@@ -4,9 +4,9 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\FleetOps\Models\Waypoint as WaypointModel;
 use Fleetbase\Http\Resources\FleetbaseResource;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
 use Fleetbase\Support\Resolve;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 
 class Waypoint extends FleetbaseResource
 {
@@ -56,9 +56,7 @@ class Waypoint extends FleetbaseResource
     }
 
     /**
-     * Finds the waypoint got a payload and place
-     *
-     * @return WaypointModel|null
+     * Finds the waypoint got a payload and place.
      */
     private function getWaypoint(): ?WaypointModel
     {

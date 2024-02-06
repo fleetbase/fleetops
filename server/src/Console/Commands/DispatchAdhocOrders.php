@@ -5,7 +5,7 @@ namespace Fleetbase\FleetOps\Console\Commands;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 

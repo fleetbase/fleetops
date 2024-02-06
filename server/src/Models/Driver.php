@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Scopes\DriverScope;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Support\Utils as FleetOpsUtils;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
@@ -14,11 +15,11 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
@@ -157,25 +158,12 @@ class Driver extends Model
     protected $filterParams = ['vendor', 'facilitator', 'customer', 'fleet', 'photo_uuid', 'avatar_uuid'];
 
     /**
-     * Properties which activity needs to be logged.
-     *
-     * @var array
+     * Get the activity log options for the model.
      */
-    protected static $logAttributes = '*';
-
-    /**
-     * Do not log empty changed.
-     *
-     * @var bool
-     */
-    protected static $submitEmptyLogs = false;
-
-    /**
-     * The name of the subject to log.
-     *
-     * @var string
-     */
-    protected static $logName = 'driver';
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logOnly(['*'])->logOnlyDirty();
+    }
 
     /**
      * Get the options for generating the slug.

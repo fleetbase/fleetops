@@ -19,7 +19,7 @@ jobs:
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '7.4'
+        php-version: '8.2'
         extensions: mbstring, xml, gd, zip, pdo_mysql, sockets, intl, bcmath, gmp 
         coverage: xdebug
 
@@ -27,6 +27,9 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y libzip-dev libgd-dev libfreetype6-dev libjpeg-dev libpng-dev imagemagick libmagickwand-dev libmemcached-dev libgeos-dev libgmp-dev default-mysql-client libicu-dev
+      
+    - name: Configure Composer Auth for Github
+      run: composer config --global github-oauth.github.com ${{ secrets._GITHUB_AUTH_TOKEN }}
 
     - name: Validate composer.json and composer.lock
       run: composer validate

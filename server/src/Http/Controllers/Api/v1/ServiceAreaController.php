@@ -9,7 +9,7 @@ use Fleetbase\FleetOps\Http\Resources\v1\ServiceArea as ServiceAreaResource;
 use Fleetbase\FleetOps\Models\ServiceArea;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 
 class ServiceAreaController extends Controller

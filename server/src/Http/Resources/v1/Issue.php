@@ -3,8 +3,8 @@
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\Http\Resources\FleetbaseResource;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 
 class Issue extends FleetbaseResource
 {

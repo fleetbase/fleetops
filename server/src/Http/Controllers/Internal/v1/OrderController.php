@@ -381,7 +381,7 @@ class OrderController extends FleetOpsController
         $flow = $activity = Flow::getNextActivity($order);
 
         /**
-         * @var \Grimzy\LaravelMysqlSpatial\Types\Point
+         * @var \Fleetbase\LaravelMysqlSpatial\Types\Point
          */
         $location = $order->getLastLocation();
 
@@ -453,7 +453,7 @@ class OrderController extends FleetOpsController
         }
 
         /**
-         * @var \Grimzy\LaravelMysqlSpatial\Types\Point
+         * @var \Fleetbase\LaravelMysqlSpatial\Types\Point
          */
         $location = $order->getLastLocation();
 

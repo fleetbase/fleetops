@@ -808,7 +808,7 @@ class OrderController extends Controller
         $driver->current_job_uuid = $order->uuid;
         $driver->save();
 
-        /** @var \Grimzy\LaravelMysqlSpatial\Types\Point */
+        /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point */
         $location = $order->getLastLocation();
 
         // set first destination for payload
@@ -890,7 +890,7 @@ class OrderController extends Controller
             return new OrderResource($order);
         }
 
-        /** @var \Grimzy\LaravelMysqlSpatial\Types\Point */
+        /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point */
         $location = $order->getLastLocation();
 
         // if is multi drop order and no current destination set it
@@ -1023,7 +1023,7 @@ class OrderController extends Controller
 
         $order->notifyCompleted();
 
-        /** @var \Grimzy\LaravelMysqlSpatial\Types\Point */
+        /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point */
         $location = $order->getLastLocation();
 
         $order->setStatus($activity['code']);

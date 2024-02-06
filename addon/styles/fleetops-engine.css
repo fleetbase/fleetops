@@ -51,12 +51,12 @@ body[data-theme='dark'] .scheduler-left-sidebar {
     --fleet-summary-nav-item-base-padding: 1.5rem;
 }
 
-.next-sidebar-panel-container.next-driver-listing > .next-sidebar-panel > .next-content-panel > .next-sidebar-panel-toggle,
+.next-sidebar .next-sidebar-panel-container.next-driver-listing > .next-sidebar-panel > .next-content-panel > .next-sidebar-panel-toggle,
 .next-sidebar .next-sidebar-panel-container.next-fleet-summary > .next-sidebar-panel > .next-content-panel > .next-sidebar-panel-toggle {
     padding-left: 2rem;
 }
 
-.next-sidebar-panel-container.next-driver-listing > .next-sidebar-panel > .next-content-panel > .next-content-panel-body .next-nav-item,
+.next-sidebar .next-sidebar-panel-container.next-driver-listing > .next-sidebar-panel > .next-content-panel > .next-content-panel-body .next-nav-item,
 .next-sidebar .next-sidebar-panel-container.next-driver-listing > .next-sidebar-panel > .next-content-panel > .next-sidebar-panel-body .next-nav-item.driver-nav-item {
     padding-left: 3.5rem;
 }

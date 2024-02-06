@@ -4,22 +4,22 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\FleetOps\Casts\MultiPolygon as MultiPolygonCast;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Types\LineString;
+use Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Polygon;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
-use Grimzy\LaravelMysqlSpatial\Types\LineString;
-use Grimzy\LaravelMysqlSpatial\Types\MultiPolygon;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
-use Grimzy\LaravelMysqlSpatial\Types\Polygon;
 use Illuminate\Support\Arr;
 
 /**
- * @var \Grimzy\LaravelMysqlSpatial\Types\Point        $location
- * @var \Grimzy\LaravelMysqlSpatial\Types\MultiPolygon $border
+ * @var \Fleetbase\LaravelMysqlSpatial\Types\Point        $location
+ * @var \Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon $border
  */
 class ServiceArea extends Model
 {
@@ -130,10 +130,10 @@ class ServiceArea extends Model
     /**
      * Creates a polygon from a given point and radius.
      *
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the polygon
-     * @param int                                     $meters The radius in meters for the polygon. Default is 500 meters.
+     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the polygon
+     * @param int                                        $meters The radius in meters for the polygon. Default is 500 meters.
      *
-     * @return \Grimzy\LaravelMysqlSpatial\Types\Polygon returns a Polygon object
+     * @return \Fleetbase\LaravelMysqlSpatial\Types\Polygon returns a Polygon object
      */
     public static function createPolygonFromPoint(Point $point, int $meters = 500): Polygon
     {
@@ -150,10 +150,10 @@ class ServiceArea extends Model
     /**
      * Creates a multi-polygon from a given point and radius.
      *
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the multi-polygon
-     * @param int                                     $meters The radius in meters for the multi-polygon. Default is 500 meters.
+     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the multi-polygon
+     * @param int                                        $meters The radius in meters for the multi-polygon. Default is 500 meters.
      *
-     * @return \Grimzy\LaravelMysqlSpatial\Types\MultiPolygon returns a MultiPolygon object
+     * @return \Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon returns a MultiPolygon object
      */
     public static function createMultiPolygonFromPoint(Point $point, int $meters = 500): MultiPolygon
     {
@@ -180,7 +180,7 @@ class ServiceArea extends Model
     /**
      * Retrieves the location attribute as a point.
      *
-     * @return \Grimzy\LaravelMysqlSpatial\Types\Point returns the centroid of the border as a Point object
+     * @return \Fleetbase\LaravelMysqlSpatial\Types\Point returns the centroid of the border as a Point object
      */
     public function getLocationAttribute(): Point
     {

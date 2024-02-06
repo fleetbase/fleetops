@@ -5,13 +5,13 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\Internal\v1\Payload as PayloadResource;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -562,7 +562,7 @@ class Payload extends Model
     /**
      * Get the pickup location for the payload.
      *
-     * @return \Grimzy\LaravelMysqlSpatial\Types\Point
+     * @return \Fleetbase\LaravelMysqlSpatial\Types\Point
      */
     public function getPickupLocation()
     {
@@ -653,8 +653,8 @@ class Payload extends Model
     /**
      * Set the first waypoint and update activity.
      *
-     * @param array                                   $activity
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $location
+     * @param array                                      $activity
+     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point $location
      *
      * @return void
      */
@@ -682,9 +682,9 @@ class Payload extends Model
     /**
      * Update the current waypoint activity and it's entities.
      *
-     * @param array                                   $activity
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $location
-     * @param \Fleetbase\Models\Proof|string|null     $proof    resolvable proof of delivery/activity
+     * @param array                                      $activity
+     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point $location
+     * @param \Fleetbase\Models\Proof|string|null        $proof    resolvable proof of delivery/activity
      *
      * @return $this
      */
