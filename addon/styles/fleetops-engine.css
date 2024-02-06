@@ -66,3 +66,8 @@ body[data-theme='dark'] .scheduler-left-sidebar {
     border: none;
     box-shadow: none;
 }
+
+body[data-theme='dark'] .next-table-wrapper.order-view-purchase-rate-table-wrapper > table#order-view-purchase-rate-table tbody tr td {
+    background-color: rgb(31, 41, 55);
+    color: rgb(249, 250, 251);
+}

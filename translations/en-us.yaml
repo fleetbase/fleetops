@@ -8,6 +8,7 @@ fleet-ops:
     avatar: Avatar
     building: Building
     bulk-action: Bulk Action
+    cancel: Cancel
     category: Category
     city: City
     coordinates: Coordinates
@@ -185,8 +186,8 @@ fleet-ops:
         create-zone: Create zone inside...
       toolbar:
         create: Create Order
-        view: View Orders
-        service: Service Areas
+        view-order: View Orders
+        view-service-area: View Service Areas
         visibility: Visibility Controls
         scope: Scope
     modals:
@@ -1157,6 +1158,12 @@ fleet-ops:
           edit-field-title: Edit custom field
           edit-metadata: Edit Metadata
         view:
+          purchase-rate-panel-title: Purchase Rate
+          documents-panel-title: Documents & Files
+          route-panel-title: Route
+          currency: Currency
+          comments-title: Comments
+          notes-title: Notes
           dispatch: Dispatch
           order-actions: Order Actions
           edit-details: Edit Details

@@ -61,12 +61,12 @@ export default class FleetPanelComponent extends Component {
     @tracked tab;
 
     /**
-     * The vehicle being displayed or edited.
+     * The fleet being displayed or edited.
      *
-     * @type {VehicleModel}
+     * @type {FleetModel}
      * @tracked
      */
-    @tracked vehicle;
+    @tracked fleet;
 
     /**
      * Returns the array of tabs available for the panel.

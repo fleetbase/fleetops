@@ -3,13 +3,11 @@ import { inject as controller } from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, computed } from '@ember/object';
-import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { not, notEmpty, alias } from '@ember/object/computed';
 import { task } from 'ember-concurrency-decorators';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import groupBy from '@fleetbase/ember-core/utils/macros/group-by';
-import findClosestWaypoint from '@fleetbase/ember-core/utils/find-closest-waypoint';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 
 export default class OperationsOrdersIndexViewController extends BaseController {
@@ -115,6 +113,29 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @tracked isWaypointsCollapsed;
     @tracked leafletRoute;
     @tracked routeControl;
+    @tracked commentInput = '';
+    @tracked uploadQueue = [];
+    acceptedFileTypes = [
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/msword',
+        'application/pdf',
+        'application/x-pdf',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'video/mp4',
+        'video/quicktime',
+        'video/x-msvideo',
+        'video/x-flv',
+        'video/x-ms-wmv',
+        'audio/mpeg',
+        'video/x-msvideo',
+        'application/zip',
+        'application/x-tar',
+    ];
 
     @alias('currentUser.latitude') userLatitude;
     @alias('currentUser.longitude') userLongitude;
@@ -133,16 +154,16 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     ];
 
     @tracked routePanelButtons = [
-        {
-            type: 'default',
-            text: 'Edit',
-            icon: 'pencil',
-            iconPrefix: 'fas',
-            onClick: () => {
-                const order = this.model;
-                this.editOrderRoute(order);
-            },
-        },
+        // {
+        //     type: 'default',
+        //     text: 'Edit',
+        //     icon: 'pencil',
+        //     iconPrefix: 'fas',
+        //     onClick: () => {
+        //         const order = this.model;
+        //         this.editOrderRoute(order);
+        //     },
+        // },
     ];
 
     @not('isWaypointsCollapsed') waypointsIsNotCollapsed;
@@ -179,6 +200,25 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         return groups;
     }
 
+    @computed('model.payload.{dropoff,pickup,waypoints}') get routeWaypoints() {
+        const { payload } = this.model;
+        let waypoints = [];
+        let coordinates = [];
+
+        waypoints.pushObjects([payload.pickup, ...payload.waypoints.toArray(), payload.dropoff]);
+        waypoints.forEach((place) => {
+            if (place && place.get('longitude') && place.get('latitude')) {
+                if (place.hasInvalidCoordinates) {
+                    return;
+                }
+
+                coordinates.pushObject([place.get('latitude'), place.get('longitude')]);
+            }
+        });
+
+        return coordinates;
+    }
+
     @task *loadOrderRelations(order) {
         yield order.loadPayload();
         yield order.loadDriver();
@@ -186,6 +226,8 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         yield order.loadCustomer();
         yield order.loadTrackingActivity();
         yield order.loadOrderConfig();
+        yield order.loadPurchaseRate();
+        yield order.loadFiles();
     }
 
     @action resetView() {
@@ -280,8 +322,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         setup();
     }
 
-    @computed('model.payload.{dropoff,pickup,waypoints}') get routeWaypoints() {
-        const { payload } = this.model;
+    getPayloadCoordinates(payload) {
         let waypoints = [];
         let coordinates = [];
 
@@ -299,11 +340,19 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         return coordinates;
     }
 
+    getPayloadWaypointsAsArray() {
+        if (this.model.payload && this.model.payload.waypoints) {
+            return this.model.payload.waypoints.toArray();
+        }
+
+        return [];
+    }
+
     @action displayOrderRoute() {
-        const payload = this.model.payload;
-        const waypoints = this.routeWaypoints;
         const leafletMap = this.leafletMap;
-        const routingHost = getRoutingHost(payload, payload?.waypoints?.toArray());
+        const payload = this.model.payload;
+        const waypoints = this.getPayloadCoordinates(payload);
+        const routingHost = getRoutingHost(payload, this.getPayloadWaypointsAsArray());
 
         if (!waypoints || waypoints.length < 2 || !leafletMap) {
             return;
@@ -334,7 +383,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             router,
         }).addTo(leafletMap);
 
-        this.routeControl?.on('routesfound', (event) => {
+        this.routeControl.on('routesfound', (event) => {
             const { routes } = event;
 
             this.leafletRoute = routes.firstObject;
@@ -343,7 +392,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         later(
             this,
             () => {
-                leafletMap?.flyToBounds(waypoints, {
+                leafletMap.flyToBounds(waypoints, {
                     paddingBottomRight: [200, 0],
                     maxZoom: 14,
                     animate: true,
@@ -412,9 +461,14 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             order,
             confirm: (modal) => {
                 modal.startLoading();
-                return order.save().then(() => {
-                    this.notifications.success(options.successNotification || this.intl.t('fleet-ops.operations.orders.index.view.update-success', { orderId: order.public_id }));
-                });
+                return order
+                    .save()
+                    .then(() => {
+                        this.notifications.success(options.successNotification || this.intl.t('fleet-ops.operations.orders.index.view.update-success', { orderId: order.public_id }));
+                    })
+                    .catch((error) => {
+                        this.notifications.serverError(error);
+                    });
             },
             decline: () => {
                 order.payload.rollbackAttributes();
@@ -475,114 +529,30 @@ export default class OperationsOrdersIndexViewController extends BaseController 
      * @void
      */
     @action async editOrderRoute(order, options = {}) {
-        options = options === null ? {} : options;
+        const updateRouteDisplay = () => {
+            later(
+                this,
+                () => {
+                    this.displayOrderRoute();
+                },
+                100
+            );
+        };
 
-        await this.modalsManager.done();
-
-        this.modalsManager.show('modals/order-route-form', {
-            title: this.intl.t('fleet-ops.operations.orders.index.view.edit-route-title'),
-            acceptButtonText: 'Save Changes',
-            acceptButtonIcon: 'save',
-            order,
-            userLatitude: this.userLatitude,
-            userLongitude: this.userLongitude,
-            isOptimizingRoute: false,
-            editPlace: async (place) => {
-                await this.modalsManager.done();
-
-                this.contextPanel.focus(place, 'editing', {
-                    args: {
-                        onClose: () => {
-                            this.editOrderRoute(order);
-                        },
-                    },
-                });
+        this.contextPanel.focus(order, 'editingRoute', {
+            args: {
+                isResizable: true,
+                latitude: this.userLatitude,
+                longitude: this.userLongitude,
+                ...options,
             },
-            toggleMultiDropOrder: () => {
-                if (order.payload.isMultiDrop) {
-                    order.payload.waypoints.clear();
-                    order.payload.setProperties({
-                        pickup_uuid: '#',
-                        dropoff_uuid: '#',
-                    });
-                } else {
-                    const waypoint = this.store.createRecord('waypoint');
-                    order.payload.waypoints.pushObject(waypoint);
-
-                    order.payload.setProperties({
-                        pickup_uuid: null,
-                        dropoff_uuid: null,
-                        pickup: null,
-                        dropoff: null,
-                    });
-                }
+            onRouteChanged: () => {
+                updateRouteDisplay();
             },
-            removeWaypoint: (waypoint) => {
-                order.payload.waypoints.removeObject(waypoint);
+            onAfterSave: () => {
+                this.contextPanel.clear();
+                updateRouteDisplay();
             },
-            addWaypoint: () => {
-                const waypoint = this.store.createRecord('waypoint');
-                order.payload.waypoints.pushObject(waypoint);
-            },
-            setWaypointPlace: (index, place) => {
-                if (!order.payload.waypoints?.objectAt(index)) {
-                    return;
-                }
-
-                order.payload.waypoints.objectAt(index).setProperties({
-                    name: place.name,
-                    place_uuid: place.id,
-                    place,
-                });
-            },
-            setPayloadPlace: (prop, place) => {
-                order.payload.set(prop, place);
-            },
-            optimizeRoute: async () => {
-                this.modalsManager.setOption('isOptimizingRoute', true);
-
-                const coordinates = order.payload.payloadCoordinates;
-                const routingHost = getRoutingHost(order.payload, order.payload.waypoints);
-
-                const response = await this.fetch.routing(coordinates, { source: 'any', destination: 'any', annotations: true }, { host: routingHost }).catch(() => {
-                    this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.view.route-error'));
-                    this.modalsManager.setOption('isOptimizingRoute', false);
-                });
-
-                if (response && response.code === 'Ok') {
-                    if (response.waypoints && isArray(response.waypoints)) {
-                        const responseWaypoints = response.waypoints.sortBy('waypoint_index');
-                        const sortedWaypoints = [];
-
-                        for (let i = 0; i < responseWaypoints.length; i++) {
-                            const optimizedWaypoint = responseWaypoints.objectAt(i);
-                            const optimizedWaypointLongitude = optimizedWaypoint.location.firstObject;
-                            const optimizedWaypointLatitude = optimizedWaypoint.location.lastObject;
-                            const waypointModel = findClosestWaypoint(optimizedWaypointLatitude, optimizedWaypointLongitude, order.payload.waypoints);
-
-                            sortedWaypoints.pushObject(waypointModel);
-                        }
-
-                        order.payload.waypoints = sortedWaypoints;
-                    }
-                } else {
-                    this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.view.route-error'));
-                }
-
-                this.modalsManager.setOption('isOptimizingRoute', false);
-            },
-            confirm: (modal) => {
-                modal.startLoading();
-
-                return order.payload.save().then(() => {
-                    this.notifications.success(options.successNotification ?? this.intl.t('fleet-ops.operations.orders.index.view.route-update-success', { orderId: order.public_id }));
-                });
-            },
-            decline: () => {
-                order.payload.rollbackAttributes();
-                this.modalsManager.done();
-            },
-            ...options,
         });
     }
 
@@ -910,5 +880,40 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                 });
             },
         });
+    }
+
+    @action queueFile(file) {
+        // since we have dropzone and upload button within dropzone validate the file state first
+        // as this method can be called twice from both functions
+        if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) {
+            return;
+        }
+
+        // Queue and upload immediatley
+        this.uploadQueue.pushObject(file);
+        this.fetch.uploadFile.perform(
+            file,
+            {
+                path: 'uploads/fleet-ops/order-files',
+                subject_uuid: this.model.id,
+                subject_type: 'fleet-ops:order',
+                type: 'order_file',
+            },
+            (uploadedFile) => {
+                this.model.files.pushObject(uploadedFile);
+                this.uploadQueue.removeObject(file);
+            },
+            () => {
+                this.uploadQueue.removeObject(file);
+                // remove file from queue
+                if (file.queue && typeof file.queue.remove === 'function') {
+                    file.queue.remove(file);
+                }
+            }
+        );
+    }
+
+    @action removeFile(file) {
+        return file.destroyRecord();
     }
 }

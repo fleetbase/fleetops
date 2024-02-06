@@ -94,8 +94,9 @@ class DriverController extends FleetOpsController
                         ->filter()
                         ->toArray();
 
-                    // set the user
-                    $input['company_uuid'] = session('company');
+                    // Get current session company
+                    $company               = Auth::getCompany();
+                    $input['company_uuid'] = session('company', $company->uuid);
                     $input['user_uuid']    = $existingUser->uuid;
                     $input['slug']         = $existingUser->slug;
 
@@ -106,6 +107,18 @@ class DriverController extends FleetOpsController
 
                     // create the profile
                     $driverProfile = Driver::create($input);
+
+                    // Assign user to company
+                    if ($company) {
+                        $existingUser->assignCompany($company);
+
+                        // create company user
+                        CompanyUser::create([
+                            'user_uuid'    => $existingUser->uuid,
+                            'company_uuid' => $company->uuid,
+                            'status'       => $isOrganizationMember ? 'active' : 'pending'
+                        ]);
+                    }
 
                     if (!$isOrganizationMember) {
                         // send invitation to user
@@ -159,7 +172,7 @@ class DriverController extends FleetOpsController
 
                     // Get current session company
                     $company                   = Auth::getCompany();
-                    $userInput['company_uuid'] = $company ? $company->uuid : session('company');
+                    $userInput['company_uuid'] = session('company', $company->uuid);
 
                     // Create user account
                     $user = User::create($userInput);

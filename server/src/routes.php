@@ -40,6 +40,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->get('/', 'DriverController@query');
                     $router->get('{id}', 'DriverController@find');
                     $router->get('{id}/organizations', 'DriverController@listOrganizations');
+                    $router->get('{id}/current-organization', 'DriverController@currentOrganization');
                     $router->put('{id}', 'DriverController@update');
                     $router->delete('{id}', 'DriverController@delete');
                 });

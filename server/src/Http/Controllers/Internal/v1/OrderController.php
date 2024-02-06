@@ -82,6 +82,7 @@ class OrderController extends FleetOpsController
                     $payload   = Utils::get($input, 'payload');
                     $waypoints = Utils::get($input, 'payload.waypoints');
                     $entities  = Utils::get($input, 'payload.entities');
+                    $uploads   = Utils::get($input, 'files', []);
 
                     // save order route & payload with request input
                     $order
@@ -90,6 +91,16 @@ class OrderController extends FleetOpsController
                         ->insertPayload($payload)
                         ->insertWaypoints($waypoints)
                         ->insertEntities($entities);
+
+                    // If order creation includes files assosciate each to this order
+                    if ($uploads) {
+                        $ids = collect($uploads)->pluck('uuid');
+                        $files = File::whereIn('uuid', $ids)->get();
+
+                        foreach ($files as $file) {
+                            $file->setKey($order);
+                        }
+                    }
 
                     // if it's integrated vendor order apply to meta
                     if ($isIntegratedVendorOrder) {

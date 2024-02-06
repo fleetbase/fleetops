@@ -376,7 +376,7 @@ class DriverController extends Controller
         }
 
         // Get the user's company for this driver profile
-        $company = $this->_getDriverCompanyFromUser($user);
+        $company = static::getDriverCompanyFromUser($user);
 
         // Get driver record
         $driver = Driver::where(
@@ -414,7 +414,7 @@ class DriverController extends Controller
         }
 
         // Get the user's company for this driver profile
-        $company = $this->_getDriverCompanyFromUser($user);
+        $company = static::getDriverCompanyFromUser($user);
 
         // generate verification token
         try {
@@ -465,7 +465,7 @@ class DriverController extends Controller
         }
 
         // Get the user's company for this driver profile
-        $company = $this->_getDriverCompanyFromUser($user);
+        $company = static::getDriverCompanyFromUser($user);
 
         // get driver record
         $driver = Driver::where(
@@ -489,19 +489,33 @@ class DriverController extends Controller
     }
 
     /**
-     * Patches phone number with international code.
+     * Gets the current organization/company for the driver
+     *
+     * @param string $id
+     * @param \Illuminate\Http\Request $request
+     * @return \Fleetbase\Http\Resources\Organization
      */
-    public static function phone(string $phone = null): string
+    public function currentOrganization(string $id, Request $request)
     {
-        if ($phone === null) {
-            $phone = request()->input('phone');
+        try {
+            $driver = Driver::findRecordOrFail($id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return response()->apiError('Driver resource not found.', 404);
         }
 
-        if (!Str::startsWith($phone, '+')) {
-            $phone = '+' . $phone;
+        // Get the driver user account
+        $user = $driver->getUser();
+        if (!$user) {
+            return response()->apiError('Driver has not user account.');
         }
 
-        return $phone;
+        // Get the user account company
+        $company = Flow::getCompanySessionForUser($user);
+        if (!$company) {
+            return response()->apiError('No company found for this driver.');
+        }
+
+        return new Organization($company);
     }
 
     /**
@@ -549,23 +563,26 @@ class DriverController extends Controller
             );
         }
 
-        // get the next organization
+        // Get the next organization
         $company = Company::where('public_id', $nextOrganization)->first();
 
         if ($company->uuid === $driver->user->company_uuid) {
-            return response()->json([
-                'error' => 'Driver is already on this organizations session',
-            ]);
+            return response()->apiError('Driver is already on this organizations session.');
         }
 
         if (!CompanyUser::where(['user_uuid' => $driver->user_uuid, 'company_uuid' => $company->uuid])->exists()) {
-            return response()->json([
-                'errors' => ['You do not belong to this organization'],
-            ]);
+            return response()->apiError('You do not belong to this organization');
         }
 
-        $driver->user->assignCompany($company);
-        Auth::setSession($driver->user);
+        // Get the driver user account
+        $user = $driver->getUser();
+        if (!$user) {
+            return response()->apiError('Driver has not user account.');
+        }
+
+        // Assign user to company and update their session
+        $user->assignCompany($company);
+        Auth::setSession($user);
 
         return new Organization($company);
     }
@@ -701,7 +718,13 @@ class DriverController extends Controller
         return response()->json($route);
     }
 
-    private function _getDriverCompanyFromUser(User $user): ?Company
+    /**
+     * Get the drivers current company using their user account.
+     *
+     * @param \Fleetbase\Models\User $user
+     * @return \Fleetbase\Models\Company|null
+     */
+    private static function getDriverCompanyFromUser(User $user): ?Company
     {
         // company defaults to null
         $company = null;
@@ -719,5 +742,21 @@ class DriverController extends Controller
         }
 
         return $company;
+    }
+
+    /**
+     * Patches phone number with international code.
+     */
+    private static function phone(string $phone = null): string
+    {
+        if ($phone === null) {
+            $phone = request()->input('phone');
+        }
+
+        if (!Str::startsWith($phone, '+')) {
+            $phone = '+' . $phone;
+        }
+
+        return $phone;
     }
 }

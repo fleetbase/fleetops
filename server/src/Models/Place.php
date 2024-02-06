@@ -451,8 +451,8 @@ class Place extends Model
             $uuid = data_get($place, 'uuid');
 
             // If $place has a valid uuid and a matching Place object exists, return the uuid
-            if (Str::isUuid($uuid) && $place = Place::where('uuid', $uuid)->first()) {
-                return $place;
+            if (Str::isUuid($uuid) && $existingPlace = Place::where('uuid', $uuid)->first()) {
+                return $existingPlace;
             }
 
             // Otherwise, create a new Place object with the given attributes
