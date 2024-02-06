@@ -6,7 +6,7 @@ use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Support\Utils;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -49,7 +49,7 @@ trait HasTrackingNumber
      *
      * @param string                              $status   the short status update
      * @param string                              $details  the detailed update
-     * @param array|Point                         $location the location of the update, can be either [lat, lng] or a \Grimzy\LaravelMysqlSpatial\Types\Point instance
+     * @param array|Point                         $location the location of the update, can be either [lat, lng] or a \Fleetbase\LaravelMysqlSpatial\Types\Point instance
      * @param string                              $code     the onew word status code
      * @param \Fleetbase\Models\Proof|string|null $proof    resolvable proof of delivery/activity
      *
@@ -84,7 +84,7 @@ trait HasTrackingNumber
      *
      * @param string                              $status   the short status update
      * @param string                              $details  the detailed update
-     * @param array|Point                         $location the location of the update, can be either [lat, lng] or a \Grimzy\LaravelMysqlSpatial\Types\Point instance
+     * @param array|Point                         $location the location of the update, can be either [lat, lng] or a \Fleetbase\LaravelMysqlSpatial\Types\Point instance
      * @param \Fleetbase\Models\Proof|string|null $proof    resolvable proof of delivery/activity
      * @param string                              $code     the onew word status code
      */

@@ -125,7 +125,7 @@ class Polyline
                 $lng = $number * 1 / (10 ** static::$precision); // Using ** operator for pow
             } else {
                 $lat      = $number * 1 / (10 ** static::$precision);
-                $points[] = new \Grimzy\LaravelMysqlSpatial\Types\Point($lat, $lng); // Create Point object and add to the array
+                $points[] = new \Fleetbase\LaravelMysqlSpatial\Types\Point($lat, $lng); // Create Point object and add to the array
             }
 
             $index++;

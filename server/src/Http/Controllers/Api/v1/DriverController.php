@@ -17,6 +17,7 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Requests\SwitchOrganizationRequest;
 use Fleetbase\Http\Resources\Organization;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\User;
@@ -24,7 +25,6 @@ use Fleetbase\Models\UserDevice;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Support\Auth;
 use Geocoder\Laravel\Facades\Geocoder;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -425,6 +425,7 @@ class DriverController extends Controller
             if (app()->bound('sentry')) {
                 app('sentry')->captureException($e);
             }
+
             return response()->apiError('Unable to send SMS Verification code.');
         }
 
