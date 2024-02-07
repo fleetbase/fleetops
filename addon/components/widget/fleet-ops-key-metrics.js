@@ -4,7 +4,7 @@ import { inject as service } from '@ember/service';
 import { action, computed } from '@ember/object';
 import { task } from 'ember-concurrency-decorators';
 
-export default class WidgetKeyMetricsComponent extends Component {
+export default class WidgetFleetOpsKeyMetricsComponent extends Component {
     /**
      * Inject the fetch service.
      *

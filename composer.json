@@ -22,7 +22,7 @@
     ],
     "require": {
         "php": "^8.0",
-        "fleetbase/core-api": "dev-dev-v1.4.0",
+        "fleetbase/core-api": "^1.4.0",
         "barryvdh/laravel-dompdf": "^2.0",
         "brick/geo": "0.7.2",
         "cknow/laravel-money": "^7.1",
@@ -42,12 +42,6 @@
         "phpstan/phpstan": "^1.10.38",
         "symfony/var-dumper": "^5.4.29"
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/fleetbase/core-api"
-        }
-    ],
     "autoload": {
         "psr-4": {
             "Fleetbase\\FleetOps\\": "server/src/"

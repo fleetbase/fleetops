@@ -5,7 +5,7 @@ import config from './config/environment';
 import services from '@fleetbase/ember-core/exports/services';
 import AdminVisibilityControlsComponent from './components/admin/visibility-controls';
 import NavigatorAppConfigComponent from './components/admin/navigator-app';
-import WidgetKeyMetricsComponent from './components/widget/key-metrics';
+import FleetOpsKeyMetricsWidget from './components/widget/fleet-ops-key-metrics';
 
 const { modulePrefix } = config;
 const externalRoutes = ['console', 'extensions'];
@@ -47,7 +47,7 @@ export default class FleetOpsEngine extends Engine {
             name: 'Fleet-Ops Metrics',
             description: 'Key metrics from Fleet-Ops.',
             icon: 'truck',
-            component: WidgetKeyMetricsComponent,
+            component: FleetOpsKeyMetricsWidget,
             grid_options: { w: 12, h: 12, minW: 8, minH: 12 },
             options: {
                 title: 'Fleet-Ops Metrics',
