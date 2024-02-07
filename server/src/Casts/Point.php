@@ -109,9 +109,13 @@ class Point implements CastsAttributes
      *
      * @return bool
      */
-    public static function isRawPoint($data)
+    public static function isRawPoint($data): bool
     {
-        return preg_match('/[\x00-\x1f]/', $data, $matches) === 1;
+        if (is_string($data)) {
+            return preg_match('/[\x00-\x1f]/', $data, $matches) === 1;
+        }
+
+        return false;
     }
 
     /**

@@ -43,7 +43,7 @@ export default class FleetOpsEngine extends Engine {
 
         // widgets for registry
         const KeyMetricsWidgetDefinition = {
-            did: 'fleetops-metrics',
+            widgetId: 'fleet-ops-key-metrics-widget',
             name: 'Fleet-Ops Metrics',
             description: 'Key metrics from Fleet-Ops.',
             icon: 'truck',
