@@ -6,7 +6,7 @@ use Fleetbase\FleetOps\Models\ServiceArea;
 use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
-use Grimzy\LaravelMysqlSpatial\Types\Geometry;
+use Fleetbase\LaravelMysqlSpatial\Types\Geometry;
 
 class PlaceFilter extends Filter
 {

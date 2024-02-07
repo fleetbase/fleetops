@@ -3,7 +3,7 @@
 namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Support\Encoding\Polyline;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 

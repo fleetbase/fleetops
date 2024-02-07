@@ -541,6 +541,7 @@ fleet-ops:
         message: Let's see what you can do to jumpstart operations...
         start-task: Start Task
       key-metrics:
+        title: Fleet-Ops Metrics
         earnings: Earnings
         fuel-expenses: Fuel Expenses
         traveled: Distance Traveled

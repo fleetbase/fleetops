@@ -3,8 +3,8 @@
 namespace Fleetbase\FleetOps\Integrations\Lalamove;
 
 use Fleetbase\FleetOps\Models\Place;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialExpression;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialExpression;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Str;
 
 class LalamoveDeliveryStop

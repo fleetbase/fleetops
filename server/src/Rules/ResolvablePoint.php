@@ -19,7 +19,7 @@ class ResolvablePoint implements Rule
         try {
             $point = Utils::getPointFromMixed($value);
 
-            return $point instanceof \Grimzy\LaravelMysqlSpatial\Types\Point;
+            return $point instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point;
         } catch (\Exception $e) {
             return false;
         }

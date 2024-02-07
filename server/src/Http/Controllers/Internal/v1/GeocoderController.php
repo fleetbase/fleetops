@@ -22,11 +22,11 @@ class GeocoderController extends Controller
         $query  = $request->or(['coordinates', 'query']);
         $single = $request->boolean('single');
 
-        /** @var \Grimzy\LaravelMysqlSpatial\Types\Point $coordinates */
+        /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point $coordinates */
         $coordinates = Utils::getPointFromCoordinates($query);
 
         // if not a valid point error
-        if (!$coordinates instanceof \Grimzy\LaravelMysqlSpatial\Types\Point) {
+        if (!$coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
             return response()->error('Invalid coordinates provided.');
         }
 
