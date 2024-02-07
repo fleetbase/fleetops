@@ -1,7 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { action, computed } from '@ember/object';
 import { task } from 'ember-concurrency-decorators';
 
 export default class WidgetFleetOpsKeyMetricsComponent extends Component {
