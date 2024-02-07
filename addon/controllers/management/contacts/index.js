@@ -327,7 +327,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @void
      */
     @action viewContact(contact) {
-        return this.transitionToRoute('management.contact.index.details', contact);
+        return this.transitionToRoute('management.contacts.index.details', contact);
     }
 
     /**
@@ -336,7 +336,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @void
      */
     @action createContact() {
-        return this.transitionToRoute('management.contact.index.new');
+        return this.transitionToRoute('management.contacts.index.new');
     }
 
     /**
@@ -346,7 +346,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @void
      */
     @action editContact(contact) {
-        return this.transitionToRoute('management.contact.index.edit', contact);
+        return this.transitionToRoute('management.contacts.index.edit', contact);
     }
 
     /**

@@ -5,6 +5,13 @@ import { task } from 'ember-concurrency-decorators';
 
 export default class WidgetFleetOpsKeyMetricsComponent extends Component {
     /**
+     * The widget ID to use for registering.
+     *
+     * @memberof WidgetFleetOpsKeyMetricsComponent
+     */
+    static widgetId = 'fleet-ops-key-metrics-widget';
+
+    /**
      * Inject the fetch service.
      *
      * @memberof WidgetKeyMetricsComponent
