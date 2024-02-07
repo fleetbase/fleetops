@@ -5,8 +5,8 @@ dependencies:
     specifier: ^7.23.2
     version: 7.23.2
   '@fleetbase/ember-core':
-    specifier: ^0.2.3
-    version: 0.2.3(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
+    specifier: ^0.2.4
+    version: 0.2.4(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
   '@fleetbase/ember-ui':
     specifier: ^0.2.10
     version: 0.2.10(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.33)(rollup@4.9.6)(tracked-built-ins@3.3.0)(webpack@5.89.0)
@@ -2399,8 +2399,8 @@ packages:
       - supports-color
     dev: false
 
-  /@fleetbase/ember-core@0.2.3(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0):
-    resolution: {integrity: sha512-IGeIVmrMfHnd9y/wXJHAtHFgitWbhztQOqsHGFiZ8ks7j3LASRNxJTvWNPW4vEOS7hS1qb3CsYRg3dGUUVyhFQ==}
+  /@fleetbase/ember-core@0.2.4(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0):
+    resolution: {integrity: sha512-flOA8Qz/y9gQLEUOw1ZoZ85mRU9+dvcr8aYgDtNc1iLFQcuEwZQcvwviLh3j/xIDcSNKsYL2ACopAXAQP5n7nA==}
     engines: {node: '>= 18'}
     dependencies:
       '@babel/core': 7.23.2
