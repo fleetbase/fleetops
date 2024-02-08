@@ -1,41 +1,42 @@
-<div class="live-map-component {{@wrapperClass}}" {{did-insert this.setupComponent}}>
-    <LeafletMap id={{this.mapId}} class={{@mapClass}} @lat={{this.latitude}} @lng={{this.longitude}} @zoom={{this.zoom}} @zoomControl={{@zoomControl}} @contextmenu={{true}} @contextmenuWidth={{140}} @contextmenuItems={{this.contextMenuItems}} @onLoad={{this.setupMap}} {{will-destroy this.closeChannels}} ...attributes as |layers|>
-        <layers.tile @url={{this.tileSourceUrl}} />
-        {{#if this.visibilityControls.drivers}}
-            {{#each this.drivers as |driver|}}
-                <layers.drift-marker @id={{driver.id}} @rotationAngle={{driver.heading}} @duration={{300}} @icon={{icon iconUrl=(or driver.vehicle_avatar (config "defaultValues.vehicleAvatar")) iconSize=(array 24 24)}} @location={{point-to-coordinates driver.location}} @publicId={{driver.public_id}} @onAdd={{fn this.triggerAction "onDriverAdded" driver}} @onClick={{fn this.triggerAction "onDriverClicked" driver}} as |marker|>
-                    <marker.popup @maxWidth="500" @minWidth="225">
-                        <DriverCard @driver={{driver}} @showCoordinates={{true}} @textClass="text-gray-900 dark:text-gray-100" />
-                    </marker.popup>
-                    <marker.tooltip @permanent={{false}} @sticky={{true}}>{{driver.name}}</marker.tooltip>
-                </layers.drift-marker>
-            {{/each}}
-        {{/if}}
+<div class="live-map-component {{@wrapperClass}}">
+    {{#if this.isReady}}
+        <LeafletMap id={{this.mapId}} class={{@mapClass}} @lat={{this.latitude}} @lng={{this.longitude}} @zoom={{this.zoom}} @zoomControl={{@zoomControl}} @contextmenu={{true}} @contextmenuWidth={{140}} @contextmenuItems={{this.contextMenuItems}} @onLoad={{this.setupMap}} {{will-destroy this.closeChannels}} ...attributes as |layers|>
+            <layers.tile @url={{this.tileSourceUrl}} />
+            {{#if this.visibilityControls.drivers}}
+                {{#each this.drivers as |driver|}}
+                    <layers.drift-marker @id={{driver.id}} @rotationAngle={{driver.heading}} @duration={{300}} @icon={{icon iconUrl=(or driver.vehicle_avatar (config "defaultValues.vehicleAvatar")) iconSize=(array 24 24)}} @location={{point-to-coordinates driver.location}} @publicId={{driver.public_id}} @onAdd={{fn this.triggerAction "onDriverAdded" driver}} @onClick={{fn this.triggerAction "onDriverClicked" driver}} as |marker|>
+                        <marker.popup @maxWidth="500" @minWidth="225">
+                            <DriverCard @driver={{driver}} @showCoordinates={{true}} @textClass="text-gray-900 dark:text-gray-100" />
+                        </marker.popup>
+                        <marker.tooltip @permanent={{false}} @sticky={{true}}>{{driver.name}}</marker.tooltip>
+                    </layers.drift-marker>
+                {{/each}}
+            {{/if}}
 
-        {{#if this.visibilityControls.vehicles}}
-            {{#each this.vehicles as |vehicle|}}
-                <layers.drift-marker @id={{vehicle.id}} @rotationAngle={{vehicle.heading}} @duration={{300}} @icon={{icon iconUrl=(or vehicle.avatar_url (config "defaultValues.vehicleAvatar")) iconSize=(array 24 24)}} @location={{point-to-coordinates vehicle.location}} @publicId={{vehicle.public_id}} @onAdd={{fn this.triggerAction "onVehicleAdded" vehicle}} @onClick={{fn this.triggerAction "onVehicleClicked" vehicle}} as |marker|>
-                    <marker.tooltip @permanent={{false}} @sticky={{true}}>
-                        <div>{{vehicle.displayName}}</div>
-                        <div>{{if vehicle.online "Online" "Offline"}}</div>
-                    </marker.tooltip>
-                </layers.drift-marker>
-            {{/each}}
-        {{/if}}
+            {{#if this.visibilityControls.vehicles}}
+                {{#each this.vehicles as |vehicle|}}
+                    <layers.drift-marker @id={{vehicle.id}} @rotationAngle={{vehicle.heading}} @duration={{300}} @icon={{icon iconUrl=(or vehicle.avatar_url (config "defaultValues.vehicleAvatar")) iconSize=(array 24 24)}} @location={{point-to-coordinates vehicle.location}} @publicId={{vehicle.public_id}} @onAdd={{fn this.triggerAction "onVehicleAdded" vehicle}} @onClick={{fn this.triggerAction "onVehicleClicked" vehicle}} as |marker|>
+                        <marker.tooltip @permanent={{false}} @sticky={{true}}>
+                            <div>{{vehicle.displayName}}</div>
+                            <div>{{if vehicle.online "Online" "Offline"}}</div>
+                        </marker.tooltip>
+                    </layers.drift-marker>
+                {{/each}}
+            {{/if}}
 
-        {{#if this.visibilityControls.places}}
-            {{#each this.places as |place|}}
-                <layers.marker @id={{place.id}} @icon={{icon iconUrl="/engines-dist/images/building-marker.png" iconSize=(array 16 16)}} @location={{point-to-coordinates place.location}} @riseOnHover={{true}} @title={{place.address}} @alt={{place.address}} @onAdd={{fn this.triggerAction "onPlaceAdded" place}} @onClick={{fn this.triggerAction "onPlaceClicked" place}} as |marker|>
-                    <marker.popup>
-                        <div>{{place.address}}</div>
-                        <div>{{format-point place.location}}</div>
-                    </marker.popup>
-                    <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="bottom">{{place.name}}</marker.tooltip>
-                </layers.marker>
-            {{/each}}
-        {{/if}}
+            {{#if this.visibilityControls.places}}
+                {{#each this.places as |place|}}
+                    <layers.marker @id={{place.id}} @icon={{icon iconUrl="/engines-dist/images/building-marker.png" iconSize=(array 16 16)}} @location={{point-to-coordinates place.location}} @riseOnHover={{true}} @title={{place.address}} @alt={{place.address}} @onAdd={{fn this.triggerAction "onPlaceAdded" place}} @onClick={{fn this.triggerAction "onPlaceClicked" place}} as |marker|>
+                        <marker.popup>
+                            <div>{{place.address}}</div>
+                            <div>{{format-point place.location}}</div>
+                        </marker.popup>
+                        <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="bottom">{{place.name}}</marker.tooltip>
+                    </layers.marker>
+                {{/each}}
+            {{/if}}
 
-        {{!-- {{#if this.isRoutesVisible}}
+            {{!-- {{#if this.isRoutesVisible}}
             {{#each this.routes as |route|}}
                 <layers.polyline @locations={{route.details.coordinates}} />
 
@@ -67,22 +68,27 @@
             {{/each}}
         {{/if}} --}}
 
-        <layers.draw-control @position="topright" @draw={{hash marker=false circlemarker=false circle=false polyline=false}} @onDrawDrawstop={{fn this.triggerAction "onDrawDrawstop"}} @onDrawDeleted={{fn this.triggerAction "onDrawDeleted"}} @onDrawEdited={{fn this.triggerAction "onDrawEdited"}} @onDrawDeletestart={{fn this.triggerAction "onDrawDeletestart"}} @onDrawEditstop={{fn this.triggerAction "onDrawEditstop"}} @onDrawControlCreated={{fn this.triggerAction "onDrawControlCreated"}} @onDrawFeatureGroupCreated={{fn this.triggerAction "onDrawFeatureGroupCreated"}} />
+            <layers.draw-control @position="topright" @draw={{hash marker=false circlemarker=false circle=false polyline=false}} @onDrawDrawstop={{fn this.triggerAction "onDrawDrawstop"}} @onDrawDeleted={{fn this.triggerAction "onDrawDeleted"}} @onDrawEdited={{fn this.triggerAction "onDrawEdited"}} @onDrawDeletestart={{fn this.triggerAction "onDrawDeletestart"}} @onDrawEditstop={{fn this.triggerAction "onDrawEditstop"}} @onDrawControlCreated={{fn this.triggerAction "onDrawControlCreated"}} @onDrawFeatureGroupCreated={{fn this.triggerAction "onDrawFeatureGroupCreated"}} />
 
-        {{#each this.activeServiceAreas as |serviceArea|}}
-            <layers.polygon @id={{serviceArea.id}} @record={{serviceArea}} @locations={{serviceArea.bounds}} @fillColor={{serviceArea.color}} @color={{serviceArea.stroke_color}} @onAdd={{fn this.triggerAction "onServiceAreaLayerAdded" serviceArea}} as |polygon|>
-                <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{serviceArea.name}} {{t "fleet-ops.component.live-map.service-area"}}</polygon.tooltip>
-            </layers.polygon>
-
-            {{#each serviceArea.zones as |zone|}}
-                <layers.polygon @id={{zone.id}} @record={{zone}} @locations={{zone.locations}} @fillColor={{zone.color}} @color={{zone.stroke_color}} @onAdd={{fn this.triggerAction "onZoneLayerAdd" zone}} as |polygon|>
-                    <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{zone.name}} {{t "fleet-ops.component.live-map.zone"}}</polygon.tooltip>
+            {{#each this.activeServiceAreas as |serviceArea|}}
+                <layers.polygon @id={{serviceArea.id}} @record={{serviceArea}} @locations={{serviceArea.bounds}} @fillColor={{serviceArea.color}} @color={{serviceArea.stroke_color}} @onAdd={{fn this.triggerAction "onServiceAreaLayerAdded" serviceArea}} as |polygon|>
+                    <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{serviceArea.name}} {{t "fleet-ops.component.live-map.service-area"}}</polygon.tooltip>
                 </layers.polygon>
-            {{/each}}
-        {{/each}}
 
-        {{yield layers}}
-    </LeafletMap>
+                {{#each serviceArea.zones as |zone|}}
+                    <layers.polygon @id={{zone.id}} @record={{zone}} @locations={{zone.locations}} @fillColor={{zone.color}} @color={{zone.stroke_color}} @onAdd={{fn this.triggerAction "onZoneLayerAdd" zone}} as |polygon|>
+                        <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{zone.name}} {{t "fleet-ops.component.live-map.zone"}}</polygon.tooltip>
+                    </layers.polygon>
+                {{/each}}
+            {{/each}}
+
+            {{yield layers}}
+        </LeafletMap>
+    {{else}}
+        <div class="flex w-full h-full items-center justify-center">
+            <Spinner />
+        </div>
+    {{/if}}
 </div>
 
 {{#if this.isDataLoaded}}
