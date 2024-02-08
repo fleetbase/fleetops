@@ -5,7 +5,6 @@ import { action, set } from '@ember/object';
 import { isArray } from '@ember/array';
 import { dasherize, camelize, classify } from '@ember/string';
 import { singularize } from 'ember-inflector';
-import { alias } from '@ember/object/computed';
 import { later } from '@ember/runloop';
 import { allSettled } from 'rsvp';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
@@ -292,7 +291,7 @@ export default class LiveMapComponent extends Component {
      * @action
      * @function
      */
-   setupComponent() {
+    setupComponent() {
         // trigger that initial coordinates have been set
         this.universe.trigger('fleet-ops.live-map.loaded', this);
 

@@ -91,9 +91,9 @@ export default class LocationService extends Service {
                 });
             }
 
-            if (isArray(coordiantes)) {
-                const validCoordinates = coordinates.filter((point) => point.cordinates[0] !== 0);
-                const [longitude, latitude] = getWithDefault(validCoordinates, '0.coordiantes', [0, 0]);
+            if (isArray(coordinates)) {
+                const validCoordinates = coordinates.filter((point) => point.coordinates[0] !== 0);
+                const [longitude, latitude] = getWithDefault(validCoordinates, '0.coordinates', [0, 0]);
                 const coordinates = {
                     latitude,
                     longitude,
