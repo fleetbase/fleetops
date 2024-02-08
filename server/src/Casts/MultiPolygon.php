@@ -3,9 +3,9 @@
 namespace Fleetbase\FleetOps\Casts;
 
 use Fleetbase\FleetOps\Support\Utils;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialExpression;
-use Grimzy\LaravelMysqlSpatial\Types\GeometryInterface;
-use Grimzy\LaravelMysqlSpatial\Types\MultiPolygon as SpatialMultiPolygon;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialExpression;
+use Fleetbase\LaravelMysqlSpatial\Types\GeometryInterface;
+use Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon as SpatialMultiPolygon;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 
 class MultiPolygon implements CastsAttributes

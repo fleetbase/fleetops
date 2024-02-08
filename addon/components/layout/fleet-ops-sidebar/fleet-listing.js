@@ -105,12 +105,12 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
     listenForChanges() {
         // when a vehicle is assigned/ or unassigned reload
         this.universe.on('fleet.vehicle.assigned', () => {
-            this.loadFleetsWithVehicles();
+            this.fetchFleets.perform();
         });
 
         // when a vehicle is assigned/ or unassigned reload
         this.universe.on('fleet.vehicle.unassigned', () => {
-            this.loadFleetsWithVehicles();
+            this.fetchFleets.perform();
         });
     }
 

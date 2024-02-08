@@ -5,8 +5,8 @@ dependencies:
     specifier: ^7.23.2
     version: 7.23.2
   '@fleetbase/ember-core':
-    specifier: ^0.2.1
-    version: 0.2.1(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
+    specifier: ^0.2.4
+    version: 0.2.4(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
   '@fleetbase/ember-ui':
     specifier: ^0.2.10
     version: 0.2.10(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.33)(rollup@4.9.6)(tracked-built-ins@3.3.0)(webpack@5.89.0)
@@ -1900,7 +1900,7 @@ packages:
       '@ember/edition-utils': 1.2.0
       '@ember/string': 3.1.1
       '@embroider/macros': 1.13.4
-      ember-auto-import: 2.6.3(webpack@5.89.0)
+      ember-auto-import: 2.7.2(webpack@5.89.0)
       ember-cli-babel: 7.26.11
     transitivePeerDependencies:
       - '@glint/template'
@@ -2399,8 +2399,8 @@ packages:
       - supports-color
     dev: false
 
-  /@fleetbase/ember-core@0.2.1(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0):
-    resolution: {integrity: sha512-Girrpe25G7LhXhZfIF+qq2X/DF4mvfSFFv3Qeh5WFxMChMDwZwnX6FVg0wP3J4MOYZMveYdArOb9E6v7sS6Xjw==}
+  /@fleetbase/ember-core@0.2.4(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0):
+    resolution: {integrity: sha512-flOA8Qz/y9gQLEUOw1ZoZ85mRU9+dvcr8aYgDtNc1iLFQcuEwZQcvwviLh3j/xIDcSNKsYL2ACopAXAQP5n7nA==}
     engines: {node: '>= 18'}
     dependencies:
       '@babel/core': 7.23.2
@@ -4384,7 +4384,7 @@ packages:
       glob: 7.2.3
       pkg-up: 2.0.0
       reselect: 3.0.1
-      resolve: 1.22.2
+      resolve: 1.22.8
 
   /babel-plugin-module-resolver@5.0.0:
     resolution: {integrity: sha512-g0u+/ChLSJ5+PzYwLwP8Rp8Rcfowz58TJNCe+L/ui4rpzE/mg//JVX0EWBUYoxaextqnwuGHzfGp2hh0PPV25Q==}
@@ -4394,7 +4394,7 @@ packages:
       glob: 8.1.0
       pkg-up: 3.1.0
       reselect: 4.1.8
-      resolve: 1.22.2
+      resolve: 1.22.8
     dev: false
 
   /babel-plugin-polyfill-corejs2@0.4.8(@babel/core@7.23.2):
@@ -6903,7 +6903,6 @@ packages:
       - '@glint/template'
       - supports-color
       - webpack
-    dev: false
 
   /ember-basic-dropdown@7.3.0(@babel/core@7.23.2)(@ember/string@3.1.1)(ember-source@5.4.0)(webpack@5.89.0):
     resolution: {integrity: sha512-XzLd1noCrHjG7O35HpZ+ljj7VwPPqon7svbvNJ2U7421e00eXBUVcCioGJFo1NnnPkjc14FTDc5UwktbGSbJdQ==}
@@ -7368,7 +7367,7 @@ packages:
       debug: 4.3.4
       execa: 4.1.0
       fs-extra: 9.1.0
-      resolve: 1.22.2
+      resolve: 1.22.8
       rsvp: 4.8.5
       semver: 7.5.4
       stagehand: 1.0.1
@@ -10172,7 +10171,7 @@ packages:
       heimdalljs: 0.2.6
       heimdalljs-logger: 0.1.10
       path-root: 0.1.1
-      resolve: 1.22.2
+      resolve: 1.22.8
       resolve-package-path: 1.2.7
     transitivePeerDependencies:
       - supports-color
@@ -13466,7 +13465,7 @@ packages:
     resolution: {integrity: sha512-fVEKHGeK85bGbVFuwO9o1aU0n3vqQGrezPc51JGu9UTXpFQfWq5qCeKxyaRUSvephs+06c5j5rPq/dzHGEo8+Q==}
     dependencies:
       path-root: 0.1.1
-      resolve: 1.22.2
+      resolve: 1.22.8
 
   /resolve-package-path@2.0.0:
     resolution: {integrity: sha512-/CLuzodHO2wyyHTzls5Qr+EFeG6RcW4u6//gjYvUfcfyuplIX1SSccU+A5A9A78Gmezkl3NBkFAMxLbzTY9TJA==}
@@ -13480,7 +13479,7 @@ packages:
     engines: {node: 10.* || >= 12}
     dependencies:
       path-root: 0.1.1
-      resolve: 1.22.2
+      resolve: 1.22.8
 
   /resolve-package-path@4.0.3:
     resolution: {integrity: sha512-SRpNAPW4kewOaNUt8VPqhJ0UMxawMwzJD8V7m1cJfdSTK9ieZwS6K7Dabsm4bmLFM96Z5Y/UznrpG5kt1im8yA==}
@@ -13590,7 +13589,7 @@ packages:
       '@types/resolve': 0.0.8
       builtin-modules: 3.3.0
       is-module: 1.0.0
-      resolve: 1.22.2
+      resolve: 1.22.8
       rollup: 4.9.6
       rollup-pluginutils: 2.8.2
     dev: false

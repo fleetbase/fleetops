@@ -6,6 +6,7 @@ use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -14,7 +15,6 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -171,7 +171,7 @@ class Place extends Model
     /**
      * Returns a Point instance from the location of the model.
      */
-    public function getLocationAsPoint(): \Grimzy\LaravelMysqlSpatial\Types\Point
+    public function getLocationAsPoint(): \Fleetbase\LaravelMysqlSpatial\Types\Point
     {
         return Utils::getPointFromCoordinates($this->location);
     }
@@ -218,7 +218,7 @@ class Place extends Model
         }
 
         if ($coordinates = $address->getCoordinates()) {
-            $this->setAttribute('location', new \Grimzy\LaravelMysqlSpatial\Types\Point($coordinates->getLatitude(), $coordinates->getLongitude()));
+            $this->setAttribute('location', new \Fleetbase\LaravelMysqlSpatial\Types\Point($coordinates->getLatitude(), $coordinates->getLongitude()));
         }
 
         return $this;
@@ -245,7 +245,7 @@ class Place extends Model
         $attributes['city']         = $address->getLocality();
         $attributes['building']     = $address->getStreetNumber();
         $attributes['country']      = $address->getCountry() instanceof \Geocoder\Model\Country ? $address->getCountry()->getCode() : null;
-        $attributes['location']     = new \Grimzy\LaravelMysqlSpatial\Types\Point($coordinates->getLatitude(), $coordinates->getLongitude());
+        $attributes['location']     = new \Fleetbase\LaravelMysqlSpatial\Types\Point($coordinates->getLatitude(), $coordinates->getLongitude());
 
         return $attributes;
     }
@@ -303,7 +303,7 @@ class Place extends Model
      *
      * @return \Fleetbase\Models\Place|null
      */
-    public static function createFromReverseGeocodingLookup(\Grimzy\LaravelMysqlSpatial\Types\Point $point, $saveInstance = false): ?Place
+    public static function createFromReverseGeocodingLookup(\Fleetbase\LaravelMysqlSpatial\Types\Point $point, $saveInstance = false): ?Place
     {
         $results = Geocoding::reverseFromCoordinates($point->getLat(), $point->getLng());
         $place   = $results->first();
@@ -322,8 +322,8 @@ class Place extends Model
     /**
      * Creates a new Place instance from given coordinates.
      *
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point|array $coordinates
-     * @param bool                                          $saveInstance
+     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point|array $coordinates
+     * @param bool                                             $saveInstance
      *
      * @return \Fleetbase\Models\Place|null
      */
@@ -332,15 +332,15 @@ class Place extends Model
         $instance = new Place();
         $point    = Utils::getPointFromMixed($coordinates);
 
-        if ($coordinates instanceof \Grimzy\LaravelMysqlSpatial\Types\Point) {
+        if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
             $latitude               = $coordinates->getLat();
             $longitude              = $coordinates->getLng();
-        } elseif ($point instanceof \Grimzy\LaravelMysqlSpatial\Types\Point) {
+        } elseif ($point instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
             $latitude               = $point->getLat();
             $longitude              = $point->getLng();
         }
 
-        $instance->setAttribute('location', new \Grimzy\LaravelMysqlSpatial\Types\Point($latitude, $longitude));
+        $instance->setAttribute('location', new \Fleetbase\LaravelMysqlSpatial\Types\Point($latitude, $longitude));
         $instance->fill($attributes);
 
         $results = \Geocoder\Laravel\Facades\Geocoder::reverse($latitude, $longitude)->get();
@@ -361,8 +361,8 @@ class Place extends Model
     /**
      * Inserts a new place into the database using latitude and longitude coordinates.
      *
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point|array        $coordinates
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point|string|array $coordinates the coordinates to use for the new place
+     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point|array        $coordinates
+     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point|string|array $coordinates the coordinates to use for the new place
      *
      * @return mixed returns the UUID of the new place on success or false on failure
      */
@@ -371,11 +371,11 @@ class Place extends Model
         $attributes = array_merge([], $attributes);
         $point      = Utils::getPointFromMixed($coordinates);
 
-        if ($coordinates instanceof \Grimzy\LaravelMysqlSpatial\Types\Point) {
+        if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
             $attributes['location'] = $coordinates;
             $latitude               = $coordinates->getLat();
             $longitude              = $coordinates->getLng();
-        } elseif ($point instanceof \Grimzy\LaravelMysqlSpatial\Types\Point) {
+        } elseif ($point instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
             $attributes['location'] = $point;
             $latitude               = $point->getLat();
             $longitude              = $point->getLng();

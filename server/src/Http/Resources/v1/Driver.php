@@ -4,8 +4,8 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 
 class Driver extends FleetbaseResource
 {
