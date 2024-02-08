@@ -11,26 +11,66 @@ export default class AdminAvatarManagementComponent extends Component {
      */
     @service fileQueue;
 
+    /**
+     * Inject the `fetch` service for making network requests.
+     *
+     * @var {Service}
+     */
     @service fetch;
 
+    /**
+     * Inject the `notifications` service for handling notifications.
+     *
+     * @var {Service}
+     */
     @service notifications;
 
+    /**
+     * Tracks the files in the upload queue.
+     *
+     * @var {Array}
+     */
     @tracked uploadQueue = [];
 
+    /**
+     * Tracks the selected category for avatar management.
+     *
+     * @var {string|null}
+     */
     @tracked selectedCategory = null;
 
+    /**
+     * Tracks the filtered files based on the selected category.
+     *
+     * @var {Array}
+     */
     @tracked filteredFiles = [];
 
+    /**
+     * Initializes the component with an empty avatar object.
+     *
+     * @constructor
+     */
     constructor() {
         super(...arguments);
         this.avatar = { files: [] };
     }
 
+    /**
+     * Action triggered when a category is selected.
+     *
+     * @param {string} category - The selected category.
+     */
     @action selectCategory(category) {
         this.selectedCategory = category;
         this.loadFilesByType.perform();
     }
 
+    /**
+     * Action triggered when a file is queued for upload.
+     *
+     * @param {File} file - The file to be queued.
+     */
     @action queueFile(file) {
         if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) {
             return;
@@ -76,10 +116,23 @@ export default class AdminAvatarManagementComponent extends Component {
         );
     }
 
+    /**
+     * Action triggered when a file is removed.
+     *
+     * @param {File} file - The file to be removed.
+     * @returns {Promise} - A promise representing the file destruction operation.
+     */
     @action removeFile(file) {
         return file.destroyRecord();
     }
 
+    /**
+     * Task that loads files based on the selected category.
+     *
+     * @task
+     * @generator
+     * @yields {Array} - The filtered files based on the selected category.
+     */
     @task *loadFilesByType() {
         let type = {
             vehicles: 'vehicle_avatar',
