@@ -397,9 +397,11 @@ class DriverController extends FleetOpsController
         }
 
         // Generate verification token
-        VerificationCode::generateSmsVerificationFor($user, 'driver_login', function ($verification) {
-            return 'Your ' . config('app.name') . ' verification code is ' . $verification->code;
-        });
+        VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
+            'messageCallback' => function ($verification) {
+                return 'Your ' . config('app.name') . ' verification code is ' . $verification->code;
+            }
+        ]);
 
         return response()->json(['status' => 'OK']);
     }

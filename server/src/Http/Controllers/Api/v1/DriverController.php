@@ -418,9 +418,11 @@ class DriverController extends Controller
 
         // generate verification token
         try {
-            VerificationCode::generateSmsVerificationFor($user, 'driver_login', function ($verification) use ($company) {
-                return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
-            });
+            VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
+                'messageCallback' => function ($verification) use ($company) {
+                    return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
+                }
+            ]);
         } catch (\Throwable $e) {
             if (app()->bound('sentry')) {
                 app('sentry')->captureException($e);
