@@ -23,7 +23,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
         | End-user API routes, these are routes that the SDK and applications will interface with, and require API credentials.
         */
         Route::prefix('v1')
-            ->middleware(['fleetbase.api', \Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class])
+            ->middleware(['fleetbase.api', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class])
             ->namespace('Api\v1')
             ->group(function ($router) {
                 // drivers routes
@@ -194,7 +194,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 });
 
                 // auth:sanctum
-                $router->group(['middleware' => ['fleetbase.protected', \Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]], function () use ($router) {
+                $router->group(['middleware' => ['fleetbase.protected', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]], function () use ($router) {
                     $router->group(['prefix' => 'orders'], function () use ($router) {
                         $router->post('/', 'Api\v1\OrderController@create');
                         $router->get('/', 'Api\v1\OrderController@query');
@@ -249,7 +249,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 );
 
                 $router->group(
-                    ['prefix' => 'v1', 'namespace' => 'v1', 'middleware' => ['fleetbase.protected', \Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]],
+                    ['prefix' => 'v1', 'namespace' => 'v1', 'middleware' => ['fleetbase.protected', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]],
                     function ($router) {
                         $router->fleetbaseRoutes(
                             'contacts',

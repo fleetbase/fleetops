@@ -16,7 +16,7 @@ class FleetOpsLookupController extends Controller
     /**
      * Returns a collection of polymorphic resources as JSON.
      *
-     * @param \Illuminate\Http\Request $request the HTTP request object
+     * @param Request $request the HTTP request object
      *
      * @return \Illuminate\Http\Response the JSON response with the polymorphic resources
      */

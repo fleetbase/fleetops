@@ -144,7 +144,7 @@ class TrackingStatus extends Model
         return $string;
     }
 
-    public static function insertGetUuid($values = [], TrackingNumber $trackingNumber = null)
+    public static function insertGetUuid($values = [], ?TrackingNumber $trackingNumber = null)
     {
         $instance   = new static();
         $fillable   = $instance->getFillable();

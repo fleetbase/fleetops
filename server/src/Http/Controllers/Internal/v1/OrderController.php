@@ -94,7 +94,7 @@ class OrderController extends FleetOpsController
 
                     // If order creation includes files assosciate each to this order
                     if ($uploads) {
-                        $ids = collect($uploads)->pluck('uuid');
+                        $ids   = collect($uploads)->pluck('uuid');
                         $files = File::whereIn('uuid', $ids)->get();
 
                         foreach ($files as $file) {
@@ -339,7 +339,7 @@ class OrderController extends FleetOpsController
     public function start(Request $request)
     {
         /**
-         * @var \Fleetbase\FleetOps\Models\Order
+         * @var Order
          */
         $order = Order::where('uuid', $request->input('order'))->withoutGlobalScopes()->first();
 
@@ -352,12 +352,12 @@ class OrderController extends FleetOpsController
         }
 
         /**
-         * @var \Fleetbase\FleetOps\Models\Driver
+         * @var Driver
          */
         $driver = Driver::where('uuid', $order->driver_assigned_uuid)->withoutGlobalScopes()->first();
 
         /**
-         * @var \Fleetbase\FleetOps\Models\Payload
+         * @var Payload
          */
         $payload = Payload::where('uuid', $order->payload_uuid)->withoutGlobalScopes()->with(['waypoints', 'waypointMarkers', 'entities'])->first();
 

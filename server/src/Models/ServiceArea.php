@@ -18,8 +18,8 @@ use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Support\Arr;
 
 /**
- * @var \Fleetbase\LaravelMysqlSpatial\Types\Point        $location
- * @var \Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon $border
+ * @var Point        $location
+ * @var MultiPolygon $border
  */
 class ServiceArea extends Model
 {
@@ -130,10 +130,10 @@ class ServiceArea extends Model
     /**
      * Creates a polygon from a given point and radius.
      *
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the polygon
-     * @param int                                        $meters The radius in meters for the polygon. Default is 500 meters.
+     * @param Point $point  the central point from which to create the polygon
+     * @param int   $meters The radius in meters for the polygon. Default is 500 meters.
      *
-     * @return \Fleetbase\LaravelMysqlSpatial\Types\Polygon returns a Polygon object
+     * @return Polygon returns a Polygon object
      */
     public static function createPolygonFromPoint(Point $point, int $meters = 500): Polygon
     {
@@ -150,10 +150,10 @@ class ServiceArea extends Model
     /**
      * Creates a multi-polygon from a given point and radius.
      *
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the multi-polygon
-     * @param int                                        $meters The radius in meters for the multi-polygon. Default is 500 meters.
+     * @param Point $point  the central point from which to create the multi-polygon
+     * @param int   $meters The radius in meters for the multi-polygon. Default is 500 meters.
      *
-     * @return \Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon returns a MultiPolygon object
+     * @return MultiPolygon returns a MultiPolygon object
      */
     public static function createMultiPolygonFromPoint(Point $point, int $meters = 500): MultiPolygon
     {
@@ -180,7 +180,7 @@ class ServiceArea extends Model
     /**
      * Retrieves the location attribute as a point.
      *
-     * @return \Fleetbase\LaravelMysqlSpatial\Types\Point returns the centroid of the border as a Point object
+     * @return Point returns the centroid of the border as a Point object
      */
     public function getLocationAttribute(): Point
     {

@@ -13,7 +13,7 @@ class GeocoderController extends Controller
     /**
      * Reverse geocodes the given coordinates and returns the results as JSON.
      *
-     * @param \Illuminate\Http\Request $request the HTTP request object
+     * @param Request $request the HTTP request object
      *
      * @return \Illuminate\Http\Response the JSON response with the geocoded results
      */
@@ -57,7 +57,7 @@ class GeocoderController extends Controller
     /**
      * Geocodes the given query and returns the results as JSON.
      *
-     * @param \Illuminate\Http\Request $request the HTTP request object
+     * @param Request $request the HTTP request object
      *
      * @return \Illuminate\Http\Response the JSON response with the geocoded results
      */

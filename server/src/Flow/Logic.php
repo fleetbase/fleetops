@@ -1,7 +1,7 @@
-<?php 
+<?php
 
 namespace Fleetbase\FleetOps\Flow;
 
-class Logic {
-    
+class Logic
+{
 }

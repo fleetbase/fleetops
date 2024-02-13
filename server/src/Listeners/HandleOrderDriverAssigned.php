@@ -22,7 +22,7 @@ class HandleOrderDriverAssigned implements ShouldQueue
      */
     public function handle(OrderDriverAssigned $event)
     {
-        /** @var \Fleetbase\FleetOps\Models\Order $order */
+        /** @var Order $order */
         $order = $event->getModelRecord();
 
         // halt if unable to resolve order record from event
@@ -30,7 +30,7 @@ class HandleOrderDriverAssigned implements ShouldQueue
             return;
         }
 
-        /** @var \Fleetbase\FleetOps\Models\Driver */
+        /** @var Driver */
         $driver = Driver::where('uuid', $order->driver_assigned_uuid)->withoutGlobalScopes()->first();
         $order->setRelation('driverAssigned', $driver);
 

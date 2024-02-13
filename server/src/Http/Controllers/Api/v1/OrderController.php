@@ -423,7 +423,7 @@ class OrderController extends Controller
     {
         $results = Order::queryWithRequest($request, function (&$query, $request) {
             $query->where('company_uuid', session('company'));
-            
+
             if ($request->has('payload')) {
                 $query->whereHas('payload', function ($q) use ($request) {
                     $q->where('public_id', $request->input('payload'));
@@ -691,7 +691,7 @@ class OrderController extends Controller
     /**
      * Schedules an order using date and time.
      *
-     * @param \Fleetbase\FleetOps\Http\Requests\ScheduleOrderRequest
+     * @param ScheduleOrderRequest
      *
      * @return \Fleetbase\Http\Resources\v1\Order
      */
@@ -835,7 +835,7 @@ class OrderController extends Controller
 
         // if instance of order is passed directly to this method
         if ($id instanceof Order) {
-            /** @var \Fleetbase\FleetOps\Models\Order $order */
+            /** @var Order $order */
             $order = $id;
         }
 
@@ -1112,7 +1112,7 @@ class OrderController extends Controller
      *
      * @return void
      */
-    public function captureQrScan(string $id, string $subjectId = null, Request $request)
+    public function captureQrScan(string $id, ?string $subjectId = null, Request $request)
     {
         $code    = $request->input('code');
         $data    = $request->input('data', []);
@@ -1183,7 +1183,7 @@ class OrderController extends Controller
      *
      * @return void
      */
-    public function captureSignature(string $id, string $subjectId = null, Request $request)
+    public function captureSignature(string $id, ?string $subjectId = null, Request $request)
     {
         $disk         = $request->input('disk', config('filesystems.default'));
         $bucket       = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));

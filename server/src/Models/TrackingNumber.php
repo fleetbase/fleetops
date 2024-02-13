@@ -223,7 +223,7 @@ class TrackingNumber extends Model
         throw (new \Illuminate\Database\Eloquent\ModelNotFoundException())->setModel(static::class, $id);
     }
 
-    public function updateOwnerStatus(TrackingStatus $trackingStatus = null)
+    public function updateOwnerStatus(?TrackingStatus $trackingStatus = null)
     {
         $trackingStatus = $trackingStatus ?? $this->load(['status'])->getRelationValue('status');
         // update status on owner
@@ -239,7 +239,7 @@ class TrackingNumber extends Model
         return $this;
     }
 
-    public static function insertGetUuid($values = [], Model $owner = null)
+    public static function insertGetUuid($values = [], ?Model $owner = null)
     {
         $instance   = new static();
         $fillable   = $instance->getFillable();

@@ -48,8 +48,8 @@ class SimulateDrivingRoute implements ShouldQueue
     /**
      * Create a new job instance.
      *
-     * @param \Fleetbase\FleetOps\Models\Driver $driver    the driver for whom the route is being simulated
-     * @param array                             $waypoints the waypoints that make up the route
+     * @param Driver $driver    the driver for whom the route is being simulated
+     * @param array  $waypoints the waypoints that make up the route
      */
     public function __construct(Driver $driver, array $waypoints = [])
     {

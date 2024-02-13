@@ -24,7 +24,7 @@ class HandleOrderDispatchFailed implements ShouldQueue
         /** @var \Fleetbase\FleetOps\Models\Order $order */
         $order = $event->getModelRecord();
 
-        /** @var \Fleetbase\Models\User */
+        /** @var User */
         $createdBy = User::where('uuid', $order->created_by_uuid)->first();
 
         // notify driver assigned order was canceled

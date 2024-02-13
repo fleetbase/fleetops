@@ -76,7 +76,7 @@ class Lalamove
      */
     private ?IntegratedVendor $integratedVendor = null;
 
-    public function __construct(string $apiKey = null, string $apiSecret = null, bool $sandbox = false, $market = null)
+    public function __construct(?string $apiKey = null, ?string $apiSecret = null, bool $sandbox = false, $market = null)
     {
         if ($apiKey === null) {
             $apiKey = config('services.lalamove.key');
@@ -109,7 +109,7 @@ class Lalamove
         );
     }
 
-    public static function instance(string $apiKey = null, string $apiSecret = null, bool $sandbox = false, $market = null): Lalamove
+    public static function instance(?string $apiKey = null, ?string $apiSecret = null, bool $sandbox = false, $market = null): Lalamove
     {
         return new static($apiKey, $apiSecret, $market, $sandbox);
     }
@@ -169,7 +169,7 @@ class Lalamove
         return $this;
     }
 
-    public static function createServiceQuoteFromQuotation($quotation, $requestId = null, $integratedVendor = null, Payload $payload = null): ServiceQuote
+    public static function createServiceQuoteFromQuotation($quotation, $requestId = null, $integratedVendor = null, ?Payload $payload = null): ServiceQuote
     {
         $serviceQuote = static::serviceQuoteFromQuotation($quotation, $requestId, $integratedVendor, $payload);
         $serviceQuote->save();
@@ -182,7 +182,7 @@ class Lalamove
         return $serviceQuote->load(['items']);
     }
 
-    public static function serviceQuoteFromQuotation($quotation = null, $requestId = null, $integratedVendor = null, Payload $payload = null): ServiceQuote
+    public static function serviceQuoteFromQuotation($quotation = null, $requestId = null, $integratedVendor = null, ?Payload $payload = null): ServiceQuote
     {
         if (!$quotation) {
             return null;
@@ -651,7 +651,7 @@ class Lalamove
         return $this->createOrder($quotationId, $sender, $recipients, false, $isPODEnabled, $metadata);
     }
 
-    public function setWebhook(string $webhookUrl = null)
+    public function setWebhook(?string $webhookUrl = null)
     {
         if (!is_string($webhookUrl)) {
             return;
