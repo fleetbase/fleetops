@@ -9,7 +9,7 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 class OrdersImport implements ToCollection, WithHeadingRow
 {
     /**
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     public function collection(Collection $rows)
     {

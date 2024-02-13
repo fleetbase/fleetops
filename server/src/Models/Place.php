@@ -179,7 +179,7 @@ class Place extends Model
     /**
      * Fills empty address attributes with Google address attributes.
      *
-     * @return \Fleetbase\FleetOps\Models\Place $this
+     * @return Place $this
      */
     public function fillWithGoogleAddress(\Geocoder\Provider\GoogleMaps\Model\GoogleAddress $address): Place
     {

@@ -47,7 +47,7 @@ class Flow
         $authored = $authoredQuery->get();
 
         // create array of configs
-        /** @var \Illuminate\Support\Collection $configs */
+        /** @var Collection $configs */
         $configs = collect([...$installedExtensions, ...$authored]);
 
         // if no installed configs always place default config
@@ -79,7 +79,7 @@ class Flow
         $authored = Extension::where(['author_uuid' => session('company'), 'meta_type' => 'order_config', 'status' => 'private'])->get();
 
         // create array of configs
-        /** @var \Illuminate\Support\Collection $configs */
+        /** @var Collection $configs */
         $configs = collect([...$installedExtensions, ...$authored]);
 
         // if no installed configs always place default config
@@ -111,7 +111,7 @@ class Flow
         $authored = Extension::where(['author_uuid' => $order->company_uuid, 'meta_type' => 'order_config', 'status' => 'private'])->get();
 
         // create array of configs
-        /** @var \Illuminate\Support\Collection $configs */
+        /** @var Collection $configs */
         $configs = collect([...$installedExtensions, ...$authored]);
 
         // if no installed configs always place default config
@@ -259,7 +259,7 @@ class Flow
     /**
      * Returns a order flow status for the waypoint only.
      */
-    public static function getOrderWaypointFlow(Order $order, Waypoint $waypoint = null): ?array
+    public static function getOrderWaypointFlow(Order $order, ?Waypoint $waypoint = null): ?array
     {
         if ($waypoint === null) {
             /** @var \Fleetbase\Models\Waypoint $waypoint */
@@ -293,7 +293,7 @@ class Flow
     /**
      * Returns a order flow status for the waypoint only.
      */
-    public static function getOrderFlowVars(Order $order, Waypoint $currentWaypoint = null): ?array
+    public static function getOrderFlowVars(Order $order, ?Waypoint $currentWaypoint = null): ?array
     {
         $vars         = [];
         $allWaypoints = data_get($order, 'payload.waypoints', collect());
@@ -603,7 +603,7 @@ class Flow
 
     public static function getAllDefaultOrderConfigs(): Collection
     {
-        /** @var \Illuminate\Support\Collection $extensions */
+        /** @var Collection $extensions */
         $extensions             = collect();
         $company                = static::getCompanySession();
         $orderConfigs           = config('api.types.order', []);

@@ -182,7 +182,7 @@ class Waypoint extends Model
         return data_get($this, 'trackingNumber.last_status_code');
     }
 
-    public static function insertGetUuid($values = [], Payload $payload = null)
+    public static function insertGetUuid($values = [], ?Payload $payload = null)
     {
         $instance   = new static();
         $fillable   = $instance->getFillable();

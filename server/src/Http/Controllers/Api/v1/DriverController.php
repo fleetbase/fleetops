@@ -354,7 +354,7 @@ class DriverController extends Controller
     /**
      * Authenticates customer using login credentials and returns with auth token.
      *
-     * @return \Fleetbase\FleetOps\Http\Resources\v1\Driver
+     * @return DriverResource
      */
     public function login(Request $request)
     {
@@ -418,9 +418,11 @@ class DriverController extends Controller
 
         // generate verification token
         try {
-            VerificationCode::generateSmsVerificationFor($user, 'driver_login', function ($verification) use ($company) {
-                return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
-            });
+            VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
+                'messageCallback' => function ($verification) use ($company) {
+                    return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
+                },
+            ]);
         } catch (\Throwable $e) {
             if (app()->bound('sentry')) {
                 app('sentry')->captureException($e);
@@ -435,7 +437,7 @@ class DriverController extends Controller
     /**
      * Verifys SMS code and sends auth token with customer resource.
      *
-     * @return \Fleetbase\FleetOps\Http\Resources\v1\Driver
+     * @return DriverResource
      */
     public function verifyCode(Request $request)
     {
@@ -489,11 +491,9 @@ class DriverController extends Controller
     }
 
     /**
-     * Gets the current organization/company for the driver
+     * Gets the current organization/company for the driver.
      *
-     * @param string $id
-     * @param \Illuminate\Http\Request $request
-     * @return \Fleetbase\Http\Resources\Organization
+     * @return Organization
      */
     public function currentOrganization(string $id, Request $request)
     {
@@ -521,7 +521,7 @@ class DriverController extends Controller
     /**
      * List organizations that driver is apart of.
      *
-     * @return \Fleetbase\Http\Resources\Organization
+     * @return Organization
      */
     public function listOrganizations(string $id, Request $request)
     {
@@ -546,7 +546,7 @@ class DriverController extends Controller
     /**
      * Allow driver to switch organization.
      *
-     * @return \Fleetbase\Http\Resources\Organization
+     * @return Organization
      */
     public function switchOrganization(string $id, SwitchOrganizationRequest $request)
     {
@@ -604,7 +604,7 @@ class DriverController extends Controller
         $order = $request->input('order');
 
         try {
-            /** @var \Fleetbase\FleetOps\Models\Driver $driver */
+            /** @var Driver $driver */
             $driver = Driver::findRecordOrFail($id, ['user']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             return response()->json(
@@ -617,7 +617,7 @@ class DriverController extends Controller
 
         if ($order) {
             try {
-                /** @var \Fleetbase\FleetOps\Models\Order $order */
+                /** @var Order $order */
                 $order = Order::findRecordOrFail($order, ['payload']);
             } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
                 return response()->json(
@@ -720,9 +720,6 @@ class DriverController extends Controller
 
     /**
      * Get the drivers current company using their user account.
-     *
-     * @param \Fleetbase\Models\User $user
-     * @return \Fleetbase\Models\Company|null
      */
     private static function getDriverCompanyFromUser(User $user): ?Company
     {
@@ -747,7 +744,7 @@ class DriverController extends Controller
     /**
      * Patches phone number with international code.
      */
-    private static function phone(string $phone = null): string
+    private static function phone(?string $phone = null): string
     {
         if ($phone === null) {
             $phone = request()->input('phone');

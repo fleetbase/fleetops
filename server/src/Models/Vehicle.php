@@ -392,11 +392,11 @@ class Vehicle extends Model
      * Updates the position of the vehicle, creating a new Position record if
      * the driver has moved more than 100 meters or if it's their first recorded position.
      *
-     * @param \Fleetbase\FleetOps\Models\Order|null $order The order to consider when updating the position (default: null)
+     * @param Order|null $order The order to consider when updating the position (default: null)
      *
-     * @return \Fleetbase\FleetOps\Models\Position|null The created Position object, or null if no new position was created
+     * @return Position|null The created Position object, or null if no new position was created
      */
-    public function updatePositionWithOrderContext(Order $order = null): ?Position
+    public function updatePositionWithOrderContext(?Order $order = null): ?Position
     {
         $position     = null;
         $lastPosition = $this->positions()->whereCompanyUuid(session('company'))->latest()->first();

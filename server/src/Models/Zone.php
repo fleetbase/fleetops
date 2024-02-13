@@ -104,7 +104,7 @@ class Zone extends Model
     /**
      * Retrieves the location attribute as a point.
      *
-     * @return \Fleetbase\LaravelMysqlSpatial\Types\Point returns the centroid of the border as a Point object
+     * @return Point returns the centroid of the border as a Point object
      */
     public function getLocationAttribute(): Point
     {
@@ -195,10 +195,10 @@ class Zone extends Model
     /**
      * Creates a polygon from a given point and radius.
      *
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point $point  the central point from which to create the polygon
-     * @param int                                        $meters The radius in meters for the polygon. Default is 500 meters.
+     * @param Point $point  the central point from which to create the polygon
+     * @param int   $meters The radius in meters for the polygon. Default is 500 meters.
      *
-     * @return \Fleetbase\LaravelMysqlSpatial\Types\Polygon returns a Polygon object
+     * @return Polygon returns a Polygon object
      */
     public static function createPolygonFromPoint(Point $point, int $meters = 500): Polygon
     {

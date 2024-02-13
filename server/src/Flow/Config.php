@@ -1,7 +1,7 @@
-<?php 
+<?php
 
 namespace Fleetbase\FleetOps\Flow;
 
-class Config {
-    
+class Config
+{
 }

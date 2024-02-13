@@ -125,7 +125,7 @@ class Geocoding
      *
      * @throws \Exception
      */
-    public static function reverseFromCoordinates($latitude, $longitude, string $searchQuery = null): Collection
+    public static function reverseFromCoordinates($latitude, $longitude, ?string $searchQuery = null): Collection
     {
         $httpClient = new Client();
         $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));

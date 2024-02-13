@@ -106,8 +106,6 @@ class Point implements CastsAttributes
 
     /**
      * Check if the given data is a raw Point object.
-     *
-     * @return bool
      */
     public static function isRawPoint($data): bool
     {

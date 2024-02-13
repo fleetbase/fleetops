@@ -273,7 +273,7 @@ class Entity extends Model
     /**
      * The length the entity belongs to.
      *
-     * @var \PhpUnitsOfMeasure\PhysicalQuantity\Length
+     * @var Length
      */
     public function getLengthUnitAttribute()
     {
@@ -283,7 +283,7 @@ class Entity extends Model
     /**
      * The width the entity belongs to.
      *
-     * @var \PhpUnitsOfMeasure\PhysicalQuantity\Length
+     * @var Length
      */
     public function getWidthUnitAttribute()
     {
@@ -416,7 +416,7 @@ class Entity extends Model
         return $this;
     }
 
-    public static function insertGetUuid($values = [], Payload $payload = null)
+    public static function insertGetUuid($values = [], ?Payload $payload = null)
     {
         if (is_array($values) && isset($values['uuid'])) {
             Entity::where('uuid', $values['uuid'])->update([

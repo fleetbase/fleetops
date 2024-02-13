@@ -1,10 +1,11 @@
-<?php 
+<?php
 
 namespace Fleetbase\FleetOps\Flow;
 
 use Fleetbase\Models\Model;
 
-class Activity {
+class Activity
+{
     protected string $status;
     protected string $code;
     protected string $details;

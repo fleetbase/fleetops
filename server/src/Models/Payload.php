@@ -562,7 +562,7 @@ class Payload extends Model
     /**
      * Get the pickup location for the payload.
      *
-     * @return \Fleetbase\LaravelMysqlSpatial\Types\Point
+     * @return Point
      */
     public function getPickupLocation()
     {
@@ -653,8 +653,8 @@ class Payload extends Model
     /**
      * Set the first waypoint and update activity.
      *
-     * @param array                                      $activity
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point $location
+     * @param array $activity
+     * @param Point $location
      *
      * @return void
      */
@@ -682,9 +682,9 @@ class Payload extends Model
     /**
      * Update the current waypoint activity and it's entities.
      *
-     * @param array                                      $activity
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point $location
-     * @param \Fleetbase\Models\Proof|string|null        $proof    resolvable proof of delivery/activity
+     * @param array                               $activity
+     * @param Point                               $location
+     * @param \Fleetbase\Models\Proof|string|null $proof    resolvable proof of delivery/activity
      *
      * @return $this
      */
@@ -743,14 +743,14 @@ class Payload extends Model
         $order = $this->order;
 
         // set google matrix based distance and time
-        if ($order instanceof \Fleetbase\FleetOps\Models\Order) {
+        if ($order instanceof Order) {
             return $order->setDistanceAndTime();
         }
 
         return null;
     }
 
-    public function findDestinationFromKey(string $destinationKey = null): ?Place
+    public function findDestinationFromKey(?string $destinationKey = null): ?Place
     {
         if ($destinationKey === null) {
             return null;

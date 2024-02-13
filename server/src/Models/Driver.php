@@ -498,9 +498,9 @@ class Driver extends Model
      *
      * @param Order|null $order The order to consider when updating the position (default: null)
      *
-     * @return \Fleetbase\FleetOps\Models\Position|null The created Position object, or null if no new position was created
+     * @return Position|null The created Position object, or null if no new position was created
      */
-    public function updatePosition(Order $order = null): ?Position
+    public function updatePosition(?Order $order = null): ?Position
     {
         $position     = null;
         $lastPosition = $this->positions()->whereCompanyUuid(session('company'))->latest()->first();

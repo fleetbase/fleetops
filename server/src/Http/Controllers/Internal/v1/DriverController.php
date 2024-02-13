@@ -116,7 +116,7 @@ class DriverController extends FleetOpsController
                         CompanyUser::create([
                             'user_uuid'    => $existingUser->uuid,
                             'company_uuid' => $company->uuid,
-                            'status'       => $isOrganizationMember ? 'active' : 'pending'
+                            'status'       => $isOrganizationMember ? 'active' : 'pending',
                         ]);
                     }
 
@@ -397,9 +397,11 @@ class DriverController extends FleetOpsController
         }
 
         // Generate verification token
-        VerificationCode::generateSmsVerificationFor($user, 'driver_login', function ($verification) {
-            return 'Your ' . config('app.name') . ' verification code is ' . $verification->code;
-        });
+        VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
+            'messageCallback' => function ($verification) {
+                return 'Your ' . config('app.name') . ' verification code is ' . $verification->code;
+            },
+        ]);
 
         return response()->json(['status' => 'OK']);
     }
@@ -453,7 +455,7 @@ class DriverController extends FleetOpsController
     /**
      * Patches phone number with international code.
      */
-    public static function phone(string $phone = null): string
+    public static function phone(?string $phone = null): string
     {
         if ($phone === null) {
             $phone = request()->input('phone');

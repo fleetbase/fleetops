@@ -11,7 +11,6 @@ class MetricsController extends Controller
     /**
      * Gets all key metrics for the current session.
      *
-     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
     public function all(Request $request)

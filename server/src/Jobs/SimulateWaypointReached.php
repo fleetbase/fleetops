@@ -23,12 +23,12 @@ class SimulateWaypointReached implements ShouldQueue
     use SerializesModels;
 
     /**
-     * @var \Fleetbase\FleetOps\Models\Driver the driver for whom the waypoint is being simulated
+     * @var Driver the driver for whom the waypoint is being simulated
      */
     public Driver $driver;
 
     /**
-     * @var \Fleetbase\LaravelMysqlSpatial\Types\Point the waypoint that the driver is simulated to have reached
+     * @var Point the waypoint that the driver is simulated to have reached
      */
     public Point $waypoint;
 
