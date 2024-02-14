@@ -92,7 +92,8 @@ export default class AdminAvatarManagementComponent extends Component {
                 uploadType = 'driver_avatar';
                 break;
             default:
-                throw new Error('Invalid category selected');
+                this.notifications.error('Please select category before uploading a file.');
+                return;
         }
 
         this.uploadQueue.pushObject(file);

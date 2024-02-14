@@ -337,6 +337,7 @@ class Vehicle extends Model
     public static function getAvatarOptions()
     {
         $options = [
+            'custom_avatar',
             '2_door_truck.svg',
             '3_door_hatchback.svg',
             '4_door_truck.svg',
