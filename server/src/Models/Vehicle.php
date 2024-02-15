@@ -6,6 +6,7 @@ use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -13,6 +14,7 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -337,6 +339,7 @@ class Vehicle extends Model
     public static function getAvatarOptions()
     {
         $options = [
+            'custom_avatar',
             '2_door_truck.svg',
             '3_door_hatchback.svg',
             '4_door_truck.svg',
@@ -370,7 +373,15 @@ class Vehicle extends Model
         return collect($options)->mapWithKeys(
             function ($option) {
                 $key = str_replace('.svg', '', $option);
-
+                if ($key === 'custom_avatar') {
+                    $files = File::where('type', 'vehicle_avatar')->get();
+                    if (!$files->isEmpty()) {
+                        $filePaths = $files->map(function ($file) {
+                            return $file->path;
+                        });
+                        return [$key => $filePaths];
+                    }
+                }
                 return [$key => Utils::assetFromS3('static/vehicle-icons/' . $option)];
             }
         );

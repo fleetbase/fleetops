@@ -21,7 +21,7 @@
                     <Button
                         @icon={{if this.vehicle.id "save" "check"}}
                         @type="primary"
-                        @text={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.save-vehicle")(t "fleet-ops.component.vehicle-form-panel.create-vehicle") }}
+                        @text={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.save-vehicle") (t "fleet-ops.component.vehicle-form-panel.create-vehicle")}}
                         @onClick={{this.save}}
                         @isLoading={{this.isLoading}}
                     />
@@ -29,7 +29,7 @@
                 <Button
                     @type="default"
                     @icon="times"
-                    @helpText={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.cancel-edit-vehicle")(t "fleet-ops.component.vehicle-form-panel.cancel-new-vehicle") }}
+                    @helpText={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.cancel-edit-vehicle") (t "fleet-ops.component.vehicle-form-panel.cancel-new-vehicle")}}
                     @onClick={{this.onPressCancel}}
                     @disabled={{this.isLoading}}
                 />
@@ -147,21 +147,24 @@
                         </div>
                     </InputGroup>
                     <InputGroup @name={{t "fleet-ops.common.coordinates"}} @wrapperClass="col-span-2">
-                <CoordinatesInput
-                    @value={{this.vehicle.location}}
-                    @onChange={{this.onCoordinatesChanged}}
-                    @onGeocode={{this.onAutocomplete}}
-                    @onUpdatedFromMap={{this.onCoordinatesChanged}}
-                    @onInit={{this.setCoordinatesInput}}
-                />
-            </InputGroup>
+                        <CoordinatesInput
+                            @value={{this.vehicle.location}}
+                            @onChange={{this.onCoordinatesChanged}}
+                            @onGeocode={{this.onAutocomplete}}
+                            @onUpdatedFromMap={{this.onCoordinatesChanged}}
+                            @onInit={{this.setCoordinatesInput}}
+                        />
+                    </InputGroup>
                 </div>
             </ContentPanel>
 
             <ContentPanel @title={{t "fleet-ops.component.vehicle-form-panel.avatar"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
                     <div class="input-group mb-2">
-                        <InputLabel @labelText={{t "fleet-ops.component.vehicle-form-panel.select-map-avatar"}} @helpText={{t "fleet-ops.component.vehicle-form-panel.select-avatar-rendering"}} />
+                        <InputLabel
+                            @labelText={{t "fleet-ops.component.vehicle-form-panel.select-map-avatar"}}
+                            @helpText={{t "fleet-ops.component.vehicle-form-panel.select-avatar-rendering"}}
+                        />
                         <FetchSelect
                             @wrapperClass="w-60"
                             @placeholder={{t "fleet-ops.component.vehicle-form-panel.select-avatar"}}
@@ -176,6 +179,13 @@
                     </div>
                     <div>
                         <img alt={{this.vehicle.displayName}} src={{this.vehicle.avatar_url}} class="w-24 h-24" />
+                    </div>
+                </div>
+                <div class="flex w-full h-auto">
+                    <div class="grid grid-cols-5 gap-5 max-h-60 overflow-hidden">
+                        {{#each this.vehicle.avatar_url as |url|}}
+                            <img alt={{url}} src={{url}} {{on 'click' (fn this.updateSelectedImage url)}} class={{if (eq url this.selectedImage) 'selected' ''}} />
+                        {{/each}}
                     </div>
                 </div>
             </ContentPanel>

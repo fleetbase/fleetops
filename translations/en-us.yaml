@@ -104,6 +104,12 @@ fleet-ops:
         title: Visibility Controls
         message: Visibility controls allow you to disable sections of Fleet-Ops. Toggle the checkbox to enable or disable sections to hide in Fleet-ops.
         checkbox-text: Enable or disable visibility for this section in Fleet-Ops.
+      avatar-management:
+        upload-avatar: Upload Avatar
+        view-avatar: View Avatar
+        vehicles : Vehicles
+        drivers : Drivers
+        places : Places
     cell:
       driver-name:
         not-assigned: No driver assigned
