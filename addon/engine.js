@@ -68,5 +68,4 @@ export default class FleetOpsEngine extends Engine {
         universe.createRegistries(['engine:fleet-ops', 'component:vehicle-panel', 'component:driver-panel', 'contextmenu:vehicle', 'contextmenu:driver']);
     };
 }
-
 loadInitializers(FleetOpsEngine, modulePrefix);
