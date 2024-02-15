@@ -13,11 +13,7 @@ use NotificationChannels\Apn\ApnChannel;
 use NotificationChannels\Apn\ApnMessage;
 use NotificationChannels\Fcm\FcmChannel;
 use NotificationChannels\Fcm\FcmMessage;
-use NotificationChannels\Fcm\Resources\AndroidConfig;
-use NotificationChannels\Fcm\Resources\AndroidFcmOptions;
-use NotificationChannels\Fcm\Resources\AndroidNotification;
-use NotificationChannels\Fcm\Resources\ApnsConfig;
-use NotificationChannels\Fcm\Resources\ApnsFcmOptions;
+use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
 class OrderCanceled extends Notification implements ShouldQueue
 {
@@ -105,23 +101,26 @@ class OrderCanceled extends Notification implements ShouldQueue
      */
     public function toFcm($notifiable)
     {
-        $notification = \NotificationChannels\Fcm\Resources\Notification::create()
-            ->setTitle('Order ' . $this->order->public_id . ' was canceled')
-            ->setBody('No further action is necessary.');
-
-        $message = FcmMessage::create()
-            ->setData(['id' => $this->order->public_id, 'type' => 'order_canceled'])
-            ->setNotification($notification)
-            ->setAndroid(
-                AndroidConfig::create()
-                    ->setFcmOptions(AndroidFcmOptions::create()->setAnalyticsLabel('analytics'))
-                    ->setNotification(AndroidNotification::create()->setColor('#4391EA'))
-            )->setApns(
-                ApnsConfig::create()
-                    ->setFcmOptions(ApnsFcmOptions::create()->setAnalyticsLabel('analytics_ios'))
-            );
-
-        return $message;
+        return (new FcmMessage(notification: new FcmNotification(
+            title: 'Order ' . $this->order->public_id . ' was canceled',
+            body: 'No further action is necessary.',
+        )))
+        ->data(['id' => $this->order->public_id, 'type' => 'order_canceled'])
+        ->custom([
+            'android' => [
+                'notification' => [
+                    'color' => '#4391EA',
+                ],
+                'fcm_options' => [
+                    'analytics_label' => 'analytics',
+                ],
+            ],
+            'apns' => [
+                'fcm_options' => [
+                    'analytics_label' => 'analytics',
+                ],
+            ],
+        ]);
     }
 
     /**

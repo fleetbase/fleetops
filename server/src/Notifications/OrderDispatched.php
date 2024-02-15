@@ -16,11 +16,7 @@ use NotificationChannels\Apn\ApnChannel;
 use NotificationChannels\Apn\ApnMessage;
 use NotificationChannels\Fcm\FcmChannel;
 use NotificationChannels\Fcm\FcmMessage;
-use NotificationChannels\Fcm\Resources\AndroidConfig;
-use NotificationChannels\Fcm\Resources\AndroidFcmOptions;
-use NotificationChannels\Fcm\Resources\AndroidNotification;
-use NotificationChannels\Fcm\Resources\ApnsConfig;
-use NotificationChannels\Fcm\Resources\ApnsFcmOptions;
+use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
 class OrderDispatched extends Notification implements ShouldQueue
 {
@@ -149,23 +145,26 @@ class OrderDispatched extends Notification implements ShouldQueue
      */
     public function toFcm($notifiable)
     {
-        $notification = \NotificationChannels\Fcm\Resources\Notification::create()
-            ->setTitle('Order ' . $this->order->public_id . ' has been dispatched!')
-            ->setBody('An order has just been dispatched to you and is ready to be started.');
-
-        $message = FcmMessage::create()
-            ->setData(['id' => $this->order->public_id, 'type' => 'order_dispatched'])
-            ->setNotification($notification)
-            ->setAndroid(
-                AndroidConfig::create()
-                    ->setFcmOptions(AndroidFcmOptions::create()->setAnalyticsLabel('analytics'))
-                    ->setNotification(AndroidNotification::create()->setColor('#4391EA'))
-            )->setApns(
-                ApnsConfig::create()
-                    ->setFcmOptions(ApnsFcmOptions::create()->setAnalyticsLabel('analytics_ios'))
-            );
-
-        return $message;
+        return (new FcmMessage(notification: new FcmNotification(
+            title: 'Order ' . $this->order->public_id . ' has been dispatched!',
+            body: 'An order has just been dispatched to you and is ready to be started.',
+        )))
+        ->data(['id' => $this->order->public_id, 'type' => 'order_dispatched'])
+        ->custom([
+            'android' => [
+                'notification' => [
+                    'color' => '#4391EA',
+                ],
+                'fcm_options' => [
+                    'analytics_label' => 'analytics',
+                ],
+            ],
+            'apns' => [
+                'fcm_options' => [
+                    'analytics_label' => 'analytics',
+                ],
+            ],
+        ]);
     }
 
     /**
