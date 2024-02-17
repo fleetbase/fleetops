@@ -86,15 +86,15 @@ class OrderCanceled extends Notification implements ShouldQueue
     public function toArray()
     {
         $order = new OrderResource($this->order);
-        
+
         return [
             'title' => 'Order ' . $this->order->public_id . ' was canceled',
-            'body' => 'Order ' . $this->order->public_id . ' has been canceled.',
-            'data' => [
-                'id' => $this->order->public_id, 
-                'type' => 'order_canceled',
-                'order' => $order->toWebhookPayload()
-            ]
+            'body'  => 'Order ' . $this->order->public_id . ' has been canceled.',
+            'data'  => [
+                'id'    => $this->order->public_id,
+                'type'  => 'order_canceled',
+                'order' => $order->toWebhookPayload(),
+            ],
         ];
     }
 

@@ -103,15 +103,15 @@ class OrderPing extends Notification implements ShouldQueue
     public function toArray()
     {
         $order = new OrderResource($this->order);
-        
+
         return [
             'title' => 'New incoming order!',
-            'body' => $this->distance ? 'New order available for pickup about ' . Utils::formatMeters($this->distance, false) . ' away' : 'New order is available for pickup.',
-            'data' => [
-                'id' => $this->order->public_id, 
-                'type' => 'order_ping',
-                'order' => $order->toWebhookPayload()
-            ]
+            'body'  => $this->distance ? 'New order available for pickup about ' . Utils::formatMeters($this->distance, false) . ' away' : 'New order is available for pickup.',
+            'data'  => [
+                'id'    => $this->order->public_id,
+                'type'  => 'order_ping',
+                'order' => $order->toWebhookPayload(),
+            ],
         ];
     }
 

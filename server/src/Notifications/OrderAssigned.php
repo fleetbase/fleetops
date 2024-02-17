@@ -86,15 +86,15 @@ class OrderAssigned extends Notification implements ShouldQueue
     public function toArray()
     {
         $order = new OrderResource($this->order);
-        
+
         return [
             'title' => 'New order ' . $this->order->public_id . ' assigned!',
-            'body' => $this->order->isScheduled ? 'You have a new order scheduled for ' . $this->order->scheduled_at : 'You have a new order assigned, tap for details.',
-            'data' => [
-                'id' => $this->order->public_id, 
-                'type' => 'order_assigned',
-                'order' => $order->toWebhookPayload()
-            ]
+            'body'  => $this->order->isScheduled ? 'You have a new order scheduled for ' . $this->order->scheduled_at : 'You have a new order assigned, tap for details.',
+            'data'  => [
+                'id'    => $this->order->public_id,
+                'type'  => 'order_assigned',
+                'order' => $order->toWebhookPayload(),
+            ],
         ];
     }
 

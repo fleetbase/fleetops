@@ -100,15 +100,15 @@ class OrderDispatched extends Notification implements ShouldQueue
     public function toArray()
     {
         $order = new OrderResource($this->order);
-        
+
         return [
             'title' => 'Order ' . $this->order->public_id . ' has been dispatched!',
-            'body' => 'An order has just been dispatched to you and is ready to be started.',
-            'data' => [
-                'id' => $this->order->public_id, 
-                'type' => 'order_dispatched',
-                'order' => $order->toWebhookPayload()
-            ]
+            'body'  => 'An order has just been dispatched to you and is ready to be started.',
+            'data'  => [
+                'id'    => $this->order->public_id,
+                'type'  => 'order_dispatched',
+                'order' => $order->toWebhookPayload(),
+            ],
         ];
     }
 
