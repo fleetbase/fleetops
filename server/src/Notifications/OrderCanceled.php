@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Notifications;
 
+use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Broadcasting\Channel;
@@ -74,6 +75,26 @@ class OrderCanceled extends Notification implements ShouldQueue
             new Channel('api.' . session('api_credential')),
             new Channel('order.' . $this->order->uuid),
             new Channel('order.' . $this->order->public_id),
+        ];
+    }
+
+    /**
+     * Get notification as array.
+     *
+     * @return void
+     */
+    public function toArray()
+    {
+        $order = new OrderResource($this->order);
+
+        return [
+            'title' => 'Order ' . $this->order->public_id . ' was canceled',
+            'body'  => 'Order ' . $this->order->public_id . ' has been canceled.',
+            'data'  => [
+                'id'    => $this->order->public_id,
+                'type'  => 'order_canceled',
+                'order' => $order->toWebhookPayload(),
+            ],
         ];
     }
 

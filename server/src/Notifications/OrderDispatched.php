@@ -87,6 +87,28 @@ class OrderDispatched extends Notification implements ShouldQueue
             new Channel('api.' . session('api_credential')),
             new Channel('order.' . $this->order->uuid),
             new Channel('order.' . $this->order->public_id),
+            new Channel('driver.' . data_get($this->order, 'driverAssigned.uuid')),
+            new Channel('driver.' . data_get($this->order, 'driverAssigned.public_id')),
+        ];
+    }
+
+    /**
+     * Get notification as array.
+     *
+     * @return void
+     */
+    public function toArray()
+    {
+        $order = new OrderResource($this->order);
+
+        return [
+            'title' => 'Order ' . $this->order->public_id . ' has been dispatched!',
+            'body'  => 'An order has just been dispatched to you and is ready to be started.',
+            'data'  => [
+                'id'    => $this->order->public_id,
+                'type'  => 'order_dispatched',
+                'order' => $order->toWebhookPayload(),
+            ],
         ];
     }
 
@@ -131,7 +153,7 @@ class OrderDispatched extends Notification implements ShouldQueue
     {
         $message = (new MailMessage())
             ->subject('Order ' . $this->order->public_id . ' has been dispatched!')
-            ->line('Order ' . $this->order->public_id . ' has been dispatched to you.');
+            ->line('An order has just been dispatched to you and is ready to be started.');
 
         $message->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
 
