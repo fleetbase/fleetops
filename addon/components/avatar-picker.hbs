@@ -7,9 +7,9 @@
     </div>
     <div>
         {{#if this.model.avatar_custom_url}}
-            <Image alt={{this.model.displayName}} src={{this.model.avatar_custom_url}} class="w-24 h-24" />
+            <Image alt={{this.model.displayName}} src={{this.model.avatar_custom_url}} @fallbackSrc={{@defaultAvatar}} class="w-24 h-24" />
         {{else}}
-            <Image alt={{this.model.displayName}} src={{this.model.avatar_url}} class="w-24 h-24" />
+            <Image alt={{this.model.displayName}} src={{this.model.avatar_url}} @fallbackSrc={{@defaultAvatar}} class="w-24 h-24" />
         {{/if}}
     </div>
 </div>

@@ -347,17 +347,17 @@ class Driver extends Model
     public static function getAvatarOptions()
     {
         $options = [
-            'moto-driver',
+            'moto-driver.png',
         ];
 
         // Get custom avatars
-        $customAvatars = File::where('type', 'driver-avatar')->get()->mapWithKeys(
+        $customAvatars = collect(File::where('type', 'driver-avatar')->get()->mapWithKeys(
             function ($file) {
                 $key = str_replace(['.svg', '.png'], '', 'Custom: ' . $file->original_filename);
 
                 return [$key => $file->uuid];
             }
-        );
+        )->toArray());
 
         // Create default avatars included from fleetbase
         $avatars = collect($options)->mapWithKeys(

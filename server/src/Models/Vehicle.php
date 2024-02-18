@@ -380,13 +380,13 @@ class Vehicle extends Model
         ];
 
         // Get custom avatars
-        $customAvatars = File::where('type', 'vehicle-avatar')->get()->mapWithKeys(
+        $customAvatars = collect(File::where('type', 'vehicle-avatar')->get()->mapWithKeys(
             function ($file) {
                 $key = str_replace(['.svg', '.png'], '', 'Custom: ' . $file->original_filename);
 
                 return [$key => $file->uuid];
             }
-        );
+        )->toArray());
 
         // Create default avatars included from fleetbase
         $avatars = collect($options)->mapWithKeys(

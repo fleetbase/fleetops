@@ -215,17 +215,17 @@ class Place extends Model
     public static function getAvatarOptions()
     {
         $options = [
-            'basic-building',
+            'basic-building.png',
         ];
 
         // Get custom avatars
-        $customAvatars = File::where('type', 'place-avatar')->get()->mapWithKeys(
+        $customAvatars = collect(File::where('type', 'place-avatar')->get()->mapWithKeys(
             function ($file) {
                 $key = str_replace(['.svg', '.png'], '', 'Custom: ' . $file->original_filename);
 
                 return [$key => $file->uuid];
             }
-        );
+        )->toArray());
 
         // Create default avatars included from fleetbase
         $avatars = collect($options)->mapWithKeys(

@@ -107,7 +107,7 @@
             </ContentPanel>
 
             <ContentPanel @title={{t "fleet-ops.component.avatar-picker.avatar"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-                <AvatarPicker @model={{this.vehicle}} />
+                <AvatarPicker @model={{this.vehicle}} @defaultAvatar={{config "defaultValues.vehicleAvatar"}} />
             </ContentPanel>
         </div>
 

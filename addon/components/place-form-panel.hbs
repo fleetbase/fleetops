@@ -36,7 +36,7 @@
                 </InputGroup>
             </div>
             <ContentPanel @title={{t "fleet-ops.component.avatar-picker.avatar"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-                <AvatarPicker @model={{this.place}} />
+                <AvatarPicker @model={{this.place}} @defaultAvatar={{config "defaultValues.placeAvatar"}} />
             </ContentPanel>
         </div>
 
