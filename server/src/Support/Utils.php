@@ -783,8 +783,8 @@ class Utils extends FleetbaseUtils
             ]
         )->json();
 
-        $distance = data_get($response, 'rows.0.elements.0.distance.value');
-        $time     = data_get($response, 'rows.0.elements.0.duration.value');
+        $distance = (float) data_get($response, 'rows.0.elements.0.distance.value', 0);
+        $time     = (float) data_get($response, 'rows.0.elements.0.duration.value', 0);
 
         $result = static::createObject(
             [
@@ -812,7 +812,7 @@ class Utils extends FleetbaseUtils
         $destination = static::getPointFromMixed($destination);
 
         $distance = Utils::vincentyGreatCircleDistance($origin, $destination);
-        $time     = round($distance / 100) * self::DRIVING_TIME_MULTIPLIER;
+        $time     = (float) round($distance / 100) * self::DRIVING_TIME_MULTIPLIER;
 
         return new DistanceMatrix($distance, $time);
     }

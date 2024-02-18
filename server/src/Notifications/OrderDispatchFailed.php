@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Notifications;
 
 use Fleetbase\FleetOps\Events\OrderDispatchFailed as OrderDispatchFailedEvent;
+use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Broadcasting\Channel;
@@ -79,6 +80,26 @@ class OrderDispatchFailed extends Notification implements ShouldQueue
     public function via($notifiable)
     {
         return ['mail'];
+    }
+
+    /**
+     * Get notification as array.
+     *
+     * @return void
+     */
+    public function toArray()
+    {
+        $order = new OrderResource($this->order);
+
+        return [
+            'title' => 'Order ' . $this->order->public_id . ' has dispatch has failed!',
+            'body'  => $this->reason,
+            'data'  => [
+                'id'    => $this->order->public_id,
+                'type'  => 'order_dispatch_failed',
+                'order' => $order->toWebhookPayload(),
+            ],
+        ];
     }
 
     /**
