@@ -1,31 +1,19 @@
 <div class="mb-4">
-    <ContentPanel
-        @title={{t "fleet-ops.component.admin.avatar-management.upload-avatar"}}
-        @titleStatusRight={{this.orders.length}}
-        @titleStatuRightClass="info-status-badge"
-        @hideStatusDot={{true}}
-        @open={{true}}
-        @pad={{false}}
-        @wrapperClass={{@wrapperClass}}
-        @onInsert={{this.setupWidget}}
-    >
-        <div class="flex">
-            <div class="flex flex-col w-1/2 border-r">
-                <div class="p-5 border-b cursor-pointer hover:bg-blue-500 {{if (eq this.selectedCategory 'vehicles') 'bg-blue-500'}}" {{on "click" (fn this.selectCategory "vehicles")}}>{{t
-                        "fleet-ops.component.admin.avatar-management.vehicles"
-                    }}</div>
-                <div class="p-5 border-b cursor-pointer hover:bg-blue-500 {{if (eq this.selectedCategory 'places') 'bg-blue-500'}}" {{on "click" (fn this.selectCategory "places")}}>{{t
-                        "fleet-ops.component.admin.avatar-management.places"
-                    }}</div>
-                <div class="p-5 cursor-pointer hover:bg-blue-500 {{if (eq this.selectedCategory 'drivers') 'bg-blue-500'}}" {{on "click" (fn this.selectCategory "drivers")}}>{{t
-                        "fleet-ops.component.admin.avatar-management.drivers"
-                    }}</div>
-            </div>
-            <div class="flex flex-col w-1/2 p-1">
+    <div class="flex flex-row items-stretch rounded-lg border border-gray-200 dark:border-gray-700">
+        <div class="w-48 h-full bg-white dark:bg-gray-700 rounded-l-lg">
+            {{#each this.categories as |category index|}}
+                <a href="#" class="flex flex-row px-4 py-2 border-b border-gray-200 dark:border-gray-900 hover:bg-blue-400 {{if (eq this.currentCategory.type category.type) 'bg-blue-500'}} {{if (eq index 1) "rounded-tl-lg"}}" {{on "click" (fn this.switchCategory category)}}>
+                    <div class="w-6">
+                        <FaIcon @icon={{category.icon}} @size="sm" />
+                    </div>
+                    <div>{{category.name}}</div>
+                </a>
+            {{/each}}
+        </div>
+        <div class="flex-1 border-l border-gray-200 dark:border-gray-700">
+            <div class="p-4">
                 {{#if this.isUploading}}
-                    <div
-                        class="dropzone w-full rounded-lg px-4 py-8 bg-gray-50 dark:bg-gray-900 bg-opacity-25 text-gray-900 dark:text-white text-center flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-indigo-500"
-                    >
+                    <div class="dropzone w-full rounded-lg px-4 py-8 bg-gray-50 dark:bg-gray-900 bg-opacity-25 text-gray-900 dark:text-white text-center flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-indigo-500">
                         <div class="flex items-center justify-center py-5">
                             <Spinner class="text-sm dar:text-gray-100" @loadingMessage={{t "fleet-ops.common.uploading"}} />
                         </div>
@@ -48,11 +36,11 @@
                             {{else}}
                                 <h4 class="font-semibold">
                                     <FaIcon @icon="folder-open" @size="lg" class="text-indigo-500 mr-2" />
-                                    {{t "component.dropzone.upload-documents-files"}}
+                                    {{t "component.dropzone.upload-avatar-files"}}
                                 </h4>
                                 <div>
                                     {{#if dropzone.supported}}
-                                        <p class="text-sm my-5">{{t "component.dropzone.dropzone-supported-files"}}</p>
+                                        <p class="text-sm my-5">{{t "component.dropzone.dropzone-supported-avatars"}}</p>
                                     {{/if}}
                                     <FileUpload @name="files" @for="files" @accept={{join "," this.acceptedFileTypes}} @multiple={{true}} @onFileAdded={{this.queueFile}}>
                                         <a tabindex={{0}} class="btn btn-magic cursor-pointer ml-1">{{t "component.dropzone.or-select-button-text"}}</a>
@@ -62,50 +50,29 @@
                         </FileDropzone>
                     {{/let}}
                 {{/if}}
-            </div>
-        </div>
-        {{#if this.avatar.files.length}}
-            <div class="flex w-full h-auto border-t">
-                <div class="grid grid-cols-7 gap-4 max-h-40 overflow-hidden">
-                    {{#each this.avatar.files as |file|}}
-                        <File @file={{file}} @onDelete={{this.removeFile}} />
-                    {{/each}}
+                <div class="space-y-4 mt-4">
+                    {{#if this.uploadQueue}}
+                        <div class="space-y-2">
+                            {{#each this.uploadQueue as |file|}}
+                                <div class="flex items-center justify-between bg-blue-100 border border-blue-800 dark:border-blue-800 py-1.5 shadow-sm rounded-lg px-4">
+                                    <div class="text-xs text-blue-900 truncate">{{truncate-filename file.name 50}}</div>
+                                    <div class="flex items-center text-sm">
+                                        <Spinner class="text-blue-900 mr-2" />
+                                        <span class="font-bold text-blue-900">{{round file.progress}}%</span>
+                                    </div>
+                                </div>
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                    <div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+                            {{#each this.currentCategory.avatars as |file|}}
+                                <File @file={{file}} @onDelete={{this.removeFile}} />
+                            {{/each}}
+                        </div>
+                    </div>
                 </div>
             </div>
-        {{/if}}
-    </ContentPanel>
-</div>
-<div>
-    <ContentPanel
-        @title={{t "fleet-ops.component.admin.avatar-management.view-avatar"}}
-        @titleStatusRight={{this.orders.length}}
-        @titleStatuRightClass="info-status-badge"
-        @hideStatusDot={{true}}
-        @open={{false}}
-        @pad={{false}}
-        @wrapperClass={{@wrapperClass}}
-        @onInsert={{this.setupWidget}}
-    >
-        <div class="flex flex-row w-full">
-            <div
-                class="p-4 border-r cursor-pointer hover:bg-blue-500 flex-1 {{if (eq this.selectedCategory 'vehicles') 'bg-blue-500'}}"
-                {{on "click" (fn this.selectCategory "vehicles")}}
-            >{{t "fleet-ops.component.admin.avatar-management.vehicles"}}</div>
-            <div class="p-4 border-r cursor-pointer hover:bg-blue-500 flex-1 {{if (eq this.selectedCategory 'places') 'bg-blue-500'}}" {{on "click" (fn this.selectCategory "places")}}>{{t
-                    "fleet-ops.component.admin.avatar-management.places"
-                }}</div>
-            <div class="p-4 cursor-pointer hover:bg-blue-500 flex-1 {{if (eq this.selectedCategory 'drivers') 'bg-blue-500'}}" {{on "click" (fn this.selectCategory "drivers")}}>{{t
-                    "fleet-ops.component.admin.avatar-management.drivers"
-                }}</div>
         </div>
-        {{#if this.selectedCategory}}
-            <div class="flex w-full h-auto border-t overflow-y-auto">
-                <div class="grid grid-cols-7 gap-4 max-h-40">
-                    {{#each this.filteredFiles.files as |file|}}
-                        <File @file={{file}} @onDelete={{this.removeFile}} />
-                    {{/each}}
-                </div>
-            </div>
-        {{/if}}
-    </ContentPanel>
+    </div>
 </div>

@@ -71,3 +71,8 @@ body[data-theme='dark'] .next-table-wrapper.order-view-purchase-rate-table-wrapp
     background-color: rgb(31, 41, 55);
     color: rgb(249, 250, 251);
 }
+
+nav.next-sidebar {
+    height: 100%;
+    overflow-y: scroll;
+}

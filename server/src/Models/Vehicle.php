@@ -14,7 +14,6 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -167,7 +166,7 @@ class Vehicle extends Model
      */
     public function photo()
     {
-        return $this->belongsTo(\Fleetbase\Models\File::class);
+        return $this->belongsTo(File::class);
     }
 
     /**
@@ -240,20 +239,6 @@ class Vehicle extends Model
     }
 
     /**
-     * Get avatar url.
-     *
-     * @return string|null
-     */
-    public function getAvatarUrlAttribute($value)
-    {
-        if (!$value) {
-            return static::getAvatar();
-        }
-
-        return $value;
-    }
-
-    /**
      * Get the driver's name assigned to vehicle.
      *
      * @return string|null
@@ -320,14 +305,39 @@ class Vehicle extends Model
     }
 
     /**
+     * Get avatar url.
+     *
+     * @return string|null
+     */
+    public function getAvatarUrlAttribute($value)
+    {
+        if (!$value) {
+            return static::getAvatar();
+        }
+
+        if (Str::isUuid($value)) {
+            return static::getAvatar($value);
+        }
+
+        return $value;
+    }
+
+    /**
      * Get an avatar url by key.
      *
      * @param string $key
-     *
-     * @return string
      */
-    public static function getAvatar($key = 'mini_bus')
+    public static function getAvatar($key = 'mini_bus'): ?string
     {
+        if (Str::isUuid($key)) {
+            $file = File::where('uuid', $key)->first();
+            if ($file) {
+                return $file->url;
+            }
+
+            return null;
+        }
+
         return static::getAvatarOptions()->get($key);
     }
 
@@ -339,7 +349,6 @@ class Vehicle extends Model
     public static function getAvatarOptions()
     {
         $options = [
-            'custom_avatar',
             '2_door_truck.svg',
             '3_door_hatchback.svg',
             '4_door_truck.svg',
@@ -370,21 +379,25 @@ class Vehicle extends Model
             'taxi.svg',
         ];
 
-        return collect($options)->mapWithKeys(
+        // Get custom avatars
+        $customAvatars = File::where('type', 'vehicle-avatar')->get()->mapWithKeys(
+            function ($file) {
+                $key = str_replace(['.svg', '.png'], '', 'Custom: ' . $file->original_filename);
+
+                return [$key => $file->uuid];
+            }
+        );
+
+        // Create default avatars included from fleetbase
+        $avatars = collect($options)->mapWithKeys(
             function ($option) {
-                $key = str_replace('.svg', '', $option);
-                if ($key === 'custom_avatar') {
-                    $files = File::where('type', 'vehicle_avatar')->get();
-                    if (!$files->isEmpty()) {
-                        $filePaths = $files->map(function ($file) {
-                            return $file->path;
-                        });
-                        return [$key => $filePaths];
-                    }
-                }
+                $key = str_replace(['.svg', '.png'], '', $option);
+
                 return [$key => Utils::assetFromS3('static/vehicle-icons/' . $option)];
             }
         );
+
+        return $customAvatars->merge($avatars);
     }
 
     /**

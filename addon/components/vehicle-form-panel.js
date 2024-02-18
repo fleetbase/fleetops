@@ -194,6 +194,12 @@ export default class VehicleFormPanelComponent extends Component {
         return contextComponentCallback(this, 'onPressCancel', this.vehicle);
     }
 
+    /**
+     * Handle autocomplete callback
+     *
+     * @param {AutocompleteEvent} { location }
+     * @memberof VehicleFormPanelComponent
+     */
     @action onAutocomplete({ location }) {
         if (location) {
             this.vehicle.setProperties({ location });

@@ -95,6 +95,11 @@ fleet-ops:
     back: Back
 
   component:
+    avatar-picker:
+      avatar: Avatar
+      select-map-avatar: Select map avatar
+      select-avatar-rendering: Select an avatar to be used for rendering on maps when using geolocation tracking features.
+      select-avatar: Select avatar
     admin:
       navigator-app:
         title: Navigator App
