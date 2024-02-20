@@ -254,7 +254,6 @@ export default class ManagementPlacesIndexController extends BaseController {
             hidden: true,
             resizable: true,
             sortable: true,
-            hidden: true,
             filterable: true,
             filterComponent: 'filter/string',
         },
