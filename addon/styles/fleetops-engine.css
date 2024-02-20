@@ -76,3 +76,32 @@ nav.next-sidebar {
     height: 100%;
     overflow-y: scroll;
 }
+
+/** places management css mods */
+.next-content-overlay.place-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header,
+.next-content-overlay.place-form-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    height: auto;
+    align-items: start;
+    padding: 0.65rem 1rem;
+}
+.next-content-overlay.place-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-left > div > div,
+.next-content-overlay.place-form-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-left > div > div {
+    flex-direction: column !important;
+    justify-content: start;
+    align-items: start;
+}
+.next-content-overlay.place-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-left .next-content-overlay-panel-title,
+.next-content-overlay.place-form-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-left .next-content-overlay-panel-title {
+    white-space: initial;
+}
+.next-content-overlay.place-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-left .status-badge,
+.next-content-overlay.place-form-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-left .status-badge {
+    margin-left: 0 !important;
+}
+/** end places management mods */
+
+body.fleetbase-console .next-content-overlay > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-right .btn-wrapper {
+    flex-shrink: 0;
+}

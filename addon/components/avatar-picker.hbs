@@ -5,7 +5,7 @@
             {{titleize (humanize option.key)}}
         </FetchSelect>
     </div>
-    <div>
+    <div class="flex flex-row justify-end">
         {{#if this.model.avatar_custom_url}}
             <Image alt={{this.model.displayName}} src={{this.model.avatar_custom_url}} @fallbackSrc={{@defaultAvatar}} class="w-24 h-24" />
         {{else}}

@@ -18,7 +18,7 @@
                 <div class="flex flex-row">
                     <div class="w-14">
                         <div class="upload-avatar-overlay w-12 h-12 flex items-center justify-start rounded-lg">
-                            <img src={{this.driver.photo_url}} alt={{this.driver.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                            <Image src={{this.driver.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{this.driver.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
                             <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                                 <InputInfo @text={{t "fleet-ops.component.driver-form-panel.upload-new-photo"}} />
                             </Attach::Tooltip>
