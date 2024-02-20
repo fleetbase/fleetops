@@ -65,7 +65,7 @@ export default class FleetOpsEngine extends Engine {
         universe.registerDashboardWidgets([KeyMetricsWidgetDefinition]);
 
         // create all registries necessary
-        universe.createRegistries(['engine:fleet-ops', 'component:vehicle-panel', 'component:driver-panel', 'contextmenu:vehicle', 'contextmenu:driver']);
+        universe.createRegistries(['engine:fleet-ops', 'component:vehicle-panel', 'component:driver-panel', 'contextmenu:vehicle', 'contextmenu:driver', 'view:order', 'view:create-order']);
     };
 }
 

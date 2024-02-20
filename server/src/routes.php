@@ -311,6 +311,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->get('label/{id}', $controller('label'));
                                 $router->get('next-activity/{id}', $controller('nextActivity'));
                                 $router->post('process-imports', $controller('importFromFiles'));
+                                $router->patch('route/{id}', $controller('editOrderRoute'));
                                 $router->patch('update-activity/{id}', $controller('updateActivity'));
                                 $router->patch('bulk-cancel', $controller('bulkCancel'));
                                 $router->patch('cancel', $controller('cancel'));

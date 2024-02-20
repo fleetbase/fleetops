@@ -41,11 +41,15 @@ class Payload extends FleetbaseResource
 
     private function getWaypoints(): ?\Illuminate\Support\Collection
     {
-        return $this->waypoints->map(function ($waypoint) {
-            $waypoint->payload_uuid = $this->uuid;
+        if ($this->waypoints instanceof \Illuminate\Support\Collection) {
+            return $this->waypoints->map(function ($waypoint) {
+                $waypoint->payload_uuid = $this->uuid;
 
-            return $waypoint;
-        });
+                return $waypoint;
+            });
+        }
+        
+        return [];
     }
 
     /**
