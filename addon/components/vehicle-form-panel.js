@@ -86,6 +86,33 @@ export default class VehicleFormPanelComponent extends Component {
     }
 
     /**
+     * Updates the avatar URL based on the provided option.
+     *
+     * @action
+     * @param {Object} option - The option containing key and value properties.
+     * @param {string} option.key - The key indicating the type of avatar (e.g., 'custom_avatar').
+     * @param {string} option.value - The URL or value associated with the avatar.
+     * @memberof VehicleFormPanelComponent
+     */
+    @action updateAvatarUrl(option) {
+        if (option.key === 'custom_avatar') {
+            this.vehicle.avatar_url = option.value;
+        } else {
+            this.vehicle.avatar_url = [option.value];
+        }
+    }
+
+    /**
+     * Updates the selected image URL.
+     *
+     * @action
+     * @param {string} url - The URL of the selected image.
+     */
+    @action updateSelectedImage(url) {
+        this.vehicle.avatar_url = url;
+    }
+
+    /**
      * Saves the vehicle changes.
      *
      * @action
@@ -167,6 +194,12 @@ export default class VehicleFormPanelComponent extends Component {
         return contextComponentCallback(this, 'onPressCancel', this.vehicle);
     }
 
+    /**
+     * Handle autocomplete callback
+     *
+     * @param {AutocompleteEvent} { location }
+     * @memberof VehicleFormPanelComponent
+     */
     @action onAutocomplete({ location }) {
         if (location) {
             this.vehicle.setProperties({ location });

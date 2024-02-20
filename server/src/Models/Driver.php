@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Scopes\DriverScope;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Support\Utils as FleetOpsUtils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
@@ -77,6 +78,7 @@ class Driver extends Model
         'current_job_uuid',
         'auth_token',
         'signup_token_used',
+        'avatar_url',
         'drivers_license_number',
         'location',
         'heading',
@@ -293,6 +295,80 @@ class Driver extends Model
     public function devices()
     {
         return $this->hasMany(\Fleetbase\Models\UserDevice::class, 'user_uuid', 'user_uuid');
+    }
+
+    /**
+     * Get avatar url.
+     *
+     * @return string|null
+     */
+    public function getAvatarUrlAttribute($value)
+    {
+        // if vehicle assigned us the vehicle avatar
+        if ($this->vehicle) {
+            return $this->vehicle->avatar_url;
+        }
+
+        if (!$value) {
+            return static::getAvatar();
+        }
+
+        if (Str::isUuid($value)) {
+            return static::getAvatar($value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Get an avatar url by key.
+     *
+     * @param string $key
+     */
+    public static function getAvatar($key = 'moto-driver'): ?string
+    {
+        if (Str::isUuid($key)) {
+            $file = File::where('uuid', $key)->first();
+            if ($file) {
+                return $file->url;
+            }
+
+            return null;
+        }
+
+        return static::getAvatarOptions()->get($key);
+    }
+
+    /**
+     * Get all avatar options for a vehicle.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public static function getAvatarOptions()
+    {
+        $options = [
+            'moto-driver.png',
+        ];
+
+        // Get custom avatars
+        $customAvatars = collect(File::where('type', 'driver-avatar')->get()->mapWithKeys(
+            function ($file) {
+                $key = str_replace(['.svg', '.png'], '', 'Custom: ' . $file->original_filename);
+
+                return [$key => $file->uuid];
+            }
+        )->toArray());
+
+        // Create default avatars included from fleetbase
+        $avatars = collect($options)->mapWithKeys(
+            function ($option) {
+                $key = str_replace(['.svg', '.png'], '', $option);
+
+                return [$key => Utils::assetFromS3('static/driver-icons/' . $option)];
+            }
+        );
+
+        return $customAvatars->merge($avatars);
     }
 
     /**

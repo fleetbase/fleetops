@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -69,6 +70,7 @@ class Place extends Model
         'company_uuid',
         'owner_uuid',
         'owner_type',
+        'avatar_url',
         'name',
         'type',
         'street1',
@@ -166,6 +168,75 @@ class Place extends Model
     public function getCountryNameAttribute(): ?string
     {
         return data_get($this, 'country_data.name.common');
+    }
+
+    /**
+     * Get avatar url.
+     *
+     * @return string|null
+     */
+    public function getAvatarUrlAttribute($value)
+    {
+        if (!$value) {
+            return static::getAvatar();
+        }
+
+        if (Str::isUuid($value)) {
+            return static::getAvatar($value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Get an avatar url by key.
+     *
+     * @param string $key
+     */
+    public static function getAvatar($key = 'basic-building'): ?string
+    {
+        if (Str::isUuid($key)) {
+            $file = File::where('uuid', $key)->first();
+            if ($file) {
+                return $file->url;
+            }
+
+            return null;
+        }
+
+        return static::getAvatarOptions()->get($key);
+    }
+
+    /**
+     * Get all avatar options for a vehicle.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public static function getAvatarOptions()
+    {
+        $options = [
+            'basic-building.png',
+        ];
+
+        // Get custom avatars
+        $customAvatars = collect(File::where('type', 'place-avatar')->get()->mapWithKeys(
+            function ($file) {
+                $key = str_replace(['.svg', '.png'], '', 'Custom: ' . $file->original_filename);
+
+                return [$key => $file->uuid];
+            }
+        )->toArray());
+
+        // Create default avatars included from fleetbase
+        $avatars = collect($options)->mapWithKeys(
+            function ($option) {
+                $key = str_replace(['.svg', '.png'], '', $option);
+
+                return [$key => Utils::assetFromS3('static/place-icons/' . $option)];
+            }
+        );
+
+        return $customAvatars->merge($avatars);
     }
 
     /**

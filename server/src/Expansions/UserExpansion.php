@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Expansions;
 
 use Fleetbase\Build\Expansion;
+use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
 
 class UserExpansion implements Expansion

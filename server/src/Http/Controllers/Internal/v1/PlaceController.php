@@ -160,4 +160,16 @@ class PlaceController extends FleetOpsController
             200
         );
     }
+
+    /**
+     * Get all avatar options for an vehicle.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function avatars()
+    {
+        $options = Place::getAvatarOptions();
+
+        return response()->json($options);
+    }
 }

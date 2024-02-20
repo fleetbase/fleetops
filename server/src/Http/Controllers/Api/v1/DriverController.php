@@ -58,7 +58,13 @@ class DriverController extends Controller
         $user = User::create($userDetails);
 
         // Assign company
-        $user->assignCompany($company);
+        if ($company) {
+            $user->assignCompany($company);
+        } else {
+            $user->deleteQuietly();
+
+            return response()->apiError('Unable to assign driver to company.');
+        }
 
         // Set user type
         $user->setUserType('driver');

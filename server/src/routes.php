@@ -264,6 +264,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             'drivers',
                             function ($router, $controller) {
                                 $router->get('statuses', $controller('statuses'));
+                                $router->get('avatars', $controller('avatars'));
                                 $router->get('export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
@@ -324,6 +325,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             function ($router, $controller) {
                                 $router->get('search', $controller('search'))->middleware('cache.headers:private;max_age=3600');
                                 $router->get('lookup', $controller('geocode'))->middleware('cache.headers:private;max_age=3600');
+                                $router->get('avatars', $controller('avatars'));
                                 $router->get('export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }

@@ -14,7 +14,6 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
-use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\Invite;
 use Fleetbase\Models\User;
 use Fleetbase\Models\VerificationCode;
@@ -176,13 +175,9 @@ class DriverController extends FleetOpsController
                     // Assign user to company
                     if ($company) {
                         $user->assignCompany($company);
-
-                        // create company user
-                        CompanyUser::create([
-                            'user_uuid'    => $user->uuid,
-                            'company_uuid' => $company->uuid,
-                            'status'       => 'active',
-                        ]);
+                    } else {
+                        $user->deleteQuietly();
+                        throw new \Exception('Unable to assign driver to company.');
                     }
 
                     // Set user type as driver
@@ -303,6 +298,18 @@ class DriverController extends FleetOpsController
             ->values();
 
         return response()->json($statuses);
+    }
+
+    /**
+     * Get all avatar options for an vehicle.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function avatars()
+    {
+        $options = Driver::getAvatarOptions();
+
+        return response()->json($options);
     }
 
     /**
