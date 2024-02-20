@@ -1,29 +1,29 @@
 <div class="p-4">
     <ContentPanel @title={{t "fleet-ops.common.details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-900">
         <div class="grid grid-cols-2 gap-2 text-xs md:mb-6 dark:text-gray-100">
-            <div class="field-info-container ">
+            <div class="field-info-container md:col-span-3">
                 <div class="field-name">{{t "fleet-ops.common.name"}}</div>
                 <div class="field-value">{{n-a @driver.name}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "fleet-ops.common.id"}}</div>
-                <div class="field-value">{{n-a @driver.public_id}}</div>
+                <ClickToCopy @value={{@driver.public_id}} class="field-value">{{n-a @driver.public_id}}</ClickToCopy>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "fleet-ops.common.internal-id"}}</div>
                 <div class="field-value">{{n-a @driver.internal_id}}</div>
             </div>
-            <div class="field-info-container">
+            <div class="field-info-container md:col-span-3">
                 <div class="field-name">{{t "fleet-ops.common.driver-license"}}</div>
                 <div class="field-value">{{n-a @driver.drivers_license_number}}</div>
             </div>
-            <div class="field-info-container">
+            <div class="field-info-container md:col-span-3">
                 <div class="field-name">{{t "fleet-ops.common.email"}}</div>
-                <div class="field-value">{{n-a @driver.email}}</div>
+                <ClickToCopy @value={{@driver.email}} class="field-value">{{n-a @driver.email}}</ClickToCopy>
             </div>
-            <div class="field-info-container">
+            <div class="field-info-container md:col-span-3">
                 <div class="field-name">{{t "fleet-ops.common.phone"}}</div>
-                <div class="field-value">{{n-a @driver.phone}}</div>
+                <ClickToCopy @value={{@driver.phone}} class="field-value">{{n-a @driver.phone}}</ClickToCopy>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "fleet-ops.common.city"}}</div>
