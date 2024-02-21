@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { format, isValid as isValidDate } from 'date-fns';
-import createFullCalendarEventFromOrder from '../../../utils/create-full-calendar-event-from-order';
+import createFullCalendarEventFromOrder, { createOrderEventTitle } from '../../../utils/create-full-calendar-event-from-order';
 
 export default class OperationsSchedulerIndexController extends BaseController {
     @service modalsManager;
@@ -17,6 +17,9 @@ export default class OperationsSchedulerIndexController extends BaseController {
 
     @action setCalendarApi(calendar) {
         this.calendar = calendar;
+
+        // setup some custom post initialization stuff here
+        // calendar.setOption('height', 800);
     }
 
     @action viewEvent(order) {
@@ -63,7 +66,7 @@ export default class OperationsSchedulerIndexController extends BaseController {
 
                     // update event props
                     if (event && typeof event.setProp === 'function') {
-                        event.setProp('title', order.eventTitle);
+                        event.setProp('title', createOrderEventTitle(order));
                     }
 
                     // refresh route
@@ -99,7 +102,7 @@ export default class OperationsSchedulerIndexController extends BaseController {
 
         // update event props
         if (typeof event.setProp === 'function') {
-            event.setProp('title', order.eventTitle);
+            event.setProp('title', createOrderEventTitle(order));
         }
     }
 
@@ -120,7 +123,7 @@ export default class OperationsSchedulerIndexController extends BaseController {
 
         // update event props
         if (typeof event.setProp === 'function') {
-            event.setProp('title', order.eventTitle);
+            event.setProp('title', createOrderEventTitle(order));
         }
     }
 }

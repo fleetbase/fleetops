@@ -79,7 +79,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @memberof OrderScheduleCardComponent
      */
     @action startAssignDriver() {
-        this.isAssigningDriver = true;
+        this.isAssigningDriver = !this.isAssigningDriver;
     }
 
     /**
