@@ -29,6 +29,7 @@ class Vehicle extends FleetbaseResource
             'devices'                => $this->whenLoaded('devices', $this->devices),
             'photo_url'              => $this->photo_url,
             'avatar_url'             => $this->avatar_url,
+            'avatar_value'           => $this->when(Http::isInternalRequest(), $this->getOriginal('avatar_url')),
             'make'                   => $this->make,
             'model'                  => $this->model,
             'year'                   => $this->year,

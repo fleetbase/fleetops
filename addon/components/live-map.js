@@ -393,7 +393,6 @@ export default class LiveMapComponent extends Component {
 
         // trigger that initial coordinates is set to livemap component
         this.universe.trigger('fleet-ops.live-map.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
-        return [this.latitude, this.longitude];
     }
 
     /**

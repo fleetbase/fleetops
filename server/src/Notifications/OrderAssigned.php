@@ -75,6 +75,8 @@ class OrderAssigned extends Notification implements ShouldQueue
             new Channel('api.' . session('api_credential')),
             new Channel('order.' . $this->order->uuid),
             new Channel('order.' . $this->order->public_id),
+            new Channel('driver.' . data_get($this->order, 'driverAssigned.uuid')),
+            new Channel('driver.' . data_get($this->order, 'driverAssigned.public_id')),
         ];
     }
 

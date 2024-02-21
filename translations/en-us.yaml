@@ -95,6 +95,11 @@ fleet-ops:
     back: Back
 
   component:
+    avatar-picker:
+      avatar: Avatar
+      select-map-avatar: Select map avatar
+      select-avatar-rendering: Select an avatar to be used for rendering on maps when using geolocation tracking features.
+      select-avatar: Select avatar
     admin:
       navigator-app:
         title: Navigator App
@@ -104,6 +109,12 @@ fleet-ops:
         title: Visibility Controls
         message: Visibility controls allow you to disable sections of Fleet-Ops. Toggle the checkbox to enable or disable sections to hide in Fleet-ops.
         checkbox-text: Enable or disable visibility for this section in Fleet-Ops.
+      avatar-management:
+        upload-avatar: Upload Avatar
+        view-avatar: View Avatar
+        vehicles : Vehicles
+        drivers : Drivers
+        places : Places
     cell:
       driver-name:
         not-assigned: No driver assigned
@@ -524,6 +535,7 @@ fleet-ops:
         show-less: Show less details
         show-more: Show more details
       schedule-card:
+        destination: Destination
         unassign-driver: Unassign Driver?
         unassign-text: You are about to unassign the driver for Order {orderId}. Click continue to confirm removal of driver.
         unassign-button: Continue and unassign driver
@@ -531,11 +543,11 @@ fleet-ops:
         assign-text: You are about to assign a new driver ({driverName}) to Order {orderId}. Click continue to confirm driver.
         assign-button: Continue and assign driver
         date: Date scheduled
-        driver-assigned: Driver Assigned
-        no-driver: No Driver Assigned
+        driver-assigned: Driver
+        no-driver: No Driver
         select-driver: Select Driver
-        vehicle-assigned: Vehicle Assigned
-        no-vehicle: No Vehicle Assigned
+        vehicle-assigned: Vehicle
+        no-vehicle: No Vehicle
     widget:
       fleet-ops-quickstart:
         message: Let's see what you can do to jumpstart operations...

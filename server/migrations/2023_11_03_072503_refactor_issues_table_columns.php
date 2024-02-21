@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class RefactorIssuesTableColumns extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -39,4 +39,4 @@ class RefactorIssuesTableColumns extends Migration
             $table->dropColumn(['reported_by_uuid', 'meta', 'tags', 'category']);
         });
     }
-}
+};

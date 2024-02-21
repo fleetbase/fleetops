@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
+import { task } from 'ember-concurrency-decorators';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
@@ -87,26 +88,50 @@ export default class EditOrderRoutePanelComponent extends Component {
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
 
-    /**
-     * Handles save action for the order route.
-     *
-     * @method
-     * @action
-     */
-    @action onSave() {
-        const isActionOverrided = contextComponentCallback(this, 'onSave', this.order);
+    @task *save() {
+        const { payload } = this.order;
 
-        if (!isActionOverrided) {
-            return this.order
-                .save()
-                .then((order) => {
-                    this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.update-success', { orderId: order.public_id }));
-                    contextComponentCallback(this, 'onAfterSave', order);
-                })
-                .catch((error) => {
-                    this.notifications.serverError(error);
-                });
+        yield this.fetch
+            .patch(
+                `orders/route/${this.order.id}`,
+                {
+                    pickup: payload.pickup,
+                    dropoff: payload.dropoff,
+                    return: payload.return,
+                    waypoints: this._serializeWaypoints(payload.waypoints),
+                },
+                {
+                    normalizeToEmberData: true,
+                    normalizeModelType: 'order',
+                }
+            )
+            .then((order) => {
+                this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.update-success', { orderId: order.public_id }));
+                contextComponentCallback(this, 'onAfterSave', order);
+            })
+            .catch((error) => {
+                this.notifications.serverError(error);
+            });
+    }
+
+    _serializeWaypoints(waypoints = []) {
+        if (!waypoints) {
+            return [];
         }
+
+        waypoints = typeof waypoints.toArray === 'function' ? waypoints.toArray() : Array.from(waypoints);
+        return waypoints.map((waypoint) => {
+            const json = waypoint.serialize();
+            // if place is serialized just send it back
+            if (json.place) {
+                return json;
+            }
+
+            // set id for place_uuid
+            json.place_uuid = waypoint.place ? waypoint.place.id : waypoint.place_uuid;
+
+            return json;
+        });
     }
 
     /**
@@ -147,26 +172,50 @@ export default class EditOrderRoutePanelComponent extends Component {
             }
 
             this.order.payload.setProperties({
-                pickup_uuid: null,
-                dropoff_uuid: null,
-            });
-        } else {
-            const waypoint = this.store.createRecord('waypoint');
-            this.order.payload.waypoints.pushObject(waypoint);
-
-            this.order.payload.setProperties({
-                pickup_uuid: null,
-                dropoff_uuid: null,
                 pickup: null,
                 dropoff: null,
+                return: null,
+                pickup_uuid: null,
+                dropoff_uuid: null,
+                return_uuid: null,
+            });
+        } else {
+            // get pickup from payload waypoints if available
+            const waypoints = typeof this.order.payload.waypoints.toArray === 'function' ? this.order.payload.waypoints.toArray() : Array.from(this.order.payload.waypoints);
+
+            if (waypoints[0]) {
+                const pickup = this.createPlaceFromWaypoint(waypoints[0]);
+                this.order.payload.set('pickup', pickup);
+            }
+
+            if (waypoints[1]) {
+                const dropoff = this.createPlaceFromWaypoint(waypoints[1]);
+                this.order.payload.set('dropoff', dropoff);
+            }
+
+            this.order.payload.setProperties({
+                waypoints: [],
             });
         }
 
+        // this.isMultiDrop = isMultiDrop;
         contextComponentCallback(this, 'onRouteChanged');
     }
 
+    createPlaceFromWaypoint(waypoint) {
+        const json = waypoint.serialize();
+        return this.store.createRecord('place', json);
+    }
+
     addWaypointFromExistingPlace(place) {
-        const waypoint = this.store.createRecord('waypoint', { place, location: place.location });
+        const json = place.serialize();
+        const waypoint = this.store.createRecord('waypoint', {
+            uuid: place.id,
+            place_uuid: place.id,
+            location: place.location,
+            place,
+            ...json,
+        });
         this.order.payload.waypoints.pushObject(waypoint);
 
         // fire callback
@@ -196,11 +245,13 @@ export default class EditOrderRoutePanelComponent extends Component {
             return;
         }
 
+        const json = place.serialize();
         this.order.payload.waypoints.objectAt(index).setProperties({
-            name: place.name,
+            uuid: place.id,
             place_uuid: place.id,
             location: place.location,
             place,
+            ...json,
         });
 
         // fire callback waypoint place selected

@@ -143,6 +143,52 @@ class OrderController extends FleetOpsController
     }
 
     /**
+     *  Route which enables editing of an order route.
+     * 
+     * @param string $id - The order ID.
+     * @param Request $request
+     * @return Response
+     */
+    public function editOrderRoute(string $id, Request $request) {
+        $pickup = $request->input('pickup');
+        $dropoff = $request->input('dropoff');
+        $return = $request->input('return');
+        $waypoints = $request->array('waypoints', []);
+
+        // Get the order
+        $order = Order::where('uuid', $id)->with(['payload'])->first();
+        if (!$order) {
+            return response()->error('Unable to find order to update route for.');
+        }
+        
+        // Handle update of multiple waypoints
+        if ($waypoints) {
+            $order->payload->updateWaypoints($waypoints);
+            $order->payload->removePlace(['pickup', 'dropoff', 'return'], ['save' => true]);
+        } else {
+            // Update pickup
+            if ($pickup) {
+                $order->payload->setPickup($pickup, ['save' => true]);
+            }
+
+            // Update dropoff
+            if ($dropoff) {
+                $order->payload->setDropoff($dropoff, ['save' => true]);
+            }
+
+            // Update return
+            if ($return) {
+                $order->payload->setDropoff($return, ['save' => true]);
+            }
+
+            // Remove waypoints if any
+            $order->payload->removeWaypoints();
+        }
+
+        return ['order' => new $this->resource($order)]; 
+    }
+
+    /**
      * Process import files (excel,csv) into Fleetbase order data.
      *
      * @return \Illuminate\Http\Response
