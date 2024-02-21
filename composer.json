@@ -22,7 +22,7 @@
     ],
     "require": {
         "php": "^8.0",
-        "fleetbase/core-api": "^1.4.6",
+        "fleetbase/core-api": "^1.4.7",
         "barryvdh/laravel-dompdf": "^2.0",
         "brick/geo": "0.7.2",
         "cknow/laravel-money": "^7.1",
