@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Notifications;
 
+use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Broadcasting\Channel;
@@ -13,11 +14,7 @@ use NotificationChannels\Apn\ApnChannel;
 use NotificationChannels\Apn\ApnMessage;
 use NotificationChannels\Fcm\FcmChannel;
 use NotificationChannels\Fcm\FcmMessage;
-use NotificationChannels\Fcm\Resources\AndroidConfig;
-use NotificationChannels\Fcm\Resources\AndroidFcmOptions;
-use NotificationChannels\Fcm\Resources\AndroidNotification;
-use NotificationChannels\Fcm\Resources\ApnsConfig;
-use NotificationChannels\Fcm\Resources\ApnsFcmOptions;
+use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
 class OrderAssigned extends Notification implements ShouldQueue
 {
@@ -78,6 +75,28 @@ class OrderAssigned extends Notification implements ShouldQueue
             new Channel('api.' . session('api_credential')),
             new Channel('order.' . $this->order->uuid),
             new Channel('order.' . $this->order->public_id),
+            new Channel('driver.' . data_get($this->order, 'driverAssigned.uuid')),
+            new Channel('driver.' . data_get($this->order, 'driverAssigned.public_id')),
+        ];
+    }
+
+    /**
+     * Get notification as array.
+     *
+     * @return void
+     */
+    public function toArray()
+    {
+        $order = new OrderResource($this->order);
+
+        return [
+            'title' => 'New order ' . $this->order->public_id . ' assigned!',
+            'body'  => $this->order->isScheduled ? 'You have a new order scheduled for ' . $this->order->scheduled_at : 'You have a new order assigned, tap for details.',
+            'data'  => [
+                'id'    => $this->order->public_id,
+                'type'  => 'order_assigned',
+                'order' => $order->toWebhookPayload(),
+            ],
         ];
     }
 
@@ -108,27 +127,26 @@ class OrderAssigned extends Notification implements ShouldQueue
      */
     public function toFcm($notifiable)
     {
-        $notification = \NotificationChannels\Fcm\Resources\Notification::create()
-            ->setTitle('New order ' . $this->order->public_id . ' assigned!')
-            ->setBody('You have a new order assigned, tap for details.');
-
-        if ($this->order->isScheduled) {
-            $notification->setBody('You have a new order scheduled for ' . $this->order->scheduled_at);
-        }
-
-        $message = FcmMessage::create()
-            ->setData(['id' => $this->order->public_id, 'type' => 'order_assigned'])
-            ->setNotification($notification)
-            ->setAndroid(
-                AndroidConfig::create()
-                    ->setFcmOptions(AndroidFcmOptions::create()->setAnalyticsLabel('analytics'))
-                    ->setNotification(AndroidNotification::create()->setColor('#4391EA'))
-            )->setApns(
-                ApnsConfig::create()
-                    ->setFcmOptions(ApnsFcmOptions::create()->setAnalyticsLabel('analytics_ios'))
-            );
-
-        return $message;
+        return (new FcmMessage(notification: new FcmNotification(
+            title: 'New order ' . $this->order->public_id . ' assigned!',
+            body: $this->order->isScheduled ? 'You have a new order scheduled for ' . $this->order->scheduled_at : 'You have a new order assigned, tap for details.',
+        )))
+        ->data(['id' => $this->order->public_id, 'type' => 'order_assigned'])
+        ->custom([
+            'android' => [
+                'notification' => [
+                    'color' => '#4391EA',
+                ],
+                'fcm_options' => [
+                    'analytics_label' => 'analytics',
+                ],
+            ],
+            'apns' => [
+                'fcm_options' => [
+                    'analytics_label' => 'analytics',
+                ],
+            ],
+        ]);
     }
 
     /**

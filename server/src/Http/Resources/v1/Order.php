@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\Comment;
+use Fleetbase\Http\Resources\File;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 use Fleetbase\Support\Resolve;
@@ -45,7 +46,7 @@ class Order extends FleetbaseResource
             'tracking_number'      => new TrackingNumber($this->trackingNumber),
             'tracking_statuses'    => $this->whenLoaded('trackingStatuses', TrackingStatus::collection($this->trackingStatuses)),
             'comments'             => $this->when(Http::isInternalRequest(), Comment::collection($this->comments)),
-            'files'                => $this->when(Http::isInternalRequest(), $this->files),
+            'files'                => $this->when(Http::isInternalRequest(), $this->files, File::collection($this->files)),
             'purchase_rate'        => new PurchaseRate($this->purchaseRate),
             'notes'                => $this->notes,
             'type'                 => $this->type,

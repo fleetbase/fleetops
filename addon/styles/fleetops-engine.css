@@ -71,3 +71,97 @@ body[data-theme='dark'] .next-table-wrapper.order-view-purchase-rate-table-wrapp
     background-color: rgb(31, 41, 55);
     color: rgb(249, 250, 251);
 }
+
+nav.next-sidebar {
+    height: 100%;
+    overflow-y: scroll;
+}
+
+/** places management css mods */
+
+.next-content-overlay.place-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header,
+.next-content-overlay.place-form-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    height: auto;
+    align-items: start;
+    padding: 0.65rem 1rem;
+}
+
+.next-content-overlay.place-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-left > div > div,
+.next-content-overlay.place-form-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-left > div > div {
+    flex-direction: column !important;
+    justify-content: start;
+    align-items: start;
+}
+
+.next-content-overlay.place-panel
+    > .next-content-overlay-panel-container
+    > .next-content-overlay-panel
+    .next-content-overlay-panel-header
+    > .next-view-header-left
+    .next-content-overlay-panel-title,
+.next-content-overlay.place-form-panel
+    > .next-content-overlay-panel-container
+    > .next-content-overlay-panel
+    .next-content-overlay-panel-header
+    > .next-view-header-left
+    .next-content-overlay-panel-title {
+    white-space: initial;
+}
+
+.next-content-overlay.place-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-left .status-badge,
+.next-content-overlay.place-form-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-left .status-badge {
+    margin-left: 0 !important;
+}
+
+/** end places management mods */
+
+body.fleetbase-console .next-content-overlay > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-right .btn-wrapper {
+    flex-shrink: 0;
+}
+
+/** calendar event css mods */
+
+#fleet-ops-scheduler-calendar .fc-h-event .fc-event-main .fc-event-title {
+    display: block;
+    white-space: pre;
+    word-break: break-word;
+    padding: 0.05rem 0.2rem;
+    text-overflow: ellipsis;
+    font-size: 0.7rem;
+}
+
+#fleet-ops-scheduler-sidebar .fleetbase-model-select > .ember-basic-dropdown > .ember-basic-dropdown-trigger {
+    box-shadow: none;
+    background-color: inherit;
+    padding: 0 0.25rem;
+    border: 1px rgb(161 161 161 / 7%) solid;
+    border-radius: 0;
+    line-height: 1rem;
+    width: 11rem;
+    background-image: none;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#fleet-ops-scheduler-sidebar .fleetbase-model-select > .ember-basic-dropdown > .ember-basic-dropdown-trigger > .ember-power-select-selected-item,
+#fleet-ops-scheduler-sidebar .fleetbase-model-select > .ember-basic-dropdown > .ember-basic-dropdown-trigger > .ember-power-select-selected-item span {
+    font-size: 0.65rem;
+}
+
+#fleet-ops-scheduler-sidebar .fleetbase-model-select > .ember-basic-dropdown > .ember-basic-dropdown-trigger > .ember-power-select-clear-btn {
+    margin: 0.15rem 0.25rem;
+    padding: 0;
+    width: 1rem;
+    height: 1rem;
+    right: 0;
+}
+
+#fleet-ops-scheduler-sidebar .fleetbase-model-select > .ember-basic-dropdown + .ember-model-select__loading {
+    box-shadow: none;
+    background-color: inherit;
+    border: 0;
+}

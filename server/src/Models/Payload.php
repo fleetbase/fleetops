@@ -578,8 +578,45 @@ class Payload extends Model
         }
 
         $this->load('order');
-
         return $this->order;
+    }
+
+    public function removeWaypoints()
+    {
+        Waypoint::where('payload_uuid', $this->uuid)->delete();
+        $this->setRelation('waypoints', collect());
+        return $this;
+    }
+
+    public function removePlace($property, array $options = [])
+    {
+        // remove multiple places
+        if (is_array($property)) {
+            foreach ($property as $prop) {
+                if (is_string($prop)) {
+                    $this->removePlace($prop, $options);
+                }
+            }
+
+            return $this;
+        }
+
+        $attr     = $property . '_uuid';
+        $save     = data_get($options, 'save', false);
+        $callback = data_get($options, 'callback', false);
+
+        $this->setAttribute($attr, null);
+        $this->setRelation($property, null);
+
+        if ($save) {
+            $this->updateQuietly([$attr => null]);
+        }
+
+        if (is_callable($callback)) {
+            $callback($this);
+        }
+
+        return $this;
     }
 
     public function setPlace($property, Place $place, array $options = [])
@@ -599,8 +636,17 @@ class Payload extends Model
             }
         }
 
+        // Get the ID property
+        $id = $this->{$attr};
+
+        // set relationship to model instance to
+        if ($instance instanceof Model) {
+            $this->setRelation($property, $instance);
+        }
+
+        // If optioned to save
         if ($save) {
-            $this->save();
+            $this->updateQuietly([$attr => $id]);
         }
 
         if (is_callable($callback)) {
@@ -673,7 +719,7 @@ class Payload extends Model
         }
 
         $this->current_waypoint_uuid = $destination->uuid;
-        $this->save();
+        $this->saveQuietly();
         $this->updateWaypointActivity($activity, $location);
 
         return $this->load('currentWaypoint');

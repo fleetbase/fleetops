@@ -46,15 +46,32 @@ class DriverController extends Controller
         $input = $request->except(['name', 'password', 'email', 'phone', 'location', 'altitude', 'heading', 'speed', 'meta']);
 
         // get user details for driver
-        $userDetails                 = $request->only(['name', 'password', 'email', 'phone']);
-        $userDetails['company_uuid'] = session('company');
+        $userDetails                 = $request->only(['name', 'password', 'email', 'phone', 'timezone']);
+
+        // Get current company session
+        $company                   = Auth::getCompany();
+
+        // Apply user infos
+        $userDetails = User::applyUserInfoFromRequest($request, $userDetails);
 
         // create user account for driver
         $user = User::create($userDetails);
 
+        // Assign company
+        if ($company) {
+            $user->assignCompany($company);
+        } else {
+            $user->deleteQuietly();
+
+            return response()->apiError('Unable to assign driver to company.');
+        }
+
+        // Set user type
+        $user->setUserType('driver');
+
         // set user id
         $input['user_uuid']    = $user->uuid;
-        $input['company_uuid'] = session('company');
+        $input['company_uuid'] = $company->uuid;
 
         // vehicle assignment public_id -> uuid
         if ($request->has('vehicle')) {

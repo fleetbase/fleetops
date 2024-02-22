@@ -26,6 +26,8 @@ class Place extends FleetbaseResource
             'location'             => data_get($this, 'location', new Point(0, 0)),
             'address'              => $this->address,
             'address_html'         => $this->when(Http::isInternalRequest(), $this->address_html),
+            'avatar_url'           => $this->avatar_url,
+            'avatar_value'         => $this->when(Http::isInternalRequest(), $this->getOriginal('avatar_url')),
             'street1'              => $this->street1 ?? null,
             'street2'              => $this->street2 ?? null,
             'city'                 => $this->city ?? null,

@@ -15,11 +15,7 @@ use NotificationChannels\Apn\ApnChannel;
 use NotificationChannels\Apn\ApnMessage;
 use NotificationChannels\Fcm\FcmChannel;
 use NotificationChannels\Fcm\FcmMessage;
-use NotificationChannels\Fcm\Resources\AndroidConfig;
-use NotificationChannels\Fcm\Resources\AndroidFcmOptions;
-use NotificationChannels\Fcm\Resources\AndroidNotification;
-use NotificationChannels\Fcm\Resources\ApnsConfig;
-use NotificationChannels\Fcm\Resources\ApnsFcmOptions;
+use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
 class OrderPing extends Notification implements ShouldQueue
 {
@@ -100,6 +96,26 @@ class OrderPing extends Notification implements ShouldQueue
     }
 
     /**
+     * Get notification as array.
+     *
+     * @return void
+     */
+    public function toArray()
+    {
+        $order = new OrderResource($this->order);
+
+        return [
+            'title' => 'New incoming order!',
+            'body'  => $this->distance ? 'New order available for pickup about ' . Utils::formatMeters($this->distance, false) . ' away' : 'New order is available for pickup.',
+            'data'  => [
+                'id'    => $this->order->public_id,
+                'type'  => 'order_ping',
+                'order' => $order->toWebhookPayload(),
+            ],
+        ];
+    }
+
+    /**
      * Get the broadcastable representation of the notification.
      *
      * @return BroadcastMessage
@@ -138,23 +154,26 @@ class OrderPing extends Notification implements ShouldQueue
      */
     public function toFcm($notifiable)
     {
-        $notification = \NotificationChannels\Fcm\Resources\Notification::create()
-            ->setTitle('New incoming order!')
-            ->setBody($this->distance ? 'New order available for pickup about ' . Utils::formatMeters($this->distance, false) . ' away' : 'New order is available for pickup.');
-
-        $message = FcmMessage::create()
-            ->setData(['id' => $this->order->public_id, 'type' => 'order_ping'])
-            ->setNotification($notification)
-            ->setAndroid(
-                AndroidConfig::create()
-                    ->setFcmOptions(AndroidFcmOptions::create()->setAnalyticsLabel('analytics'))
-                    ->setNotification(AndroidNotification::create()->setColor('#4391EA'))
-            )->setApns(
-                ApnsConfig::create()
-                    ->setFcmOptions(ApnsFcmOptions::create()->setAnalyticsLabel('analytics_ios'))
-            );
-
-        return $message;
+        return (new FcmMessage(notification: new FcmNotification(
+            title: 'New incoming order!',
+            body: $this->distance ? 'New order available for pickup about ' . Utils::formatMeters($this->distance, false) . ' away' : 'New order is available for pickup.',
+        )))
+        ->data(['id' => $this->order->public_id, 'type' => 'order_ping'])
+        ->custom([
+            'android' => [
+                'notification' => [
+                    'color' => '#4391EA',
+                ],
+                'fcm_options' => [
+                    'analytics_label' => 'analytics',
+                ],
+            ],
+            'apns' => [
+                'fcm_options' => [
+                    'analytics_label' => 'analytics',
+                ],
+            ],
+        ]);
     }
 
     /**

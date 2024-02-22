@@ -48,8 +48,11 @@ class PlaceController extends Controller
             'meta',
         ]);
 
+        // Check is missing key address attributes
+        $isNotAddressObject = $request->isNotFilled(['name', 'location', 'latititude', 'longitude', 'city', 'province', 'postal_code']);
+
         // if address param is sent create from mixed
-        if ($request->isString('address')) {
+        if ($isNotAddressObject && $request->isString('address')) {
             $place = Place::createFromGeocodingLookup($request->input('address'));
 
             if ($place instanceof Place) {
@@ -58,7 +61,7 @@ class PlaceController extends Controller
         }
 
         // if street1 is the only param
-        if ($request->missing(['name', 'location', 'latititude', 'longitude', 'address']) && $request->isString('street1')) {
+        if ($isNotAddressObject && $request->isString('street1')) {
             $place = Place::createFromGeocodingLookup($request->input('street1'));
 
             if ($place instanceof Place) {
@@ -129,6 +132,11 @@ class PlaceController extends Controller
         // check if missing location
         $isMissingLocation = empty($input['location']);
 
+        // set a default location for creation
+        if ($isMissingLocation) {
+            $input['location'] = new Point(0, 0);
+        }
+
         // fill place with attributes
         $place->fill($input);
 
@@ -145,6 +153,7 @@ class PlaceController extends Controller
             }
         }
 
+        // Save place
         $place->save();
 
         return new PlaceResource($place);

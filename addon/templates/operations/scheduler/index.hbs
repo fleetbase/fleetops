@@ -1,9 +1,9 @@
 <Layout::Section::Header @title={{t "fleet-ops.operations.scheduler.index.title"}} />
 
-<Layout::Section::Body class="overflow-y-scroll h-screen">
-    <div class="h-screen">
+<Layout::Section::Body>
+    <div id="fleet-ops-scheduler-container">
         <div class="grid grid-cols-1 lg:grid-cols-3">
-            <div class="scheduler-left-sidebar">
+            <div id="fleet-ops-scheduler-sidebar" class="scheduler-left-sidebar">
                 <ContentPanel
                     @title={{t "fleet-ops.operations.scheduler.index.unscheduled-orders"}}
                     @titleStatuRight={{this.unscheduledOrders.length}}
@@ -38,7 +38,7 @@
                 </ContentPanel>
             </div>
 
-            <div class="col-span-2 p-4">
+            <div id="fleet-ops-scheduler-calendar" class="col-span-2 py-4 px-2">
                 <FullCalendar
                     @events={{this.events}}
                     @editable={{true}}
@@ -48,6 +48,7 @@
                     @onEventClick={{this.viewOrderAsEvent}}
                     @onInit={{this.setCalendarApi}}
                 />
+                <Spacer @height="400px" />
             </div>
         </div>
     </div>
