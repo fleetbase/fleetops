@@ -773,7 +773,7 @@ class Utils extends FleetbaseUtils
             }
         }
 
-        $response = Http::get(
+        $response = Http::withOptions(['verify' => false])->get(
             'https://maps.googleapis.com/maps/api/distancematrix/json',
             [
                 'origins'      => $originsString,
