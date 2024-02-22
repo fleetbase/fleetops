@@ -14,7 +14,9 @@ return new class extends Migration
     public function up()
     {
         Schema::table('drivers', function (Blueprint $table) {
-            $table->json('meta')->nullable()->after('slug');
+            if (!Schema::hasColumn('drivers', 'meta')) {
+                $table->json('meta')->nullable()->after('slug');
+            }
         });
     }
 
@@ -26,7 +28,9 @@ return new class extends Migration
     public function down()
     {
         Schema::table('drivers', function (Blueprint $table) {
-            $table->dropColumn('meta');
+            if (Schema::hasColumn('drivers', 'meta')) {
+                $table->dropColumn('meta');
+            }
         });
     }
 };
