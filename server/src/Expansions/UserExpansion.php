@@ -21,7 +21,7 @@ class UserExpansion implements Expansion
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasOne
      */
-    public function driver()
+    public static function driver()
     {
         return function () {
             /* @var \Illuminate\Database\Eloquent\Model $this */
@@ -32,7 +32,7 @@ class UserExpansion implements Expansion
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasOne
      */
-    public function currentDriverSession()
+    public static function currentDriverSession()
     {
         return function () {
             /* @var \Illuminate\Database\Eloquent\Model $this */
@@ -43,7 +43,7 @@ class UserExpansion implements Expansion
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
-    public function driverProfiles()
+    public static function driverProfiles()
     {
         return function () {
             /* @var \Illuminate\Database\Eloquent\Model $this */
@@ -54,7 +54,7 @@ class UserExpansion implements Expansion
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasOne
      */
-    public function customer()
+    public static function customer()
     {
         return function () {
             /* @var \Illuminate\Database\Eloquent\Model $this */
