@@ -144,15 +144,16 @@ class OrderController extends FleetOpsController
 
     /**
      *  Route which enables editing of an order route.
-     * 
-     * @param string $id - The order ID.
-     * @param Request $request
+     *
+     * @param string $id - The order ID
+     *
      * @return Response
      */
-    public function editOrderRoute(string $id, Request $request) {
-        $pickup = $request->input('pickup');
-        $dropoff = $request->input('dropoff');
-        $return = $request->input('return');
+    public function editOrderRoute(string $id, Request $request)
+    {
+        $pickup    = $request->input('pickup');
+        $dropoff   = $request->input('dropoff');
+        $return    = $request->input('return');
         $waypoints = $request->array('waypoints', []);
 
         // Get the order
@@ -160,7 +161,7 @@ class OrderController extends FleetOpsController
         if (!$order) {
             return response()->error('Unable to find order to update route for.');
         }
-        
+
         // Handle update of multiple waypoints
         if ($waypoints) {
             $order->payload->updateWaypoints($waypoints);
@@ -185,7 +186,7 @@ class OrderController extends FleetOpsController
             $order->payload->removeWaypoints();
         }
 
-        return ['order' => new $this->resource($order)]; 
+        return ['order' => new $this->resource($order)];
     }
 
     /**

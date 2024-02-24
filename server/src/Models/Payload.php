@@ -578,6 +578,7 @@ class Payload extends Model
         }
 
         $this->load('order');
+
         return $this->order;
     }
 
@@ -585,6 +586,7 @@ class Payload extends Model
     {
         Waypoint::where('payload_uuid', $this->uuid)->delete();
         $this->setRelation('waypoints', collect());
+
         return $this;
     }
 
