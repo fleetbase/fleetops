@@ -7,7 +7,7 @@ use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 
 
-class Order extends FleetbaseResource
+class Organizations extends FleetbaseResource
 {
      /**
      * Transform the resource into an array.

@@ -7,7 +7,7 @@ use Fleetbase\Http\Resources\Organization;
 use Fleetbase\Models\Company;
 
 
-class OrganizationController extends Controller
+class OrganizationsController extends Controller
 {
     /**
      * Return List organizations.
@@ -15,7 +15,7 @@ class OrganizationController extends Controller
      * @return Organization
      */
 
-    public function getOrganizationList()
+    public function listOrganizations()
     {
     
         $companies = Company::whereHas('users')->take(10)->get();
