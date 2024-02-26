@@ -44,10 +44,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->put('{id}', 'DriverController@update');
                     $router->delete('{id}', 'DriverController@delete');
                 });
-                // organization routes
-                $router->group(['prefix' => 'organizations'], function () use ($router) {
-                    $router->get('/', 'OrganizationsController@listOrganizations');
-                });
                 // contacts routes
                 $router->group(['prefix' => 'contacts'], function () use ($router) {
                     $router->post('/', 'ContactController@create');
@@ -180,6 +176,17 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->get('{id}', 'LabelController@getLabel');
                 });
             });
+
+       /*
+        |--------------------------------------------------------------------------
+        | Publicly Consumable FleetOps API Routes
+        |--------------------------------------------------------------------------
+        |
+        | End-user API routes, these are routes that the SDK and applications will interface with, that DO NOT REQUIRE API credentials.
+        */
+        $router->group(['prefix' => 'v1/public', 'namespace' => 'Api\v1'], function () use ($router) {
+            $router->get('organizations', 'OrganizationController@listOrganizations');
+        });
 
         /*
         |--------------------------------------------------------------------------
