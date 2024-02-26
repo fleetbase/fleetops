@@ -947,7 +947,7 @@ class OrderController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function getNextActivity(string $id, Request $request)
+    public function getNextActivity(Request $request, string $id)
     {
         $waypointId = $request->input('waypoint');
 
@@ -1112,7 +1112,7 @@ class OrderController extends Controller
      *
      * @return void
      */
-    public function captureQrScan(string $id, ?string $subjectId = null, Request $request)
+    public function captureQrScan(Request $request, string $id, ?string $subjectId = null) 
     {
         $code    = $request->input('code');
         $data    = $request->input('data', []);
@@ -1129,7 +1129,7 @@ class OrderController extends Controller
                 404
             );
         }
-
+        
         if (!$code) {
             return response()->apiError('No QR code data to capture.');
         }
