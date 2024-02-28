@@ -320,6 +320,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
+                        $router->fleetbaseRoutes('order-configs');
                         $router->fleetbaseRoutes('payloads');
                         $router->fleetbaseRoutes(
                             'places',

@@ -165,3 +165,43 @@ body.fleetbase-console .next-content-overlay > .next-content-overlay-panel-conta
     background-color: inherit;
     border: 0;
 }
+
+.fleetops-pill-tabs > nav {
+    display: flex;
+    flex-direction: row;
+}
+
+.fleetops-pill-tabs > nav > a.ui-tab {
+    border-radius: 1rem;
+    border: 1px solid #374151;
+    background-color: #1f2937;
+    margin-right: 0.75rem;
+    padding: 0.15rem 1rem;
+    font-size: 0.85rem;
+}
+
+body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab {
+    background-color: #e5e7eb;
+    border: 1px solid #d1d5db;
+}
+
+.fleetops-pill-tabs > nav > a.ui-tab.active {
+    background-color: #3b82f6;
+    border: 1px solid #2563eb;
+}
+
+body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab.active {
+    background-color: #3b82f6;
+    border: 1px solid #2563eb;
+    color: #fff;
+}
+
+.fleetops-pill-tabs > nav > a.ui-tab:hover {
+    opacity: 0.75;
+}
+
+.next-view-section-subheader .next-view-section-subheader-actions button.btn.order-config-select-button,
+.btn.order-config-select-button {
+    padding-top: 0.265rem !important;
+    padding-bottom: 0.265rem !important;
+}
