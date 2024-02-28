@@ -491,7 +491,7 @@ export default class OperationsOrdersIndexController extends BaseController {
         },
         {
             label: this.intl.t('fleet-ops.common.created-at'),
-            valuePath: 'createdAt',
+            valuePath: 'createdAtShort',
             sortParam: 'created_at',
             filterParam: 'created_at',
             width: '140px',
@@ -502,7 +502,7 @@ export default class OperationsOrdersIndexController extends BaseController {
         },
         {
             label: this.intl.t('fleet-ops.common.updated-at'),
-            valuePath: 'updatedAt',
+            valuePath: 'updatedAtShort',
             sortParam: 'updated_at',
             filterParam: 'updated_at',
             width: '125px',
@@ -949,7 +949,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @memberof OperationsOrdersIndexController
      */
     @action fetchActiveOrdersCount() {
-        this.fetch.get('fleet-ops/metrics/all', { discover: ['orders_in_progress'] }).then((response) => {
+        this.fetch.get('fleet-ops/metrics', { discover: ['orders_in_progress'] }).then((response) => {
             this.activeOrdersCount = response.orders_in_progress;
         });
     }

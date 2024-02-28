@@ -378,7 +378,7 @@ class ServiceRate extends Model
      *
      * @return array an array of applicable service rates
      */
-    public static function getServicableForWaypoints($waypoints = [], \Closure $queryCallback = null): array
+    public static function getServicableForWaypoints($waypoints = [], ?\Closure $queryCallback = null): array
     {
         $reader                 = new GeoJSONReader();
         $applicableServiceRates = [];
@@ -440,7 +440,7 @@ class ServiceRate extends Model
      *
      * @return array an array of applicable service rates
      */
-    public static function getServicableForPlaces($places = [], $service = null, $currency = null, \Closure $queryCallback = null): array
+    public static function getServicableForPlaces($places = [], $service = null, $currency = null, ?\Closure $queryCallback = null): array
     {
         $reader                 = new GeoJSONReader();
         $applicableServiceRates = [];

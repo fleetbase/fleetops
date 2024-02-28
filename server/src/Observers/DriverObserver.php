@@ -4,9 +4,9 @@ namespace Fleetbase\FleetOps\Observers;
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\User;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 
 class DriverObserver
 {

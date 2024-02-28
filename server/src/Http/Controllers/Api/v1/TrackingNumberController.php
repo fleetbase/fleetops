@@ -115,7 +115,7 @@ class TrackingNumberController extends Controller
     /**
      * Take the uuid value of an entity QR code and return the object.
      *
-     * @param \Illuminate\Http\Request $request
+     * @param Request $request
      *
      * @return \Illuminate\Http\Response
      */

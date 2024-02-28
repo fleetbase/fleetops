@@ -5,13 +5,13 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\Internal\v1\Payload as PayloadResource;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -562,7 +562,7 @@ class Payload extends Model
     /**
      * Get the pickup location for the payload.
      *
-     * @return \Grimzy\LaravelMysqlSpatial\Types\Point
+     * @return Point
      */
     public function getPickupLocation()
     {
@@ -582,6 +582,45 @@ class Payload extends Model
         return $this->order;
     }
 
+    public function removeWaypoints()
+    {
+        Waypoint::where('payload_uuid', $this->uuid)->delete();
+        $this->setRelation('waypoints', collect());
+
+        return $this;
+    }
+
+    public function removePlace($property, array $options = [])
+    {
+        // remove multiple places
+        if (is_array($property)) {
+            foreach ($property as $prop) {
+                if (is_string($prop)) {
+                    $this->removePlace($prop, $options);
+                }
+            }
+
+            return $this;
+        }
+
+        $attr     = $property . '_uuid';
+        $save     = data_get($options, 'save', false);
+        $callback = data_get($options, 'callback', false);
+
+        $this->setAttribute($attr, null);
+        $this->setRelation($property, null);
+
+        if ($save) {
+            $this->updateQuietly([$attr => null]);
+        }
+
+        if (is_callable($callback)) {
+            $callback($this);
+        }
+
+        return $this;
+    }
+
     public function setPlace($property, Place $place, array $options = [])
     {
         $attr     = $property . '_uuid';
@@ -599,8 +638,17 @@ class Payload extends Model
             }
         }
 
+        // Get the ID property
+        $id = $this->{$attr};
+
+        // set relationship to model instance to
+        if ($instance instanceof Model) {
+            $this->setRelation($property, $instance);
+        }
+
+        // If optioned to save
         if ($save) {
-            $this->save();
+            $this->updateQuietly([$attr => $id]);
         }
 
         if (is_callable($callback)) {
@@ -653,8 +701,8 @@ class Payload extends Model
     /**
      * Set the first waypoint and update activity.
      *
-     * @param array                                   $activity
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $location
+     * @param array $activity
+     * @param Point $location
      *
      * @return void
      */
@@ -673,7 +721,7 @@ class Payload extends Model
         }
 
         $this->current_waypoint_uuid = $destination->uuid;
-        $this->save();
+        $this->saveQuietly();
         $this->updateWaypointActivity($activity, $location);
 
         return $this->load('currentWaypoint');
@@ -682,9 +730,9 @@ class Payload extends Model
     /**
      * Update the current waypoint activity and it's entities.
      *
-     * @param array                                   $activity
-     * @param \Grimzy\LaravelMysqlSpatial\Types\Point $location
-     * @param \Fleetbase\Models\Proof|string|null     $proof    resolvable proof of delivery/activity
+     * @param array                               $activity
+     * @param Point                               $location
+     * @param \Fleetbase\Models\Proof|string|null $proof    resolvable proof of delivery/activity
      *
      * @return $this
      */
@@ -743,14 +791,14 @@ class Payload extends Model
         $order = $this->order;
 
         // set google matrix based distance and time
-        if ($order instanceof \Fleetbase\FleetOps\Models\Order) {
+        if ($order instanceof Order) {
             return $order->setDistanceAndTime();
         }
 
         return null;
     }
 
-    public function findDestinationFromKey(string $destinationKey = null): ?Place
+    public function findDestinationFromKey(?string $destinationKey = null): ?Place
     {
         if ($destinationKey === null) {
             return null;

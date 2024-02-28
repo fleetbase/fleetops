@@ -32,7 +32,7 @@ class IntegratedVendorException extends \Exception implements Responsable
      * @param int                   $code             the exception code
      * @param \Throwable|null       $previous         the previous throwable used for the exception chaining
      */
-    public function __construct(string $message = '', IntegratedVendor $integratedVendor = null, string $triggerMethod = null, int $code = 400, \Throwable $previous = null)
+    public function __construct(string $message = '', ?IntegratedVendor $integratedVendor = null, ?string $triggerMethod = null, int $code = 400, ?\Throwable $previous = null)
     {
         parent::__construct($message, $code, $previous);
         $this->integratedVendor = $integratedVendor;
@@ -44,7 +44,7 @@ class IntegratedVendorException extends \Exception implements Responsable
      *
      * @param \Illuminate\Http\Request $request
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function toResponse($request)
     {

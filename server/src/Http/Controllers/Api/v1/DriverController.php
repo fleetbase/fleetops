@@ -17,6 +17,7 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Requests\SwitchOrganizationRequest;
 use Fleetbase\Http\Resources\Organization;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\User;
@@ -24,7 +25,6 @@ use Fleetbase\Models\UserDevice;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Support\Auth;
 use Geocoder\Laravel\Facades\Geocoder;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -46,15 +46,32 @@ class DriverController extends Controller
         $input = $request->except(['name', 'password', 'email', 'phone', 'location', 'altitude', 'heading', 'speed', 'meta']);
 
         // get user details for driver
-        $userDetails                 = $request->only(['name', 'password', 'email', 'phone']);
-        $userDetails['company_uuid'] = session('company');
+        $userDetails                 = $request->only(['name', 'password', 'email', 'phone', 'timezone']);
+
+        // Get current company session
+        $company                   = Auth::getCompany();
+
+        // Apply user infos
+        $userDetails = User::applyUserInfoFromRequest($request, $userDetails);
 
         // create user account for driver
         $user = User::create($userDetails);
 
+        // Assign company
+        if ($company) {
+            $user->assignCompany($company);
+        } else {
+            $user->deleteQuietly();
+
+            return response()->apiError('Unable to assign driver to company.');
+        }
+
+        // Set user type
+        $user->setUserType('driver');
+
         // set user id
         $input['user_uuid']    = $user->uuid;
-        $input['company_uuid'] = session('company');
+        $input['company_uuid'] = $company->uuid;
 
         // vehicle assignment public_id -> uuid
         if ($request->has('vehicle')) {
@@ -354,7 +371,7 @@ class DriverController extends Controller
     /**
      * Authenticates customer using login credentials and returns with auth token.
      *
-     * @return \Fleetbase\FleetOps\Http\Resources\v1\Driver
+     * @return DriverResource
      */
     public function login(Request $request)
     {
@@ -418,13 +435,16 @@ class DriverController extends Controller
 
         // generate verification token
         try {
-            VerificationCode::generateSmsVerificationFor($user, 'driver_login', function ($verification) use ($company) {
-                return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
-            });
+            VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
+                'messageCallback' => function ($verification) use ($company) {
+                    return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
+                },
+            ]);
         } catch (\Throwable $e) {
             if (app()->bound('sentry')) {
                 app('sentry')->captureException($e);
             }
+
             return response()->apiError('Unable to send SMS Verification code.');
         }
 
@@ -434,7 +454,7 @@ class DriverController extends Controller
     /**
      * Verifys SMS code and sends auth token with customer resource.
      *
-     * @return \Fleetbase\FleetOps\Http\Resources\v1\Driver
+     * @return DriverResource
      */
     public function verifyCode(Request $request)
     {
@@ -488,11 +508,9 @@ class DriverController extends Controller
     }
 
     /**
-     * Gets the current organization/company for the driver
+     * Gets the current organization/company for the driver.
      *
-     * @param string $id
-     * @param \Illuminate\Http\Request $request
-     * @return \Fleetbase\Http\Resources\Organization
+     * @return Organization
      */
     public function currentOrganization(string $id, Request $request)
     {
@@ -520,7 +538,7 @@ class DriverController extends Controller
     /**
      * List organizations that driver is apart of.
      *
-     * @return \Fleetbase\Http\Resources\Organization
+     * @return Organization
      */
     public function listOrganizations(string $id, Request $request)
     {
@@ -545,7 +563,7 @@ class DriverController extends Controller
     /**
      * Allow driver to switch organization.
      *
-     * @return \Fleetbase\Http\Resources\Organization
+     * @return Organization
      */
     public function switchOrganization(string $id, SwitchOrganizationRequest $request)
     {
@@ -603,7 +621,7 @@ class DriverController extends Controller
         $order = $request->input('order');
 
         try {
-            /** @var \Fleetbase\FleetOps\Models\Driver $driver */
+            /** @var Driver $driver */
             $driver = Driver::findRecordOrFail($id, ['user']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             return response()->json(
@@ -616,7 +634,7 @@ class DriverController extends Controller
 
         if ($order) {
             try {
-                /** @var \Fleetbase\FleetOps\Models\Order $order */
+                /** @var Order $order */
                 $order = Order::findRecordOrFail($order, ['payload']);
             } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
                 return response()->json(
@@ -719,9 +737,6 @@ class DriverController extends Controller
 
     /**
      * Get the drivers current company using their user account.
-     *
-     * @param \Fleetbase\Models\User $user
-     * @return \Fleetbase\Models\Company|null
      */
     private static function getDriverCompanyFromUser(User $user): ?Company
     {
@@ -746,7 +761,7 @@ class DriverController extends Controller
     /**
      * Patches phone number with international code.
      */
-    private static function phone(string $phone = null): string
+    private static function phone(?string $phone = null): string
     {
         if ($phone === null) {
             $phone = request()->input('phone');

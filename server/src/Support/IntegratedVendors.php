@@ -169,7 +169,7 @@ class ResolvedIntegratedVendor
         return json_encode($this->toArray());
     }
 
-    public function callback(string $callback = null, ...$callbackParams)
+    public function callback(?string $callback = null, ...$callbackParams)
     {
         if (!is_string($callback)) {
             return;

@@ -17,9 +17,9 @@ namespace Fleetbase\FleetOps\Support;
 class DistanceMatrix
 {
     public ?float $distance;
-    public ?int $time;
+    public ?float $time;
 
-    public function __construct(?float $distance, ?int $time)
+    public function __construct(?float $distance, ?float $time)
     {
         $this->distance = $distance;
         $this->time     = $time;

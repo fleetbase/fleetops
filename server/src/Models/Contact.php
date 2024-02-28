@@ -13,6 +13,7 @@ use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
@@ -92,25 +93,12 @@ class Contact extends Model
     protected $filterParams = ['place_uuid', 'customer_type', 'facilitator_type', 'place'];
 
     /**
-     * Properties which activity needs to be logged.
-     *
-     * @var array
+     * Get the activity log options for the model.
      */
-    protected static $logAttributes = '*';
-
-    /**
-     * Do not log empty changed.
-     *
-     * @var bool
-     */
-    protected static $submitEmptyLogs = false;
-
-    /**
-     * The name of the subject to log.
-     *
-     * @var string
-     */
-    protected static $logName = 'contact';
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logOnly(['*'])->logOnlyDirty();
+    }
 
     /**
      * Get the options for generating the slug.

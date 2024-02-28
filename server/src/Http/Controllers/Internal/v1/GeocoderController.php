@@ -13,7 +13,7 @@ class GeocoderController extends Controller
     /**
      * Reverse geocodes the given coordinates and returns the results as JSON.
      *
-     * @param \Illuminate\Http\Request $request the HTTP request object
+     * @param Request $request the HTTP request object
      *
      * @return \Illuminate\Http\Response the JSON response with the geocoded results
      */
@@ -22,11 +22,11 @@ class GeocoderController extends Controller
         $query  = $request->or(['coordinates', 'query']);
         $single = $request->boolean('single');
 
-        /** @var \Grimzy\LaravelMysqlSpatial\Types\Point $coordinates */
+        /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point $coordinates */
         $coordinates = Utils::getPointFromCoordinates($query);
 
         // if not a valid point error
-        if (!$coordinates instanceof \Grimzy\LaravelMysqlSpatial\Types\Point) {
+        if (!$coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
             return response()->error('Invalid coordinates provided.');
         }
 
@@ -57,7 +57,7 @@ class GeocoderController extends Controller
     /**
      * Geocodes the given query and returns the results as JSON.
      *
-     * @param \Illuminate\Http\Request $request the HTTP request object
+     * @param Request $request the HTTP request object
      *
      * @return \Illuminate\Http\Response the JSON response with the geocoded results
      */

@@ -7,6 +7,8 @@ use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Scopes\DriverScope;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Support\Utils as FleetOpsUtils;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
@@ -14,11 +16,11 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
@@ -76,6 +78,7 @@ class Driver extends Model
         'current_job_uuid',
         'auth_token',
         'signup_token_used',
+        'avatar_url',
         'drivers_license_number',
         'location',
         'heading',
@@ -157,25 +160,12 @@ class Driver extends Model
     protected $filterParams = ['vendor', 'facilitator', 'customer', 'fleet', 'photo_uuid', 'avatar_uuid'];
 
     /**
-     * Properties which activity needs to be logged.
-     *
-     * @var array
+     * Get the activity log options for the model.
      */
-    protected static $logAttributes = '*';
-
-    /**
-     * Do not log empty changed.
-     *
-     * @var bool
-     */
-    protected static $submitEmptyLogs = false;
-
-    /**
-     * The name of the subject to log.
-     *
-     * @var string
-     */
-    protected static $logName = 'driver';
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logOnly(['*'])->logOnlyDirty();
+    }
 
     /**
      * Get the options for generating the slug.
@@ -305,6 +295,80 @@ class Driver extends Model
     public function devices()
     {
         return $this->hasMany(\Fleetbase\Models\UserDevice::class, 'user_uuid', 'user_uuid');
+    }
+
+    /**
+     * Get avatar url.
+     *
+     * @return string|null
+     */
+    public function getAvatarUrlAttribute($value)
+    {
+        // if vehicle assigned us the vehicle avatar
+        if ($this->vehicle) {
+            return $this->vehicle->avatar_url;
+        }
+
+        if (!$value) {
+            return static::getAvatar();
+        }
+
+        if (Str::isUuid($value)) {
+            return static::getAvatar($value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Get an avatar url by key.
+     *
+     * @param string $key
+     */
+    public static function getAvatar($key = 'moto-driver'): ?string
+    {
+        if (Str::isUuid($key)) {
+            $file = File::where('uuid', $key)->first();
+            if ($file) {
+                return $file->url;
+            }
+
+            return null;
+        }
+
+        return static::getAvatarOptions()->get($key);
+    }
+
+    /**
+     * Get all avatar options for a vehicle.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public static function getAvatarOptions()
+    {
+        $options = [
+            'moto-driver.png',
+        ];
+
+        // Get custom avatars
+        $customAvatars = collect(File::where('type', 'driver-avatar')->get()->mapWithKeys(
+            function ($file) {
+                $key = str_replace(['.svg', '.png'], '', 'Custom: ' . $file->original_filename);
+
+                return [$key => $file->uuid];
+            }
+        )->toArray());
+
+        // Create default avatars included from fleetbase
+        $avatars = collect($options)->mapWithKeys(
+            function ($option) {
+                $key = str_replace(['.svg', '.png'], '', $option);
+
+                return [$key => Utils::assetFromS3('static/driver-icons/' . $option)];
+            }
+        );
+
+        return $customAvatars->merge($avatars);
     }
 
     /**
@@ -510,9 +574,9 @@ class Driver extends Model
      *
      * @param Order|null $order The order to consider when updating the position (default: null)
      *
-     * @return \Fleetbase\FleetOps\Models\Position|null The created Position object, or null if no new position was created
+     * @return Position|null The created Position object, or null if no new position was created
      */
-    public function updatePosition(Order $order = null): ?Position
+    public function updatePosition(?Order $order = null): ?Position
     {
         $position     = null;
         $lastPosition = $this->positions()->whereCompanyUuid(session('company'))->latest()->first();

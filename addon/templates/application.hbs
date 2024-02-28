@@ -1,5 +1,5 @@
 <EmberWormhole @to="sidebar-menu-items">
-    <Layout::FleetOpsSidebar @visibilitySettings={{@model.visibilitySettings}} @onClickCreateOrder={{this.createOrder}} @onClickSettings={{this.toggleSettings}} />
+    <Layout::FleetOpsSidebar @controller={{this}} @visibilitySettings={{@model.visibilitySettings}} @onClickCreateOrder={{this.createOrder}} @onClickSettings={{this.toggleSettings}} />
 </EmberWormhole>
 
 <Layout::Section::Container>

@@ -7,25 +7,31 @@
     </a>
     <div class="{{@contentClass}} card-content bg-white dark:bg-gray-900 text-sm space-y-2">
         <div class="flex items-center justify-between">
-            <div>
-                <FaIcon @icon="calendar" class="mr-2" />
+            <div class="flex flex-row items-center leading-5">
+                <div class="w-4">
+                    <FaIcon @icon="clock" @size="xs" />
+                </div>
                 <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.date"}}</span>
             </div>
             <span class={{unless @order.scheduled_at "dark:text-gray-600 text-gray-400"}}>{{n-a @order.scheduledAt "Not Scheduled"}}</span>
         </div>
         <div class="flex items-center justify-between">
-            <div>
-                <FaIcon @icon="calendar" class="mr-2" />
+            <div class="flex flex-row items-center leading-5">
+                <div class="w-4">
+                    <FaIcon @icon="calendar" @size="xs" />
+                </div>
                 <span class="font-semibold">Date created</span>
             </div>
             <span>{{n-a @order.createdAtWithTime}}</span>
         </div>
         <div class="flex items-center justify-between">
             <div class="flex flex-row items-center">
-                <FaIcon @icon="calendar" class="mr-2" />
+                <div class="w-4">
+                    <FaIcon @icon="id-card-alt" @size="xs" />
+                </div>
                 <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.driver-assigned"}}</span>
-                <div class="ml-2">
-                    <a href="javascript:;" class="text-blue-400 hover:opacity-75" {{on "click" this.startAssignDriver}}>
+                <div class="ml-1">
+                    <a href="javascript:;" class="text-blue-400 text-xs hover:opacity-75" {{on "click" this.startAssignDriver}}>
                         <FaIcon @icon="edit" @size="xs" />
                     </a>
                 </div>
@@ -33,14 +39,9 @@
             <div>
                 {{#if this.isAssigningDriver}}
                     <ModelSelect @modelName="driver" @selectedModel={{@order.driver_assigned}} @placeholder={{t "fleet-ops.component.order.schedule-card.select-driver"}} @triggerClass="form-select form-input form-input-sm w-48" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @disabled={{@model.isLoading}} @onChange={{this.assignDriver}} as |model|>
-                        <div class="flex items-center">
-                            <div class="w-5">
-                                <FaIcon @icon="id-card-alt" @size="xs" />
-                            </div>
-                            <div class="flex-1 flex flex-row truncate text-xs">
-                                <span class="uppercase mr-1.5 text-xs">{{model.name}}</span>
-                                <span class="uppercase text-xs">{{model.phone}}</span>
-                            </div>
+                        <div class="flex flex-row items-center truncate uppercase">
+                            <span class="uppercase mr-1.5">{{model.name}}</span>
+                            <span class="uppercase">{{model.phone}}</span>
                         </div>
                     </ModelSelect>
                 {{else}}
@@ -49,11 +50,22 @@
             </div>
         </div>
         <div class="flex items-center justify-between">
-            <div class="flex flex-row items-center">
-                <FaIcon @icon="calendar" class="mr-2" />
+            <div class="flex flex-row items-center leading-5">
+                <div class="w-4">
+                    <FaIcon @icon="car" @size="xs" />
+                </div>
                 <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.vehicle-assigned"}}</span>
             </div>
             <a href="javascript:;" disabled={{not @order.driver_assigned.vehicle}} class={{unless @order.driver_assigned.vehicle_uuid "dark:text-gray-600 text-gray-400"}} {{on "click" (fn this.onClickVehicle @order.driver_assigned.vehicle)}}>{{n-a @order.driver_assigned.vehicle_name (t "fleet-ops.component.order.schedule-card.no-vehicle")}}</a>
+        </div>
+        <div class="flex items-center justify-between">
+            <div class="flex flex-row items-center leading-5">
+                <div class="w-4">
+                    <FaIcon @icon="location-dot" @size="xs" />
+                </div>
+                <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.destination"}}</span>
+            </div>
+            <span>{{n-a @order.pickupName}}</span>
         </div>
         {{!-- <div class="z-20 relative">
             <RouteList @order={{@order}} />

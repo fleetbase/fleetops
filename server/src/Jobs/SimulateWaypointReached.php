@@ -4,7 +4,7 @@ namespace Fleetbase\FleetOps\Jobs;
 
 use Fleetbase\FleetOps\Events\DriverSimulatedLocationChanged;
 use Fleetbase\FleetOps\Models\Driver;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -23,12 +23,12 @@ class SimulateWaypointReached implements ShouldQueue
     use SerializesModels;
 
     /**
-     * @var \Fleetbase\FleetOps\Models\Driver the driver for whom the waypoint is being simulated
+     * @var Driver the driver for whom the waypoint is being simulated
      */
     public Driver $driver;
 
     /**
-     * @var \Grimzy\LaravelMysqlSpatial\Types\Point the waypoint that the driver is simulated to have reached
+     * @var Point the waypoint that the driver is simulated to have reached
      */
     public Point $waypoint;
 

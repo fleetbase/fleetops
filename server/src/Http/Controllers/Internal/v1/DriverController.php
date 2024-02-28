@@ -13,13 +13,12 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
-use Fleetbase\Models\CompanyUser;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Invite;
 use Fleetbase\Models\User;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Notifications\UserInvited;
 use Fleetbase\Support\Auth;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -111,13 +110,6 @@ class DriverController extends FleetOpsController
                     // Assign user to company
                     if ($company) {
                         $existingUser->assignCompany($company);
-
-                        // create company user
-                        CompanyUser::create([
-                            'user_uuid'    => $existingUser->uuid,
-                            'company_uuid' => $company->uuid,
-                            'status'       => $isOrganizationMember ? 'active' : 'pending'
-                        ]);
                     }
 
                     if (!$isOrganizationMember) {
@@ -174,19 +166,18 @@ class DriverController extends FleetOpsController
                     $company                   = Auth::getCompany();
                     $userInput['company_uuid'] = session('company', $company->uuid);
 
+                    // Apply user infos
+                    $userInput = User::applyUserInfoFromRequest($request, $userInput);
+
                     // Create user account
                     $user = User::create($userInput);
 
                     // Assign user to company
                     if ($company) {
                         $user->assignCompany($company);
-
-                        // create company user
-                        CompanyUser::create([
-                            'user_uuid'    => $user->uuid,
-                            'company_uuid' => $company->uuid,
-                            'status'       => 'active',
-                        ]);
+                    } else {
+                        $user->deleteQuietly();
+                        throw new \Exception('Unable to assign driver to company.');
                     }
 
                     // Set user type as driver
@@ -310,6 +301,18 @@ class DriverController extends FleetOpsController
     }
 
     /**
+     * Get all avatar options for an vehicle.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function avatars()
+    {
+        $options = Driver::getAvatarOptions();
+
+        return response()->json($options);
+    }
+
+    /**
      * Export the drivers to excel or csv.
      *
      * @return \Illuminate\Http\Response
@@ -397,9 +400,11 @@ class DriverController extends FleetOpsController
         }
 
         // Generate verification token
-        VerificationCode::generateSmsVerificationFor($user, 'driver_login', function ($verification) {
-            return 'Your ' . config('app.name') . ' verification code is ' . $verification->code;
-        });
+        VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
+            'messageCallback' => function ($verification) {
+                return 'Your ' . config('app.name') . ' verification code is ' . $verification->code;
+            },
+        ]);
 
         return response()->json(['status' => 'OK']);
     }
@@ -453,7 +458,7 @@ class DriverController extends FleetOpsController
     /**
      * Patches phone number with international code.
      */
-    public static function phone(string $phone = null): string
+    public static function phone(?string $phone = null): string
     {
         if ($phone === null) {
             $phone = request()->input('phone');

@@ -95,6 +95,76 @@ fleet-ops:
     back: Back
 
   component:
+    custom-field-form-panel:
+      custom-field-title-concat: 'Custom Field: '
+      new-custom-field: New custom field
+      close-new-custom-field: Cancel custom field changes
+      save-custom-field: Save Changes
+      create-custom-field: Create New Field
+      field-name: Field Name
+      field-label: Field Label
+      field-type: Field Type
+      select-field-type: Select field type...
+      field-description: Field Description
+      field-help-text: Field Help Text
+      field-default-value: Field Default Value
+      field-is-required: Is this field required?
+      field-options: Field Options
+      field-validation-rules: Field Validation Rules
+    order-config-manager:
+      title: Orders Configuration
+      message: Order configurations allow you to define dynamic configurations which will tell Fleetbase how different types of orders should be executed.
+      configuration: Configuration
+      new-order-config: New Order Config
+      select-order-config: Select Order Config
+      create-new-title: Create a new order configuration
+      create-warning-message: Order configuration requires a name
+      create-success-message: New order config created successfully.
+      no-order-config-selected: No order configuration selected.
+      saved-success-message: '{orderConfigName} configuration saved.'
+      cloned-success-message: Order config successfully cloned.
+      enter-clone-name: Enter name of cloned configuration
+      no-config-name-warning-message: No config name entered.
+      delete-warning-message: Once this order configuration is deleted you will not be able to create orders using it anymore. Are you sure?
+      uninstall-order-config: Uninstall Configuration
+      uninstall-order-config-success-message: Extension {extensionName} uninstalled.
+      select-order-config-to-start: Select or create an order config to start.
+      details:
+        details: Details
+        name: Name
+        description: Description
+        tags: Tags
+        add-tags: Add Tags
+        key: Key
+        version: Version
+        namespace: Namespace
+        controls: Controls
+        delete-config: Delete Config
+        delete:
+          delete-title: Delete this order config?
+          delete-body-message: Once this order config is deleted it will not be recoverable and you will lose all configurations.
+          confirm-delete: Delete
+      custom-fields:
+        new-field-group: New field group
+        new-custom-field: Create new custom field
+        grid-size: Grid Size
+        delete-custom-field-prompt:
+          modal-title: Delete this custom field?
+          delete-body-message: Once this custom field is deleted it will not be recoverable and you will lose all configurations.
+          confirm-delete: Delete
+        delete-custom-field-group-prompt:
+          modal-title: Delete this field group?
+          delete-body-message: Once this field group is deleted it will not be recoverable and you will lose all custom fields inside.
+          confirm-delete: Delete
+      types:
+        no-order-installed: No order configurations installed!
+        you-have-no-configs: You currently have no order configs installed, check at the extensions to install an order configuration to get started.
+        view-extensions: View extensions
+    avatar-picker:
+      avatar: Avatar
+      select-map-avatar: Select map avatar
+      select-avatar-rendering: Select an avatar to be used for rendering on maps when using geolocation tracking features.
+      select-avatar: Select avatar
     admin:
       navigator-app:
         title: Navigator App
@@ -104,6 +174,12 @@ fleet-ops:
         title: Visibility Controls
         message: Visibility controls allow you to disable sections of Fleet-Ops. Toggle the checkbox to enable or disable sections to hide in Fleet-ops.
         checkbox-text: Enable or disable visibility for this section in Fleet-Ops.
+      avatar-management:
+        upload-avatar: Upload Avatar
+        view-avatar: View Avatar
+        vehicles : Vehicles
+        drivers : Drivers
+        places : Places
     cell:
       driver-name:
         not-assigned: No driver assigned
@@ -135,6 +211,7 @@ fleet-ops:
         issues: Issues
         title: Create new order
         settings: Settings
+        order-config: Order Config
     live-map-drawer:
       driver-listing:
         location: Location
@@ -191,6 +268,9 @@ fleet-ops:
         visibility: Visibility Controls
         scope: Scope
     modals:
+      new-custom-field-group:
+        modal-title: Create a new custom field group
+        group-name: Group Name
       assign-driver:
         select-driver: Select Driver
         select-assign: Select Driver to Assign
@@ -524,6 +604,7 @@ fleet-ops:
         show-less: Show less details
         show-more: Show more details
       schedule-card:
+        destination: Destination
         unassign-driver: Unassign Driver?
         unassign-text: You are about to unassign the driver for Order {orderId}. Click continue to confirm removal of driver.
         unassign-button: Continue and unassign driver
@@ -531,16 +612,17 @@ fleet-ops:
         assign-text: You are about to assign a new driver ({driverName}) to Order {orderId}. Click continue to confirm driver.
         assign-button: Continue and assign driver
         date: Date scheduled
-        driver-assigned: Driver Assigned
-        no-driver: No Driver Assigned
+        driver-assigned: Driver
+        no-driver: No Driver
         select-driver: Select Driver
-        vehicle-assigned: Vehicle Assigned
-        no-vehicle: No Vehicle Assigned
+        vehicle-assigned: Vehicle
+        no-vehicle: No Vehicle
     widget:
       fleet-ops-quickstart:
         message: Let's see what you can do to jumpstart operations...
         start-task: Start Task
       key-metrics:
+        title: Fleet-Ops Metrics
         earnings: Earnings
         fuel-expenses: Fuel Expenses
         traveled: Distance Traveled

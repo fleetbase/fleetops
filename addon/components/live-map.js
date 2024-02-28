@@ -5,13 +5,9 @@ import { action, set } from '@ember/object';
 import { isArray } from '@ember/array';
 import { dasherize, camelize, classify } from '@ember/string';
 import { singularize } from 'ember-inflector';
-import { alias } from '@ember/object/computed';
 import { later } from '@ember/runloop';
 import { allSettled } from 'rsvp';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
-
-const DEFAULT_LATITUDE = 1.369;
-const DEFAULT_LONGITUDE = 103.8864;
 
 /**
  * Component which displays live activity.
@@ -65,6 +61,13 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @service serviceAreas;
+
+    /**
+     * Inject the `location` service.
+     *
+     * @memberof LiveMapComponent
+     */
+    @service location;
 
     /**
      * Inject the `appCache` service.
@@ -240,14 +243,14 @@ export default class LiveMapComponent extends Component {
      * @type {number}
      * @memberof LiveMapComponent
      */
-    @tracked latitude = DEFAULT_LATITUDE;
+    @tracked latitude = this.location.getLatitude();
 
     /**
      * The longitude for the map view.
      * @type {number}
      * @memberof LiveMapComponent
      */
-    @tracked longitude = DEFAULT_LONGITUDE;
+    @tracked longitude = this.location.getLongitude();
 
     /**
      * Indicates if coordinate setting should be skipped.
@@ -264,32 +267,20 @@ export default class LiveMapComponent extends Component {
     originalResources = {};
 
     /**
-     * The user's latitude from the currentUser.
-     * @type {number}
-     * @memberof LiveMapComponent
-     */
-    @alias('currentUser.latitude') userLatitude;
-
-    /**
-     * The user's longitude from the currentUser.
-     * @type {number}
-     * @memberof LiveMapComponent
-     */
-    @alias('currentUser.longitude') userLongitude;
-
-    /**
      * Creates an instance of LiveMapComponent.
      * @memberof LiveMapComponent
      */
-    constructor() {
+    constructor(owner, { zoom = 12, tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', darkMode }) {
         super(...arguments);
-        this.skipSetCoordinates = getWithDefault(this.args, 'skipSetCoordinates', false);
-        this.zoom = getWithDefault(this.args, 'zoom', 12);
-        this.tileSourceUrl = getWithDefault(this.args, 'tileSourceUrl', 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png');
 
-        if (this.args.darkMode === true) {
+        this.zoom = zoom;
+        this.tileSourceUrl = tileSourceUrl;
+        if (darkMode === true) {
             this.tileSourceUrl = 'https://{s}.tile.jawg.io/jawg-matrix/{z}/{x}/{y}{r}.png?access-token=';
         }
+
+        this.ready();
+        this.setupComponent();
     }
 
     /**
@@ -300,7 +291,7 @@ export default class LiveMapComponent extends Component {
      * @action
      * @function
      */
-    @action setupComponent() {
+    setupComponent() {
         // trigger that initial coordinates have been set
         this.universe.trigger('fleet-ops.live-map.loaded', this);
 
@@ -394,36 +385,14 @@ export default class LiveMapComponent extends Component {
      * if available, or null if the function is skipped.
      */
     async setInitialCoordinates() {
-        if (this.skipSetCoordinates === false) {
-            if (this.appCache.has(['map_latitude', 'map_longitude'])) {
-                this.latitude = this.appCache.get('map_latitude');
-                this.longitude = this.appCache.get('map_longitude');
-                this.isReady = true;
+        const { latitude, longitude } = await this.location.getUserLocation();
 
-                // trigger that initial coordinates is set to livemap component
-                this.universe.trigger('fleet-ops.live-map.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.ready();
 
-                return [this.latitude, this.longitude];
-            }
-
-            const { latitude, longitude } = await this.getInitialCoordinates();
-
-            if (this.appCache.doesntHave(['map_latitude', 'map_longitude'])) {
-                this.appCache.set('map_latitude', latitude);
-                this.appCache.set('map_longitude', longitude);
-            }
-
-            this.latitude = latitude;
-            this.longitude = longitude;
-            this.isReady = true;
-
-            // trigger that initial coordinates is set to livemap component
-            this.universe.trigger('fleet-ops.live-map.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
-
-            return [this.latitude, this.longitude];
-        }
-
-        return null;
+        // trigger that initial coordinates is set to livemap component
+        this.universe.trigger('fleet-ops.live-map.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
     }
 
     /**
@@ -1884,70 +1853,6 @@ export default class LiveMapComponent extends Component {
     }
 
     /**
-     * Retrieve the initial coordinates for the map view.
-     *
-     * @returns {Promise} A promise that resolves to an object containing latitude and longitude.
-     * @memberof LiveMapComponent
-     */
-    getInitialCoordinates() {
-        const initialCoordinates = {
-            latitude: DEFAULT_LATITUDE,
-            longitude: DEFAULT_LONGITUDE,
-        };
-
-        const getCoordinateFromNavigator = () => {
-            return new Promise((resolve) => {
-                // eslint-disable-next-line no-undef
-                if (window.navigator && window.navigator.geolocation) {
-                    // eslint-disable-next-line no-undef
-                    return navigator.geolocation.getCurrentPosition(
-                        ({ coords }) => {
-                            const { latitude, longitude } = coords;
-
-                            initialCoordinates.latitude = latitude;
-                            initialCoordinates.longitude = longitude;
-
-                            resolve(initialCoordinates);
-                        },
-                        () => {
-                            // if failed use default user lat/lng
-                            initialCoordinates.latitude = this.getLocalLatitude();
-                            initialCoordinates.longitude = this.getLocalLongitude();
-
-                            resolve(initialCoordinates);
-                        }
-                    );
-                }
-            });
-        };
-
-        return new Promise((resolve) => {
-            // get location from active orders
-            this.fetch
-                .get('fleet-ops/live/coordinates')
-                .then((coordinates) => {
-                    if (!coordinates) {
-                        return getCoordinateFromNavigator().then((navigatorCoordinates) => {
-                            resolve(navigatorCoordinates);
-                        });
-                    }
-
-                    // from the `get-active-order-coordinates` the responded coordinates will always be [longitude, latitude]
-                    const validCoordinates = coordinates.filter((point) => point.cordinates[0] !== 0);
-                    const [longitude, latitude] = getWithDefault(validCoordinates, '0.coordiantes', [0, 0]);
-
-                    initialCoordinates.latitude = latitude;
-                    initialCoordinates.longitude = longitude;
-
-                    resolve(initialCoordinates);
-                })
-                .catch(() => {
-                    getCoordinateFromNavigator().then(resolve);
-                });
-        });
-    }
-
-    /**
      * Fetch service areas and cache them if not already cached.
      *
      * @returns {Promise} A promise that resolves to an array of service area records.
@@ -1975,31 +1880,5 @@ export default class LiveMapComponent extends Component {
                     this.isLoading = false;
                 });
         });
-    }
-
-    /**
-     * Get the local latitude for the map view.
-     *
-     * @returns {number} The local latitude.
-     * @memberof LiveMapComponent
-     */
-    getLocalLatitude() {
-        const whois = this.currentUser.getOption('whois');
-        const latitude = this.appCache.get('map_latitude');
-
-        return latitude || whois?.latitude || DEFAULT_LATITUDE;
-    }
-
-    /**
-     * Get the local longitude for the map view.
-     *
-     * @returns {number} The local longitude.
-     * @memberof LiveMapComponent
-     */
-    getLocalLongitude() {
-        const whois = this.currentUser.getOption('whois');
-        const longitude = this.appCache.get('map_longitude');
-
-        return longitude || whois?.longitude || DEFAULT_LONGITUDE;
     }
 }

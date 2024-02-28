@@ -1,0 +1,26 @@
+<Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{or this.isResizable @isResizable}} @width={{or this.width @width "570px"}}>
+    <Overlay::Header @title={{if this.customField.label (concat (t "fleet-ops.component.custom-field-form-panel.custom-field-title-concat") this.customField.label) (t "fleet-ops.component.custom-field-form-panel.new-custom-field") }} @hideStatusDot={{true}} @titleWrapperClass="leading-5">
+        <div class="flex flex-1 justify-end">
+            <Button @icon={{if this.customField.id "save" "check"}} @type="primary" @text={{if this.customField.id (t "fleet-ops.component.custom-field-form-panel.save-custom-field")(t "fleet-ops.component.custom-field-form-panel.create-custom-field") }} @onClick={{this.save}} @wrapperClass="mr-2" />
+            <Button @type="default" @icon="times" @helpText={{if this.customField.id (t "fleet-ops.component.custom-field-form-panel.cancel-edit-custom-field")(t "fleet-ops.component.custom-field-form-panel.close-new-custom-field") }} @onClick={{this.onPressCancel}} />
+        </div>
+    </Overlay::Header>
+
+    <Overlay::Body @wrapperClass="px-4 pt-4">
+        <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.field-label"}} @value={{this.customField.label}} {{on "input" this.setCustomFieldName}} />
+        <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.field-name"}} @value={{this.customField.name}} @disabled={{true}} />
+        <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.field-name"}}>
+            <select class="form-select w-full has--placeholder" {{on "change" this.onSelectCustomFieldType}}>
+                <option selected disabled>
+                    {{t "fleet-ops.component.custom-field-form-panel.select-field-type"}}
+                </option>
+                {{#each-in this.customFieldTypeMap as |key|}}
+                    <option value={{dasherize key}} selected={{eq this.customField.type (dasherize key)}}>
+                        {{smart-humanize key}}
+                    </option>
+                {{/each-in}}
+            </select>
+        </InputGroup>
+        <Spacer @height="300px" />
+    </Overlay::Body>
+</Overlay>

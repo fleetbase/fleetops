@@ -94,7 +94,7 @@ class OrderController extends FleetOpsController
 
                     // If order creation includes files assosciate each to this order
                     if ($uploads) {
-                        $ids = collect($uploads)->pluck('uuid');
+                        $ids   = collect($uploads)->pluck('uuid');
                         $files = File::whereIn('uuid', $ids)->get();
 
                         foreach ($files as $file) {
@@ -140,6 +140,53 @@ class OrderController extends FleetOpsController
         } catch (FleetbaseRequestValidationException $e) {
             return response()->error($e->getErrors());
         }
+    }
+
+    /**
+     *  Route which enables editing of an order route.
+     *
+     * @param string $id - The order ID
+     *
+     * @return Response
+     */
+    public function editOrderRoute(string $id, Request $request)
+    {
+        $pickup    = $request->input('pickup');
+        $dropoff   = $request->input('dropoff');
+        $return    = $request->input('return');
+        $waypoints = $request->array('waypoints', []);
+
+        // Get the order
+        $order = Order::where('uuid', $id)->with(['payload'])->first();
+        if (!$order) {
+            return response()->error('Unable to find order to update route for.');
+        }
+
+        // Handle update of multiple waypoints
+        if ($waypoints) {
+            $order->payload->updateWaypoints($waypoints);
+            $order->payload->removePlace(['pickup', 'dropoff', 'return'], ['save' => true]);
+        } else {
+            // Update pickup
+            if ($pickup) {
+                $order->payload->setPickup($pickup, ['save' => true]);
+            }
+
+            // Update dropoff
+            if ($dropoff) {
+                $order->payload->setDropoff($dropoff, ['save' => true]);
+            }
+
+            // Update return
+            if ($return) {
+                $order->payload->setDropoff($return, ['save' => true]);
+            }
+
+            // Remove waypoints if any
+            $order->payload->removeWaypoints();
+        }
+
+        return ['order' => new $this->resource($order)];
     }
 
     /**
@@ -339,7 +386,7 @@ class OrderController extends FleetOpsController
     public function start(Request $request)
     {
         /**
-         * @var \Fleetbase\FleetOps\Models\Order
+         * @var Order
          */
         $order = Order::where('uuid', $request->input('order'))->withoutGlobalScopes()->first();
 
@@ -352,12 +399,12 @@ class OrderController extends FleetOpsController
         }
 
         /**
-         * @var \Fleetbase\FleetOps\Models\Driver
+         * @var Driver
          */
         $driver = Driver::where('uuid', $order->driver_assigned_uuid)->withoutGlobalScopes()->first();
 
         /**
-         * @var \Fleetbase\FleetOps\Models\Payload
+         * @var Payload
          */
         $payload = Payload::where('uuid', $order->payload_uuid)->withoutGlobalScopes()->with(['waypoints', 'waypointMarkers', 'entities'])->first();
 
@@ -381,7 +428,7 @@ class OrderController extends FleetOpsController
         $flow = $activity = Flow::getNextActivity($order);
 
         /**
-         * @var \Grimzy\LaravelMysqlSpatial\Types\Point
+         * @var \Fleetbase\LaravelMysqlSpatial\Types\Point
          */
         $location = $order->getLastLocation();
 
@@ -453,7 +500,7 @@ class OrderController extends FleetOpsController
         }
 
         /**
-         * @var \Grimzy\LaravelMysqlSpatial\Types\Point
+         * @var \Fleetbase\LaravelMysqlSpatial\Types\Point
          */
         $location = $order->getLastLocation();
 

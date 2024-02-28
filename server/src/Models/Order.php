@@ -12,6 +12,7 @@ use Fleetbase\FleetOps\Events\OrderDriverAssigned;
 use Fleetbase\FleetOps\Support\Flow;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\Transaction;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -23,9 +24,9 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
 class Order extends Model
@@ -201,25 +202,12 @@ class Order extends Model
     ];
 
     /**
-     * Properties which activity needs to be logged.
-     *
-     * @var array
+     * Get the activity log options for the model.
      */
-    protected static $logAttributes = '*';
-
-    /**
-     * Do not log empty changed.
-     *
-     * @var bool
-     */
-    protected static $submitEmptyLogs = false;
-
-    /**
-     * The name of the subject to log.
-     *
-     * @var string
-     */
-    protected static $logName = 'order';
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logOnly(['*'])->logOnlyDirty();
+    }
 
     /**
      * @return \Barryvdh\DomPDF\PDF
@@ -256,7 +244,7 @@ class Order extends Model
      */
     public function transaction()
     {
-        return $this->belongsTo(\Fleetbase\Models\Transaction::class);
+        return $this->belongsTo(Transaction::class);
     }
 
     /**
@@ -337,6 +325,14 @@ class Order extends Model
     public function files()
     {
         return $this->hasMany(\Fleetbase\Models\File::class, 'subject_uuid')->latest();
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function customFields()
+    {
+        return $this->hasMany(\Fleetbase\Models\CustomField::class, 'subject_uuid')->orderBy('order');
     }
 
     /**
@@ -590,7 +586,7 @@ class Order extends Model
     /**
      * Set the order type attribute, which defaults to `default`.
      */
-    public function setTypeAttribute(string $type = null): void
+    public function setTypeAttribute(?string $type = null): void
     {
         $this->attributes['type'] = is_string($type) ? Str::slug($type) : 'default';
     }
@@ -598,7 +594,7 @@ class Order extends Model
     /**
      * Set the order status attribute, which defaults to `created`.
      */
-    public function setStatusAttribute(string $status = null): void
+    public function setStatusAttribute(?string $status = null): void
     {
         $this->attributes['status'] = is_string($status) ? Str::snake($status) : 'created';
     }
@@ -983,7 +979,7 @@ class Order extends Model
         }
     }
 
-    public function updateActivity(array $activity = null, $proof = null): Order
+    public function updateActivity(?array $activity = null, $proof = null): Order
     {
         $status   = data_get($activity, 'status');
         $details  = data_get($activity, 'details', '');

@@ -8,7 +8,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -159,5 +159,17 @@ class PlaceController extends FleetOpsController
             ],
             200
         );
+    }
+
+    /**
+     * Get all avatar options for an vehicle.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function avatars()
+    {
+        $options = Place::getAvatarOptions();
+
+        return response()->json($options);
     }
 }

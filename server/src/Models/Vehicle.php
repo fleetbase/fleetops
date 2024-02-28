@@ -5,6 +5,8 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -12,8 +14,8 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
@@ -66,25 +68,12 @@ class Vehicle extends Model
     protected $with = [];
 
     /**
-     * Properties which activity needs to be logged.
-     *
-     * @var array
+     * Get the activity log options for the model.
      */
-    protected static $logAttributes = '*';
-
-    /**
-     * Do not log empty changed.
-     *
-     * @var bool
-     */
-    protected static $submitEmptyLogs = false;
-
-    /**
-     * The name of the subject to log.
-     *
-     * @var string
-     */
-    protected static $logName = 'vehicle';
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logOnly(['*'])->logOnlyDirty();
+    }
 
     /**
      * Get the options for generating the slug.
@@ -177,7 +166,7 @@ class Vehicle extends Model
      */
     public function photo()
     {
-        return $this->belongsTo(\Fleetbase\Models\File::class);
+        return $this->belongsTo(File::class);
     }
 
     /**
@@ -250,20 +239,6 @@ class Vehicle extends Model
     }
 
     /**
-     * Get avatar url.
-     *
-     * @return string|null
-     */
-    public function getAvatarUrlAttribute($value)
-    {
-        if (!$value) {
-            return static::getAvatar();
-        }
-
-        return $value;
-    }
-
-    /**
      * Get the driver's name assigned to vehicle.
      *
      * @return string|null
@@ -330,14 +305,39 @@ class Vehicle extends Model
     }
 
     /**
+     * Get avatar url.
+     *
+     * @return string|null
+     */
+    public function getAvatarUrlAttribute($value)
+    {
+        if (!$value) {
+            return static::getAvatar();
+        }
+
+        if (Str::isUuid($value)) {
+            return static::getAvatar($value);
+        }
+
+        return $value;
+    }
+
+    /**
      * Get an avatar url by key.
      *
      * @param string $key
-     *
-     * @return string
      */
-    public static function getAvatar($key = 'mini_bus')
+    public static function getAvatar($key = 'mini_bus'): ?string
     {
+        if (Str::isUuid($key)) {
+            $file = File::where('uuid', $key)->first();
+            if ($file) {
+                return $file->url;
+            }
+
+            return null;
+        }
+
         return static::getAvatarOptions()->get($key);
     }
 
@@ -379,13 +379,25 @@ class Vehicle extends Model
             'taxi.svg',
         ];
 
-        return collect($options)->mapWithKeys(
+        // Get custom avatars
+        $customAvatars = collect(File::where('type', 'vehicle-avatar')->get()->mapWithKeys(
+            function ($file) {
+                $key = str_replace(['.svg', '.png'], '', 'Custom: ' . $file->original_filename);
+
+                return [$key => $file->uuid];
+            }
+        )->toArray());
+
+        // Create default avatars included from fleetbase
+        $avatars = collect($options)->mapWithKeys(
             function ($option) {
-                $key = str_replace('.svg', '', $option);
+                $key = str_replace(['.svg', '.png'], '', $option);
 
                 return [$key => Utils::assetFromS3('static/vehicle-icons/' . $option)];
             }
         );
+
+        return $customAvatars->merge($avatars);
     }
 
     /**
@@ -404,11 +416,11 @@ class Vehicle extends Model
      * Updates the position of the vehicle, creating a new Position record if
      * the driver has moved more than 100 meters or if it's their first recorded position.
      *
-     * @param \Fleetbase\FleetOps\Models\Order|null $order The order to consider when updating the position (default: null)
+     * @param Order|null $order The order to consider when updating the position (default: null)
      *
-     * @return \Fleetbase\FleetOps\Models\Position|null The created Position object, or null if no new position was created
+     * @return Position|null The created Position object, or null if no new position was created
      */
-    public function updatePositionWithOrderContext(Order $order = null): ?Position
+    public function updatePositionWithOrderContext(?Order $order = null): ?Position
     {
         $position     = null;
         $lastPosition = $this->positions()->whereCompanyUuid(session('company'))->latest()->first();

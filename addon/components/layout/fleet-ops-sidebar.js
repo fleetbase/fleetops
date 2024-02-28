@@ -40,6 +40,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.dashboard'), icon: 'home', route: 'operations.orders' },
             { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.service-rates'), icon: 'file-invoice-dollar', route: 'operations.service-rates' },
             { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.scheduler'), icon: 'calendar-day', route: 'operations.scheduler' },
+            { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.order-config'), icon: 'diagram-project', route: 'operations.order-config' },
         ];
 
         const resourcesItems = [

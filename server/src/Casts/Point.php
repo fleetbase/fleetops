@@ -3,8 +3,8 @@
 namespace Fleetbase\FleetOps\Casts;
 
 use Fleetbase\FleetOps\Support\Utils;
-use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialExpression;
-use Grimzy\LaravelMysqlSpatial\Types\GeometryInterface;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialExpression;
+use Fleetbase\LaravelMysqlSpatial\Types\GeometryInterface;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Query\Expression;
 
@@ -106,12 +106,14 @@ class Point implements CastsAttributes
 
     /**
      * Check if the given data is a raw Point object.
-     *
-     * @return bool
      */
-    public static function isRawPoint($data)
+    public static function isRawPoint($data): bool
     {
-        return preg_match('/[\x00-\x1f]/', $data, $matches) === 1;
+        if (is_string($data)) {
+            return preg_match('/[\x00-\x1f]/', $data, $matches) === 1;
+        }
+
+        return false;
     }
 
     /**

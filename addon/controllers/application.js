@@ -5,7 +5,7 @@ import { computed, action } from '@ember/object';
 
 export default class ApplicationController extends BaseController {
     @service hostRouter;
-
+    @service contextPanel;
     @tracked routes = ['console.fleet-ops.operations', 'console.fleet-ops.management', 'console.fleet-ops.comms'];
     @tracked settingsContext;
 
@@ -19,6 +19,10 @@ export default class ApplicationController extends BaseController {
 
     @action closeSettings() {
         this.settingsContext?.close();
+    }
+
+    @action openOrderConfigManager() {
+        this.contextPanel.focus('orderConfigManager');
     }
 
     @action isRouteActive(route) {

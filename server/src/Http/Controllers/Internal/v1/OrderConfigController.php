@@ -2,10 +2,10 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Flow;
 use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Category;
 use Fleetbase\Models\Extension;
 use Fleetbase\Models\ExtensionInstall;
@@ -13,8 +13,15 @@ use Fleetbase\Models\Type;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
-class OrderConfigController extends Controller
+class OrderConfigController extends FleetOpsController
 {
+    /**
+     * The resource to query.
+     *
+     * @var string
+     */
+    public $resource = 'order-config';
+
     /**
      * Retrieve all installed or created order configurations.
      *

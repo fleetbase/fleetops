@@ -25,7 +25,7 @@
         </div>
     </Overlay::Header>
 
-    <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 pt-4" @increaseInnerBodyHeightBy={{1000}}>
+    <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 pt-4">
         <div class="grid grid-cols-1 text-xs dark:text-gray-100">
             <InputGroup @name={{t "fleet-ops.component.issue-form-panel.reported-by"}}>
                 <ModelSelect
@@ -172,5 +172,6 @@
                 <CoordinatesInput @value={{this.issue.location}} @onChange={{fn (mut this.issue.location)}} />
             </InputGroup>
         </div>
+        <Spacer @height="300px" />
     </Overlay::Body>
 </Overlay>

@@ -3,8 +3,8 @@
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\Http\Resources\FleetbaseResource;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
-use Grimzy\LaravelMysqlSpatial\Types\Point;
 
 class Vehicle extends FleetbaseResource
 {
@@ -29,6 +29,7 @@ class Vehicle extends FleetbaseResource
             'devices'                => $this->whenLoaded('devices', $this->devices),
             'photo_url'              => $this->photo_url,
             'avatar_url'             => $this->avatar_url,
+            'avatar_value'           => $this->when(Http::isInternalRequest(), $this->getOriginal('avatar_url')),
             'make'                   => $this->make,
             'model'                  => $this->model,
             'year'                   => $this->year,

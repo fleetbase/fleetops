@@ -23,7 +23,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
         | End-user API routes, these are routes that the SDK and applications will interface with, and require API credentials.
         */
         Route::prefix('v1')
-            ->middleware(['fleetbase.api', \Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class])
+            ->middleware(['fleetbase.api', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class])
             ->namespace('Api\v1')
             ->group(function ($router) {
                 // drivers routes
@@ -194,7 +194,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 });
 
                 // auth:sanctum
-                $router->group(['middleware' => ['fleetbase.protected', \Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]], function () use ($router) {
+                $router->group(['middleware' => ['fleetbase.protected', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]], function () use ($router) {
                     $router->group(['prefix' => 'orders'], function () use ($router) {
                         $router->post('/', 'Api\v1\OrderController@create');
                         $router->get('/', 'Api\v1\OrderController@query');
@@ -249,7 +249,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 );
 
                 $router->group(
-                    ['prefix' => 'v1', 'namespace' => 'v1', 'middleware' => ['fleetbase.protected', \Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]],
+                    ['prefix' => 'v1', 'namespace' => 'v1', 'middleware' => ['fleetbase.protected', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]],
                     function ($router) {
                         $router->fleetbaseRoutes(
                             'contacts',
@@ -264,6 +264,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             'drivers',
                             function ($router, $controller) {
                                 $router->get('statuses', $controller('statuses'));
+                                $router->get('avatars', $controller('avatars'));
                                 $router->get('export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
@@ -310,6 +311,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->get('label/{id}', $controller('label'));
                                 $router->get('next-activity/{id}', $controller('nextActivity'));
                                 $router->post('process-imports', $controller('importFromFiles'));
+                                $router->patch('route/{id}', $controller('editOrderRoute'));
                                 $router->patch('update-activity/{id}', $controller('updateActivity'));
                                 $router->patch('bulk-cancel', $controller('bulkCancel'));
                                 $router->patch('cancel', $controller('cancel'));
@@ -318,12 +320,14 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
+                        $router->fleetbaseRoutes('order-configs');
                         $router->fleetbaseRoutes('payloads');
                         $router->fleetbaseRoutes(
                             'places',
                             function ($router, $controller) {
                                 $router->get('search', $controller('search'))->middleware('cache.headers:private;max_age=3600');
                                 $router->get('lookup', $controller('geocode'))->middleware('cache.headers:private;max_age=3600');
+                                $router->get('avatars', $controller('avatars'));
                                 $router->get('export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
@@ -390,9 +394,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                         $router->group(
                             ['prefix' => 'fleet-ops'],
                             function ($router) {
-                                /* Dashboard Build */
-                                $router->get('dashboard', 'MetricsController@dashboard');
-
                                 $router->group(
                                     ['prefix' => 'order-configs'],
                                     function () use ($router) {
@@ -432,7 +433,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->group(
                                     ['prefix' => 'metrics'],
                                     function ($router) {
-                                        $router->get('all', 'MetricsController@all');
+                                        $router->get('/', 'MetricsController@all');
                                     }
                                 );
                             }
