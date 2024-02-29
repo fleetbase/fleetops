@@ -60,6 +60,9 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->put('{id}', 'VendorController@update');
                     $router->delete('{id}', 'VendorController@delete');
                 });
+                $router->fleetbaseRoutes(
+                    'issues'
+                );
                 // orders routes
                 $router->group(['prefix' => 'orders'], function () use ($router) {
                     $router->post('/', 'OrderController@create');
