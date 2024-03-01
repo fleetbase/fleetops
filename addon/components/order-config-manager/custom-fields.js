@@ -3,7 +3,6 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
-import { underscore } from '@ember/string';
 import { task } from 'ember-concurrency-decorators';
 import isObject from '@fleetbase/ember-core/utils/is-object';
 
@@ -41,14 +40,8 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
             options: [],
         });
 
-        this.contextPanel.focus(customField, 'editing', {
-            args: {
-                customField,
-                onCustomFieldSaved: () => {
-                    this.loadCustomFields.perform();
-                },
-            },
-        });
+        this.addCustomFieldToGroup(customField, group);
+        this.editCustomField(customField);
     }
 
     @action editCustomField(customField) {
@@ -60,7 +53,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
                 },
                 onPressCancel: () => {
                     this.contextPanel.clear();
-                }
+                },
             },
         });
     }
@@ -119,11 +112,17 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
         });
     }
 
-
     @task *loadCustomFields() {
         this.groups = yield this.store.query('category', { subject_uuid: this.config.id, for: 'custom_field_group' });
         this.customFields = yield this.store.query('custom-field', { subject_uuid: this.config.id });
         this.groupCustomFields();
+    }
+
+    addCustomFieldToGroup(customField, group) {
+        if (!isArray(group.customFields)) {
+            group.customFields = [];
+        }
+        group.set('customFields', [...group.customFields, customField]);
     }
 
     groupCustomFields() {

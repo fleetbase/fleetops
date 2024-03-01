@@ -108,9 +108,12 @@ fleet-ops:
       field-description: Field Description
       field-help-text: Field Help Text
       field-default-value: Field Default Value
-      field-is-required: Is this field required?
+      field-is-required: Field is Required
       field-options: Field Options
       field-validation-rules: Field Validation Rules
+      field-model-type: Field Model Type
+      field-select-model-type: Select model type
+      add-new-option: Add new option
     order-config-manager:
       title: Orders Configuration
       message: Order configurations allow you to define dynamic configurations which will tell Fleetbase how different types of orders should be executed.

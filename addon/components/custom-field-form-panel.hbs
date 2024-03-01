@@ -1,15 +1,21 @@
 <Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{or this.isResizable @isResizable}} @width={{or this.width @width "570px"}}>
     <Overlay::Header @title={{if this.customField.label (concat (t "fleet-ops.component.custom-field-form-panel.custom-field-title-concat") this.customField.label) (t "fleet-ops.component.custom-field-form-panel.new-custom-field") }} @hideStatusDot={{true}} @titleWrapperClass="leading-5">
         <div class="flex flex-1 justify-end">
-            <Button @icon={{if this.customField.id "save" "check"}} @type="primary" @text={{if this.customField.id (t "fleet-ops.component.custom-field-form-panel.save-custom-field")(t "fleet-ops.component.custom-field-form-panel.create-custom-field") }} @onClick={{this.save}} @wrapperClass="mr-2" />
+            <Button @icon={{if this.customField.id "save" "check"}} @type="primary" @text={{if this.customField.id (t "fleet-ops.component.custom-field-form-panel.save-custom-field")(t "fleet-ops.component.custom-field-form-panel.create-custom-field") }} @onClick={{perform this.save}} @isLoading={{not this.save.isIdle}} @wrapperClass="mr-2" />
             <Button @type="default" @icon="times" @helpText={{if this.customField.id (t "fleet-ops.component.custom-field-form-panel.cancel-edit-custom-field")(t "fleet-ops.component.custom-field-form-panel.close-new-custom-field") }} @onClick={{this.onPressCancel}} />
         </div>
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="px-4 pt-4">
         <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.field-label"}} @value={{this.customField.label}} {{on "input" this.setCustomFieldName}} />
-        <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.field-name"}} @value={{this.customField.name}} @disabled={{true}} />
-        <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.field-name"}}>
+        <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.field-description"}} @value={{this.customField.description}} />
+        <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.field-help-text"}} @value={{this.customField.help_text}} />
+        <InputGroup>
+            <Toggle @isToggled={{this.customField.required}} @onToggle={{fn (mut this.customField.required)}}>
+                <span class="dark:text-gray-100 text-sm ml-2">{{t "fleet-ops.component.custom-field-form-panel.field-is-required"}}</span>
+            </Toggle>
+        </InputGroup>
+        <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.field-type"}}>
             <select class="form-select w-full has--placeholder" {{on "change" this.onSelectCustomFieldType}}>
                 <option selected disabled>
                     {{t "fleet-ops.component.custom-field-form-panel.select-field-type"}}
@@ -21,6 +27,23 @@
                 {{/each-in}}
             </select>
         </InputGroup>
+        {{#if this.currentFieldMap.hasOptions}}
+            <CustomFieldFormPanel::OptionsInput @customField={{this.customField}} @fieldMap={{this.currentFieldMap}} />
+        {{/if}}
+        {{#if this.currentFieldMap.allowedModels}}
+            <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.field-model-type"}}>
+                <select class="form-select w-full has--placeholder" {{on "change" this.onSelectModelType}}>
+                    <option selected disabled>
+                        {{t "fleet-ops.component.custom-field-form-panel.field-select-model-type"}}
+                    </option>
+                    {{#each this.currentFieldMap.allowedModels as |modelName|}}
+                        <option value={{dasherize modelName}} selected={{eq this.customField.meta.modelName (dasherize modelName)}}>
+                            {{smart-humanize modelName}}
+                        </option>
+                    {{/each}}
+                </select>
+            </InputGroup>
+        {{/if}}
         <Spacer @height="300px" />
     </Overlay::Body>
 </Overlay>
