@@ -205,3 +205,12 @@ body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab.active {
     padding-top: 0.265rem !important;
     padding-bottom: 0.265rem !important;
 }
+
+.flow-activity-add-button:hover,
+.flow-activity:hover {
+    stroke: #2563eb;
+}
+
+.flow-activity-add-button:hover {
+    fill: #3b82f6;
+}

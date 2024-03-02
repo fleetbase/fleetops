@@ -1,0 +1,15 @@
+<Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{or this.isResizable @isResizable}} @width={{or this.width @width "570px"}}>
+    <Overlay::Header @title={{if this.activity.status (concat (t "fleet-ops.component.activity-form-panel.title-concat") this.activity.status) (t "fleet-ops.component.activity-form-panel.new-activity-title") }} @hideStatusDot={{true}} @titleWrapperClass="leading-5">
+        <div class="flex flex-1 justify-end">
+            <Button @type="primary" @icon="check" @text={{t "fleet-ops.common.done"}} @onClick={{this.onPressCancel}} />
+        </div>
+    </Overlay::Header>
+
+    <Overlay::Body @wrapperClass="px-4 pt-4">
+        <InputGroup @name={{t "fleet-ops.component.activity-form-panel.code"}} @value={{this.activity.code}} {{on "input" this.setActivityCode}} />
+        <InputGroup @name={{t "fleet-ops.component.activity-form-panel.status"}} @value={{this.activity.status}} />
+        <InputGroup @name={{t "fleet-ops.component.activity-form-panel.details"}} @value={{this.activity.details}} />
+        
+        <Spacer @height="300px" />
+    </Overlay::Body>
+</Overlay>

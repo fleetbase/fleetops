@@ -99,15 +99,21 @@ export default class ContextPanelService extends Service {
                 componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
+        order: {
+            editingRoute: {
+                component: 'edit-order-route-panel',
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
+            },
+        },
         customField: {
             editing: {
                 component: 'custom-field-form-panel',
                 componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
-        order: {
-            editingRoute: {
-                component: 'edit-order-route-panel',
+        activity: {
+            editing: {
+                component: 'activity-form-panel',
                 componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },

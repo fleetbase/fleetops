@@ -93,6 +93,7 @@ fleet-ops:
     zone: Zone
     total: Total
     back: Back
+    done: Done
 
   component:
     custom-field-form-panel:
@@ -114,6 +115,12 @@ fleet-ops:
       field-model-type: Field Model Type
       field-select-model-type: Select model type
       add-new-option: Add new option
+    activity-form-panel:
+      title-concat: 'Activity: '
+      new-activity-title: Create new activity
+      code: Code
+      status: Status
+      details: Details
     order-config-manager:
       title: Orders Configuration
       message: Order configurations allow you to define dynamic configurations which will tell Fleetbase how different types of orders should be executed.
@@ -1128,6 +1135,8 @@ fleet-ops:
         title: Vendors
         delete-vendors: Delete Vendors
   operations:
+    order-config:
+      route-loading-message: Loading Order Config Builder
     orders:
       index:
         payload: Payload
