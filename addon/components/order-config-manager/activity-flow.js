@@ -4,6 +4,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
+import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency-decorators';
 import createFlowActivity from '../../utils/create-flow-activity';
 import contextComponentCallback from '../../utils/context-component-callback';
@@ -221,7 +222,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         this.addActivityNodeToGraph(parentActivity);
         this.addActivityNodeTools(parentActivity, positionals);
         this.addChildActivities(parentActivity, childActivities);
-        this.repositionActivities(parentActivity);
+        this.repositionAllActivities();
     }
 
     /**
@@ -247,6 +248,18 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             this.addChildActivities(childActivity, childActivity.get('activities'));
         });
         this.repositionActivities(parentActivity);
+    }
+
+    /**
+     * Repositions all activities and their child activities.
+     *
+     * @memberof OrderConfigManagerActivityFlowComponent
+     */
+    repositionAllActivities() {
+        const activities = Object.values(this.flow);
+        activities.forEach((parentActivity) => {
+            this.repositionActivities(parentActivity);
+        });
     }
 
     /**
