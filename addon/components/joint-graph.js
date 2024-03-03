@@ -10,6 +10,7 @@ export default class JointGraphComponent extends Component {
     @tracked width = 800;
     @tracked gridSize = 1;
     @tracked fullSize = true;
+    @tracked dragStartPosition = {};
 
     constructor(owner, { height = 400, width = 800, gridSize = 1, fullSize = true }) {
         super(...arguments);
@@ -35,11 +36,11 @@ export default class JointGraphComponent extends Component {
             gridSize: this.gridSize,
             cellViewNamespace: namespace,
             interactive: false,
-            panning: true,
         });
 
         this.graph = graph;
         this.paper = paper;
+        this.createPanningHandlers(paper);
 
         if (typeof this.args.onSetup === 'function') {
             this.args.onSetup({ paper, graph, el }, this);
@@ -52,5 +53,21 @@ export default class JointGraphComponent extends Component {
             this.width = parentEl.offsetWidth;
             this.height = parentEl.offsetHeight;
         }
+    }
+
+    createPanningHandlers(paper) {
+        paper.on('blank:pointerdown', (event, x, y) => {
+            this.dragStartPosition = { x: x, y: y };
+        });
+
+        paper.on('cell:pointerup blank:pointerup', () => {
+            this.dragStartPosition = undefined;
+        });
+
+        paper.el.addEventListener('mousemove', (event) => {
+            if (this.dragStartPosition) {
+                paper.translate(event.offsetX - this.dragStartPosition.x, event.offsetY - this.dragStartPosition.y);
+            }
+        });
     }
 }

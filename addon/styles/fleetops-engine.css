@@ -214,3 +214,7 @@ body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab.active {
 .flow-activity-add-button:hover {
     fill: #3b82f6;
 }
+
+.joint-js-paper {
+    overflow: auto;
+}
