@@ -5,7 +5,6 @@ import { action } from '@ember/object';
 
 export default class JointGraphComponent extends Component {
     @tracked graph;
-    @tracked graphBBox;
     @tracked paper;
     @tracked height = 400;
     @tracked width = 800;
@@ -28,11 +27,6 @@ export default class JointGraphComponent extends Component {
     createGraph(el) {
         const namespace = joint.shapes;
         const graph = new joint.dia.Graph({}, { cellNamespace: namespace });
-        // const graphBBox = joint.layout(graph, {
-        //     nodeSep: 50,
-        //     edgeSep: 80,
-        //     rankDir: "TB"
-        // });
         const paper = new joint.dia.Paper({
             el,
             model: graph,
@@ -41,10 +35,10 @@ export default class JointGraphComponent extends Component {
             gridSize: this.gridSize,
             cellViewNamespace: namespace,
             interactive: false,
+            panning: true,
         });
 
         this.graph = graph;
-        // this.graphBBox = graphBBox;
         this.paper = paper;
 
         if (typeof this.args.onSetup === 'function') {

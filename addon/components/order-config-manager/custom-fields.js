@@ -113,7 +113,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
     }
 
     @task *loadCustomFields() {
-        this.groups = yield this.store.query('category', { subject_uuid: this.config.id, for: 'custom_field_group' });
+        this.groups = yield this.store.query('category', { owner_uuid: this.config.id, for: 'custom_field_group' });
         this.customFields = yield this.store.query('custom-field', { subject_uuid: this.config.id });
         this.groupCustomFields();
     }

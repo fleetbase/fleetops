@@ -25,6 +25,7 @@ return new class extends Migration
             $table->string('status')->nullable();
             $table->string('version')->nullable();
             $table->boolean('core_service')->default(0);
+            $table->json('flow')->nullable();
             $table->json('tags')->nullable();
             $table->json('meta')->nullable();
             $table->timestamps();

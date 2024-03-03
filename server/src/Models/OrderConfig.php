@@ -50,6 +50,7 @@ class OrderConfig extends Model
         'version',
         'core_service',
         'tags',
+        'flow',
         'meta',
     ];
 
@@ -60,6 +61,7 @@ class OrderConfig extends Model
      */
     protected $casts = [
         'tags' => Json::class,
+        'flow' => Json::class,
         'meta' => Json::class,
     ];
 

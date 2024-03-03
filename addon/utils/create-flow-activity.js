@@ -1,7 +1,7 @@
 import ObjectProxy from '@ember/object/proxy';
 import { underscore } from '@ember/string';
 
-export default function createFlowActivity(name = '', status = '', details = '', sequence = 0, color = '#1f2937') {
+export default function createFlowActivity(name = '', status = '', details = '', sequence = 0, color = '#1f2937', props = {}) {
     return ObjectProxy.create({
         content: {
             code: underscore(name),
@@ -17,6 +17,7 @@ export default function createFlowActivity(name = '', status = '', details = '',
             _internalModel: {
                 modelName: 'activity',
             },
+            ...props,
         },
     });
 }

@@ -6,6 +6,7 @@ import applyContextComponentArguments from '../utils/apply-context-component-arg
 
 export default class ActivityFormPanelComponent extends Component {
     @tracked activity;
+    @tracked targetActivity;
 
     constructor() {
         super(...arguments);
