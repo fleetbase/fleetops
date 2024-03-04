@@ -4,13 +4,10 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Http\Requests\CreateIssueRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateIssueRequest;
-use Fleetbase\FleetOps\Http\Resources\v1\Fleet as FleetResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Issue as IssueResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Issue as DeletedIssue;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Issue;
-use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -67,36 +64,33 @@ class IssueController extends Controller
      *
      * @return \Fleetbase\Http\Resources\Issue
      */
-    public function update($id, UpdateIssueRequest $request)
+    public function updateRecord($id, UpdateIssueRequest $request)
     {
-        // find for the fleet
+        // find for the issue
         try {
-            $fleet = Issue::findRecordOrFail($id);
+            $issue = Issue::findRecordOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             return response()->json(
                 [
-                    'error' => 'Fleet resource not found.',
+                    'error' => 'Issue resource not found.',
                 ],
                 404
             );
         }
 
-        // get request input
-        $input = $request->only(['name']);
-
-        // service area assignment
-        if ($request->has('service_area')) {
-            $input['service_area_uuid'] = Utils::getUuid('service_areas', [
-                'public_id'    => $request->input('service_area'),
-                'company_uuid' => session('company'),
+        $input = $request->only([
+                'category',
+                'type',
+                'report',
+                'priority',
             ]);
-        }
 
-        // update the fleet
-        $fleet->update($input);
 
-        // response the fleet resource
-        return new FleetResource($fleet);
+        // update the issue
+        $issue->update($input);
+
+        // response the issue resource
+        return new IssueResource($issue);
     }
 
 
@@ -118,7 +112,7 @@ class IssueController extends Controller
      *
      * @return \Fleetbase\Http\Resources\FleetCollection
      */
-    public function delete($id)
+    public function deleteRecord($id)
     {
         // find for the driver
         try {
@@ -132,10 +126,10 @@ class IssueController extends Controller
             );
         }
 
-        // delete the contact
+        // delete the issue
         $issue->delete();
 
-        // response the contact resource
+        // response the issue resource
         return new DeletedIssue($issue);
     }
 }
