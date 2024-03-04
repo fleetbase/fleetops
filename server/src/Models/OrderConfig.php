@@ -51,6 +51,7 @@ class OrderConfig extends Model
         'core_service',
         'tags',
         'flow',
+        'entities',
         'meta',
     ];
 
@@ -62,6 +63,7 @@ class OrderConfig extends Model
     protected $casts = [
         'tags' => Json::class,
         'flow' => Json::class,
+        'entities' => Json::class,
         'meta' => Json::class,
     ];
 
@@ -148,4 +150,8 @@ class OrderConfig extends Model
     {
         return $this->belongsTo(\Fleetbase\Models\File::class);
     }
+
+    public function currentActivity() {}
+    public function nextActivity() {}
+    public function previousActivity() {}
 }

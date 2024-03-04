@@ -4,7 +4,6 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
-import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency-decorators';
 import createFlowActivity from '../../utils/create-flow-activity';
 import contextComponentCallback from '../../utils/context-component-callback';
@@ -74,6 +73,38 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     }
 
     /**
+     * Zooms in by scaling the paper.
+     *
+     * @return {void}
+     * @memberof OrderConfigManagerActivityFlowComponent
+     */
+    @action zoomIn() {
+        const currentScale = this.paper.scale();
+        const currentScaleSx = currentScale.sx;
+        if (currentScaleSx >= 1.2) {
+            return;
+        }
+
+        this.paper.scale(currentScaleSx + 0.2);
+    }
+
+    /**
+     * Zooms out by scaling the paper.
+     *
+     * @return {void}
+     * @memberof OrderConfigManagerActivityFlowComponent
+     */
+    @action zoomOut() {
+        const currentScale = this.paper.scale();
+        const currentScaleSx = currentScale.sx;
+        if (currentScaleSx <= 0.2) {
+            return;
+        }
+
+        this.paper.scale(currentScaleSx - 0.2);
+    }
+
+    /**
      * Listens for element click events within the JointJS paper.
      */
     listenForElementClicks() {
@@ -114,6 +145,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
                     {
                         tagName: 'rect',
                         selector: 'pill',
+                        className: 'flow-activity-status-pill',
                     },
                     {
                         tagName: 'text',
@@ -139,7 +171,11 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     @task *save() {
         const flow = this.serializeFlow();
         this.config.set('flow', flow);
-        yield this.config.save();
+        yield this.config.save().then((config) => {
+            this.config = config;
+            this.initializeActivityFlow();
+            this.listenForElementClicks();
+        });
     }
 
     /**
@@ -194,7 +230,11 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @returns {Object} Deserialized activity object.
      */
     deserializeActivity(activityObject, incomingFlow) {
-        const activity = createFlowActivity(activityObject.code, activityObject.status, activityObject.details, activityObject.sequence, activityObject.color);
+        const activity = createFlowActivity(activityObject.code, activityObject.status, activityObject.details, activityObject.sequence, activityObject.color, {
+            logic: activityObject.logic ?? [],
+            events: activityObject.events ?? [],
+            complete: activityObject.complete ?? false,
+        });
         const { activities } = activityObject;
         if (isArray(activities)) {
             activity.set(
@@ -380,6 +420,18 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     }
 
     /**
+     * Updates an existing activity in the flow map.
+     * @param {Object} activity - The activity to update in the flow map.
+     * @returns {Object} The updated flow map.
+     */
+    updateActivityInFlowMap(activity) {
+        const flowClone = { ...this.flow };
+        flowClone[activity.get('code')] = activity;
+        this.flow = flowClone;
+        return this.flow;
+    }
+
+    /**
      * Creates a new activity node based on the provided activity and positioning data.
      * @param {Object} activity - The activity data.
      * @param {Object} positionals - Positioning information for the activity node.
@@ -394,7 +446,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             attrs: {
                 pill: {
                     ref: 'code',
-                    refWidth: activity.get('code').length * 1.5,
+                    refWidth: activity.get('code').length * 1.25,
                     refHeight: 5,
                     refX: -5,
                     refY: -2,
@@ -702,6 +754,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
                 },
                 onSave: () => {
                     this.contextPanel.clear();
+                    this.updateActivityInFlowMap(activity);
                     if (targetActivity) {
                         this.addNewLinkedActivity(targetActivity, activity);
                     }

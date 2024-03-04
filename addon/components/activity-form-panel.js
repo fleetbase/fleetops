@@ -19,4 +19,14 @@ export default class ActivityFormPanelComponent extends Component {
         this.activity.set('code', code);
         this.activity.set('status', w(value.replace('_', ' ')).map(capitalize).join(' '));
     }
+
+    @action updateActivityLogic(logic = []) {
+        console.log('updateActivityLogic() #logic', logic);
+        this.activity.set('logic', logic);
+    }
+
+    @action updateActivityEvents(events = []) {
+        console.log('updateActivityEvents() #events', events);
+        this.activity.set('events', events);
+    }
 }

@@ -12,6 +12,8 @@ export default function createFlowActivity(name = '', status = '', details = '',
             activities: [],
             events: [],
             logic: [],
+            actions: [],
+            complete: false,
             options: {},
             node: null,
             _internalModel: {

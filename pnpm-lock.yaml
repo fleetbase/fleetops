@@ -11,8 +11,8 @@ dependencies:
     specifier: ^0.2.11
     version: 0.2.11(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0)
   '@fleetbase/fleetops-data':
-    specifier: link:../fleetops-data
-    version: link:../fleetops-data
+    specifier: ^0.1.10
+    version: 0.1.10
   '@fleetbase/leaflet-routing-machine':
     specifier: ^3.2.16
     version: 3.2.16
@@ -26,6 +26,9 @@ dependencies:
     specifier: ^6.4.0
     version: 6.4.0
   '@joint/core':
+    specifier: ^4.0.1
+    version: 4.0.1
+  '@joint/layout-directed-graph':
     specifier: ^4.0.1
     version: 4.0.1
   '@terraformer/spatial':
@@ -1904,6 +1907,17 @@ packages:
       postcss: 8.4.35
     dev: false
 
+  /@dagrejs/dagre@1.0.4:
+    resolution: {integrity: sha512-jrEore+HhW1yg1Rsd9H1PPMcoEOD4bVh0WCXc6GqzyzubnJj4GaWGg8ETOrskTd/3n/g5LOzumGM4CCgpNLJNw==}
+    dependencies:
+      '@dagrejs/graphlib': 2.1.13
+    dev: false
+
+  /@dagrejs/graphlib@2.1.13:
+    resolution: {integrity: sha512-calbMa7Gcyo+/t23XBaqQqon8LlgE9regey4UVoikoenKBXvUnCUL3s9RP6USCxttfr0XWVICtYUuKMdehKqMw==}
+    engines: {node: '>17.0.0'}
+    dev: false
+
   /@ember-data/adapter@4.12.5(@ember-data/store@4.12.5)(@ember/string@3.1.1)(ember-inflector@4.0.2):
     resolution: {integrity: sha512-YWCjBga9h59q3iBqLONxi68AjNZtKmxQ/uB7e8uSv7czOXGQKpzONlTb68jyMJ687qpg0RWebxLBlBU5yPxq1Q==}
     engines: {node: 16.* || >= 18.*}
@@ -2550,6 +2564,18 @@ packages:
       - webpack-command
     dev: false
 
+  /@fleetbase/fleetops-data@0.1.10:
+    resolution: {integrity: sha512-M4o3Uqx/tg3zSOBdU2LwDGvaLA01mfgxzvVIJcMI07v7a9wIv9m1rMZJzSDPWXeXt+RS/IUH6JVUgXs+N3PTfg==}
+    engines: {node: '>= 18'}
+    dependencies:
+      '@babel/core': 7.23.2
+      date-fns: 2.30.0
+      ember-cli-babel: 8.2.0(@babel/core@7.23.2)
+      ember-cli-htmlbars: 6.3.0
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
   /@fleetbase/intl-lint@0.0.1:
     resolution: {integrity: sha512-LkjxJr15hSiGmqh3JwixcpjmkhXNieNAEgQUVv1Duo50jTr/D5WXEyOaeI8wuVnVFhT+FS/DMqm403DgSKlsEg==}
     hasBin: true
@@ -3019,6 +3045,14 @@ packages:
 
   /@joint/core@4.0.1:
     resolution: {integrity: sha512-/nI64MhSUhTJ4rVT0UeaVBYyFYE8SLGbz1M6nB3lcE9pub1a8cudXG6+8MqhmQMMBOZ2SwNUpHebZXyl5gqDZg==}
+    dev: false
+
+  /@joint/layout-directed-graph@4.0.1:
+    resolution: {integrity: sha512-PgYARBoJjutgHRy2a97xpLdn46IeklXr9ka4TzJxz3uFTY+1C6BNa3nb12uJ44dA5SmlcTSDe6hu3Sf5hazmNw==}
+    dependencies:
+      '@dagrejs/dagre': 1.0.4
+      '@dagrejs/graphlib': 2.1.13
+      '@joint/core': 4.0.1
     dev: false
 
   /@jridgewell/gen-mapping@0.3.3:

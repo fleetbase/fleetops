@@ -2,12 +2,22 @@
 
 namespace Fleetbase\FleetOps\Flow;
 
-use Fleetbase\Models\Model;
-
-class Activity
+class Activity extends Flow
 {
-    protected string $status;
-    protected string $code;
-    protected string $details;
-    protected Model $owner;
+    public array $attributes = [];
+
+    public function __constructor(array $attributes = [])
+    {
+        $this->attributes = $attributes;
+    }
+
+    public function getLogicAttribute()
+    {
+        return array_map(
+            function ($logic) {
+                return new Logic($logic);
+            },
+            $this->get('logic', [])
+        );
+    }
 }

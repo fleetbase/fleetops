@@ -40,7 +40,7 @@ export default class JointGraphComponent extends Component {
 
         this.graph = graph;
         this.paper = paper;
-        this.createPanningHandlers(paper);
+        this.createPanningHandler(paper);
 
         if (typeof this.args.onSetup === 'function') {
             this.args.onSetup({ paper, graph, el }, this);
@@ -55,9 +55,9 @@ export default class JointGraphComponent extends Component {
         }
     }
 
-    createPanningHandlers(paper) {
+    createPanningHandler(paper) {
         paper.on('blank:pointerdown', (event, x, y) => {
-            this.dragStartPosition = { x: x, y: y };
+            this.dragStartPosition = { x, y };
         });
 
         paper.on('cell:pointerup blank:pointerup', () => {
