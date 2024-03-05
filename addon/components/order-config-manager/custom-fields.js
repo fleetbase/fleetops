@@ -14,7 +14,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
     @service intl;
     @tracked groups = [];
     @tracked config;
-    @tracked gridSizeOptions = [1, 2, 3, 4, 5];
+    @tracked gridSizeOptions = [1, 2, 3];
 
     constructor(owner, { config }) {
         super(...arguments);
@@ -50,6 +50,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
                 customField,
                 onCustomFieldSaved: () => {
                     this.loadCustomFields.perform();
+                    this.contextPanel.clear();
                 },
                 onPressCancel: () => {
                     this.contextPanel.clear();

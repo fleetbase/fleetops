@@ -1,15 +1,16 @@
 <Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{or this.isResizable @isResizable}} @width={{or this.width @width "570px"}}>
     <Overlay::Header @title={{if this.activity.status (concat (t "fleet-ops.component.activity-form-panel.title-concat") this.activity.status) (t "fleet-ops.component.activity-form-panel.new-activity-title") }} @hideStatusDot={{true}} @titleWrapperClass="leading-5">
         <div class="flex flex-1 justify-end">
-            <Button @type="primary" @icon="save" @text={{t "common.save"}} @onClick={{this.onSave}} @wrapperClass="mr-2" />
+            <Button @type="primary" @icon="save" @text={{t "common.save"}} @onClick={{this.save}} @wrapperClass="mr-2" />
             <Button @type="default" @icon="times" @text={{t "fleet-ops.common.cancel"}} @onClick={{this.onPressCancel}} />
         </div>
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="px-4 pt-4">
-        <InputGroup @name={{t "fleet-ops.component.activity-form-panel.code"}} @value={{this.activity.code}} {{on "input" this.setActivityCode}} />
-        <InputGroup @name={{t "fleet-ops.component.activity-form-panel.status"}} @value={{this.activity.status}} />
-        <InputGroup @name={{t "fleet-ops.component.activity-form-panel.details"}} @value={{this.activity.details}} />
+        <InputGroup @name={{t "fleet-ops.component.activity-form-panel.key"}} @value={{this.activity.key}} @helpText="This is a key for programatic decision making which can represent this activity or multiple activities provided they have the same key. This does not have to be unique." {{on "input" this.setActivityKey}} />
+        <InputGroup @name={{t "fleet-ops.component.activity-form-panel.code"}} @value={{this.activity.code}} @helpText="Unique identifier for this activity." {{on "input" this.setActivityCode}} />
+        <InputGroup @name={{t "fleet-ops.component.activity-form-panel.status"}} @value={{this.activity.status}} @helpText="The status the end user views when this activity is triggered." />
+        <InputGroup @name={{t "fleet-ops.component.activity-form-panel.details"}} @value={{this.activity.details}} @helpText="The descriptive explanation of the activity for the end-user." />
         <InputGroup>
             <Toggle @isToggled={{this.activity.complete}} @onToggle={{fn (mut this.activity.complete)}}>
                 <span class="dark:text-gray-100 text-sm ml-2">{{t "fleet-ops.component.activity-form-panel.completes-order"}}</span>

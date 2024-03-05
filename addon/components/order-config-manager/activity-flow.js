@@ -20,6 +20,12 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     @service contextPanel;
 
     /**
+     * Service to fire notifications.
+     * @type {Service}
+     */
+    @service notifications;
+
+    /**
      * Represents the current state of the activity flow.
      * @type {Object}
      */
@@ -104,12 +110,18 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         this.paper.scale(currentScaleSx - 0.2);
     }
 
+    @action resetConfig() {
+        this.flow = {};
+        const created = createFlowActivity('created', 'Order Created', 'New order was created.');
+        const dispatched = createFlowActivity('dispatched', 'Order Dispatched', 'Order has been dispatched.');
+        this.addActivityToGraph([created, dispatched]);
+    }
+
     /**
      * Listens for element click events within the JointJS paper.
      */
     listenForElementClicks() {
         this.paper.on('element:pointerdown', (elementView, event) => {
-            console.log('activity clicked!', elementView);
             this.onActivityClicked(elementView);
             contextComponentCallback(this, 'onActivityClicked', elementView, event);
         });
@@ -231,8 +243,11 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      */
     deserializeActivity(activityObject, incomingFlow) {
         const activity = createFlowActivity(activityObject.code, activityObject.status, activityObject.details, activityObject.sequence, activityObject.color, {
+            key: activityObject.key,
             logic: activityObject.logic ?? [],
             events: activityObject.events ?? [],
+            entities: activityObject.entities ?? [],
+            actions: activityObject.actions ?? [],
             complete: activityObject.complete ?? false,
         });
         const { activities } = activityObject;
@@ -446,7 +461,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             attrs: {
                 pill: {
                     ref: 'code',
-                    refWidth: activity.get('code').length * 1.25,
+                    refWidth: activity.get('code').length * 1.35,
                     refHeight: 5,
                     refX: -5,
                     refY: -2,
@@ -747,12 +762,17 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
 
         this.contextPanel.focus(activity, 'editing', {
             args: {
-                activity,
                 targetActivity,
                 onPressCancel: () => {
                     this.contextPanel.clear();
                 },
-                onSave: () => {
+                onSave: (activity) => {
+                    // Make sure `code` is unique
+                    if (this.flow[activity.get('code')]) {
+                        this.notifications.warning('Activity code must be unique!');
+                        return;
+                    }
+
                     this.contextPanel.clear();
                     this.updateActivityInFlowMap(activity);
                     if (targetActivity) {

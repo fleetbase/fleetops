@@ -117,6 +117,12 @@ export default class ContextPanelService extends Service {
                 componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
+        customEntity: {
+            editing: {
+                component: 'custom-entity-form-panel',
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
+            },
+        },
         orderConfigManager: {
             component: 'order-config-manager-overlay',
             componentArguments: [{ isResizable: true }, { width: '500px' }],
@@ -276,7 +282,9 @@ export default class ContextPanelService extends Service {
      */
     createDynamicArgsFromRegistry(registry, model, additionalArgs = {}) {
         // Generate dynamic arguments object
-        const dynamicArgs = {};
+        const dynamicArgs = {
+            [camelize(getModelName(model))]: model,
+        };
         const componentArguments = registry.componentArguments || [];
 
         componentArguments.forEach((arg, index) => {

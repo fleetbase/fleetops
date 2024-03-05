@@ -206,6 +206,10 @@ body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab.active {
     padding-bottom: 0.265rem !important;
 }
 
+.order-config-custom-field-type-pill {
+    max-width: 100px;
+}
+
 body[data-theme='light'] .flow-activity {
     stroke: #e5e7eb;
     fill: rgba(249, 250, 251, 50%);

@@ -118,6 +118,7 @@ fleet-ops:
     activity-form-panel:
       title-concat: 'Activity: '
       new-activity-title: Create new activity
+      key: Key
       code: Code
       status: Status
       details: Details

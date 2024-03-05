@@ -1,1 +1,48 @@
-{{yield}}
+<div class="px-6 space-y-4">
+    <div class="flex flex-row items-center py-2 space-x-4">
+        <Button @type="primary" @icon="plus" @text="New Custom Entity" @onClick={{this.createNewCustomEntity}} />
+    </div>
+    {{#each this.customEntities as |customEntity index|}}
+        <ContentPanel @title={{customEntity.name}} @subtitle={{customEntity.description}} @panelSubtitleInlineClass="text-xs" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-900">
+            <div class="flex flex-row items-center py-2 space-x-2 mb-4">
+                <Button @type="primary" @icon="square-plus" @text="Add Custom Field to Entity" />
+                <Button @type="default" @icon="pencil" @onClick={{fn this.editCustomEntity customEntity index}} />
+                <Button @type="danger" @icon="trash" @onClick={{fn this.deleteCustomEntity customEntity index}} />
+            </div>
+            <div class="space-y-4">
+                <div class="grid grid-cols-4 gap-2">
+                    <div>
+                        <div class="font-semibold text-sm mb-2">Name</div>
+                        <div class="text-xs">{{customEntity.name}}</div>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-sm mb-2">Description</div>
+                        <div class="text-xs">{{customEntity.description}}</div>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-sm mb-2">Type</div>
+                        <div class="text-xs">{{customEntity.type}}</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                    <div>
+                        <div class="font-semibold text-sm mb-2">Length</div>
+                        <div class="text-xs">{{customEntity.length}} {{customEntity.dimensions_unit}}</div>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-sm mb-2">Width</div>
+                        <div class="text-xs">{{customEntity.width}} {{customEntity.dimensions_unit}}</div>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-sm mb-2">Height</div>
+                        <div class="text-xs">{{customEntity.height}} {{customEntity.dimensions_unit}}</div>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-sm mb-2">Weight</div>
+                        <div class="text-xs">{{customEntity.weight}} {{customEntity.weight_unit}}</div>
+                    </div>
+                </div>
+            </div>
+        </ContentPanel>
+    {{/each}}
+</div>

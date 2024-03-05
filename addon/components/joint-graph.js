@@ -4,20 +4,25 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
 export default class JointGraphComponent extends Component {
+    @tracked el;
     @tracked graph;
     @tracked paper;
     @tracked height = 400;
     @tracked width = 800;
     @tracked gridSize = 1;
     @tracked fullSize = true;
+    @tracked panning = true;
+    @tracked responsive = true;
     @tracked dragStartPosition = {};
 
-    constructor(owner, { height = 400, width = 800, gridSize = 1, fullSize = true }) {
+    constructor(owner, { height = 400, width = 800, gridSize = 1, fullSize = true, panning = true, responsive = true }) {
         super(...arguments);
         this.height = height;
         this.width = width;
         this.gridSize = gridSize;
         this.fullSize = fullSize;
+        this.panning = panning;
+        this.responsive = responsive;
     }
 
     @action setupGraph(el) {
@@ -38,21 +43,46 @@ export default class JointGraphComponent extends Component {
             interactive: false,
         });
 
+        this.el = el;
         this.graph = graph;
         this.paper = paper;
-        this.createPanningHandler(paper);
+        if (this.panning) {
+            this.createPanningHandler(paper);
+        }
+        if (this.responsive) {
+            this.createResponsiveHandler(paper);
+        }
 
         if (typeof this.args.onSetup === 'function') {
             this.args.onSetup({ paper, graph, el }, this);
         }
     }
 
+    getFullGridSize(el) {
+        const parentEl = el.parentElement;
+        const width = parentEl.offsetWidth;
+        const height = parentEl.offsetHeight;
+        return { width, height };
+    }
+
     sizeGrid(el) {
         if (this.fullSize) {
-            const parentEl = el.parentElement;
-            this.width = parentEl.offsetWidth;
-            this.height = parentEl.offsetHeight;
+            const { width, height } = this.getFullGridSize(el);
+            this.width = width;
+            this.height = height;
         }
+    }
+
+    createResponsiveHandler(paper) {
+        window.addEventListener('resize', () => {
+            if (!this.el) {
+                return;
+            }
+            const { width, height } = this.getFullGridSize(this.el);
+            this.width = width;
+            this.height = height;
+            paper.setDimensions(width, height);
+        });
     }
 
     createPanningHandler(paper) {
