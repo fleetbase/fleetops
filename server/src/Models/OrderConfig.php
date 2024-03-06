@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Casts\OrderConfigEntities;
 use Fleetbase\Models\Model;
 use Fleetbase\Support\Auth;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -63,7 +64,7 @@ class OrderConfig extends Model
     protected $casts = [
         'tags' => Json::class,
         'flow' => Json::class,
-        'entities' => Json::class,
+        'entities' => OrderConfigEntities::class,
         'meta' => Json::class,
     ];
 
@@ -149,6 +150,14 @@ class OrderConfig extends Model
     public function icon()
     {
         return $this->belongsTo(\Fleetbase\Models\File::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function customFields()
+    {
+        return $this->belongsTo(\Fleetbase\Models\CustomField::class);
     }
 
     public function currentActivity() {}

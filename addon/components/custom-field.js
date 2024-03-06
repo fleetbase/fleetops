@@ -1,46 +1,34 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { equal } from '@ember/object/computed';
+import getCustomFieldTypeMap from '../utils/get-custom-field-type-map';
 
 export default class CustomFieldComponent extends Component {
-    @tracked selectedPort;
-    @tracked selectedVessel;
+    @tracked orderConfig;
+    @tracked customField;
+    @tracked order;
+    @tracked customFieldComponent;
+    @tracked value;
 
-    @equal('args.metaField.type', 'text') isTextInput;
-    @equal('args.metaField.type', 'select') isSelectInput;
-    @equal('args.metaField.type', 'vessel') isVesselInput;
-    @equal('args.metaField.type', 'port') isPortInput;
-    @equal('args.metaField.type', 'datetime') isDateTimeInput;
-    @equal('args.metaField.type', 'boolean') isBooleanInput;
+    /**
+     * A map defining the available custom field types and their corresponding components.
+     */
+    customFieldTypeMap = getCustomFieldTypeMap();
 
-    @action onToggle() {
-        if (typeof this.args.onChange === 'function') {
-            this.args.onChange(...arguments);
-        }
+    constructor(owner, { customField, orderConfig, order }) {
+        super(...arguments);
+        this.customField = customField;
+        this.orderConfig = orderConfig;
+        this.order = order;
+        this.customFieldComponent = typeof customField.component === 'string' ? customField.component : 'input';
     }
 
-    @action setDateValue(dateInstance) {
-        const dateTime = dateInstance.toDate();
-
+    @action onChangeHandler(event) {
+        console.log('[onValueChangeHandler]', ...arguments);
+        const value = event.target.value;
+        this.value = value;
         if (typeof this.args.onChange === 'function') {
-            this.args.onChange(dateTime);
-        }
-    }
-
-    @action selectPort(port) {
-        this.selectedPort = port;
-
-        if (typeof this.args.onChange === 'function') {
-            this.args.onChange(port.portcode);
-        }
-    }
-
-    @action selectVessel(vessel) {
-        this.selectedVessel = vessel;
-
-        if (typeof this.args.onChange === 'function') {
-            this.args.onChange(vessel.name);
+            this.args.onChange(value);
         }
     }
 }

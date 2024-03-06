@@ -7,6 +7,7 @@ import { not, equal, alias } from '@ember/object/computed';
 import { isArray } from '@ember/array';
 import { dasherize } from '@ember/string';
 import { later, next } from '@ember/runloop';
+import { task } from 'ember-concurrency-decorators';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import polyline from '@fleetbase/ember-core/utils/polyline';
 import findClosestWaypoint from '@fleetbase/ember-core/utils/find-closest-waypoint';
@@ -125,7 +126,10 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @tracked entities = [];
     @tracked waypoints = [];
     @tracked payloadCoordinates = [];
-    @tracked types = [];
+    @tracked orderConfig;
+    @tracked orderConfigs = [];
+    @tracked customFieldGroups = [];
+    @tracked customFields = [];
     @tracked serviceRates = [];
     @tracked selectedServiceRate;
     @tracked selectedServiceQuote;
@@ -244,14 +248,6 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 // .filter((place) => place.get('hasValidCoordinates'))
                 .map((place) => place.get('latlng'))
         );
-    }
-
-    @computed('order.type', 'types') get typeConfig() {
-        return this.types.find((type) => type.key === this.order.type);
-    }
-
-    @computed('order.type', 'types') get typeConfigIndex() {
-        return this.types.findIndex((type) => type.key === this.order.type);
     }
 
     @computed('entities.[]', 'waypoints.[]') get entitiesByImportId() {
@@ -1033,7 +1029,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         const meta = [];
         const entities = [];
         const waypoints = [];
-        const types = [];
+        const orderConfigs = [];
+        const orderConfig = undefined;
         const isCreatingOrder = false;
         const isMultipleDropoffOrder = false;
         const leafletRoute = undefined;
@@ -1051,7 +1048,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             meta,
             entities,
             waypoints,
-            types,
+            orderConfigs,
+            orderConfig,
             isCreatingOrder,
             isMultipleDropoffOrder,
             leafletRoute,
@@ -1063,14 +1061,41 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         this.resetInterface();
     }
 
-    @action setConfig(type) {
-        if (!type) {
+    @action setConfig(orderConfig) {
+        if (!orderConfig) {
             return;
         }
 
-        set(this, 'order.type', type);
-        this.meta = [];
-        this.applyCustomMetaFields(type);
+        this.orderConfig = orderConfig;
+        this.order.set('type', orderConfig.key);
+
+        // load custom fields
+        this.loadCustomFields.perform(orderConfig);
+    }
+
+    /**
+     * A task method to load custom fields from the store and group them.
+     * @task
+     */
+    @task *loadCustomFields(orderConfig) {
+        this.customFieldGroups = yield this.store.query('category', { owner_uuid: orderConfig.id, for: 'custom_field_group' });
+        this.customFields = yield this.store.query('custom-field', { subject_uuid: orderConfig.id });
+        this.groupCustomFields();
+    }
+
+    /**
+     * Organizes custom fields into their respective groups.
+     */
+    groupCustomFields() {
+        for (let i = 0; i < this.customFieldGroups.length; i++) {
+            const group = this.customFieldGroups[i];
+            group.set(
+                'customFields',
+                this.customFields.filter((customField) => {
+                    return customField.category_uuid === group.id;
+                })
+            );
+        }
     }
 
     @action setOrderFacilitator(model) {

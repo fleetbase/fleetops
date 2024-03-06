@@ -16,6 +16,8 @@ export default function createFlowActivity(name = '', status = '', details = '',
             actions: [],
             entities: [],
             complete: false,
+            require_pod: false,
+            pod_method: 'scan',
             options: {},
             node: null,
             _internalModel: {

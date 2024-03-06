@@ -11,8 +11,8 @@ dependencies:
     specifier: ^0.2.11
     version: 0.2.11(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0)
   '@fleetbase/fleetops-data':
-    specifier: ^0.1.10
-    version: 0.1.10
+    specifier: ^0.1.11
+    version: 0.1.11
   '@fleetbase/leaflet-routing-machine':
     specifier: ^3.2.16
     version: 3.2.16
@@ -2564,8 +2564,8 @@ packages:
       - webpack-command
     dev: false
 
-  /@fleetbase/fleetops-data@0.1.10:
-    resolution: {integrity: sha512-M4o3Uqx/tg3zSOBdU2LwDGvaLA01mfgxzvVIJcMI07v7a9wIv9m1rMZJzSDPWXeXt+RS/IUH6JVUgXs+N3PTfg==}
+  /@fleetbase/fleetops-data@0.1.11:
+    resolution: {integrity: sha512-hWf/lRO+tvHpPB4ardD+G01T9YlTPQggyqRUEZE6NoXHpY+7uBOJYBjPVWxY3KAvR/DXcpFjIANLecB0XGdE3Q==}
     engines: {node: '>= 18'}
     dependencies:
       '@babel/core': 7.23.2

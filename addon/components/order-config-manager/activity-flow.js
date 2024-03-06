@@ -26,6 +26,12 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     @service notifications;
 
     /**
+     * Service for internationalization.
+     * @type {Service}
+     */
+    @service intl;
+
+    /**
      * Represents the current state of the activity flow.
      * @type {Object}
      */
@@ -248,6 +254,8 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             events: activityObject.events ?? [],
             entities: activityObject.entities ?? [],
             actions: activityObject.actions ?? [],
+            require_pod: activityObject.require_pod ?? false,
+            pod_method: activityObject.pod_method ?? 'scan',
             complete: activityObject.complete ?? false,
         });
         const { activities } = activityObject;
@@ -769,7 +777,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
                 onSave: (activity) => {
                     // Make sure `code` is unique
                     if (this.flow[activity.get('code')]) {
-                        this.notifications.warning('Activity code must be unique!');
+                        this.notifications.warning(this.intl.t('fleet-ops.component.order-config-manager.activity-flow.edit-activity-unique-code-warning'));
                         return;
                     }
 

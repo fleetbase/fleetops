@@ -1,4 +1,6 @@
 import ObjectProxy from '@ember/object/proxy';
+import config from '../config/environment';
+import { get } from '@ember/object';
 
 export default function createCustomEntity(name = '', type = '', description = '', props = {}) {
     return ObjectProxy.create({
@@ -8,6 +10,7 @@ export default function createCustomEntity(name = '', type = '', description = '
             type,
             dimensions_unit: 'cm',
             weight_unit: 'kg',
+            photo_url: typeof props.photo_url === 'string' ? props.photo_url : get(config, 'defaultValues.entityImage'),
             ...props,
             _internalModel: {
                 modelName: 'custom-entity',
