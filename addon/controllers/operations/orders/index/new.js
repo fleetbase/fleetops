@@ -145,7 +145,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @tracked leafletLayers = [];
     @tracked routeProfile = 'driving';
     @tracked routeProfileOptions = ['driving', 'bycicle', 'walking'];
-    @tracked podOptions = ['scan', 'signature'];
+    @tracked podOptions = ['scan', 'signature', 'photo'];
     @tracked isCsvImportedOrder = false;
     @tracked routePreviewArray = [];
     @tracked previewRouteControl;

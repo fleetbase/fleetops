@@ -1269,4 +1269,96 @@ class OrderController extends Controller
 
         return new ProofResource($proof);
     }
+    
+    /**
+     * Validate a photo.
+     *
+     * @return void
+     */
+    public function capturePhoto(string $id, ?string $subjectId = null, Request $request)
+    {
+        $disk         = $request->input('disk', config('filesystems.default'));
+        $bucket       = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
+        $photo        = $request->input('photo');
+        $data         = $request->input('data', []);
+        $remarks      = $request->input('remarks', 'Verified by Photo');
+        $type         = $subjectId ? strtok($subjectId, '_') : null;
+
+        try {
+            $order = Order::findRecordOrFail($id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return response()->json(
+                [
+                    'error' => 'Order resource not found.',
+                ],
+                404
+            );
+        }
+
+        if (!$photo) {
+            return response()->apiError('No photo data to capture.');
+        }
+
+        $subject = $type === null ? $order : null;
+
+        switch ($type) {
+            case 'place':
+            case 'waypoint':
+                $subject = Waypoint::where('payload_uuid', $order->payload_uuid)->where(function ($q) use ($subjectId) {
+                    $q->whereHas('place', function ($q) use ($subjectId) {
+                        $q->where('public_id', $subjectId);
+                    });
+                    $q->orWhere('public_id', $subjectId);
+                })->withoutGlobalScopes()->first();
+                break;
+
+            case 'entity':
+                $subject = Entity::where('public_id', $subjectId)->withoutGlobalScopes()->first();
+                break;
+
+            default:
+                break;
+        }
+
+        if (!$subject) {
+            return response()->apiError('Unable to capture photo');
+        }
+
+        // create proof instance
+        $proof = Proof::create([
+            'company_uuid' => session('company'),
+            'order_uuid'   => $order->uuid,
+            'subject_uuid' => $subject->uuid,
+            'subject_type' => Utils::getModelClassName($subject),
+            'remarks'      => $remarks,
+            'raw_data'     => $photo,
+            'data'         => $data,
+        ]);
+
+        // set the photo storage path
+        $path = 'uploads/' . session('company') . '/photos/' . $proof->public_id . '.png';
+
+        // upload photo
+        Storage::disk($disk)->put($path, base64_decode($photo));
+
+        // create file record for upload
+        $file = File::create([
+            'company_uuid'      => session('company'),
+            'uploader_uuid'     => session('user'),
+            'name'              => basename($path),
+            'original_filename' => basename($path),
+            'extension'         => 'png',
+            'content_type'      => 'image/png',
+            'path'              => $path,
+            'bucket'            => $bucket,
+            'type'              => 'photo',
+            'size'              => Utils::getBase64ImageSize($photo),
+        ])->setKey($proof);
+
+        // set file to proof
+        $proof->file_uuid = $file->uuid;
+        $proof->save();
+
+        return new ProofResource($proof);
+    }
 }
