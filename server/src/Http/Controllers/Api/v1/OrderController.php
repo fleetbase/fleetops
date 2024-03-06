@@ -1275,7 +1275,7 @@ class OrderController extends Controller
      *
      * @return void
      */
-    public function capturePhoto(string $id, ?string $subjectId = null, Request $request)
+    public function capturePhoto( Request $request, string $id, ?string $subjectId = null)
     {
         $disk         = $request->input('disk', config('filesystems.default'));
         $bucket       = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
