@@ -20,6 +20,7 @@ use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Flow;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
+use Fleetbase\Models\CustomFieldValue;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
 use Illuminate\Http\Request;
@@ -78,11 +79,12 @@ class OrderController extends FleetOpsController
                     $isIntegratedVendorOrder = isset($requestInput['integrated_vendor_order']);
                     $serviceQuote            = ServiceQuote::resolveFromRequest($request);
 
-                    $route     = Utils::get($input, 'route');
-                    $payload   = Utils::get($input, 'payload');
-                    $waypoints = Utils::get($input, 'payload.waypoints');
-                    $entities  = Utils::get($input, 'payload.entities');
-                    $uploads   = Utils::get($input, 'files', []);
+                    $route               = Utils::get($input, 'route');
+                    $payload             = Utils::get($input, 'payload');
+                    $waypoints           = Utils::get($input, 'payload.waypoints');
+                    $entities            = Utils::get($input, 'payload.entities');
+                    $uploads             = Utils::get($input, 'files', []);
+                    $customFieldValues   = Utils::get($input, 'custom_field_values', []);
 
                     // save order route & payload with request input
                     $order
@@ -99,6 +101,20 @@ class OrderController extends FleetOpsController
 
                         foreach ($files as $file) {
                             $file->setKey($order);
+                        }
+                    }
+
+                    // save custom field values
+                    if (is_array($customFieldValues)) {
+                        foreach ($customFieldValues as $customFieldValue) {
+                            CustomFieldValue::create([
+                                'company_uuid'      => session('company'),
+                                'custom_field_uuid' => data_get($customFieldValue, 'custom_field_uuid'),
+                                'subject_uuid'      => $order->uuid,
+                                'subject_type'      => Utils::getMutationType($order),
+                                'value'             => data_get($customFieldValue, 'value'),
+                                'value_type'        => 'text', // only support text values for now v0.4.10
+                            ]);
                         }
                     }
 

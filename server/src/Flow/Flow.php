@@ -31,6 +31,7 @@ class Flow
     public function set(string $key, $value)
     {
         $this->attributes[$key] = $value;
+
         return $this;
     }
 

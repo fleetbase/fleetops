@@ -1,8 +1,8 @@
 {{#if this.customFieldComponent}}
     {{#if (eq this.customFieldComponent "input")}}
-        <InputGroup @name={{this.customField.label}} @value={{this.value}} {{on "input" this.onChangeHandler}} />
+        <InputGroup @name={{this.customField.label}} @value={{this.value}} @helpText={{this.customField.help_text}} {{on "input" this.onChangeHandler}} />
     {{else if (eq this.customFieldComponent "select")}}
-        <InputGroup @name={{this.customField.label}}>
+        <InputGroup @name={{this.customField.label}} @helpText={{this.customField.help_text}}>
             <select class="form-select w-full has--placeholder" {{on "change" this.onChangeHandler}}>
                 <option selected disabled>
                     {{this.customField.label}}

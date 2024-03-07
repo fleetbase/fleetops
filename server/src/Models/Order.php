@@ -13,6 +13,8 @@ use Fleetbase\FleetOps\Support\Flow;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Models\CustomField;
+use Fleetbase\Models\CustomFieldValue;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\Transaction;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -84,6 +86,7 @@ class Order extends Model
         'company_uuid',
         'session_uuid',
         'payload_uuid',
+        'order_config_uuid',
         'transaction_uuid',
         'purchase_rate_uuid',
         'tracking_number_uuid',
@@ -242,6 +245,14 @@ class Order extends Model
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
+    public function orderConfig()
+    {
+        return $this->belongsTo(OrderConfig::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
     public function transaction()
     {
         return $this->belongsTo(Transaction::class);
@@ -269,14 +280,6 @@ class Order extends Model
     public function company()
     {
         return $this->belongsTo(\Fleetbase\Models\Company::class);
-    }
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne
-     */
-    public function orderConfig()
-    {
-        return $this->hasOne(\Fleetbase\Models\Extension::class, 'key', 'type')->where('type', 'order_config');
     }
 
     /**
@@ -332,7 +335,15 @@ class Order extends Model
      */
     public function customFields()
     {
-        return $this->hasMany(\Fleetbase\Models\CustomField::class, 'subject_uuid')->orderBy('order');
+        return $this->hasMany(CustomField::class, 'subject_uuid')->orderBy('order');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function customFieldValues()
+    {
+        return $this->hasMany(CustomFieldValue::class, 'subject_uuid');
     }
 
     /**
@@ -599,36 +610,76 @@ class Order extends Model
         $this->attributes['status'] = is_string($status) ? Str::snake($status) : 'created';
     }
 
+    /**
+     * Checks if a driver is assigned to the order.
+     *
+     * @return bool returns true if a driver is assigned, false otherwise
+     */
     public function getHasDriverAssignedAttribute()
     {
         return (bool) $this->driver_assigned_uuid;
     }
 
+    /**
+     * Determines if the order is ready for dispatch.
+     * An order is ready for dispatch if it has a driver assigned or if it is marked as adhoc.
+     *
+     * @return bool returns true if the order is ready for dispatch, false otherwise
+     */
     public function getIsReadyForDispatchAttribute()
     {
         return $this->hasDrvierAssigned || $this->adhoc;
     }
 
+    /**
+     * Checks if the order is scheduled.
+     * Determines if a valid scheduled date and time is set for the order.
+     *
+     * @return bool returns true if the order is scheduled, false otherwise
+     */
     public function getIsScheduledAttribute(): bool
     {
         return !empty($this->scheduled_at) && Carbon::parse($this->scheduled_at)->isValid();
     }
 
+    /**
+     * Determines if the order is assigned to a driver but not yet dispatched.
+     *
+     * @return bool returns true if the order is assigned to a driver but not dispatched, false otherwise
+     */
     public function getIsAssignedNotDispatchedAttribute(): bool
     {
         return !empty($this->driver_assigned_uuid) && $this->dispatched_at === null;
     }
 
+    /**
+     * Checks if the order has not been dispatched.
+     *
+     * @return bool returns true if the order has not been dispatched, false otherwise
+     */
     public function getIsNotDispatchedAttribute(): bool
     {
         return $this->dispatched_at === null;
     }
 
+    /**
+     * Indicates whether the order is from an integrated vendor.
+     *
+     * @return bool returns true if the order is from an integrated vendor, false otherwise
+     */
     public function getIsIntegratedVendorOrderAttribute()
     {
         return $this->isIntegratedVendorOrder();
     }
 
+    /**
+     * Associates a given payload with the order.
+     * Sets the payload_uuid and updates the payload relationship for the order.
+     *
+     * @param Payload|null $payload the Payload instance to associate with the order
+     *
+     * @return Order the Order instance for method chaining
+     */
     public function setPayload(?Payload $payload): Order
     {
         $this->payload_uuid = $payload->uuid;
@@ -638,6 +689,15 @@ class Order extends Model
         return $this;
     }
 
+    /**
+     * Creates a new payload for the order with the provided attributes.
+     * Optionally sets the newly created payload as the payload of the order.
+     *
+     * @param array|null $attributes the attributes for creating the payload
+     * @param bool       $setPayload whether to set the newly created payload as the order's payload
+     *
+     * @return Payload the newly created Payload instance
+     */
     public function createPayload(?array $attributes = [], bool $setPayload = true): Payload
     {
         // set payload type if not set
@@ -678,6 +738,15 @@ class Order extends Model
         return $payload;
     }
 
+    /**
+     * Inserts a new payload for the order into the database with the provided attributes.
+     * Optionally sets the inserted payload as the payload of the order.
+     *
+     * @param array|null $attributes the attributes for inserting the payload
+     * @param bool       $setPayload whether to set the inserted payload as the order's payload
+     *
+     * @return Payload the inserted Payload instance
+     */
     public function insertPayload(?array $attributes = [], bool $setPayload = true): Payload
     {
         // set payload type if not set
@@ -737,6 +806,12 @@ class Order extends Model
         return $payload;
     }
 
+    /**
+     * Retrieves the payload associated with the order.
+     * If the payload is not already loaded, it loads the payload relationship.
+     *
+     * @return Payload|null the Payload model associated with the order
+     */
     public function getPayload()
     {
         if ($this->payload) {
@@ -748,6 +823,15 @@ class Order extends Model
         return $this->payload;
     }
 
+    /**
+     * Sets or updates the route for the order.
+     * If a Route instance is provided, it sets the order_uuid and saves the Route.
+     * Otherwise, it creates a new Route with the provided attributes.
+     *
+     * @param array|Route|null $attributes attributes for the route or a Route instance
+     *
+     * @return self the Order instance for method chaining
+     */
     public function setRoute(?array $attributes = [])
     {
         if (!$attributes) {
@@ -777,6 +861,12 @@ class Order extends Model
         return $this;
     }
 
+    /**
+     * Retrieves the current destination location for the order.
+     * It prioritizes dropoff location, then waypoints, and defaults to a zero-point if none are set.
+     *
+     * @return Point the current destination location as a Point instance
+     */
     public function getCurrentDestinationLocation()
     {
         if ($this->payload && $this->payload->dropoff) {
@@ -794,6 +884,12 @@ class Order extends Model
         return new Point(0, 0);
     }
 
+    /**
+     * Retrieves the last known location for the order.
+     * It checks the driver assigned location, then the pickup location, followed by waypoints.
+     *
+     * @return Point the last known location as a Point instance
+     */
     public function getLastLocation()
     {
         if ($this->driverAssigned && $this->driverAssigned->location) {
@@ -815,6 +911,15 @@ class Order extends Model
         return new Point(0, 0);
     }
 
+    /**
+     * Purchases a service quote for the order and creates a purchase rate.
+     * The purchase rate details are saved to the order.
+     *
+     * @param string $serviceQuoteId the UUID of the service quote
+     * @param array  $meta           additional metadata for the purchase
+     *
+     * @return bool returns true if the purchase rate is successfully saved
+     */
     public function purchaseQuote(string $serviceQuoteId, $meta = [])
     {
         // $serviceQuote = ServiceQuote::where('uuid', $serviceQuoteId)->first();
@@ -834,6 +939,15 @@ class Order extends Model
         return $this->save();
     }
 
+    /**
+     * Purchases a service quote for the order, or creates a transaction without a service quote if none is provided.
+     * The function handles different types of service quote identifiers and creates a purchase rate accordingly.
+     *
+     * @param mixed $serviceQuote the service quote or its identifier
+     * @param array $meta         additional metadata for the purchase
+     *
+     * @return self|bool the Order instance for method chaining, or false on failure
+     */
     public function purchaseServiceQuote($serviceQuote, $meta = [])
     {
         if (!$serviceQuote) {
@@ -870,6 +984,12 @@ class Order extends Model
         return false;
     }
 
+    /**
+     * Creates a transaction for the order without a service quote.
+     * This method is used when an order is made without selecting a specific service quote.
+     *
+     * @return Transaction|null the created Transaction model or null on failure
+     */
     public function createOrderTransactionWithoutServiceQuote(): ?Transaction
     {
         $transaction = null;
@@ -898,6 +1018,13 @@ class Order extends Model
         return $transaction;
     }
 
+    /**
+     * Determines if the order should be dispatched based on the scheduled time and a precision interval.
+     *
+     * @param int $precision the number of minutes before and after the scheduled time to consider for dispatching
+     *
+     * @return bool returns true if the order should be dispatched, false otherwise
+     */
     public function shouldDispatch($precision = 1)
     {
         $min = Carbon::now()->subMinutes($precision);
@@ -906,6 +1033,14 @@ class Order extends Model
         return !$this->dispatched && Carbon::fromString($this->scheduled_at)->between($min, $max);
     }
 
+    /**
+     * Dispatches the order.
+     * Sets the dispatched flag and dispatched_at timestamp. Optionally saves the order and flushes attribute cache.
+     *
+     * @param bool $save whether to save the order after dispatching
+     *
+     * @return mixed the result of the OrderDispatched event
+     */
     public function dispatch($save = true)
     {
         $this->dispatched    = true;
@@ -919,6 +1054,12 @@ class Order extends Model
         return event(new OrderDispatched($this));
     }
 
+    /**
+     * Inserts a dispatch activity into the order.
+     * Retrieves and applies a dispatch activity specific to the order.
+     *
+     * @return Order the updated Order instance
+     */
     public function insertDispatchActivity(): Order
     {
         // get dispatch activity if any and apply to order
@@ -931,6 +1072,12 @@ class Order extends Model
         return $this;
     }
 
+    /**
+     * Dispatches the order and inserts a dispatch activity.
+     * Combines the functionalities of dispatching the order and inserting a dispatch activity.
+     *
+     * @return Order the updated Order instance
+     */
     public function dispatchWithActivity(): Order
     {
         $this->dispatch();
@@ -939,6 +1086,12 @@ class Order extends Model
         return $this;
     }
 
+    /**
+     * Dispatches the order only if it hasn't been dispatched yet.
+     * A check is performed before dispatching the order.
+     *
+     * @return Order the updated Order instance
+     */
     public function firstDispatch(): Order
     {
         if ($this->dispatched) {
@@ -948,6 +1101,12 @@ class Order extends Model
         return $this;
     }
 
+    /**
+     * Dispatches the order with activity only if it hasn't been dispatched yet.
+     * A check is performed before dispatching the order and inserting the dispatch activity.
+     *
+     * @return Order the updated Order instance
+     */
     public function firstDispatchWithActivity(): Order
     {
         if ($this->dispatched) {
@@ -957,6 +1116,12 @@ class Order extends Model
         return $this;
     }
 
+    /**
+     * Cancels the order.
+     * Sets the order status to 'canceled' and handles cancellation for integrated vendor orders.
+     *
+     * @return mixed the result of the OrderCanceled event
+     */
     public function cancel()
     {
         $this->status = 'canceled';
@@ -972,6 +1137,12 @@ class Order extends Model
         return event(new OrderCanceled($this));
     }
 
+    /**
+     * Notifies that a driver has been assigned to the order.
+     * Triggers an event when a driver is assigned to the order.
+     *
+     * @return mixed the result of the OrderDriverAssigned event, if a driver is assigned
+     */
     public function notifyDriverAssigned()
     {
         if ($this->driver_assigned_uuid) {
@@ -979,6 +1150,15 @@ class Order extends Model
         }
     }
 
+    /**
+     * Updates the activity of the order.
+     * Updates the order status and inserts a new activity based on the provided activity details.
+     *
+     * @param array|null $activity the activity details to be updated
+     * @param mixed      $proof    additional proof or details for the activity update
+     *
+     * @return Order the updated Order instance
+     */
     public function updateActivity(?array $activity = null, $proof = null): Order
     {
         $status   = data_get($activity, 'status');
@@ -995,17 +1175,35 @@ class Order extends Model
         return $this;
     }
 
+    /**
+     * Notifies that the order has been completed.
+     * Triggers an event indicating the completion of the order.
+     *
+     * @return mixed the result of the OrderCompleted event
+     */
     public function notifyCompleted()
     {
         return event(new OrderCompleted($this));
     }
 
+    /**
+     * Sets the customer for the order.
+     * Updates the customer_uuid and customer_type attributes based on the provided model.
+     *
+     * @param Model $model the customer model to set for the order
+     */
     public function setCustomer($model)
     {
         $this->customer_uuid = $model->uuid;
-        $this->customer_type = Utils::getModelClassName($model);
+        $this->customer_type = Utils::getMutationType($model);
     }
 
+    /**
+     * Sets the customer type attribute for the order.
+     * Transforms and sets the customer type attribute based on specific string handling rules.
+     *
+     * @param string $type the customer type to be set
+     */
     public function setCustomerTypeAttribute($type)
     {
         if (is_string($type)) {
@@ -1023,6 +1221,12 @@ class Order extends Model
         }
     }
 
+    /**
+     * Sets the facilitator type attribute for the order.
+     * Transforms and sets the facilitator type attribute based on specific string handling rules.
+     *
+     * @param string $type the facilitator type to be set
+     */
     public function setFacilitatorTypeAttribute($type)
     {
         if (is_string($type)) {
@@ -1040,6 +1244,12 @@ class Order extends Model
         }
     }
 
+    /**
+     * Sets the pickup location of the payload to the driver's current location.
+     * Optionally forces the update or sets the location based on specific order conditions.
+     *
+     * @param bool $force whether to force the update of the pickup location
+     */
     public function setDriverLocationAsPickup($force = false)
     {
         if ($force === true) {
@@ -1061,11 +1271,24 @@ class Order extends Model
         }
     }
 
+    /**
+     * Determines if the pickup location is set to be from the driver's current location.
+     *
+     * @return bool returns true if the pickup location should be the driver's current location, false otherwise
+     */
     public function isPickupIsFromDriverLocation()
     {
         return $this->payload instanceof Payload && $this->payload->hasMeta('pickup_is_driver_location');
     }
 
+    /**
+     * Updates the status of the order.
+     * Allows updating multiple statuses or a specific status based on a code or the order's flow.
+     *
+     * @param string|array|null $code the status code(s) to update the order status to
+     *
+     * @return bool returns true if the status is successfully updated, false otherwise
+     */
     public function updateStatus($code = null)
     {
         // update multiple status codes
@@ -1110,6 +1333,13 @@ class Order extends Model
         return true;
     }
 
+    /**
+     * Checks if the specified driver is assigned to the order.
+     *
+     * @param mixed $driver the driver instance, UUID, or public ID to check against
+     *
+     * @return bool returns true if the specified driver is assigned to the order, false otherwise
+     */
     public function isDriver($driver)
     {
         if ($driver instanceof Driver) {
@@ -1123,6 +1353,16 @@ class Order extends Model
         return $driver === $this->driverAssigned;
     }
 
+    /**
+     * Assigns a driver to the order.
+     * Sets the driver_assigned_uuid and updates the related relationships.
+     * Optionally notifies about the driver assignment.
+     *
+     * @param mixed $driver the driver instance or identifier to assign
+     * @param bool  $silent whether to suppress the notification of the driver assignment
+     *
+     * @return Order the updated Order instance
+     */
     public function assignDriver($driver, $silent = false)
     {
         if ($driver instanceof Driver) {
@@ -1155,6 +1395,12 @@ class Order extends Model
         return $this;
     }
 
+    /**
+     * Retrieves the current origin position for the order.
+     * The origin is either the driver's current location or the payload's pickup/current waypoint.
+     *
+     * @return Point|null the current origin position as a Point instance, or null if not set
+     */
     public function getCurrentOriginPosition()
     {
         if ($this->hasDriverAssigned) {
@@ -1179,6 +1425,12 @@ class Order extends Model
         return $origin ? $origin->location : null;
     }
 
+    /**
+     * Retrieves the destination position for the order.
+     * The destination is either the payload's dropoff or the last waypoint.
+     *
+     * @return Point|null the destination position as a Point instance, or null if not set
+     */
     public function getDestinationPosition()
     {
         $destination = null;
@@ -1190,6 +1442,12 @@ class Order extends Model
         return $destination ? $destination->location : null;
     }
 
+    /**
+     * Sets the preliminary distance and time for the order.
+     * Uses a utility method to calculate the distance and time between the current origin and destination positions.
+     *
+     * @return Order the updated Order instance
+     */
     public function setPreliminaryDistanceAndTime()
     {
         $origin      = $this->getCurrentOriginPosition();
@@ -1206,6 +1464,12 @@ class Order extends Model
         return $this;
     }
 
+    /**
+     * Sets the accurate distance and time for the order based on driving distance.
+     * Uses a utility method to calculate the driving distance and time between the current origin and destination positions.
+     *
+     * @return Order the updated Order instance
+     */
     public function setDistanceAndTime(): Order
     {
         $origin      = $this->getCurrentOriginPosition();
@@ -1222,13 +1486,80 @@ class Order extends Model
         return $this;
     }
 
+    /**
+     * Determines if the order is from an integrated vendor.
+     *
+     * @return bool returns true if the order is from an integrated vendor, false otherwise
+     */
     public function isIntegratedVendorOrder()
     {
         return $this->facilitator_is_integrated_vendor === true;
     }
 
+    /**
+     * Retrieves the adhoc ping distance for the order.
+     * Defaults to a specified value or a configuration setting.
+     *
+     * @return int the adhoc ping distance in meters
+     */
     public function getAdhocPingDistance(): int
     {
         return (int) Utils::get($this, 'adhoc_distance', Utils::get($this, 'company.options.fleetops.adhoc_distance', 6000));
+    }
+
+    /**
+     * Retrieves the custom field value for the specified custom field.
+     *
+     * @param CustomField $customField the custom field to retrieve the value for
+     *
+     * @return CustomFieldValue|null the custom field value, or null if not found
+     */
+    public function getCustomFieldValue(CustomField $customField): ?CustomFieldValue
+    {
+        $customFieldValue = $this->customFieldValues()->where('custom_field_uuid', $customField->uuid)->first();
+        if ($customFieldValue) {
+            return $customFieldValue;
+        }
+
+        return null;
+    }
+
+    /**
+     * Retrieves the value of a custom field by its key.
+     *
+     * @param string $key the key of the custom field
+     *
+     * @return mixed|null the value of the custom field, or null if not found
+     */
+    public function getCustomFieldValueByKey(string $key)
+    {
+        $key         = Str::slug($key);
+        $customField = $this->customFields()->where('name', $key)->first();
+        if ($customField) {
+            $customFieldValue = $this->getCustomFieldValue($customField);
+            if ($customFieldValue) {
+                return $customFieldValue->value;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Retrieves all custom field values associated with the order.
+     *
+     * @return array an array of custom field values
+     */
+    public function getCustomFieldValues(): array
+    {
+        $customFields = [];
+        foreach ($this->customFieldValues as $customFieldValue) {
+            $key = Str::snake(strtolower($customFieldValue->custom_field_label));
+            if ($key) {
+                $customFields[$key] = $customFieldValue->value;
+            }
+        }
+
+        return $customFields;
     }
 }

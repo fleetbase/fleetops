@@ -24,11 +24,11 @@ export default class CustomFieldComponent extends Component {
     }
 
     @action onChangeHandler(event) {
-        console.log('[onValueChangeHandler]', ...arguments);
         const value = event.target.value;
         this.value = value;
+
         if (typeof this.args.onChange === 'function') {
-            this.args.onChange(value);
+            this.args.onChange(value, this.customField);
         }
     }
 }

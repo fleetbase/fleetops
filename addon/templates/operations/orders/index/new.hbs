@@ -51,17 +51,16 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
                 <div class="input-group">
                     <InputLabel @labelText={{t "fleet-ops.operations.orders.index.new.order-type"}} @helpText={{t "fleet-ops.operations.orders.index.new.order-type-help-text"}} />
-                    {{!-- <Select class="w-full" @options={{this.orderConfigs}} @value={{this.order.type}} @optionLabel="name" @optionValue="key" @onSelect={{this.setConfig}} @placeholder={{t "fleet-ops.operations.orders.index.new.order-type-placeholder"}} /> --}}
-                    <ModelSelect @modelName="order-config" @selectedModel={{this.orderConfig}} @placeholder={{t "fleet-ops.operations.orders.index.new.order-type-placeholder"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @onChange={{this.setConfig}} as |model|>
-                        <div class="flex items-center">
-                            <div class="w-7">
-                                <FaIcon @icon="diagram-project" />
-                            </div>
-                            <span class="uppercase">
-                                {{model.name}}
-                            </span>
-                        </div>
-                    </ModelSelect>
+                    <select class="form-select w-full has--placeholder" {{on "change" this.setConfig}}>
+                        <option selected disabled>
+                            {{t "fleet-ops.operations.orders.index.new.order-type-placeholder"}}
+                        </option>
+                        {{#each this.orderConfigs as |orderConfig|}}
+                            <option value={{orderConfig.id}} selected={{eq this.orderConfig.id orderConfig.id}}>
+                                {{orderConfig.name}}
+                            </option>
+                        {{/each}}
+                    </select>
                 </div>
 
                 <InputGroup @name={{t "fleet-ops.operations.orders.index.new.internal-id"}} @value={{this.order.internal_id}} @helpText={{t "fleet-ops.operations.orders.index.new.internal-id-help-text"}} />
@@ -170,7 +169,7 @@
                 <ContentPanel @title={{group.name}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                     <div class="grid grid-cols-{{or group.meta.grid_size 1}} gap-2">
                         {{#each group.customFields as |customField|}}
-                            <CustomField @customField={{customField}} @order={{this.order}} @orderConfig={{this.orderConfig}} />
+                            <CustomField @customField={{customField}} @order={{this.order}} @orderConfig={{this.orderConfig}} @onChange={{this.setCustomFieldValue}} />
                         {{/each}}
                     </div>
                 </ContentPanel>
@@ -320,6 +319,12 @@
                 </div>
             {{/if}}
         </ContentPanel>
+
+        {{#if this.renderableComponents}}
+            {{#each this.renderableComponents as |renderableComponent|}}
+                {{component renderableComponent order=this.order}}
+            {{/each}}
+        {{/if}}
 
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.payload-entities"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if this.isNotCsvImportedOrder}}

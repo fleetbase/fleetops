@@ -3,11 +3,11 @@ import { inject as controller } from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, computed } from '@ember/object';
+import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { not, notEmpty, alias } from '@ember/object/computed';
 import { task } from 'ember-concurrency-decorators';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
-import groupBy from '@fleetbase/ember-core/utils/macros/group-by';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 
 export default class OperationsOrdersIndexViewController extends BaseController {
@@ -114,6 +114,8 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @tracked leafletRoute;
     @tracked routeControl;
     @tracked commentInput = '';
+    @tracked customFieldGroups = [];
+    @tracked customFields = [];
     @tracked uploadQueue = [];
     acceptedFileTypes = [
         'application/vnd.ms-excel',
@@ -169,7 +171,11 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @not('isWaypointsCollapsed') waypointsIsNotCollapsed;
     @notEmpty('model.payload.waypoints') isMultiDropOrder;
     @alias('ordersController.leafletMap') leafletMap;
-    @groupBy('model.order_config.meta.fields', 'group') groupedMetaFields;
+
+    get renderableComponents() {
+        const renderableComponents = this.universe.getRenderableComponentsFromRegistry('fleet-ops:template:operations:orders:view');
+        return renderableComponents;
+    }
 
     /** @var entitiesByDestination */
     @computed('model.payload.{entities.[],waypoints.[]}')
@@ -220,14 +226,51 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     }
 
     @task *loadOrderRelations(order) {
+        console.log('config', order.get('order_config'));
+        // yield order.loadOrderConfig();
         yield order.loadPayload();
         yield order.loadDriver();
         yield order.loadTrackingNumber();
         yield order.loadCustomer();
         yield order.loadTrackingActivity();
-        yield order.loadOrderConfig();
         yield order.loadPurchaseRate();
         yield order.loadFiles();
+        this.loadCustomFields.perform(order);
+    }
+
+    /**
+     * A task method to load custom fields from the store and group them.
+     * @task
+     */
+    @task *loadCustomFields(order) {
+        const orderConfig = order.order_config;
+        if (orderConfig) {
+            this.customFieldGroups = yield this.store.query('category', { owner_uuid: orderConfig.id, for: 'custom_field_group' });
+            this.customFields = yield this.store.query('custom-field', { subject_uuid: orderConfig.id });
+            if (isArray(this.customFields)) {
+                // map values to the custom fields
+                this.customFields = this.customFields.map((customField) => {
+                    customField.value = order.custom_field_values.find((customFieldValue) => customFieldValue.custom_field_uuid === customField.id);
+                    return customField;
+                });
+            }
+            this.groupCustomFields();
+        }
+    }
+
+    /**
+     * Organizes custom fields into their respective groups.
+     */
+    groupCustomFields() {
+        for (let i = 0; i < this.customFieldGroups.length; i++) {
+            const group = this.customFieldGroups[i];
+            group.set(
+                'customFields',
+                this.customFields.filter((customField) => {
+                    return customField.category_uuid === group.id;
+                })
+            );
+        }
     }
 
     @action resetView() {

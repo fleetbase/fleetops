@@ -4,12 +4,14 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\OrderConfigEntities;
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\Models\Model;
 use Fleetbase\Support\Auth;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class OrderConfig extends Model
@@ -62,10 +64,10 @@ class OrderConfig extends Model
      * @var array
      */
     protected $casts = [
-        'tags' => Json::class,
-        'flow' => Json::class,
+        'tags'     => Json::class,
+        'flow'     => Json::class,
         'entities' => OrderConfigEntities::class,
-        'meta' => Json::class,
+        'meta'     => Json::class,
     ];
 
     /**
@@ -73,7 +75,7 @@ class OrderConfig extends Model
      *
      * @var array
      */
-    protected $appends = [];
+    protected $appends = ['type'];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -97,9 +99,9 @@ class OrderConfig extends Model
 
         static::creating(function ($model) {
             $model->namespace = static::createNamespace($model->name);
-            $model->version = '0.0.1';
-            $model->status = 'private';
-            $model->key = Str::slug($model->name);
+            $model->version   = '0.0.1';
+            $model->status    = 'private';
+            $model->key       = Str::slug($model->name);
         });
     }
 
@@ -111,8 +113,9 @@ class OrderConfig extends Model
      * segment ':order-config:', and the provided name. This is used to
      * create a unique namespace for each model instance.
      *
-     * @param string $name The name to be included in the namespace.
-     * @return string The generated namespaced string.
+     * @param string $name the name to be included in the namespace
+     *
+     * @return string the generated namespaced string
      */
     public static function createNamespace(string $name): string
     {
@@ -160,7 +163,35 @@ class OrderConfig extends Model
         return $this->belongsTo(\Fleetbase\Models\CustomField::class);
     }
 
-    public function currentActivity() {}
-    public function nextActivity() {}
-    public function previousActivity() {}
+    public function getTypeAttribute()
+    {
+        return 'order-config';
+    }
+
+    public function activities(): Collection
+     {
+        $activities = collect();
+        foreach ($this->flow as $activity) {
+            $activities->push(new Activity($activity));
+        }
+
+        return $activities;
+    }
+
+    public function getCreatedActivity()
+    {
+        return $this->activities()->firstWhere('code', 'created');
+    }
+
+    public function currentActivity()
+    {
+    }
+
+    public function nextActivity()
+    {
+    }
+
+    public function previousActivity()
+    {
+    }
 }

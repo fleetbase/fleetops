@@ -28,7 +28,7 @@ class OrderConfigEntities implements CastsAttributes
                         $entity['photo_url'] = $file->url;
                     }
                 }
-                
+
                 return $entity;
             }, $entities);
         }
