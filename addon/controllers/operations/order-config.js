@@ -4,7 +4,10 @@ import { action } from '@ember/object';
 
 export default class OperationsOrderConfigController extends Controller {
     @tracked tab = 'details';
-    queryParams = ['tab'];
+    @tracked config;
+    @tracked context;
+    @tracked contextModel;
+    queryParams = ['tab', 'config', 'context', 'contextModel'];
 
     /**
      * Handle tab change.
@@ -14,5 +17,26 @@ export default class OperationsOrderConfigController extends Controller {
      */
     @action onTabChanged(tab) {
         this.tab = tab;
+    }
+
+    /**
+     * Handle order config change.
+     *
+     * @param {*} config
+     * @memberof OperationsOrderConfigController
+     */
+    @action onConfigChanged(config) {
+        this.config = config.id;
+    }
+
+    /**
+     * Handle order config change.
+     *
+     * @param {*} config
+     * @memberof OperationsOrderConfigController
+     */
+    @action onContextChanged(context, contextModel) {
+        this.context = context;
+        this.contextModel = contextModel;
     }
 }

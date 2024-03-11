@@ -130,9 +130,8 @@ class PlaceController extends Controller
         ]);
 
         // check if missing location
-        $isMissingLocation = empty($input['location']);
-
         // set a default location for creation
+        $isMissingLocation = empty($input['location']);
         if ($isMissingLocation) {
             $input['location'] = new Point(0, 0);
         }
@@ -141,7 +140,7 @@ class PlaceController extends Controller
         $place->fill($input);
 
         // attempt to find and set latitude and longitude
-        if ($isMissingLocation || $request->missing(['latitude', 'longitude', 'location']) || $place->isMissing('country')) {
+        if ($isMissingLocation || $request->missing(['latitude', 'longitude', 'location']) || empty($place->country)) {
             $geocoded = Geocoder::geocode($place->toAddressString(['name']))
                 ->get()
                 ->first();

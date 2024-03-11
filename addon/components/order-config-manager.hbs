@@ -8,7 +8,7 @@
         selectConfig=this.selectConfig
         tabs=this.tabs 
         currentTab=this.tab
-        content=(component this.tab.component config=this.currentConfig tabOptions=this.tab options=this.tab.componentParams onConfigDeleting=this.onConfigDeleting onConfigDeleted=this.onConfigDeleted onConfigUpdated=this.onConfigUpdated)
+        content=(component this.tab.component configManagerContext=this.configManagerContext config=this.currentConfig context=this.context contextModel=this.contextModel tabOptions=this.tab options=this.tab.componentParams onConfigDeleting=this.onConfigDeleting onConfigDeleted=this.onConfigDeleted onConfigUpdated=this.onConfigUpdated onContextChanged=this.onContextChanged)
         onTabChanged=this.onTabChanged
         onClickCreateOrderConfig=this.createNewOrderConfig
     )

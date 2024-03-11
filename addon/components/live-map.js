@@ -7,6 +7,7 @@ import { dasherize, camelize, classify } from '@ember/string';
 import { singularize } from 'ember-inflector';
 import { later } from '@ember/runloop';
 import { allSettled } from 'rsvp';
+import { task } from 'ember-concurrency-decorators';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 /**
@@ -300,18 +301,18 @@ export default class LiveMapComponent extends Component {
 
         // load data and complete setup
         this.completeSetup([
-            this.fetchLiveData('routes'),
-            this.fetchLiveData('vehicles', {
+            this.loadLiveData.perform('routes'),
+            this.loadLiveData.perform('vehicles', {
                 onLoaded: (vehicles) => {
                     this.watchMovingObjects('vehicles', vehicles);
                 },
             }),
-            this.fetchLiveData('drivers', {
+            this.loadLiveData.perform('drivers', {
                 onLoaded: (drivers) => {
                     this.watchMovingObjects('drivers', drivers);
                 },
             }),
-            this.fetchLiveData('places'),
+            this.loadLiveData.perform('places'),
         ]);
     }
 
@@ -342,18 +343,18 @@ export default class LiveMapComponent extends Component {
      */
     reload() {
         this.completeSetup([
-            this.fetchLiveData('routes'),
-            this.fetchLiveData('vehicles', {
+            this.loadLiveData.perform('routes'),
+            this.loadLiveData.perform('vehicles', {
                 onLoaded: (vehicles) => {
                     this.watchMovingObjects('vehicles', vehicles);
                 },
             }),
-            this.fetchLiveData('drivers', {
+            this.loadLiveData.perform('drivers', {
                 onLoaded: (drivers) => {
                     this.watchMovingObjects('drivers', drivers);
                 },
             }),
-            this.fetchLiveData('places'),
+            this.loadLiveData.perform('places'),
         ]);
     }
 
@@ -477,9 +478,10 @@ export default class LiveMapComponent extends Component {
         const internalName = camelize(path);
         const callbackFnName = `on${internalName}Loaded`;
         const params = getWithDefault(options, 'params', {});
+        const url = `fleet-ops/live/${path}`;
 
         return this.fetch
-            .get(`fleet-ops/live/${path}`, params, { normalizeToEmberData: true, normalizeModelType: singularize(internalName) })
+            .get(url, params, { normalizeToEmberData: true, normalizeModelType: singularize(internalName) })
             .then((data) => {
                 this.triggerAction(callbackFnName);
                 this.createVisibilityControl(internalName);
@@ -501,6 +503,54 @@ export default class LiveMapComponent extends Component {
             .finally(() => {
                 this.isLoading = false;
             });
+    }
+
+    /**
+     * Asynchronously loads live data for a specified path and updates the component's state.
+     * This function uses Ember Concurrency to handle the asynchronous operation, ensuring
+     * better handling of concurrency and potential task cancellation.
+     *
+     * @memberof LiveMapComponent
+     * @task
+     * @generator
+     * @param {string} path - The path for fetching live data.
+     * @param {Object} [options={}] - Configuration options for the data loading process.
+     * @param {Object} [options.params={}] - Additional parameters to include in the request.
+     * @param {Function} [options.onLoaded] - Callback function executed when data is successfully loaded.
+     * @param {Function} [options.onFailure] - Callback function executed in case of a failure in data loading.
+     * @returns {Promise<Object|undefined>} A promise that resolves with the fetched data, or undefined if an error occurs.
+     *
+     * @example
+     * // To load data and execute specific actions on load and failure
+     * this.loadLiveData.perform('some/path', {
+     *   params: { key: 'value' },
+     *   onLoaded: (data) => { console.log('Data loaded', data); },
+     *   onFailure: (error) => { console.error('Failed to load data', error); }
+     * });
+     */
+    @task *loadLiveData(path, options = {}) {
+        const internalName = camelize(path);
+        const callbackFnName = `on${internalName}Loaded`;
+        const params = getWithDefault(options, 'params', {});
+        const url = `fleet-ops/live/${path}`;
+        const data = yield this.fetch.get(url, params, { normalizeToEmberData: true, normalizeModelType: singularize(internalName) }).catch((error) => {
+            if (typeof options.onFailure === 'function') {
+                options.onFailure(error);
+            }
+        });
+
+        if (data) {
+            this.triggerAction(callbackFnName);
+            this.createVisibilityControl(internalName);
+            this[internalName] = data;
+            this.cacheOriginalResources(internalName);
+
+            if (typeof options.onLoaded === 'function') {
+                options.onLoaded(data);
+            }
+        }
+
+        return data;
     }
 
     /**
@@ -1858,27 +1908,20 @@ export default class LiveMapComponent extends Component {
      * @returns {Promise} A promise that resolves to an array of service area records.
      * @memberof LiveMapComponent
      */
-    fetchServiceAreas() {
-        this.isLoading = true;
+    @task *loadServiceAreas() {
+        if (this.serviceAreas && typeof this.serviceAreas.getFromCache === 'function') {
+            const cachedRecords = this.serviceAreas.getFromCache('serviceAreas', 'service-area');
 
-        return new Promise((resolve) => {
-            if (this.serviceAreas && typeof this.serviceAreas.getFromCache === 'function') {
-                const cachedRecords = this.serviceAreas.getFromCache('serviceAreas', 'service-area');
-
-                if (cachedRecords) {
-                    resolve(cachedRecords);
-                }
+            if (cachedRecords) {
+                return cachedRecords;
             }
+        }
 
-            return this.store
-                .query('service-area', { with: ['zones'] })
-                .then((serviceAreaRecords) => {
-                    this.appCache.setEmberData('serviceAreas', serviceAreaRecords);
-                    resolve(serviceAreaRecords);
-                })
-                .finally(() => {
-                    this.isLoading = false;
-                });
-        });
+        const serviceAreaRecords = yield this.store.query('service-area', { with: ['zones'] });
+        if (serviceAreaRecords) {
+            this.appCache.setEmberData('serviceAreas', serviceAreaRecords);
+        }
+
+        return serviceAreaRecords;
     }
 }

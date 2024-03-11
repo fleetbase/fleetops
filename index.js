@@ -65,6 +65,26 @@ module.exports = buildEngine({
             );
         }
 
+        // jointjs
+        const jointJsPath = path.join(this.pathBase('@joint/core'), 'dist');
+        trees.push(
+            new Funnel(jointJsPath, {
+                destDir: '/',
+                include: ['joint.min.js'],
+                exclude: [],
+            })
+        );
+
+        // jointjs directed graph
+        const jointJsDirectedGraphPath = path.join(this.pathBase('@joint/layout-directed-graph'), 'dist');
+        trees.push(
+            new Funnel(jointJsDirectedGraphPath, {
+                destDir: '/',
+                include: ['DirectedGraph.min.js'],
+                exclude: [],
+            })
+        );
+
         trees.push(
             new Funnel(leafletImagesPath, {
                 srcDir: '/',

@@ -180,14 +180,18 @@ body.fleetbase-console .next-content-overlay > .next-content-overlay-panel-conta
     font-size: 0.85rem;
 }
 
-body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab {
-    background-color: #e5e7eb;
-    border: 1px solid #d1d5db;
-}
-
 .fleetops-pill-tabs > nav > a.ui-tab.active {
     background-color: #3b82f6;
     border: 1px solid #2563eb;
+}
+
+.fleetops-pill-tabs > nav > a.ui-tab:hover {
+    opacity: 0.75;
+}
+
+body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab {
+    background-color: #e5e7eb;
+    border: 1px solid #d1d5db;
 }
 
 body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab.active {
@@ -196,12 +200,236 @@ body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab.active {
     color: #fff;
 }
 
-.fleetops-pill-tabs > nav > a.ui-tab:hover {
-    opacity: 0.75;
-}
-
 .next-view-section-subheader .next-view-section-subheader-actions button.btn.order-config-select-button,
 .btn.order-config-select-button {
     padding-top: 0.265rem !important;
     padding-bottom: 0.265rem !important;
+}
+
+.order-config-custom-field-type-pill {
+    max-width: 100px;
+}
+
+body[data-theme='light'] .flow-activity {
+    stroke: #e5e7eb;
+    fill: rgba(249, 250, 251, 50%);
+}
+
+body[data-theme='light'] .flow-activity:hover,
+body[data-theme='light'] .joint-type-fleetbase-activity:hover .flow-activity {
+    stroke: #2563eb;
+}
+
+body[data-theme='light'] .joint-type-fleetbase-activity text {
+    fill: #030712;
+}
+
+body[data-theme='light'] .flow-activity-status-pill {
+    fill: #f3f4f6;
+    stroke: #f3f4f6;
+}
+
+body[data-theme='light'] .flow-activity-status-pill text {
+    fill: #030712;
+}
+
+.flow-activity:hover,
+.flow-activity-add-button:hover,
+.joint-type-fleetbase-activity:hover .flow-activity {
+    stroke: #2563eb;
+}
+
+.flow-activity-add-button:hover {
+    fill: #3b82f6;
+}
+
+.joint-js-paper {
+    overflow: auto;
+}
+
+.activity-flow-graph-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.activity-flow-zoom-controls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding-left: 1.5rem;
+    padding-top: 1rem;
+    z-index: 99;
+}
+
+.activity-flow-zoom-controls > .btn-wrapper:first-child > .btn {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.activity-flow-zoom-controls > .btn-wrapper:last-child > .btn {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.activity-flow-zoom-controls > .btn-wrapper > .btn:hover {
+    opacity: 0.5;
+}
+
+.activity-logic-builder-conditions {
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-logic-builder .activity-logic-builder-condition {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 1;
+}
+
+.activity-logic-builder .activity-logic-builder-condition > div .ember-basic-dropdown-trigger button.btn {
+    padding: 0.5rem;
+    border-radius: 0;
+    font-size: 0.8rem;
+    width: 5.5rem;
+}
+
+.activity-logic-builder .activity-logic-builder-condition > div > input,
+.activity-logic-builder .activity-logic-builder-condition > div .ember-basic-dropdown-trigger button.btn {
+    border: 0;
+    box-shadow: none;
+    font-size: 0.75rem;
+    height: 28px;
+}
+
+.activity-logic-builder .activity-logic-builder-condition .btn.btn-danger {
+    box-shadow: none;
+    font-size: 0.75rem;
+    height: 28px;
+    padding: 0.5rem;
+}
+
+.activity-logic-builder .activity-logic-builder-condition > div > input {
+    padding: 0.25rem 0.5rem;
+    width: 100%;
+    height: 28px;
+}
+
+.activity-logic-builder .activity-logic-builder-condition > div:first-child,
+.activity-logic-builder .activity-logic-builder-condition > div:last-child {
+    flex: 1;
+}
+
+.activity-logic-builder .activity-logic-builder-condition > div:first-child > input {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.activity-logic-builder .activity-logic-builder-condition > div:last-child > input {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.activity-logic-builder .activity-logic-builder-condition > div:first-child {
+    border-right: 1px #1f2937 solid;
+}
+
+.activity-logic-builder .activity-logic-builder-condition > div:last-child {
+    border-left: 1px #1f2937 solid;
+}
+
+body[data-theme='light'] .activity-logic-builder .activity-logic-builder-condition > div:first-child {
+    border-right: 1px #f9fafb solid;
+}
+
+body[data-theme='light'] .activity-logic-builder .activity-logic-builder-condition > div:last-child {
+    border-left: 1px #f9fafb solid;
+}
+
+.activity-logic-builder .activity-logic-builder-logic {
+    border-top: 1px #374151 solid;
+    padding: 0.5rem;
+}
+
+.activity-logic-builder .activity-logic-builder-condition-type-container {
+    display: flex;
+    flex-direction: row;
+}
+
+.activity-logic-builder button.activity-logic-builder-add-condition,
+.activity-logic-builder .activity-logic-builder-condition-type {
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    color: #f9fafb;
+    background-color: #111827;
+    border: 1px #374151 solid;
+    border-radius: 0.25rem;
+    margin: 0.5rem 0;
+    font-size: 0.8rem;
+    align-self: flex-start;
+    flex: 0 1 auto;
+}
+
+.activity-logic-builder .activity-logic-builder-condition-type {
+    width: 5rem;
+}
+
+body[data-theme='light'] .activity-logic-builder .activity-logic-builder-condition-type {
+    color: #030712;
+    background-color: #f9fafb;
+    border: 1px #e5e7eb solid;
+    margin-bottom: 0.5rem;
+}
+
+.activity-event-selector .activity-event-selector-event {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px #374151 solid;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    font-family: monospace;
+}
+
+.x-fleetbase-file.custom-field-file {
+    max-width: 100%;
+    height: unset;
+}
+
+.x-fleetbase-file.custom-field-file > .x-fleetbase-file-wrapper {
+    width: 100%;
+    max-width: 100%;
+    height: unset;
+    padding: 0.35rem;
+}
+
+.x-fleetbase-file.custom-field-file > .x-fleetbase-file-wrapper > .x-fleetbase-file-actions + div.flex.flex-col {
+    flex-direction: row;
+    flex: none;
+    width: 100%;
+    justify-content: start;
+}
+
+.x-fleetbase-file.custom-field-file > .x-fleetbase-file-wrapper > .x-fleetbase-file-actions + div.flex.flex-col > .flex-1:not(.flex-col) {
+    flex: none;
+}
+
+.x-fleetbase-file.custom-field-file > .x-fleetbase-file-wrapper .x-fleetbase-file-preview {
+    margin-bottom: 0;
+    height: unset;
+    width: 2rem;
+    margin-right: 0.5rem;
+}
+
+.x-fleetbase-file.custom-field-file > .x-fleetbase-file-wrapper .x-fleetbase-file-name {
+    width: 100%;
+    text-align: left;
+    padding-left: 0.5rem;
+}
+
+.x-fleetops-input-height {
+    height: 38px;
 }

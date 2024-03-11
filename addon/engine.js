@@ -72,8 +72,8 @@ export default class FleetOpsEngine extends Engine {
             'component:order-config-manager',
             'contextmenu:vehicle',
             'contextmenu:driver',
-            'view:order',
-            'view:create-order',
+            'fleet-ops:template:operations:orders:view',
+            'fleet-ops:template:operations:orders:new',
         ]);
     };
 }

@@ -6,8 +6,9 @@ use Brick\Geo\Engine\GeometryEngineRegistry;
 use Brick\Geo\Engine\GEOSEngine;
 use Fleetbase\Providers\CoreServiceProvider;
 use Fleetbase\Support\NotificationRegistry;
+use Fleetbase\Support\Utils;
 
-if (!class_exists(CoreServiceProvider::class)) {
+if (!Utils::classExists(CoreServiceProvider::class)) {
     throw new \Exception('FleetOps cannot be loaded without `fleetbase/core-api` installed!');
 }
 

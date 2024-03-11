@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+Route::get('fleet-ops-test', 'Fleetbase\FleetOps\Http\Controllers\Controller@test');
+
 Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase\FleetOps\Http\Controllers')->group(
     function ($router) {
         /*
@@ -394,17 +396,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                         $router->group(
                             ['prefix' => 'fleet-ops'],
                             function ($router) {
-                                $router->group(
-                                    ['prefix' => 'order-configs'],
-                                    function () use ($router) {
-                                        $router->get('get-installed', 'OrderConfigController@getInstalled');
-                                        $router->get('dynamic-meta-fields', 'OrderConfigController@getDynamicMetaFields');
-                                        $router->post('save', 'OrderConfigController@save');
-                                        $router->post('new', 'OrderConfigController@new');
-                                        $router->post('clone', 'OrderConfigController@clone');
-                                        $router->delete('{id}', 'OrderConfigController@delete');
-                                    }
-                                );
                                 $router->group(
                                     ['prefix' => 'lookup'],
                                     function ($router) {

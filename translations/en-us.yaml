@@ -93,9 +93,26 @@ fleet-ops:
     zone: Zone
     total: Total
     back: Back
+    done: Done
 
   component:
+    activity-logic-builder:
+      activity-logic: Activity Logic
+      activity-logic-help-text: Define custom logic conditions that determine when an activity becomes available in the workflow. This feature allows you to tailor the flow based on specific criteria, ensuring that each activity is triggered only when its predefined conditions are met.
+      activity-logic-add-logic-help-text: Create a new set of conditions that will define when an activity should be activated. Click this to start crafting a new logical rule.
+      activity-logic-select-logic-type-help-text: Choose the type of logic that this condition will follow. Select 'If' for a direct condition, 'And'/'Or' for compound conditions, or 'Not' to negate a condition.
+      activity-logic-add-condition-help-text: Add a specific requirement that must be satisfied within this logic set. Use this to specify additional criteria that control the activity's availability.
+      field: Field
+      value: Value
+      add-logic: Add Logic
+    activity-event-selector:
+      activity-events: Activity Events
+      activity-events-select-to-fire: Select which events will be activated when this activity occurs.
+      activity-events-select-events-info: Select the specific event you want to trigger in response to this activity.
+      select-event-to-add: Select event to add...
     custom-field-form-panel:
+      meta-col-span: 'Meta: Column-Span'
+      col-span-size: Column Span Size
       custom-field-title-concat: 'Custom Field: '
       new-custom-field: New custom field
       close-new-custom-field: Cancel custom field changes
@@ -108,9 +125,38 @@ fleet-ops:
       field-description: Field Description
       field-help-text: Field Help Text
       field-default-value: Field Default Value
-      field-is-required: Is this field required?
+      field-is-required: Field is Required
+      field-is-editable: Field is Editable
       field-options: Field Options
       field-validation-rules: Field Validation Rules
+      field-model-type: Field Model Type
+      field-select-model-type: Select model type
+      add-new-option: Add new option
+    activity-form-panel:
+      title-concat: 'Activity: '
+      new-activity-title: Create new activity
+      key: Key
+      code: Code
+      status: Status
+      details: Details
+      completes-order: Completes Order
+      complete: Complete
+      key-help: "Enter a key used for programmatic decision-making. This key can represent one or several activities with the same identifier. Note: This key is not required to be unique."
+      code-help: Enter a unique identifier specific to this activity.
+      status-help: Specify the status displayed to the end-user when this activity is triggered.
+      details-help: Provide a detailed description of the activity for the end-user's understanding.
+    custom-entity-issue-form-panel: 
+        new-custom-entity: New Custom Entity
+        name: Name
+        description: Description
+        details: Details
+        type: Type
+        length: Length
+        width: Width
+        height: Height
+        weight: Weight
+        entity-image: Entity Image
+        measurements: Measurements
     order-config-manager:
       title: Orders Configuration
       message: Order configurations allow you to define dynamic configurations which will tell Fleetbase how different types of orders should be executed.
@@ -144,6 +190,9 @@ fleet-ops:
           delete-title: Delete this order config?
           delete-body-message: Once this order config is deleted it will not be recoverable and you will lose all configurations.
           confirm-delete: Delete
+      activity-flow:
+        save-activity-flow: Save Activity Flow
+        edit-activity-unique-code-warning: Activity code must be unique!
       custom-fields:
         new-field-group: New field group
         new-custom-field: Create new custom field
@@ -156,6 +205,18 @@ fleet-ops:
           modal-title: Delete this field group?
           delete-body-message: Once this field group is deleted it will not be recoverable and you will lose all custom fields inside.
           confirm-delete: Delete
+      entities: 
+        new-custom-entity: New Custom Entity
+        name: Name
+        description: Description
+        type: Type
+        length: Length
+        width: Width
+        height: Height
+        weight: Weight
+        delete-custom-entity-title: Delete this custom entity?
+        delete-custom-entity-body: Once this custom entity is deleted it will not be recoverable and you will lose all configurations.
+        confirm-delete: Confirm
       types:
         no-order-installed: No order configurations installed!
         you-have-no-configs: You currently have no order configs installed, check at the extensions to install an order configuration to get started.
@@ -1125,6 +1186,8 @@ fleet-ops:
         title: Vendors
         delete-vendors: Delete Vendors
   operations:
+    order-config:
+      route-loading-message: Loading Order Config Builder
     orders:
       index:
         payload: Payload
@@ -1212,6 +1275,7 @@ fleet-ops:
           add-item-order: Add Item to Order
           items-drop: Items drop at
           add-item-button: Add Item
+          add-entity: Add Entity
           sku: SKU
           select-destination: Select Destination
           edit-item: Edit Item
@@ -1239,6 +1303,7 @@ fleet-ops:
           value-warning: Custom field must have a value
           edit-field-title: Edit custom field
           edit-metadata: Edit Metadata
+          input-field-required: The {inputFieldName} is required.
         view:
           purchase-rate-panel-title: Purchase Rate
           documents-panel-title: Documents & Files
@@ -1305,6 +1370,9 @@ fleet-ops:
           order-title: Order Label
           waypoint-title: Waypoint Label
           proof-of-delivery: Proof of Delivery
+          notes-placeholder: Enter order notes here....
+          save-order-note: Save Order Note
+          order-notes-updated: Order notes updated.
         config:
           title: Orders Configuration
           message: Order configurations allow you to define dynamic configurations which will tell Fleetbase how different types of orders should be executed.
