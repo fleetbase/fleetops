@@ -179,6 +179,17 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 });
             });
 
+       /*
+        |--------------------------------------------------------------------------
+        | Publicly Consumable FleetOps API Routes
+        |--------------------------------------------------------------------------
+        |
+        | End-user API routes, these are routes that the SDK and applications will interface with, that DO NOT REQUIRE API credentials.
+        */
+        $router->group(['prefix' => 'v1', 'namespace' => 'Api\v1'], function () use ($router) {
+            $router->get('organizations', 'OrganizationController@listOrganizations');
+        });
+
         /*
         |--------------------------------------------------------------------------
         | Navigator App API
