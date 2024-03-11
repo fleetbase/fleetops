@@ -42,9 +42,9 @@
     },
     "dependencies": {
         "@babel/core": "^7.23.2",
-        "@fleetbase/ember-core": "^0.2.4",
+        "@fleetbase/ember-core": "^0.2.5",
         "@fleetbase/ember-ui": "^0.2.11",
-        "@fleetbase/fleetops-data": "^0.1.11",
+        "@fleetbase/fleetops-data": "^0.1.12",
         "@fleetbase/leaflet-routing-machine": "^3.2.16",
         "@fortawesome/ember-fontawesome": "^0.4.1",
         "@fortawesome/fontawesome-svg-core": "^6.4.0",
