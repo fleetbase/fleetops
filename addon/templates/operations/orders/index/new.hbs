@@ -33,12 +33,6 @@
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.edit-order"}}</span>
                     </a>
-                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.addCustomField)}}>
-                        <div class="w-6">
-                            <FaIcon @icon="edit" />
-                        </div>
-                        <span>{{t "fleet-ops.operations.orders.index.new.add-field"}}</span>
-                    </a>
                 </div>
             </div>
         </DropdownButton>
@@ -328,7 +322,28 @@
 
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.payload-entities"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if this.isNotCsvImportedOrder}}
-                <Button @wrapperClass="mb-4" @icon="plus" @iconPrefix="fas" @text={{t "fleet-ops.operations.orders.index.new.add-item-order"}} @size="sm" @onClick={{this.addEntity}} />
+                <div class="flex items-center mb-4">
+                    <Button @wrapperClass="mr-2" @icon="ellipsis-h" @iconPrefix="fas" @text={{t "fleet-ops.operations.orders.index.new.add-item-order"}} @size="sm" @onClick={{this.addEntity}} />
+                    {{#if this.orderConfig.entities}}
+                        <DropdownButton @type="magic" @icon="circle-chevron-down" @size="sm" @iconPrefix="fas" @text={{t "fleet-ops.operations.orders.index.new.add-entity"}} @triggerClass="mr-2 hidden md:flex" as |dd|>
+                            <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
+                                {{#each this.orderConfig.entities as |customEntity|}}
+                                    <div class="p-1">
+                                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.addFromCustomEntity customEntity)}}>
+                                            <div class="w-6">
+                                                <FaIcon @icon="cube" />
+                                            </div>
+                                            <div>
+                                                <div class="font-semibold">{{customEntity.name}}</div>
+                                                <span class="text-xs">{{customEntity.description}}</span>
+                                            </div>
+                                        </a>
+                                    </div>
+                                {{/each}}
+                            </div>
+                        </DropdownButton>
+                    {{/if}}
+                </div>
             {{/if}}
             {{#if this.isCsvImportedOrder}}
                 <div class="space-y-2">
@@ -568,7 +583,7 @@
                             <label>{{metaField.label}}</label>
                             <a href="javascript:;" class="text-xs" {{on "click" (fn this.editCustomField index)}}>
                                 <FaIcon @icon="edit" @size="sm" class="mr-1" />
-                                Edit
+                                {{t "common.edit"}}
                             </a>
                         </div>
                         <Input class="w-full form-input" @value={{metaField.value}} placeholder={{metaField.label}} />

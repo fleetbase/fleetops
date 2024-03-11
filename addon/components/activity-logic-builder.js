@@ -10,10 +10,6 @@ export default class ActivityLogicBuilderComponent extends Component {
     @tracked logic = [];
     types = [
         {
-            type: 'if',
-            description: 'Conditional logic: Executes the following action if the condition is true',
-        },
-        {
             type: 'and',
             description: 'Logical AND: True if all conditions are true',
         },
@@ -26,14 +22,19 @@ export default class ActivityLogicBuilderComponent extends Component {
             description: 'Logical NOT: Inverts the truth value of the condition',
         },
         {
-            type: 'conditionalAssignment',
-            description: 'Conditional Assignment: Assigns a value to a field based on a condition',
+            type: 'if',
+            description: 'Conditional logic: Executes the following action if the condition is true',
         },
-        {
-            type: 'timeBased',
-            description: 'Time-Based Condition: Executes logic based on time or date conditions',
-        },
+        // {
+        //     type: 'conditionalAssignment',
+        //     description: 'Conditional Assignment: Assigns a value to a field based on a condition',
+        // },
+        // {
+        //     type: 'timeBased',
+        //     description: 'Time-Based Condition: Executes logic based on time or date conditions',
+        // },
     ];
+
     operators = {
         equal: {
             symbol: '==',

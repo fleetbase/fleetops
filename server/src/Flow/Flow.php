@@ -2,41 +2,49 @@
 
 namespace Fleetbase\FleetOps\Flow;
 
-use Illuminate\Support\Str;
-
-class Flow
+class Flow extends FlowResource implements \IteratorAggregate
 {
-    public array $attributes = [];
-
-    public function __constructor(array $attributes = [])
+    /**
+     * Returns an iterator for the flow.
+     *
+     * @return \Traversable an iterator for the flow's activities
+     */
+    public function getIterator(): \Traversable
     {
-        $this->attributes = $attributes;
+        foreach ($this->attributes['activities'] as $activityAttributes) {
+            yield new Activity($activityAttributes, $this->serialize());
+        }
     }
 
-    public function get($key, $defaultValue = null)
+    /**
+     * Retrieve the activity for a given code.
+     *
+     * @param string $code the unique code identifier for the activity
+     *
+     * @return Activity|null the Activity object if found, or null otherwise
+     */
+    public function getActivity(string $code): ?Activity
     {
-        $methodKey = 'get' . Str::capitalize($key) . 'Attribute';
-        if (method_exists($this, $methodKey)) {
-            return $this->{$methodKey}();
+        if (isset($this->{$code})) {
+            return new Activity($this->{$code}, $this->serialize());
         }
 
-        $value = $this->attributes[$key];
-        if (!$value) {
-            return $defaultValue;
-        }
-
-        return $value;
+        return null;
     }
 
-    public function set(string $key, $value)
+    /**
+     * Determines if a given object is an instance of Activity.
+     *
+     * This static method is used to check if a provided object is an
+     * instance of the Activity class. This can be useful in contexts where
+     * there is a need to verify the type of a given resource or object.
+     *
+     * @param mixed $activity the object to check
+     *
+     * @return bool returns true if the provided object is an instance of Activity, false otherwise
+     */
+    public static function isActivity($activity)
     {
-        $this->attributes[$key] = $value;
-
-        return $this;
-    }
-
-    public function serialize()
-    {
-        return $this->attributes;
+        return $activity instanceof Activity;
     }
 }

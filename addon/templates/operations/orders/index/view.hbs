@@ -209,7 +209,11 @@
                         {{#each group.customFields as |customField|}}
                             <div class="field-info-container space-y-2">
                                 <div class="field-name">{{customField.label}}</div>
-                                <div class="field-value">{{n-a customField.value.value}}</div>
+                                {{#if (and (eq customField.type "file-upload") customField.value.asFile)}}
+                                    <File @file={{customField.value.asFile}} @onDelete={{fn this.removeCustomFieldFile customField.value}} class="custom-field-file" />
+                                {{else}}
+                                    <div class="field-value">{{n-a customField.value.value}}</div>
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -254,8 +258,16 @@
             </ContentPanel>
         {{/if}}
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.notes-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-            <p class="text-gray-700 dark:text-gray-300 leading-5 text-sm">{{n-a @model.notes}}</p>
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.notes-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.notesPanelButtons}}>
+            {{#if this.isEditingOrderNotes}}
+                <Textarea @value={{@model.notes}} class="form-input w-full" placeholder={{t "fleet-ops.operations.orders.index.view.notes-placeholder"}} rows={{4}} />
+                <div class="flex items-center space-x-2">
+                    <Button @type="primary" @icon="save" @text={{t "fleet-ops.operations.orders.index.view.save-order-note"}} @onClick={{perform this.saveOrderNotes}} @isLoading={{not this.saveOrderNotes.isIdle}} />
+                    <Button @type="default" @icon="times" @text={{t "fleet-ops.common.cancel"}} @onClick={{this.saveOrderNotes}} />
+                </div>
+            {{else}}
+                <p class="text-gray-700 dark:text-gray-300 leading-5 text-sm">{{n-a @model.notes}}</p>
+            {{/if}}
         </ContentPanel>
 
         {{#if @model.isIntegratedVendorOrder}}

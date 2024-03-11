@@ -1,10 +1,13 @@
 /* eslint-disable no-undef */
 import Component from '@glimmer/component';
+import ObjectProxy from '@ember/object/proxy';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
+import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency-decorators';
+import generateUUID from '@fleetbase/ember-core/utils/generate-uuid';
 import createFlowActivity from '../../utils/create-flow-activity';
 import contextComponentCallback from '../../utils/context-component-callback';
 
@@ -66,9 +69,13 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @param {Object} owner - The owner of the component instance.
      * @param {Object} config - The configuration data for the activity flow.
      */
-    constructor(owner, { config }) {
+    constructor(owner, { config, configManagerContext }) {
         super(...arguments);
         this.config = config;
+
+        configManagerContext.on('onConfigChanged', (newConfig) => {
+            this.changeConfig(newConfig);
+        });
     }
 
     /**
@@ -116,11 +123,53 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         this.paper.scale(currentScaleSx - 0.2);
     }
 
+    /**
+     * Handles the reset of the config.
+     *
+     * @memberof OrderConfigManagerActivityFlowComponent
+     */
     @action resetConfig() {
         this.flow = {};
         const created = createFlowActivity('created', 'Order Created', 'New order was created.');
         const dispatched = createFlowActivity('dispatched', 'Order Dispatched', 'Order has been dispatched.');
         this.addActivityToGraph([created, dispatched]);
+    }
+
+    /**
+     * Handles the change of a config.
+     *
+     * @param {OrderConfigModel} newConfig
+     * @memberof OrderConfigManagerActivityFlowComponent
+     */
+    changeConfig(newConfig) {
+        this.clearGraph({
+            onAfter: () => {
+                this.config = newConfig;
+                this.initializeActivityFlow();
+                this.listenForElementClicks();
+            },
+        });
+    }
+
+    /**
+     * Handles the reset of the config.
+     *
+     * @memberof OrderConfigManagerActivityFlowComponent
+     */
+    clearGraph(options = {}) {
+        if (typeof options.onBefore === 'function') {
+            options.onBefore();
+        }
+        for (let activityCode in this.flow) {
+            const activity = this.flow[activityCode];
+            const node = activity.get('node');
+            if (node) {
+                node.remove();
+            }
+        }
+        if (typeof options.onAfter === 'function') {
+            options.onAfter();
+        }
     }
 
     /**
@@ -197,6 +246,27 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     }
 
     /**
+     * If any context is provided then initialize the state.
+     *
+     * @memberof OrderConfigManagerCustomFieldsComponent
+     */
+    initializeContext() {
+        later(
+            this,
+            () => {
+                const { context, contextModel } = this.args;
+                if (typeof context === 'string' && contextModel === 'activity') {
+                    const contextActivity = Object.values(this.flow).find((activity) => activity.get('internalId') === context);
+                    if (contextActivity) {
+                        this.editActivity(contextActivity);
+                    }
+                }
+            },
+            300
+        );
+    }
+
+    /**
      * Serializes the current activity flow into a JSON-compatible format.
      * @returns {Object} The serialized activity flow.
      */
@@ -257,6 +327,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             require_pod: activityObject.require_pod ?? false,
             pod_method: activityObject.pod_method ?? 'scan',
             complete: activityObject.complete ?? false,
+            internalId: activityObject.internalId ?? generateUUID(),
         });
         const { activities } = activityObject;
         if (isArray(activities)) {
@@ -361,12 +432,14 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         const hasFlow = Object.keys(this.config.flow).length > 0;
         if (hasFlow) {
             this.deserializeFlow(this.config.flow);
+            this.initializeContext();
             return;
         }
 
         const created = createFlowActivity('created', 'Order Created', 'New order was created.');
         const dispatched = createFlowActivity('dispatched', 'Order Dispatched', 'Order has been dispatched.');
         this.addActivityToGraph([created, dispatched]);
+        this.initializeContext();
     }
 
     /**
@@ -768,19 +841,24 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             return;
         }
 
+        contextComponentCallback(this, 'onContextChanged', this._createContextualActivity(activity));
         this.contextPanel.focus(activity, 'editing', {
             args: {
                 targetActivity,
                 onPressCancel: () => {
                     this.contextPanel.clear();
+                    contextComponentCallback(this, 'onContextChanged', null);
                 },
                 onSave: (activity) => {
-                    // Make sure `code` is unique
-                    if (this.flow[activity.get('code')]) {
+                    const existingActivity = this.flow[activity.get('code')];
+
+                    // Check if the activity exists and if it's not the same instance being updated
+                    if (existingActivity && existingActivity !== activity) {
                         this.notifications.warning(this.intl.t('fleet-ops.component.order-config-manager.activity-flow.edit-activity-unique-code-warning'));
                         return;
                     }
 
+                    contextComponentCallback(this, 'onContextChanged', null);
                     this.contextPanel.clear();
                     this.updateActivityInFlowMap(activity);
                     if (targetActivity) {
@@ -789,6 +867,24 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
                 },
             },
         });
+    }
+
+    /**
+     * Creates a contextual activity using ObjectProxy.
+     *
+     * This function wraps the content of a given activity inside an ObjectProxy,
+     * allowing for proxy-based interaction with the activity's content. The function
+     * also sets the 'id' of the newly created proxy to the 'internalId' of the activity.
+     * This can be useful for tracking or referencing the original activity.
+     *
+     * @param {Object} activity - The activity object whose content needs to be proxied.
+     * @returns {ObjectProxy} The created contextual activity, which is an ObjectProxy instance with the same content as the original activity, but with a reassigned 'id'.
+     */
+    _createContextualActivity(activity) {
+        const contextualActivity = ObjectProxy.create(activity.content);
+        // set persited id to id
+        contextualActivity.set('id', activity.get('internalId'));
+        return contextualActivity;
     }
 
     /**

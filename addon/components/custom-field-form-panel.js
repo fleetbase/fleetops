@@ -41,6 +41,12 @@ export default class CustomFieldFormPanelComponent extends Component {
     customFieldTypeMap = getCustomFieldTypeMap();
 
     /**
+     * Tracked array of col span size options for the custom field groups.
+     * @tracked
+     */
+    @tracked colSpanSizeOptions = [1, 2, 3];
+
+    /**
      * Constructor for CustomFieldFormPanelComponent.
      * Applies context component arguments and selects the appropriate field map
      * based on the custom field type.
@@ -60,6 +66,9 @@ export default class CustomFieldFormPanelComponent extends Component {
         yield this.customField
             .save()
             .then((customField) => {
+                if (typeof this.onCustomFieldSaved === 'function') {
+                    this.onCustomFieldSaved(customField);
+                }
                 contextComponentCallback(this, 'onCustomFieldSaved', customField);
             })
             .catch((error) => {

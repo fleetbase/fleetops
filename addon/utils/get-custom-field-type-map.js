@@ -20,15 +20,15 @@ export default function getCustomFieldTypeMap() {
             component: 'select',
             hasOptions: true,
         },
-        modelSelect: {
-            allowedModels: ['driver', 'contact', 'vendor', 'place', 'issue', 'fuel-report'],
-            component: 'model-select',
-        },
+        // modelSelect: {
+        //     allowedModels: ['driver', 'contact', 'vendor', 'place', 'issue', 'fuel-report'],
+        //     component: 'model-select',
+        // },
         fileUpload: {
             component: 'file-upload',
         },
-        dropzone: {
-            component: 'file-dropzone',
-        },
+        // dropzone: {
+        //     component: 'file-dropzone',
+        // },
     };
 }

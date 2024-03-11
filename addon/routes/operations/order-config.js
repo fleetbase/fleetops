@@ -6,10 +6,16 @@ export default class OperationsOrderConfigRoute extends Route {
     @service loader;
 
     queryParams = {
+        config: {
+            refreshModel: true,
+        },
         tab: {
             refreshModel: false,
         },
         context: {
+            refreshModel: false,
+        },
+        contextModel: {
             refreshModel: false,
         },
     };

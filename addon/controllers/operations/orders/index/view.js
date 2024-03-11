@@ -3,7 +3,6 @@ import { inject as controller } from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, computed } from '@ember/object';
-import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { not, notEmpty, alias } from '@ember/object/computed';
 import { task } from 'ember-concurrency-decorators';
@@ -111,6 +110,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
 
     @tracked isLoadingAdditionalData = false;
     @tracked isWaypointsCollapsed;
+    @tracked isEditingOrderNotes = false;
     @tracked leafletRoute;
     @tracked routeControl;
     @tracked commentInput = '';
@@ -164,6 +164,18 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             onClick: () => {
                 const order = this.model;
                 this.editOrderRoute(order);
+            },
+        },
+    ];
+
+    @tracked notesPanelButtons = [
+        {
+            type: 'default',
+            text: 'Edit',
+            icon: 'pencil',
+            iconPrefix: 'fas',
+            onClick: () => {
+                this.editOrderNotes();
             },
         },
     ];
@@ -226,8 +238,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     }
 
     @task *loadOrderRelations(order) {
-        console.log('config', order.get('order_config'));
-        // yield order.loadOrderConfig();
+        yield order.loadOrderConfig();
         yield order.loadPayload();
         yield order.loadDriver();
         yield order.loadTrackingNumber();
@@ -247,26 +258,29 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         if (orderConfig) {
             this.customFieldGroups = yield this.store.query('category', { owner_uuid: orderConfig.id, for: 'custom_field_group' });
             this.customFields = yield this.store.query('custom-field', { subject_uuid: orderConfig.id });
-            if (isArray(this.customFields)) {
-                // map values to the custom fields
-                this.customFields = this.customFields.map((customField) => {
-                    customField.value = order.custom_field_values.find((customFieldValue) => customFieldValue.custom_field_uuid === customField.id);
-                    return customField;
-                });
-            }
-            this.groupCustomFields();
+            this.groupCustomFields(order);
         }
     }
 
     /**
      * Organizes custom fields into their respective groups.
      */
-    groupCustomFields() {
+    groupCustomFields(order) {
+        const customFields = Array.from(this.customFields);
+        const customFieldValues = Array.from(order.custom_field_values);
+        // map values to the custom fields
+        const customFieldsWithValues = customFields.map((customField) => {
+            customField.value = customFieldValues.find((customFieldValue) => customFieldValue.custom_field_uuid === customField.id);
+            return customField;
+        });
+        // update custom fields with values
+        this.customFields = customFieldsWithValues;
+        // group custom fields
         for (let i = 0; i < this.customFieldGroups.length; i++) {
             const group = this.customFieldGroups[i];
             group.set(
                 'customFields',
-                this.customFields.filter((customField) => {
+                customFieldsWithValues.filter((customField) => {
                     return customField.category_uuid === group.id;
                 })
             );
@@ -538,6 +552,25 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         });
     }
 
+    @action editOrderNotes() {
+        this.isEditingOrderNotes = true;
+    }
+
+    @task *saveOrderNotes() {
+        const { notes } = this.model;
+        yield this.model.persistProperty('notes', notes).then(() => {
+            this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.order-notes-updated'));
+        });
+        this.isEditingOrderNotes = false;
+    }
+
+    /**
+     * Prompt to unassign driver from otder.
+     *
+     * @param {OrderModel} order
+     * @param {*} [options={}]
+     * @memberof OperationsOrdersIndexViewController
+     */
     @action unassignDriver(order, options = {}) {
         this.modalsManager.confirm({
             title: this.intl.t('fleet-ops.operations.orders.index.view.edit-order-title', { driverName: order.driver_assigned.name }),
@@ -636,7 +669,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @action dispatchOrder(order) {
         this.ordersController.dispatchOrder(order, {
             onConfirm: () => {
-                order.loadTrackingActivity();
+                this.loadOrderRelations.perform(order);
             },
         });
     }
@@ -958,5 +991,12 @@ export default class OperationsOrdersIndexViewController extends BaseController 
 
     @action removeFile(file) {
         return file.destroyRecord();
+    }
+
+    @action removeCustomFieldFile(customFieldValue, file) {
+        customFieldValue.set('value', null);
+        customFieldValue.save().then(() => {
+            return file.destroyRecord();
+        });
     }
 }

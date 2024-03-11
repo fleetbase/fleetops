@@ -9,7 +9,7 @@ use Fleetbase\FleetOps\Events\OrderCanceled;
 use Fleetbase\FleetOps\Events\OrderCompleted;
 use Fleetbase\FleetOps\Events\OrderDispatched;
 use Fleetbase\FleetOps\Events\OrderDriverAssigned;
-use Fleetbase\FleetOps\Support\Flow;
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
@@ -247,7 +247,7 @@ class Order extends Model
      */
     public function orderConfig()
     {
-        return $this->belongsTo(OrderConfig::class);
+        return $this->belongsTo(OrderConfig::class)->withTrashed();
     }
 
     /**
@@ -1063,7 +1063,7 @@ class Order extends Model
     public function insertDispatchActivity(): Order
     {
         // get dispatch activity if any and apply to order
-        $dispatchActivity = Flow::getDispatchActivity($this);
+        $dispatchActivity = $this->config()->getDispatchActivity();
 
         if ($dispatchActivity) {
             $this->updateActivity($dispatchActivity);
@@ -1154,23 +1154,28 @@ class Order extends Model
      * Updates the activity of the order.
      * Updates the order status and inserts a new activity based on the provided activity details.
      *
-     * @param array|null $activity the activity details to be updated
-     * @param mixed      $proof    additional proof or details for the activity update
+     * @param Activity $activity the activity details to be updated
+     * @param mixed    $proof    additional proof or details for the activity update
      *
      * @return Order the updated Order instance
      */
-    public function updateActivity(?array $activity = null, $proof = null): Order
+    public function updateActivity(?Activity $activity = null, $proof = null): Order
     {
-        $status   = data_get($activity, 'status');
-        $details  = data_get($activity, 'details', '');
-        $code     = data_get($activity, 'code', 'dispatched');
+        if (!Utils::isActivity($activity)) {
+            return $this;
+        }
+
+        // Get location
         $location = $this->getLastLocation();
 
-        // insert dispatch activity
-        $this->insertActivity($status, $details, $location, $code, $proof);
+        // Insert dispatch activity
+        $this->insertActivity($activity, $location, $proof);
 
-        // update status using code
-        $this->setStatus($code, true);
+        // Update status using code
+        $this->setStatus($activity->get('code'), true);
+
+        // Fire activity events
+        $activity->fireEvents($this);
 
         return $this;
     }
@@ -1184,6 +1189,39 @@ class Order extends Model
     public function notifyCompleted()
     {
         return event(new OrderCompleted($this));
+    }
+
+    /**
+     * Completes the order and updates its activities.
+     *
+     * This method is responsible for marking the order as completed. It achieves this by
+     * creating a new 'completed' Activity instance and updating the order's status and activities
+     * accordingly. Additionally, this method triggers a notification to indicate that the order
+     * has been completed. Optionally, proof or additional details can be provided to accompany
+     * the activity update.
+     *
+     * The process involves the following steps:
+     * 1. Creating a new Activity instance with the 'completed' code and relevant details.
+     * 2. Notifying that the order has been completed via `notifyCompleted`.
+     * 3. Updating the order's activity with the new 'completed' activity through `updateActivity`.
+     *
+     * @param Proof|null $proof Optional. Additional proof or details for the activity update.
+     *
+     * @return Order the order instance with updated activities, reflecting the completion status
+     */
+    public function complete(?Proof $proof = null): self
+    {
+        $activity = new Activity(
+            [
+                'code'    => 'completed',
+                'status'  => 'Order completed',
+                'details' => 'Order was completed.',
+            ]
+        );
+
+        $this->notifyCompleted();
+
+        return $this->updateActivity($activity, $proof);
     }
 
     /**
@@ -1298,7 +1336,7 @@ class Order extends Model
             });
         }
 
-        $flow     = Flow::getOrderFlow($this);
+        $flow     = $this->config()->nextActivity();
         $activity = null;
 
         if (count($flow) === 1 && $code === null) {
@@ -1306,29 +1344,27 @@ class Order extends Model
         }
 
         if ($code) {
-            $activity = collect($flow)->firstWhere('code', $code);
+            $activity = $flow->firstWhere('code', $code);
         }
 
-        if (!$activity) {
+        if (!Utils::isActivity($activity)) {
             return false;
         }
 
-        $isDispatchActivity = is_array($activity) && $activity['code'] === 'dispatched';
+        $isDispatchActivity = Utils::isActivity($activity) && $activity->is('dispatched');
         $isReadyForDispatch = $this->isReadyForDispatch;
 
         if ($isDispatchActivity && $isReadyForDispatch) {
             $this->dispatch(true);
         }
 
-        // edge case if not dispatched but code is dispatched/dispatch
-        if (!$this->dispatched && Str::startsWith($code, 'dispatch')) {
-            $this->dispatch(true);
-        }
-
         $location = $this->getLastLocation();
 
-        $this->setStatus($activity['code']);
-        $this->insertActivity($activity['status'], $activity['details'], $location, $activity['code']);
+        $this->setStatus($activity->code);
+        $this->insertActivity($activity, $location);
+
+        // fire events if any
+        $activity->fireEvents($this);
 
         return true;
     }
@@ -1508,6 +1544,23 @@ class Order extends Model
     }
 
     /**
+     * Retrieves a custom field by its key.
+     *
+     * This method searches for a custom field where the name or label matches the given key.
+     *
+     * @param string $key the key used to search for the custom field
+     *
+     * @return CustomField|null the found CustomField object or null if not found
+     */
+    public function getCustomField(string $key): ?CustomField
+    {
+        $name         = Str::slug($key);
+        $label        = Str::title($key);
+
+        return $this->customFields()->where('name', $name)->orWhere('label', $label)->first();
+    }
+
+    /**
      * Retrieves the custom field value for the specified custom field.
      *
      * @param CustomField $customField the custom field to retrieve the value for
@@ -1533,8 +1586,7 @@ class Order extends Model
      */
     public function getCustomFieldValueByKey(string $key)
     {
-        $key         = Str::slug($key);
-        $customField = $this->customFields()->where('name', $key)->first();
+        $customField = $this->getCustomField($key);
         if ($customField) {
             $customFieldValue = $this->getCustomFieldValue($customField);
             if ($customFieldValue) {
@@ -1543,6 +1595,19 @@ class Order extends Model
         }
 
         return null;
+    }
+
+    /**
+     * Checks if a custom field exists.
+     *
+     * @param string $key the key of the custom field
+     */
+    public function isCustomField(string $key): bool
+    {
+        $name         = Str::slug($key);
+        $label        = Str::title($key);
+
+        return $this->customFields()->where('name', $name)->orWhere('label', $label)->exists();
     }
 
     /**
@@ -1561,5 +1626,106 @@ class Order extends Model
         }
 
         return $customFields;
+    }
+
+    /**
+     * Retrieves the OrderConfig associated with this order.
+     *
+     * This function first attempts to load the 'orderConfig' relationship.
+     * If 'orderConfig' is already loaded and is an instance of OrderConfig,
+     * it returns this instance. If not, and if the 'order_config_uuid' is
+     * a valid UUID, it attempts to retrieve the OrderConfig by this UUID,
+     * including any trashed instances. If none of these conditions are met,
+     * it returns null.
+     *
+     * @return OrderConfig|null the OrderConfig associated with this order, or null if not found
+     *
+     * @throws \Exception type of exceptions this function might throw, if any
+     */
+    public function config(): OrderConfig
+    {
+        $this->load(['orderConfig']);
+
+        if ($this->orderConfig instanceof OrderConfig) {
+            $this->orderConfig->setOrderContext($this);
+
+            return $this->orderConfig;
+        }
+
+        if (Str::isUuid($this->order_config_uuid)) {
+            $orderConfig = OrderConfig::where('uuid', $this->order_config_uuid)->withTrashed()->first();
+            $orderConfig->setOrderContext($this);
+
+            return $orderConfig;
+        }
+
+        return null;
+    }
+
+    /**
+     * Retrieves the flow configuration from the order config.
+     *
+     * This method accesses the order config and returns its 'flow' property.
+     * The flow property is expected to be an array that outlines the sequence or
+     * structure of activities or steps in the order process. If the flow property
+     * is not an array or is not set, an empty array is returned.
+     *
+     * @return array the flow configuration array from the order config, or an empty array if not set or not an array
+     */
+    public function getConfigFlow(): array
+    {
+        $orderConfig = $this->config();
+        if (is_array($orderConfig->flow)) {
+            return $orderConfig->flow;
+        }
+
+        return [];
+    }
+
+    /**
+     * Resolves a given value which can be a static value or a dynamic property name.
+     *
+     * This method attempts to resolve the dynamic property first, if not found it returns the given value.
+     *
+     * @return mixed the resolved value, or the input value if the resolution finds nothing
+     */
+    public function resolveDynamicProperty(string $property)
+    {
+        $snakedProperty = Str::snake($property);
+
+        // check if existing property
+        if ($this->{$snakedProperty}) {
+            return $this->{$snakedProperty};
+        }
+
+        // Check if custom field property
+        if ($this->isCustomField($property)) {
+            return $this->getCustomFieldValueByKey($property);
+        }
+
+        // Check if meta attribute
+        if ($this->hasMeta($property)) {
+            return $this->getMeta($property);
+        }
+
+        return data_get($this, $property);
+    }
+
+    /**
+     * Resolves the value of a dynamic property.
+     *
+     * This method attempts to resolve the property from the object, then as a custom field, and finally as a meta attribute.
+     * If none of these are found, it returns the value using the `data_get` helper function.
+     *
+     * @return mixed the resolved value of the property, or the original property if not found
+     */
+    public function resolveDynamicValue(string $value)
+    {
+        $resolved = $this->resolveDynamicProperty($value);
+        if ($resolved) {
+            return $resolved;
+        }
+
+        return $value;
     }
 }

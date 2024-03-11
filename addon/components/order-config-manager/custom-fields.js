@@ -3,8 +3,10 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
+import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency-decorators';
 import isObject from '@fleetbase/ember-core/utils/is-object';
+import contextComponentCallback from '../../utils/context-component-callback';
 
 /**
  * Component class for managing custom fields within an order configuration.
@@ -68,10 +70,14 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * @param {Object} owner - The owner of the component.
      * @param {Object} args - The arguments passed to the component, including the configuration.
      */
-    constructor(owner, { config }) {
+    constructor(owner, { config, configManagerContext }) {
         super(...arguments);
         this.config = config;
         this.loadCustomFields.perform();
+
+        configManagerContext.on('onConfigChanged', (newConfig) => {
+            this.changeConfig(newConfig);
+        });
     }
 
     /**
@@ -113,15 +119,18 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * @action
      */
     @action editCustomField(customField) {
+        contextComponentCallback(this, 'onContextChanged', customField);
         this.contextPanel.focus(customField, 'editing', {
             args: {
                 customField,
                 onCustomFieldSaved: () => {
                     this.loadCustomFields.perform();
                     this.contextPanel.clear();
+                    contextComponentCallback(this, 'onContextChanged', null);
                 },
                 onPressCancel: () => {
                     this.contextPanel.clear();
+                    contextComponentCallback(this, 'onContextChanged', null);
                 },
             },
         });
@@ -203,6 +212,39 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
         this.groups = yield this.store.query('category', { owner_uuid: this.config.id, for: 'custom_field_group' });
         this.customFields = yield this.store.query('custom-field', { subject_uuid: this.config.id });
         this.groupCustomFields();
+        this.initializeContext();
+    }
+
+    /**
+     * If any context is provided then initialize the state.
+     *
+     * @memberof OrderConfigManagerCustomFieldsComponent
+     */
+    initializeContext() {
+        later(
+            this,
+            () => {
+                const { context, contextModel } = this.args;
+                if (typeof context === 'string' && contextModel === 'custom-field') {
+                    const contextCustomField = this.store.peekRecord('custom-field', context);
+                    if (contextCustomField) {
+                        this.editCustomField(contextCustomField);
+                    }
+                }
+            },
+            300
+        );
+    }
+
+    /**
+     * Handle the change of config.
+     *
+     * @param {OrderConfigModel} newConfig
+     * @memberof OrderConfigManagerCustomFieldsComponent
+     */
+    changeConfig(newConfig) {
+        this.config = newConfig;
+        this.loadCustomFields.perform();
     }
 
     /**

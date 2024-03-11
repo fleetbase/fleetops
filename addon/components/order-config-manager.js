@@ -1,9 +1,13 @@
 import Component from '@glimmer/component';
+import EmberObject from '@ember/object';
+import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { task } from 'ember-concurrency-decorators';
+import isModel from '@fleetbase/ember-core/utils/is-model';
+import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 import contextComponentCallback from '../utils/context-component-callback';
 import applyContextComponentArguments from '../utils/apply-context-component-arguments';
 import OrderConfigManagerDetailsComponent from './order-config-manager/details';
@@ -11,6 +15,7 @@ import OrderConfigManagerCustomFieldsComponent from './order-config-manager/cust
 import OrderConfigManagerActivityFlowComponent from './order-config-manager/activity-flow';
 import OrderConfigManagerEntitiesComponent from './order-config-manager/entities';
 
+const configManagerContext = EmberObject.extend(Evented);
 export default class OrderConfigManagerComponent extends Component {
     @service universe;
     @service notifications;
@@ -20,6 +25,9 @@ export default class OrderConfigManagerComponent extends Component {
     @tracked configs = [];
     @tracked currentConfig;
     @tracked tab;
+    @tracked configManagerContext;
+    @tracked context;
+    @tracked contextModel;
 
     /**
      * Returns the array of tabs available for the panel.
@@ -45,11 +53,14 @@ export default class OrderConfigManagerComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor() {
+    constructor(owner, { tab, context, contextModel }) {
         super(...arguments);
         applyContextComponentArguments(this);
 
-        this.tab = this.getTabUsingSlug(this.args.tab);
+        this.context = context;
+        this.contextModel = contextModel;
+        this.configManagerContext = configManagerContext.create();
+        this.tab = this.getTabUsingSlug(tab);
         this.loadOrderConfigs.perform();
     }
 
@@ -66,9 +77,46 @@ export default class OrderConfigManagerComponent extends Component {
     @task *loadOrderConfigs() {
         this.configs = yield this.store.findAll('order-config');
 
+        let currentConfig;
+        let initialOrderConfig = this.args.orderConfig;
         if (isArray(this.configs) && this.configs.length > 0) {
-            this.currentConfig = this.configs[0];
+            if (initialOrderConfig) {
+                currentConfig = this.configs.find((config) => {
+                    if (isModel(initialOrderConfig)) {
+                        return config.id === initialOrderConfig.id;
+                    }
+
+                    if (typeof initialOrderConfig === 'string') {
+                        return config.id === initialOrderConfig;
+                    }
+                });
+            }
+
+            if (!currentConfig) {
+                currentConfig = this.configs[0];
+            }
+
+            this.selectConfig(currentConfig);
         }
+    }
+
+    /**
+     * Handle anonymous context change.
+     *
+     * @memberof OrderConfigManagerComponent
+     */
+    @action onContextChanged(context) {
+        const isValidContext = context && isModel(context);
+        if (context === null || !isValidContext) {
+            this.context = undefined;
+            this.contextModel = undefined;
+            contextComponentCallback(this, 'onContextChanged', this.context, this.contextModel);
+            return;
+        }
+
+        this.context = context.get('id');
+        this.contextModel = getModelName(context);
+        contextComponentCallback(this, 'onContextChanged', this.context, this.contextModel);
     }
 
     /**
@@ -122,6 +170,9 @@ export default class OrderConfigManagerComponent extends Component {
      */
     @action selectConfig(config) {
         this.currentConfig = config;
+        this.configManagerContext.set('currentConfig', config);
+        this.configManagerContext.trigger('onConfigChanged', config);
+        contextComponentCallback(this, 'onConfigChanged', ...arguments);
     }
 
     /**
@@ -133,6 +184,7 @@ export default class OrderConfigManagerComponent extends Component {
      */
     @action onConfigDeleting() {
         this.selectConfig(null);
+        this.configManagerContext.trigger('onConfigDeleting');
         contextComponentCallback(this, 'onConfigDeleting', ...arguments);
     }
 
@@ -144,6 +196,7 @@ export default class OrderConfigManagerComponent extends Component {
      */
     @action onConfigDeleted() {
         this.loadOrderConfigs.perform();
+        this.configManagerContext.trigger('onConfigDeleted');
         contextComponentCallback(this, 'onConfigDeleted', ...arguments);
     }
 
@@ -154,6 +207,7 @@ export default class OrderConfigManagerComponent extends Component {
      * It primarily executes additional operations defined in 'contextComponentCallback'.
      */
     @action onConfigUpdated() {
+        this.configManagerContext.trigger('onConfigUpdated');
         contextComponentCallback(this, 'onConfigUpdated', ...arguments);
     }
 
@@ -165,6 +219,7 @@ export default class OrderConfigManagerComponent extends Component {
      */
     @action setOverlayContext(overlayContext) {
         this.context = overlayContext;
+        this.configManagerContext.trigger('onLoad');
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
 
@@ -177,6 +232,7 @@ export default class OrderConfigManagerComponent extends Component {
      */
     @action onTabChanged(tab) {
         this.tab = this.getTabUsingSlug(tab);
+        this.configManagerContext.trigger('onTabChanged');
         contextComponentCallback(this, 'onTabChanged', tab);
     }
 

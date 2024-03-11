@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Traits;
 
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
@@ -47,16 +48,16 @@ trait HasTrackingNumber
     /**
      * Creates activity for this resource tracking number.
      *
-     * @param string                              $status   the short status update
-     * @param string                              $details  the detailed update
      * @param array|Point                         $location the location of the update, can be either [lat, lng] or a \Fleetbase\LaravelMysqlSpatial\Types\Point instance
-     * @param string                              $code     the onew word status code
      * @param \Fleetbase\Models\Proof|string|null $proof    resolvable proof of delivery/activity
      *
      * @return \Fleetbase\Models\TrackingStatus
      */
-    public function createActivity(string $status, string $details = '', $location = [], string $code = '', $proof = null): TrackingStatus
+    public function createActivity(Activity $activity, $location = [], $proof = null): TrackingStatus
     {
+        $status   = $activity->get('status');
+        $details  = $activity->get('details');
+        $code     = $activity->get('code');
         $proof    = static::resolveProof($proof);
         $activity = TrackingStatus::create([
             'company_uuid'         => data_get($this, 'company_uuid', session('company')),
@@ -82,14 +83,14 @@ trait HasTrackingNumber
     /**
      * Inserts activity for this resource tracking number.
      *
-     * @param string                              $status   the short status update
-     * @param string                              $details  the detailed update
      * @param array|Point                         $location the location of the update, can be either [lat, lng] or a \Fleetbase\LaravelMysqlSpatial\Types\Point instance
      * @param \Fleetbase\Models\Proof|string|null $proof    resolvable proof of delivery/activity
-     * @param string                              $code     the onew word status code
      */
-    public function insertActivity(string $status, string $details = '', $location = [], string $code = '', $proof = null): string
+    public function insertActivity(Activity $activity, $location = [], $proof = null): string
     {
+        $status     = $activity->get('status');
+        $details    = $activity->get('details');
+        $code       = $activity->get('code');
         $proof      = static::resolveProof($proof);
         $activityId = TrackingStatus::insertGetUuid([
             'company_uuid'         => data_get($this, 'company_uuid', session('company')),
@@ -158,7 +159,6 @@ trait HasTrackingNumber
         $this->status = $status;
 
         if ($andSave) {
-            // static::where('uuid', $this->uuid)->update(['status' => $status]);
             $this->save();
         }
 

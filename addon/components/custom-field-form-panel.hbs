@@ -15,6 +15,11 @@
                 <span class="dark:text-gray-100 text-sm ml-2">{{t "fleet-ops.component.custom-field-form-panel.field-is-required"}}</span>
             </Toggle>
         </InputGroup>
+        <InputGroup>
+            <Toggle @isToggled={{this.customField.editable}} @onToggle={{fn (mut this.customField.editable)}}>
+                <span class="dark:text-gray-100 text-sm ml-2">{{t "fleet-ops.component.custom-field-form-panel.field-is-editable"}}</span>
+            </Toggle>
+        </InputGroup>
         <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.field-type"}}>
             <select class="form-select w-full has--placeholder" {{on "change" this.onSelectCustomFieldType}}>
                 <option selected disabled>
@@ -28,7 +33,7 @@
             </select>
         </InputGroup>
         {{#if this.currentFieldMap.hasOptions}}
-            <CustomFieldFormPanel::OptionsInput @customField={{this.customField}} @fieldMap={{this.currentFieldMap}} />
+            <CustomFieldFormPanel::OptionsInput @customField={{this.customField}} @fieldMap={{this.currentFieldMap}} class="mb-4" />
         {{/if}}
         {{#if this.currentFieldMap.allowedModels}}
             <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.field-model-type"}}>
@@ -44,6 +49,29 @@
                 </select>
             </InputGroup>
         {{/if}}
+        <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.meta-col-span"}}>
+            <DropdownButton @text={{concat (t "fleet-ops.component.custom-field-form-panel.col-span-size") ": " (n-a this.customField.meta.colSpan)}} @textClass="text-sm mr-2" @buttonClass="flex-row-reverse w-64 justify-between" @icon="caret-down" @iconClass="mr-0i" @size="sm" @iconPrefix="fas" @triggerClass="hidden md:flex" as |dd|>
+                <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
+                    <div class="p-1">
+                        {{#each this.colSpanSizeOptions as |size|}}
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.setCustomFieldMetaProperty "colSpan" size)}}>
+                                <div class="flex-1 flex flex-row items-center">
+                                    <div class="w-6">
+                                        <FaIcon @icon="grip" />
+                                    </div>
+                                    <span>{{size}}</span>
+                                </div>
+                                <div>
+                                    {{#if (eq size this.customField.meta.colSpan)}}
+                                        <FaIcon @icon="check" class="text-green-500" />
+                                    {{/if}}
+                                </div>
+                            </a>
+                        {{/each}}
+                    </div>
+                </div>
+            </DropdownButton>
+        </InputGroup>
         <Spacer @height="300px" />
     </Overlay::Body>
 </Overlay>

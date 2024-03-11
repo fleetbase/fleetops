@@ -1,10 +1,12 @@
 import ObjectProxy from '@ember/object/proxy';
 import config from '../config/environment';
+import generateUUID from '@fleetbase/ember-core/utils/generate-uuid';
 import { get } from '@ember/object';
 
 export default function createCustomEntity(name = '', type = '', description = '', props = {}) {
     return ObjectProxy.create({
         content: {
+            id: generateUUID(),
             name,
             description,
             type,

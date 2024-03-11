@@ -5,6 +5,7 @@ import { tracked } from '@glimmer/tracking';
 import { action, computed, setProperties, set, get } from '@ember/object';
 import { not, equal, alias } from '@ember/object/computed';
 import { isArray } from '@ember/array';
+import { isBlank } from '@ember/utils';
 import { dasherize } from '@ember/string';
 import { later, next } from '@ember/runloop';
 import { task } from 'ember-concurrency-decorators';
@@ -133,6 +134,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @tracked serviceRates = [];
     @tracked selectedServiceRate;
     @tracked selectedServiceQuote;
+    @tracked isCustomFieldsValid = true;
     @tracked isCreatingOrder = false;
     @tracked isMultipleDropoffOrder = false;
     @tracked isViewingRoutePreview = false;
@@ -199,7 +201,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @alias('ordersController.leafletMap') leafletMap;
     @equal('isCsvImportedOrder', false) isNotCsvImportedOrder;
 
-    @computed('entities.length', 'isMultipleDropoffOrder', 'isFetchingQuotes', 'isSubscriptionValid', 'order.type', 'payload.{dropoff,pickup}', 'waypoints.length')
+    @computed('isCustomFieldsValid', 'entities.length', 'isMultipleDropoffOrder', 'isFetchingQuotes', 'isSubscriptionValid', 'order.type', 'payload.{dropoff,pickup}', 'waypoints.length')
     get isValid() {
         const { isMultipleDropoffOrder, isSubscriptionValid, isFetchingQuotes } = this;
         const isOrderTypeSet = isNotEmpty(this.order?.type);
@@ -220,7 +222,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             return isOrderTypeSet && isWaypointsSet;
         }
 
-        return isOrderTypeSet && isPickupSet && isDropoffSet;
+        return isOrderTypeSet && isPickupSet && isDropoffSet && this.isCustomFieldsValid;
     }
 
     updatePayloadCoordinates() {
@@ -276,6 +278,16 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         return groups;
     }
 
+    checkIfCustomFieldsValid() {
+        this.isCustomFieldsValid = this.customFields.every((customField) => {
+            if (!customField.required) {
+                return true;
+            }
+            const customFieldValue = this.customFieldValues[customField.id];
+            return customFieldValue && !isBlank(customFieldValue.value);
+        });
+    }
+
     @action createOrder() {
         if (!this.isValid) {
             return;
@@ -307,11 +319,25 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             return;
         }
 
+        // valiadate custom field inputs
+        for (let i = 0; i < this.customFields.length; i++) {
+            const customField = this.customFields[i];
+            if (customField.required) {
+                const customFieldValue = this.customFieldValues[customField.id];
+                if (!customFieldValue || isBlank(customFieldValue.value)) {
+                    this.loader.removeLoader();
+                    return this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.new.input-field-required', { inputFieldName: customField.label }));
+                }
+            }
+        }
+
         // create custom field values
         for (let customFieldId in this.customFieldValues) {
+            const { value, value_type } = this.customFieldValues[customFieldId];
             const customFieldValue = this.store.createRecord('custom-field-value', {
                 custom_field_uuid: customFieldId,
-                value: this.customFieldValues[customFieldId],
+                value,
+                value_type,
             });
             this.order.custom_field_values.push(customFieldValue);
         }
@@ -1097,6 +1123,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         this.customFieldGroups = yield this.store.query('category', { owner_uuid: orderConfig.id, for: 'custom_field_group' });
         this.customFields = yield this.store.query('custom-field', { subject_uuid: orderConfig.id });
         this.groupCustomFields();
+        this.checkIfCustomFieldsValid();
     }
 
     /**
@@ -1117,8 +1144,28 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @action setCustomFieldValue(value, customField) {
         this.customFieldValues = {
             ...this.customFieldValues,
-            [customField.id]: value,
+            [customField.id]: {
+                value,
+                value_type: this._getCustomFieldValueType(customField),
+            },
         };
+        this.checkIfCustomFieldsValid();
+    }
+
+    _getCustomFieldValueType(customField) {
+        if (customField.type === 'file-upload') {
+            return 'file';
+        }
+
+        if (customField.type === 'date-time-input') {
+            return 'date';
+        }
+
+        if (customField.type === 'model-select') {
+            return 'model';
+        }
+
+        return 'text';
     }
 
     @action setOrderFacilitator(model) {
@@ -1348,6 +1395,15 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         const { value } = target;
 
         this.entities[index].destination_uuid = value;
+    }
+
+    @action addFromCustomEntity(customEntity) {
+        const entity = this.store.createRecord('entity', {
+            ...customEntity,
+            id: undefined,
+        });
+
+        this.entities.pushObject(entity);
     }
 
     @action addEntity(importId = null) {

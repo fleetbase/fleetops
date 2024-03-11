@@ -111,6 +111,8 @@ fleet-ops:
       activity-events-select-events-info: Select the specific event you want to trigger in response to this activity.
       select-event-to-add: Select event to add...
     custom-field-form-panel:
+      meta-col-span: 'Meta: Column-Span'
+      col-span-size: Column Span Size
       custom-field-title-concat: 'Custom Field: '
       new-custom-field: New custom field
       close-new-custom-field: Cancel custom field changes
@@ -124,6 +126,7 @@ fleet-ops:
       field-help-text: Field Help Text
       field-default-value: Field Default Value
       field-is-required: Field is Required
+      field-is-editable: Field is Editable
       field-options: Field Options
       field-validation-rules: Field Validation Rules
       field-model-type: Field Model Type
@@ -1272,6 +1275,7 @@ fleet-ops:
           add-item-order: Add Item to Order
           items-drop: Items drop at
           add-item-button: Add Item
+          add-entity: Add Entity
           sku: SKU
           select-destination: Select Destination
           edit-item: Edit Item
@@ -1299,6 +1303,7 @@ fleet-ops:
           value-warning: Custom field must have a value
           edit-field-title: Edit custom field
           edit-metadata: Edit Metadata
+          input-field-required: The {inputFieldName} is required.
         view:
           purchase-rate-panel-title: Purchase Rate
           documents-panel-title: Documents & Files
@@ -1365,6 +1370,9 @@ fleet-ops:
           order-title: Order Label
           waypoint-title: Waypoint Label
           proof-of-delivery: Proof of Delivery
+          notes-placeholder: Enter order notes here....
+          save-order-note: Save Order Note
+          order-notes-updated: Order notes updated.
         config:
           title: Orders Configuration
           message: Order configurations allow you to define dynamic configurations which will tell Fleetbase how different types of orders should be executed.

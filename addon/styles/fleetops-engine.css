@@ -393,3 +393,43 @@ body[data-theme='light'] .activity-logic-builder .activity-logic-builder-conditi
     font-size: 0.9rem;
     font-family: monospace;
 }
+
+.x-fleetbase-file.custom-field-file {
+    max-width: 100%;
+    height: unset;
+}
+
+.x-fleetbase-file.custom-field-file > .x-fleetbase-file-wrapper {
+    width: 100%;
+    max-width: 100%;
+    height: unset;
+    padding: 0.35rem;
+}
+
+.x-fleetbase-file.custom-field-file > .x-fleetbase-file-wrapper > .x-fleetbase-file-actions + div.flex.flex-col {
+    flex-direction: row;
+    flex: none;
+    width: 100%;
+    justify-content: start;
+}
+
+.x-fleetbase-file.custom-field-file > .x-fleetbase-file-wrapper > .x-fleetbase-file-actions + div.flex.flex-col > .flex-1:not(.flex-col) {
+    flex: none;
+}
+
+.x-fleetbase-file.custom-field-file > .x-fleetbase-file-wrapper .x-fleetbase-file-preview {
+    margin-bottom: 0;
+    height: unset;
+    width: 2rem;
+    margin-right: 0.5rem;
+}
+
+.x-fleetbase-file.custom-field-file > .x-fleetbase-file-wrapper .x-fleetbase-file-name {
+    width: 100%;
+    text-align: left;
+    padding-left: 0.5rem;
+}
+
+.x-fleetops-input-height {
+    height: 38px;
+}

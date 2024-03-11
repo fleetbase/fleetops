@@ -1,4 +1,5 @@
 import ObjectProxy from '@ember/object/proxy';
+import generateUUID from '@fleetbase/ember-core/utils/generate-uuid';
 import { underscore } from '@ember/string';
 
 export default function createFlowActivity(name = '', status = '', details = '', sequence = 0, color = '#1f2937', props = {}) {
@@ -20,6 +21,7 @@ export default function createFlowActivity(name = '', status = '', details = '',
             pod_method: 'scan',
             options: {},
             node: null,
+            internalId: generateUUID(),
             _internalModel: {
                 modelName: 'activity',
             },

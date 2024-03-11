@@ -3,10 +3,12 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
+import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency-decorators';
+import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 import ObjectProxy from '@ember/object/proxy';
 import createCustomEntity from '../../utils/create-custom-entity';
-import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
+import contextComponentCallback from '../../utils/context-component-callback';
 
 /**
  * Component class for managing order configuration entities.
@@ -52,10 +54,15 @@ export default class OrderConfigManagerEntitiesComponent extends Component {
      * @param {Object} owner - The owner of the component.
      * @param {Object} args - The arguments passed to the component.
      */
-    constructor(owner, { config }) {
+    constructor(owner, { config, configManagerContext }) {
         super(...arguments);
         this.config = config;
         this.customEntities = this.getEntitiesFromConfig(config);
+        this.initializeContext();
+
+        configManagerContext.on('onConfigChanged', (newConfig) => {
+            this.changeConfig(newConfig);
+        });
     }
 
     /**
@@ -74,11 +81,13 @@ export default class OrderConfigManagerEntitiesComponent extends Component {
      * @action
      */
     @action editCustomEntity(customEntity, index) {
+        contextComponentCallback(this, 'onContextChanged', customEntity);
         this.contextPanel.focus(customEntity, 'editing', {
             args: {
                 config: this.config,
                 onPressCancel: () => {
                     this.contextPanel.clear();
+                    contextComponentCallback(this, 'onContextChanged', null);
                 },
                 onSave: (customEntity) => {
                     if (index > -1) {
@@ -94,6 +103,7 @@ export default class OrderConfigManagerEntitiesComponent extends Component {
                     }
                     this.contextPanel.clear();
                     this.save.perform();
+                    contextComponentCallback(this, 'onContextChanged', null);
                 },
             },
         });
@@ -129,6 +139,38 @@ export default class OrderConfigManagerEntitiesComponent extends Component {
             this.config = config;
             this.customEntities = this.getEntitiesFromConfig(config);
         });
+    }
+
+    /**
+     * If any context is provided then initialize the state.
+     *
+     * @memberof OrderConfigManagerCustomFieldsComponent
+     */
+    initializeContext() {
+        later(
+            this,
+            () => {
+                const { context, contextModel } = this.args;
+                if (typeof context === 'string' && contextModel === 'custom-entity') {
+                    const contextCustomEntity = this.customEntities.find((entity) => entity.get('id') === context);
+                    if (contextCustomEntity) {
+                        this.editCustomEntity(contextCustomEntity);
+                    }
+                }
+            },
+            300
+        );
+    }
+
+    /**
+     * Handle change of config.
+     *
+     * @param {OrderConfigModel} newConfig
+     * @memberof OrderConfigManagerEntitiesComponent
+     */
+    changeConfig(newConfig) {
+        this.config = newConfig;
+        this.customEntities = this.getEntitiesFromConfig(newConfig);
     }
 
     /**

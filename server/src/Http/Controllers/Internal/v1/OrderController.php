@@ -6,6 +6,7 @@ use Fleetbase\Exceptions\FleetbaseRequestValidationException;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Events\OrderReady;
 use Fleetbase\FleetOps\Events\OrderStarted;
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
 use Fleetbase\FleetOps\Imports\OrdersImport;
@@ -17,7 +18,6 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
-use Fleetbase\FleetOps\Support\Flow;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\Models\CustomFieldValue;
@@ -113,7 +113,7 @@ class OrderController extends FleetOpsController
                                 'subject_uuid'      => $order->uuid,
                                 'subject_type'      => Utils::getMutationType($order),
                                 'value'             => data_get($customFieldValue, 'value'),
-                                'value_type'        => 'text', // only support text values for now v0.4.10
+                                'value_type'        => data_get($customFieldValue, 'value_type', 'text'),
                             ]);
                         }
                     }
@@ -373,7 +373,7 @@ class OrderController extends FleetOpsController
         /**
          * @var \Fleetbase\Models\Order
          */
-        $order = Order::select(['uuid', 'driver_assigned_uuid', 'adhoc', 'dispatched', 'dispatched_at'])->where('uuid', $request->input('order'))->withoutGlobalScopes()->first();
+        $order = Order::select(['uuid', 'driver_assigned_uuid', 'order_config_uuid', 'adhoc', 'dispatched', 'dispatched_at'])->where('uuid', $request->input('order'))->withoutGlobalScopes()->first();
 
         if (!$order->hasDriverAssigned && !$order->adhoc) {
             return response()->error('No driver assigned to dispatch!');
@@ -383,7 +383,7 @@ class OrderController extends FleetOpsController
             return response()->error('Order has already been dispatched!');
         }
 
-        $order->dispatch();
+        $order->dispatchWithActivity();
 
         return response()->json(
             [
@@ -441,7 +441,7 @@ class OrderController extends FleetOpsController
         $driver->save();
 
         // get the next order activity
-        $flow = $activity = Flow::getNextActivity($order);
+        $flow = $activity = $order->config()->nextFirstActivity();
 
         /**
          * @var \Fleetbase\LaravelMysqlSpatial\Types\Point
@@ -459,11 +459,11 @@ class OrderController extends FleetOpsController
 
             // update activity for each waypoint and entity
             foreach ($payload->waypointMarkers as $waypointMarker) {
-                $waypointMarker->insertActivity($activity['status'], $activity['details'], $location, $activity['code']);
+                $waypointMarker->insertActivity($activity, $location);
             }
 
             foreach ($payload->entities as $entity) {
-                $entity->insertActivity($activity['status'], $activity['details'], $location, $activity['code']);
+                $entity->insertActivity($activity, $location);
             }
         }
 
@@ -493,10 +493,11 @@ class OrderController extends FleetOpsController
             return response()->error('No order found.');
         }
 
-        $activity = $request->input('activity');
+        $activity = $request->array('activity');
+        $activity = new Activity($activity, $order->getConfigFlow());
 
-        // handle pickup/dropoff order activity update as normal
-        if (is_array($activity) && $activity['code'] === 'dispatched') {
+        // Handle pickup/dropoff order activity update as normal
+        if (Utils::isActivity($activity) && $activity->is('dispatched')) {
             // make sure driver is assigned if not trigger failed dispatch
             if (!$order->hasDriverAssigned && !$order->adhoc) {
                 event(new OrderDispatchFailed($order, 'No driver assigned for order to dispatch to.'));
@@ -509,27 +510,30 @@ class OrderController extends FleetOpsController
             return response()->json(['status' => 'dispatched']);
         }
 
-        if (is_array($activity) && $activity['code'] === 'completed' && $order->driverAssigned) {
-            // unset from driver current job
-            $order->driverAssigned->unassignCurrentOrder();
-            $order->notifyCompleted();
-        }
-
         /**
          * @var \Fleetbase\LaravelMysqlSpatial\Types\Point
          */
         $location = $order->getLastLocation();
-
-        $order->setStatus($activity['code']);
-        $order->insertActivity($activity['status'], $activity['details'], $location, $activity['code']);
+        $order->setStatus($activity->code);
+        $order->insertActivity($activity, $location);
 
         // also update for each order entities if not multiple drop order
         // all entities will share the same activity status as is one drop order
         if (!$order->payload->isMultipleDropOrder) {
             foreach ($order->payload->entities as $entity) {
-                $entity->insertActivity($activity['status'], $activity['details'], $location, $activity['code']);
+                $entity->insertActivity($activity, $location);
             }
         }
+
+        // Handle order completed
+        if (Utils::isActivity($activity) && $activity->completesOrder() && $order->driverAssigned) {
+            // unset from driver current job
+            $order->driverAssigned->unassignCurrentOrder();
+            $order->complete();
+        }
+
+        // Fire activity events
+        $activity->fireEvents($order);
 
         return response()->json(['status' => 'ok']);
     }
@@ -550,9 +554,9 @@ class OrderController extends FleetOpsController
             return response()->error('No order found.');
         }
 
-        $flow = Flow::getOrderFlow($order);
+        $nextActivities = $order->config()->nextActivity();
 
-        return response()->json($flow);
+        return response()->json($nextActivities);
     }
 
     /**
