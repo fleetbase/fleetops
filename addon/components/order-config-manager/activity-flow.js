@@ -881,7 +881,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @returns {ObjectProxy} The created contextual activity, which is an ObjectProxy instance with the same content as the original activity, but with a reassigned 'id'.
      */
     _createContextualActivity(activity) {
-        const contextualActivity = ObjectProxy.create(activity.content);
+        const contextualActivity = ObjectProxy.create({ content: { ...activity.get('content') } });
         // set persited id to id
         contextualActivity.set('id', activity.get('internalId'));
         return contextualActivity;
