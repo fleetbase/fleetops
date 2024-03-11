@@ -658,7 +658,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      */
     addActivityNodeTools(activity, positionals = {}) {
         const activityNode = activity.get('node');
-        if (!activityNode) {
+        if (!activityNode || this.config.core_service) {
             return;
         }
         const { width } = positionals;
@@ -666,11 +666,12 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         const addButton = this.createAddActivityButton(activity, { x: width });
         let tools = [];
 
-        if (activity.get('code') === 'created') {
+
+        if (activity.get('code') === 'created' || activity.get('code') === 'dispatched') {
             tools = [];
         }
 
-        if (activity.get('code') === 'dispatched') {
+        if (activity.get('code') === 'started') {
             tools = [addButton];
         }
 
