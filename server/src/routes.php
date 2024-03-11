@@ -78,6 +78,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->match(['post', 'patch'], '{id}/set-destination/{placeId}', 'OrderController@setDestination');
                     $router->post('{id}/capture-signature/{subjectId?}', 'OrderController@captureSignature');
                     $router->post('{id}/capture-qr/{subjectId?}', 'OrderController@captureQrScan');
+                    $router->post('{id}/capture-photo/{subjectId?}', 'OrderController@capturePhoto');
                     $router->put('{id}', 'OrderController@update');
                     $router->delete('{id}', 'OrderController@delete');
                 });
@@ -222,6 +223,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                         $router->post('{id}/set-destination/{placeId}', 'Api\v1\OrderController@setDestination');
                         $router->post('{id}/capture-signature/{subjectId?}', 'Api\v1\OrderController@captureSignature');
                         $router->post('{id}/capture-qr/{subjectId?}', 'Api\v1\OrderController@captureQrScan');
+                        $router->post('{id}/capture-photo/{subjectId?}', 'Api\v1\OrderController@capturePhoto');
                         $router->put('{id}', 'Api\v1\OrderController@update');
                         $router->delete('{id}', 'Api\v1\OrderController@delete');
                     });
