@@ -1100,7 +1100,7 @@ class OrderController extends Controller
      *
      * @return void
      */
-    public function captureQrScan(string $id, ?string $subjectId = null, Request $request)
+    public function captureQrScan(Request $request, string $id, ?string $subjectId = null) 
     {
         $code    = $request->input('code');
         $data    = $request->input('data', []);
@@ -1117,7 +1117,7 @@ class OrderController extends Controller
                 404
             );
         }
-
+        
         if (!$code) {
             return response()->apiError('No QR code data to capture.');
         }
@@ -1171,7 +1171,7 @@ class OrderController extends Controller
      *
      * @return void
      */
-    public function captureSignature(string $id, ?string $subjectId = null, Request $request)
+    public function captureSignature(Request $request, string $id, ?string $subjectId = null)
     {
         $disk         = $request->input('disk', config('filesystems.default'));
         $bucket       = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
