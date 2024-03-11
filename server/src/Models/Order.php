@@ -1211,10 +1211,16 @@ class Order extends Model
      */
     public function complete(?Proof $proof = null): self
     {
-        $activity = $this->config()->getCompletedActivity();
         $this->notifyCompleted();
 
-        return $this->updateActivity($activity, $proof);
+        $doesntHaveCompletedActivity = TrackingStatus::where(['tracking_number_uuid' => $this->tracking_number_uuid, 'code' => 'COMPLETED'])->doesntExist();
+        if ($doesntHaveCompletedActivity) {
+            $activity = $this->config()->getCompletedActivity();
+
+            return $this->updateActivity($activity, $proof);
+        }
+
+        return $this;
     }
 
     /**

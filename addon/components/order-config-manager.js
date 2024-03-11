@@ -74,7 +74,7 @@ export default class OrderConfigManagerComponent extends Component {
      * @task
      * @generator
      */
-    @task *loadOrderConfigs() {
+    @task *loadOrderConfigs(options = {}) {
         this.configs = yield this.store.findAll('order-config');
 
         let currentConfig;
@@ -97,6 +97,10 @@ export default class OrderConfigManagerComponent extends Component {
             }
 
             this.selectConfig(currentConfig);
+        }
+
+        if (typeof options.onAfter === 'function') {
+            options.onAfter(this.configs, currentConfig);
         }
     }
 
@@ -152,9 +156,13 @@ export default class OrderConfigManagerComponent extends Component {
                 }
 
                 modal.startLoading();
-                return orderConfig.save().then(() => {
+                return orderConfig.save().then((newOrderConfig) => {
                     this.notifications.success(this.intl.t('fleet-ops.component.order-config-manager.create-success-message'));
-                    this.loadOrderConfigs.perform();
+                    this.loadOrderConfigs.perform({
+                        onAfter: () => {
+                            this.selectConfig(newOrderConfig);
+                        },
+                    });
                 });
             },
         });

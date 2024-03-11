@@ -105,7 +105,7 @@ class OrderConfig extends Model
         parent::boot();
 
         static::creating(function ($model) {
-            $model->namespace = static::createNamespace($model->name);
+            $model->namespace = empty($model->namespace) ? static::createNamespace($model->name) : $model->namespace;
             $model->version   = '0.0.1';
             $model->status    = 'private';
             $model->key       = Str::slug($model->name);

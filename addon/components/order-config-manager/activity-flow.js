@@ -44,7 +44,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * An array of activity codes that should not be modified.
      * @type {Array.<string>}
      */
-    @tracked immutableActivities = ['created', 'dispatched'];
+    @tracked immutableActivities = ['created', 'dispatched', 'started'];
 
     /**
      * The configuration data for the activity flow.
@@ -420,6 +420,10 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @param {Object} elementView - The JointJS element view of the clicked activity.
      */
     onActivityClicked(elementView) {
+        // Disable editing activity if core service
+        if (this.config.core_service) {
+            return;
+        }
         const { model } = elementView;
         const activity = this.getActivityById(model.id);
         if (activity) {
