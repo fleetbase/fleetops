@@ -1,8 +1,10 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { camelize } from '@ember/string';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
+import isObject from '@fleetbase/ember-core/utils/is-object';
 
 /**
  * Service for managing the state and interactions of the context panel.
@@ -103,6 +105,28 @@ export default class ContextPanelService extends Service {
                 componentArguments: [{ isResizable: true }, { width: '500px' }],
             },
         },
+        customField: {
+            editing: {
+                component: 'custom-field-form-panel',
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
+            },
+        },
+        activity: {
+            editing: {
+                component: 'activity-form-panel',
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
+            },
+        },
+        customEntity: {
+            editing: {
+                component: 'custom-entity-form-panel',
+                componentArguments: [{ isResizable: true }, { width: '500px' }],
+            },
+        },
+        orderConfigManager: {
+            component: 'order-config-manager-overlay',
+            componentArguments: [{ isResizable: true }, { width: '500px' }],
+        },
     };
 
     /**
@@ -142,16 +166,52 @@ export default class ContextPanelService extends Service {
      * @action
      */
     @action focus(model, intent = 'viewing', options = {}) {
-        const modelName = getModelName(model);
-        const registry = this.registry[modelName];
-        const dynamicArgs = getWithDefault(options, 'args', {});
+        // handle focus which is not based on a model resource
+        // this is purely intent
+        if (typeof model === 'string') {
+            if (isObject(intent)) {
+                options = intent;
+            }
 
+            const registry = this.registry[model];
+            const dynamicArgs = getWithDefault(options, 'args', {});
+            if (registry) {
+                this.currentContext = null;
+                this.currentContextRegistry = registry;
+                this.currentContextComponentArguments = this.createDynamicArgsFromRegistry(registry, model, dynamicArgs);
+                this.contextOptions = options;
+
+                return this;
+            }
+
+            throw new Error(`Unable to focus selected context: ${model}`);
+        }
+
+        const modelName = getModelName(model);
+        const registry = this.getRegistryFromModelName(modelName);
+        const dynamicArgs = getWithDefault(options, 'args', {});
         if (registry && registry[intent]) {
             this.currentContext = model;
             this.currentContextRegistry = registry[intent];
             this.currentContextComponentArguments = this.createDynamicArgsFromRegistry(registry[intent], model, dynamicArgs);
             this.contextOptions = options;
+
+            return this;
         }
+    }
+
+    /**
+     * Get the correct registry from the modelName provided.
+     *
+     * @param {string} modelName
+     * @return {object}
+     * @memberof ContextPanelService
+     */
+    getRegistryFromModelName(modelName) {
+        if (typeof modelName === 'string' && modelName.includes('-')) {
+            modelName = camelize(modelName);
+        }
+        return this.registry[modelName];
     }
 
     /**
@@ -222,7 +282,9 @@ export default class ContextPanelService extends Service {
      */
     createDynamicArgsFromRegistry(registry, model, additionalArgs = {}) {
         // Generate dynamic arguments object
-        const dynamicArgs = {};
+        const dynamicArgs = {
+            [camelize(getModelName(model))]: model,
+        };
         const componentArguments = registry.componentArguments || [];
 
         componentArguments.forEach((arg, index) => {

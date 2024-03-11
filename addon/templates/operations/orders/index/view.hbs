@@ -202,6 +202,25 @@
             </div>
         </ContentPanel>
 
+        {{#if @model.order_config}}
+            {{#each this.customFieldGroups as |group|}}
+                <ContentPanel @title={{group.name}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <div class="grid grid-cols-{{or group.meta.grid_size 1}} gap-2">
+                        {{#each group.customFields as |customField|}}
+                            <div class="field-info-container space-y-2">
+                                <div class="field-name">{{customField.label}}</div>
+                                {{#if (and (eq customField.type "file-upload") customField.value.asFile)}}
+                                    <File @file={{customField.value.asFile}} @onDelete={{fn this.removeCustomFieldFile customField.value}} class="custom-field-file" />
+                                {{else}}
+                                    <div class="field-value">{{n-a customField.value.value}}</div>
+                                {{/if}}
+                            </div>
+                        {{/each}}
+                    </div>
+                </ContentPanel>
+            {{/each}}
+        {{/if}}
+
         {{#if @model.purchase_rate}}
             <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.purchase-rate-panel-title"}} @open={{true}} @pad={{false}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="order-view-purchase-rate-table-wrapper next-table-wrapper h-auto table-fluid rounded-b-md">
@@ -239,31 +258,22 @@
             </ContentPanel>
         {{/if}}
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.notes-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-            <p class="text-gray-700 dark:text-gray-300 leading-5 text-sm">{{n-a @model.notes}}</p>
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.notes-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.notesPanelButtons}}>
+            {{#if this.isEditingOrderNotes}}
+                <Textarea @value={{@model.notes}} class="form-input w-full" placeholder={{t "fleet-ops.operations.orders.index.view.notes-placeholder"}} rows={{4}} />
+                <div class="flex items-center space-x-2">
+                    <Button @type="primary" @icon="save" @text={{t "fleet-ops.operations.orders.index.view.save-order-note"}} @onClick={{perform this.saveOrderNotes}} @isLoading={{not this.saveOrderNotes.isIdle}} />
+                    <Button @type="default" @icon="times" @text={{t "fleet-ops.common.cancel"}} @onClick={{this.saveOrderNotes}} />
+                </div>
+            {{else}}
+                <p class="text-gray-700 dark:text-gray-300 leading-5 text-sm">{{n-a @model.notes}}</p>
+            {{/if}}
         </ContentPanel>
-        
+
         {{#if @model.isIntegratedVendorOrder}}
             <ContentPanel @title={{concat @model.facilitator.name (t "fleet-ops.operations.orders.index.view.order-details-title")}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <IntegratedOrderDetails @integratedVendor={{@model.facilitator}} @details={{@model.meta.integrated_vendor_order}} />
             </ContentPanel>
-        {{/if}}
-
-        {{#if @model.order_config}}
-            {{#each @model.groupedMetaFields as |group|}}
-                <ContentPanel @title={{if group.value (humanize group.value) (t "fleet-ops.operations.orders.index.view.additional-details-title")}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
-                        {{#each group.items as |metaField|}}
-                            <div class="field-info-container space-y-2">
-                                <div class="field-name">{{metaField.label}}</div>
-                                <div class="field-value">
-                                    <CustomFieldValue @metaField={{metaField}} @value={{get @model.meta metaField.key}} />
-                                </div>
-                            </div>
-                        {{/each}}
-                    </div>
-                </ContentPanel>
-            {{/each}}
         {{/if}}
 
         {{#if @model.tracking_number}}
@@ -305,78 +315,10 @@
             {{/if}}
         </ContentPanel>
 
-        {{#if @model.isStorefrontOrder}}
-            <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.order-summary"}} @prefixTitleRight={{if @model.payload.cod_amount "Cash" ""}} @prefixTitleRightClass="text-green-400" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-                <div class="flex flex-col space-y-4 p-2 overflow-hidden">
-                    {{#each @model.payload.entities as |entity|}}
-                        <div class="flex flex-1">
-                            <div class="mr-2">
-                                <div class="flex items-center justify-center w-6 h-5 border border-gray-200 dark:border-blue-400 rounded-md">
-                                    <span class="text-blue-400 text-xs">{{entity.meta.quantity}}x</span>
-                                </div>
-                            </div>
-                            <div class="flex-1 flex">
-                                <div class="mr-4">
-                                    <img src={{entity.photo_url}} class="w-12 h-12 rounded-md shadow-sm" alt={{entity.name}} />
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold dark:text-gray-100 mb-1 text-sm">{{entity.name}}</h4>
-                                    <div class="flex flex-wrap truncate w-44">
-                                        <p class="dark:text-gray-50 text-xs truncate">{{entity.description}}</p>
-                                    </div>
-                                    <div>
-                                        {{#each entity.meta.variants as |variant|}}
-                                            <div>
-                                                <span class="text-xs dark:text-gray-50">{{variant.name}}</span>
-                                            </div>
-                                        {{/each}}
-                                    </div>
-                                    <div>
-                                        {{#each entity.meta.addons as |addon|}}
-                                            <div>
-                                                <span class="text-xs dark:text-gray-50">+ {{addon.name}}</span>
-                                            </div>
-                                        {{/each}}
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <span class="dark:text-gray-50 text-sm">{{format-currency entity.meta.subtotal entity.currency}}</span>
-                            </div>
-                        </div>
-                    {{/each}}
-                </div>
-                <div class="p-2 space-y-2 border-t border-b dark:border-gray-800">
-                    <div class="flex items-center justify-between">
-                        <span class="dark:text-gray-50 text-sm">{{t "fleet-ops.operations.orders.index.view.subtotal"}}</span>
-                        <span class="dark:text-gray-50 text-sm">{{format-currency @model.meta.subtotal @model.meta.currency}}</span>
-                    </div>
-                    {{#unless @model.meta.is_pickup}}
-                        <div class="flex items-center justify-between">
-                            <span class="dark:text-gray-50 text-sm">{{t "fleet-ops.operations.orders.index.view.delivery-fee"}}</span>
-                            <span class="dark:text-gray-50 text-sm">{{format-currency @model.meta.delivery_fee @model.meta.currency}}</span>
-                        </div>
-                    {{/unless}}
-                    {{#if @model.meta.tip}}
-                        <div class="flex items-center justify-between">
-                            <span class="dark:text-gray-50 text-sm">{{t "fleet-ops.operations.orders.index.view.tip"}}</span>
-                            <span class="dark:text-gray-50 text-sm">{{get-tip-amount @model.meta.tip @model.meta.subtotal @model.meta.currency}}</span>
-                        </div>
-                    {{/if}}
-                    {{#if @model.meta.delivery_tip}}
-                        <div class="flex items-center justify-between">
-                            <span class="dark:text-gray-50 text-sm">{{t "fleet-ops.operations.orders.index.view.delivery-tip"}}</span>
-                            <span class="dark:text-gray-50 text-sm">{{get-tip-amount @model.meta.delivery_tip @model.meta.subtotal @model.meta.currency}}</span>
-                        </div>
-                    {{/if}}
-                </div>
-                <div class="p-2">
-                    <div class="flex items-center justify-between">
-                        <span class="dark:text-gray-50 font-bold text-sm">{{t "fleet-ops.operations.orders.index.view.total"}}</span>
-                        <span class="dark:text-gray-50 font-bold text-sm">{{format-currency @model.meta.total @model.meta.currency}}</span>
-                    </div>
-                </div>
-            </ContentPanel>
+        {{#if this.renderableComponents}}
+            {{#each this.renderableComponents as |renderableComponent|}}
+                {{component renderableComponent order=this.order}}
+            {{/each}}
         {{/if}}
 
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.payload"}} @open={{gt @model.payload.entities.length 0}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
@@ -473,13 +415,11 @@
                 </div>
             {{/if}}
         </ContentPanel>
-        
+
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.documents-panel-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <div class="space-y-4">
                 {{#if this.isUploading}}
-                    <div
-                        class="dropzone w-full rounded-lg px-4 py-8 bg-gray-50 dark:bg-gray-900 bg-opacity-25 text-gray-900 dark:text-white text-center flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-indigo-500"
-                    >
+                    <div class="dropzone w-full rounded-lg px-4 py-8 bg-gray-50 dark:bg-gray-900 bg-opacity-25 text-gray-900 dark:text-white text-center flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-indigo-500">
                         <div class="flex items-center justify-center py-5">
                             <Spinner class="text-sm dar:text-gray-100" @loadingMessage={{t "fleet-ops.common.uploading"}} />
                         </div>

@@ -48,7 +48,7 @@ class Payload extends FleetbaseResource
                 return $waypoint;
             });
         }
-        
+
         return [];
     }
 

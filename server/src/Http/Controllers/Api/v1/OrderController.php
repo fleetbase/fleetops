@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Events\OrderReady;
 use Fleetbase\FleetOps\Events\OrderStarted;
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\ScheduleOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateOrderRequest;
@@ -19,7 +20,6 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
-use Fleetbase\FleetOps\Support\Flow;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Company;
@@ -779,13 +779,16 @@ class OrderController extends Controller
             return response()->apiError('No driver assigned to order.');
         }
 
+        // Get the order config
+        $orderConfig = $order->config();
+
         // get the next order activity
-        $flow = $activity = Flow::getNextActivity($order);
+        $flow = $activity = $orderConfig->nextFirstActivity();
 
         // order is not dispatched if next activity code is dispatch or order is not flagged as dispatched
-        $isNotDispatched = $activity['code'] === 'dispatched' || $order->isNotDispatched;
+        $isNotDispatched = $activity->is('dispatched') || $order->isNotDispatched;
 
-        // if order is not dispatched yet $activity['code'] === 'dispatched' || $order->dispatched === true
+        // if order is not dispatched yet $activity->is('dispatched') || $order->dispatched === true
         // and not skipping throw order not dispatched error
         if ($isNotDispatched && !$skipDispatch) {
             return response()->apiError('Order has not been dispatched yet and cannot be started.');
@@ -793,7 +796,7 @@ class OrderController extends Controller
 
         // if we're going to skip the dispatch get the next activity status and flow and continue
         if ($isNotDispatched && $skipDispatch) {
-            $flow = $activity = Flow::getAfterNextActivity($order);
+            $flow = $activity = $orderConfig->afterNextActivity();
         }
 
         // set order to started
@@ -869,15 +872,22 @@ class OrderController extends Controller
             return response()->apiError('Order is already completed.');
         }
 
-        $activity = $request->input('activity', Flow::getNextActivity($order));
+        // Get the order config
+        $orderConfig = $order->config();
+        $activity    = $request->array('activity');
+        if (!Utils::isActivity($activity)) {
+            $activity = $orderConfig->nextFirstActivity();
+        } else {
+            $activity = new Activity($activity, $order->getConfigFlow());
+        }
 
         // if we're going to skip the dispatch get the next activity status and flow and continue
-        if (is_array($activity) && $activity['code'] === 'dispatched' && $skipDispatch) {
-            $activity = Flow::getAfterNextActivity($order);
+        if (Utils::isActivity($activity) && $activity->is('dispatched') && $skipDispatch) {
+            $activity = $orderConfig->afterNextActivity();
         }
 
         // handle pickup/dropoff order activity update as normal
-        if (is_array($activity) && $activity['code'] === 'dispatched') {
+        if (Utils::isActivity($activity) && $activity->is('dispatched')) {
             // make sure driver is assigned if not trigger failed dispatch
             if (!$order->hasDriverAssigned && !$order->adhoc) {
                 event(new OrderDispatchFailed($order, 'No driver assigned for order to dispatch to.'));
@@ -898,7 +908,7 @@ class OrderController extends Controller
             $order->payload->setFirstWaypoint($activity, $location);
         }
 
-        if (is_array($activity) && $activity['code'] === 'completed' && $order->payload->isMultipleDropOrder) {
+        if (Utils::isActivity($activity) && $activity->completeOrder() && $order->payload->isMultipleDropOrder) {
             // confirm every waypoint is completed
             $isCompleted = $order->payload->waypointMarkers->every(function ($waypoint) {
                 return $waypoint->status_code === 'COMPLETED';
@@ -921,22 +931,24 @@ class OrderController extends Controller
             }
         }
 
-        if (is_array($activity) && $activity['code'] === 'completed' && $order->driverAssigned) {
-            // unset from driver current job
-            $order->driverAssigned->unassignCurrentOrder();
-            $order->notifyCompleted();
-        }
-
+        // Update activity
         $order->updateActivity($activity, $proof);
 
         // also update for each order entities if not multiple drop order
         // all entities will share the same activity status as is one drop order
         if (!$order->payload->isMultipleDropOrder) {
             foreach ($order->payload->entities as $entity) {
-                $entity->insertActivity($activity['status'], $activity['details'] ?? '', $location, $activity['code'], $proof);
+                $entity->insertActivity($activity, $location, $proof);
             }
         } else {
             $order->payload->updateWaypointActivity($activity, $location);
+        }
+
+        // Handle order completion
+        if (Utils::isActivity($activity) && $activity->completeOrder() && $order->driverAssigned) {
+            // unset from driver current job
+            $order->driverAssigned->unassignCurrentOrder();
+            $order->complete();
         }
 
         return new OrderResource($order);
@@ -947,10 +959,8 @@ class OrderController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function getNextActivity(Request $request, string $id)
+    public function getNextActivity(string $id)
     {
-        $waypointId = $request->input('waypoint');
-
         try {
             $order = Order::findRecordOrFail($id, ['payload']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
@@ -962,22 +972,7 @@ class OrderController extends Controller
             );
         }
 
-        $isMultipleDropOrder = $order->payload->isMultipleDropOrder;
-
-        if ($waypointId && $isMultipleDropOrder) {
-            $waypoint = Waypoint::where('payload_uuid', $order->payload_uuid)->where(function ($q) use ($waypointId) {
-                $q->whereHas('place', function ($q) use ($waypointId) {
-                    $q->where('public_id', $waypointId);
-                });
-                $q->orWhere('public_id', $waypointId);
-            })->withoutGlobalScopes()->first();
-
-            $activity = Flow::getOrderWaypointFlow($order, $waypoint);
-
-            return response()->json($activity);
-        }
-
-        $activity = Flow::getOrderFlow($order);
+        $activity = $order->config()->nextActivity();
 
         return response()->json($activity);
     }
@@ -1010,24 +1005,17 @@ class OrderController extends Controller
             return response()->apiError('Not all waypoints completed for order.');
         }
 
-        $activity = [
-            'status'  => 'Order completed',
-            'details' => 'Driver has completed order for all waypoints',
-            'code'    => 'completed',
-        ];
-
+        $activity = $order->config()->getCompletedActivity();
         if ($order->driverAssigned) {
             // unset from driver current job
             $order->driverAssigned->unassignCurrentOrder();
         }
 
-        $order->notifyCompleted();
-
         /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point */
         $location = $order->getLastLocation();
-
-        $order->setStatus($activity['code']);
-        $order->insertActivity($activity['status'], $activity['details'] ?? '', $location, $activity['code']);
+        $order->setStatus($activity->code);
+        $order->insertActivity($activity, $location);
+        $order->notifyCompleted();
 
         return new OrderResource($order);
     }

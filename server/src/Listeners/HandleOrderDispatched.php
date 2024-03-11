@@ -5,9 +5,9 @@ namespace Fleetbase\FleetOps\Listeners;
 use Fleetbase\FleetOps\Events\OrderDispatched;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Notifications\OrderDispatched as OrderDispatchedNotification;
 use Fleetbase\FleetOps\Notifications\OrderPing;
-use Fleetbase\FleetOps\Support\Flow;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -39,15 +39,19 @@ class HandleOrderDispatched implements ShouldQueue
             return event(new OrderDispatchFailed($order, 'No driver assigned for order to dispatch to.'));
         }
 
-        /** check for dispatch code in activity options, if there is the correct dispatch code update activity */
-        $activity = Flow::getDispatchActivity($order);
-
-        if ($activity) {
-            /** update order activity */
-            $location = $order->getLastLocation();
-
-            $order->setStatus($activity['code']);
-            $order->createActivity($activity['status'], $activity['details'], $location, $activity['code']);
+        /**
+         * Check if dispatch activity already exists, if not -
+         * Check for dispatch code in activity options, if there is the correct dispatch code update activity.
+         **/
+        $doesntHaveDispatchActivity = TrackingStatus::where(['code' => 'DISPATCHED', 'tracking_number_uuid' => $order->tracking_number_uuid])->doesntExist();
+        if ($doesntHaveDispatchActivity) {
+            $activity = $order->config()->getDispatchActivity();
+            if ($activity) {
+                /** update order activity */
+                $location = $order->getLastLocation();
+                $order->setStatus($activity->code);
+                $order->createActivity($activity, $location);
+            }
         }
 
         /* update dispatch attributes */
@@ -59,10 +63,8 @@ class HandleOrderDispatched implements ShouldQueue
         /* if order is adhoc ping drivers within radius of pickup to accept order * */
         if ($order->adhoc) {
             $order->load(['company']);
-
             $pickup   = $order->getPickupLocation();
             $distance = $order->getAdhocDistance();
-
             if (!Utils::isPoint($pickup)) {
                 return;
             }

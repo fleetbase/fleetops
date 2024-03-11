@@ -5,6 +5,7 @@ export default buildRoutes(function () {
     this.route('operations', { path: '/' }, function () {
         this.route('dispatch');
         this.route('zones', function () {});
+        this.route('order-config', function () {});
         this.route('service-rates', function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');

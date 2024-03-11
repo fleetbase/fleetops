@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\Internal\v1\Payload as PayloadResource;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
@@ -578,6 +579,7 @@ class Payload extends Model
         }
 
         $this->load('order');
+
         return $this->order;
     }
 
@@ -585,6 +587,7 @@ class Payload extends Model
     {
         Waypoint::where('payload_uuid', $this->uuid)->delete();
         $this->setRelation('waypoints', collect());
+
         return $this;
     }
 
@@ -699,12 +702,11 @@ class Payload extends Model
     /**
      * Set the first waypoint and update activity.
      *
-     * @param array $activity
      * @param Point $location
      *
      * @return void
      */
-    public function setFirstWaypoint($activity = null, $location = null)
+    public function setFirstWaypoint(?Activity $activity = null, $location = null)
     {
         $destination = null;
 
@@ -728,27 +730,26 @@ class Payload extends Model
     /**
      * Update the current waypoint activity and it's entities.
      *
-     * @param array                               $activity
      * @param Point                               $location
      * @param \Fleetbase\Models\Proof|string|null $proof    resolvable proof of delivery/activity
      *
      * @return $this
      */
-    public function updateWaypointActivity($activity = null, $location = null, $proof = null)
+    public function updateWaypointActivity(?Activity $activity = null, $location = null, $proof = null)
     {
-        if ($this->isMultipleDropOrder && is_array($activity) && $location) {
+        if ($this->isMultipleDropOrder && Utils::isActivity($activity) && $location) {
             // update activity for the current waypoint
             $currentWaypoint = $this->waypointMarkers->firstWhere('place_uuid', $this->current_waypoint_uuid);
 
             if ($currentWaypoint) {
-                $currentWaypoint->insertActivity($activity['status'], $activity['details'], $location, $activity['code'], $proof);
+                $currentWaypoint->insertActivity($activity, $location, $proof);
             }
 
             // update activity for all entities for this destination/waypoint
             $entities = $this->entities->where('destination_uuid', $this->current_waypoint_uuid);
 
             foreach ($entities as $entity) {
-                $entity->insertActivity($activity['status'], $activity['details'], $location, $activity['code'], $proof);
+                $entity->insertActivity($activity, $location, $proof);
             }
         }
 

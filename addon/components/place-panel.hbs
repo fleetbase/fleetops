@@ -3,7 +3,7 @@
         <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.place-panel.edit-place"}} @onClick={{this.onEdit}} @wrapperClass="mr-2" />
         <Button @type="default" @icon="times" @helpText={{if this.place.id (t "fleet-ops.component.place-panel.cancel-edit-place")(t "fleet-ops.component.place-panel.cancel-new-place") }} @onClick={{this.onPressCancel}} />
     </Overlay::Header>
-    <Overlay::Body class="no-padding" @increaseInnerBodyHeightBy={{1000}}>
+    <Overlay::Body class="no-padding">
         <div class="section-header-actions w-full overflow-x-scroll lg:overflow-x-auto">
             <div class="ui-tabs mt-4">
                 <nav>
