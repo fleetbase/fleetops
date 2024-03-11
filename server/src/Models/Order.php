@@ -1211,14 +1211,7 @@ class Order extends Model
      */
     public function complete(?Proof $proof = null): self
     {
-        $activity = new Activity(
-            [
-                'code'    => 'completed',
-                'status'  => 'Order completed',
-                'details' => 'Order was completed.',
-            ]
-        );
-
+        $activity = $this->config()->getCompletedActivity();
         $this->notifyCompleted();
 
         return $this->updateActivity($activity, $proof);

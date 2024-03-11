@@ -323,9 +323,9 @@
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.payload-entities"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if this.isNotCsvImportedOrder}}
                 <div class="flex items-center mb-4">
-                    <Button @wrapperClass="mr-2" @icon="ellipsis-h" @iconPrefix="fas" @text={{t "fleet-ops.operations.orders.index.new.add-item-order"}} @size="sm" @onClick={{this.addEntity}} />
+                    <Button @wrapperClass="mr-2" @icon="square-plus" @iconPrefix="fas" @text={{t "fleet-ops.operations.orders.index.new.add-item-order"}} @size="sm" @onClick={{this.addEntity}} />
                     {{#if this.orderConfig.entities}}
-                        <DropdownButton @type="magic" @icon="circle-chevron-down" @size="sm" @iconPrefix="fas" @text={{t "fleet-ops.operations.orders.index.new.add-entity"}} @triggerClass="mr-2 hidden md:flex" as |dd|>
+                        <DropdownButton @type="magic" @icon="ellipsis-h" @size="sm" @iconPrefix="fas" @text={{t "fleet-ops.operations.orders.index.new.add-entity"}} @triggerClass="mr-2 hidden md:flex" as |dd|>
                             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                                 {{#each this.orderConfig.entities as |customEntity|}}
                                     <div class="p-1">

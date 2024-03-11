@@ -314,8 +314,9 @@ class OrderConfig extends Model
      */
     public function afterNextActivity(?Order $order = null): ?Activity
     {
-        $afterNext    = collect();
-        $nextActivity = $this->nextFirstActivity($order);
+        $afterNext       = collect();
+        $order           = $this->getOrderContext($order);
+        $nextActivity    = $this->nextFirstActivity($order);
         if ($nextActivity) {
             $afterNext = $nextActivity->getNext($order);
         }
@@ -352,11 +353,17 @@ class OrderConfig extends Model
      */
     public function getCanceledActivity()
     {
+        $canceledActivity = $this->activities()->firstWhere('code', 'canceled');
+        if ($canceledActivity) {
+            return $canceledActivity;
+        }
+
         return new Activity([
-            'key'     => 'order_canceled',
-            'code'    => 'canceled',
-            'status'  => 'Order canceled',
-            'details' => 'Order was canceled',
+            'key'      => 'order_canceled',
+            'code'     => 'canceled',
+            'status'   => 'Order canceled',
+            'details'  => 'Order was canceled',
+            'complete' => false,
         ], $this->flow);
     }
 
@@ -371,11 +378,42 @@ class OrderConfig extends Model
      */
     public function getCompletedActivity()
     {
+        $completedActivity = $this->activities()->firstWhere('code', 'completed');
+        if ($completedActivity) {
+            return $completedActivity;
+        }
+
         return new Activity([
-            'key'     => 'order_completed',
-            'code'    => 'completed',
-            'status'  => 'Order completed',
-            'details' => 'Order was completed',
+            'key'      => 'order_completed',
+            'code'     => 'completed',
+            'status'   => 'Order completed',
+            'details'  => 'Order was completed',
+            'complete' => true,
+        ], $this->flow);
+    }
+
+    /**
+     * Creates an Activity instance representing a started order.
+     *
+     * This method constructs an Activity object with specific attributes
+     * such as key, code, status, and details, indicating that the order has been started.
+     * It leverages the flow associated with the OrderConfig to construct this Activity.
+     *
+     * @return Activity a new Activity instance representing a started order
+     */
+    public function getStartedActivity()
+    {
+        $startedActivity = $this->activities()->firstWhere('code', 'started');
+        if ($startedActivity) {
+            return $startedActivity;
+        }
+
+        return new Activity([
+            'key'      => 'order_started',
+            'code'     => 'started',
+            'status'   => 'Order started',
+            'details'  => 'Order has started',
+            'complete' => false,
         ], $this->flow);
     }
 }

@@ -129,10 +129,13 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @memberof OrderConfigManagerActivityFlowComponent
      */
     @action resetConfig() {
-        this.flow = {};
-        const created = createFlowActivity('created', 'Order Created', 'New order was created.');
-        const dispatched = createFlowActivity('dispatched', 'Order Dispatched', 'Order has been dispatched.');
-        this.addActivityToGraph([created, dispatched]);
+        this.clearGraph({
+            onAfter: () => {
+                this.flow = {};
+                const defaultActivities = this.getDefaultActivities();
+                this.addActivityToGraph(defaultActivities);
+            },
+        });
     }
 
     /**
@@ -426,6 +429,17 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     }
 
     /**
+     * Get the standard default activities which apply to every order.
+     * @returns {Array}
+     */
+    getDefaultActivities() {
+        const created = createFlowActivity('created', 'Order Created', 'New order was created.');
+        const dispatched = createFlowActivity('dispatched', 'Order Dispatched', 'Order has been dispatched.');
+        const started = createFlowActivity('started', 'Order Started', 'Order has been started');
+        return [created, [dispatched, started]];
+    }
+
+    /**
      * Initializes the activity flow by either loading from configuration or creating a default flow.
      */
     initializeActivityFlow() {
@@ -436,9 +450,8 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             return;
         }
 
-        const created = createFlowActivity('created', 'Order Created', 'New order was created.');
-        const dispatched = createFlowActivity('dispatched', 'Order Dispatched', 'Order has been dispatched.');
-        this.addActivityToGraph([created, dispatched]);
+        const defaultActivities = this.getDefaultActivities();
+        this.addActivityToGraph(defaultActivities);
         this.initializeContext();
     }
 
@@ -454,6 +467,20 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         let lastActivity = null;
         activities.forEach((activityObject, index) => {
             if (index > 0 && lastActivity) {
+                if (isArray(activityObject)) {
+                    let lastChildActivity = null;
+                    return activityObject.forEach((childActivityObject, childIndex) => {
+                        if (childIndex > 0 && lastChildActivity) {
+                            console.log('[lastChildActivity]', lastChildActivity);
+                            console.log('[childActivityObject]', childActivityObject);
+                            this.addNewLinkedActivity(lastChildActivity, childActivityObject);
+                            return;
+                        }
+                        const firstChildActivity = this.addNewLinkedActivity(lastActivity, childActivityObject);
+                        lastChildActivity = firstChildActivity;
+                    });
+                }
+
                 this.addNewLinkedActivity(lastActivity, activityObject);
                 return;
             }

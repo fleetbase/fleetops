@@ -13,14 +13,12 @@ class OrganizationController extends Controller
      *
      * @return Organization
      */
-
     public function listOrganizations()
     {
-    
         $companies = Company::whereHas('users')->take(10)->get()->map(function ($company) {
             return [
                 'name' => $company->name,
-                'id' => $company->public_id
+                'id'   => $company->public_id,
             ];
         });
 

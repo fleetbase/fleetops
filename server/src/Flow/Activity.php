@@ -236,40 +236,4 @@ class Activity extends FlowResource
     {
         return $this->complete();
     }
-
-    /**
-     * Creates a new instance representing a completed order.
-     *
-     * This method initializes an order as completed with predefined values such as
-     * key, code, status, and details specific to a completed order.
-     *
-     * @return static a new instance of the class with properties set for a completed order
-     */
-    public static function completed()
-    {
-        return new static([
-            'key'     => 'order_completed',
-            'code'    => 'completed',
-            'status'  => 'Order completed',
-            'details' => 'Order was completed',
-        ]);
-    }
-
-    /**
-     * Creates a new instance representing a canceled order.
-     *
-     * This method initializes an order as canceled with predefined values such as
-     * key, code, status, and details specific to a canceled order.
-     *
-     * @return static a new instance of the class with properties set for a canceled order
-     */
-    public static function canceled()
-    {
-        return new static([
-            'key'     => 'order_canceled',
-            'code'    => 'canceled',
-            'status'  => 'Order canceled',
-            'details' => 'Order was canceled',
-        ]);
-    }
 }

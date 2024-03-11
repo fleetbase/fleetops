@@ -4,8 +4,8 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Http\Requests\CreateIssueRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateIssueRequest;
-use Fleetbase\FleetOps\Http\Resources\v1\Issue as IssueResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Issue as DeletedIssue;
+use Fleetbase\FleetOps\Http\Resources\v1\Issue as IssueResource;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Issue;
 use Fleetbase\Http\Controllers\Controller;
@@ -45,9 +45,9 @@ class IssueController extends Controller
         }
 
         // get the user uuid
-        $input['driver_uuid'] = $driver->uuid;
+        $input['driver_uuid']      = $driver->uuid;
         $input['reported_by_uuid'] = $driver->user_uuid;
-        $input['vehicle_uuid'] = $driver->vehicle_uuid;
+        $input['vehicle_uuid']     = $driver->vehicle_uuid;
 
         // create the entity
         $entity = Issue::create($input);
@@ -56,9 +56,9 @@ class IssueController extends Controller
         return new IssueResource($entity);
     }
 
-       /**
+    /**
      * Updates new Fleetbase Issue resource.
-     * 
+     *
      * @param string                                      $id
      * @param \Fleetbase\Http\Requests\UpdateIssueRequest $request
      *
@@ -85,14 +85,12 @@ class IssueController extends Controller
                 'priority',
             ]);
 
-
         // update the issue
         $issue->update($input);
 
         // response the issue resource
         return new IssueResource($issue);
     }
-
 
     /**
      * Query for Fleetbase Issue resources.
@@ -106,8 +104,7 @@ class IssueController extends Controller
         return IssueResource::collection($results);
     }
 
-
-        /**
+    /**
      * Deletes a Fleetbase Issue resources.
      *
      * @return \Fleetbase\Http\Resources\FleetCollection

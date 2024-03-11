@@ -35,7 +35,7 @@ class OrderController extends Controller
     /**
      * Creates a new Fleetbase Order resource.
      *
-     * @param \Illuminate\Http\Request|\Fleetbase\Http\Requests\CreateOrderRequest $request
+     * @param Request|\Fleetbase\Http\Requests\CreateOrderRequest $request
      *
      * @return \Fleetbase\Http\Resources\Order
      */
@@ -782,21 +782,16 @@ class OrderController extends Controller
         // Get the order config
         $orderConfig = $order->config();
 
-        // get the next order activity
-        $flow = $activity = $orderConfig->nextFirstActivity();
+        // Get the order started activity
+        $activity = $orderConfig->getStartedActivity();
 
-        // order is not dispatched if next activity code is dispatch or order is not flagged as dispatched
-        $isNotDispatched = $activity->is('dispatched') || $order->isNotDispatched;
+        // Order is not dispatched if next activity code is dispatch or order is not flagged as dispatched
+        $isNotDispatched = $order->isNotDispatched;
 
-        // if order is not dispatched yet $activity->is('dispatched') || $order->dispatched === true
+        // If order is not dispatched yet $activity->is('dispatched') || $order->dispatched === true
         // and not skipping throw order not dispatched error
         if ($isNotDispatched && !$skipDispatch) {
             return response()->apiError('Order has not been dispatched yet and cannot be started.');
-        }
-
-        // if we're going to skip the dispatch get the next activity status and flow and continue
-        if ($isNotDispatched && $skipDispatch) {
-            $flow = $activity = $orderConfig->afterNextActivity();
         }
 
         // set order to started
@@ -819,7 +814,7 @@ class OrderController extends Controller
         $order->setRelation('payload', $payload);
 
         // update order activity
-        $updateActivityRequest = new Request(['activity' => $flow]);
+        $updateActivityRequest = new Request(['activity' => $activity->serialize()]);
 
         // update activity
         return $this->updateActivity($order, $updateActivityRequest);
@@ -876,14 +871,12 @@ class OrderController extends Controller
         $orderConfig = $order->config();
         $activity    = $request->array('activity');
         if (!Utils::isActivity($activity)) {
-            $activity = $orderConfig->nextFirstActivity();
-        } else {
             $activity = new Activity($activity, $order->getConfigFlow());
         }
 
         // if we're going to skip the dispatch get the next activity status and flow and continue
         if (Utils::isActivity($activity) && $activity->is('dispatched') && $skipDispatch) {
-            $activity = $orderConfig->afterNextActivity();
+            $activity = $orderConfig->getStartedActivity();
         }
 
         // handle pickup/dropoff order activity update as normal
@@ -908,7 +901,7 @@ class OrderController extends Controller
             $order->payload->setFirstWaypoint($activity, $location);
         }
 
-        if (Utils::isActivity($activity) && $activity->completeOrder() && $order->payload->isMultipleDropOrder) {
+        if (Utils::isActivity($activity) && $activity->completesOrder() && $order->payload->isMultipleDropOrder) {
             // confirm every waypoint is completed
             $isCompleted = $order->payload->waypointMarkers->every(function ($waypoint) {
                 return $waypoint->status_code === 'COMPLETED';
@@ -945,7 +938,7 @@ class OrderController extends Controller
         }
 
         // Handle order completion
-        if (Utils::isActivity($activity) && $activity->completeOrder() && $order->driverAssigned) {
+        if (Utils::isActivity($activity) && $activity->completesOrder()) {
             // unset from driver current job
             $order->driverAssigned->unassignCurrentOrder();
             $order->complete();
@@ -1100,7 +1093,7 @@ class OrderController extends Controller
      *
      * @return void
      */
-    public function captureQrScan(Request $request, string $id, ?string $subjectId = null) 
+    public function captureQrScan(Request $request, string $id, ?string $subjectId = null)
     {
         $code    = $request->input('code');
         $data    = $request->input('data', []);
@@ -1117,7 +1110,7 @@ class OrderController extends Controller
                 404
             );
         }
-        
+
         if (!$code) {
             return response()->apiError('No QR code data to capture.');
         }
@@ -1257,13 +1250,13 @@ class OrderController extends Controller
 
         return new ProofResource($proof);
     }
-    
+
     /**
      * Validate a photo.
      *
      * @return void
      */
-    public function capturePhoto( Request $request, string $id, ?string $subjectId = null)
+    public function capturePhoto(Request $request, string $id, ?string $subjectId = null)
     {
         $disk         = $request->input('disk', config('filesystems.default'));
         $bucket       = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
