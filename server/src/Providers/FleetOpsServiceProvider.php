@@ -6,8 +6,9 @@ use Brick\Geo\Engine\GeometryEngineRegistry;
 use Brick\Geo\Engine\GEOSEngine;
 use Fleetbase\Providers\CoreServiceProvider;
 use Fleetbase\Support\NotificationRegistry;
+use Fleetbase\Support\Utils;
 
-if (!class_exists(CoreServiceProvider::class)) {
+if (!Utils::classExists(CoreServiceProvider::class)) {
     throw new \Exception('FleetOps cannot be loaded without `fleetbase/core-api` installed!');
 }
 
@@ -45,6 +46,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\DispatchOrders::class,
         \Fleetbase\FleetOps\Console\Commands\TrackOrderDistanceAndTime::class,
         \Fleetbase\FleetOps\Console\Commands\FixDriverCompanies::class,
+        \Fleetbase\FleetOps\Console\Commands\FixLegacyOrderConfigs::class,
     ];
 
     /**

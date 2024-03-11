@@ -527,7 +527,7 @@ class DriverController extends Controller
         }
 
         // Get the user account company
-        $company = Flow::getCompanySessionForUser($user);
+        $company = Auth::getCompanySessionForUser($user);
         if (!$company) {
             return response()->apiError('No company found for this driver.');
         }
@@ -752,7 +752,7 @@ class DriverController extends Controller
 
         // If unable to find company from driver profile, fallback to session flow
         if (!$company) {
-            $company = Flow::getCompanySessionForUser($user);
+            $company = Auth::getCompanySessionForUser($user);
         }
 
         return $company;

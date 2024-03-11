@@ -59,7 +59,7 @@ class OrderDispatchFailed extends Notification implements ShouldQueue
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return \Illuminate\Broadcasting\Channel|array
+     * @return Channel|array
      */
     public function broadcastOn()
     {

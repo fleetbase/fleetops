@@ -28,7 +28,7 @@
                                 {{activity.details}}
 
                                 {{#if (eq activity.code "dispatched")}}
-                                    <InfoBlock class="warning xs mt-2" @icon="exclamation-triangle" @text={{t "fleet-ops.component.modals.order-new-activity.dispatch"}} />
+                                    <InfoBlock class="warning xs mt-2" @icon="exclamation-triangle" @textClass="text-yellow-900 focus:text-yellow-900" @text={{t "fleet-ops.component.modals.order-new-activity.dispatch"}} />
                                 {{/if}}
                             </span>
                         </label>

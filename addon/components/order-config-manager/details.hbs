@@ -1,0 +1,23 @@
+<div class="px-6 py-2 space-y-4">
+    <ContentPanel @title={{t "fleet-ops.component.order-config-manager.details.details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-900">
+        <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.name"}} @value={{@config.name}} @disabled={{@config.core_service}} />
+        <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.description"}} @value={{@config.description}} @disabled={{@config.core_service}} />
+        <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.tags"}}>
+            <TagInput class="form-input" @placeholder={{t "fleet-ops.component.order-config-manager.details.add-tags"}} @allowSpacesInTags={{true}} @tags={{@config.tags}} @addTag={{@config.addTag}} @removeTagAtIndex={{@config.removeTag}} @disabled={{@config.core_service}} as |tag|>
+                {{tag}}
+            </TagInput>
+        </InputGroup>
+        <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.key"}} @value={{@config.key}} @disabled={{true}} />
+        <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.namespace"}} @value={{@config.namespace}} @disabled={{true}} />
+        <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.version"}} @value={{@config.version}} @disabled={{true}} />
+    </ContentPanel>
+
+    {{#unless @config.core_service}}
+        <ContentPanel @title={{t "fleet-ops.component.order-config-manager.details.controls"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-900">
+            <div class="flex flex-row items-center py-2 space-x-4">
+                <Button @type="primary" @icon="save" @text={{t "common.save-changes"}} @onClick={{this.save}} @disabled={{not @config.hasDirtyAttributes}} />
+                <Button @type="danger" @icon="trash" @text={{t "fleet-ops.component.order-config-manager.details.delete-config"}} @onClick={{this.delete}} />
+            </div>
+        </ContentPanel>
+    {{/unless}}
+</div>

@@ -21,7 +21,6 @@
 
 {{#if this.isTableLayout}}
     <Layout::Section::Header @title={{t "fleet-ops.common.orders"}} @onSearch={{perform this.search}}>
-        <Button @icon="cogs" @text={{t "fleet-ops.common.config"}} class="mr-2" @onClick={{fn (transition-to "operations.orders.index.config")}} />
         <FiltersPicker @columns={{this.columns}} @onApply={{fn this.filters.apply this}} @onClear={{fn this.filters.reset this}} @onFilterClear={{this.filters.clear}} @onChange={{this.filters.set}} @buttonWrapperClass="mr-2" />
         <VisibleColumnPicker @columns={{this.columns}} @onChange={{fn (mut this.columns)}} class="mr-2" />
         {{#if (safe-has this.table "selectedRows")}}

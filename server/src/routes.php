@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+Route::get('fleet-ops-test', 'Fleetbase\FleetOps\Http\Controllers\Controller@test');
+
 Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase\FleetOps\Http\Controllers')->group(
     function ($router) {
         /*
@@ -60,6 +62,9 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->put('{id}', 'VendorController@update');
                     $router->delete('{id}', 'VendorController@delete');
                 });
+                $router->fleetbaseRoutes(
+                    'issues'
+                );
                 // orders routes
                 $router->group(['prefix' => 'orders'], function () use ($router) {
                     $router->post('/', 'OrderController@create');
@@ -76,6 +81,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->match(['post', 'patch'], '{id}/set-destination/{placeId}', 'OrderController@setDestination');
                     $router->post('{id}/capture-signature/{subjectId?}', 'OrderController@captureSignature');
                     $router->post('{id}/capture-qr/{subjectId?}', 'OrderController@captureQrScan');
+                    $router->post('{id}/capture-photo/{subjectId?}', 'OrderController@capturePhoto');
                     $router->put('{id}', 'OrderController@update');
                     $router->delete('{id}', 'OrderController@delete');
                 });
@@ -178,6 +184,17 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
             });
 
         /*
+         |--------------------------------------------------------------------------
+         | Publicly Consumable FleetOps API Routes
+         |--------------------------------------------------------------------------
+         |
+         | End-user API routes, these are routes that the SDK and applications will interface with, that DO NOT REQUIRE API credentials.
+         */
+        $router->group(['prefix' => 'v1', 'namespace' => 'Api\v1'], function () use ($router) {
+            $router->get('organizations', 'OrganizationController@listOrganizations');
+        });
+
+        /*
         |--------------------------------------------------------------------------
         | Navigator App API
         |--------------------------------------------------------------------------
@@ -209,6 +226,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                         $router->post('{id}/set-destination/{placeId}', 'Api\v1\OrderController@setDestination');
                         $router->post('{id}/capture-signature/{subjectId?}', 'Api\v1\OrderController@captureSignature');
                         $router->post('{id}/capture-qr/{subjectId?}', 'Api\v1\OrderController@captureQrScan');
+                        $router->post('{id}/capture-photo/{subjectId?}', 'Api\v1\OrderController@capturePhoto');
                         $router->put('{id}', 'Api\v1\OrderController@update');
                         $router->delete('{id}', 'Api\v1\OrderController@delete');
                     });
@@ -320,6 +338,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
+                        $router->fleetbaseRoutes('order-configs');
                         $router->fleetbaseRoutes('payloads');
                         $router->fleetbaseRoutes(
                             'places',
@@ -393,17 +412,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                         $router->group(
                             ['prefix' => 'fleet-ops'],
                             function ($router) {
-                                $router->group(
-                                    ['prefix' => 'order-configs'],
-                                    function () use ($router) {
-                                        $router->get('get-installed', 'OrderConfigController@getInstalled');
-                                        $router->get('dynamic-meta-fields', 'OrderConfigController@getDynamicMetaFields');
-                                        $router->post('save', 'OrderConfigController@save');
-                                        $router->post('new', 'OrderConfigController@new');
-                                        $router->post('clone', 'OrderConfigController@clone');
-                                        $router->delete('{id}', 'OrderConfigController@delete');
-                                    }
-                                );
                                 $router->group(
                                     ['prefix' => 'lookup'],
                                     function ($router) {

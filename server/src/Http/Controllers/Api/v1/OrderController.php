@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Events\OrderReady;
 use Fleetbase\FleetOps\Events\OrderStarted;
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\ScheduleOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateOrderRequest;
@@ -19,7 +20,6 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
-use Fleetbase\FleetOps\Support\Flow;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Company;
@@ -35,7 +35,7 @@ class OrderController extends Controller
     /**
      * Creates a new Fleetbase Order resource.
      *
-     * @param \Illuminate\Http\Request|\Fleetbase\Http\Requests\CreateOrderRequest $request
+     * @param Request|\Fleetbase\Http\Requests\CreateOrderRequest $request
      *
      * @return \Fleetbase\Http\Resources\Order
      */
@@ -779,21 +779,19 @@ class OrderController extends Controller
             return response()->apiError('No driver assigned to order.');
         }
 
-        // get the next order activity
-        $flow = $activity = Flow::getNextActivity($order);
+        // Get the order config
+        $orderConfig = $order->config();
 
-        // order is not dispatched if next activity code is dispatch or order is not flagged as dispatched
-        $isNotDispatched = $activity['code'] === 'dispatched' || $order->isNotDispatched;
+        // Get the order started activity
+        $activity = $orderConfig->getStartedActivity();
 
-        // if order is not dispatched yet $activity['code'] === 'dispatched' || $order->dispatched === true
+        // Order is not dispatched if next activity code is dispatch or order is not flagged as dispatched
+        $isNotDispatched = $order->isNotDispatched;
+
+        // If order is not dispatched yet $activity->is('dispatched') || $order->dispatched === true
         // and not skipping throw order not dispatched error
         if ($isNotDispatched && !$skipDispatch) {
             return response()->apiError('Order has not been dispatched yet and cannot be started.');
-        }
-
-        // if we're going to skip the dispatch get the next activity status and flow and continue
-        if ($isNotDispatched && $skipDispatch) {
-            $flow = $activity = Flow::getAfterNextActivity($order);
         }
 
         // set order to started
@@ -816,7 +814,7 @@ class OrderController extends Controller
         $order->setRelation('payload', $payload);
 
         // update order activity
-        $updateActivityRequest = new Request(['activity' => $flow]);
+        $updateActivityRequest = new Request(['activity' => $activity->serialize()]);
 
         // update activity
         return $this->updateActivity($order, $updateActivityRequest);
@@ -869,15 +867,20 @@ class OrderController extends Controller
             return response()->apiError('Order is already completed.');
         }
 
-        $activity = $request->input('activity', Flow::getNextActivity($order));
+        // Get the order config
+        $orderConfig = $order->config();
+        $activity    = $request->array('activity');
+        if (!Utils::isActivity($activity)) {
+            $activity = new Activity($activity, $order->getConfigFlow());
+        }
 
         // if we're going to skip the dispatch get the next activity status and flow and continue
-        if (is_array($activity) && $activity['code'] === 'dispatched' && $skipDispatch) {
-            $activity = Flow::getAfterNextActivity($order);
+        if (Utils::isActivity($activity) && $activity->is('dispatched') && $skipDispatch) {
+            $activity = $orderConfig->getStartedActivity();
         }
 
         // handle pickup/dropoff order activity update as normal
-        if (is_array($activity) && $activity['code'] === 'dispatched') {
+        if (Utils::isActivity($activity) && $activity->is('dispatched')) {
             // make sure driver is assigned if not trigger failed dispatch
             if (!$order->hasDriverAssigned && !$order->adhoc) {
                 event(new OrderDispatchFailed($order, 'No driver assigned for order to dispatch to.'));
@@ -898,7 +901,7 @@ class OrderController extends Controller
             $order->payload->setFirstWaypoint($activity, $location);
         }
 
-        if (is_array($activity) && $activity['code'] === 'completed' && $order->payload->isMultipleDropOrder) {
+        if (Utils::isActivity($activity) && $activity->completesOrder() && $order->payload->isMultipleDropOrder) {
             // confirm every waypoint is completed
             $isCompleted = $order->payload->waypointMarkers->every(function ($waypoint) {
                 return $waypoint->status_code === 'COMPLETED';
@@ -921,22 +924,24 @@ class OrderController extends Controller
             }
         }
 
-        if (is_array($activity) && $activity['code'] === 'completed' && $order->driverAssigned) {
-            // unset from driver current job
-            $order->driverAssigned->unassignCurrentOrder();
-            $order->notifyCompleted();
-        }
-
+        // Update activity
         $order->updateActivity($activity, $proof);
 
         // also update for each order entities if not multiple drop order
         // all entities will share the same activity status as is one drop order
         if (!$order->payload->isMultipleDropOrder) {
             foreach ($order->payload->entities as $entity) {
-                $entity->insertActivity($activity['status'], $activity['details'] ?? '', $location, $activity['code'], $proof);
+                $entity->insertActivity($activity, $location, $proof);
             }
         } else {
             $order->payload->updateWaypointActivity($activity, $location);
+        }
+
+        // Handle order completion
+        if (Utils::isActivity($activity) && $activity->completesOrder()) {
+            // unset from driver current job
+            $order->driverAssigned->unassignCurrentOrder();
+            $order->complete();
         }
 
         return new OrderResource($order);
@@ -947,10 +952,8 @@ class OrderController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function getNextActivity(string $id, Request $request)
+    public function getNextActivity(string $id)
     {
-        $waypointId = $request->input('waypoint');
-
         try {
             $order = Order::findRecordOrFail($id, ['payload']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
@@ -962,22 +965,7 @@ class OrderController extends Controller
             );
         }
 
-        $isMultipleDropOrder = $order->payload->isMultipleDropOrder;
-
-        if ($waypointId && $isMultipleDropOrder) {
-            $waypoint = Waypoint::where('payload_uuid', $order->payload_uuid)->where(function ($q) use ($waypointId) {
-                $q->whereHas('place', function ($q) use ($waypointId) {
-                    $q->where('public_id', $waypointId);
-                });
-                $q->orWhere('public_id', $waypointId);
-            })->withoutGlobalScopes()->first();
-
-            $activity = Flow::getOrderWaypointFlow($order, $waypoint);
-
-            return response()->json($activity);
-        }
-
-        $activity = Flow::getOrderFlow($order);
+        $activity = $order->config()->nextActivity();
 
         return response()->json($activity);
     }
@@ -1010,24 +998,17 @@ class OrderController extends Controller
             return response()->apiError('Not all waypoints completed for order.');
         }
 
-        $activity = [
-            'status'  => 'Order completed',
-            'details' => 'Driver has completed order for all waypoints',
-            'code'    => 'completed',
-        ];
-
+        $activity = $order->config()->getCompletedActivity();
         if ($order->driverAssigned) {
             // unset from driver current job
             $order->driverAssigned->unassignCurrentOrder();
         }
 
-        $order->notifyCompleted();
-
         /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point */
         $location = $order->getLastLocation();
-
-        $order->setStatus($activity['code']);
-        $order->insertActivity($activity['status'], $activity['details'] ?? '', $location, $activity['code']);
+        $order->setStatus($activity->code);
+        $order->insertActivity($activity, $location);
+        $order->notifyCompleted();
 
         return new OrderResource($order);
     }
@@ -1112,7 +1093,7 @@ class OrderController extends Controller
      *
      * @return void
      */
-    public function captureQrScan(string $id, ?string $subjectId = null, Request $request)
+    public function captureQrScan(Request $request, string $id, ?string $subjectId = null)
     {
         $code    = $request->input('code');
         $data    = $request->input('data', []);
@@ -1183,7 +1164,7 @@ class OrderController extends Controller
      *
      * @return void
      */
-    public function captureSignature(string $id, ?string $subjectId = null, Request $request)
+    public function captureSignature(Request $request, string $id, ?string $subjectId = null)
     {
         $disk         = $request->input('disk', config('filesystems.default'));
         $bucket       = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
@@ -1261,6 +1242,98 @@ class OrderController extends Controller
             'bucket'            => $bucket,
             'type'              => 'signature',
             'size'              => Utils::getBase64ImageSize($signature),
+        ])->setKey($proof);
+
+        // set file to proof
+        $proof->file_uuid = $file->uuid;
+        $proof->save();
+
+        return new ProofResource($proof);
+    }
+
+    /**
+     * Validate a photo.
+     *
+     * @return void
+     */
+    public function capturePhoto(Request $request, string $id, ?string $subjectId = null)
+    {
+        $disk         = $request->input('disk', config('filesystems.default'));
+        $bucket       = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
+        $photo        = $request->input('photo');
+        $data         = $request->input('data', []);
+        $remarks      = $request->input('remarks', 'Verified by Photo');
+        $type         = $subjectId ? strtok($subjectId, '_') : null;
+
+        try {
+            $order = Order::findRecordOrFail($id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return response()->json(
+                [
+                    'error' => 'Order resource not found.',
+                ],
+                404
+            );
+        }
+
+        if (!$photo) {
+            return response()->apiError('No photo data to capture.');
+        }
+
+        $subject = $type === null ? $order : null;
+
+        switch ($type) {
+            case 'place':
+            case 'waypoint':
+                $subject = Waypoint::where('payload_uuid', $order->payload_uuid)->where(function ($q) use ($subjectId) {
+                    $q->whereHas('place', function ($q) use ($subjectId) {
+                        $q->where('public_id', $subjectId);
+                    });
+                    $q->orWhere('public_id', $subjectId);
+                })->withoutGlobalScopes()->first();
+                break;
+
+            case 'entity':
+                $subject = Entity::where('public_id', $subjectId)->withoutGlobalScopes()->first();
+                break;
+
+            default:
+                break;
+        }
+
+        if (!$subject) {
+            return response()->apiError('Unable to capture photo');
+        }
+
+        // create proof instance
+        $proof = Proof::create([
+            'company_uuid' => session('company'),
+            'order_uuid'   => $order->uuid,
+            'subject_uuid' => $subject->uuid,
+            'subject_type' => Utils::getModelClassName($subject),
+            'remarks'      => $remarks,
+            'raw_data'     => $photo,
+            'data'         => $data,
+        ]);
+
+        // set the photo storage path
+        $path = 'uploads/' . session('company') . '/photos/' . $proof->public_id . '.png';
+
+        // upload photo
+        Storage::disk($disk)->put($path, base64_decode($photo));
+
+        // create file record for upload
+        $file = File::create([
+            'company_uuid'      => session('company'),
+            'uploader_uuid'     => session('user'),
+            'name'              => basename($path),
+            'original_filename' => basename($path),
+            'extension'         => 'png',
+            'content_type'      => 'image/png',
+            'path'              => $path,
+            'bucket'            => $bucket,
+            'type'              => 'photo',
+            'size'              => Utils::getBase64ImageSize($photo),
         ])->setKey($proof);
 
         // set file to proof

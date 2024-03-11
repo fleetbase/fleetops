@@ -1,42 +1,64 @@
-<div class="custom-meta-field" ...attributes>
-    {{#if this.isTextInput}}
-        <Input @type="text" class="form-input w-full {{@inputClass}}" @value={{@value}} placeholder={{@placeholder}} />
-    {{/if}}
-
-    {{#if this.isSelectInput}}
-        <Select class="{{@inputClass}} w-full" @options={{@metaField.options}} @optionLabel="label" @optionValue="value" @value={{@value}} @placeholder={{@placeholder}} @humanize={{@metaField.humanizeOptions}} @onSelect={{@onChange}} />
-    {{/if}}
-
-    {{#if this.isDateTimeInput}}
-        <DateTimeInput class="form-input {{@inputClass}}" @value={{@value}} @onUpdate={{this.setDateValue}} />
-    {{/if}}
-
-    {{#if this.isPortInput}}
-        <ModelSelect @modelName="port" @selectedModel={{this.selectedPort}} @placeholder="Select Port" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @onChange={{this.selectPort}} as |port|>
-            <div class="flex items-center">
-                <span class="uppercase">
-                    {{port.name}} - {{port.portcode}}
-                </span>
-            </div>
-        </ModelSelect>
-    {{/if}}
-
-    {{#if this.isVesselInput}}
-        <ModelSelect @modelName="vessel" @selectedModel={{this.selectedVessel}} @placeholder="Select Vessel" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @onChange={{this.selectVessel}} as |vessel|>
-            <div class="flex items-center">
-                <div class="w-7">
-                    <FaIcon @icon="ship" />
+{{#if this.customFieldComponent}}
+    <div class="{{if this.customField.meta.colSpan (concat "col-span-" this.customField.meta.colSpan) ''}}">
+        {{#if (eq this.customFieldComponent "input")}}
+            <InputGroup @name={{this.customField.label}} @value={{this.value}} @required={{this.customField.required}} @helpText={{this.customField.help_text}} {{on "input" this.onChangeHandler}} />
+        {{else if (eq this.customFieldComponent "select")}}
+            <InputGroup @name={{this.customField.label}} @required={{this.customField.required}} @helpText={{this.customField.help_text}}>
+                <select class="form-select w-full has--placeholder" {{on "change" this.onChangeHandler}}>
+                    <option selected disabled>
+                        {{this.customField.label}}
+                    </option>
+                    {{#each this.customField.options as |selectOption|}}
+                        <option value={{selectOption}} selected={{eq this.value selectOption}}>
+                            {{selectOption}}
+                        </option>
+                    {{/each}}
+                </select>
+            </InputGroup>
+        {{else if (eq this.customFieldComponent "phone-input")}}
+            <InputGroup @name={{this.customField.label}} @required={{this.customField.required}} @helpText={{this.customField.help_text}}>
+                <PhoneInput @value={{this.value}} @onInput={{this.onChangeHandler}} class="form-input w-full" />
+            </InputGroup>
+        {{else if (eq this.customFieldComponent "money-input")}}
+            <InputGroup @name={{this.customField.label}} @required={{this.customField.required}} @helpText={{this.customField.help_text}}>
+                <MoneyInput class="w-full" @wrapperClass="x-fleetops-input-height shadow-md" @value={{this.value}} @canSelectCurrency={{true}} @onChange={{this.onChangeHandler}} />
+            </InputGroup>
+        {{else if (eq this.customFieldComponent "date-time-input")}}
+            <InputGroup @name={{this.customField.label}} @required={{this.customField.required}} @helpText={{this.customField.help_text}}>
+                <DateTimeInput class="form-input" @value={{this.value}} @minDate={{format-date (now) "yyyy-MM-d" }} @minTime={{format-date (now) "HH:mm" }} @onUpdate={{this.onChangeHandler}} />
+            </InputGroup>
+        {{else if (eq this.customFieldComponent "radio-button-select")}}
+            <InputGroup @name={{this.customField.label}} @required={{this.customField.required}} @helpText={{this.customField.help_text}}>
+                <div class="mt-2 flex items-center space-x-2">
+                    {{#each this.customField.options as |radioOption index|}}
+                        <div class="radio-group-item shadow-sm {{if (eq this.value radioOption) 'is-checked'}}">
+                            <div class="flex items-center">
+                                <RadioButton @radioClass="focus:ring-blue-500" @radioId={{concat this.customField.name "-radio-option-" index}} @value={{radioOption}} @groupValue={{this.value}} @name={{radioOption}} @changed={{this.onChangeHandler}} />
+                                <div class="ml-2 text-sm dark:text-gray-100 text-gray-900 truncate">{{radioOption}}</div>
+                            </div>
+                        </div>
+                    {{/each}}
                 </div>
-                <span class="uppercase">
-                    {{vessel.name}} - {{vessel.imo}}
-                </span>
-            </div>
-        </ModelSelect>
-    {{/if}}
-
-    {{#if this.isBooleanInput}}
-        <Toggle @label={{@metaField.label}} @wrapperClass="justify-start-i" @isToggled={{@value}} @onToggle={{this.onToggle}} @helpText={{@metaField.helpText}} />
-    {{/if}}
-
-    {{yield}}
-</div>
+            </InputGroup>
+        {{else if (eq this.customFieldComponent "file-upload")}}
+            <InputGroup @name={{this.customField.label}} @required={{this.customField.required}} @helpText={{this.customField.help_text}}>
+                <div class="flex items-center">
+                    <FileUpload @name={{this.customField.name}} @for={{this.customField.name}} @accept={{join "," this.acceptedFileTypes}} @multiple={{false}} @onFileAdded={{this.onFileAddedHandler}}>
+                        <a tabindex={{0}} class="btn btn-default btn-xs cursor-pointer">
+                            <FaIcon @icon="upload" @size="sm" class="mr-2" />{{t "common.select-file"}}
+                        </a>
+                    </FileUpload>
+                    {{#if this.file}}
+                        <div class="ml-2 flex items-center text-sm">
+                            <Spinner class="dark:text-blue-400 text-blue-900" />
+                            <span class="ml-2 text-xs dark:text-blue-400 text-blue-900">{{round this.file.progress}}%</span>
+                        </div>
+                    {{/if}}
+                </div>
+                {{#if this.uploadedFile}}
+                    <File @file={{this.uploadedFile}} @onDelete={{this.removeFile}} class="custom-field-file" />
+                {{/if}}
+            </InputGroup>
+        {{/if}}
+    </div>
+{{/if}}

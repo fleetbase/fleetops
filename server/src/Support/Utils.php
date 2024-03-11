@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Support;
 
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\Support\Utils as FleetbaseUtils;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -1275,5 +1276,21 @@ class Utils extends FleetbaseUtils
         $theta_deg = fmod($theta_deg + 360, 360);
 
         return $theta_deg;
+    }
+
+    /**
+     * Determines if a given object is an instance of Activity.
+     *
+     * This static method is used to check if a provided object is an
+     * instance of the Activity class. This can be useful in contexts where
+     * there is a need to verify the type of a given resource or object.
+     *
+     * @param mixed $activity the object to check
+     *
+     * @return bool returns true if the provided object is an instance of Activity, false otherwise
+     */
+    public static function isActivity($activity)
+    {
+        return $activity && $activity instanceof Activity && !empty($activity->code);
     }
 }

@@ -1,4 +1,6 @@
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
+import isModel from '@fleetbase/ember-core/utils/is-model';
+import { camelize } from '@ember/string';
 
 /**
  * Applies context and dynamic arguments to a given component.
@@ -9,8 +11,8 @@ export default function applyContextComponentArguments(component) {
     const { context, dynamicArgs = {} } = component.args;
 
     // Apply context model if available
-    if (context) {
-        const contextModelName = getModelName(context);
+    if (context && isModel(context)) {
+        const contextModelName = camelize(getModelName(context));
         if (contextModelName) {
             component[contextModelName] = context;
         }

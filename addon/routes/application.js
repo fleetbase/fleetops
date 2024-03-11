@@ -17,7 +17,7 @@ export default class ApplicationRoute extends Route {
     }
 
     beforeModel() {
-        return this.location.getUserLocation();
+        this.location.getUserLocation();
     }
 
     model() {
