@@ -231,6 +231,9 @@ fleet-ops:
         title: Navigator App
         name: Instance Linking URL
         message: Use this URL to link the official Navigator app to this {companyName} instance. Opening this URL on a mobile device will open the Navigator app and update it's configuration and branding.
+        settings: Entity Settings
+        select-input: Allow driver to update entity details 
+
       visibility-controls:
         title: Visibility Controls
         message: Visibility controls allow you to disable sections of Fleet-Ops. Toggle the checkbox to enable or disable sections to hide in Fleet-ops.
