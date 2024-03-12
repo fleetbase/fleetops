@@ -26,9 +26,9 @@ class CreateOrderRequest extends FleetbaseRequest
     {
         $validations = [
             'order_config_uuid' => 'required',
-            'adhoc'             => 'in:true,false,1,0',
+            // 'adhoc'             => 'in:true,false,1,0',
             'dispatch'          => ['nullable', 'boolean'],
-            'adhoc_distance'    => 'numeric',
+            // 'adhoc_distance'    => 'numeric',
             'pod_required'      => 'in:true,false,1,0',
             'pod_method'        => 'in:' . config('api.pod_methods'),
             'scheduled_at'      => ['nullable', 'date'],
@@ -37,7 +37,7 @@ class CreateOrderRequest extends FleetbaseRequest
             'purchase_rate'     => 'nullable|exists:purchase_rates,uuid',
             'facilitator'       => ['nullable', new ExistsInAny(['vendors', 'contacts', 'integrated_vendors'], ['uuid', 'provider'])],
             'customer'          => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'uuid')],
-            'status'            => 'string',
+            'status'            => 'nullable|string',
             'type'              => 'string',
         ];
 
@@ -49,30 +49,15 @@ class CreateOrderRequest extends FleetbaseRequest
                 $validations['payload']         = 'required';
 
                 if ($this->missing('payload.waypoints')) {
-                    $validations['payload.pickup']  = 'required';
-                    $validations['payload.dropoff'] = 'required';
+                    $validations['payload.pickup_uuid']  = 'required';
+                    $validations['payload.dropoff_uuid'] = 'required';
                 }
 
                 if ($this->missing(['payload.pickup', 'payload.dropoff'])) {
                     $validations['payload.waypoints'] = 'required|array|min:2';
                 }
 
-                $validations['payload.return']  = 'nullable';
-            }
-
-            if ($this->isString('payload')) {
-                $validations['payload'] = 'required|exists:payloads,uuid';
-            }
-        }
-
-        if ($this->missing('payload') && $this->isMethod('POST')) {
-            if ($this->missing('waypoints')) {
-                $validations['pickup']  = 'required';
-                $validations['dropoff'] = 'required';
-            }
-
-            if ($this->missing(['pickup', 'dropoff'])) {
-                $validations['waypoints'] = 'required|array|min:2';
+                $validations['payload.return_uuid']  = 'nullable';
             }
         }
 

@@ -976,9 +976,20 @@ class OrderController extends Controller
             );
         }
 
-        $activity = $order->config()->nextActivity();
+        $activities = $order->config()->nextActivity();
 
-        return response()->json($activity);
+        // If activity is to complete order add proof of delivery properties if required
+        // This is a temporary fix until activity is updated to handle POD on it's own
+        $activities = $activities->map(function ($activity) use ($order) {
+            if ($activity->completesOrder() && $order->pod_required) {
+                $activity->set('require_pod', true);
+                $activity->set('pod_method', $order->pod_method);
+            }
+
+            return $activity;
+        });
+
+        return response()->json($activities);
     }
 
     /**
