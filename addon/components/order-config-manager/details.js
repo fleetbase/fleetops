@@ -81,16 +81,25 @@ export default class OrderConfigManagerDetailsComponent extends Component {
             title: this.intl.t('fleet-ops.component.order-config-manager.details.delete.delete-title'),
             body: this.intl.t('fleet-ops.component.order-config-manager.details.delete.delete-body-message'),
             acceptButtonText: this.intl.t('fleet-ops.component.order-config-manager.details.delete.confirm-delete'),
-            confirm: () => {
+            confirm: (modal) => {
                 if (typeof this.args.onConfigDeleting === 'function') {
                     this.args.onConfigDeleting(this.config);
                 }
 
-                return this.config.destroyRecord().then(() => {
-                    if (typeof this.args.onConfigDeleted === 'function') {
-                        this.args.onConfigDeleted(this.config);
-                    }
-                });
+                modal.startLoading();
+                return this.config
+                    .destroyRecord()
+                    .then(() => {
+                        if (typeof this.args.onConfigDeleted === 'function') {
+                            this.args.onConfigDeleted(this.config);
+                        }
+                    })
+                    .catch((error) => {
+                        this.notifications.serverError(error);
+                    })
+                    .finally(() => {
+                        modal.done();
+                    });
             },
         });
     }

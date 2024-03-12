@@ -2,7 +2,7 @@
 
 namespace Fleetbase\FleetOps\Observers;
 
-use Fleetbase\FleetOps\Seeders\OrderConfigSeeder;
+use Fleetbase\FleetOps\Support\FleetOps;
 use Fleetbase\Models\Company;
 
 class CompanyObserver
@@ -15,6 +15,6 @@ class CompanyObserver
     public function created(Company $company)
     {
         // Add the default transport order config
-        OrderConfigSeeder::createTransportConfig($company);
+        FleetOps::createTransportConfig($company);
     }
 }

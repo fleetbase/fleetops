@@ -5,6 +5,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
+import { dasherize } from '@ember/string';
 import { task } from 'ember-concurrency-decorators';
 import isModel from '@fleetbase/ember-core/utils/is-model';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
@@ -156,14 +157,26 @@ export default class OrderConfigManagerComponent extends Component {
                 }
 
                 modal.startLoading();
-                return orderConfig.save().then((newOrderConfig) => {
-                    this.notifications.success(this.intl.t('fleet-ops.component.order-config-manager.create-success-message'));
-                    this.loadOrderConfigs.perform({
-                        onAfter: () => {
-                            this.selectConfig(newOrderConfig);
-                        },
+                orderConfig.set('key', dasherize(orderConfig.name));
+                orderConfig
+                    .save()
+                    .then((newOrderConfig) => {
+                        this.notifications.success(this.intl.t('fleet-ops.component.order-config-manager.create-success-message'));
+                        this.loadOrderConfigs.perform({
+                            onAfter: () => {
+                                this.selectConfig(newOrderConfig);
+                            },
+                        });
+                        modal.done();
+                    })
+                    .catch((error) => {
+                        modal.stopLoading();
+                        this.notifications.serverError(error);
                     });
-                });
+            },
+            decline: (modal) => {
+                orderConfig.destroyRecord();
+                modal.done();
             },
         });
     }

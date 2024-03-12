@@ -5,10 +5,12 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\OrderConfigEntities;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\Models\Company;
 use Fleetbase\Models\Model;
 use Fleetbase\Support\Auth;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
+use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Illuminate\Support\Collection;
@@ -17,6 +19,7 @@ use Illuminate\Support\Str;
 class OrderConfig extends Model
 {
     use HasUuid;
+    use HasPublicId;
     use Searchable;
     use HasMetaAttributes;
     use HasApiModelBehavior;
@@ -27,6 +30,13 @@ class OrderConfig extends Model
      * @var string
      */
     protected $table = 'order_configs';
+
+    /**
+     * The type of public Id to generate.
+     *
+     * @var string
+     */
+    protected $publicIdType = 'order_config';
 
     /**
      * These attributes that can be queried.
@@ -41,6 +51,7 @@ class OrderConfig extends Model
      * @var array
      */
     protected $fillable = [
+        'public_id',
         'company_uuid',
         'author_uuid',
         'category_uuid',
@@ -415,5 +426,42 @@ class OrderConfig extends Model
             'details'  => 'Order has started',
             'complete' => false,
         ], $this->flow);
+    }
+
+    /**
+     * Resolves an OrderConfig from a given identifier or an array of identifiers within an optional company context.
+     *
+     * @param string|array $orderConfigIdentifier the identifier(s) for the OrderConfig (namespace, public_id, or key)
+     * @param Company|null $company               the company context, if any, to narrow down the search
+     *
+     * @return OrderConfig|null the found OrderConfig or null if none found
+     */
+    public static function resolveFromIdentifier($orderConfigIdentifier, ?Company $company = null): ?OrderConfig
+    {
+        $query = static::query();
+
+        if ($company instanceof Company) {
+            $query->where('company_uuid', $company->uuid);
+        } else {
+            $companyUuid = session('company');
+            if ($companyUuid) {
+                $query->where('company_uuid', $companyUuid);
+            }
+        }
+
+        $identifiers = is_array($orderConfigIdentifier) ? $orderConfigIdentifier : [$orderConfigIdentifier];
+        foreach ($identifiers as $identifier) {
+            $orderConfig = $query->where(function ($query) use ($identifier) {
+                $query->where('namespace', $identifier)
+                      ->orWhere('public_id', $identifier)
+                      ->orWhere('key', $identifier);
+            })->first();
+
+            if ($orderConfig) {
+                return $orderConfig;
+            }
+        }
+
+        return null;
     }
 }

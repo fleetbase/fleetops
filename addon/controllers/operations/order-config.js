@@ -1,6 +1,7 @@
 import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import isModel from '@fleetbase/ember-core/utils/is-model';
 
 export default class OperationsOrderConfigController extends Controller {
     @tracked tab = 'details';
@@ -26,7 +27,7 @@ export default class OperationsOrderConfigController extends Controller {
      * @memberof OperationsOrderConfigController
      */
     @action onConfigChanged(config) {
-        this.config = config.id;
+        this.config = isModel(config) ? config.id : null;
     }
 
     /**
