@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 
 export default class NavigatorAppControlsComponent extends Component {
     @service fetch;
@@ -13,7 +14,7 @@ export default class NavigatorAppControlsComponent extends Component {
     }
 
     /**
-     * Indicates whether settings is currently enabled.
+     * Indicates whether driver entity settings is currently enabled.
      *
      * @property {boolean} isEnabled
      * @public
@@ -21,10 +22,10 @@ export default class NavigatorAppControlsComponent extends Component {
     @tracked isDriverEntityUpdateSettingEnabled;
 
     /**
-     * Action handler for toggling Entity Settings.
+     * Action handler for toggling Driver Entity Update Settings.
      *
-     * @method onEntityToggled
-     * @param {boolean} isEntityEnabled - Indicates whether Entity Settings is enabled.
+     * @method enableDriverEntityUpdateSetting
+     * @param {boolean} isDriverEntityUpdateSettingEnabled - Indicates whether Driver Entity Settings is enabled.
      * @return {void}
      * @public
      */
