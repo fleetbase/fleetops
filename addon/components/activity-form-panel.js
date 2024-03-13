@@ -26,6 +26,13 @@ export default class ActivityFormPanelComponent extends Component {
     @tracked targetActivity;
 
     /**
+     * Proof of delivery options.
+     *
+     * @memberof ActivityFormPanelComponent
+     */
+    @tracked podOptions = ['scan', 'signature', 'photo'];
+
+    /**
      * Constructor for ActivityFormPanelComponent.
      * Applies context component arguments upon instantiation.
      */
@@ -44,6 +51,17 @@ export default class ActivityFormPanelComponent extends Component {
         if (typeof this.onSave === 'function') {
             this.onSave(this.activity);
         }
+    }
+
+    /**
+     * Sets the proof of delivery method to be used for this activity.
+     *
+     * @param {Event} event
+     * @memberof ActivityFormPanelComponent
+     */
+    @action setProofOfDeliveryMethod(event) {
+        const value = event.target.value;
+        this.activity.set('pod_method', value);
     }
 
     /**

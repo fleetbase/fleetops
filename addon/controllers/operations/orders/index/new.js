@@ -534,6 +534,11 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             params.facilitator = this.order.facilitator.public_id;
         }
 
+        // filter by order config type
+        if (this.orderConfig) {
+            params.service_type = this.orderConfig.key;
+        }
+
         if (shouldCheck) {
             try {
                 serviceRates = await this.fetch.get(`service-rates/for-route`, params);

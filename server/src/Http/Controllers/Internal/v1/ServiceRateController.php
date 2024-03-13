@@ -39,6 +39,9 @@ class ServiceRateController extends FleetOpsController
             $waypoints,
             function ($query) use ($request) {
                 $query->where('company_uuid', $request->session()->get('company'));
+                if ($request->filled('service_type')) {
+                    $query->where('service_type', $request->input('service_type'));
+                }
             }
         );
 

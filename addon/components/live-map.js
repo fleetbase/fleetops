@@ -280,7 +280,6 @@ export default class LiveMapComponent extends Component {
             this.tileSourceUrl = 'https://{s}.tile.jawg.io/jawg-matrix/{z}/{x}/{y}{r}.png?access-token=';
         }
 
-        this.ready();
         this.setupComponent();
     }
 
@@ -332,7 +331,6 @@ export default class LiveMapComponent extends Component {
             })
             .finally(() => {
                 this.listen();
-                this.ready();
             });
     }
 
@@ -386,14 +384,23 @@ export default class LiveMapComponent extends Component {
      * if available, or null if the function is skipped.
      */
     async setInitialCoordinates() {
-        const { latitude, longitude } = await this.location.getUserLocation();
+        try {
+            const { latitude, longitude } = await this.location.getUserLocation();
 
-        this.latitude = latitude;
-        this.longitude = longitude;
+            this.latitude = latitude || this.location.DEFAULT_LATITUDE;
+            this.longitude = longitude || this.location.DEFAULT_LONGITUDE;
+        } catch (error) {
+            this.latitude = this.location.DEFAULT_LATITUDE;
+            this.longitude = this.location.DEFAULT_LONGITUDE;
+        }
+
         this.ready();
 
-        // trigger that initial coordinates is set to livemap component
-        this.universe.trigger('fleet-ops.live-map.has_coordinates', { latitude: this.latitude, longitude: this.longitude });
+        // Trigger that initial coordinates are set to live map component
+        this.universe.trigger('fleet-ops.live-map.has_coordinates', {
+            latitude: this.latitude,
+            longitude: this.longitude,
+        });
     }
 
     /**

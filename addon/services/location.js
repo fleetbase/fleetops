@@ -78,66 +78,74 @@ export default class LocationService extends Service {
     }
 
     /**
-     * Attempts to fetch the user's location from various sources.
-     * Uses cached data, navigator geolocation, or WHOIS data as fallbacks.
+     * Attempts to fetch the user's location from various sources including cached data,
+     * navigator geolocation, or WHOIS data. It first tries to get the cached coordinates.
+     * If not available or outdated, it tries the browser's geolocation API.
+     * As a fallback, it uses WHOIS data associated with the user's account.
+     *
      * @returns {Promise<Object>} A promise that resolves to an object containing latitude and longitude.
      */
-    getUserLocation() {
-        return this.fetch.cachedGet('fleet-ops/live/coordinates', {}, { expirationInterval: 1, expirationIntervalUnit: 'hour' }).then((coordinates) => {
+    async getUserLocation() {
+        // If the location has already been located, return the existing coordinates
+        if (this.located) {
+            return { latitude: this.latitude, longitude: this.longitude };
+        }
+
+        try {
+            const coordinates = await this.fetch.cachedGet('fleet-ops/live/coordinates', {}, { expirationInterval: 1, expirationIntervalUnit: 'hour' });
+
             if (isBlank(coordinates)) {
-                return this.getUserLocationFromNavigator().then((navigatorCoordinates) => {
-                    this.updateLocation(navigatorCoordinates);
-                    return navigatorCoordinates;
-                });
+                return await this.getUserLocationFromNavigator();
             }
 
-            if (isArray(coordinates)) {
-                const validCoordinates = coordinates.filter((point) => point.coordinates[0] !== 0);
+            if (isArray(coordinates) && coordinates.length > 0) {
+                // Ensure the coordinates array contains valid data
+                const validCoordinates = coordinates.find((point) => point.coordinates[0] !== 0 && point.coordinates[1] !== 0);
                 if (validCoordinates) {
-                    const [longitude, latitude] = getWithDefault(validCoordinates, '0.coordinates', [0, 0]);
-                    const userCoordinates = {
-                        latitude,
-                        longitude,
-                    };
-
-                    this.updateLocation(userCoordinates);
-                    return userCoordinates;
+                    const [longitude, latitude] = validCoordinates.coordinates;
+                    this.updateLocation({ latitude, longitude });
+                    return { latitude, longitude };
                 }
             }
 
-            return this.getUserLocationFromWhois();
-        });
+            return await this.getUserLocationFromWhois();
+        } catch (error) {
+            return await this.getUserLocationFromWhois();
+        }
     }
 
     /**
      * Retrieves the user's location using the browser's navigator geolocation API.
-     * @returns {Promise<Object>} A promise that resolves to geolocation coordinates.
+     * It creates a promise that resolves with the geolocation if successful,
+     * or with WHOIS data as a fallback in case of failure or absence of navigator geolocation.
+     *
+     * @returns {Promise<Object>} A promise that resolves to geolocation coordinates or WHOIS data.
      */
-    getUserLocationFromNavigator() {
-        return new Promise((resolve) => {
-            // eslint-disable-next-line no-undef
-            if (window.navigator && window.navigator.geolocation) {
-                // eslint-disable-next-line no-undef
-                return navigator.geolocation.getCurrentPosition(
-                    ({ coords }) => {
-                        this.updateLocation(coords);
-                        return resolve(coords);
-                    },
-                    () => {
-                        // If failed use user whois
-                        return resolve(this.getUserLocationFromWhois());
-                    }
-                );
+    async getUserLocationFromNavigator() {
+        if (window.navigator && window.navigator.geolocation) {
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 600,
+                    });
+                });
+                const { latitude, longitude } = position.coords;
+                this.updateLocation({ latitude, longitude });
+                return { latitude, longitude };
+            } catch (error) {
+                return await this.getUserLocationFromWhois();
             }
-
-            // default to whois lookup coordinates
-            return resolve(this.getUserLocationFromWhois());
-        });
+        } else {
+            return await this.getUserLocationFromWhois();
+        }
     }
 
     /**
-     * Retrieves the user's location based on WHOIS data associated with the user's account.
-     * @returns {Object} An object containing latitude and longitude from WHOIS data.
+     * Retrieves the user's location based on WHOIS data associated with their account.
+     * Defaults to predefined coordinates if WHOIS data is not available.
+     *
+     * @returns {Object} An object containing latitude and longitude from WHOIS data or default values.
      */
     getUserLocationFromWhois() {
         const whois = this.currentUser.getOption('whois');
@@ -151,8 +159,10 @@ export default class LocationService extends Service {
     }
 
     /**
-     * Updates the service's tracked properties with the new location data and triggers an event.
-     * @param {Object} coordinates - An object containing the latitude and longitude.
+     * Updates the service's tracked properties with the new location data.
+     * Triggers an event to notify other parts of the application that the user's location has been updated.
+     *
+     * @param {Object} coordinates - An object containing the latitude and longitude to be set.
      */
     updateLocation({ latitude, longitude }) {
         this.latitude = latitude;
