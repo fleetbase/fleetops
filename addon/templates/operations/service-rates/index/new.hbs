@@ -17,7 +17,16 @@
 
                 <div class="input-group">
                     <InputLabel @labelText={{t "fleet-ops.operations.service-rates.index.new.service-order-label"}} @helpText={{t "fleet-ops.operations.service-rates.index.new.service-order-help-text"}} />
-                    <Select class="w-full" @options={{this.serviceTypes}} @value={{this.serviceRate.service_type}} @optionLabel="name" @optionValue="key" @onSelect={{fn (mut this.serviceRate.service_type)}} @placeholder={{t "fleet-ops.operations.service-rates.index.new.service-order-placeholder"}} />
+                    <select class="form-select w-full has--placeholder" {{on "change" this.setConfig}}>
+                        <option selected disabled>
+                            {{t "fleet-ops.operations.service-rates.index.new.service-order-placeholder"}}
+                        </option>
+                        {{#each this.orderConfigs as |orderConfig|}}
+                            <option value={{orderConfig.id}} selected={{eq orderConfig.id this.serviceRate.order_config_uuid}}>
+                                {{orderConfig.name}}
+                            </option>
+                        {{/each}}
+                    </select>
                 </div>
 
                 <div class="input-group">

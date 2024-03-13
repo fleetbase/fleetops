@@ -4,9 +4,9 @@ namespace Fleetbase\FleetOps\Console\Commands;
 
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
-use Fleetbase\Support\Utils;
+use Fleetbase\FleetOps\Support\FleetOps;
+use Fleetbase\Models\Company;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Artisan;
 
 class FixLegacyOrderConfigs extends Command
 {
@@ -15,7 +15,7 @@ class FixLegacyOrderConfigs extends Command
      *
      * @var string
      */
-    protected $signature = 'fleetops:fix-legacy-order-configs';
+    protected $signature = 'fleetops:fix-legacy-order-configs {--create-configs}';
 
     /**
      * The console command description.
@@ -35,14 +35,20 @@ class FixLegacyOrderConfigs extends Command
      */
     public function handle()
     {
-        if (Utils::classExists('\\Fleetbase\\FleetOps\\Seeders\\OrderConfigSeeder')) {
-            $this->info('Starting the database seeding...');
-
-            Artisan::call('db:seed', [
-                '--class' => '\\Fleetbase\\FleetOps\\Seeders\\OrderConfigSeeder',
-            ]);
-
-            $this->info('Database seeding completed.');
+        $shouldCreateConfigs = $this->option('create-configs');
+        if ($shouldCreateConfigs) {
+            $companies      = Company::all();
+            $totalCompanies = $companies->count();
+            $this->info('Initializing transport config for ' . $totalCompanies . ' companies.');
+            $progressBar = $this->output->createProgressBar($totalCompanies);
+            $progressBar->start();
+            foreach ($companies as $company) {
+                FleetOps::createTransportConfig($company);
+                $progressBar->advance();
+            }
+            $progressBar->finish();
+            $this->line('');
+            $this->info('All transport configs created.');
         }
 
         $orders      = Order::whereNull('order_config_uuid')->get();

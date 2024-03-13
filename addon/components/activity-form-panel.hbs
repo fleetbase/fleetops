@@ -16,6 +16,25 @@
                 <span class="dark:text-gray-100 text-sm ml-2">{{t "fleet-ops.component.activity-form-panel.completes-order"}}</span>
             </Toggle>
         </InputGroup>
+        <InputGroup @helpText={{t "fleet-ops.component.activity-form-panel.require-pod-help-text"}}>
+            <Toggle @isToggled={{this.activity.require_pod}} @onToggle={{fn (mut this.activity.require_pod)}} @helpText={{t "fleet-ops.component.activity-form-panel.require-pod-help-text"}}>
+                <span class="dark:text-gray-100 text-sm mx-2">{{t "fleet-ops.component.activity-form-panel.require-pod"}}</span>
+            </Toggle>
+        </InputGroup>
+        {{#if this.activity.require_pod}}
+            <InputGroup @name={{t "fleet-ops.component.activity-form-panel.select-pod-method"}}>
+                <select class="form-select w-full has--placeholder" {{on "change" this.setProofOfDeliveryMethod}}>
+                    <option selected disabled>
+                        {{t "fleet-ops.component.activity-form-panel.pod-method-placeholder"}}
+                    </option>
+                    {{#each this.podOptions as |podOption|}}
+                        <option value={{podOption}} selected={{eq this.activity.pod_method podOption}}>
+                            {{smart-humanize podOption}}
+                        </option>
+                    {{/each}}
+                </select>
+            </InputGroup>
+        {{/if}}
         <ActivityLogicBuilder @activity={{this.activity}} @onChange={{this.updateActivityLogic}} class="mb-4" />
         <ActivityEventSelector @activity={{this.activity}} @onChange={{this.updateActivityEvents}} />
         <Spacer @height="300px" />

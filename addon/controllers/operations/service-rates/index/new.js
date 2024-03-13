@@ -48,11 +48,11 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
     @tracked serviceRate = this.store.createRecord('service-rate', { per_meter_unit: 'm' });
 
     /**
-     * Different service types available, based on order type.
+     * Available order configs.
      *
      * @var {Array}
      */
-    @tracked serviceTypes = [];
+    @tracked orderConfigs = [];
 
     /**
      * Service areas.
@@ -74,6 +74,13 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
      * @var {Boolean}
      */
     @tracked isCreatingServiceRate = false;
+
+    /**
+     * The current selected order config.
+     *
+     * @var {OrderConfigModel|null}
+     */
+    @tracked orderConfig;
 
     /**
      * True if updating service rate.
@@ -277,6 +284,20 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
             fee: 0,
             currency,
         });
+    }
+
+    @action setConfig(event) {
+        const orderConfigId = event.target.value;
+        if (!orderConfigId) {
+            return;
+        }
+
+        const orderConfig = this.store.peekRecord('order-config', orderConfigId);
+        if (orderConfig) {
+            this.orderConfig = orderConfig;
+            this.serviceRate.set('order_config_uuid', orderConfig.id);
+            this.serviceRate.set('service_type', orderConfig.key);
+        }
     }
 
     /**
