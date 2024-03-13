@@ -9,21 +9,10 @@
 
 <ContentPanel @title={{t "fleet-ops.component.admin.navigator-app.settings"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
     <InputGroup @name={{t "fleet-ops.component.admin.navigator-app.select-input"}}>
-        <Toggle @isToggled={{this.isEnabled}} @onToggle={{this.onToggled}} />
+        <Toggle @isToggled={{this.isDriverEntityUpdateSettingEnabled}} @onToggle={{this.enableDriverEntityUpdateSetting}} />
+        {{#if this.isDriverEntityUpdateSettingEnabled}}
+            
+        {{/if}}
     </InputGroup>
-    {{#if this.loadSystemTwoFaConfig.isIdle}}
-        <EnableSettings
-            @showEnforceOption={{true}}
-            @twoFaMethods={{this.methods}}
-            @twoFaSettings={{this.twoFaSettings}}
-            @onTwoFaToggled={{this.onTwoFaToggled}}
-            @onTwoFaMethodSelected={{this.onTwoFaMethodSelected}}
-            @onTwoFaEnforcedToggled={{this.onTwoFaEnforceToggled}}
-            @isLoading={{this.isLoading}}
-        />
-    {{else}}
-        <div class="flex items-center justify-center p-4">
-            <Spinner @loadingMessage="Loading enable Settings..." @wrapperClass="flex flex-row" @iconClass="mr-2" />
-        </div>
-    {{/if}}
+    
 </ContentPanel>

@@ -12,6 +12,26 @@ export default class NavigatorAppControlsComponent extends Component {
         this.getAppLinkUrl();
     }
 
+    /**
+     * Indicates whether settings is currently enabled.
+     *
+     * @property {boolean} isEnabled
+     * @public
+     */
+    @tracked isDriverEntityUpdateSettingEnabled;
+
+    /**
+     * Action handler for toggling Entity Settings.
+     *
+     * @method onEntityToggled
+     * @param {boolean} isEntityEnabled - Indicates whether Entity Settings is enabled.
+     * @return {void}
+     * @public
+     */
+    @action enableDriverEntityUpdateSetting(isDriverEntityUpdateSettingEnabled) {
+        this.isDriverEntityUpdateSettingEnabled = isDriverEntityUpdateSettingEnabled;
+    }
+
     getAppLinkUrl() {
         this.isLoading = true;
 
