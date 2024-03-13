@@ -15,6 +15,7 @@ use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
@@ -42,7 +43,17 @@ class OrderController extends Controller
     public function create(CreateOrderRequest $request)
     {
         // get request input
-        $input = $request->only(['internal_id', 'payload', 'service_quote', 'purchase_rate', 'adhoc', 'adhoc_distance', 'pod_method', 'pod_required', 'scheduled_at', 'type', 'status', 'meta', 'notes']);
+        $input = $request->only(['internal_id', 'payload', 'service_quote', 'purchase_rate', 'adhoc', 'adhoc_distance', 'pod_method', 'pod_required', 'scheduled_at', 'status', 'meta', 'notes']);
+
+        // Get order config
+        $orderConfig = OrderConfig::resolveFromIdentifier($request->only(['type', 'order_config']));
+        if (!$orderConfig) {
+            return response()->apiError('Invalid order `type` or `order_config` provided.');
+        }
+
+        // Set order config to input
+        $input['order_config_uuid'] = $orderConfig->uuid;
+        $input['type']              = $orderConfig->key;
 
         // make sure company is set
         $input['company_uuid'] = session('company');
@@ -965,9 +976,20 @@ class OrderController extends Controller
             );
         }
 
-        $activity = $order->config()->nextActivity();
+        $activities = $order->config()->nextActivity();
 
-        return response()->json($activity);
+        // If activity is to complete order add proof of delivery properties if required
+        // This is a temporary fix until activity is updated to handle POD on it's own
+        $activities = $activities->map(function ($activity) use ($order) {
+            if ($activity->completesOrder() && $order->pod_required) {
+                $activity->set('require_pod', true);
+                $activity->set('pod_method', $order->pod_method);
+            }
+
+            return $activity;
+        });
+
+        return response()->json($activities);
     }
 
     /**

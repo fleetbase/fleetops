@@ -7,8 +7,20 @@ export default class OperationsServiceRatesIndexEditRoute extends Route {
     @service currentUser;
     @service notifications;
 
+    /**
+     * Re-use the new service rate form template.
+     *
+     * @memberof OperationsServiceRatesIndexEditRoute
+     */
     templateName = 'operations.service-rates.index.new';
 
+    /**
+     * Handle any async error.
+     *
+     * @param {*} error
+     * @return {*}
+     * @memberof OperationsServiceRatesIndexEditRoute
+     */
     @action error(error) {
         this.notifications.serverError(error);
         return this.transitionTo('operations.service-rates.index');
@@ -33,10 +45,7 @@ export default class OperationsServiceRatesIndexEditRoute extends Route {
             controller.parcelFees = model.parcel_fees;
         }
 
-        const serviceTypes = await this.currentUser.getInstalledOrderConfigs();
-        const serviceAreas = await this.store.findAll('service-area');
-
-        controller.serviceTypes = serviceTypes;
-        controller.serviceAreas = serviceAreas;
+        controller.orderConfigs = await this.store.findAll('order-config');
+        controller.serviceAreas = await this.store.findAll('service-area');
     }
 }

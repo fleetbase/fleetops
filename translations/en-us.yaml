@@ -139,6 +139,11 @@ fleet-ops:
       code: Code
       status: Status
       details: Details
+      proof-of-delivery: Proof of Delivery
+      require-pod: Requires Proof of Delivery
+      require-pod-help-text: This activity requires a proof to be created before it can be applied to the order.
+      select-pod-method: Proof of Delivery Method
+      pod-method-placeholder: Select Proof of Delivery Method
       completes-order: Completes Order
       complete: Complete
       key-help: "Enter a key used for programmatic decision-making. This key can represent one or several activities with the same identifier. Note: This key is not required to be unique."
@@ -1409,7 +1414,7 @@ fleet-ops:
           service-name: Service Name
           service-name-help-text: Display name for this service.
           service-order-label: Service Order Type
-          service-order-help-text: Restrict this service rate to an explicit `order type`.
+          service-order-help-text: Select an order configuration to which this service rate will be exclusively applied. This ensures that only orders created with the selected order configuration can utilize this specific service rate.
           service-order-placeholder: Select order type to restrict service to
           base-fee-label: Base Fee
           base-fee-help-text: Set a base fee which represents the minimum cost for this serice.

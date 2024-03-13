@@ -53,6 +53,7 @@ class ServiceRate extends Model
         'company_uuid',
         'service_area_uuid',
         'zone_uuid',
+        'order_config_uuid',
         'service_name',
         'service_type',
         'per_meter_flat_rate_fee',
@@ -122,6 +123,14 @@ class ServiceRate extends Model
     public function parcelFees()
     {
         return $this->hasMany(ServiceRateParcelFee::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function orderConfig()
+    {
+        return $this->belongsTo(OrderConfig::class)->withTrashed();
     }
 
     /**

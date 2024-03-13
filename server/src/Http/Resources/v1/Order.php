@@ -39,7 +39,7 @@ class Order extends FleetbaseResource
             'service_quote_uuid'   => $this->when(Http::isInternalRequest(), $this->service_quote_uuid),
             'has_driver_assigned'  => $this->when(Http::isInternalRequest(), $this->has_driver_assigned),
             'is_scheduled'         => $this->when(Http::isInternalRequest(), $this->is_scheduled),
-            'order_config'         => $this->when(Http::isInternalRequest(), $this->whenLoaded('orderConfig', $this->orderConfig)),
+            'order_config'         => $this->when(Http::isInternalRequest(), $this->whenLoaded('orderConfig', $this->orderConfig), data_get($this->orderConfig, 'public_id')),
             'custom_field_values'  => $this->when(Http::isInternalRequest(), $this->customFieldValues),
             'customer'             => $this->setCustomerType(Resolve::resourceForMorph($this->customer_type, $this->customer_uuid)),
             'payload'              => new Payload($this->payload),

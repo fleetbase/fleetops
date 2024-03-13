@@ -9,6 +9,7 @@ use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
+use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest;
 use Fleetbase\FleetOps\Imports\OrdersImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
@@ -25,6 +26,7 @@ use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -44,9 +46,17 @@ class OrderController extends FleetOpsController
      */
     public function createRecord(Request $request)
     {
-        try {
-            $this->validateRequest($request);
+        // Create validation request
+        $createOrderRequest  = CreateOrderRequest::createFrom($request);
+        $rules               = $createOrderRequest->rules();
 
+        // Manually validate request
+        $validator = Validator::make($request->input('order'), $rules);
+        if ($validator->fails()) {
+            return $createOrderRequest->responseWithErrors($validator);
+        }
+
+        try {
             $record = $this->model->createRecordFromRequest(
                 $request,
                 function ($request, &$input) {

@@ -34,6 +34,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Models\Vehicle::class        => \Fleetbase\FleetOps\Observers\VehicleObserver::class,
         \Fleetbase\FleetOps\Models\Fleet::class          => \Fleetbase\FleetOps\Observers\FleetObserver::class,
         \Fleetbase\Models\User::class                    => \Fleetbase\FleetOps\Observers\UserObserver::class,
+        \Fleetbase\Models\Company::class                 => \Fleetbase\FleetOps\Observers\CompanyObserver::class,
     ];
 
     /**
@@ -46,6 +47,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\DispatchOrders::class,
         \Fleetbase\FleetOps\Console\Commands\TrackOrderDistanceAndTime::class,
         \Fleetbase\FleetOps\Console\Commands\FixDriverCompanies::class,
+        \Fleetbase\FleetOps\Console\Commands\FixLegacyOrderConfigs::class,
     ];
 
     /**

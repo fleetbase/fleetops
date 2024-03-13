@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Http\Requests\QueryServiceQuotesRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\ServiceQuote as ServiceQuoteResource;
+use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
@@ -76,11 +77,15 @@ class ServiceQuoteController extends Controller
 
         // if quote for single service
         if ($service && $service !== 'all') {
-            $serviceRate = ServiceRate::where('uuid', $service)->where(function ($q) use ($currency) {
-                if ($currency) {
-                    $q->where(DB::raw('lower(currency)'), strtolower($currency));
-                }
-            })->first();
+            $serviceRate = ServiceRate::where(
+                function ($query) use ($service) {
+                    $query->where('uuid', $service)->orWhere('public_id', $service);
+                })->where(
+                    function ($q) use ($currency) {
+                        if ($currency) {
+                            $q->where(DB::raw('lower(currency)'), strtolower($currency));
+                        }
+                    })->first();
             $serviceQuotes = collect();
 
             if ($serviceRate) {
