@@ -7,6 +7,9 @@ export default class NavigatorAppControlsComponent extends Component {
     @service fetch;
     @tracked isLoading = false;
     @tracked url;
+    @tracked selectedOrderConfig;
+    @tracked entityFields = ['name', 'sku', 'description', 'height', 'width', 'length', 'weight', 'declared value', 'sale price'];
+    @tracked driverEntityUpdateSettings = {};
 
     constructor() {
         super(...arguments);
@@ -31,6 +34,29 @@ export default class NavigatorAppControlsComponent extends Component {
      */
     @action enableDriverEntityUpdateSetting(isDriverEntityUpdateSettingEnabled) {
         this.isDriverEntityUpdateSettingEnabled = isDriverEntityUpdateSettingEnabled;
+    }
+
+    @action onConfigChanged(orderConfig) {
+        console.log('onConfigChanged()', ...arguments);
+        this.driverEntityUpdateSettings = {
+            ...this.driverEntityUpdateSettings,
+            [orderConfig.id]: {
+                editable_entity_fields: [],
+            },
+        };
+    }
+
+    @action makeFieldEditable(fieldName) {
+        const editableFields = this.driverEntityUpdateSettings[this.selectedOrderConfig.id].editable_entity_fields;
+        if (isArray(editableFields)) {
+            editableFields.pushObject(fieldName);
+        }
+        this.driverEntityUpdateSettings = {
+            ...this.driverEntityUpdateSettings,
+            [this.selectedOrderConfig.id]: {
+                editable_entity_fields: editableFields,
+            },
+        };
     }
 
     getAppLinkUrl() {
