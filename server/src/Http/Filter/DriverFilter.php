@@ -23,6 +23,11 @@ class DriverFilter extends Filter
         );
     }
 
+    public function queryForPublic()
+    {
+        $this->queryForInternal();
+    }
+
     public function query(?string $searchQuery)
     {
         $this->builder->where(function ($query) use ($searchQuery) {

@@ -157,7 +157,7 @@ class Driver extends Model
      *
      * @var array
      */
-    protected $filterParams = ['vendor', 'facilitator', 'customer', 'fleet', 'photo_uuid', 'avatar_uuid'];
+    protected $filterParams = ['vendor', 'facilitator', 'customer', 'fleet', 'photo_uuid', 'avatar_uuid', 'avatar_value'];
 
     /**
      * Get the activity log options for the model.
