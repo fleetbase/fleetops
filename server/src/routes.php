@@ -45,6 +45,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->get('{id}/current-organization', 'DriverController@currentOrganization');
                     $router->put('{id}', 'DriverController@update');
                     $router->delete('{id}', 'DriverController@delete');
+                    $router->post('save-settings', 'DriverController@entityEditingSettings');
                 });
                 // contacts routes
                 $router->group(['prefix' => 'contacts'], function () use ($router) {

@@ -8,7 +8,17 @@ export default class NavigatorAppControlsComponent extends Component {
     @tracked isLoading = false;
     @tracked url;
     @tracked selectedOrderConfig;
-    @tracked entityFields = ['name', 'sku', 'description', 'height', 'width', 'length', 'weight', 'declared value', 'sale price'];
+    @tracked entityFields = [
+        { name: 'Name', visible: false },
+        { name: 'Sku', visible: false },
+        { name: 'Description', visible: false },
+        { name: 'Height', visible: false },
+        { name: 'Width', visible: false },
+        { name: 'Length', visible: false },
+        { name: 'Weight', visible: false },
+        { name: 'Declared Value', visible: false },
+        { name: 'Sale Price', visible: false },
+    ];
     @tracked driverEntityUpdateSettings = {};
 
     constructor() {
@@ -37,11 +47,11 @@ export default class NavigatorAppControlsComponent extends Component {
     }
 
     @action onConfigChanged(orderConfig) {
-        console.log('onConfigChanged()', ...arguments);
+        this.selectedOrderConfig = {};
         this.driverEntityUpdateSettings = {
             ...this.driverEntityUpdateSettings,
             [orderConfig.id]: {
-                editable_entity_fields: [],
+                // editable_entity_fields: [name, sku, weight],
             },
         };
     }
@@ -51,8 +61,10 @@ export default class NavigatorAppControlsComponent extends Component {
         if (isArray(editableFields)) {
             editableFields.pushObject(fieldName);
         }
+
         this.driverEntityUpdateSettings = {
             ...this.driverEntityUpdateSettings,
+
             [this.selectedOrderConfig.id]: {
                 editable_entity_fields: editableFields,
             },
@@ -70,5 +82,22 @@ export default class NavigatorAppControlsComponent extends Component {
             .finally(() => {
                 this.isLoading = false;
             });
+    }
+
+    @action onSave() {
+        console.log(
+            'Checked fields: ',
+            this.entityFields.filter((item) => item.visible)
+        );
+        // const { entityFields } = this;
+        // this.isLoading = true;
+        // return this.fetch
+        //     .post('drivers/save-settings', { entityFields })
+        //     .then(() => {
+        //         this.entityFields.success('Successfuully saved.');
+        //     })
+        //     .catch((error) => {
+        //         this.entityFields.serverError(error);
+        //     });
     }
 }
