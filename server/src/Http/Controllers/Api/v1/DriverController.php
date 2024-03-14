@@ -11,7 +11,6 @@ use Fleetbase\FleetOps\Http\Resources\v1\Driver as DriverResource;
 use Fleetbase\FleetOps\Jobs\SimulateDrivingRoute;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
-use Fleetbase\Models\Setting;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
@@ -773,41 +772,4 @@ class DriverController extends Controller
 
         return $phone;
     }
-
-   /**
-     * Allow edit entity.
-     *
-     */
-    public function entityEditingSettings(Request $request)
-    {
-        $key = session('company') . '.driver-entity-editable-fields';
-        Setting::configure($key, $request);
-        $request->validate([
-            'order_config_id' => 'required',
-        ]);
-    
-        $orderConfigId = $request->input('order_config_id');
-    
-        $allowedFields = $this->getAllowedFields($orderConfigId);
-    
-        return response()->json(['allowed_fields' => $allowedFields]);
-    }
-    
-    private function getAllowedFields($orderConfigId)
-    {
-        $key = session('company') . '.driver-entity-editable-fields';
-
-        $editableEntityFields = Setting::lookup($key);
-        $driver = Driver::findOrFail($orderConfigId);
-    
-        $response = [];
-        foreach ($editableEntityFields as $field) {
-            if (property_exists($driver, $field)) {
-                $response[$field] = $driver->$field;
-            }
-        }
-    
-        return $response;
-    }
-    
 }

@@ -2,102 +2,79 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { isArray } from '@ember/array';
+import { task } from 'ember-concurrency-decorators';
 
 export default class NavigatorAppControlsComponent extends Component {
     @service fetch;
     @tracked isLoading = false;
     @tracked url;
     @tracked selectedOrderConfig;
-    @tracked entityFields = [
-        { name: 'Name', visible: false },
-        { name: 'Sku', visible: false },
-        { name: 'Description', visible: false },
-        { name: 'Height', visible: false },
-        { name: 'Width', visible: false },
-        { name: 'Length', visible: false },
-        { name: 'Weight', visible: false },
-        { name: 'Declared Value', visible: false },
-        { name: 'Sale Price', visible: false },
-    ];
-    @tracked driverEntityUpdateSettings = {};
+    @tracked entityFields = ['name', 'description', 'sku', 'height', 'width', 'length', 'weight', 'declared_value', 'sale_price'];
+    @tracked entityEditingSettings = {};
+    @tracked isEntityFieldsEditable = false;
 
     constructor() {
         super(...arguments);
-        this.getAppLinkUrl();
+        this.getAppLinkUrl.perform();
+        this.getEntityEditableSettings.perform();
     }
 
-    /**
-     * Indicates whether driver entity settings is currently enabled.
-     *
-     * @property {boolean} isEnabled
-     * @public
-     */
-    @tracked isDriverEntityUpdateSettingEnabled;
-
-    /**
-     * Action handler for toggling Driver Entity Update Settings.
-     *
-     * @method enableDriverEntityUpdateSetting
-     * @param {boolean} isDriverEntityUpdateSettingEnabled - Indicates whether Driver Entity Settings is enabled.
-     * @return {void}
-     * @public
-     */
-    @action enableDriverEntityUpdateSetting(isDriverEntityUpdateSettingEnabled) {
-        this.isDriverEntityUpdateSettingEnabled = isDriverEntityUpdateSettingEnabled;
+    @action enableEditableEntityFields(isEntityFieldsEditable) {
+        this.isEntityFieldsEditable = isEntityFieldsEditable;
     }
 
     @action onConfigChanged(orderConfig) {
-        this.selectedOrderConfig = {};
-        this.driverEntityUpdateSettings = {
-            ...this.driverEntityUpdateSettings,
-            [orderConfig.id]: {
-                // editable_entity_fields: [name, sku, weight],
-            },
-        };
+        this.selectedOrderConfig = orderConfig;
     }
 
-    @action makeFieldEditable(fieldName) {
-        const editableFields = this.driverEntityUpdateSettings[this.selectedOrderConfig.id].editable_entity_fields;
+    @action toggleFieldEditable(fieldName, isEditable) {
+        const editableFields = this.entityEditingSettings[this.selectedOrderConfig.id].editable_entity_fields;
         if (isArray(editableFields)) {
-            editableFields.pushObject(fieldName);
+            if (isEditable) {
+                editableFields.pushObject(fieldName);
+            } else {
+                editableFields.removeObject(fieldName);
+            }
+        } else {
+            this.entityEditingSettings = {
+                ...this.entityEditingSettings,
+                [this.selectedOrderConfig.id]: {
+                    editable_entity_fields: [],
+                },
+            };
+            return this.toggleFieldEditable(...arguments);
         }
 
-        this.driverEntityUpdateSettings = {
-            ...this.driverEntityUpdateSettings,
+        this.updateEditableEntityFieldsForOrderConfig(editableFields);
+    }
 
-            [this.selectedOrderConfig.id]: {
+    updateEditableEntityFieldsForOrderConfig(editableFields = [], orderConfig = null) {
+        orderConfig = orderConfig === null ? this.selectedOrderConfig : orderConfig;
+        this.entityEditingSettings = {
+            ...this.entityEditingSettings,
+            [orderConfig.id]: {
                 editable_entity_fields: editableFields,
             },
         };
     }
 
-    getAppLinkUrl() {
-        this.isLoading = true;
-
-        return this.fetch
-            .get('fleet-ops/navigator/get-link-app')
-            .then(({ linkUrl }) => {
-                this.url = linkUrl;
-            })
-            .finally(() => {
-                this.isLoading = false;
-            });
+    @task *getAppLinkUrl() {
+        const response = yield this.fetch.get('fleet-ops/navigator/get-link-app');
+        const { linkUrl } = response;
+        if (linkUrl) {
+            this.url = linkUrl;
+        }
     }
 
-    @action onSave() {
-        console.log(
-            'Checked fields: ',
-            this.entityFields.filter((item) => item.visible)
-        );
-        // const { entityFields } = this;
-        // this.isLoading = true;
-        // return this.fetch
-        //     .post('drivers/save-settings', { entityFields })
-        //     .then(() => {
-        //         this.entityFields.success('Successfuully saved.');
-        //     })
-        //     .catch((error) => {
-        //         this.entityFields.serverError(error);
-        //     });
+    @task *getEntityEditableSettings() {
+        const { entityEditingSettings, isEntityFieldsEditable } = yield this.fetch.get('fleet-ops/settings/entity-editing-settings');
+        this.entityEditingSettings = entityEditingSettings;
+        this.isEntityFieldsEditable = isEntityFieldsEditable;
+    }
+
+    @task *saveEntityEditingSettings() {
+        const { entityEditingSettings, isEntityFieldsEditable } = this;
+        yield this.fetch.post('fleet-ops/settings/entity-editing-settings', { entityEditingSettings, isEntityFieldsEditable });
     }
 }

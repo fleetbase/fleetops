@@ -45,7 +45,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->get('{id}/current-organization', 'DriverController@currentOrganization');
                     $router->put('{id}', 'DriverController@update');
                     $router->delete('{id}', 'DriverController@delete');
-                    $router->post('save-settings', 'DriverController@entityEditingSettings');
                 });
                 // contacts routes
                 $router->group(['prefix' => 'contacts'], function () use ($router) {
@@ -85,6 +84,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->post('{id}/capture-photo/{subjectId?}', 'OrderController@capturePhoto');
                     $router->put('{id}', 'OrderController@update');
                     $router->delete('{id}', 'OrderController@delete');
+                    $router->delete('{id}', 'OrderController@getEntityEditableFields');
                 });
                 // entities routes
                 $router->group(['prefix' => 'entities'], function () use ($router) {
@@ -436,6 +436,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                     function ($router) {
                                         $router->get('visibility', 'SettingController@getVisibilitySettings');
                                         $router->post('visibility', 'SettingController@saveVisibilitySettings');
+                                        $router->get('entity-editing-settings', 'SettingController@getEntityEditingSettings');
+                                        $router->post('entity-editing-settings', 'SettingController@saveEntityEditingSettings');
                                     }
                                 );
                                 $router->group(
