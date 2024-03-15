@@ -633,13 +633,26 @@ class Utils extends FleetbaseUtils
                 ]
             );
         } else {
-            $point  = static::getPointFromMixed($origin);
-            $origin = static::createObject(
-                [
-                    'latitude'  => $point->getLat(),
-                    'longitude' => $point->getLng(),
-                ]
-            );
+            try {
+                $point  = static::getPointFromMixed($origin);
+                $origin = static::createObject(
+                    [
+                        'latitude'  => $point->getLat(),
+                        'longitude' => $point->getLng(),
+                    ]
+                );
+            } catch (\Throwable $e) {
+                if (app()->bound('sentry')) {
+                    app('sentry')->captureException($e);
+                }
+                // create dummy $origin
+                $origin = static::createObject(
+                    [
+                        'latitude'  => 0,
+                        'longitude' => 0,
+                    ]
+                );
+            }
         }
 
         if ($destination instanceof \Fleetbase\FleetOps\Models\Place) {
@@ -650,13 +663,26 @@ class Utils extends FleetbaseUtils
                 ]
             );
         } else {
-            $point       = static::getPointFromMixed($destination);
-            $destination = static::createObject(
-                [
-                    'latitude'  => $point->getLat(),
-                    'longitude' => $point->getLng(),
-                ]
-            );
+            try {
+                $point       = static::getPointFromMixed($destination);
+                $destination = static::createObject(
+                    [
+                        'latitude'  => $point->getLat(),
+                        'longitude' => $point->getLng(),
+                    ]
+                );
+            } catch (\Throwable $e) {
+                if (app()->bound('sentry')) {
+                    app('sentry')->captureException($e);
+                }
+                // create dummy $destination
+                $destination = static::createObject(
+                    [
+                        'latitude'  => 0,
+                        'longitude' => 0,
+                    ]
+                );
+            }
         }
 
         $cacheKey = $origin->latitude . ':' . $origin->longitude . ':' . $destination->latitude . ':' . $destination->longitude;
