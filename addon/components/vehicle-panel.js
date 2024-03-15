@@ -4,8 +4,8 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
 import VehiclePanelDetailComponent from './vehicle-panel/details';
-import contextComponentCallback from '../utils/context-component-callback';
-import applyContextComponentArguments from '../utils/apply-context-component-arguments';
+import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
+import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
 /**
  * Represents the vehicle panel component, handling vehicle information display and editing.

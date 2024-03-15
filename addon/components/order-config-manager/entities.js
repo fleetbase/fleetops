@@ -8,7 +8,7 @@ import { task } from 'ember-concurrency-decorators';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 import ObjectProxy from '@ember/object/proxy';
 import createCustomEntity from '../../utils/create-custom-entity';
-import contextComponentCallback from '../../utils/context-component-callback';
+import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 
 /**
  * Component class for managing order configuration entities.
