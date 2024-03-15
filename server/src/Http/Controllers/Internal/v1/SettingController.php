@@ -50,7 +50,7 @@ class SettingController extends Controller
 
     public function saveEntityEditingSettings(Request $request)
     {
-        $entityEditingSettings = $request->input('entityEditingSettings', []);
+        $entityEditingSettings  = $request->input('entityEditingSettings', []);
         $isEntityFieldsEditable = $request->boolean('isEntityFieldsEditable');
 
         // Save entity editing settings
@@ -59,10 +59,10 @@ class SettingController extends Controller
 
         return response()->json(['entityEditingSettings' => $entityEditingSettings, 'isEntityFieldsEditable' => $isEntityFieldsEditable]);
     }
-    
+
     public function getEntityEditingSettings()
     {
-        $entityEditingSettings = Setting::where('key', 'fleet-ops.entity-editing-settings')->value('value');
+        $entityEditingSettings  = Setting::where('key', 'fleet-ops.entity-editing-settings')->value('value');
         $isEntityFieldsEditable = Setting::where('key', 'fleet-ops.entity-fields-editable')->value('value');
 
         return response()->json(['entityEditingSettings' => $entityEditingSettings, 'isEntityFieldsEditable' => $isEntityFieldsEditable]);
