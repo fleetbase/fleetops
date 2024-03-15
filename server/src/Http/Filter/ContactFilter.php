@@ -22,6 +22,11 @@ class ContactFilter extends Filter
         );
     }
 
+    public function queryForPublic()
+    {
+        $this->builder->where('company_uuid', $this->session->get('company'));
+    }
+
     public function query(?string $searchQuery)
     {
         $this->builder->search($searchQuery);

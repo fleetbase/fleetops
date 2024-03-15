@@ -12,6 +12,11 @@ class FleetFilter extends Filter
         $this->builder->where('company_uuid', $this->session->get('company'))->with(['serviceArea', 'zone']);
     }
 
+    public function queryForPublic()
+    {
+        $this->builder->where('company_uuid', $this->session->get('company'));
+    }
+
     public function query(?string $searchQuery)
     {
         $this->builder->where(function ($query) use ($searchQuery) {

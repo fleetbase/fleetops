@@ -11,6 +11,11 @@ class TrackingStatusFilter extends Filter
         $this->builder->where('company_uuid', $this->session->get('company'));
     }
 
+    public function queryForPublic()
+    {
+        $this->builder->where('company_uuid', $this->session->get('company'));
+    }
+
     public function trackingNumber(string $trackingNumber)
     {
         $this->builder->whereHas('trackingNumber', function ($query) use ($trackingNumber) {

@@ -3,8 +3,8 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import Point from '@fleetbase/fleetops-data/utils/geojson/point';
-import contextComponentCallback from '../utils/context-component-callback';
-import applyContextComponentArguments from '../utils/apply-context-component-arguments';
+import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
+import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
 export default class DriverFormPanelComponent extends Component {
     /**

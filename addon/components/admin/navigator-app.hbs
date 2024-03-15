@@ -1,8 +1,84 @@
-<ContentPanel @title={{t "fleet-ops.component.admin.navigator-app.title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+<ContentPanel @title={{t "fleet-ops.component.admin.navigator-app.title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800 mb-4">
     <InputGroup @name={{t "fleet-ops.component.admin.navigator-app.name"}}>
         <ClickToCopy class="px-4 py-2 border rounded-md bg-gray-100 shadow-sm dark:bg-gray-700 border-gray-200 dark:border-gray-800" @value={{this.url}}>{{this.url}}</ClickToCopy>
         <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
             <InputInfo>{{t "fleet-ops.component.admin.navigator-app.message" htmlSafe=true companyName=@app.name}}</InputInfo>
         </Attach::Tooltip>
     </InputGroup>
+</ContentPanel>
+
+<ContentPanel @title={{t "fleet-ops.component.admin.navigator-app.settings"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+    <InputGroup>
+        <div class="flex items-center">
+            <Toggle @isToggled={{this.isEntityFieldsEditable}} @onToggle={{this.enableEditableEntityFields}} />
+            <div class="ml-2">{{t "fleet-ops.component.admin.navigator-app.select-input"}}</div>
+        </div>
+    </InputGroup>
+    {{#if this.isEntityFieldsEditable}}
+        <OrderConfigManager @onConfigChanged={{this.onConfigChanged}} as |Action Context|>
+            <div class="mt-2">
+                <InputGroup @name="Select order config" @helpText="Apply entity editing settings for an order config.">
+                    <DropdownButton
+                        class="order-config-select-button mr-2"
+                        @disabled={{not Context.configs}}
+                        @text={{if Context.currentConfig.name Context.currentConfig.name (t "fleet-ops.component.order-config-manager.select-order-config")}}
+                        @textClass="text-sm mr-2"
+                        @buttonClass="flex-row-reverse w-44 justify-between"
+                        @icon="caret-down"
+                        @iconClass="mr-0i"
+                        @size="sm"
+                        @iconPrefix="fas"
+                        @triggerClass="hidden md:flex"
+                        as |dd|
+                    >
+                        <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
+                            <div class="p-1">
+                                {{#each Context.configs as |orderConfig|}}
+                                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd Context.selectConfig orderConfig)}}>
+                                        <div class="flex-1 flex flex-row items-center">
+                                            <div class="w-6">
+                                                <FaIcon @icon="cogs" />
+                                            </div>
+                                            <span>{{orderConfig.name}}</span>
+                                        </div>
+                                        <div>
+                                            {{#if (eq Context.currentConfig.id orderConfig.id)}}
+                                                <FaIcon @icon="check" class="text-green-500" />
+                                            {{/if}}
+                                        </div>
+                                    </a>
+                                {{/each}}
+                            </div>
+                        </div>
+                    </DropdownButton>
+                </InputGroup>
+            </div>
+        </OrderConfigManager>
+        {{#if this.selectedOrderConfig}}
+            <div class="bg-gray-400 border-gray-600 rounded-lg px-4 py-2 dark:bg-gray-700 dark:border-gray-800">
+                {{#let (get (get this.entityEditingSettings this.selectedOrderConfig.id) "editable_entity_fields") as |editableEntityFields|}}
+                    {{#each this.entityFields as |entityField|}}
+                        <div class="mt-1">
+                            <Checkbox
+                                @value={{includes entityField editableEntityFields}}
+                                @label={{smart-humanize entityField}}
+                                @onToggle={{fn this.toggleFieldEditable entityField}}
+                                @helpText={{t "fleet-ops.component.admin.visibility-controls.checkbox-text"}}
+                            />
+                        </div>
+                    {{/each}}
+                {{/let}}
+            </div>
+            <div class="mt-3 flex items-center">
+                <Button
+                    @type="primary"
+                    @size="lg"
+                    @icon="save"
+                    @text={{t "fleet-ops.common.save-changes"}}
+                    @onClick={{perform this.saveEntityEditingSettings}}
+                    @isLoading={{not this.saveEntityEditingSettings.isIdle}}
+                />
+            </div>
+        {{/if}}
+    {{/if}}
 </ContentPanel>

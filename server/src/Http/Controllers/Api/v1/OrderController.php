@@ -25,6 +25,7 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\File;
+use Fleetbase\Models\Setting;
 use Fleetbase\Support\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -433,8 +434,6 @@ class OrderController extends Controller
     public function query(Request $request)
     {
         $results = Order::queryWithRequest($request, function (&$query, $request) {
-            $query->where('company_uuid', session('company'));
-
             if ($request->has('payload')) {
                 $query->whereHas('payload', function ($q) use ($request) {
                     $q->where('public_id', $request->input('payload'));
@@ -1363,5 +1362,37 @@ class OrderController extends Controller
         $proof->save();
 
         return new ProofResource($proof);
+    }
+
+    public function getEntityEditableFields(string $id, Request $request)
+    {
+        try {
+            $order = Order::findRecordOrFail($id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return response()->json(
+                [
+                    'error' => 'Order resource not found.',
+                ],
+                404
+            );
+        }
+
+        // Define settings as array
+        $entityEditingSettings = [];
+
+        // get the order config id
+        $orderConfigId = data_get($order, 'order_config_uuid');
+
+        // Get entity editing settings
+        $savedEntityEditingSettings = Setting::where('key', 'fleet-ops.entity-editing-settings')->value('value');
+
+        if ($orderConfigId && $savedEntityEditingSettings) {
+            $resolvedEntityEditingSettings = data_get($savedEntityEditingSettings, $orderConfigId, []);
+            if ($resolvedEntityEditingSettings) {
+                $entityEditingSettings = data_get($resolvedEntityEditingSettings, 'editable_entity_fields', []);
+            }
+        }
+
+        return response()->json($entityEditingSettings);
     }
 }

@@ -4,7 +4,7 @@ namespace Fleetbase\FleetOps\Http\Filter;
 
 use Fleetbase\Http\Filter\Filter;
 
-class ZoneFilter extends Filter
+class PayloadFilter extends Filter
 {
     public function queryForInternal()
     {

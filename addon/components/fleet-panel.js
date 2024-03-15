@@ -6,8 +6,8 @@ import { isArray } from '@ember/array';
 import FleetPanelDetailComponent from './fleet-panel/details';
 import FleetPanelDriverListingComponent from './fleet-panel/driver-listing';
 import FleetPanelVehicleListingComponent from './fleet-panel/vehicle-listing';
-import contextComponentCallback from '../utils/context-component-callback';
-import applyContextComponentArguments from '../utils/apply-context-component-arguments';
+import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
+import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
 export default class FleetPanelComponent extends Component {
     /**

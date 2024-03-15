@@ -5,7 +5,7 @@ import { isBlank } from '@ember/utils';
 import { action, set } from '@ember/object';
 import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
-import contextComponentCallback from '../../utils/context-component-callback';
+import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 
 export default class FleetPanelVehicleListingComponent extends Component {
     /**

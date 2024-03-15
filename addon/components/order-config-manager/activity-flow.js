@@ -9,7 +9,7 @@ import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency-decorators';
 import generateUUID from '@fleetbase/ember-core/utils/generate-uuid';
 import createFlowActivity from '../../utils/create-flow-activity';
-import contextComponentCallback from '../../utils/context-component-callback';
+import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 
 /**
  * Manages the activity flow for order configuration, allowing users to create, edit, and view a sequence of activities.

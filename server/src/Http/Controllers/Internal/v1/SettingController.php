@@ -47,4 +47,24 @@ class SettingController extends Controller
 
         return response()->json(['visibilitySettings' => $visibilitySettings]);
     }
+
+    public function saveEntityEditingSettings(Request $request)
+    {
+        $entityEditingSettings  = $request->input('entityEditingSettings', []);
+        $isEntityFieldsEditable = $request->boolean('isEntityFieldsEditable');
+
+        // Save entity editing settings
+        Setting::configure('fleet-ops.entity-editing-settings', $entityEditingSettings);
+        Setting::configure('fleet-ops.entity-fields-editable', $isEntityFieldsEditable);
+
+        return response()->json(['entityEditingSettings' => $entityEditingSettings, 'isEntityFieldsEditable' => $isEntityFieldsEditable]);
+    }
+
+    public function getEntityEditingSettings()
+    {
+        $entityEditingSettings  = Setting::where('key', 'fleet-ops.entity-editing-settings')->value('value');
+        $isEntityFieldsEditable = Setting::where('key', 'fleet-ops.entity-fields-editable')->value('value');
+
+        return response()->json(['entityEditingSettings' => $entityEditingSettings, 'isEntityFieldsEditable' => $isEntityFieldsEditable]);
+    }
 }

@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import contextComponentCallback from '../utils/context-component-callback';
+import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 
 export default class OrderConfigManagerOverlayComponent extends Component {
     /**
