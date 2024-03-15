@@ -29,7 +29,7 @@ export default class NavigatorAppControlsComponent extends Component {
     }
 
     @action toggleFieldEditable(fieldName, isEditable) {
-        const editableFields = this.entityEditingSettings[this.selectedOrderConfig.id].editable_entity_fields;
+        const editableFields = this.entityEditingSettings[this.selectedOrderConfig.id]?.editable_entity_fields;
         if (isArray(editableFields)) {
             if (isEditable) {
                 editableFields.pushObject(fieldName);
