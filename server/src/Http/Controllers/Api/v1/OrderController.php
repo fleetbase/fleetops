@@ -1364,7 +1364,23 @@ class OrderController extends Controller
         return new ProofResource($proof);
     }
 
-    public function getEntityEditableFields(string $id, Request $request)
+    /**
+     * Retrieves editable fields for a specific order entity based on its configuration.
+     *
+     * This function looks up an order by its ID and retrieves configurable editable fields
+     * associated with it, as defined in the settings. If the order is not found, it returns
+     * a 404 response with an error message. Otherwise, it returns the editable fields for
+     * the order entity.
+     *
+     * @param string  $id      the unique identifier of the order
+     * @param Request $request the incoming request instance
+     *
+     * @return \Illuminate\Http\JsonResponse returns a JSON response containing either an error message
+     *                                       or the editable fields for the order entity
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException thrown if the order with the given ID cannot be found
+     */
+    public function getEditableEntityFields(string $id, Request $request)
     {
         try {
             $order = Order::findRecordOrFail($id);

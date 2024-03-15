@@ -84,7 +84,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->post('{id}/capture-photo/{subjectId?}', 'OrderController@capturePhoto');
                     $router->put('{id}', 'OrderController@update');
                     $router->delete('{id}', 'OrderController@delete');
-                    $router->delete('{id}', 'OrderController@getEntityEditableFields');
+                    $router->get('{id}/editable-entity-fields', 'OrderController@getEditableEntityFields');
                 });
                 // entities routes
                 $router->group(['prefix' => 'entities'], function () use ($router) {
