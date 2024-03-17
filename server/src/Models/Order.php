@@ -1505,13 +1505,11 @@ class Order extends Model
      *
      * @return Order the updated Order instance
      */
-    public function setDistanceAndTime(): Order
+    public function setDistanceAndTime($options = []): Order
     {
         $origin      = $this->getCurrentOriginPosition();
         $destination = $this->getDestinationPosition();
-
-        $matrix = Utils::getDrivingDistanceAndTime($origin, $destination);
-
+        $matrix      = Utils::getDrivingDistanceAndTime($origin, $destination, $options);
         if ($origin === null || $destination === null) {
             return $this;
         }

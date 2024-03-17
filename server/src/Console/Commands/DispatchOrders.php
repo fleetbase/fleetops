@@ -14,7 +14,7 @@ class DispatchOrders extends Command
      *
      * @var string
      */
-    protected $signature = 'fleetops:dispatch-orders {--sandbox=false}';
+    protected $signature = 'fleetops:dispatch-orders {--sandbox=false : Whether to use the sandbox database for testing purposes.}';
 
     /**
      * The console command description.
@@ -26,41 +26,47 @@ class DispatchOrders extends Command
     /**
      * Execute the console command.
      *
-     * @return int
+     * Processes and dispatches orders that are scheduled for today. Orders are
+     * filtered based on their dispatch status, scheduled time, and other criteria.
+     * The command allows for a sandbox mode for testing.
      */
-    public function handle()
+    public function handle(): void
     {
         // Set UTC as default timezone
         date_default_timezone_set('UTC');
 
-        // Get all scheduled dispatchable orders
-        $orders = $this->getScheduledOrders();
+        $sandboxMode = Utils::castBoolean($this->option('sandbox'));
+        $this->info('Running in ' . ($sandboxMode ? 'sandbox' : 'production') . ' mode.');
 
-        // Notify Current Time and # of Orders in Alera
-        $this->alert('Found (' . $orders->count() . ') Orders Scheduled for Dispatched -- Current Time: ' . Carbon::now()->toDateTimeString());
+        // Get all scheduled dispatchable orders
+        $orders = $this->getScheduledOrders($sandboxMode);
+
+        $this->alert('Found ' . $orders->count() . ' orders scheduled for dispatch. Current Time: ' . Carbon::now()->toDateTimeString());
 
         // Dispatch each order
-        $orders->each(
-            function ($order) {
-                if ($order->shouldDispatch()) {
-                    $order->dispatch();
-
-                    $this->info('Order ' . $order->public_id . ' dispatched! (' . $order->scheduled_at . ')');
-                } else {
-                    $this->warn('Order ' . $order->public_id . ' will be dispatched today today AT ' . $order->scheduled_at);
-                }
+        foreach ($orders as $order) {
+            if ($order->shouldDispatch()) {
+                $order->dispatch();
+                $this->info('Order ' . $order->public_id . ' dispatched successfully (' . $order->scheduled_at . ').');
+            } else {
+                $this->warn('Order ' . $order->public_id . ' is not ready for dispatch (' . $order->scheduled_at . ').');
             }
-        );
+        }
     }
 
     /**
-     * Fetches scheduled dispatchable orders based on certain criteria.
+     * Fetches scheduled dispatchable orders.
+     *
+     * Retrieves orders that are scheduled for today and have not yet been dispatched.
+     * Filters orders based on dispatch status, order status, and scheduled date.
+     *
+     * @param bool $sandboxMode whether to use the sandbox database
+     *
+     * @return \Illuminate\Database\Eloquent\Collection returns a collection of orders that meet the criteria
      */
-    public function getScheduledOrders(): \Illuminate\Database\Eloquent\Collection
+    protected function getScheduledOrders(bool $sandboxMode): \Illuminate\Database\Eloquent\Collection
     {
-        $sandbox = Utils::castBoolean($this->option('sandbox'));
-
-        return Order::on($sandbox ? 'sandbox' : 'mysql')
+        return Order::on($sandboxMode ? 'sandbox' : 'mysql')
             ->withoutGlobalScopes()
             ->where('dispatched', 0)
             ->whereIn('status', ['pending', 'created'])

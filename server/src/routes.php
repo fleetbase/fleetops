@@ -12,9 +12,6 @@ use Illuminate\Support\Facades\Route;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-
-Route::get('fleet-ops-test', 'Fleetbase\FleetOps\Http\Controllers\Controller@test');
-
 Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase\FleetOps\Http\Controllers')->group(
     function ($router) {
         /*

@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Utils as FleetbaseUtils;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -95,11 +96,11 @@ class Utils extends FleetbaseUtils
     /**
      * Unpacks a mysql POINT column from binary to array.
      */
-    public static function mysqlPointAsGeometry(string $rawPoint): \Fleetbase\LaravelMysqlSpatial\Types\Point
+    public static function mysqlPointAsGeometry(string $rawPoint): Point
     {
         $coordinates = static::unpackPoint($rawPoint);
 
-        return new \Fleetbase\LaravelMysqlSpatial\Types\Point($coordinates['lon'], $coordinates['lat']);
+        return new Point($coordinates['lon'], $coordinates['lat']);
     }
 
     /**
@@ -162,7 +163,7 @@ class Utils extends FleetbaseUtils
     public static function isCoordinates($coordinates): bool
     {
         try {
-            return static::getPointFromMixed($coordinates) instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point;
+            return static::getPointFromMixed($coordinates) instanceof Point;
         } catch (\Throwable $e) {
             return false;
         }
@@ -175,9 +176,9 @@ class Utils extends FleetbaseUtils
      *
      * @param mixed $coordinates the coordinates input value to extract a coordinate from
      *
-     * @return \Fleetbase\LaravelMysqlSpatial\Types\Point the extracted Point object
+     * @return Point the extracted Point object
      */
-    public static function getPointFromMixed($coordinates): ?\Fleetbase\LaravelMysqlSpatial\Types\Point
+    public static function getPointFromMixed($coordinates): ?Point
     {
         $latitude  = null;
         $longitude = null;
@@ -199,7 +200,7 @@ class Utils extends FleetbaseUtils
             $coordinates = $coordinates->getSpatialValue();
         }
 
-        if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
+        if ($coordinates instanceof Point) {
             $latitude  = $coordinates->getLat();
             $longitude = $coordinates->getLng();
         } elseif (static::isGeoJson($coordinates)) {
@@ -216,7 +217,7 @@ class Utils extends FleetbaseUtils
 
             if (static::isJson($coordinatesJson)) {
                 try {
-                    $coordinates = \Fleetbase\LaravelMysqlSpatial\Types\Point::fromJson($coordinatesJson);
+                    $coordinates = Point::fromJson($coordinatesJson);
                 } catch (\Throwable $e) {
                     if ($coordinatesInGeoJson) {
                         return static::getPointFromMixed($coordinatesInGeoJson);
@@ -312,7 +313,7 @@ class Utils extends FleetbaseUtils
             $longitude = $coords[1];
         }
 
-        if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
+        if ($coordinates instanceof Point) {
             return $coordinates;
         }
 
@@ -321,7 +322,7 @@ class Utils extends FleetbaseUtils
             throw new \Exception('Attempted to resolve Point from invalid location.');
         }
 
-        return new \Fleetbase\LaravelMysqlSpatial\Types\Point((float) $latitude, (float) $longitude);
+        return new Point((float) $latitude, (float) $longitude);
     }
 
     /**
@@ -334,7 +335,7 @@ class Utils extends FleetbaseUtils
      */
     public static function isCoordinatesStrict($coordinates)
     {
-        return static::getPointFromCoordinatesStrict($coordinates) instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point;
+        return static::getPointFromCoordinatesStrict($coordinates) instanceof Point;
     }
 
     /**
@@ -343,15 +344,15 @@ class Utils extends FleetbaseUtils
      *
      * @param mixed $coordinates the coordinates, which can be an array, object, or string
      *
-     * @return \Fleetbase\LaravelMysqlSpatial\Types\Point Returns the Point instance
+     * @return Point Returns the Point instance
      */
-    public static function getPointFromCoordinatesStrict($coordinates): ?\Fleetbase\LaravelMysqlSpatial\Types\Point
+    public static function getPointFromCoordinatesStrict($coordinates): ?Point
     {
         if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialExpression) {
             $coordinates = $coordinates->getSpatialValue();
         }
 
-        if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
+        if ($coordinates instanceof Point) {
             return $coordinates;
         }
 
@@ -363,7 +364,7 @@ class Utils extends FleetbaseUtils
             }
 
             if (static::isJson($coordinatesJson)) {
-                $coordinates = \Fleetbase\LaravelMysqlSpatial\Types\Point::fromJson($coordinatesJson);
+                $coordinates = Point::fromJson($coordinatesJson);
             }
         }
 
@@ -372,7 +373,7 @@ class Utils extends FleetbaseUtils
             $longitude = static::or($coordinates, ['lon', '_lon', 'long', 'lng', '_lng', '_longitude', 'longitude', 'y', '1']);
 
             if (is_numeric($latitude) && is_numeric($longitude)) {
-                $coordinates = new \Fleetbase\LaravelMysqlSpatial\Types\Point((float) $latitude, (float) $longitude);
+                $coordinates = new Point((float) $latitude, (float) $longitude);
             }
         }
 
@@ -412,11 +413,11 @@ class Utils extends FleetbaseUtils
             $longitude = $coords[1];
 
             if (is_numeric($latitude) && is_numeric($longitude)) {
-                $coordinates = new \Fleetbase\LaravelMysqlSpatial\Types\Point((float) $latitude, (float) $longitude);
+                $coordinates = new Point((float) $latitude, (float) $longitude);
             }
         }
 
-        if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
+        if ($coordinates instanceof Point) {
             return $coordinates;
         }
 
@@ -444,7 +445,7 @@ class Utils extends FleetbaseUtils
             $coordinates = $coordinates->location;
         }
 
-        if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
+        if ($coordinates instanceof Point) {
             $latitude  = $coordinates->getLat();
             $longitude = $coordinates->getLng();
         } elseif (is_array($coordinates) || is_object($coordinates)) {
@@ -534,22 +535,22 @@ class Utils extends FleetbaseUtils
      *
      * @param mixed $coordinates the input value representing a location or set of coordinates
      *
-     * @return \Fleetbase\LaravelMysqlSpatial\Types\Point the extracted point value
+     * @return Point the extracted point value
      */
-    public static function getPointFromCoordinates($coordinates): \Fleetbase\LaravelMysqlSpatial\Types\Point
+    public static function getPointFromCoordinates($coordinates): Point
     {
-        if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
+        if ($coordinates instanceof Point) {
             return $coordinates;
         }
 
         if (is_null($coordinates) || !static::isCoordinates($coordinates)) {
-            return new \Fleetbase\LaravelMysqlSpatial\Types\Point(0, 0);
+            return new Point(0, 0);
         }
 
         $latitude  = static::getLatitudeFromCoordinates($coordinates);
         $longitude = static::getLongitudeFromCoordinates($coordinates);
 
-        return new \Fleetbase\LaravelMysqlSpatial\Types\Point($latitude, $longitude);
+        return new Point($latitude, $longitude);
     }
 
     /**
@@ -563,19 +564,19 @@ class Utils extends FleetbaseUtils
     {
         $wkt = 'POINT(0 0)';
 
-        if ($point instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
+        if ($point instanceof Point) {
             $wkt = $point->toWKT();
         }
 
         if (is_array($point)) {
             $json = json_encode($point);
-            $p    = \Fleetbase\LaravelMysqlSpatial\Types\Point::fromJson($json);
+            $p    = Point::fromJson($json);
 
             $wkt = $p->toWkt();
         }
 
         if (is_string($point)) {
-            $p = \Fleetbase\LaravelMysqlSpatial\Types\Point::fromString($point);
+            $p = Point::fromString($point);
 
             $wkt = $p->toWKT();
         }
@@ -605,133 +606,75 @@ class Utils extends FleetbaseUtils
      *
      * @param string $data the binary string representing the point
      *
-     * @return \Fleetbase\LaravelMysqlSpatial\Types\Point the Laravel MySQL Spatial Point instance
+     * @return Point the Laravel MySQL Spatial Point instance
      */
-    public static function rawPointToPoint(string $data): \Fleetbase\LaravelMysqlSpatial\Types\Point
+    public static function rawPointToPoint(string $data): Point
     {
         // Use the `unpack` function to extract the X, Y, and SRID values from the binary string.
         $res = unpack('lSRID/CByteOrder/lTypeInfo/dX/dY', $data);
 
         // Return a new Laravel MySQL Spatial Point instance with the X, Y, and SRID values.
-        return new \Fleetbase\LaravelMysqlSpatial\Types\Point($res['X'], $res['Y'], $res['SRID']);
+        return new Point($res['X'], $res['Y'], $res['SRID']);
     }
 
     /**
-     * Calculates driving distance and time using Google distance matrix.
-     * Returns distance in meters and time in seconds.
+     * Calculates the driving distance and time between two points.
      *
-     * @param \Fleetbase\FleetOps\Models\Place|\Fleetbase\LaravelMysqlSpatial\Types\Point|array $origin
-     * @param \Fleetbase\FleetOps\Models\Place|\Fleetbase\LaravelMysqlSpatial\Types\Point|array $destination
+     * This function attempts to find the driving distance and time from the origin to the destination
+     * using various map APIs. It first attempts to resolve the origin and destination from various input types
+     * into geographical coordinates. Then, based on the provider specified in the options or defaulting to configured provider,
+     * it queries the respective service for the driving distance and time. The result is returned as a DistanceMatrix
+     * object with the distance in meters and the time in seconds.
+     *
+     * @param mixed $origin      The origin of the journey. Can be a Place model, a string, or an array with latitude and longitude.
+     * @param mixed $destination The destination of the journey. Similar to the origin, it accepts multiple input types.
+     *
+     * @return DistanceMatrix an object containing the distance and time of the journey
+     *
+     * @throws \Throwable throws any exception encountered during the resolution of points or API calls
      */
-    public static function getDrivingDistanceAndTime($origin, $destination): DistanceMatrix
+    public static function getDrivingDistanceAndTime($origin, $destination, $options = []): DistanceMatrix
     {
-        if ($origin instanceof \Fleetbase\FleetOps\Models\Place) {
-            $origin = static::createObject(
-                [
-                    'latitude'  => $origin->location->getLat(),
-                    'longitude' => $origin->location->getLng(),
-                ]
-            );
-        } else {
-            try {
-                $point  = static::getPointFromMixed($origin);
-                $origin = static::createObject(
-                    [
-                        'latitude'  => $point->getLat(),
-                        'longitude' => $point->getLng(),
-                    ]
-                );
-            } catch (\Throwable $e) {
-                if (app()->bound('sentry')) {
-                    app('sentry')->captureException($e);
-                }
-                // create dummy $origin
-                $origin = static::createObject(
-                    [
-                        'latitude'  => 0,
-                        'longitude' => 0,
-                    ]
-                );
-            }
+        $origin       = static::getPointFromMixed($origin);
+        $destination  = static::getPointFromMixed($destination);
+        $origins      = $origin->getLat() . ',' . $origin->getLng();
+        $destinations = $destination->getLat() . ',' . $destination->getLng();
+
+        // Create empty distance matric
+        $distanceMatrix = new DistanceMatrix(0, 0);
+        $provider       = data_get($options, 'provider', config('fleetops.distance_matrix.provider'));
+        switch ($provider) {
+            case 'calculate':
+                $distanceMatrix = static::calculateDrivingDistanceAndTime($origins, $destinations);
+                break;
+
+            case 'osrm':
+                $distanceMatrix = static::getDistanceMatrixFromOSRM($origins, $destinations);
+                break;
+
+            case 'google':
+            default:
+                $distanceMatrix = static::getDistanceMatrixFromGoogle($origins, $destinations);
+                break;
         }
 
-        if ($destination instanceof \Fleetbase\FleetOps\Models\Place) {
-            $destination = static::createObject(
-                [
-                    'latitude'  => $destination->location->getLat(),
-                    'longitude' => $destination->location->getLng(),
-                ]
-            );
-        } else {
-            try {
-                $point       = static::getPointFromMixed($destination);
-                $destination = static::createObject(
-                    [
-                        'latitude'  => $point->getLat(),
-                        'longitude' => $point->getLng(),
-                    ]
-                );
-            } catch (\Throwable $e) {
-                if (app()->bound('sentry')) {
-                    app('sentry')->captureException($e);
-                }
-                // create dummy $destination
-                $destination = static::createObject(
-                    [
-                        'latitude'  => 0,
-                        'longitude' => 0,
-                    ]
-                );
-            }
-        }
-
-        $cacheKey = $origin->latitude . ':' . $origin->longitude . ':' . $destination->latitude . ':' . $destination->longitude;
-
-        // check cache for results
-        $cachedResult = Redis::get($cacheKey);
-
-        if ($cachedResult) {
-            $json = json_decode($cachedResult);
-
-            if (!empty($json->distance) && !empty($json->time)) {
-                return new DistanceMatrix($json->distance, $json->time);
-            }
-        }
-
-        $response = Http::get(
-            'https://maps.googleapis.com/maps/api/distancematrix/json',
-            [
-                'origins'      => $origin->latitude . ',' . $origin->longitude,
-                'destinations' => $destination->latitude . ',' . $destination->longitude,
-                'mode'         => 'driving',
-                'key'          => env('GOOGLE_MAPS_API_KEY'),
-            ]
-        )->json();
-
-        $distance = data_get($response, 'rows.0.elements.0.distance.value');
-        $time     = data_get($response, 'rows.0.elements.0.duration.value');
-
-        $result = static::createObject(
-            [
-                'distance' => $distance,
-                'time'     => $time,
-            ]
-        );
-
-        // cache result
-        Redis::set($cacheKey, json_encode($result));
-
-        return new DistanceMatrix($distance, $time);
+        return $distanceMatrix;
     }
 
     /**
-     * Calculates driving distance and time using Google distance matrix for multiple origins or destinations.
-     * Returns distance in meters and time in seconds.
+     * Computes a distance matrix for multiple origins and destinations.
      *
-     * @param Place|Point|array $origins
-     * @param Place|Point|array $destinations
+     * This function is designed to handle arrays of origins and destinations to calculate a distance matrix.
+     * It converts the input arrays into a string format suitable for the map API request. The provider specified
+     * in the options (default is Google) determines which map service API is used for the calculations.
+     *
+     * @param array|\Illuminate\Support\Collection $origins      array or collection of origin points
+     * @param array|\Illuminate\Support\Collection $destinations array or collection of destination points
+     * @param array                                $options      options for API calls, like the provider and mode of transport
+     *
+     * @return DistanceMatrix an object representing the distance and time between the furthest origins and destinations
      */
-    public static function distanceMatrix($origins = [], $destinations = []): DistanceMatrix
+    public static function distanceMatrix($origins = [], $destinations = [], $options = []): DistanceMatrix
     {
         if ($origins instanceof \Illuminate\Support\Collection) {
             $origins = $origins->all();
@@ -741,57 +684,83 @@ class Utils extends FleetbaseUtils
             $destinations = $destinations->all();
         }
 
-        $origins = array_map(
-            function ($origin) {
-                $point  = static::getPointFromMixed($origin);
-                $origin = static::createObject(
-                    [
-                        'latitude'  => $point->getLat(),
-                        'longitude' => $point->getLng(),
-                    ]
-                );
+        // Convert origins and destinatinos to string
+        $origins      = static::createCoordinateStringFromPlacesArray($origins);
+        $destinations = static::createCoordinateStringFromPlacesArray($destinations);
 
-                return $origin;
+        // Create empty distance matric
+        $distanceMatrix = new DistanceMatrix(0, 0);
+        $provider       = data_get($options, 'provider', config('fleetops.distance_matrix.provider'));
+        switch ($provider) {
+            case 'calculate':
+                $distanceMatrix = static::calculateDrivingDistanceAndTime($origins, $destinations);
+                break;
+
+            case 'osrm':
+                $distanceMatrix = static::getDistanceMatrixFromOSRM($origins, $destinations);
+                break;
+
+            case 'google':
+            default:
+                $distanceMatrix = static::getDistanceMatrixFromGoogle($origins, $destinations);
+                break;
+        }
+
+        return $distanceMatrix;
+    }
+
+    /**
+     * Converts an array of places into a coordinate string.
+     *
+     * Accepts an array of places (or any type that can be converted into geographical points)
+     * and converts each into a 'latitude,longitude' format. These coordinates are then concatenated into a single string,
+     * separated by the specified separator. The function gracefully handles any errors in the conversion process.
+     *
+     * @param array  $places    array of places to be converted into coordinates
+     * @param string $separator separator used to concatenate the coordinates into a single string
+     *
+     * @return string a concatenated string of coordinates
+     */
+    public static function createCoordinateStringFromPlacesArray(array $places = [], $separator = '|'): string
+    {
+        $coordinates = array_map(
+            function ($place) {
+                try {
+                    $point       = static::getPointFromMixed($place);
+                } catch (\Throwable $e) {
+                    $point = new Point(0, 0);
+                }
+
+                return $point;
             },
-            $origins
+            $places
         );
 
-        $destinations = array_map(
-            function ($destination) {
-                $point       = static::getPointFromMixed($destination);
-                $destination = static::createObject(
-                    [
-                        'latitude'  => $point->getLat(),
-                        'longitude' => $point->getLng(),
-                    ]
-                );
-
-                return $destination;
+        return implode($separator, array_map(
+            function ($point) {
+                return $point->getLat() . ',' . $point->getLng();
             },
-            $destinations
-        );
-
-        // get url ready string for origins
-        $originsString = implode('|', array_map(
-            function ($origin) {
-                return $origin->latitude . ',' . $origin->longitude;
-            },
-            $origins
+            $coordinates
         ));
+    }
 
-        // get url ready string for origins
-        $destinationString = implode('|', array_map(
-            function ($destination) {
-                return $destination->latitude . ',' . $destination->longitude;
-            },
-            $destinations
-        ));
-
-        $cacheKey = md5($originsString . '_' . $destinationString);
-
-        // check cache for results
+    /**
+     * Retrieves a distance matrix using the Google Distance Matrix API.
+     *
+     * This function calculates the distance and time between origins and destinations using the Google API.
+     * It first checks if there is a cached result in Redis and, if not, performs an API call to Google.
+     * The results are then cached in Redis and returned as a DistanceMatrix object.
+     *
+     * @param string $origins      a string of origins in 'latitude,longitude' format, separated by a specified delimiter
+     * @param string $destinations a string of destinations in a similar format to origins
+     * @param array  $options      additional options for the API call, like the mode of transport
+     *
+     * @return DistanceMatrix the distance and time between the given origins and destinations
+     */
+    public static function getDistanceMatrixFromGoogle(string $origins, string $destinations, $options = []): DistanceMatrix
+    {
+        $cacheKey     = md5($origins . '_' . $destinations);
         $cachedResult = Redis::get($cacheKey);
-
         if ($cachedResult) {
             $json = json_decode($cachedResult);
 
@@ -803,9 +772,9 @@ class Utils extends FleetbaseUtils
         $response = Http::withOptions(['verify' => false])->get(
             'https://maps.googleapis.com/maps/api/distancematrix/json',
             [
-                'origins'      => $originsString,
-                'destinations' => $destinationString,
-                'mode'         => 'driving',
+                'origins'      => $origins,
+                'destinations' => $destinations,
+                'mode'         => data_get($options, 'mode', 'driving'),
                 'key'          => env('GOOGLE_MAPS_API_KEY'),
             ]
         )->json();
@@ -813,17 +782,69 @@ class Utils extends FleetbaseUtils
         $distance = (float) data_get($response, 'rows.0.elements.0.distance.value', 0);
         $time     = (float) data_get($response, 'rows.0.elements.0.duration.value', 0);
 
-        $result = static::createObject(
-            [
-                'distance' => $distance,
-                'time'     => $time,
-            ]
-        );
+        // Create distance matrix
+        $distanceMatrix = new DistanceMatrix($distance, $time);
 
-        // cache result
-        Redis::set($cacheKey, json_encode($result));
+        // Cache distance matrix
+        Redis::set($cacheKey, json_encode($distanceMatrix));
 
-        return new DistanceMatrix($distance, $time);
+        return $distanceMatrix;
+    }
+
+    /**
+     * Calculates distance and time between points using the OSRM API.
+     *
+     * Similar to the Google Distance Matrix function, this uses the OSRM (Open Source Routing Machine) API.
+     * It first checks for cached results before making a new API request. The origins and destinations are
+     * reformatted to the OSRM API requirement and the response is parsed into a DistanceMatrix object.
+     *
+     * @param string $origins      comma-separated string of origin coordinates
+     * @param string $destinations comma-separated string of destination coordinates
+     *
+     * @return DistanceMatrix an object containing the distance and time for the specified journey
+     */
+    public static function getDistanceMatrixFromOSRM(string $origins, string $destinations): DistanceMatrix
+    {
+        $cacheKey     = md5($origins . '_' . $destinations);
+        $cachedResult = Redis::get($cacheKey);
+        if ($cachedResult) {
+            $json = json_decode($cachedResult);
+
+            if (!empty($json->distance) && !empty($json->time)) {
+                return new DistanceMatrix($json->distance, $json->time);
+            }
+        }
+
+        // OSRM uses semi-colon to delimit coordinates so replace any `|` as we typically use with `;`
+        $origins           = Str::replace('|', ';', $origins);
+        $destinations      = Str::replace('|', ';', $destinations);
+        $coordinatesString = $origins . ';' . $destinations;
+        // Split the string into individual coordinates
+        $coordinatesArray = explode(';', $coordinatesString);
+
+        // Reverse the latitude and longitude in each coordinate
+        $reversedCoordinates = array_map(function ($coordinate) {
+            $parts = explode(',', $coordinate);
+            if (count($parts) == 2) {
+                return $parts[1] . ',' . $parts[0]; // Swap latitude and longitude
+            }
+
+            return $coordinate; // Return original if it's not a valid coordinate
+        }, $coordinatesArray);
+
+        // Join the reversed coordinates back into a string
+        $reversedCoordinatesString = implode(';', $reversedCoordinates);
+        $response                  = OSRM::getRouteFromCoordinatesString($reversedCoordinatesString);
+        $distance                  = (float) data_get($response, 'routes.0.distance', 0);
+        $time                      = (float) data_get($response, 'routes.0.duration', 0);
+
+        // Create distance matrix
+        $distanceMatrix = new DistanceMatrix($distance, $time);
+
+        // Cache distance matrix
+        Redis::set($cacheKey, json_encode($distanceMatrix));
+
+        return $distanceMatrix;
     }
 
     /**
@@ -883,13 +904,13 @@ class Utils extends FleetbaseUtils
      * https://en.wikipedia.org/wiki/Great-circle_distance#Formulas
      * https://en.wikipedia.org/wiki/Antipodal_point
      *
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point Starting point
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point Ending point
+     * @param Point Starting point
+     * @param Point Ending point
      * @param float $earthRadius Mean earth radius in [m]
      *
      * @return float Distance between points in [m] (same as earthRadius)
      */
-    public static function vincentyGreatCircleDistance(\Fleetbase\LaravelMysqlSpatial\Types\Point $from, \Fleetbase\LaravelMysqlSpatial\Types\Point $to, float $earthRadius = 6371000): float
+    public static function vincentyGreatCircleDistance(Point $from, Point $to, float $earthRadius = 6371000): float
     {
         // convert from degrees to radians
         $latFrom = deg2rad($from->getLat());
@@ -910,7 +931,7 @@ class Utils extends FleetbaseUtils
     /**
      * Finds the nearest timezone for a given coordinate point.
      */
-    public static function getNearestTimezone(\Fleetbase\LaravelMysqlSpatial\Types\Point $location, string $countryCode = ''): string
+    public static function getNearestTimezone(Point $location, string $countryCode = ''): string
     {
         $timezoneIds = \DateTimeZone::listIdentifiers(\DateTimeZone::PER_COUNTRY, $countryCode);
         $lat         = $location->getLat();
@@ -1010,7 +1031,7 @@ class Utils extends FleetbaseUtils
 
     public static function isPoint($point): bool
     {
-        return $point instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point;
+        return $point instanceof Point;
     }
 
     /**
@@ -1275,7 +1296,7 @@ class Utils extends FleetbaseUtils
      *
      * @return float the heading in degrees from the starting point to the ending point
      */
-    public static function calculateHeading(\Fleetbase\LaravelMysqlSpatial\Types\Point $point1, \Fleetbase\LaravelMysqlSpatial\Types\Point $point2): float
+    public static function calculateHeading(Point $point1, Point $point2): float
     {
         // Extract latitude and longitude from Point objects
         $lat1 = $point1->getLat();

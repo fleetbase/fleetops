@@ -13,7 +13,7 @@ class TrackOrderDistanceAndTime extends Command
      *
      * @var string
      */
-    protected $signature = 'fleetops:update-estimations';
+    protected $signature = 'fleetops:update-estimations {--provider : The distance and time calculation provider (calculate, google, or osrm)}';
 
     /**
      * The console command description.
@@ -32,31 +32,46 @@ class TrackOrderDistanceAndTime extends Command
         // Set UTC as default timezone
         date_default_timezone_set('UTC');
 
-        // Get all active/ready order
+        // Determine the provider
+        $provider = $this->option('provider') ?? config('fleetops.distance_matrix.provider');
+        $this->info("Using '{$provider}' as the provider for calculations.");
+
+        // Get all active/ready orders
         $orders = $this->getActiveOrders();
 
-        // Track updated orders
-        $updated = [];
-
-        // Notify Current Time and # of Orders in Alera
-        $this->alert('Found (' . $orders->count() . ') Orders to update Tracking Estimation -- Current Time: ' . Carbon::now()->toDateTimeString());
+        // Notify Current Time and # of Orders
+        $this->alert('Found ' . $orders->count() . ' orders to update tracking estimations. Current Time: ' . Carbon::now()->toDateTimeString());
 
         // Update for each order
-        $orders->each(
-            function ($order) use (&$updated) {
-                $updated[] = $order->setDistanceAndTime()->id;
+        $updated = 0;
+        foreach ($orders as $order) {
+            try {
+                // Update order distance and time estimations based on the provider
+                $order->setDistanceAndTime(['provider' => $provider]);
+                $updated++;
+                $this->info("Order ID {$order->id} - Distance & Time estimations updated.");
+            } catch (\Exception $e) {
+                $this->error("Failed to update Order ID {$order->id} - Error: " . $e->getMessage());
             }
-        );
+        }
 
-        // Update info
-        $this->info('Updated ' . count($updated) . '/' . $orders->count() . ' orders Distance & Time Estimations.');
+        // Summary info
+        $this->info("Updated $updated/" . $orders->count() . " orders' Distance & Time Estimations.");
     }
 
     /**
      * Fetches active orders.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getActiveOrders(): \Illuminate\Database\Eloquent\Collection
+    protected function getActiveOrders()
     {
-        return Order::whereNotIn('status', ['completed', 'canceled'])->whereNull(['deleted_at'])->whereNotNull('company_uuid')->whereHas('payload')->with(['payload', 'payload.waypoints', 'payload.pickup', 'payload.dropoff'])->withoutGlobalScopes()->get();
+        return Order::whereNotIn('status', ['completed', 'canceled'])
+                    ->whereNull('deleted_at')
+                    ->whereNotNull('company_uuid')
+                    ->whereHas('payload')
+                    ->with(['payload', 'payload.waypoints', 'payload.pickup', 'payload.dropoff'])
+                    ->withoutGlobalScopes()
+                    ->get();
     }
 }
