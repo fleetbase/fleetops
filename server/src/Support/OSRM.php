@@ -35,6 +35,13 @@ class OSRM
         }
 
         $coordinates = "{$start->getLng()},{$start->getLat()};{$end->getLng()},{$end->getLat()}";
+
+        return static::getRouteFromCoordinatesString($coordinates, $queryParameters);
+    }
+
+    public static function getRouteFromCoordinatesString(string $coordinates, array $queryParameters = [])
+    {
+        $cacheKey    = 'getRouteFromCoordinatesString:' . md5($coordinates . serialize($queryParameters));
         $url         = self::$baseUrl . "/route/v1/driving/{$coordinates}";
         $response    = Http::get($url, $queryParameters);
         $data        = $response->json();

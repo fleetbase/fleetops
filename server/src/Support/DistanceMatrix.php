@@ -14,7 +14,7 @@ namespace Fleetbase\FleetOps\Support;
  * @license  https://opensource.org/licenses/MIT MIT License
  * @author   Ronald A. Richardson
  */
-class DistanceMatrix
+class DistanceMatrix implements \JsonSerializable
 {
     public ?float $distance;
     public ?float $time;
@@ -23,5 +23,13 @@ class DistanceMatrix
     {
         $this->distance = $distance;
         $this->time     = $time;
+    }
+
+    public function jsonSerialize()
+    {
+        return [
+            'distance' => $this->distance,
+            'time'     => $this->time,
+        ];
     }
 }

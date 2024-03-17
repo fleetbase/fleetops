@@ -48,6 +48,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\TrackOrderDistanceAndTime::class,
         \Fleetbase\FleetOps\Console\Commands\FixDriverCompanies::class,
         \Fleetbase\FleetOps\Console\Commands\FixLegacyOrderConfigs::class,
+        \Fleetbase\FleetOps\Console\Commands\FixInvalidPolymorphicRelationTypeNamespaces::class,
     ];
 
     /**

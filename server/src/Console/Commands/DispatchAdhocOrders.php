@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 
 class DispatchAdhocOrders extends Command
@@ -28,52 +29,56 @@ class DispatchAdhocOrders extends Command
     /**
      * Execute the console command.
      *
-     * This method is responsible for the main logic of the command.
-     * It fetches dispatchable orders, notifies about the current time and number of orders,
-     * and then dispatches each order if there are nearby drivers.
-     *
-     * @return int
+     * Processes and dispatches ad-hoc orders based on their scheduled dispatch time and driver availability.
+     * Orders without an assigned driver and that have surpassed the dispatch time threshold are considered for dispatch.
+     * The command supports sandbox and testing modes for different operational environments.
      */
-    public function handle()
+    public function handle(): void
     {
-        // Set UTC as default timezone
         date_default_timezone_set('UTC');
 
-        // Get all dispatchable orders
+        $sandboxMode = Utils::castBoolean($this->option('sandbox'));
+        $this->info('Running in ' . ($sandboxMode ? 'sandbox' : 'production') . ' mode.');
+
         $orders = $this->getDispatchableOrders();
 
-        // Notify Current Time and # of Orders in Alera
-        $this->alert('Found (' . $orders->count() . ') Orders to be Dispatched -- Current Time: ' . Carbon::now()->toDateTimeString());
+        $this->alert($orders->count() . ' orders found for ad-hoc dispatch. Current Time: ' . Carbon::now()->toDateTimeString());
 
-        // Iterate for each order
-        $orders->each(
-            function ($order) {
-                $pickup   = $order->getPickupLocation();
-                $distance = $order->getAdhocPingDistance();
+        foreach ($orders as $order) {
+            $pickup   = $order->getPickupLocation();
+            $distance = $order->getAdhocPingDistance();
 
-                if (!Utils::isPoint($pickup)) {
-                    return;
-                }
-
-                // Get nearby drivers for this order
-                $drivers = $this->getNearbyDriversForOrder($order, $pickup, $distance);
-
-                // Inform
-                $this->alert('Found (' . $drivers->count() . ') driver within ' . $distance . ' meters of the pickup location for order ' . $order->public_id);
-
-                // Dispatch if there is nearby drivers
-                if ($drivers->count()) {
-                    $order->dispatch(true);
-                    $this->info('Order ' . $order->public_id . ' dispatched!');
-                }
+            if (!Utils::isPoint($pickup)) {
+                $this->error('Invalid pickup location for order ' . $order->public_id);
+                continue;
             }
-        );
+
+            $drivers = $this->getNearbyDriversForOrder($order, $pickup, $distance);
+
+            $this->line('Checking order ' . $order->public_id . ' for nearby drivers within ' . $distance . ' meters.');
+
+            if ($drivers->count()) {
+                $order->dispatch(true);
+                $this->info('Order ' . $order->public_id . ' dispatched successfully to ' . $drivers->count() . ' nearby drivers.');
+                foreach ($drivers as $driver) {
+                    $this->info('Pinging driver ' . $driver->name . ' (' . $driver->public_id . ') ...');
+                }
+            } else {
+                $this->warn('No available drivers found for order ' . $order->public_id);
+            }
+        }
     }
 
     /**
-     * Fetches dispatchable orders based on certain criteria.
+     * Fetches ad-hoc dispatchable orders based on certain criteria.
+     *
+     * Retrieves orders that are marked as ad-hoc and have not been dispatched yet. The orders
+     * are filtered by their scheduled dispatch time, order status, and whether a driver has been
+     * assigned to them. The method also applies filters based on sandbox mode.
+     *
+     * @return Collection returns a collection of orders that meet the criteria
      */
-    public function getDispatchableOrders(): \Illuminate\Database\Eloquent\Collection
+    public function getDispatchableOrders(): Collection
     {
         $sandbox  = Utils::castBoolean($this->option('sandbox'));
         $interval = 4;
@@ -100,8 +105,17 @@ class DispatchAdhocOrders extends Command
 
     /**
      * Fetches nearby drivers for a given order based on the pickup location and distance.
+     *
+     * Retrieves drivers who are within a specified distance from the pickup location of the order.
+     * The method supports a testing mode to simulate driver availability.
+     *
+     * @param Order $order    the order for which drivers are being sought
+     * @param Point $pickup   the geographic point representing the pickup location
+     * @param int   $distance the maximum distance (in meters) within which drivers should be located
+     *
+     * @return Collection returns a collection of nearby drivers
      */
-    public function getNearbyDriversForOrder(Order $order, Point $pickup, int $distance): \Illuminate\Database\Eloquent\Collection
+    public function getNearbyDriversForOrder(Order $order, Point $pickup, int $distance): Collection
     {
         $testing = Utils::castBoolean($this->option('testing'));
 
