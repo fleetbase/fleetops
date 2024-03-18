@@ -13,6 +13,7 @@ export default class NavigatorAppControlsComponent extends Component {
     @tracked entityFields = ['name', 'description', 'sku', 'height', 'width', 'length', 'weight', 'declared_value', 'sale_price'];
     @tracked entityEditingSettings = {};
     @tracked isEntityFieldsEditable = false;
+    @tracked isEntityEditingSettingsReady = false;
 
     constructor() {
         super(...arguments);
@@ -71,6 +72,7 @@ export default class NavigatorAppControlsComponent extends Component {
         const { entityEditingSettings, isEntityFieldsEditable } = yield this.fetch.get('fleet-ops/settings/entity-editing-settings');
         this.entityEditingSettings = entityEditingSettings;
         this.isEntityFieldsEditable = isEntityFieldsEditable;
+        this.isEntityEditingSettingsReady = true;
     }
 
     @task *saveEntityEditingSettings() {

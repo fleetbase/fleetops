@@ -14,6 +14,7 @@ use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
+use Fleetbase\Models\Setting;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
@@ -25,7 +26,6 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\File;
-use Fleetbase\Models\Setting;
 use Fleetbase\Support\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -434,6 +434,8 @@ class OrderController extends Controller
     public function query(Request $request)
     {
         $results = Order::queryWithRequest($request, function (&$query, $request) {
+            $query->where('company_uuid', session('company'));
+
             if ($request->has('payload')) {
                 $query->whereHas('payload', function ($q) use ($request) {
                     $q->where('public_id', $request->input('payload'));
@@ -1364,23 +1366,7 @@ class OrderController extends Controller
         return new ProofResource($proof);
     }
 
-    /**
-     * Retrieves editable fields for a specific order entity based on its configuration.
-     *
-     * This function looks up an order by its ID and retrieves configurable editable fields
-     * associated with it, as defined in the settings. If the order is not found, it returns
-     * a 404 response with an error message. Otherwise, it returns the editable fields for
-     * the order entity.
-     *
-     * @param string  $id      the unique identifier of the order
-     * @param Request $request the incoming request instance
-     *
-     * @return \Illuminate\Http\JsonResponse returns a JSON response containing either an error message
-     *                                       or the editable fields for the order entity
-     *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException thrown if the order with the given ID cannot be found
-     */
-    public function getEditableEntityFields(string $id, Request $request)
+    public function getEntityEditableFields(string $id, Request $request)
     {
         try {
             $order = Order::findRecordOrFail($id);
@@ -1401,6 +1387,7 @@ class OrderController extends Controller
 
         // Get entity editing settings
         $savedEntityEditingSettings = Setting::where('key', 'fleet-ops.entity-editing-settings')->value('value');
+        $isEntityFieldsEditable = data_get($savedEntityEditingSettings, 'isEntityFieldsEditable', false);
 
         if ($orderConfigId && $savedEntityEditingSettings) {
             $resolvedEntityEditingSettings = data_get($savedEntityEditingSettings, $orderConfigId, []);
@@ -1409,6 +1396,9 @@ class OrderController extends Controller
             }
         }
 
-        return response()->json($entityEditingSettings);
+        return response()->json([
+            'entityEditingSettings' => $entityEditingSettings,
+            'isEntityFieldsEditable' => $isEntityFieldsEditable
+        ]);
     }
 }
