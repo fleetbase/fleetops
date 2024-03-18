@@ -10,9 +10,13 @@ export default class NavigatorAppControlsComponent extends Component {
     @tracked isLoading = false;
     @tracked url;
     @tracked selectedOrderConfig;
+    @tracked selectedDriverConfig;
     @tracked entityFields = ['name', 'description', 'sku', 'height', 'width', 'length', 'weight', 'declared_value', 'sale_price'];
     @tracked entityEditingSettings = {};
     @tracked isEntityFieldsEditable = false;
+    @tracked isDriverFieldsEditable = false;
+    @tracked isDocumentEditable = false;
+    @tracked isModelSelectVisible = false;
 
     constructor() {
         super(...arguments);
@@ -20,15 +24,49 @@ export default class NavigatorAppControlsComponent extends Component {
         this.getEntityEditableSettings.perform();
     }
 
+    toggleModelSelect() {
+        this.isModelSelectVisible = !this.isModelSelectVisible;
+    }
+
     @action enableEditableEntityFields(isEntityFieldsEditable) {
         this.isEntityFieldsEditable = isEntityFieldsEditable;
     }
 
+    @action enableDriverEntityFields(isDriverFieldsEditable) {
+        this.isDriverFieldsEditable = isDriverFieldsEditable;
+    }
+
+    @action enableDocumentEntityFields(isDocumentEditable) {
+        this.isDocumentEditable = isDocumentEditable;
+    }
     @action onConfigChanged(orderConfig) {
         this.selectedOrderConfig = orderConfig;
     }
+    @action onDriverConfigChanged(config) {
+        this.selectedDriverConfig = config;
+    }
 
     @action toggleFieldEditable(fieldName, isEditable) {
+        const editableFields = this.entityEditingSettings[this.selectedOrderConfig.id]?.editable_entity_fields;
+        if (isArray(editableFields)) {
+            if (isEditable) {
+                editableFields.pushObject(fieldName);
+            } else {
+                editableFields.removeObject(fieldName);
+            }
+        } else {
+            this.entityEditingSettings = {
+                ...this.entityEditingSettings,
+                [this.selectedOrderConfig.id]: {
+                    editable_entity_fields: [],
+                },
+            };
+            return this.toggleFieldEditable(...arguments);
+        }
+
+        this.updateEditableEntityFieldsForOrderConfig(editableFields);
+    }
+    @action toggleDriverFieldEditable(fieldName, isEditable) {
         const editableFields = this.entityEditingSettings[this.selectedOrderConfig.id]?.editable_entity_fields;
         if (isArray(editableFields)) {
             if (isEditable) {

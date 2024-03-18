@@ -238,6 +238,9 @@ fleet-ops:
         message: Use this URL to link the official Navigator app to this {companyName} instance. Opening this URL on a mobile device will open the Navigator app and update it's configuration and branding.
         settings: Entity Settings
         select-input: Allow driver to update entity details 
+        driver-settings: Driver Settings
+        description: Enable driver on-board
+        upload-document: Require driver to upload documents
 
       visibility-controls:
         title: Visibility Controls
