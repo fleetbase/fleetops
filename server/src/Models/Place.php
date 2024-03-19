@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\Utils;
@@ -114,8 +115,9 @@ class Place extends Model
      * @var array
      */
     protected $casts = [
-        'meta'     => Json::class,
-        'location' => Point::class,
+        'meta'          => Json::class,
+        'location'      => Point::class,
+        'owner_type'    => PolymorphicType::class,
     ];
 
     /**
