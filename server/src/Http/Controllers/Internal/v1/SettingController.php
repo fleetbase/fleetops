@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
+use Fleetbase\Models\Company;
 use Illuminate\Http\Request;
 
 /**
@@ -66,5 +67,34 @@ class SettingController extends Controller
         $isEntityFieldsEditable = Setting::where('key', 'fleet-ops.entity-fields-editable')->value('value');
 
         return response()->json(['entityEditingSettings' => $entityEditingSettings, 'isEntityFieldsEditable' => $isEntityFieldsEditable]);
+    }
+
+    public function saveOnboardSettings(Request $request)
+    {
+        $enableDriverOnboardFromApp = $request->boolean('enableDriverOnboardFromApp');
+        $driverOnboardAppMethod = $request->input('driverOnboardAppMethod');
+        $driverProvideOnboardDocuments = $request->boolean('driverProvideOnboardDocuments');
+        $requiredOnboardDocuments = $request->input('requiredOnboardDocuments');
+
+        $company = Company::where('uuid', session('company'))->first();
+
+        $onBoardSettings = [
+            'enableDriverOnboardFromApp' => $enableDriverOnboardFromApp,
+            'driverOnboardAppMethod' => $driverOnboardAppMethod,
+            'driverMustProvideOnboardDocuments' => $driverProvideOnboardDocuments,
+            'requiredOnboardDocuments' => $requiredOnboardDocuments
+        ];
+
+        if (!$company) {
+            return response()->error('Company not found');
+        }
+    
+        $companySettings = [
+            $company->uuid => $onBoardSettings
+        ];
+    
+        Setting::configure('fleet-ops.driver-onboard', $companySettings);
+    
+        return response()->json(['onBoardSettings' => $onBoardSettings]);
     }
 }
