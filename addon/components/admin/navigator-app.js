@@ -16,7 +16,7 @@ export default class NavigatorAppControlsComponent extends Component {
     @tracked isEntityFieldsEditable = false;
     @tracked isDriverFieldsEditable = false;
     @tracked isDocumentEditable = false;
-    @tracked isModelSelectVisible = false;
+    @tracked options = ['Invite', 'Driver'];
 
     constructor() {
         super(...arguments);
@@ -24,15 +24,11 @@ export default class NavigatorAppControlsComponent extends Component {
         this.getEntityEditableSettings.perform();
     }
 
-    toggleModelSelect() {
-        this.isModelSelectVisible = !this.isModelSelectVisible;
-    }
-
     @action enableEditableEntityFields(isEntityFieldsEditable) {
         this.isEntityFieldsEditable = isEntityFieldsEditable;
     }
 
-    @action enableDriverEntityFields(isDriverFieldsEditable) {
+    @action enableEntityFields(isDriverFieldsEditable) {
         this.isDriverFieldsEditable = isDriverFieldsEditable;
     }
 
@@ -41,9 +37,6 @@ export default class NavigatorAppControlsComponent extends Component {
     }
     @action onConfigChanged(orderConfig) {
         this.selectedOrderConfig = orderConfig;
-    }
-    @action onDriverConfigChanged(config) {
-        this.selectedDriverConfig = config;
     }
 
     @action toggleFieldEditable(fieldName, isEditable) {
@@ -114,5 +107,9 @@ export default class NavigatorAppControlsComponent extends Component {
     @task *saveEntityEditingSettings() {
         const { entityEditingSettings, isEntityFieldsEditable } = this;
         yield this.fetch.post('fleet-ops/settings/entity-editing-settings', { entityEditingSettings, isEntityFieldsEditable });
+    }
+
+    @action selectOnboard(type) {
+        console.log(type);
     }
 }

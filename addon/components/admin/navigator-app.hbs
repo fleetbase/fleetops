@@ -84,38 +84,50 @@
 </ContentPanel>
 
 <ContentPanel @title={{t "fleet-ops.component.admin.navigator-app.driver-settings"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800 mb-4">
-    <InputGroup>
-        <div class="flex items-center">
-            <div class="ml-2 mr-4">{{t "fleet-ops.component.admin.navigator-app.description"}}</div>
-            <Toggle @isToggled={{this.isDriverFieldsEditable}} @onToggle={{this.enableDriverEntityFields}} />
-        </div>
-    </InputGroup>
-    {{#if this.selectedDriverConfig}}
-        <InputGroup @name={{t "fleet-ops.common.driver"}}>
-            {{#if this.isModelSelectVisible}}
-                <ModelSelect
-                    @modelName="driver"
-                    @selectedModel={{this.issue.driver}}
-                    @placeholder={{t "fleet-ops.component.issue-form-panel.select-driver"}}
-                    @triggerClass="form-select form-input"
-                    @infiniteScroll={{false}}
-                    @renderInPlace={{true}}
-                    @onChange={{fn (mut this.issue.driver)}}
-                    as |model|
-                >
-                    {{model.name}}
-                </ModelSelect>
-            {{/if}}
-        </InputGroup>
-        <div class="mt-3 flex items-center">
-            <Button @type="primary" @size="lg" @icon="save" @text={{t "fleet-ops.common.save-changes"}} {{on "click" this.toggleModelSelect}} />
-        </div>
-    {{/if}}
 
     <InputGroup>
         <div class="flex items-center">
-            <div class="ml-2 mr-4">{{t "fleet-ops.component.admin.navigator-app.upload-document"}}</div>
-            <Toggle @isToggled={{this.isDocumentEditable}} @onToggle={{this.enableDocumentEntityFields}} />
+            <div class="ml-2 mr-4">{{t "fleet-ops.component.admin.navigator-app.description"}}</div>
+            <Toggle @isToggled={{this.isDriverFieldsEditable}} @onToggle={{this.enableEntityFields}} />
         </div>
     </InputGroup>
+    {{#if this.isDriverFieldsEditable}}
+        <div class="fleetbase-model-select fleetbase-power-select ember-model-select h-10">
+            <DropdownButton
+                class="h-10"
+                @text={{"Select onboard option"}}
+                @textClass="text-sm mr-2"
+                @buttonClass="flex-row-reverse w-44 justify-between"
+                @icon="caret-down"
+                @iconClass="mr-0i"
+                @size="sm"
+                @iconPrefix="fas"
+                @triggerClass="hidden md:flex"
+                as |dd|
+            >
+                <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
+                    <div class="p-1">
+                        {{#each this.options as |option|}}
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.selectOnboard option)}}>
+                                <div class="flex-1 flex flex-row items-center">
+                                    <span>{{option}}</span>
+                                </div>
+                            </a>
+                        {{/each}}
+                    </div>
+                </div>
+            </DropdownButton>
+        </div>
+        <div class="mt-3 flex items-center mb-4">
+            <Button @type="primary" @size="lg" @icon="save" @text={{t "fleet-ops.common.save-changes"}} />
+        </div>
+
+        <InputGroup>
+            <div class="flex items-center">
+                <div class="ml-2 mr-4">{{t "fleet-ops.component.admin.navigator-app.upload-document"}}</div>
+                <Toggle @isToggled={{this.isDocumentEditable}} @onToggle={{this.enableDocumentEntityFields}} />
+            </div>
+        </InputGroup>
+    {{/if}}
+
 </ContentPanel>
