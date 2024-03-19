@@ -95,7 +95,7 @@
         <div class="fleetbase-model-select fleetbase-power-select ember-model-select h-10">
             <DropdownButton
                 class="h-10"
-                @text={{if this.selectedOptions this.selectedOptions.title "Select onboard"}}
+                @text={{if this.selectedOption this.selectedOption.title "Select onboard"}}
                 @textClass="text-sm mr-2"
                 @buttonClass="flex-row-reverse w-44 justify-between"
                 @icon="caret-down"

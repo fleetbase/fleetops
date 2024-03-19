@@ -123,14 +123,14 @@ export default class NavigatorAppControlsComponent extends Component {
     @action selectOnboardType(option) {
         this.selectedOption = option;
     }
-    
+
     @task *saveDriverOnboard() {
-        const { selectedOption, requiredOnboardDocuments } = this;
-        yield this.fetch.post('fleet-ops/settings/onboard-settings', {
-            enableDriverOnboardFromApp: selectedOption.title === 'Invite only' ? selectedOption : null,
-            driverOnboardAppMethod: selectedOption.title === 'Become Driver' ? selectedOption : null,
-            driverMustProvideOnboardDocuments: this.isDocumentEditable,
-            requiredOnboardDocuments,
-        });
+        // const { selectedOption, requiredOnboardDocuments } = this;
+        // yield this.fetch.post('fleet-ops/settings/onboard-settings', {
+        //     enableDriverOnboardFromApp: selectedOption.title === 'Invite only' ? selectedOption : null,
+        //     driverOnboardAppMethod: selectedOption.title === 'Become Driver' ? selectedOption : null,
+        //     driverMustProvideOnboardDocuments: this.isDocumentEditable,
+        //     requiredOnboardDocuments,
+        // });
     }
 }
