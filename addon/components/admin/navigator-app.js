@@ -16,6 +16,8 @@ export default class NavigatorAppControlsComponent extends Component {
     @tracked isEntityFieldsEditable = false;
     @tracked isFieldsEditable = false;
     @tracked isDocumentEditable = false;
+    @tracked requiredOnboardDocuments = {};
+    @tracked isDocumentHasValue = [];
     @tracked options = [
         { key: 'invite', title: 'Invite only' },
         { key: 'button', title: 'Become Driver' },
@@ -123,11 +125,11 @@ export default class NavigatorAppControlsComponent extends Component {
     }
     
     @task *saveDriverOnboard() {
-        const { selectedOption } = this;
+        const { selectedOption, requiredOnboardDocuments } = this;
         yield this.fetch.post('fleet-ops/settings/onboard-settings', {
-            enableDriverOnboardFromApp: selectedOption.title,
-            driverOnboardAppMethod,
-            driverMustProvideOnboardDocuments,
+            enableDriverOnboardFromApp: selectedOption.title === 'Invite only' ? selectedOption : null,
+            driverOnboardAppMethod: selectedOption.title === 'Become Driver' ? selectedOption : null,
+            driverMustProvideOnboardDocuments: this.isDocumentEditable,
             requiredOnboardDocuments,
         });
     }
