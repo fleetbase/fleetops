@@ -33,7 +33,10 @@ class TrackOrderDistanceAndTime extends Command
         date_default_timezone_set('UTC');
 
         // Determine the provider
-        $provider = $this->option('provider') ?? config('fleetops.distance_matrix.provider');
+        $provider = $this->option('provider');
+        if (!$provider) {
+            $provider = config('fleetops.distance_matrix.provider');
+        }
         $this->info("Using '{$provider}' as the provider for calculations.");
 
         // Get all active/ready orders
@@ -60,15 +63,30 @@ class TrackOrderDistanceAndTime extends Command
     }
 
     /**
-     * Fetches active orders.
+     * Retrieves active orders that meet specific criteria.
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * This method returns a collection of active orders with the following conditions:
+     * - Not in 'completed' or 'canceled' status.
+     * - Not marked as deleted (`deleted_at` is null).
+     * - Associated with a company (`company_uuid` is not null).
+     * - The order process has started (`started` is not null).
+     * - Contains a payload (`payload` relationship exists).
+     * - Created within the past month.
+     *
+     * The result includes related payload data, waypoints, and information about pickup and dropoff points.
+     * Global scopes are not applied to this query.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection collection of relevant Order objects
      */
     protected function getActiveOrders()
     {
+        $oneMonthAgo = Carbon::now()->subMonth();
+
         return Order::whereNotIn('status', ['completed', 'canceled'])
                     ->whereNull('deleted_at')
                     ->whereNotNull('company_uuid')
+                    ->whereNotNull('started')
+                    ->where('created_at', '>=', $oneMonthAgo)
                     ->whereHas('payload')
                     ->with(['payload', 'payload.waypoints', 'payload.pickup', 'payload.dropoff'])
                     ->withoutGlobalScopes()
