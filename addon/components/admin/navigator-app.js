@@ -10,13 +10,22 @@ export default class NavigatorAppControlsComponent extends Component {
     @tracked isLoading = false;
     @tracked url;
     @tracked selectedOrderConfig;
-    @tracked selectedDriverConfig;
+    @tracked selectedOption = null;
     @tracked entityFields = ['name', 'description', 'sku', 'height', 'width', 'length', 'weight', 'declared_value', 'sale_price'];
     @tracked entityEditingSettings = {};
     @tracked isEntityFieldsEditable = false;
-    @tracked isDriverFieldsEditable = false;
+    @tracked isFieldsEditable = false;
     @tracked isDocumentEditable = false;
-    @tracked options = ['Invite', 'Driver'];
+    @tracked options = [
+        { key: 'invite', title: 'Invite only' },
+        { key: 'button', title: 'Become Driver' },
+    ];
+    @tracked isRequiredDocuments = [];
+
+    // enableDriverOnboardFromApp
+    // driverOnboardAppMethod
+    // driverMustProvideOnboardDocuments
+    // requiredOnboardDocuments
 
     constructor() {
         super(...arguments);
@@ -28,8 +37,8 @@ export default class NavigatorAppControlsComponent extends Component {
         this.isEntityFieldsEditable = isEntityFieldsEditable;
     }
 
-    @action enableEntityFields(isDriverFieldsEditable) {
-        this.isDriverFieldsEditable = isDriverFieldsEditable;
+    @action enableEntityFields(isFieldsEditable) {
+        this.isFieldsEditable = isFieldsEditable;
     }
 
     @action enableDocumentEntityFields(isDocumentEditable) {
@@ -109,7 +118,17 @@ export default class NavigatorAppControlsComponent extends Component {
         yield this.fetch.post('fleet-ops/settings/entity-editing-settings', { entityEditingSettings, isEntityFieldsEditable });
     }
 
-    @action selectOnboard(type) {
-        console.log(type);
+    @action selectOnboardType(option) {
+        this.selectedOption = option;
+    }
+    
+    @task *saveDriverOnboard() {
+        const { selectedOption } = this;
+        yield this.fetch.post('fleet-ops/settings/onboard-settings', {
+            enableDriverOnboardFromApp: selectedOption.title,
+            driverOnboardAppMethod,
+            driverMustProvideOnboardDocuments,
+            requiredOnboardDocuments,
+        });
     }
 }
