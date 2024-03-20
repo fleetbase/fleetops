@@ -1,8 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
-import { isArray } from '@ember/array';
 import { task } from 'ember-concurrency-decorators';
 
 export default class NavigatorAppControlsComponent extends Component {
