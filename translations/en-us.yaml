@@ -241,6 +241,8 @@ fleet-ops:
         driver-settings: Driver Settings
         description: Enable driver on-board
         upload-document: Require driver to upload documents
+        upload-body: Add documents
+        document: Document
 
       visibility-controls:
         title: Visibility Controls

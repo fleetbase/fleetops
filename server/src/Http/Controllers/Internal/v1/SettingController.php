@@ -95,6 +95,6 @@ class SettingController extends Controller
     
         Setting::configure('fleet-ops.driver-onboard', $companySettings);
     
-        return response()->json(['onBoardSettings' => $onBoardSettings]);
+        return response()->json($companySettings);
     }
 }

@@ -118,26 +118,22 @@
                 </div>
             </DropdownButton>
         </div>
-        <div class="mt-3 flex items-center mb-4">
-            <Button @type="primary" @size="lg" @icon="save" @text={{t "fleet-ops.common.save-changes"}} @onClick={{perform this.saveDriverOnboard}} />
-        </div>
 
         <InputGroup>
-            <div class="flex items-center">
+            <div class="flex items-center mt-4">
                 <div class="ml-2 mr-4">{{t "fleet-ops.component.admin.navigator-app.upload-document"}}</div>
                 <Toggle @isToggled={{this.isDocumentEditable}} @onToggle={{this.enableDocumentEntityFields}} />
             </div>
         </InputGroup>
         {{#if this.isDocumentEditable}}
             <div class="input-group">
-                <ArrayInput {{!-- @data={{ }}  --}} @placeholder={{t "developers.component.modals.api-key-form.enter-domain-placeholder"}} {{!-- @onDataChanged={{}} --}}>
-                    <InputLabel
-                        @labelText={{t "developers.component.modals.api-key-form.allowed-browser-label"}}
-                        @helpText={{t "developers.component.modals.api-key-form.allowed-browser-help-text"}}
-                    />
+                <ArrayInput @data={{this.data}} placeholder={{t "fleet-ops.component.admin.navigator-app.document"}} @onChange={{this.onChangeRequiredDocs}}>
+                    <InputLabel @labelText={{t "fleet-ops.component.admin.navigator-app.upload-body"}} @helpText={{t "fleet-ops.component.admin.navigator-app.document"}} />
                 </ArrayInput>
             </div>
         {{/if}}
+        <div class="mt-3 flex items-center mb-4">
+            <Button @type="primary" @size="lg" @icon="save" @text={{t "fleet-ops.common.save-changes"}} @onClick={{perform this.saveDriverOnboard}} />
+        </div>
     {{/if}}
-
 </ContentPanel>
