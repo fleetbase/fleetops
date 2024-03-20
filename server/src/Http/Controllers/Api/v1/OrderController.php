@@ -14,7 +14,6 @@ use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
-use Fleetbase\Models\Setting;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
@@ -26,6 +25,7 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\File;
+use Fleetbase\Models\Setting;
 use Fleetbase\Support\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -1387,7 +1387,7 @@ class OrderController extends Controller
 
         // Get entity editing settings
         $savedEntityEditingSettings = Setting::where('key', 'fleet-ops.entity-editing-settings')->value('value');
-        $isEntityFieldsEditable = data_get($savedEntityEditingSettings, 'isEntityFieldsEditable', false);
+        $isEntityFieldsEditable     = data_get($savedEntityEditingSettings, 'isEntityFieldsEditable', false);
 
         if ($orderConfigId && $savedEntityEditingSettings) {
             $resolvedEntityEditingSettings = data_get($savedEntityEditingSettings, $orderConfigId, []);
@@ -1397,8 +1397,8 @@ class OrderController extends Controller
         }
 
         return response()->json([
-            'entityEditingSettings' => $entityEditingSettings,
-            'isEntityFieldsEditable' => $isEntityFieldsEditable
+            'entityEditingSettings'  => $entityEditingSettings,
+            'isEntityFieldsEditable' => $isEntityFieldsEditable,
         ]);
     }
 }
