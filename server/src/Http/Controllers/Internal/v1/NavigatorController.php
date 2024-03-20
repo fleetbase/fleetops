@@ -4,9 +4,9 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Resources\Organization;
-use Fleetbase\Models\Setting;
 use Fleetbase\Models\ApiCredential;
 use Fleetbase\Models\Company;
+use Fleetbase\Models\Setting;
 use Fleetbase\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -81,6 +81,7 @@ class NavigatorController extends Controller
     public function getDriverOnboardSettings()
     {
         $onBoardSettings  = Setting::where('key', 'fleet-ops.driver-onboard')->value('value');
+
         return response()->json($onBoardSettings);
     }
 }

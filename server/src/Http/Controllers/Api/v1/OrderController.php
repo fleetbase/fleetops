@@ -1401,12 +1401,8 @@ class OrderController extends Controller
 
         // Get entity editing settings
         $savedEntityEditingSettings = Setting::where('key', 'fleet-ops.entity-editing-settings')->value('value');
-
         if ($orderConfigId && $savedEntityEditingSettings) {
-            $resolvedEntityEditingSettings = data_get($savedEntityEditingSettings, $orderConfigId, []);
-            if ($resolvedEntityEditingSettings) {
-                $entityEditingSettings = data_get($resolvedEntityEditingSettings, 'editable_entity_fields', []);
-            }
+            $entityEditingSettings = data_get($savedEntityEditingSettings, $orderConfigId, []);
         }
 
         return response()->json($entityEditingSettings);

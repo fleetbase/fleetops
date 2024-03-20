@@ -25,6 +25,10 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
             ->middleware(['fleetbase.api', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class])
             ->namespace('Api\v1')
             ->group(function ($router) {
+                // navigator app routes
+                $router->group(['prefix' => 'navigator'], function () use ($router) {
+                    $router->get('driver-onboard-settings', 'NavigatorController@getDriverOnboardSettings');
+                });
                 // drivers routes
                 $router->group(['prefix' => 'drivers'], function () use ($router) {
                     $router->post('register-device', 'DriverController@registerDevice');
@@ -261,7 +265,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     function ($router) {
                         $router->get('get-link-app', 'NavigatorController@getLinkAppUrl');
                         $router->get('link-app', 'NavigatorController@linkApp');
-                        $router->get('get-onboard', 'NavigatorController@getDriverOnboardSettings');
                     }
                 );
 
@@ -436,7 +439,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('visibility', 'SettingController@saveVisibilitySettings');
                                         $router->get('entity-editing-settings', 'SettingController@getEntityEditingSettings');
                                         $router->post('entity-editing-settings', 'SettingController@saveEntityEditingSettings');
-                                        $router->post('onboard-settings', 'SettingController@saveOnboardSettings');
+                                        $router->post('driver-onboard-settings', 'SettingController@savedDriverOnboardSettings');
+                                        $router->get('driver-onboard-settings', 'SettingController@getDriverOnboardSettings');
                                     }
                                 );
                                 $router->group(
