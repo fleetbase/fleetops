@@ -1,0 +1,56 @@
+<ContentPanel @title={{t "fleet-ops.component.driver-onboard-settings.driver-onboard-settings"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800 mb-4">
+    {{#let (get this.driverOnboardSettings this.companyId) as |driverOnboardSettings|}}
+        <InputGroup>
+            <div class="flex items-center">
+                <Toggle
+                    @isToggled={{driverOnboardSettings.enableDriverOnboardFromApp}}
+                    @onToggle={{this.enableDriverOnboard}}
+                    @label={{t "fleet-ops.component.driver-onboard-settings.enable-driver-onboard-from-app"}}
+                    @helpText={{t "fleet-ops.component.driver-onboard-settings.enable-driver-onboard-from-app-help-text"}}
+                />
+            </div>
+        </InputGroup>
+        {{#if driverOnboardSettings.enableDriverOnboardFromApp}}
+            <InputGroup
+                @name={{t "fleet-ops.component.driver-onboard-settings.select-onboard-method"}}
+                @helpText={{t "fleet-ops.component.driver-onboard-settings.select-onboard-method-help-text"}}
+            >
+                <Select
+                    class="w-full flex-1"
+                    @value={{driverOnboardSettings.driverOnboardAppMethod}}
+                    @options={{this.driverOnboardMethods}}
+                    @placeholder={{t "fleet-ops.component.driver-onboard-settings.select-onboard-method"}}
+                    @onSelect={{this.selectDriverOnboardMethod}}
+                />
+            </InputGroup>
+            <InputGroup>
+                <div class="flex items-center">
+                    <Toggle
+                        @isToggled={{driverOnboardSettings.driverMustProvideOnboardDoucments}}
+                        @onToggle={{this.enableDriverOnboardDocuments}}
+                        @label={{t "fleet-ops.component.driver-onboard-settings.require-driver-to-upload-onboard-documents"}}
+                        @helpText={{t "fleet-ops.component.driver-onboard-settings.require-driver-to-upload-onboard-documents-help-text"}}
+                    />
+                </div>
+            </InputGroup>
+            {{#if driverOnboardSettings.driverMustProvideOnboardDoucments}}
+                <InputGroup>
+                    <ArrayInput
+                        @data={{this.data}}
+                        @placeholder={{t "fleet-ops.component.driver-onboard-settings.enter-document-name"}}
+                        @onDataChanged={{this.onOnboardDocumentsChanged}}
+                        @addButtonText={{t "fleet-ops.component.driver-onboard-settings.add-onboard-document"}}
+                    >
+                        <InputLabel
+                            @labelText={{t "fleet-ops.component.driver-onboard-settings.required-onboard-documents"}}
+                            @helpText={{t "fleet-ops.component.driver-onboard-settings.required-onboard-documents-help-text"}}
+                        />
+                    </ArrayInput>
+                </InputGroup>
+            {{/if}}
+            <div class="mt-3 flex items-center mb-4">
+                <Button @type="primary" @size="lg" @icon="save" @text={{t "fleet-ops.common.save-changes"}} @onClick={{perform this.saveDriverOnboardSettings}} @isLoading={{not this.saveDriverOnboardSettings.isIdle}} />
+            </div>
+        {{/if}}
+    {{/let}}
+</ContentPanel>

@@ -66,6 +66,8 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             { title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.issues'), icon: 'triangle-exclamation', route: 'management.issues' },
         ];
 
+        const settingsItems = [{ title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.navigator-app'), icon: 'location-arrow', route: 'settings.navigator-app' }];
+
         const createPanel = (title, routePrefix, items = []) => ({
             title,
             open: true,
@@ -81,6 +83,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         this.menuPanels = [
             createPanel(this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.operations'), 'operations', operationsItems),
             createPanel(this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.resources'), 'management', resourcesItems),
+            createPanel(this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.settings'), 'settings', settingsItems),
         ].filter((panel) => {
             const isVisible = panel.visible && panel.items.length > 0;
             return isVisible;

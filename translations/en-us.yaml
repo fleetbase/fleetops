@@ -94,7 +94,6 @@ fleet-ops:
     total: Total
     back: Back
     done: Done
-
   component:
     activity-logic-builder:
       activity-logic: Activity Logic
@@ -243,7 +242,6 @@ fleet-ops:
         upload-document: Require driver to upload documents
         upload-body: Add documents
         document: Document
-
       visibility-controls:
         title: Visibility Controls
         message: Visibility controls allow you to disable sections of Fleet-Ops. Toggle the checkbox to enable or disable sections to hide in Fleet-ops.
@@ -254,6 +252,25 @@ fleet-ops:
         vehicles : Vehicles
         drivers : Drivers
         places : Places
+    entity-field-editing-settings:
+      entitiy-field-editing-settings: Entity Field Editing Settings
+      entity-field-editing-settings-help-text: These settings determine which fields of an entity are editable by a driver via Navigator App
+      select-order-config: Select Order Config
+      select-order-config-help-text: Select an order config which these settings will apply to
+      enable-driver-to-edit-entity-fields: Allow driver to edit entity details
+      enable-driver-to-edit-entity-fields-help-text: Enabling this toggle grants the driver permission to modify specific entity fields chosen below.
+    driver-onboard-settings:
+      driver-onboard-settings: Driver Onboard Settings
+      enable-driver-onboard-from-app: Enable driver onboard from Navigator App
+      enable-driver-onboard-from-app-help-text: Enabling this setting allows drivers to independently onboard (create their own account) via the Navigator App.
+      select-onboard-method: Select driver onboard method
+      select-onboard-method-help-text: This setting determines how drivers are permitted to create their accounts through the Navigator App. Choose 'Invite' if drivers need to receive an email invitation to create their account. Select 'Button' if you wish to enable a button within the app that allows anyone to create a driver account.
+      require-driver-to-upload-onboard-documents: Require driver to upload onboard documents
+      require-driver-to-upload-onboard-documents-help-text: This setting enforces documents that a driver must provide before their account can be created.
+      required-onboard-documents: Required onboard documents
+      required-onboard-documents-help-text: Input all the onboard documents required for a driver to provide below using the "Add onboard document" button.
+      enter-document-name: Enter document name
+      add-onboard-document: Add onboard document
     cell:
       driver-name:
         not-assigned: No driver assigned
@@ -270,6 +287,7 @@ fleet-ops:
         loading-vehicle: Loading fleet vehicles...
     layout:
       fleet-ops-sidebar:
+        navigator-app: Navigator App
         resources: Resources
         operations: Operations
         dashboard: Dashboard
@@ -1516,4 +1534,6 @@ fleet-ops:
           zone-label: Zone
           zone-help-text: Restrict this service to order request originating from a specific zone.
           zone-placeholder: Restrict to zone
-    
+  settings:
+    navigator-app:
+      navigator-app-settings: Navigator App Settings
