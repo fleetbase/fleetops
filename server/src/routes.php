@@ -210,6 +210,11 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->post('login-with-sms', 'DriverController@loginWithPhone');
                     $router->post('verify-code', 'DriverController@verifyCode');
                     $router->post('login', 'DriverController@login');
+                    $router->get('driver-onboard-settings', 'SettingController@getDriverOnboardSettings');
+                });
+                
+                $router->group(['prefix' => 'settings', 'namespace' => 'Internal\v1'], function () use ($router) {
+                    $router->get('driver-onboard-settings', 'SettingController@getDriverOnboardSettings');
                 });
 
                 // auth:sanctum
@@ -440,7 +445,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->get('entity-editing-settings', 'SettingController@getEntityEditingSettings');
                                         $router->post('entity-editing-settings', 'SettingController@saveEntityEditingSettings');
                                         $router->post('driver-onboard-settings', 'SettingController@savedDriverOnboardSettings');
-                                        $router->get('driver-onboard-settings', 'SettingController@getDriverOnboardSettings');
                                     }
                                 );
                                 $router->group(
