@@ -19,22 +19,22 @@ class OrganizationController extends Controller
     {
         $limit = $request->input('limit', 10);
         $withDriverOnboardEnabled = $request->boolean('with_driver_onboard');
-
+    
         $companies = Company::whereHas('users')->get()->map(function ($company) {
             return [
                 'name' => $company->name,
-                'uuid'   => $company->uuid,
+                'uuid' => $company->uuid,
             ];
         });
-
-
-
+    
         if ($withDriverOnboardEnabled) {
-            $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings')->value('value');
-
+            $driverOnboardSettings = Setting::where('key', 'fleet-ops.driver-onboard-settings')->value('value');
+    
             $companies = $companies->filter(function ($company) use ($driverOnboardSettings) {
-                      
-                return $driverOnboardSettings && isset($driverOnboardSettings[$company->uuid]) && data_get($driverOnboardSettings[$company->uuid], 'enableDriverOnboardFromApp') === true;
+                // Check if $company is an array and has 'uuid' key
+                return is_array($company) && array_key_exists('uuid', $company) &&
+                    $driverOnboardSettings && isset($driverOnboardSettings[$company['uuid']]) &&
+                    data_get($driverOnboardSettings[$company['uuid']], 'enableDriverOnboardFromApp') === true;
             });
         }
 
