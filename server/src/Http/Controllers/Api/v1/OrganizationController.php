@@ -18,7 +18,7 @@ class OrganizationController extends Controller
         $companies = Company::whereHas('users')->take(10)->get()->map(function ($company) {
             return [
                 'name' => $company->name,
-                'id'   => $company->public_id,
+                'id'   => $company->uuid,
             ];
         });
 
