@@ -40,7 +40,7 @@ export default class DriverOnboardSettingsComponent extends Component {
     }
 
     @task *getDriverOnboardSettings() {
-        const { driverOnboardSettings } = yield this.fetch.get('fleet-ops/settings/driver-onboard-settings');
+        const { driverOnboardSettings } = yield this.fetch.get('settings/driver-onboard-settings');
         this.driverOnboardSettings = driverOnboardSettings;
 
         if (this.companyDoesntHaveDriverOnboardSettings()) {

@@ -4,7 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
-use Illuminate\Http\Request;
+
 
 class NavigatorController extends Controller
 {
@@ -18,22 +18,18 @@ class NavigatorController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getDriverOnboardSettings(Request $request)
-    {
-        if (!$request->session()->has('company')) {
-            return response()->apiError('No current company session to find onboard settings.');
-        }
 
-        $companyId             = session('company');
-        $driverOnboardSettings = [
-            'enableDriverOnboardFromApp'        => false,
-            'driverOnboardAppMethod'            => null,
-            'driverMustProvideOnboardDoucments' => false,
-            'requiredOnboardDocuments'          => [],
-        ];
-        $savedDriverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings')->value('value');
-        if ($savedDriverOnboardSettings && isset($savedDriverOnboardSettings[$companyId])) {
-            $driverOnboardSettings = $savedDriverOnboardSettings[$companyId];
+
+        /**
+     * Retrieve driver onboard settings.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDriverOnboardSettings()
+    {
+        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings')->value('value');
+        if (!$driverOnboardSettings) {
+            $driverOnboardSettings = [];
         }
 
         return response()->json(['driverOnboardSettings' => $driverOnboardSettings]);
