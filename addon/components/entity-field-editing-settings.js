@@ -98,8 +98,8 @@ export default class EntityFieldEditingSettingsComponent extends Component {
         this.entityEditingSettings = {
             ...this.entityEditingSettings,
             [orderConfig.id]: {
+                ...this.entityEditingSettings[orderConfig.id],
                 editable_entity_fields: editableFields,
-                is_editable: this.isEntityFieldsEditable,
             },
         };
     }
