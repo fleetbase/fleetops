@@ -25,10 +25,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
             ->middleware(['fleetbase.api', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class])
             ->namespace('Api\v1')
             ->group(function ($router) {
-                // navigator app routes
-                $router->group(['prefix' => 'settings'], function () use ($router) {
-                    $router->get('driver-onboard-settings', 'NavigatorController@getDriverOnboardSettings');
-                });
                 
                 // drivers routes
                 $router->group(['prefix' => 'drivers'], function () use ($router) {
@@ -184,6 +180,11 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 $router->group(['prefix' => 'labels'], function () use ($router) {
                     $router->get('{id}', 'LabelController@getLabel');
                 });
+
+                  // navigator routes
+                $router->group(['prefix' => 'onboard'], function () use ($router) {
+                    $router->get('driver-onboard-settings', 'NavigatorController@getDriverOnboardSettings');
+                });
             });
 
         /*
@@ -266,6 +267,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     function ($router) {
                         $router->get('get-link-app', 'NavigatorController@getLinkAppUrl');
                         $router->get('link-app', 'NavigatorController@linkApp');
+                        $router->get('driver-onboard-settings', 'NavigatorController@getDriverOnboardSettings');
                     }
                 );
 
