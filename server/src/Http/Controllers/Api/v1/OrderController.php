@@ -545,8 +545,6 @@ class OrderController extends Controller
                 if ($addedNearbyQuery === false && is_string($nearby) && Str::startsWith($nearby, 'driver_')) {
                     $driver = Driver::where('public_id', $nearby)->first();
 
-                    dd($driver);
-
                     if ($driver) {
                         $query->whereHas('payload', function ($q) use ($driver, $distance) {
                             $q->whereHas('pickup', function ($q) use ($driver, $distance) {
@@ -584,8 +582,6 @@ class OrderController extends Controller
                 }
             }
         });
-
-        info("Result: ", [$results]);
 
         return OrderResource::collection($results);
     }
