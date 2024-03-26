@@ -15,7 +15,7 @@ class CreateDriverRequest extends FleetbaseRequest
      */
     public function authorize()
     {
-        return request()->is('navigator/v1/*') || request()->session()->has('api_credential');
+        return request()->is('navigator/v1/*') || request()->session()->has('api_credential') || request()->session()->has('is_sanctum_token');
     }
 
     /**

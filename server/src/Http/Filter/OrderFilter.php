@@ -38,7 +38,7 @@ class OrderFilter extends Filter
 
     public function queryForPublic()
     {
-        $this->builder->where('company_uuid', $this->session->get('company'))->whereHas('trackingNumber')->whereHas('payload');
+        $this->builder->where('company_uuid', $this->session->get('company'));
     }
 
     public function unassigned(bool $unassigned)
