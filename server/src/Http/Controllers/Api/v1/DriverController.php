@@ -597,7 +597,9 @@ class DriverController extends Controller
         }
 
         // Assign user to company and update their session
-        $user->assignCompany($company);
+
+        $user->update(['company_uuid' => $company->uuid]);
+
         Auth::setSession($user);
 
         return new Organization($company);
