@@ -434,6 +434,7 @@ class OrderController extends Controller
     public function query(Request $request)
     {
         $results = Order::queryWithRequest($request, function (&$query, $request) {
+            $query->where('company_uuid', session('company'));
             if ($request->has('payload')) {
                 $query->whereHas('payload', function ($q) use ($request) {
                     $q->where('public_id', $request->input('payload'));
@@ -495,9 +496,9 @@ class OrderController extends Controller
                 });
             }
 
-            if ($request->has('on')) {
-                $on = Carbon::fromString($request->input('on'));
-
+            if ($request->filled('on')) {
+                $on = Carbon::parse($request->input('on'));
+        
                 $query->where(function ($q) use ($on) {
                     $q->whereDate('created_at', $on);
                     $q->orWhereDate('scheduled_at', $on);
@@ -1401,12 +1402,8 @@ class OrderController extends Controller
 
         // Get entity editing settings
         $savedEntityEditingSettings = Setting::where('key', 'fleet-ops.entity-editing-settings')->value('value');
-
         if ($orderConfigId && $savedEntityEditingSettings) {
-            $resolvedEntityEditingSettings = data_get($savedEntityEditingSettings, $orderConfigId, []);
-            if ($resolvedEntityEditingSettings) {
-                $entityEditingSettings = data_get($resolvedEntityEditingSettings, 'editable_entity_fields', []);
-            }
+            $entityEditingSettings = data_get($savedEntityEditingSettings, $orderConfigId, []);
         }
 
         return response()->json($entityEditingSettings);
