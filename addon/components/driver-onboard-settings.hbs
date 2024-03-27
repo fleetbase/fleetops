@@ -35,7 +35,7 @@
         {{#if this.driverOnboardSettings.driverMustProvideOnboardDoucments}}
             <InputGroup>
                 <ArrayInput
-                    @data={{this.data}}
+                    @data={{this.driverOnboardSettings.requiredOnboardDocuments}}
                     @placeholder={{t "fleet-ops.component.driver-onboard-settings.enter-document-name"}}
                     @onDataChanged={{this.onOnboardDocumentsChanged}}
                     @addButtonText={{t "fleet-ops.component.driver-onboard-settings.add-onboard-document"}}
