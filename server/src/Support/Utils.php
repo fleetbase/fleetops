@@ -851,8 +851,8 @@ class Utils extends FleetbaseUtils
      * Calculates driving distance and time between two points using Vincenty's formula.
      * Returns distance in meters and time in seconds.
      *
-     * @param \Fleetbase\FleetOps\Models\Place|\Fleetbase\LaravelMysqlSpatial\Types\Point|array $origin
-     * @param \Fleetbase\FleetOps\Models\Place|\Fleetbase\LaravelMysqlSpatial\Types\Point|array $destination
+     * @param \Fleetbase\FleetOps\Models\Place|Point|array $origin
+     * @param \Fleetbase\FleetOps\Models\Place|Point|array $destination
      */
     public static function calculateDrivingDistanceAndTime($origin, $destination): DistanceMatrix
     {
@@ -870,8 +870,8 @@ class Utils extends FleetbaseUtils
      * Calculates driving distance and time between two points using Vincenty's formula.
      * Returns distance in meters and time in seconds.
      *
-     * @param \Fleetbase\FleetOps\Models\Place|\Fleetbase\LaravelMysqlSpatial\Types\Point|array $origin
-     * @param \Fleetbase\FleetOps\Models\Place|\Fleetbase\LaravelMysqlSpatial\Types\Point|array $destination
+     * @param \Fleetbase\FleetOps\Models\Place|Point|array $origin
+     * @param \Fleetbase\FleetOps\Models\Place|Point|array $destination
      */
     public static function getPreliminaryDistanceMatrix($origin, $destination): DistanceMatrix
     {
