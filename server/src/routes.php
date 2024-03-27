@@ -267,7 +267,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     function ($router) {
                         $router->get('get-link-app', 'NavigatorController@getLinkAppUrl');
                         $router->get('link-app', 'NavigatorController@linkApp');
-                        $router->get('driver-onboard-settings', 'NavigatorController@getDriverOnboardSettings');
                     }
                 );
 
@@ -443,6 +442,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->get('entity-editing-settings', 'SettingController@getEntityEditingSettings');
                                         $router->post('entity-editing-settings', 'SettingController@saveEntityEditingSettings');
                                         $router->post('driver-onboard-settings', 'SettingController@savedDriverOnboardSettings');
+                                        $router->get('driver-onboard-settings/{companyId}', 'SettingController@getDriverOnboardSettings');
                                     }
                                 );
                                 $router->group(

@@ -40,7 +40,8 @@ export default class DriverOnboardSettingsComponent extends Component {
     }
 
     @task *getDriverOnboardSettings() {
-        const { driverOnboardSettings } = yield this.fetch.get('settings/driver-onboard-settings');
+        const companyId = this.currentUser.companyId;
+        const { driverOnboardSettings } = yield this.fetch.get(`fleet-ops/settings/driver-onboard-settings/${companyId}`);
         this.driverOnboardSettings = driverOnboardSettings;
 
         if (this.companyDoesntHaveDriverOnboardSettings()) {
@@ -54,18 +55,18 @@ export default class DriverOnboardSettingsComponent extends Component {
     }
 
     companyDoesntHaveDriverOnboardSettings() {
-        const companyId = this.currentUser.companyId;
-        return this.driverOnboardSettings[companyId] === undefined;
+        const companyId = this.driverOnboardSettings.companyId;
+        return companyId === undefined;
     }
 
     updateDriverOnboardSettings(props = {}) {
         const companyId = this.currentUser.companyId;
-        const driverOnboardSettings = this.driverOnboardSettings[companyId] ?? {};
+        console.log('Driver onboard: ', this.driverOnboardSettings);
+        const driverOnboardSettings = this.driverOnboardSettings ?? {};
         this.driverOnboardSettings = {
-            [companyId]: {
-                ...driverOnboardSettings,
-                ...props,
-            },
+            companyId: companyId,
+            ...driverOnboardSettings,
+            ...props,
         };
     }
 }

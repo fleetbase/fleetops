@@ -83,9 +83,9 @@ class SettingController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getDriverOnboardSettings()
+    public function getDriverOnboardSettings($companyId)
     {
-        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings')->value('value');
+        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings.'.$companyId)->value('value');
         if (!$driverOnboardSettings) {
             $driverOnboardSettings = [];
         }
@@ -103,7 +103,7 @@ class SettingController extends Controller
         $driverOnboardSettings  = $request->input('driverOnboardSettings', []);
 
         // Save driver onboard settings
-        Setting::configure('fleet-ops.driver-onboard-settings', $driverOnboardSettings);
+        Setting::configure('fleet-ops.driver-onboard-settings.'.$driverOnboardSettings['companyId'], $driverOnboardSettings);
 
         return response()->json(['driverOnboardSettings' => $driverOnboardSettings]);
     }
