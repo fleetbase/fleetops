@@ -25,9 +25,9 @@ class NavigatorController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getDriverOnboardSettings()
+    public function getDriverOnboardSettings($companyId)
     {
-        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings')->value('value');
+        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings.'.$companyId)->value('value');
         if (!$driverOnboardSettings) {
             $driverOnboardSettings = [];
         }

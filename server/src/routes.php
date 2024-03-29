@@ -183,7 +183,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
 
                   // navigator routes
                 $router->group(['prefix' => 'onboard'], function () use ($router) {
-                    $router->get('driver-onboard-settings', 'NavigatorController@getDriverOnboardSettings');
+                    $router->get('driver-onboard-settings/{companyId}', 'NavigatorController@getDriverOnboardSettings');
                 });
             });
 
