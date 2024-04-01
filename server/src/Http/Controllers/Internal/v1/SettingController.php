@@ -100,11 +100,16 @@ class SettingController extends Controller
      */
     public function savedDriverOnboardSettings(Request $request)
     {
-        $driverOnboardSettings  = $request->input('driverOnboardSettings', []);
+        $driverOnboardSettings = $request->input('driverOnboardSettings', []);
+    
+        if ($driverOnboardSettings['enableDriverOnboardFromApp'] == false) {
+            $driverOnboardSettings["driverMustProvideOnboardDoucments"] = false;
+            $driverOnboardSettings["requiredOnboardDocuments"] = [];
+            $driverOnboardSettings["driverOnboardAppMethod"] = "";
+            $driverOnboardSettings["enableDriverOnboardFromApp"] = false;
+        }
 
-        // Save driver onboard settings
-        Setting::configure('fleet-ops.driver-onboard-settings.'.$driverOnboardSettings['companyId'], $driverOnboardSettings);
-
+        Setting::configure('fleet-ops.driver-onboard-settings.'.$driverOnboardSettings['companyId'], $driverOnboardSettings); 
         return response()->json(['driverOnboardSettings' => $driverOnboardSettings]);
     }
 }

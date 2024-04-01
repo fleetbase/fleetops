@@ -36,7 +36,8 @@ export default class DriverOnboardSettingsComponent extends Component {
 
     @task *saveDriverOnboardSettings() {
         const { driverOnboardSettings } = this;
-        yield this.fetch.post('fleet-ops/settings/driver-onboard-settings', { driverOnboardSettings });
+        const driverOnboardSettingsResponse =  yield this.fetch.post('fleet-ops/settings/driver-onboard-settings', { driverOnboardSettings });
+        if(driverOnboardSettings?.enableDriverOnboardFromApp == false) this.driverOnboardSettings = driverOnboardSettingsResponse?.driverOnboardSettings
     }
 
     @task *getDriverOnboardSettings() {
@@ -61,7 +62,6 @@ export default class DriverOnboardSettingsComponent extends Component {
 
     updateDriverOnboardSettings(props = {}) {
         const companyId = this.currentUser.companyId;
-        console.log('Driver onboard: ', this.driverOnboardSettings);
         const driverOnboardSettings = this.driverOnboardSettings ?? {};
         this.driverOnboardSettings = {
             companyId: companyId,
