@@ -25,7 +25,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
             ->middleware(['fleetbase.api', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class])
             ->namespace('Api\v1')
             ->group(function ($router) {
-                
                 // drivers routes
                 $router->group(['prefix' => 'drivers'], function () use ($router) {
                     $router->post('register-device', 'DriverController@registerDevice');
@@ -181,7 +180,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->get('{id}', 'LabelController@getLabel');
                 });
 
-                  // navigator routes
+                // navigator routes
                 $router->group(['prefix' => 'onboard'], function () use ($router) {
                     $router->get('driver-onboard-settings/{companyId}', 'NavigatorController@getDriverOnboardSettings');
                 });

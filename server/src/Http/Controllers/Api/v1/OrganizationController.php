@@ -2,7 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
-use Illuminate\Support\Collection;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Resources\Organization;
 use Fleetbase\Models\Company;
@@ -18,30 +17,29 @@ class OrganizationController extends Controller
      */
     public function listOrganizations(Request $request)
     {
-        $limit = $request->input('limit', 10);
+        $limit                    = $request->input('limit', 10);
         $withDriverOnboardEnabled = $request->boolean('with_driver_onboard');
-    
+
         $companies = Company::whereHas('users')->get()->map(function ($company) {
             return [
-                'name' => $company->name,
+                'name'   => $company->name,
                 'uuid'   => $company->uuid,
             ];
         });
-    
+
         if ($withDriverOnboardEnabled) {
             $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings')->value('value');
-    
+
             $companies = $companies->filter(function ($company) use ($driverOnboardSettings) {
-                return $driverOnboardSettings && isset($driverOnboardSettings[$company['uuid']]) && data_get($driverOnboardSettings[$company["uuid"]], 'enableDriverOnboardFromApp') === true;
+                return $driverOnboardSettings && isset($driverOnboardSettings[$company['uuid']]) && data_get($driverOnboardSettings[$company['uuid']], 'enableDriverOnboardFromApp') === true;
             });
         }
-    
+
         // limit
         $companies = $companies->take($limit);
-    
+
         $companiesArray = $companies->values()->toArray();
-    
+
         return response()->json($companiesArray);
     }
-    
 }

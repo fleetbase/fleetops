@@ -85,7 +85,7 @@ class SettingController extends Controller
      */
     public function getDriverOnboardSettings($companyId)
     {
-        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings.'.$companyId)->value('value');
+        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings.' . $companyId)->value('value');
         if (!$driverOnboardSettings) {
             $driverOnboardSettings = [];
         }
@@ -101,15 +101,16 @@ class SettingController extends Controller
     public function savedDriverOnboardSettings(Request $request)
     {
         $driverOnboardSettings = $request->input('driverOnboardSettings', []);
-    
+
         if ($driverOnboardSettings['enableDriverOnboardFromApp'] == false) {
-            $driverOnboardSettings["driverMustProvideOnboardDoucments"] = false;
-            $driverOnboardSettings["requiredOnboardDocuments"] = [];
-            $driverOnboardSettings["driverOnboardAppMethod"] = "";
-            $driverOnboardSettings["enableDriverOnboardFromApp"] = false;
+            $driverOnboardSettings['driverMustProvideOnboardDoucments'] = false;
+            $driverOnboardSettings['requiredOnboardDocuments']          = [];
+            $driverOnboardSettings['driverOnboardAppMethod']            = '';
+            $driverOnboardSettings['enableDriverOnboardFromApp']        = false;
         }
 
-        Setting::configure('fleet-ops.driver-onboard-settings.'.$driverOnboardSettings['companyId'], $driverOnboardSettings); 
+        Setting::configure('fleet-ops.driver-onboard-settings.' . $driverOnboardSettings['companyId'], $driverOnboardSettings);
+
         return response()->json(['driverOnboardSettings' => $driverOnboardSettings]);
     }
 }

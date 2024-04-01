@@ -25,14 +25,14 @@
         <InputGroup>
             <div class="flex items-center">
                 <Toggle
-                    @isToggled={{this.driverOnboardSettings.driverMustProvideOnboardDoucments}}
+                    @isToggled={{this.driverOnboardSettings.driverMustProvideOnboardDocuments}}
                     @onToggle={{this.enableDriverOnboardDocuments}}
                     @label={{t "fleet-ops.component.driver-onboard-settings.require-driver-to-upload-onboard-documents"}}
                     @helpText={{t "fleet-ops.component.driver-onboard-settings.require-driver-to-upload-onboard-documents-help-text"}}
                 />
             </div>
         </InputGroup>
-        {{#if this.driverOnboardSettings.driverMustProvideOnboardDoucments}}
+        {{#if this.driverOnboardSettings.driverMustProvideOnboardDocuments}}
             <InputGroup>
                 <ArrayInput
                     @data={{this.driverOnboardSettings.requiredOnboardDocuments}}

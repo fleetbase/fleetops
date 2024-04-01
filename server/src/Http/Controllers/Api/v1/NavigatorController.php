@@ -5,7 +5,6 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
 
-
 class NavigatorController extends Controller
 {
     /**
@@ -19,15 +18,14 @@ class NavigatorController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
 
-
-        /**
+    /**
      * Retrieve driver onboard settings.
      *
      * @return \Illuminate\Http\JsonResponse
      */
     public function getDriverOnboardSettings($companyId)
     {
-        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings.'.$companyId)->value('value');
+        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings.' . $companyId)->value('value');
         if (!$driverOnboardSettings) {
             $driverOnboardSettings = [];
         }
