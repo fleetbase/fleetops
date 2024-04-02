@@ -8,6 +8,7 @@ export default class DriverOnboardSettingsComponent extends Component {
     @service fetch;
     @service currentUser;
     @tracked companyId;
+    @tracked driverOnboardSettingsLoaded = false;
     @tracked driverOnboardSettings = {};
     @tracked driverOnboardMethods = ['invite', 'button'];
 
@@ -53,6 +54,8 @@ export default class DriverOnboardSettingsComponent extends Component {
                 requiredOnboardDocuments: [],
             });
         }
+
+        this.driverOnboardSettingsLoaded = true;
     }
 
     companyDoesntHaveDriverOnboardSettings() {

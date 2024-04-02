@@ -61,6 +61,24 @@ body[data-theme='dark'] .scheduler-left-sidebar {
     padding-left: 3.5rem;
 }
 
+/** content panel dropdown button */
+.next-sidebar .next-sidebar-panel-container.next-driver-listing > .next-sidebar-panel > .next-content-panel > .next-content-panel-header.next-sidebar-panel-toggle {
+    padding-right: 0.25rem;
+}
+
+.next-sidebar
+    .next-sidebar-panel-container.next-driver-listing
+    > .next-sidebar-panel
+    > .next-content-panel
+    > .next-content-panel-header
+    > .next-content-panel-header-right
+    > .ember-basic-dropdown
+    button {
+    padding: 0.15rem 0.625rem;
+    font-size: 10px;
+    line-height: 0.5;
+}
+
 .multi-drop-select-container .fleetbase-model-select.fleetbase-power-select.ember-model-select > .ember-model-select__loading {
     background: none;
     border: none;
