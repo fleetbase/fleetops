@@ -18,7 +18,7 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
         this.fetchDrivers.perform();
     }
 
-    displayPanelDropdown = false;
+    displayPanelDropdown = true;
 
     panelDropdownButtonActions = [
         {

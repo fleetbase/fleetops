@@ -70,9 +70,15 @@ body[data-theme='dark'] .scheduler-left-sidebar {
     .next-sidebar-panel-container.next-driver-listing
     > .next-sidebar-panel
     > .next-content-panel
-    > .next-content-panel-header
-    > .next-content-panel-header-right
-    > .ember-basic-dropdown
+    > .next-content-panel-header.next-sidebar-panel-toggle
+    .ember-basic-dropdown
+    button,
+.next-sidebar
+    .next-sidebar-panel-container.next-driver-listing
+    > .next-sidebar-panel
+    > .next-content-panel
+    > .next-content-panel-header.next-sidebar-panel-toggle
+    .ember-basic-dropdown-trigger
     button {
     padding: 0.15rem 0.625rem;
     font-size: 10px;
