@@ -1,6 +1,9 @@
 import buildRoutes from 'ember-engines/routes';
 
 export default buildRoutes(function () {
+    this.route('settings', function () {
+        this.route('navigator-app');
+    });
     this.route('virtual', { path: '/:slug/:view' });
     this.route('operations', { path: '/' }, function () {
         this.route('dispatch');
