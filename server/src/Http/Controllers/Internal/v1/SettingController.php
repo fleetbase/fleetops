@@ -48,23 +48,69 @@ class SettingController extends Controller
         return response()->json(['visibilitySettings' => $visibilitySettings]);
     }
 
+    /**
+     * Save entity editing settings.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function saveEntityEditingSettings(Request $request)
     {
         $entityEditingSettings  = $request->input('entityEditingSettings', []);
-        $isEntityFieldsEditable = $request->boolean('isEntityFieldsEditable');
 
         // Save entity editing settings
         Setting::configure('fleet-ops.entity-editing-settings', $entityEditingSettings);
-        Setting::configure('fleet-ops.entity-fields-editable', $isEntityFieldsEditable);
 
-        return response()->json(['entityEditingSettings' => $entityEditingSettings, 'isEntityFieldsEditable' => $isEntityFieldsEditable]);
+        return response()->json(['entityEditingSettings' => $entityEditingSettings]);
     }
 
+    /**
+     * Retrieve entity editing settings.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function getEntityEditingSettings()
     {
         $entityEditingSettings  = Setting::where('key', 'fleet-ops.entity-editing-settings')->value('value');
-        $isEntityFieldsEditable = Setting::where('key', 'fleet-ops.entity-fields-editable')->value('value');
+        if (!$entityEditingSettings) {
+            $entityEditingSettings = [];
+        }
 
-        return response()->json(['entityEditingSettings' => $entityEditingSettings, 'isEntityFieldsEditable' => $isEntityFieldsEditable]);
+        return response()->json(['entityEditingSettings' => $entityEditingSettings]);
+    }
+
+    /**
+     * Retrieve driver onboard settings.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDriverOnboardSettings($companyId)
+    {
+        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings.' . $companyId)->value('value');
+        if (!$driverOnboardSettings) {
+            $driverOnboardSettings = [];
+        }
+
+        return response()->json(['driverOnboardSettings' => $driverOnboardSettings]);
+    }
+
+    /**
+     * Save driver onboard settings.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function savedDriverOnboardSettings(Request $request)
+    {
+        $driverOnboardSettings = $request->input('driverOnboardSettings', []);
+
+        if ($driverOnboardSettings['enableDriverOnboardFromApp'] == false) {
+            $driverOnboardSettings['driverMustProvideOnboardDoucments'] = false;
+            $driverOnboardSettings['requiredOnboardDocuments']          = [];
+            $driverOnboardSettings['driverOnboardAppMethod']            = '';
+            $driverOnboardSettings['enableDriverOnboardFromApp']        = false;
+        }
+
+        Setting::configure('fleet-ops.driver-onboard-settings.' . $driverOnboardSettings['companyId'], $driverOnboardSettings);
+
+        return response()->json(['driverOnboardSettings' => $driverOnboardSettings]);
     }
 }

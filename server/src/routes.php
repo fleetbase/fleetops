@@ -179,6 +179,11 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 $router->group(['prefix' => 'labels'], function () use ($router) {
                     $router->get('{id}', 'LabelController@getLabel');
                 });
+
+                // navigator routes
+                $router->group(['prefix' => 'onboard'], function () use ($router) {
+                    $router->get('driver-onboard-settings/{companyId}', 'NavigatorController@getDriverOnboardSettings');
+                });
             });
 
         /*
@@ -435,6 +440,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('visibility', 'SettingController@saveVisibilitySettings');
                                         $router->get('entity-editing-settings', 'SettingController@getEntityEditingSettings');
                                         $router->post('entity-editing-settings', 'SettingController@saveEntityEditingSettings');
+                                        $router->post('driver-onboard-settings', 'SettingController@savedDriverOnboardSettings');
+                                        $router->get('driver-onboard-settings/{companyId}', 'SettingController@getDriverOnboardSettings');
                                     }
                                 );
                                 $router->group(

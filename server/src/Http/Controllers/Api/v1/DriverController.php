@@ -44,6 +44,9 @@ class DriverController extends Controller
         // get request input
         $input = $request->except(['name', 'password', 'email', 'phone', 'location', 'altitude', 'heading', 'speed', 'meta']);
 
+        // Add default status
+        $input['status'] = 'active';
+
         // get user details for driver
         $userDetails                 = $request->only(['name', 'password', 'email', 'phone', 'timezone']);
 
