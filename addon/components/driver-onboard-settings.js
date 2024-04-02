@@ -36,8 +36,8 @@ export default class DriverOnboardSettingsComponent extends Component {
 
     @task *saveDriverOnboardSettings() {
         const { driverOnboardSettings } = this;
-        const driverOnboardSettingsResponse =  yield this.fetch.post('fleet-ops/settings/driver-onboard-settings', { driverOnboardSettings });
-        if(driverOnboardSettings?.enableDriverOnboardFromApp == false) this.driverOnboardSettings = driverOnboardSettingsResponse?.driverOnboardSettings;
+        const driverOnboardSettingsResponse = yield this.fetch.post('fleet-ops/settings/driver-onboard-settings', { driverOnboardSettings });
+        if (driverOnboardSettings?.enableDriverOnboardFromApp == false) this.driverOnboardSettings = driverOnboardSettingsResponse?.driverOnboardSettings;
     }
 
     @task *getDriverOnboardSettings() {
