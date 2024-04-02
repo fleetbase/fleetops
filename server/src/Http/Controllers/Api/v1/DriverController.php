@@ -503,7 +503,7 @@ class DriverController extends Controller
             return response()->apiError($e->getMessage());
         }
 
-        // $driver->update(['auth_token' => $token->plainTextToken]);
+        $driver->update(['auth_token' => $token->plainTextToken]);
         $driver->token = $token->plainTextToken;
 
         return new DriverResource($driver);
@@ -600,7 +600,8 @@ class DriverController extends Controller
         }
 
         // Assign user to company and update their session
-        $user->assignCompany($company);
+        $user->update(['company_uuid' => $company->uuid]);
+
         Auth::setSession($user);
 
         return new Organization($company);

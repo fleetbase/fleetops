@@ -16,9 +16,7 @@ class CreatePlaceRequest extends FleetbaseRequest
      */
     public function authorize()
     {
-        return request()
-            ->session()
-            ->has('api_credential');
+        return request()->session()->has('api_credential') || request()->session()->has('is_sanctum_token');;
     }
 
     /**

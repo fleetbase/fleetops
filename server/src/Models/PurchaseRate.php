@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -57,7 +58,8 @@ class PurchaseRate extends Model
      * @var array
      */
     protected $casts = [
-        'meta' => Json::class,
+        'meta'             => Json::class,
+        'customer_type'    => PolymorphicType::class,
     ];
 
     /**
