@@ -255,14 +255,18 @@ class DriverController extends FleetOpsController
                     }
                     $input     = $input->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])->toArray();
 
-                    $driver->user->update($userInput);
-                    $driver->flushAttributesCache();
+                    // Update driver user details
+                    $driverUser = $driver->getUser();
+                    if ($driverUser) {
+                        $driverUser->update($userInput);
+                        $input['slug'] = $driverUser->slug;
+                    }
 
-                    $input['slug'] = $driver->user->slug;
+                    // Flush cache
+                    $driver->flushAttributesCache();
                 },
                 function ($request, &$driver) {
                     $driver->load(['user']);
-
                     if ($driver->user) {
                         $driver->user->setHidden(['driver']);
                     }
