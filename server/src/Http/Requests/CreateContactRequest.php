@@ -14,7 +14,7 @@ class CreateContactRequest extends FleetbaseRequest
      */
     public function authorize()
     {
-        return request()->session()->has('storefront_key') || request()->session()->has('api_credential') || request()->session()->has('is_sanctum_token');;
+        return request()->session()->has('storefront_key') || request()->session()->has('api_credential') || request()->session()->has('is_sanctum_token');
     }
 
     /**

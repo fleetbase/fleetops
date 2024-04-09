@@ -148,7 +148,10 @@ class DriverController extends Controller
         $userDetails = $request->only(['name', 'password', 'email', 'phone']);
 
         // update driver user details
-        $driver->user->update($userDetails);
+        $driverUser = $driver->getUser();
+        if ($driverUser) {
+            $driverUser->update($userDetails);
+        }
 
         // vehicle assignment public_id -> uuid
         if ($request->has('vehicle')) {

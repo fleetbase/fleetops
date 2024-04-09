@@ -19,13 +19,12 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
     }
 
     displayPanelDropdown = true;
-
     panelDropdownButtonActions = [
         {
             label: 'Create new driver...',
             onClick: () => {
                 const driver = this.store.createRecord('driver');
-                this.contextPanel.focus(driver);
+                this.contextPanel.focus(driver, 'editing');
             },
         },
     ];
