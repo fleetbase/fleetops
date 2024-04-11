@@ -212,6 +212,15 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->post('verify-code', 'DriverController@verifyCode');
                     $router->post('login', 'DriverController@login');
                 });
+                // chat
+                $router->group(['prefix' => 'chat', 'namespace' => 'Internal\v1'], function () use ($router) {
+                    $router->post('create-channel', 'ChatController@create');
+                    $router->delete('chat-channels/{id}', 'ChatController@deleteChatChannel');
+                    $router->put('chat-channels/{id}', 'ChatController@updateChatChannel');
+                    $router->delete('add-participant', 'ChatController@addParticipant');
+                    $router->put('update-participant', 'ChatController@updateParticipant');
+                    
+                });
 
                 // auth:sanctum
                 $router->group(['middleware' => ['fleetbase.protected', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]], function () use ($router) {
