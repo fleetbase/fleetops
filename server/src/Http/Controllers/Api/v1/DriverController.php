@@ -27,6 +27,7 @@ use Geocoder\Laravel\Facades\Geocoder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -506,8 +507,16 @@ class DriverController extends Controller
             return response()->apiError($e->getMessage());
         }
 
-        $driver->update(['auth_token' => $token->plainTextToken]);
-        $driver->token = $token->plainTextToken;
+        try {
+            DB::table('drivers')->where('uuid', $driver->uuid)->update(['auth_token' => $token->plainTextToken]);
+            $driver->token = $token->plainTextToken;
+        } catch (\Throwable $e) {
+            if (app()->bound('sentry')) {
+                app('sentry')->captureException($e);
+            }
+
+            return response()->apiError('Unable to authenticate driver.');
+        }
 
         return new DriverResource($driver);
     }
