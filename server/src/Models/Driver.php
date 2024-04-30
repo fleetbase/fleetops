@@ -193,7 +193,7 @@ class Driver extends Model
      */
     public function user()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class)->select(['uuid', 'company_uuid', 'avatar_uuid', 'name', 'phone', 'email'])->without(['driver'])->withTrashed();
+        return $this->belongsTo(\Fleetbase\Models\User::class)->select(['uuid', 'company_uuid', 'public_id', 'avatar_uuid', 'name', 'phone', 'email'])->without(['driver'])->withTrashed();
     }
 
     /**

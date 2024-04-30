@@ -142,35 +142,46 @@ class DriverController extends FleetOpsController
                 function (&$request, &$input) {
                     $input = collect($input);
 
-                    $userInput = $input
-                        ->only(['name', 'password', 'email', 'phone', 'status', 'avatar_uuid'])
-                        ->filter()
-                        ->toArray();
-
-                    // handle `photo_uuid`
-                    if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
-                        $userInput['avatar_uuid'] = $input['photo_uuid'];
-                    }
-
-                    $input = $input
-                        ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])
-                        ->filter()
-                        ->toArray();
-
-                    // Make sure password is set
-                    if (empty($userInput['password'])) {
-                        $userInput['password'] = Str::random(14);
-                    }
-
                     // Get current session company
                     $company                   = Auth::getCompany();
-                    $userInput['company_uuid'] = session('company', $company->uuid);
 
-                    // Apply user infos
-                    $userInput = User::applyUserInfoFromRequest($request, $userInput);
+                    if ($input->has('user_uuid')) {
+                        $user = User::where('uuid', $input->get('user_uuid'))->first();
+                        // handle `photo_uuid`
+                        if ($user && $input->has('photo_uuid')) {
+                            $user->update(['avatar_uuid' => $input->get('photo_uuid')]);
+                        }
+                    } else {
+                        $userInput = $input
+                            ->only(['name', 'password', 'email', 'phone', 'status', 'avatar_uuid'])
+                            ->filter()
+                            ->toArray();
 
-                    // Create user account
-                    $user = User::create($userInput);
+                        // handle `photo_uuid`
+                        if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
+                            $userInput['avatar_uuid'] = $input['photo_uuid'];
+                        }
+
+                        // Make sure password is set
+                        if (empty($userInput['password'])) {
+                            $userInput['password'] = Str::random(14);
+                        }
+
+                        // Set user company
+                        $userInput['company_uuid'] = session('company', $company->uuid);
+
+                        // Apply user infos
+                        $userInput = User::applyUserInfoFromRequest($request, $userInput);
+
+                        // Create user account
+                        $user = User::create($userInput);
+                    }
+
+                    // Prepare input
+                    $input = $input
+                            ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])
+                            ->filter()
+                            ->toArray();
 
                     // Assign user to company
                     if ($company) {

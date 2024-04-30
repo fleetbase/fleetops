@@ -61,58 +61,81 @@
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4">
         <div class="flex-1 space-y-4">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
-                <InputGroup @name={{t "fleet-ops.common.name"}} @wrapperClass="col-span-2">
-                    <Input @value={{this.driver.name}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} />
-                </InputGroup>
+            <ContentPanel @title={{t "fleet-ops.component.driver-form-panel.user-account"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.userAccountActionButtons}}>
+                <div class="mb-4">
+                    <InputGroup @name={{t "fleet-ops.component.driver-form-panel.user-account"}} @helpText={{t "fleet-ops.component.driver-form-panel.user-account-help-text"}}>
+                        <ModelSelect @modelName="user" @selectedModel={{this.driver.user}} @placeholder="Select User" @query={{hash doesnt_have_driver=true}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.driver.user)}} as |model|>
+                            <div class="flex flex-row">
+                                <div class="mr-2 w-6">
+                                    <Image src={{model.avatar_url}} @fallbackSrc={{config "defaultValues.userImage"}} alt={{this.user.name}} class="w-6 h-6 rounded-md" />
+                                </div>
+                                <div class="flex flex-col">
+                                    <div class="font-semibold">{{model.name}}</div>
+                                    <div class="text-xs">{{n-a model.phone}}</div>
+                                </div>
+                            </div>
+                        </ModelSelect>
+                    </InputGroup>
+                </div>
+                {{#if this.driver.user}}
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+                        <InputGroup @name={{t "fleet-ops.common.name"}} @wrapperClass="col-span-2">
+                            <Input @value={{this.driver.user.name}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} disabled={{true}} />
+                        </InputGroup>
 
-                <InputGroup @name={{t "fleet-ops.common.internal-id"}}>
-                    <Input @value={{this.driver.internal_id}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.internal-id"}} />
-                </InputGroup>
+                        <InputGroup @name={{t "fleet-ops.common.email"}} @wrapperClass="mb-0i">
+                            <Input @value={{this.driver.user.email}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.email"}} disabled={{true}} />
+                        </InputGroup>
 
-                <InputGroup @name={{t "fleet-ops.common.driver-license"}}>
-                    <Input @value={{this.driver.drivers_license_number}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.driver-license"}} />
-                </InputGroup>
-
-                <InputGroup @name={{t "fleet-ops.common.email"}}>
-                    <Input @value={{this.driver.email}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.email"}} />
-                </InputGroup>
-
-                <InputGroup @name={{t "fleet-ops.common.phone"}}>
-                    <PhoneInput @value={{this.driver.phone}} @onInput={{fn (mut this.driver.phone)}} class="form-input w-full" />
-                </InputGroup>
-
-                <InputGroup @name={{t "fleet-ops.component.driver-form-panel.vendor"}}>
-                    <ModelSelect @modelName="vendor" @selectedModel={{this.driver.vendor}} @placeholder="Select Vendor" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.driver.vendor)}} as |model|>
-                        {{model.name}}
-                    </ModelSelect>
-                </InputGroup>
-
-                <InputGroup @name={{t "fleet-ops.common.vehicle"}}>
-                    <ModelSelect @modelName="vehicle" @selectedModel={{this.driver.vehicle}} @placeholder={{t "fleet-ops.component.driver-form-panel.select-vehicle"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.driver.vehicle)}} as |model|>
-                        {{model.display_name}}
-                    </ModelSelect>
-                </InputGroup>
-
-                <InputGroup @name={{t "fleet-ops.common.city"}}>
-                    <Input @value={{this.driver.city}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.city"}} />
-                </InputGroup>
-
-                <InputGroup @name={{t "fleet-ops.common.country"}}>
-                    <CountrySelect class="w-full form-input form-select form-datalist" @value={{this.driver.country}} @onChange={{fn (mut this.driver.country)}} placeholder={{t "fleet-ops.common.country"}} />
-                </InputGroup>
-
-                <InputGroup @name={{t "fleet-ops.common.status"}}>
-                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                        <PowerSelect @options={{this.driverStatusOptions}} @selected={{this.driver.status}} @onChange={{fn (mut this.driver.status)}} @placeholder={{t "fleet-ops.common.status"}} @triggerClass="form-select form-input" as |status|>
-                            {{smart-humanize status}}
-                        </PowerSelect>
+                        <InputGroup @name={{t "fleet-ops.common.phone"}} @wrapperClass="mb-0i">
+                            <PhoneInput @value={{this.driver.user.phone}} @onInput={{fn (mut this.driver.phone)}} class="form-input w-full" disabled={{true}} />
+                        </InputGroup>
                     </div>
-                </InputGroup>
-                <InputGroup @name={{t "fleet-ops.common.coordinates"}} @wrapperClass="col-span-2">
-                    <CoordinatesInput @value={{this.driver.location}} @onChange={{this.onCoordinatesChanged}} @onGeocode={{this.onAutocomplete}} @onUpdatedFromMap={{this.onCoordinatesChanged}} @onInit={{this.setCoordinatesInput}} @renderInPlace={{false}} />
-                </InputGroup>
-            </div>
+                {{/if}}
+            </ContentPanel>
+
+            <ContentPanel @title={{t "fleet-ops.component.driver-form-panel.driver-details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+                    <InputGroup @name={{t "fleet-ops.common.internal-id"}}>
+                        <Input @value={{this.driver.internal_id}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.internal-id"}} />
+                    </InputGroup>
+
+                    <InputGroup @name={{t "fleet-ops.common.driver-license"}}>
+                        <Input @value={{this.driver.drivers_license_number}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.driver-license"}} />
+                    </InputGroup>
+
+                    <InputGroup @name={{t "fleet-ops.component.driver-form-panel.vendor"}}>
+                        <ModelSelect @modelName="vendor" @selectedModel={{this.driver.vendor}} @placeholder="Select Vendor" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.driver.vendor)}} as |model|>
+                            {{model.name}}
+                        </ModelSelect>
+                    </InputGroup>
+
+                    <InputGroup @name={{t "fleet-ops.common.vehicle"}}>
+                        <ModelSelect @modelName="vehicle" @selectedModel={{this.driver.vehicle}} @placeholder={{t "fleet-ops.component.driver-form-panel.select-vehicle"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.driver.vehicle)}} as |model|>
+                            {{model.display_name}}
+                        </ModelSelect>
+                    </InputGroup>
+
+                    <InputGroup @name={{t "fleet-ops.common.city"}}>
+                        <Input @value={{this.driver.city}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.city"}} />
+                    </InputGroup>
+
+                    <InputGroup @name={{t "fleet-ops.common.country"}}>
+                        <CountrySelect class="w-full form-input form-select form-datalist" @value={{this.driver.country}} @onChange={{fn (mut this.driver.country)}} placeholder={{t "fleet-ops.common.country"}} />
+                    </InputGroup>
+
+                    <InputGroup @name={{t "fleet-ops.common.status"}}>
+                        <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                            <PowerSelect @options={{this.driverStatusOptions}} @selected={{this.driver.status}} @onChange={{fn (mut this.driver.status)}} @placeholder={{t "fleet-ops.common.status"}} @triggerClass="form-select form-input" as |status|>
+                                {{smart-humanize status}}
+                            </PowerSelect>
+                        </div>
+                    </InputGroup>
+                    <InputGroup @name={{t "fleet-ops.common.coordinates"}} @wrapperClass="col-span-2">
+                        <CoordinatesInput @value={{this.driver.location}} @onChange={{this.onCoordinatesChanged}} @onGeocode={{this.onAutocomplete}} @onUpdatedFromMap={{this.onCoordinatesChanged}} @onInit={{this.setCoordinatesInput}} @renderInPlace={{false}} />
+                    </InputGroup>
+                </div>
+            </ContentPanel>
 
             <ContentPanel @title={{t "fleet-ops.component.avatar-picker.avatar"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <AvatarPicker @model={{this.driver}} @defaultAvatar={{config "defaultValues.driverAvatar"}} />
