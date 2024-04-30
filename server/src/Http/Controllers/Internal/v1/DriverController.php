@@ -147,6 +147,10 @@ class DriverController extends FleetOpsController
 
                     if ($input->has('user_uuid')) {
                         $user = User::where('uuid', $input->get('user_uuid'))->first();
+                        // handle `photo_uuid`
+                        if ($user && $input->has('photo_uuid')) {
+                            $user->update(['avatar_uuid' => $input->get('photo_uuid')]);
+                        }
                     } else {
                         $userInput = $input
                             ->only(['name', 'password', 'email', 'phone', 'status', 'avatar_uuid'])
