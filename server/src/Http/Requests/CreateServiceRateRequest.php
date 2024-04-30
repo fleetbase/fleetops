@@ -2,9 +2,9 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
+use Fleetbase\FleetOps\Rules\ComputableAlgo;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\FleetbaseRequest;
-use Fleetbase\Rules\ComputableAlgo;
 use Illuminate\Validation\Rule;
 
 class CreateServiceRateRequest extends FleetbaseRequest

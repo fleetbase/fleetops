@@ -764,18 +764,23 @@ fleet-ops:
     driver-card:
       no-fleets: No fleets
     driver-form-panel:
-        success-message: Driver ({driverName}) saved successfully.
-        driver-detail: View driver details
-        save-driver: Save Driver
-        create-driver: Create Driver
-        cancel-edit-driver: Cancel edit driver
-        cancel-new-driver: Cancel new driver
-        upload-new-photo: Upload new photo
-        new-driver: New Driver
-        vendor: Vendor
-        select-vehicle: Select Vehicle
-        driver-status: Select driver status
+      driver-details: Driver Details
+      user-account: User Account
+      user-account-help-text: Each driver profile needs to be connected to a specific user account. This association is essential for handling the authentication process, ensuring that each driver can securely access and manage their profile.
+      success-message: Driver ({driverName}) saved successfully.
+      driver-detail: View driver details
+      save-driver: Save Driver
+      create-driver: Create Driver
+      cancel-edit-driver: Cancel edit driver
+      cancel-new-driver: Cancel new driver
+      upload-new-photo: Upload new photo
+      new-driver: New Driver
+      vendor: Vendor
+      select-vehicle: Select Vehicle
+      driver-status: Select driver status
     driver-panel:
+      user-account: User Account
+      driver-details: Driver Details
       locate-button-text: Locate driver
       edit-button-text: Edit driver
       close-button-text: Close driver details
