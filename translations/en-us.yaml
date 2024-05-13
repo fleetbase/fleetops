@@ -778,6 +778,7 @@ fleet-ops:
       vendor: Vendor
       select-vehicle: Select Vehicle
       driver-status: Select driver status
+      order-history: Order History
     driver-panel:
       user-account: User Account
       driver-details: Driver Details
