@@ -38,7 +38,7 @@ export default class CustomerOrderHistoryComponent extends Component {
     }
 
     @action search(event) {
-        // this.reloadOrders.perform({ query: event.target.value ?? '' });
+        this.loadOrdersForDriver.perform({ query: event.target.value ?? '' });
     }
 
     @action async viewOrder(order) {

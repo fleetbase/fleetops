@@ -1,38 +1,29 @@
-{{! template-lint-disable no-unbound }}
 <Layout::Section::Header @title={{t "fleet-ops.common.orders"}} @onSearch={{this.search}} />
 
 <Layout::Section::Body>
-    <div class="p-4">
 
-        {{#if this.isLoading}}
-            <div class="px-3 py-2">
-                <Spinner class="text-sky-400" />
+    <div class="hidden md:flex flex-col p-4">
+        {{#each this.orders as |order|}}
+            <div class="bg-gray shadow-md rounded-lg p-4 mb-4 border border-gray-700">
+                <div>
+                    <a href="javascript:;" {{on "click" (fn this.viewOrder order)}}>{{order.public_id}}</a>
+                </div>
+                <div>
+                    <Badge @status={{order.status}} />
+                </div>
+                <div>
+                    <DisplayPlace @place={{@options.order.payload.dropoff}} @type="dropoff" @addressClass="text-sm dark:text-gray-100" @noAddressClass="text-sm" />
+                </div>
+                <div>
+                    <DisplayPlace @place={{@options.order.payload.pickup}} @type="pickup" />
+                </div>
+                <div>{{order.driver_assigned.vehicle_name}}</div>
+                <div>{{order.customer}}</div>
+                <div>{{order.status}}</div>
+                <div>{{format-date order.created_at "d MMM yyyy"}}</div>
+                <div>{{order.tracking_number.tracking_number}}</div>
             </div>
+        {{/each}}
+    </div>
 
-        {{/if}}
-        <div class="hidden md:flex table-wrapper table-fluid">
-            <table>
-                <thead>
-                    <tr class="h-12 text-left py-1">
-                        <th>{{t "fleet-ops.common.id"}}</th>
-                        <th>{{t "fleet-ops.common.created-at"}}</th>
-                        <th>{{t "fleet-ops.common.status"}}</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{#each this.orders as |order|}}
-                        <tr class="h-12">
-                            <td><a href="javascript:;" {{on "click" (fn this.viewOrder order)}}>{{order.public_id}}</a></td>
-
-                            <td>{{order.createdAgo}}</td>
-                            <td>
-                                <Badge @status={{order.status}} />
-                            </td>
-
-                        </tr>
-                    {{/each}}
-                </tbody>
-            </table>
-        </div>
-    </div></Layout::Section::Body>
+</Layout::Section::Body>
