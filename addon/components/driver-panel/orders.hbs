@@ -4,24 +4,101 @@
 
     <div class="hidden md:flex flex-col p-4">
         {{#each this.orders as |order|}}
-            <div class="bg-gray shadow-md rounded-lg p-4 mb-4 border border-gray-700">
-                <div>
-                    <a href="javascript:;" {{on "click" (fn this.viewOrder order)}}>{{order.public_id}}</a>
+            <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100 bg-gray shadow-md rounded-lg p-4 mb-4 border border-gray-700">
+                <div class="container mx-auto px-4 py-2">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <h1 class="text-sm font-bold">{{t "fleet-ops.common.id"}}</h1>
+
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-sm">
+                            <a href="javascript:;" {{on "click" (fn this.viewOrder order)}}>
+                                {{order.public_id}}
+                            </a></span>
+                    </div>
                 </div>
-                <div>
-                    <Badge @status={{order.status}} />
+                <div class="container mx-auto px-4 py-2">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <h1 class="text-sm font-bold">{{t "fleet-ops.common.status"}}</h1>
+
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-sm mt-4">
+                            <Badge @status={{order.status}} /></span>
+                    </div>
                 </div>
-                <div>
-                    <DisplayPlace @place={{@options.order.payload.dropoff}} @type="dropoff" @addressClass="text-sm dark:text-gray-100" @noAddressClass="text-sm" />
+
+                <div class="container mx-auto px-4 py-2">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <h1 class="text-sm font-bold">{{t "fleet-ops.common.dropoff"}}</h1>
+
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-sm">
+                            <DisplayPlace @place={{@options.order.payload.dropoff}} @type="dropoff" @addressClass="text-sm dark:text-gray-100" @noAddressClass="text-sm" /></span>
+                    </div>
                 </div>
-                <div>
-                    <DisplayPlace @place={{@options.order.payload.pickup}} @type="pickup" />
+
+                <div class="container mx-auto px-4 py-2">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <h1 class="text-sm font-bold">{{t "fleet-ops.common.pickup"}}</h1>
+                        </div>
+                    </div>
+                    <span class="text-gray-500 text-sm">
+                        <DisplayPlace @place={{@options.order.payload.pickup}} @type="pickup" />
+                    </span>
                 </div>
-                <div>{{order.driver_assigned.vehicle_name}}</div>
-                <div>{{order.customer}}</div>
-                <div>{{order.status}}</div>
-                <div>{{format-date order.created_at "d MMM yyyy"}}</div>
-                <div>{{order.tracking_number.tracking_number}}</div>
+
+                <div class="container mx-auto px-4 py-2">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <h1 class="text-sm font-bold">{{t "fleet-ops.common.vehicle-name"}}</h1>
+                        </div>
+                    </div>
+                    <span class="text-gray-500 text-sm">
+                        <div>{{order.driver_assigned.vehicle_name}}</div>
+                    </span>
+                </div>
+
+                <div class="container mx-auto px-4 py-2">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <h1 class="text-sm font-bold">{{t "fleet-ops.common.customer"}}</h1>
+                        </div>
+                    </div>
+                    <span class="text-gray-500 text-sm">
+                        <div>{{order.customer}}</div>
+                    </span>
+                </div>
+
+                <div class="container mx-auto px-4 py-2">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <h1 class="text-sm font-bold">{{t "fleet-ops.common.created-at"}}</h1>
+                        </div>
+                    </div>
+                    <span class="text-gray-500 text-sm">
+                        <div>{{format-date order.created_at "d MMM yyyy"}}</div>
+                    </span>
+                </div>
+
+                <div class="container mx-auto px-4 py-2">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <h1 class="text-sm font-bold">{{t "fleet-ops.common.tracking"}}</h1>
+                        </div>
+                    </div>
+                    <span class="text-gray-500 text-sm">
+                        <div>{{order.tracking_number.tracking_number}}</div>
+                    </span>
+                </div>
             </div>
         {{/each}}
     </div>

@@ -94,6 +94,11 @@ fleet-ops:
     total: Total
     back: Back
     done: Done
+    tracking: Tracking Number
+    customer: Customer
+    vehicle-name: Vehicle Name
+    pickup: Pickup
+    dropoff: Dropoff
   component:
     activity-logic-builder:
       activity-logic: Activity Logic
