@@ -374,6 +374,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             'service-rates',
                             function ($router, $controller) {
                                 $router->get('for-route', $controller('getServicesForRoute'));
+                                $router->get('export', $controller('export'));
                             }
                         );
                         $router->fleetbaseRoutes('tracking-numbers');

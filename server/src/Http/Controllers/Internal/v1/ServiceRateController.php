@@ -3,9 +3,13 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Brick\Geo\Point;
+use Fleetbase\FleetOps\Exports\ServiceRateExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\ServiceRate;
+use Fleetbase\Http\Requests\ExportRequest;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ServiceRateController extends FleetOpsController
 {
@@ -15,6 +19,14 @@ class ServiceRateController extends FleetOpsController
      * @var string
      */
     public $resource = 'service_rate';
+
+
+    protected array $selections = [];
+
+    public function __construct(array $selections = [])
+    {
+        $this->selections = $selections;
+    }
 
     /**
      * Creates a record with request payload.
@@ -46,5 +58,28 @@ class ServiceRateController extends FleetOpsController
         );
 
         return response()->json($applicableServiceRates);
+    }
+
+    public function collection()
+    {
+        if ($this->selections) {
+            return ServiceRate::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->get();
+        }
+
+        return ServiceRate::where('company_uuid', session('company'))->get();
+    }
+
+    /**
+     * Export the service rate to excel or csv.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public static function export(ExportRequest $request)
+    {
+        $format   = $request->input('format', 'xlsx');
+        $selections   = $request->array('selections');
+        $fileName = trim(Str::slug('contacts-' . date('Y-m-d-H:i')) . '.' . $format);
+
+        return Excel::download(new ServiceRateExport($selections), $fileName);
     }
 }
