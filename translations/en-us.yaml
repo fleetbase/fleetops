@@ -94,6 +94,11 @@ fleet-ops:
     total: Total
     back: Back
     done: Done
+    tracking: Tracking Number
+    customer: Customer
+    vehicle-name: Vehicle Name
+    pickup: Pickup
+    dropoff: Dropoff
   component:
     activity-logic-builder:
       activity-logic: Activity Logic
@@ -784,6 +789,7 @@ fleet-ops:
       vendor: Vendor
       select-vehicle: Select Vehicle
       driver-status: Select driver status
+      order-history: Order History
     driver-panel:
       user-account: User Account
       driver-details: Driver Details
