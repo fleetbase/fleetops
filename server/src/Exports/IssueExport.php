@@ -21,7 +21,7 @@ class IssueExport implements FromCollection, WithHeadings, WithMapping, WithColu
             $issue->category,
             $issue->reporter_name,
             $issue->assignee_name,
-            $issue->driver_uuid,
+            $issue->driver_name,
             $issue->vehicle_name,
             $issue->status,
             Date::dateTimeToExcel($issue->created_at),
