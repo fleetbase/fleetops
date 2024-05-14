@@ -64,7 +64,7 @@ class Order extends Model
      *
      * @var array
      */
-    protected $searchableColumns = ['public_id', 'internal_id', 'trackingNumber.tracking_number', 'meta->storefront', 'meta->storefront_network'];
+    protected $searchableColumns = ['public_id', 'internal_id', 'trackingNumber.tracking_number'];
 
     /**
      * The attributes that are mass assignable.
