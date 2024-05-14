@@ -11,12 +11,12 @@
             <div class="flex-1">
                 <div class="grid grid-cols-1 gap-2 text-xs dark:text-gray-100">
 
-                    <div class="field-info-container">
+                    <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.common.name"}}</div>
                         <div class="field-value">{{n-a @options.place.name}}</div>
                     </div>
 
-                    <div class="field-info-container">
+                    <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.common.street"}}</div>
                         <div class="field-value">{{n-a @options.place.street1}}</div>
                     </div>
@@ -24,17 +24,17 @@
 
                 <div class="grid grid-cols-3 gap-2 text-xs dark:text-gray-100">
 
-                    <div class="field-info-container">
+                    <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.common.neighborhood"}}</div>
                         <div class="field-value">{{n-a @options.place.neighborhood}}</div>
                     </div>
 
-                    <div class="field-info-container">
+                    <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.common.building"}}</div>
                         <div class="field-value">{{n-a @options.place.building}}</div>
                     </div>
 
-                    <div class="field-info-container">
+                    <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.common.security-access-code"}}</div>
                         <div class="field-value">{{n-a @options.place.security_access_code}}</div>
                     </div>
@@ -42,17 +42,17 @@
 
                 <div class="grid grid-cols-3 gap-2 text-xs dark:text-gray-100">
 
-                    <div class="field-info-container">
+                    <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.common.city"}}</div>
                         <div class="field-value">{{n-a @options.place.city}}</div>
                     </div>
 
-                    <div class="field-info-container">
+                    <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.common.state"}}</div>
                         <div class="field-value">{{n-a @options.place.province}}</div>
                     </div>
 
-                    <div class="field-info-container">
+                    <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.common.country"}}</div>
                         <div class="field-value"><CountryName @country={{@options.place.country}} @showFlag={{true}} /></div>
                     </div>
@@ -60,17 +60,17 @@
 
                 <div class="grid grid-cols-3 gap-2 text-xs dark:text-gray-100">
 
-                    <div class="field-info-container">
+                    <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.common.phone"}}</div>
                         <div class="field-value">{{n-a @options.place.phone}}</div>
                     </div>
 
-                    <div class="field-info-container">
+                    <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.common.email"}}</div>
                         <div class="field-value">{{n-a @options.place.email}}</div>
                     </div>
 
-                    <div class="field-info-container">
+                    <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.common.vendor"}}</div>
                         <div class="field-value">
                             {{#if @options.place.vendor_uuid}}

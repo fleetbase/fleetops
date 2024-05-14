@@ -122,6 +122,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
      */
     @tracked payload = this.store.createRecord('payload');
     @tracked driversQuery = {};
+    @tracked vehiclesQuery = {};
     @tracked meta = [];
     @tracked entities = [];
     @tracked waypoints = [];
@@ -296,7 +297,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         this.previewRoute(false);
         this.loader.showLoader('body', { loadingMessage: 'Creating Order...' });
 
-        const { order, groupedMetaFields, payload, entities, waypoints, isMultipleDropoffOrder } = this;
+        const { order, groupedMetaFields, payload, entities, waypoints } = this;
         const route = this.leafletOptimizedRoute ? this.getOptimizedRoute() : this.getRoute();
 
         // set service quote if applicable
@@ -305,14 +306,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         }
 
         try {
-            order
-                .serializeMeta()
-                .serializeMetaFromGroupedFields(groupedMetaFields)
-                .setPayload(payload)
-                .setRoute(route)
-                .get('payload')
-                .setWaypoints(waypoints, isMultipleDropoffOrder)
-                .setEntities(entities);
+            order.serializeMeta().serializeMetaFromGroupedFields(groupedMetaFields).setPayload(payload).setRoute(route).get('payload').setWaypoints(waypoints).setEntities(entities);
         } catch (error) {
             this.notifications.serverError(error);
             this.loader.removeLoader();
@@ -353,15 +347,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                     // trigger event that fleet-ops created an order
                     this.universe.trigger('fleet-ops.order.created', order);
 
-                    // get engine route prefix
-                    let engineMountPoint = this.universe.getEngineMountPoint('@fleetbase/fleetops-engine');
-
-                    if (!engineMountPoint.endsWith('.')) {
-                        engineMountPoint = engineMountPoint + '.';
-                    }
-
                     // transition to order view
-                    return this.hostRouter.transitionTo(`${engineMountPoint}operations.orders.index.view`, order).then(() => {
+                    return this.hostRouter.transitionTo(`console.fleet-ops.operations.orders.index.view`, order).then(() => {
                         this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.new.success-message', { orderId: order.public_id }));
                         this.loader.removeLoader();
                         this.resetForm();
@@ -557,11 +544,19 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
     @action createPlace() {
         const place = this.store.createRecord('place');
-        this.contextPanel.focus(place, 'editing');
+        this.contextPanel.focus(place, 'editing', {
+            onAfterSave: () => {
+                this.contextPanel.clear();
+            },
+        });
     }
 
     @action editPlace(place) {
-        this.contextPanel.focus(place, 'editing');
+        this.contextPanel.focus(place, 'editing', {
+            onAfterSave: () => {
+                this.contextPanel.clear();
+            },
+        });
     }
 
     @action async getQuotes(service) {
@@ -1196,7 +1191,11 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
     @action setOrderCustomer(model) {
         this.order.set('customer', model);
-        // this.order.set('customer_type', `fleet-ops:${model.customer_type}`);
+    }
+
+    @action setWaypointCustomer(waypoint, model) {
+        waypoint.set('customer', model);
+        waypoint.set('customer_type', `fleet-ops:${model.customer_type}`);
     }
 
     @action selectIntegratedServiceType(key) {
@@ -1204,6 +1203,14 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
         if (this.isUsingIntegratedVendor) {
             this.getQuotes();
+        }
+    }
+
+    @action async selectDriver(driver) {
+        this.order.set('driver_assigned', driver);
+        if (driver && driver.vehicle) {
+            const vehicle = await driver.vehicle;
+            this.order.set('vehicle_assigned', vehicle);
         }
     }
 

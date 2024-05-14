@@ -503,6 +503,9 @@ fleet-ops:
         assign-driver: Assign Driver
         assign-driver-text: Assign the driver this order will be dispatched to.
         select-driver: Select Driver
+        assign-vehicle: Assign Vehicle
+        assign-vehicle-text: Assign the vehicle this order will be performed with.
+        select-vehicle: Select Vehicle
       order-import:
         loading-message: Processing import...
         drop-upload: Drop to upload
@@ -583,6 +586,8 @@ fleet-ops:
         year: Year
         driver-assigned: Driver Assigned
         no-driver-assigned: No driver assigned
+        vehicle-assigned: Vehicle Assigned
+        no-vehicle-assigned: No vehicle assigned
         avatar: Avatar
         model-information: Model Information
         acceleration: 0 to 100 Kph
@@ -705,10 +710,11 @@ fleet-ops:
         assign-button: Continue and assign driver
         date: Date scheduled
         driver-assigned: Driver
-        no-driver: No Driver
-        select-driver: Select Driver
         vehicle-assigned: Vehicle
+        no-driver: No Driver
         no-vehicle: No Vehicle
+        select-driver: Select Driver
+        select-vehicle: Select Vehicle
     widget:
       fleet-ops-quickstart:
         message: Let's see what you can do to jumpstart operations...
@@ -1053,8 +1059,9 @@ fleet-ops:
       year: Year
       vehicle-year: Vehicle year
       driver-assigned: Driver Assigned
+      vehicle-assigned: Vehicle Assigned
       select-driver: Select Driver
-      select-vehicle: Select vehicle status
+      select-vehicle: Select Vehicle
       avatar: Avatar
       select-map-avatar: Select map avatar
       select-avatar-rendering: Select an avatar to be used for rendering on maps when using geolocation tracking features.
@@ -1235,7 +1242,8 @@ fleet-ops:
         items: Items
         transaction: Transaction Total
         tracking: Tracking Number
-        driver-assigned: Driver Assigned
+        driver-assigned: Driver
+        vehicle-assigned: Vehicle
         created-by: Created By
         updated-by: Updated By
         view-order: View Order
@@ -1277,6 +1285,9 @@ fleet-ops:
           assign-driver: Assign Driver
           assign-driver-help-text: Assign the driver this order will be dispatched to.
           assign-driver-placeholder: Select Driver
+          assign-vehicle: Assign Vehicle
+          assign-vehicle-help-text: Assign the vehicle this order will be performed with.
+          assign-vehicle-placeholder: Select Vehicle
           proof-delivery: Proof of Delivery
           proof-delivery-help-text: Select the type of proof of delivery to require. This can either be QR code scan or Signature method.
           proof-delivery-placeholder: Select Proof of Delivery Method
@@ -1364,6 +1375,7 @@ fleet-ops:
           customer: Customer
           facilitator: Facilitator
           driver-assigned: Driver Assigned
+          vehicle-assigned: Vehicle Assigned
           change-driver: Change Driver
           tracking-number: Tracking Number
           date-scheduled: Date Scheduled

@@ -2,34 +2,34 @@
     <ContentPanel @title={{t "fleet-ops.common.details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-900">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-4 text-xs dark:text-gray-100">
 
-            <div class="field-info-container">
+            <div class="field-info-container space-y-2">
                 <div class="field-name">{{t "fleet-ops.component.contact-panel.details.web-url"}}</div>
                 <div class="field-value">{{n-a @contact.name}}</div>
             </div>
 
-            <div class="field-info-container">
+            <div class="field-info-container space-y-2">
                 <div class="field-name">{{t "fleet-ops.common.title"}}</div>
                 <div class="field-value">{{n-a @contact.title}}</div>
             </div>
 
-            <div class="field-info-container">
+            <div class="field-info-container space-y-2">
                 <div class="field-name">{{t "fleet-ops.common.internal-id"}}</div>
                 <div class="field-value">{{n-a @contact.internal_id}}</div>
             </div>
 
-            <div class="field-info-container">
+            <div class="field-info-container space-y-2">
                 <div class="field-name">{{t "fleet-ops.common.email"}}</div>
                 <div class="field-value">{{n-a @contact.email}}</div>
             </div>
 
-            <div class="field-info-container">
+            <div class="field-info-container space-y-2">
                 <div class="field-name">{{t "fleet-ops.common.email"}}</div>
                 <div class="field-value">{{n-a @contact.phone}}</div>
             </div>
 
-            <div class="field-info-container">
+            <div class="field-info-container space-y-2">
                 <div class="field-name">{{t "fleet-ops.common.type"}}</div>
-                <div class="field-value"><Badge @status={{@contact.type}} /></div>
+                <div class="field-value"><Badge @status="info">{{@contact.type}}</Badge></div>
             </div>
         </div>
     </ContentPanel>

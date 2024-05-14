@@ -20,7 +20,7 @@ class IssueController extends Controller
      *
      * @return \Fleetbase\Http\Resources\Entity
      */
-    public function createRecord(CreateIssueRequest $request)
+    public function create(CreateIssueRequest $request)
     {
         // get request input
         $input = $request->only([
@@ -64,7 +64,7 @@ class IssueController extends Controller
      *
      * @return \Fleetbase\Http\Resources\Issue
      */
-    public function updateRecord($id, UpdateIssueRequest $request)
+    public function update($id, UpdateIssueRequest $request)
     {
         // find for the issue
         try {
@@ -97,7 +97,7 @@ class IssueController extends Controller
      *
      * @return \Fleetbase\Http\Resources\FleetCollection
      */
-    public function queryRecord(Request $request)
+    public function query(Request $request)
     {
         $results = Issue::queryWithRequest($request);
 
@@ -105,11 +105,34 @@ class IssueController extends Controller
     }
 
     /**
+     * Finds a single Fleetbase Issue resources.
+     *
+     * @return \Fleetbase\Http\Resources\ContactCollection
+     */
+    public function find($id)
+    {
+        // find for the issue
+        try {
+            $issue = Issue::findRecordOrFail($id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return response()->json(
+                [
+                    'error' => 'Issue resource not found.',
+                ],
+                404
+            );
+        }
+
+        // response the issue resource
+        return new IssueResource($issue);
+    }
+
+    /**
      * Deletes a Fleetbase Issue resources.
      *
      * @return \Fleetbase\Http\Resources\FleetCollection
      */
-    public function deleteRecord($id)
+    public function delete($id)
     {
         // find for the driver
         try {

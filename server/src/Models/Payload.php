@@ -4,8 +4,8 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Http\Resources\v1\Payload as PayloadResource;
 use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\Http\Resources\Internal\v1\Payload as PayloadResource;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -292,7 +292,7 @@ class Payload extends Model
         }
 
         foreach ($waypoints as $index => $attributes) {
-            $waypoint = [];
+            $waypoint = ['payload_uuid' => $this->payload_uuid];
 
             if (Utils::isset($attributes, 'place') && is_array(Utils::get($attributes, 'place'))) {
                 $attributes = Utils::get($attributes, 'place');
@@ -315,6 +315,16 @@ class Payload extends Model
                 $waypoint['place_uuid'] = $place->uuid;
             }
 
+            // Handle customer assosciation for waypoint
+            if (is_array($attributes) && array_key_exists('customer_uuid', $attributes) && array_key_exists('customer_type', $attributes)) {
+                $customerTypeNamespace = Utils::getMutationType($attributes['customer_type']);
+                $customerExists        = app($customerTypeNamespace)->where('uuid', $attributes['customer_uuid'])->exists();
+                if ($customerExists) {
+                    $waypoint['customer_uuid'] = $attributes['customer_uuid'];
+                    $waypoint['customer_type'] = $customerTypeNamespace;
+                }
+            }
+
             // set payload
             $waypoint['payload_uuid'] = $this->uuid;
             $waypointRecord           = Waypoint::updateOrCreate($waypoint);
@@ -332,18 +342,17 @@ class Payload extends Model
         }
 
         foreach ($waypoints as $index => $attributes) {
-            $waypoint = [];
+            $waypoint = ['payload_uuid' => $this->uuid, 'order' => $index];
 
             if (Utils::isset($attributes, 'place') && is_array(Utils::get($attributes, 'place'))) {
-                $attributes = Utils::get($attributes, 'place');
+                $placeAttributes = Utils::get($attributes, 'place');
+                if (is_array($placeAttributes)) {
+                    $attributes = array_merge($attributes, $placeAttributes);
+                }
             }
 
             if (is_array($attributes) && array_key_exists('place_uuid', $attributes) && Place::where('uuid', $attributes['place_uuid'])->exists()) {
-                $waypoint = [
-                    'place_uuid'   => $attributes['place_uuid'],
-                    'payload_uuid' => $attributes['payload_uuid'] ?? null,
-                    'order'        => $index,
-                ];
+                $waypoint['place_uuid'] = $attributes['place_uuid'];
             } else {
                 $placeUuid = Place::insertFromMixed($attributes);
 
@@ -359,6 +368,16 @@ class Payload extends Model
                 }
 
                 $waypoint['place_uuid'] = $placeUuid;
+            }
+
+            // Handle customer assosciation for waypoint
+            if (is_array($attributes) && array_key_exists('customer_uuid', $attributes) && array_key_exists('customer_type', $attributes)) {
+                $customerTypeNamespace = Utils::getMutationType($attributes['customer_type']);
+                $customerExists        = app($customerTypeNamespace)->where('uuid', $attributes['customer_uuid'])->exists();
+                if ($customerExists) {
+                    $waypoint['customer_uuid'] = $attributes['customer_uuid'];
+                    $waypoint['customer_type'] = $customerTypeNamespace;
+                }
             }
 
             Waypoint::insertGetUuid($waypoint, $this);

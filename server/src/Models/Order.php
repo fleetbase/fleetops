@@ -91,6 +91,7 @@ class Order extends Model
         'purchase_rate_uuid',
         'tracking_number_uuid',
         'driver_assigned_uuid',
+        'vehicle_assigned_uuid',
         'created_by_uuid',
         'updated_by_uuid',
         'scheduled_at',
@@ -312,6 +313,22 @@ class Order extends Model
     public function driver()
     {
         return $this->belongsTo(Driver::class)->without(['devices', 'vendor']);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function vehicleAssigned()
+    {
+        return $this->belongsTo(Vehicle::class)->without(['devices', 'vendor', 'fleets']);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function vehicle()
+    {
+        return $this->belongsTo(Vehicle::class)->without(['devices', 'vendor', 'fleets']);
     }
 
     /**
