@@ -143,7 +143,7 @@ export default class VendorFormPanelCreateFormComponent extends Component {
 
         return this.contextPanel.focus(place, 'editing', {
             onAfterSave: (place) => {
-                this.vendor.place = place;
+                this.selectVendorAddress(place);
                 this.contextPanel.clear();
             },
         });

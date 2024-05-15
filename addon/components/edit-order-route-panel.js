@@ -88,11 +88,17 @@ export default class EditOrderRoutePanelComponent extends Component {
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
 
+    /**
+     * Task to save order route.
+     *
+     * @return {void}
+     * @memberof EditOrderRoutePanelComponent
+     */
     @task *save() {
         const { payload } = this.order;
 
-        yield this.fetch
-            .patch(
+        try {
+            this.order = yield this.fetch.patch(
                 `orders/route/${this.order.id}`,
                 {
                     pickup: payload.pickup,
@@ -104,14 +110,14 @@ export default class EditOrderRoutePanelComponent extends Component {
                     normalizeToEmberData: true,
                     normalizeModelType: 'order',
                 }
-            )
-            .then((order) => {
-                this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.update-success', { orderId: order.public_id }));
-                contextComponentCallback(this, 'onAfterSave', order);
-            })
-            .catch((error) => {
-                this.notifications.serverError(error);
-            });
+            );
+        } catch (error) {
+            this.notifications.serverError(error);
+            return;
+        }
+
+        this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.update-success', { orderId: this.order.public_id }));
+        contextComponentCallback(this, 'onAfterSave', this.order);
     }
 
     _serializeWaypoints(waypoints = []) {

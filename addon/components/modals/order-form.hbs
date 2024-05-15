@@ -58,6 +58,19 @@
                     </div>
                 </ModelSelect>
             </InputGroup>
+
+            <InputGroup @name={{t "fleet-ops.component.modals.order-form.assign-vehicle"}} @helpText={{t "fleet-ops.component.modals.order-form.assign-vehicle-text"}}>
+                <ModelSelect @modelName="vehicle" @selectedModel={{@options.order.vehicle_assigned}} @query={{this.driversQuery}} @placeholder={{t "fleet-ops.component.modals.order-form.select-vehicle"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @disabled={{@options.order.isIntegratedVendorOrder}} @allowClear={{true}} @onChange={{@options.setVehicle}} as |model|>
+                    <div class="flex items-center">
+                        <div class="w-6">
+                            <Image @src={{model.avatar_url}} @fallbackSrc={{config "defaultValues.vehicleAvatar"}} class="w-4 h-4 shadow-sm rounded-md" />
+                        </div>
+                        <div class="flex-1 flex flex-row truncate">
+                            <span class="uppercase">{{model.display_name}}</span>
+                        </div>
+                    </div>
+                </ModelSelect>
+            </InputGroup>
         </div>
     </div>
 </Modal::Default>

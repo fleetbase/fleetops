@@ -41,6 +41,28 @@ class OrderFilter extends Filter
         $this->builder->where('company_uuid', $this->session->get('company'));
     }
 
+    public function query(?string $query)
+    {
+        $this->builder->search($query, function ($builder, $query) {
+            // also query for payload addresses
+            $builder->orWhere(function ($builder) use ($query) {
+                $builder->whereHas('payload', function ($builder) use ($query) {
+                    $builder->where(function ($builder) use ($query) {
+                        $builder->orWhereHas('pickup', function ($builder) use ($query) {
+                            $builder->search($query);
+                        });
+                        $builder->orWhereHas('dropoff', function ($builder) use ($query) {
+                            $builder->search($query);
+                        });
+                        $builder->orWhereHas('waypoints', function ($builder) use ($query) {
+                            $builder->search($query);
+                        });
+                    });
+                });
+            });
+        });
+    }
+
     public function unassigned(bool $unassigned)
     {
         if ($unassigned) {

@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Barryvdh\DomPDF\Facade\Pdf;
+use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\Models\Model;
@@ -44,7 +45,7 @@ class Waypoint extends Model
      *
      * @var array
      */
-    protected $fillable = ['_key', 'company_uuid', 'place_uuid', 'tracking_number_uuid', '_import_id', 'payload_uuid', 'type', 'order'];
+    protected $fillable = ['_key', '_import_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'type', 'order'];
 
     /**
      * Dynamic attributes that are appended to object.
@@ -66,6 +67,15 @@ class Waypoint extends Model
      * @var array
      */
     protected $hidden = [];
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'customer_type'    => PolymorphicType::class,
+    ];
 
     /**
      * The pdf source stream for label.
@@ -97,9 +107,6 @@ class Waypoint extends Model
     public function label()
     {
         $this->load(['trackingNumber', 'company', 'place', 'entities']);
-
-        // $entities = Entity::where(['payload_uuid' => $this->payload_uuid, 'destination_uuid' => $this->place_uuid])->get();
-        // dd($entities, );
 
         return view('fleetops::labels/waypoint-label', [
             'waypoint'          => $this,
@@ -209,7 +216,6 @@ class Waypoint extends Model
         }
 
         $result = static::insert($values);
-
         if ($result && $payload) {
             // create tracking number for entity
             $trackingNumberId = TrackingNumber::insertGetUuid([

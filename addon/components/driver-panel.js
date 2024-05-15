@@ -4,6 +4,7 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
 import DriverPanelDetailComponent from './driver-panel/details';
+import DriverPanelOrdersComponent from './driver-panel/orders';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
@@ -74,8 +75,10 @@ export default class DriverPanelComponent extends Component {
     get tabs() {
         const registeredTabs = this.universe.getMenuItemsFromRegistry('component:driver-panel');
         // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: DriverPanelTrackingComponent }),
-        const defaultTabs = [this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: DriverPanelDetailComponent })];
-
+        const defaultTabs = [
+            this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: DriverPanelDetailComponent }),
+            this.universe._createMenuItem('Orders', null, { icon: 'bars-progress', component: DriverPanelOrdersComponent }),
+        ];
         if (isArray(registeredTabs)) {
             return [...defaultTabs, ...registeredTabs];
         }

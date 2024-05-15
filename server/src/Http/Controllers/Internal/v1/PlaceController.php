@@ -58,7 +58,7 @@ class PlaceController extends FleetOpsController
                     $geocodingResults = Geocoding::query($searchQuery, $latitude, $longitude);
 
                     foreach ($geocodingResults as $result) {
-                        $results->push($result);
+                        $results->prepend($result);
                     }
                 } catch (\Throwable $e) {
                     return response()->error($e->getMessage());
@@ -68,7 +68,7 @@ class PlaceController extends FleetOpsController
                     $geocodingResults = Geocoding::reverseFromCoordinates($latitude, $longitude, $searchQuery);
 
                     foreach ($geocodingResults as $result) {
-                        $results->push($result);
+                        $results->prepend($result);
                     }
                 } catch (\Throwable $e) {
                     return response()->error($e->getMessage());

@@ -12,6 +12,13 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class DriverExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
 {
+    protected array $selections = [];
+
+    public function __construct(array $selections = [])
+    {
+        $this->selections = $selections;
+    }
+
     public function map($driver): array
     {
         return [
@@ -56,6 +63,10 @@ class DriverExport implements FromCollection, WithHeadings, WithMapping, WithCol
      */
     public function collection()
     {
+        if ($this->selections) {
+            return Driver::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->get();
+        }
+
         return Driver::where('company_uuid', session('company'))->get();
     }
 }
