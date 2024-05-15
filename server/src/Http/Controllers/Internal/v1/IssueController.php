@@ -18,22 +18,6 @@ class IssueController extends FleetOpsController
      */
     public $resource = 'issue';
 
-    protected array $selections = [];
-
-    public function __construct(array $selections = [])
-    {
-        $this->selections = $selections;
-    }
-
-    public function collection()
-    {
-        if ($this->selections) {
-            return Issue::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->get();
-        }
-
-        return Issue::where('company_uuid', session('company'))->get();
-    }
-
     /**
      * Export the issue to excel or csv.
      *
@@ -44,10 +28,8 @@ class IssueController extends FleetOpsController
     {
         $format   = $request->input('format', 'xlsx');
         $selections   = $request->input('selections', []);
+        info("format:::::",[$selections]);
         $fileName = trim(Str::slug('issue-' . date('Y-m-d-H:i')) . '.' . $format);
-
         return Excel::download(new IssueExport($selections), $fileName);
     }
-
 }
-

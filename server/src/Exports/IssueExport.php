@@ -10,8 +10,19 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class IssueExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
+class IssueExport implements
+    FromCollection,
+    WithHeadings,
+    WithMapping,
+    WithColumnFormatting
 {
+    protected array $selections = [];
+
+    public function __construct(array $selections = [])
+    {
+        $this->selections = $selections;
+    }
+
     public function map($issue): array
     {
         return [
@@ -58,6 +69,15 @@ class IssueExport implements FromCollection, WithHeadings, WithMapping, WithColu
      */
     public function collection()
     {
-        return Issue::where('company_uuid', session('company'))->get();
+        info("Selections:", [$this->selections]);
+        info("Session company:", [session("company")]);
+
+        if (!empty($this->selections)) {
+            return Issue::where("company_uuid", session("company"))
+                        ->whereIn("uuid", $this->selections)
+                        ->get();
+        }
+
+        return Issue::where("company_uuid", session("company"))->get();
     }
 }

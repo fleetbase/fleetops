@@ -12,6 +12,13 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class ServiceRateExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
 {
+    protected array $selections = [];
+
+    public function __construct(array $selections = [])
+    {
+        $this->selections = $selections;
+    }
+
     public function map($service_rate): array
     {
         return [
@@ -49,6 +56,12 @@ class ServiceRateExport implements FromCollection, WithHeadings, WithMapping, Wi
      */
     public function collection()
     {
-        return ServiceRate::where('company_uuid', session('company'))->get();
+        if ($this->selections) {
+            return ServiceRate::where("company_uuid", session("company"))
+                ->whereIn("uuid", $this->selections)
+                ->get();
+        }
+
+        return ServiceRate::where("company_uuid", session("company"))->get();
     }
 }
