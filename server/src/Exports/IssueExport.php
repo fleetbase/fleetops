@@ -69,9 +69,6 @@ class IssueExport implements
      */
     public function collection()
     {
-        info("Selections:", [$this->selections]);
-        info("Session company:", [session("company")]);
-
         if (!empty($this->selections)) {
             return Issue::where("company_uuid", session("company"))
                         ->whereIn("uuid", $this->selections)

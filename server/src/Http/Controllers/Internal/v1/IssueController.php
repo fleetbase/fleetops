@@ -27,8 +27,7 @@ class IssueController extends FleetOpsController
     public function export(ExportRequest $request)
     {
         $format   = $request->input('format', 'xlsx');
-        $selections   = $request->input('selections', []);
-        info("format:::::",[$selections]);
+        $selections   = $request->array('selections');
         $fileName = trim(Str::slug('issue-' . date('Y-m-d-H:i')) . '.' . $format);
         return Excel::download(new IssueExport($selections), $fileName);
     }

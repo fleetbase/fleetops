@@ -275,7 +275,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                         $router->fleetbaseRoutes(
                             'contacts',
                             function ($router, $controller) {
-                                $router->get('export', $controller('export'));
+                                $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->get('facilitators/{id}', $controller('getAsFacilitator'));
                                 $router->get('customers/{id}', $controller('getAsCustomer'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
@@ -286,7 +286,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             function ($router, $controller) {
                                 $router->get('statuses', $controller('statuses'));
                                 $router->get('avatars', $controller('avatars'));
-                                $router->get('export', $controller('export'));
+                                $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
@@ -298,21 +298,21 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->post('remove-driver', $controller('removeDriver'));
                                 $router->post('assign-vehicle', $controller('assignVehicle'));
                                 $router->post('remove-vehicle', $controller('removeVehicle'));
-                                $router->get('export', $controller('export'));
+                                $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
                         $router->fleetbaseRoutes(
                             'fuel-reports',
                             function ($router, $controller) {
-                                $router->get('export', $controller('export'));
+                                $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
                         $router->fleetbaseRoutes(
                             'issues',
                             function ($router, $controller) {
-                                $router->get('export', $controller('export'));
+                                $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
@@ -349,7 +349,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->get('search', $controller('search'))->middleware('cache.headers:private;max_age=3600');
                                 $router->get('lookup', $controller('geocode'))->middleware('cache.headers:private;max_age=3600');
                                 $router->get('avatars', $controller('avatars'));
-                                $router->get('export', $controller('export'));
+                                $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
@@ -359,7 +359,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                         $router->fleetbaseRoutes(
                             'service-areas',
                             function ($router, $controller) {
-                                $router->get('export', $controller('export'));
+                                $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
@@ -374,7 +374,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             'service-rates',
                             function ($router, $controller) {
                                 $router->get('for-route', $controller('getServicesForRoute'));
-                                $router->get('export', $controller('export'));
+                                $router->match(['get', 'post'], 'export', $controller('export'));
                             }
                         );
                         $router->fleetbaseRoutes('tracking-numbers');
@@ -384,7 +384,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             function ($router, $controller) {
                                 $router->get('statuses', $controller('statuses'));
                                 $router->get('avatars', $controller('avatars'));
-                                $router->get('export', $controller('export'));
+                                $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
@@ -393,7 +393,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             'vendors',
                             function ($router, $controller) {
                                 $router->get('statuses', $controller('statuses'));
-                                $router->get('export', $controller('export'));
+                                $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->get('facilitators/{id}', $controller('getAsFacilitator'));
                                 $router->get('customers/{id}', $controller('getAsCustomer'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
