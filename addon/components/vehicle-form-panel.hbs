@@ -8,7 +8,7 @@
             </div>
             <div class="flex flex-1 justify-end">
                 <div class="mr-2">
-                    <Button @icon={{if this.vehicle.id "save" "check"}} @type="primary" @text={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.save-vehicle") (t "fleet-ops.component.vehicle-form-panel.create-vehicle")}} @onClick={{this.save}} @isLoading={{this.isLoading}} />
+                    <Button @icon={{if this.vehicle.id "save" "check"}} @type="primary" @text={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.save-vehicle") (t "fleet-ops.component.vehicle-form-panel.create-vehicle")}} @onClick={{perform this.save}} @isLoading={{not this.save.isIdle}} />
                 </div>
                 <Button @type="default" @icon="times" @helpText={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.cancel-edit-vehicle") (t "fleet-ops.component.vehicle-form-panel.cancel-new-vehicle")}} @onClick={{this.onPressCancel}} @disabled={{this.isLoading}} />
             </div>

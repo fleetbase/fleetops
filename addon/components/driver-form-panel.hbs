@@ -8,7 +8,7 @@
             </div>
             <div class="flex flex-1 justify-end">
                 <div class="mr-2">
-                    <Button @icon={{if this.driver.id "save" "check"}} @type="primary" @text={{if this.driver.id (t "fleet-ops.component.driver-form-panel.save-driver")(t "fleet-ops.component.driver-form-panel.create-driver") }} @onClick={{this.save}} />
+                    <Button @icon={{if this.driver.id "save" "check"}} @type="primary" @text={{if this.driver.id (t "fleet-ops.component.driver-form-panel.save-driver")(t "fleet-ops.component.driver-form-panel.create-driver") }} @onClick={{perform this.save}} @isLoading={{not this.save.isIdle}} />
                 </div>
                 <Button @type="default" @icon="times" @helpText={{if this.driver.id (t "fleet-ops.component.driver-form-panel.cancel-edit-driver")(t "fleet-ops.component.driver-form-panel.cancel-new-driver") }} @onClick={{this.onPressCancel}} />
             </div>
@@ -54,7 +54,7 @@
                 </div>
             </div>
             <div class="flex justify-end w-1/4">
-                <Badge @status={{this.driver.status}} />
+                <Badge @status={{if this.driver.online "online" "offline"}}>{{if this.driver.online "Online" "Offline"}}</Badge>
             </div>
         </div>
     </Overlay::Header>

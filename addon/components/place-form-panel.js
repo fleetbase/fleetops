@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isBlank } from '@ember/utils';
+import { task } from 'ember-concurrency';
 import Point from '@fleetbase/fleetops-data/utils/geojson/point';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
@@ -34,11 +35,6 @@ export default class PlaceFormPanelComponent extends Component {
     @service hostRouter;
 
     /**
-     * @service loader
-     */
-    @service loader;
-
-    /**
      * @service contextPanel
      */
     @service contextPanel;
@@ -48,12 +44,6 @@ export default class PlaceFormPanelComponent extends Component {
      * @type {any}
      */
     @tracked context;
-
-    /**
-     * Indicates whether the component is in a loading state.
-     * @type {boolean}
-     */
-    @tracked isLoading = false;
 
     /**
      * The coordinates input component instance.
@@ -89,37 +79,23 @@ export default class PlaceFormPanelComponent extends Component {
     }
 
     /**
-     * Saves the place changes.
+     * Task to save place.
      *
-     * @action
-     * @returns {Promise<any>}
+     * @return {void}
+     * @memberof PlaceFormPanelComponent
      */
-    @action save() {
-        const { place } = this;
-
-        this.loader.showLoader('.next-content-overlay-panel-container', { loadingMessage: 'Saving place...', preserveTargetPosition: true });
-        this.isLoading = true;
-
-        contextComponentCallback(this, 'onBeforeSave', place);
+    @task *save() {
+        contextComponentCallback(this, 'onBeforeSave', this.place);
 
         try {
-            return place
-                .save()
-                .then((place) => {
-                    this.notifications.success(this.intl.t('fleet-ops.component.place-form-panel.success-message', { placeAddress: place.address }));
-                    contextComponentCallback(this, 'onAfterSave', place);
-                })
-                .catch((error) => {
-                    this.notifications.serverError(error);
-                })
-                .finally(() => {
-                    this.loader.removeLoader('.next-content-overlay-panel-container ');
-                    this.isLoading = false;
-                });
+            this.place = yield this.place.save();
         } catch (error) {
-            this.loader.removeLoader('.next-content-overlay-panel-container ');
-            this.isLoading = false;
+            this.notifications.serverError(error);
+            return;
         }
+
+        this.notifications.success(this.intl.t('fleet-ops.component.place-form-panel.success-message', { placeAddress: this.place.address }));
+        contextComponentCallback(this, 'onAfterSave', this.place);
     }
 
     /**

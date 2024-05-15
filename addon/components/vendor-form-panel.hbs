@@ -1,14 +1,4 @@
-<Overlay
-    @onLoad={{this.setOverlayContext}}
-    @onOpen={{this.onOpen}}
-    @onClose={{this.onClose}}
-    @onToggle={{this.onToggle}}
-    @position="right"
-    @noBackdrop={{true}}
-    @fullHeight={{true}}
-    @isResizeble={{or this.isResizable @isResizable}}
-    @width={{or this.width @width "570px"}}
->
+<Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "570px"}}>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
@@ -18,7 +8,7 @@
             </div>
             <div class="flex flex-1 justify-end">
                 <div class="mr-2">
-                    <Button @icon={{if this.vendor.id "save" "check"}} @type="primary" @text={{if this.vendor.id (t "fleet-ops.component.vendor-form-panel.save-vendor")(t "fleet-ops.component.vendor-form-panel.create-vendor") }} @onClick={{this.save}} />
+                    <Button @icon={{if this.vendor.id "save" "check"}} @type="primary" @text={{if this.vendor.id (t "fleet-ops.component.vendor-form-panel.save-vendor")(t "fleet-ops.component.vendor-form-panel.create-vendor") }} @onClick={{perform this.save}} @isLoading={{not this.save.isIdle}} />
                 </div>
                 <Button @type="default" @icon="times" @helpText={{if this.vendor.id (t "fleet-ops.component.vendor-form-panel.cancel-edit-vendor")(t "fleet-ops.component.vendor-form-panel.cancel-new-vendor") }} @onClick={{this.onPressCancel}} />
             </div>
@@ -33,15 +23,7 @@
                                 <InputInfo @text={{t "fleet-ops.component.vendor-form-panel.upload-photo"}} />
                             </Attach::Tooltip>
                             <div class="upload-avatar-button-wrapper rounded-lg">
-                                <UploadButton
-                                    @name={{t "fleet-ops.common.photos"}}
-                                    @accept="image/*"
-                                    @onFileAdded={{this.onUploadNewPhoto}}
-                                    @icon="upload"
-                                    @hideButtonText={{true}}
-                                    @labelClass="upload-avatar-label-overlay"
-                                    class="w-12 btn-reset"
-                                />
+                                <UploadButton @name={{t "fleet-ops.common.photos"}} @accept="image/*" @onFileAdded={{this.onUploadNewPhoto}} @icon="upload" @hideButtonText={{true}} @labelClass="upload-avatar-label-overlay" class="w-12 btn-reset" />
                             </div>
                         </div>
                     </div>
@@ -73,19 +55,9 @@
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4">
         {{#if this.isEditing}}
-            <VendorFormPanel::EditForm
-                @vendor={{this.vendor}}
-                @vendorTypes={{this.vendorTypeOptions}}
-                @vendorStatusOptions={{this.vendorStatusOptions}}
-                @onVendorChanged={{this.onVendorChanged}}
-            />
+            <VendorFormPanel::EditForm @vendor={{this.vendor}} @vendorTypes={{this.vendorTypeOptions}} @vendorStatusOptions={{this.vendorStatusOptions}} @onVendorChanged={{this.onVendorChanged}} />
         {{else}}
-            <VendorFormPanel::CreateForm
-                @vendor={{this.vendor}}
-                @vendorTypes={{this.vendorTypeOptions}}
-                @vendorStatusOptions={{this.vendorStatusOptions}}
-                @onVendorChanged={{this.onVendorChanged}}
-            />
+            <VendorFormPanel::CreateForm @vendor={{this.vendor}} @vendorTypes={{this.vendorTypeOptions}} @vendorStatusOptions={{this.vendorStatusOptions}} @onVendorChanged={{this.onVendorChanged}} />
         {{/if}}
         <Spacer @height="300px" />
     </Overlay::Body>

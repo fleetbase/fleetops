@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { underscore } from '@ember/string';
+import { task } from 'ember-concurrency';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
@@ -21,15 +22,11 @@ export default class FleetFormPanelComponent extends Component {
      * @service hostRouter
      */
     @service hostRouter;
+
     /**
      * @service intl
      */
     @service intl;
-
-    /**
-     * @service loader
-     */
-    @service loader;
 
     /**
      * @service contextPanel
@@ -42,13 +39,6 @@ export default class FleetFormPanelComponent extends Component {
      * @memberof FleetFormPanelComponent
      */
     @tracked context;
-
-    /**
-     * Indicates whether the component is in a loading state.
-     * @type {boolean}
-     * @memberof FleetFormPanelComponent
-     */
-    @tracked isLoading = false;
 
     /**
      * All possible order status options
@@ -80,38 +70,23 @@ export default class FleetFormPanelComponent extends Component {
     }
 
     /**
-     * Saves the fleet changes.
+     * Task to save fleet.
      *
-     * @action
-     * @returns {Promise<any>}
+     * @return {void}
      * @memberof FleetFormPanelComponent
      */
-    @action save() {
-        const { fleet } = this;
-
-        this.loader.showLoader('.next-content-overlay-panel-container', { loadingMessage: 'Saving fleet...', preserveTargetPosition: true });
-        this.isLoading = true;
-
-        contextComponentCallback(this, 'onBeforeSave', fleet);
+    @task *save() {
+        contextComponentCallback(this, 'onBeforeSave', this.fleet);
 
         try {
-            return fleet
-                .save()
-                .then((fleet) => {
-                    this.notifications.success(this.intl.t('fleet-ops.component.fleet-form-panel.success-message', { fleetName: fleet.name }));
-                    contextComponentCallback(this, 'onAfterSave', fleet);
-                })
-                .catch((error) => {
-                    this.notifications.serverError(error);
-                })
-                .finally(() => {
-                    this.loader.removeLoader('.next-content-overlay-panel-container');
-                    this.isLoading = false;
-                });
+            this.fleet = yield this.fleet.save();
         } catch (error) {
-            this.loader.removeLoader('.next-content-overlay-panel-container');
-            this.isLoading = false;
+            this.notifications.serverError(error);
+            return;
         }
+
+        this.notifications.success(this.intl.t('fleet-ops.component.fleet-form-panel.success-message', { fleetName: this.fleet.name }));
+        contextComponentCallback(this, 'onAfterSave', this.fleet);
     }
 
     /**

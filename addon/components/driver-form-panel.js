@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 import Point from '@fleetbase/fleetops-data/utils/geojson/point';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
@@ -38,11 +39,6 @@ export default class DriverFormPanelComponent extends Component {
     @service hostRouter;
 
     /**
-     * @service loader
-     */
-    @service loader;
-
-    /**
      * @service contextPanel
      */
     @service contextPanel;
@@ -63,12 +59,6 @@ export default class DriverFormPanelComponent extends Component {
      * @type {Array}
      */
     @tracked driverStatusOptions = ['active', 'pending'];
-
-    /**
-     * Indicates whether the component is in a loading state.
-     * @type {boolean}
-     */
-    @tracked isLoading = false;
 
     /**
      * The coordinates input component instance.
@@ -151,32 +141,23 @@ export default class DriverFormPanelComponent extends Component {
     }
 
     /**
-     * Saves the driver changes.
+     * Task to save driver.
      *
-     * @action
-     * @returns {Promise<any>}
+     * @return {void}
+     * @memberof DriverFormPanelComponent
      */
-    @action save() {
-        const { driver } = this;
+    @task *save() {
+        contextComponentCallback(this, 'onBeforeSave', this.driver);
 
-        this.loader.showLoader('.next-content-overlay-panel-container', { loadingMessage: 'Saving driver...', preserveTargetPosition: true });
-        this.isLoading = true;
+        try {
+            this.driver = yield this.driver.save();
+        } catch (error) {
+            this.notifications.serverError(error);
+            return;
+        }
 
-        contextComponentCallback(this, 'onBeforeSave', driver);
-
-        return driver
-            .save()
-            .then((driver) => {
-                this.notifications.success(this.intl.t('fleet-ops.component.driver-form-panel.success-message', { driverName: driver.name }));
-                contextComponentCallback(this, 'onAfterSave', driver);
-            })
-            .catch((error) => {
-                this.notifications.serverError(error);
-            })
-            .finally(() => {
-                this.loader.removeLoader('.next-content-overlay-panel-container ');
-                this.isLoading = false;
-            });
+        this.notifications.success(this.intl.t('fleet-ops.component.driver-form-panel.success-message', { driverName: this.driver.name }));
+        contextComponentCallback(this, 'onAfterSave', this.driver);
     }
 
     /**

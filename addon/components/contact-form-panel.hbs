@@ -18,7 +18,7 @@
             </div>
             <div class="flex flex-1 justify-end">
                 <div class="mr-2">
-                    <Button @icon={{if this.contact.id "save" "check"}} @type="primary" @text={{if this.contact.id (t "fleet-ops.component.contact-form-panel.save-contact")(t "fleet-ops.component.contact-form-panel.create-contact") }} @onClick={{this.save}} />
+                    <Button @icon={{if this.contact.id "save" "check"}} @type="primary" @text={{if this.contact.id (t "fleet-ops.component.contact-form-panel.save-contact")(t "fleet-ops.component.contact-form-panel.create-contact") }} @onClick={{perform this.save}} @isLoading={{this.save.isRunning}} />
                 </div>
                 <Button @type="default" @icon="times" @helpText={{if this.contact.id (t "fleet-ops.component.contact-form-panel.cancel-edit-button")(t "fleet-ops.component.contact-form-panel.cancel-new-button") }} @onClick={{this.onPressCancel}} />
             </div>

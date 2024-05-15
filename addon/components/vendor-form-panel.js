@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 import getVendorTypeOptions from '../utils/get-vendor-type-options';
@@ -39,11 +40,6 @@ export default class VendorFormPanelComponent extends Component {
     @service hostRouter;
 
     /**
-     * @service loader
-     */
-    @service loader;
-
-    /**
      * @service contextPanel
      */
     @service contextPanel;
@@ -53,12 +49,6 @@ export default class VendorFormPanelComponent extends Component {
      * @type {any}
      */
     @tracked context;
-
-    /**
-     * Indicates whether the component is in a loading state.
-     * @type {boolean}
-     */
-    @tracked isLoading = false;
 
     /**
      * The users vendor instance.
@@ -102,37 +92,23 @@ export default class VendorFormPanelComponent extends Component {
     }
 
     /**
-     * Saves the vendor changes.
+     * Task to save vendor.
      *
-     * @action
-     * @returns {Promise<any>}
+     * @return {void}
+     * @memberof VendorFormPanelComponent
      */
-    @action save() {
-        const { vendor } = this;
-
-        this.loader.showLoader('.next-content-overlay-panel-container', { loadingMessage: 'Saving vendor...', preserveTargetPosition: true });
-        this.isLoading = true;
-
-        contextComponentCallback(this, 'onBeforeSave', vendor);
+    @task *save() {
+        contextComponentCallback(this, 'onBeforeSave', this.vendor);
 
         try {
-            return vendor
-                .save()
-                .then((vendor) => {
-                    this.notifications.success(this.intl.t('fleet-ops.component.vendor-form-panel.success-message', { vendorName: vendor.displayName }));
-                    contextComponentCallback(this, 'onAfterSave', vendor);
-                })
-                .catch((error) => {
-                    this.notifications.serverError(error);
-                })
-                .finally(() => {
-                    this.loader.removeLoader('.next-content-overlay-panel-container ');
-                    this.isLoading = false;
-                });
+            this.vendor = yield this.vendor.save();
         } catch (error) {
-            this.loader.removeLoader('.next-content-overlay-panel-container ');
-            this.isLoading = false;
+            this.notifications.serverError(error);
+            return;
         }
+
+        this.notifications.success(this.intl.t('fleet-ops.component.vendor-form-panel.success-message', { vendorName: this.vendor.name }));
+        contextComponentCallback(this, 'onAfterSave', this.vendor);
     }
 
     /**

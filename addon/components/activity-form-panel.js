@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { underscore, capitalize, w } from '@ember/string';
+import { task } from 'ember-concurrency';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
@@ -42,14 +43,14 @@ export default class ActivityFormPanelComponent extends Component {
     }
 
     /**
-     * Action method to save the activity. It triggers an optional onSave callback
+     * Task to save the activity. It triggers an optional onSave callback
      * with the current state of the activity.
-     * @action
+     * @task
      */
-    @action save() {
+    @task *save() {
         contextComponentCallback(this, 'onSave', this.customEntity);
         if (typeof this.onSave === 'function') {
-            this.onSave(this.activity);
+            yield this.onSave(this.activity);
         }
     }
 

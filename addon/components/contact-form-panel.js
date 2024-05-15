@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
@@ -10,6 +11,7 @@ export default class ContactFormPanelComponent extends Component {
      * @service store
      */
     @service store;
+
     /**
      * @service intl
      */
@@ -36,11 +38,6 @@ export default class ContactFormPanelComponent extends Component {
     @service hostRouter;
 
     /**
-     * @service loader
-     */
-    @service loader;
-
-    /**
      * @service contextPanel
      */
     @service contextPanel;
@@ -50,12 +47,6 @@ export default class ContactFormPanelComponent extends Component {
      * @type {any}
      */
     @tracked context;
-
-    /**
-     * Indicates whether the component is in a loading state.
-     * @type {boolean}
-     */
-    @tracked isLoading = false;
 
     /**
      * All possible contact types.
@@ -92,37 +83,23 @@ export default class ContactFormPanelComponent extends Component {
     }
 
     /**
-     * Saves the contact changes.
+     * Task to save contact.
      *
-     * @action
-     * @returns {Promise<any>}
+     * @return {void}
+     * @memberof ContactFormPanelComponent
      */
-    @action save() {
-        const { contact } = this;
-
-        this.loader.showLoader('.next-content-overlay-panel-container', { loadingMessage: 'Saving contact...', preserveTargetPosition: true });
-        this.isLoading = true;
-
-        contextComponentCallback(this, 'onBeforeSave', contact);
+    @task *save() {
+        contextComponentCallback(this, 'onBeforeSave', this.contact);
 
         try {
-            return contact
-                .save()
-                .then((contact) => {
-                    this.notifications.success(this.intl.t('fleet-ops.component.contact-form-panel.success-message', { contactName: contact.name }));
-                    contextComponentCallback(this, 'onAfterSave', contact);
-                })
-                .catch((error) => {
-                    this.notifications.serverError(error);
-                })
-                .finally(() => {
-                    this.loader.removeLoader('.next-content-overlay-panel-container ');
-                    this.isLoading = false;
-                });
+            this.contact = yield this.contact.save();
         } catch (error) {
-            this.loader.removeLoader('.next-content-overlay-panel-container ');
-            this.isLoading = false;
+            this.notifications.serverError(error);
+            return;
         }
+
+        this.notifications.success(this.intl.t('fleet-ops.component.contact-form-panel.success-message', { contactName: this.contact.name }));
+        contextComponentCallback(this, 'onAfterSave', this.contact);
     }
 
     /**
