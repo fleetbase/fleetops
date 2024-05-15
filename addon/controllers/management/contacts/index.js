@@ -317,7 +317,8 @@ export default class ManagementContactsIndexController extends BaseController {
      * @void
      */
     @action exportContacts() {
-        this.crud.export('contact');
+        const selections = this.table.selectedRows.map((_) => _.id);
+        this.crud.export('contact', { params: { selections } });
     }
 
     /**

@@ -20,14 +20,6 @@ class ServiceRateController extends FleetOpsController
      */
     public $resource = 'service_rate';
 
-
-    protected array $selections = [];
-
-    public function __construct(array $selections = [])
-    {
-        $this->selections = $selections;
-    }
-
     /**
      * Creates a record with request payload.
      *
@@ -58,15 +50,6 @@ class ServiceRateController extends FleetOpsController
         );
 
         return response()->json($applicableServiceRates);
-    }
-
-    public function collection()
-    {
-        if ($this->selections) {
-            return ServiceRate::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->get();
-        }
-
-        return ServiceRate::where('company_uuid', session('company'))->get();
     }
 
     /**

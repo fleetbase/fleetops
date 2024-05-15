@@ -790,7 +790,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @memberof OperationsOrdersIndexController
      */
     @action exportOrders() {
-        this.crud.export('order');
+        this.crud.export('order', { params: { selections } });
     }
 
     /**

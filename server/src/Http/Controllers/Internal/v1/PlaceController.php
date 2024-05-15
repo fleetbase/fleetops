@@ -124,9 +124,10 @@ class PlaceController extends FleetOpsController
     public function export(ExportRequest $request)
     {
         $format   = $request->input('format', 'xlsx');
+        $selections   = $request->array('selections');
         $fileName = trim(Str::slug('places-' . date('Y-m-d-H:i')) . '.' . $format);
 
-        return Excel::download(new PlaceExport(), $fileName);
+        return Excel::download(new PlaceExport($selections), $fileName);
     }
 
     /**
