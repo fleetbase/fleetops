@@ -2,7 +2,7 @@
 
 namespace Fleetbase\FleetOps\Exports;
 
-use Fleetbase\FleetOps\Models\Fleet;
+use Fleetbase\FleetOps\Models\FuelReport;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -10,7 +10,7 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
+class FuelReportExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
 {
     protected array $selections = [];
 
@@ -23,9 +23,12 @@ class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColu
     {
         return [
             $fleet->public_id,
-            $fleet->internal_id,
-            $fleet->name,
-            $fleet->zone_uuid,
+            $fleet->reporter,
+            $fleet->driver_name,
+            $fleet->vehicle_name,
+            $fleet->status,
+            $fleet->volume,
+            $fleet->odometer,
             Date::dateTimeToExcel($fleet->created_at),
         ];
     }
@@ -34,9 +37,12 @@ class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColu
     {
         return [
             'ID',
-            'Internal ID',
-            'Name',
-            'Zone Assigned',
+            'Reporter',
+            'Driver',
+            'Vehicle',
+            'Status',
+            'Volume',
+            'Odometer',
             'Created',
         ];
     }
@@ -56,11 +62,11 @@ class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColu
     public function collection()
     {
         if ($this->selections) {
-            return Fleet::where("company_uuid", session("company"))
+            return FuelReport::where("company_uuid", session("company"))
                 ->whereIn("uuid", $this->selections)
                 ->get();
         }
 
-        return Fleet::where("company_uuid", session("company"))->get();
+        return FuelReport::where("company_uuid", session("company"))->get();
     }
 }

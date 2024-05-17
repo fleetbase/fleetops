@@ -249,7 +249,8 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
      * @void
      */
     @action exportServiceRates() {
-        this.crud.export('service-rate');
+        const selections = this.table.selectedRows.map((_) => _.id);
+        this.crud.export('service-rate', { params: { selections } });
     }
 
     /**

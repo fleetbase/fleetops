@@ -31,9 +31,10 @@ class FleetController extends FleetOpsController
     public static function export(ExportRequest $request)
     {
         $format   = $request->input('format', 'xlsx');
+        $selections   = $request->array('selections');
         $fileName = trim(Str::slug('fleets-' . date('Y-m-d-H:i')) . '.' . $format);
 
-        return Excel::download(new FleetExport(), $fileName);
+        return Excel::download(new FleetExport($selections), $fileName);
     }
 
     /**

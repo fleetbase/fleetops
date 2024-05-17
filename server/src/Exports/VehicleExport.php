@@ -12,6 +12,13 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class VehicleExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
 {
+    protected array $selections = [];
+
+    public function __construct(array $selections = [])
+    {
+        $this->selections = $selections;
+    }
+
     public function map($vehicle): array
     {
         return [
@@ -52,6 +59,12 @@ class VehicleExport implements FromCollection, WithHeadings, WithMapping, WithCo
      */
     public function collection()
     {
-        return Vehicle::where('company_uuid', session('company'))->get();
+         if ($this->selections) {
+            return Vehicle::where("company_uuid", session("company"))
+                ->whereIn("uuid", $this->selections)
+                ->get();
+        }
+
+        return Vehicle::where("company_uuid", session("company"))->get();
     }
 }

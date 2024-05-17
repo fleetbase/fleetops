@@ -350,7 +350,8 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @void
      */
     @action exportPlaces() {
-        this.crud.export('place');
+        const selections = this.table.selectedRows.map((_) => _.id);
+        this.crud.export('place', { params: { selections } });
     }
 
     /**

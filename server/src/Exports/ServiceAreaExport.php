@@ -12,6 +12,13 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class ServiceAreaExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
 {
+    protected array $selections = [];
+
+    public function __construct(array $selections = [])
+    {
+        $this->selections = $selections;
+    }
+
     public function map($service_area): array
     {
         return [
@@ -53,6 +60,12 @@ class ServiceAreaExport implements FromCollection, WithHeadings, WithMapping, Wi
      */
     public function collection()
     {
-        return ServiceArea::where('company_uuid', session('company'))->get();
+          if ($this->selections) {
+            return ServiceArea::where("company_uuid", session("company"))
+                ->whereIn("uuid", $this->selections)
+                ->get();
+        }
+
+        return ServiceArea::where("company_uuid", session("company"))->get();
     }
 }

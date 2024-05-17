@@ -335,9 +335,10 @@ class DriverController extends FleetOpsController
     public static function export(ExportRequest $request)
     {
         $format   = $request->input('format', 'xlsx');
+        $selections   = $request->array('selections');
         $fileName = trim(Str::slug('drivers-' . date('Y-m-d-H:i')) . '.' . $format);
 
-        return Excel::download(new DriverExport(), $fileName);
+        return Excel::download(new DriverExport($selections), $fileName);
     }
 
     /**

@@ -508,7 +508,8 @@ export default class ManagementDriversIndexController extends BaseController {
      * @void
      */
     @action exportDrivers() {
-        this.crud.export('driver');
+        const selections = this.table.selectedRows.map((_) => _.id);
+        this.crud.export('driver', { params: { selections } });
     }
 
     /**

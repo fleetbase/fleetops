@@ -2,7 +2,7 @@
 
 namespace Fleetbase\FleetOps\Exports;
 
-use Fleetbase\FleetOps\Models\Fleet;
+use Fleetbase\FleetOps\Models\ServiceRate;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -10,7 +10,7 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
+class ServiceRateExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
 {
     protected array $selections = [];
 
@@ -19,14 +19,15 @@ class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColu
         $this->selections = $selections;
     }
 
-    public function map($fleet): array
+    public function map($service_rate): array
     {
         return [
-            $fleet->public_id,
-            $fleet->internal_id,
-            $fleet->name,
-            $fleet->zone_uuid,
-            Date::dateTimeToExcel($fleet->created_at),
+            $service_rate->public_id,
+            $service_rate->name,
+            $service_rate->vendor_name,
+            $service_rate->vehicle_name,
+            $service_rate->country,
+            Date::dateTimeToExcel($service_rate->created_at),
         ];
     }
 
@@ -34,9 +35,9 @@ class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColu
     {
         return [
             'ID',
-            'Internal ID',
-            'Name',
-            'Zone Assigned',
+            'Service',
+            'Service Area',
+            'Zone',
             'Created',
         ];
     }
@@ -56,11 +57,11 @@ class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColu
     public function collection()
     {
         if ($this->selections) {
-            return Fleet::where("company_uuid", session("company"))
+            return ServiceRate::where("company_uuid", session("company"))
                 ->whereIn("uuid", $this->selections)
                 ->get();
         }
 
-        return Fleet::where("company_uuid", session("company"))->get();
+        return ServiceRate::where("company_uuid", session("company"))->get();
     }
 }
