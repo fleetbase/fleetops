@@ -4,14 +4,21 @@ namespace Fleetbase\FleetOps\Exports;
 
 use Fleetbase\FleetOps\Models\Vehicle;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class VehicleExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
+class VehicleExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting, ShouldAutoSize
 {
+    protected array $selections = [];
+
+    public function __construct(array $selections = [])
+    {
+        $this->selections = $selections;
+    }
+
     public function map($vehicle): array
     {
         return [
@@ -19,8 +26,10 @@ class VehicleExport implements FromCollection, WithHeadings, WithMapping, WithCo
             $vehicle->internal_id,
             $vehicle->display_name,
             $vehicle->driver_name,
-            $vehicle->model_data,
-            Date::dateTimeToExcel($vehicle->created_at),
+            $vehicle->make,
+            $vehicle->model,
+            $vehicle->year,
+            $vehicle->created_at,
         ];
     }
 
@@ -34,16 +43,14 @@ class VehicleExport implements FromCollection, WithHeadings, WithMapping, WithCo
             'Make',
             'Model',
             'Year',
-            'Created',
+            'Date Created',
         ];
     }
 
     public function columnFormats(): array
     {
         return [
-            'E' => NumberFormat::FORMAT_DATE_DDMMYYYY,
-            'F' => NumberFormat::FORMAT_DATE_DDMMYYYY,
-            'G' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'H' => NumberFormat::FORMAT_DATE_DDMMYYYY,
         ];
     }
 
@@ -52,6 +59,10 @@ class VehicleExport implements FromCollection, WithHeadings, WithMapping, WithCo
      */
     public function collection()
     {
-        return Vehicle::where('company_uuid', session('company'))->get();
+        if ($this->selections) {
+            return Vehicle::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->with(['driver'])->get();
+        }
+
+        return Vehicle::where('company_uuid', session('company'))->with(['driver'])->get();
     }
 }

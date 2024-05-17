@@ -405,7 +405,8 @@ export default class ManagementFleetsIndexController extends BaseController {
      * @void
      */
     @action exportFleets() {
-        this.crud.export('fleet');
+        const selections = this.table.selectedRows.map((_) => _.id);
+        this.crud.export('fleet', { params: { selections } });
     }
 
     /**

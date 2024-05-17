@@ -822,7 +822,8 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @memberof OperationsOrdersIndexController
      */
     @action exportOrders() {
-        this.crud.export('order');
+        const selections = this.table.selectedRows.map((_) => _.id);
+        this.crud.export('order', { params: { selections } });
     }
 
     /**
