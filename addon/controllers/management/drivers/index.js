@@ -37,6 +37,13 @@ export default class ManagementDriversIndexController extends BaseController {
     @service crud;
 
     /**
+     * Inject the `modalsManager` service
+     *
+     * @var {Service}
+     */
+    @service modalsManager;
+
+    /**
      * Inject the `driverActions` service
      *
      * @var {Service}
@@ -130,6 +137,10 @@ export default class ManagementDriversIndexController extends BaseController {
      */
     @tracked sort = '-created_at';
 
+    @tracked uploadQueue = [];
+
+    @tracked isMultipleDropoffOrder = false;
+
     /**
      * The filterable param `public_id`
      *
@@ -206,6 +217,10 @@ export default class ManagementDriversIndexController extends BaseController {
      * @memberof ManagementDriversIndexController
      */
     @tracked layout = 'table';
+
+    @tracked payload = this.store.createRecord('payload');
+
+    @tracked isUploadingFile = false;
 
     /**
      * True if the current layout style is grid.
@@ -441,6 +456,7 @@ export default class ManagementDriversIndexController extends BaseController {
         },
     ];
 
+
     /**
      * The search task.
      *
@@ -509,6 +525,43 @@ export default class ManagementDriversIndexController extends BaseController {
      */
     @action exportDrivers() {
         this.crud.export('driver');
+    }
+
+    @action removeFile(file) {
+        return file.destroyRecord();
+    }
+
+    @action queueFile(file) {
+        // since we have dropzone and upload button within dropzone validate the file state first
+        // as this method can be called twice from both functions
+        if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) {
+            return;
+        }
+
+        // Queue and upload immediatley
+        this.uploadQueue.pushObject(file);
+        this.fetch.uploadFile.perform(
+            file,
+            {
+                path: 'uploads/fleet-ops/order-files',
+                type: 'order_file',
+            },
+            (uploadedFile) => {
+                this.order.files.pushObject(uploadedFile);
+                this.uploadQueue.removeObject(file);
+            },
+            () => {
+                this.uploadQueue.removeObject(file);
+                // remove file from queue
+                if (file.queue && typeof file.queue.remove === 'function') {
+                    file.queue.remove(file);
+                }
+            }
+        );
+    }
+
+    @action import() {
+      this.crud.import('driver');
     }
 
     /**
