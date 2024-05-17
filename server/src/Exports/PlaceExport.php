@@ -4,12 +4,13 @@ namespace Fleetbase\FleetOps\Exports;
 
 use Fleetbase\FleetOps\Models\Place;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
+class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting, ShouldAutoSize
 {
     protected array $selections = [];
 
@@ -22,10 +23,12 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
     {
         return [
             $place->public_id,
-            $place->internal_id,
-            $place->display_name,
-            $place->address,
-            $place->country_name,
+            $place->name,
+            $place->phone,
+            strtoupper($place->address),
+            strtoupper($place->city),
+            $place->postal_code,
+            strtoupper($place->country_name),
             $place->created_at,
         ];
     }
@@ -34,20 +37,22 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
     {
         return [
             'ID',
-            'Internal ID',
             'Name',
+            'Phone',
             'Address',
+            'City',
+            'Postal Code',
             'Country',
-            'Created',
+            'Date Created',
         ];
     }
 
     public function columnFormats(): array
     {
         return [
-            'E' => NumberFormat::FORMAT_DATE_DDMMYYYY,
-            'F' => NumberFormat::FORMAT_DATE_DDMMYYYY,
-            'G' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'C' => '+#',
+            'F' => NumberFormat::FORMAT_GENERAL,
+            'H' => NumberFormat::FORMAT_DATE_DDMMYYYY,
         ];
     }
 
@@ -57,9 +62,7 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
     public function collection()
     {
         if ($this->selections) {
-            return Place::where('company_uuid', session('company'))
-                ->whereIn('uuid', $this->selections)
-                ->get();
+            return Place::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->get();
         }
 
         return Place::where('company_uuid', session('company'))->get();

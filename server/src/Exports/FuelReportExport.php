@@ -4,12 +4,13 @@ namespace Fleetbase\FleetOps\Exports;
 
 use Fleetbase\FleetOps\Models\FuelReport;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class FuelReportExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
+class FuelReportExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting, ShouldAutoSize
 {
     protected array $selections = [];
 
@@ -18,17 +19,17 @@ class FuelReportExport implements FromCollection, WithHeadings, WithMapping, Wit
         $this->selections = $selections;
     }
 
-    public function map($fleet): array
+    public function map($fuelReport): array
     {
         return [
-            $fleet->public_id,
-            $fleet->reporter,
-            $fleet->driver_name,
-            $fleet->vehicle_name,
-            $fleet->status,
-            $fleet->volume,
-            $fleet->odometer,
-            $fleet->created_at,
+            $fuelReport->public_id,
+            $fuelReport->reporter,
+            $fuelReport->driver_name,
+            $fuelReport->vehicle_name,
+            $fuelReport->status,
+            $fuelReport->volume,
+            $fuelReport->odometer,
+            $fuelReport->created_at,
         ];
     }
 
@@ -42,16 +43,14 @@ class FuelReportExport implements FromCollection, WithHeadings, WithMapping, Wit
             'Status',
             'Volume',
             'Odometer',
-            'Created',
+            'Date Created',
         ];
     }
 
     public function columnFormats(): array
     {
         return [
-            'E' => NumberFormat::FORMAT_DATE_DDMMYYYY,
-            'F' => NumberFormat::FORMAT_DATE_DDMMYYYY,
-            'G' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'H' => NumberFormat::FORMAT_DATE_DDMMYYYY,
         ];
     }
 

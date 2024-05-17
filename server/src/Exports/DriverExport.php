@@ -4,12 +4,13 @@ namespace Fleetbase\FleetOps\Exports;
 
 use Fleetbase\FleetOps\Models\Driver;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class DriverExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
+class DriverExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting, ShouldAutoSize
 {
     protected array $selections = [];
 
@@ -44,16 +45,15 @@ class DriverExport implements FromCollection, WithHeadings, WithMapping, WithCol
             'Phone',
             'License #',
             'Country',
-            'Created',
+            'Date Created',
         ];
     }
 
     public function columnFormats(): array
     {
         return [
-            'E' => NumberFormat::FORMAT_DATE_DDMMYYYY,
-            'F' => NumberFormat::FORMAT_DATE_DDMMYYYY,
-            'G' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'F' => '+#',
+            'I' => NumberFormat::FORMAT_DATE_DDMMYYYY,
         ];
     }
 
