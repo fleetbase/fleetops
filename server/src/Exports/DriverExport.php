@@ -7,7 +7,6 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class DriverExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
@@ -30,7 +29,7 @@ class DriverExport implements FromCollection, WithHeadings, WithMapping, WithCol
             $driver->phone,
             $driver->drivers_license_number,
             $driver->country,
-            Date::dateTimeToExcel($driver->created_at),
+            $driver->created_at,
         ];
     }
 

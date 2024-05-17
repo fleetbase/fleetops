@@ -7,7 +7,6 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class VendorExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
@@ -28,7 +27,7 @@ class VendorExport implements FromCollection, WithHeadings, WithMapping, WithCol
             $vendor->place_uuid,
             $vendor->email,
             $vendor->phone,
-            Date::dateTimeToExcel($vendor->created_at),
+            $vendor->created_at,
         ];
     }
 
@@ -59,12 +58,12 @@ class VendorExport implements FromCollection, WithHeadings, WithMapping, WithCol
      */
     public function collection()
     {
-            if ($this->selections) {
-            return Vendor::where("company_uuid", session("company"))
-                ->whereIn("uuid", $this->selections)
+        if ($this->selections) {
+            return Vendor::where('company_uuid', session('company'))
+                ->whereIn('uuid', $this->selections)
                 ->get();
         }
 
-        return Vendor::where("company_uuid", session("company"))->get();
+        return Vendor::where('company_uuid', session('company'))->get();
     }
 }

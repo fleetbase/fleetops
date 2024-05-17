@@ -7,7 +7,6 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class ServiceAreaExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
@@ -30,7 +29,7 @@ class ServiceAreaExport implements FromCollection, WithHeadings, WithMapping, Wi
             $service_area->phone,
             $service_area->drivers_license_number,
             $service_area->country,
-            Date::dateTimeToExcel($service_area->created_at),
+            $service_area->created_at,
         ];
     }
 
@@ -60,12 +59,12 @@ class ServiceAreaExport implements FromCollection, WithHeadings, WithMapping, Wi
      */
     public function collection()
     {
-          if ($this->selections) {
-            return ServiceArea::where("company_uuid", session("company"))
-                ->whereIn("uuid", $this->selections)
+        if ($this->selections) {
+            return ServiceArea::where('company_uuid', session('company'))
+                ->whereIn('uuid', $this->selections)
                 ->get();
         }
 
-        return ServiceArea::where("company_uuid", session("company"))->get();
+        return ServiceArea::where('company_uuid', session('company'))->get();
     }
 }

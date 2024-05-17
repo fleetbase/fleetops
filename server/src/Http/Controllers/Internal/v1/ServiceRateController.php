@@ -7,8 +7,8 @@ use Fleetbase\FleetOps\Exports\ServiceRateExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\Http\Requests\ExportRequest;
-use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ServiceRateController extends FleetOpsController
@@ -59,9 +59,9 @@ class ServiceRateController extends FleetOpsController
      */
     public static function export(ExportRequest $request)
     {
-        $format   = $request->input('format', 'xlsx');
+        $format       = $request->input('format', 'xlsx');
         $selections   = $request->array('selections');
-        $fileName = trim(Str::slug('contacts-' . date('Y-m-d-H:i')) . '.' . $format);
+        $fileName     = trim(Str::slug('contacts-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new ServiceRateExport($selections), $fileName);
     }

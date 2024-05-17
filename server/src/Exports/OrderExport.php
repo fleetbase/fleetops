@@ -7,14 +7,9 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class OrderExport implements
-    FromCollection,
-    WithHeadings,
-    WithMapping,
-    WithColumnFormatting
+class OrderExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
 {
     protected array $selections = [];
 
@@ -27,14 +22,16 @@ class OrderExport implements
     {
         return [
             $order->public_id,
+            $order->internal_id,
             $order->driver_name,
+            $order->vehicle_name,
+            $order->customer_name,
             $order->pickup_name,
             $order->dropoff_name,
-            $order->customer_name,
             $order->scheduled_at,
             data_get($this, 'trackingNumber.tracking_number'),
-            $order->status,   
-            Date::dateTimeToExcel($order->created_at),
+            $order->status,
+            $order->created_at,
         ];
     }
 
@@ -42,14 +39,16 @@ class OrderExport implements
     {
         return [
             'ID',
+            'Internal ID',
             'Driver',
-            'PickUp',
-            'DropOff',
+            'Vehicle',
             'Customer',
-            'ScheduledAt',
-            'TrackingNumber',
+            'Pick Up',
+            'Drop Off',
+            'Date Scheduled',
+            'Tracking Number',
             'Status',
-            'Created',
+            'Date Created',
         ];
     }
 
@@ -68,11 +67,9 @@ class OrderExport implements
     public function collection()
     {
         if (!empty($this->selections)) {
-            return Order::where("company_uuid", session("company"))
-                        ->whereIn("uuid", $this->selections)
-                        ->get();
+            return Order::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->with(['trackingNumber', 'customer', 'driverAssigned', 'payload'])->get();
         }
 
-        return Order::where("company_uuid", session("company"))->get();
+        return Order::where('company_uuid', session('company'))->get();
     }
 }

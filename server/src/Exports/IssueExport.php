@@ -7,14 +7,9 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class IssueExport implements
-    FromCollection,
-    WithHeadings,
-    WithMapping,
-    WithColumnFormatting
+class IssueExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
 {
     protected array $selections = [];
 
@@ -35,7 +30,7 @@ class IssueExport implements
             $issue->driver_name,
             $issue->vehicle_name,
             $issue->status,
-            Date::dateTimeToExcel($issue->created_at),
+            $issue->created_at,
         ];
     }
 
@@ -70,11 +65,11 @@ class IssueExport implements
     public function collection()
     {
         if (!empty($this->selections)) {
-            return Issue::where("company_uuid", session("company"))
-                        ->whereIn("uuid", $this->selections)
+            return Issue::where('company_uuid', session('company'))
+                        ->whereIn('uuid', $this->selections)
                         ->get();
         }
 
-        return Issue::where("company_uuid", session("company"))->get();
+        return Issue::where('company_uuid', session('company'))->get();
     }
 }

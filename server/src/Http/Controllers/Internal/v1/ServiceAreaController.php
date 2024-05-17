@@ -24,9 +24,9 @@ class ServiceAreaController extends FleetOpsController
      */
     public static function export(ExportRequest $request)
     {
-        $format   = $request->input('format', 'xlsx');
+        $format       = $request->input('format', 'xlsx');
         $selections   = $request->array('selections');
-        $fileName = trim(Str::slug('service-areas-' . date('Y-m-d-H:i')) . '.' . $format);
+        $fileName     = trim(Str::slug('service-areas-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new ServiceAreaExport($selections), $fileName);
     }

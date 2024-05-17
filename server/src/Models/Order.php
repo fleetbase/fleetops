@@ -440,6 +440,16 @@ class Order extends Model
     }
 
     /**
+     * The assigned vehicle name.
+     *
+     * @return string
+     */
+    public function getVehicleNameAttribute()
+    {
+        return data_get($this, 'vehicleAssigned.display_name');
+    }
+
+    /**
      * The tracking number for the order.
      *
      * @return string

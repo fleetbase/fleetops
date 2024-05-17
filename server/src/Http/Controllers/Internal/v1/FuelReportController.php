@@ -2,12 +2,11 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Exports\FuelReportExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\Http\Requests\ExportRequest;
 use Illuminate\Support\Str;
-use Fleetbase\FleetOps\Exports\FuelReportExport;
 use Maatwebsite\Excel\Facades\Excel;
-
 
 class FuelReportController extends FleetOpsController
 {
@@ -25,9 +24,10 @@ class FuelReportController extends FleetOpsController
      */
     public function export(ExportRequest $request)
     {
-        $format   = $request->input('format', 'xlsx');
+        $format       = $request->input('format', 'xlsx');
         $selections   = $request->array('selections');
-        $fileName = trim(Str::slug('fuel_report-' . date('Y-m-d-H:i')) . '.' . $format);
+        $fileName     = trim(Str::slug('fuel_report-' . date('Y-m-d-H:i')) . '.' . $format);
+
         return Excel::download(new FuelReportExport($selections), $fileName);
     }
 }
