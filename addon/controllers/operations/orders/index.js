@@ -96,6 +96,7 @@ export default class OperationsOrdersIndexController extends BaseController {
         'facilitator',
         'customer',
         'driver',
+        'vehicle',
         'pickup',
         'dropoff',
         'created_by',
@@ -183,6 +184,13 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @var {String}
      */
     @tracked driver;
+
+    /**
+     * The filterable param `vehicle`
+     *
+     * @var {String}
+     */
+    @tracked vehicle;
 
     /**
      * The filterable param `payload`
@@ -326,7 +334,7 @@ export default class OperationsOrdersIndexController extends BaseController {
         {
             label: this.intl.t('fleet-ops.common.id'),
             valuePath: 'public_id',
-            width: '150px',
+            width: '140px',
             cellComponent: 'table/cell/link-to',
             route: 'operations.orders.index.view',
             onLinkClick: this.viewOrder,
@@ -339,6 +347,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             label: this.intl.t('fleet-ops.common.internal-id'),
             valuePath: 'internal_id',
             width: '125px',
+            hidden: true,
             resizable: true,
             sortable: true,
             filterable: true,
@@ -356,32 +365,18 @@ export default class OperationsOrdersIndexController extends BaseController {
             filterComponent: 'filter/string',
         },
         {
-            label: this.intl.t('fleet-ops.operations.orders.index.customer'),
-            valuePath: 'customer.name',
-            cellComponent: 'table/cell/base',
-            width: '125px',
+            label: this.intl.t('fleet-ops.operations.orders.index.driver-assigned'),
+            cellComponent: 'cell/driver-name',
+            valuePath: 'driver_assigned',
+            modelPath: 'driver_assigned',
+            width: '210px',
             resizable: true,
-            sortable: true,
-            hidden: true,
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select order customer',
-            filterParam: 'customer',
-            model: 'customer',
-        },
-        {
-            label: this.intl.t('fleet-ops.operations.orders.index.facilitator'),
-            valuePath: 'facilitator.name',
-            cellComponent: 'table/cell/base',
-            width: '125px',
-            resizable: true,
-            hidden: true,
             sortable: true,
             filterable: true,
             filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select order facilitator',
-            filterParam: 'facilitator',
-            model: 'vendor',
+            filterComponentPlaceholder: 'Select driver for order',
+            filterParam: 'driver',
+            model: 'driver',
         },
         {
             label: this.intl.t('fleet-ops.operations.orders.index.pickup'),
@@ -411,6 +406,50 @@ export default class OperationsOrdersIndexController extends BaseController {
             filterParam: 'dropoff',
             modelNamePath: 'address',
             model: 'place',
+        },
+        {
+            label: this.intl.t('fleet-ops.operations.orders.index.customer'),
+            valuePath: 'customer.name',
+            cellComponent: 'table/cell/base',
+            width: '125px',
+            resizable: true,
+            sortable: true,
+            hidden: false,
+            filterable: true,
+            filterComponent: 'filter/model',
+            filterComponentPlaceholder: 'Select order customer',
+            filterParam: 'customer',
+            model: 'customer',
+        },
+        {
+            label: this.intl.t('fleet-ops.operations.orders.index.vehicle-assigned'),
+            cellComponent: 'cell/vehicle-name',
+            valuePath: 'vehicle_assigned.display_name',
+            modelPath: 'vehicle_assigned',
+            showOnlineIndicator: true,
+            width: '170px',
+            hidden: true,
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterComponent: 'filter/model',
+            filterComponentPlaceholder: 'Select vehicle for order',
+            filterParam: 'vehicle',
+            model: 'vehicle',
+        },
+        {
+            label: this.intl.t('fleet-ops.operations.orders.index.facilitator'),
+            valuePath: 'facilitator.name',
+            cellComponent: 'table/cell/base',
+            width: '125px',
+            resizable: true,
+            hidden: true,
+            sortable: true,
+            filterable: true,
+            filterComponent: 'filter/model',
+            filterComponentPlaceholder: 'Select order facilitator',
+            filterParam: 'facilitator',
+            model: 'vendor',
         },
         {
             label: this.intl.t('fleet-ops.operations.orders.index.scheduled-at'),
@@ -449,20 +488,6 @@ export default class OperationsOrdersIndexController extends BaseController {
             sortable: true,
             filterable: true,
             filterComponent: 'filter/string',
-        },
-        {
-            label: this.intl.t('fleet-ops.operations.orders.index.driver-assigned'),
-            cellComponent: 'table/cell/driver-name',
-            valuePath: 'driver_assigned',
-            modelPath: 'driver_assigned',
-            width: '170px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select driver for order',
-            filterParam: 'driver',
-            model: 'driver',
         },
         {
             label: this.intl.t('fleet-ops.common.type'),
@@ -643,6 +668,13 @@ export default class OperationsOrdersIndexController extends BaseController {
 
         // update the query param
         this.query = value;
+    }
+
+    /**
+     * Reload layout view.
+     */
+    @action reload() {
+        return this.hostRouter.refresh();
     }
 
     /**

@@ -58,7 +58,9 @@
         </ContentPanel>
     {{else}}
         <InputGroup @name={{t "fleet-ops.common.name"}} @value={{this.vendor.name}} @helpText={{t "fleet-ops.component.vendor-form-panel.create-form.name-text"}} />
-        <InputGroup @name={{t "fleet-ops.common.email"}} @type="email" @value={{this.vendor.email}} @helpText={{t "fleet-ops.component.vendor-form-panel.create-form.email-text"}} />
+        <InputGroup @name={{t "fleet-ops.common.email"}} @helpText={{t "fleet-ops.component.vendor-form-panel.create-form.email-text"}}>
+            <PhoneInput @value={{this.vendor.phone}} @onInput={{fn (mut this.vendor.phone)}} class="form-input w-full" />
+        </InputGroup>
         <InputGroup @name={{t "fleet-ops.common.phone"}} @type="tel" @value={{this.vendor.phone}} @helpText={{t "fleet-ops.component.vendor-form-panel.create-form.phone-text"}} />
         <InputGroup @name={{t "fleet-ops.common.website"}} @value={{this.vendor.website_url}} @helpText={{t "fleet-ops.component.vendor-form-panel.create-form.website-text"}} />
         <InputGroup @name={{t "fleet-ops.common.type"}}>

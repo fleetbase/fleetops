@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
+import { task } from 'ember-concurrency';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
@@ -36,11 +37,6 @@ export default class IssueFormPanelComponent extends Component {
     @service hostRouter;
 
     /**
-     * @service loader
-     */
-    @service loader;
-
-    /**
      * @service contextPanel
      */
     @service contextPanel;
@@ -50,12 +46,6 @@ export default class IssueFormPanelComponent extends Component {
      * @type {any}
      */
     @tracked context;
-
-    /**
-     * Indicates whether the component is in a loading state.
-     * @type {boolean}
-     */
-    @tracked isLoading = false;
 
     /**
      * All possible issue types
@@ -114,37 +104,23 @@ export default class IssueFormPanelComponent extends Component {
     }
 
     /**
-     * Saves the issue changes.
+     * Task to save issue.
      *
-     * @action
-     * @returns {Promise<any>}
+     * @return {void}
+     * @memberof IssueFormPanelComponent
      */
-    @action save() {
-        const { issue } = this;
-
-        this.loader.showLoader('.next-content-overlay-panel-container', { loadingMessage: 'Saving issue...', preserveTargetPosition: true });
-        this.isLoading = true;
-
-        contextComponentCallback(this, 'onBeforeSave', issue);
+    @task *save() {
+        contextComponentCallback(this, 'onBeforeSave', this.issue);
 
         try {
-            return issue
-                .save()
-                .then((issue) => {
-                    this.notifications.success(this.intl.t('fleet-ops.component.issue-form-panel.success-message', { publicId: issue.public_id }));
-                    contextComponentCallback(this, 'onAfterSave', issue);
-                })
-                .catch((error) => {
-                    this.notifications.serverError(error);
-                })
-                .finally(() => {
-                    this.loader.removeLoader('.next-content-overlay-panel-container ');
-                    this.isLoading = false;
-                });
+            this.issue = yield this.issue.save();
         } catch (error) {
-            this.loader.removeLoader('.next-content-overlay-panel-container ');
-            this.isLoading = false;
+            this.notifications.serverError(error);
+            return;
         }
+
+        this.notifications.success(this.intl.t('fleet-ops.component.issue-form-panel.success-message', { publicId: this.issue.public_id }));
+        contextComponentCallback(this, 'onAfterSave', this.issue);
     }
 
     /**

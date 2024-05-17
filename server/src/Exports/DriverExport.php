@@ -63,12 +63,10 @@ class DriverExport implements FromCollection, WithHeadings, WithMapping, WithCol
      */
     public function collection()
     {
-            if ($this->selections) {
-            return Driver::where("company_uuid", session("company"))
-                ->whereIn("uuid", $this->selections)
-                ->get();
+        if ($this->selections) {
+            return Driver::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->get();
         }
 
-        return Driver::where("company_uuid", session("company"))->get();
+        return Driver::where('company_uuid', session('company'))->get();
     }
 }

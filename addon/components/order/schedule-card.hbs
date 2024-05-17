@@ -56,7 +56,11 @@
                 </div>
                 <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.vehicle-assigned"}}</span>
             </div>
-            <a href="javascript:;" disabled={{not @order.driver_assigned.vehicle}} class={{unless @order.driver_assigned.vehicle_uuid "dark:text-gray-600 text-gray-400"}} {{on "click" (fn this.onClickVehicle @order.driver_assigned.vehicle)}}>{{n-a @order.driver_assigned.vehicle_name (t "fleet-ops.component.order.schedule-card.no-vehicle")}}</a>
+            {{#if @order.vehicle_assigned}}
+                <a href="javascript:;" disabled={{not @order.vehicle_assigned}} class={{unless @order.vehicle_assigned_uuid "dark:text-gray-600 text-gray-400"}} {{on "click" (fn this.onClickVehicle @order.vehicle_assigned)}}>{{n-a @order.vehicle_assigned.display_name (t "fleet-ops.component.order.schedule-card.no-vehicle")}}</a>
+            {{else if @order.driver_assigned.vehicle}}
+                <a href="javascript:;" disabled={{not @order.driver_assigned.vehicle}} class={{unless @order.driver_assigned.vehicle_uuid "dark:text-gray-600 text-gray-400"}} {{on "click" (fn this.onClickVehicle @order.driver_assigned.vehicle)}}>{{n-a @order.driver_assigned.vehicle_name (t "fleet-ops.component.order.schedule-card.no-vehicle")}}</a>
+            {{/if}}
         </div>
         <div class="flex items-center justify-between">
             <div class="flex flex-row items-center leading-5">

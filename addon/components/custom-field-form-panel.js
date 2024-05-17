@@ -63,17 +63,19 @@ export default class CustomFieldFormPanelComponent extends Component {
      * @task
      */
     @task *save() {
-        yield this.customField
-            .save()
-            .then((customField) => {
-                if (typeof this.onCustomFieldSaved === 'function') {
-                    this.onCustomFieldSaved(customField);
-                }
-                contextComponentCallback(this, 'onCustomFieldSaved', customField);
-            })
-            .catch((error) => {
-                this.notifications.serverError(error);
-            });
+        contextComponentCallback(this, 'onBeforeCustomFieldSaved', this.customField);
+
+        try {
+            this.customField = yield this.customField.save();
+        } catch (error) {
+            this.notifications.serverError(error);
+            return;
+        }
+
+        if (typeof this.onCustomFieldSaved === 'function') {
+            this.onCustomFieldSaved(this.customField);
+        }
+        contextComponentCallback(this, 'onCustomFieldSaved', this.customField);
     }
 
     /**

@@ -1,4 +1,4 @@
-<Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @width="550px" @fullHeight={{true}} @onLoad={{this.setupInterface}} as |overlay|>
+<Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @width="570px" @fullHeight={{true}} @onLoad={{this.setupInterface}} as |overlay|>
     <Overlay::Header @overlay={{overlay}} @title="New Order" @onPressCancel={{this.transitionBack}}>
         <DropdownButton @icon="ellipsis-h" @size="sm" @iconPrefix="fas" @triggerClass="mr-2 hidden md:flex" as |dd|>
             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
@@ -45,16 +45,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
                 <div class="input-group">
                     <InputLabel @labelText={{t "fleet-ops.operations.orders.index.new.order-type"}} @helpText={{t "fleet-ops.operations.orders.index.new.order-type-help-text"}} />
-                    <select class="form-select w-full has--placeholder" {{on "change" this.setConfig}}>
-                        <option selected disabled>
-                            {{t "fleet-ops.operations.orders.index.new.order-type-placeholder"}}
-                        </option>
-                        {{#each this.orderConfigs as |orderConfig|}}
-                            <option value={{orderConfig.id}} selected={{eq this.orderConfig.id orderConfig.id}}>
-                                {{orderConfig.name}}
-                            </option>
-                        {{/each}}
-                    </select>
+                    <Select @options={{this.orderConfigs}} @optionValue="id" @optionLabel="name" @onChange={{this.setConfig}} @placeholder={{t "fleet-ops.operations.orders.index.new.order-type-placeholder"}} class="w-full" />
                 </div>
 
                 <InputGroup @name={{t "fleet-ops.operations.orders.index.new.internal-id"}} @value={{this.order.internal_id}} @helpText={{t "fleet-ops.operations.orders.index.new.internal-id-help-text"}} />
@@ -65,7 +56,7 @@
                 </InputGroup>
 
                 <InputGroup @name={{t "fleet-ops.operations.orders.index.new.customer"}} @helpText={{t "fleet-ops.operations.orders.index.new.customer-help-text"}}>
-                    <ModelSelect @modelName="customer" @selectedModel={{this.order.customer}} @placeholder={{t "fleet-ops.operations.orders.index.new.customer-placeholder"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @onChange={{this.setOrderCustomer}} as |model|>
+                    <ModelSelect @modelName="customer" @selectedModel={{this.order.customer}} @placeholder={{t "fleet-ops.operations.orders.index.new.customer-placeholder"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @disabled={{this.isMultipleDropoffOrder}} @onChange={{this.setOrderCustomer}} as |model|>
                         <div class="flex items-center">
                             <div class="w-7">
                                 <FaIcon @icon={{if model.isVendor "warehouse" "user"}} />
@@ -101,9 +92,9 @@
                 {{/if}}
 
                 <InputGroup @name={{t "fleet-ops.operations.orders.index.new.assign-driver"}} @helpText={{t "fleet-ops.operations.orders.index.new.assign-driver-help-text"}}>
-                    <ModelSelect @modelName="driver" @selectedModel={{this.order.driver_assigned}} @query={{@options.driversQuery}} @placeholder={{t "fleet-ops.operations.orders.index.new.assign-driver-placeholder"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @disabled={{this.isUsingIntegratedVendor}} @onChange={{fn (mut this.order.driver_assigned)}} as |model|>
+                    <ModelSelect @modelName="driver" @selectedModel={{this.order.driver_assigned}} @query={{this.driversQuery}} @placeholder={{t "fleet-ops.operations.orders.index.new.assign-driver-placeholder"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @disabled={{this.isUsingIntegratedVendor}} @onChange={{this.selectDriver}} as |model|>
                         <div class="flex items-center">
-                            <div class="w-7">
+                            <div class="w-6">
                                 <FaIcon @icon="id-card-alt" />
                             </div>
                             <div class="flex-1 flex flex-row truncate">
@@ -117,6 +108,19 @@
                                     </span>
                                 </div>
                             {{/if}}
+                        </div>
+                    </ModelSelect>
+                </InputGroup>
+
+                <InputGroup @name={{t "fleet-ops.operations.orders.index.new.assign-vehicle"}} @helpText={{t "fleet-ops.operations.orders.index.new.assign-vehicle-help-text"}}>
+                    <ModelSelect @modelName="vehicle" @selectedModel={{this.order.vehicle_assigned}} @query={{this.vehiclesQuery}} @placeholder={{t "fleet-ops.operations.orders.index.new.assign-vehicle-placeholder"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @disabled={{this.isUsingIntegratedVendor}} @onChange={{fn (mut this.order.vehicle_assigned)}} as |model|>
+                        <div class="flex items-center">
+                            <div class="w-6">
+                                <Image @src={{model.avatar_url}} @fallbackSrc={{config "defaultValues.vehicleAvatar"}} class="w-4 h-4 shadow-sm rounded-md" />
+                            </div>
+                            <div class="flex-1 flex flex-row truncate">
+                                <span class="uppercase">{{model.display_name}}</span>
+                            </div>
                         </div>
                     </ModelSelect>
                 </InputGroup>
@@ -186,7 +190,7 @@
             {{#if this.isMultipleDropoffOrder}}
                 <DragSortList class="multi-drop-select-container overflow-visible" @items={{this.waypoints}} @dragEndAction={{this.sortWaypoints}} as |waypoint index|>
                     <div id={{concat "waypoint_" (add index 1)}} class="border rounded-md px-3 py-2 shadow-sm border-gray-300 dark:border-gray-900 mb-3">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-start justify-between">
                             <div class="flex items-center justify-between cursor-move">
                                 <FaIcon @icon="grip-lines" @prefix="fas" class="mr-3 text-gray-100" />
                                 <label class="waypoint-label dark:text-gray-100 text-sm">
@@ -194,21 +198,33 @@
                                 </label>
                             </div>
 
-                            <div class="flex-1 px-3">
-                                <ModelSelect @modelName="place" @selectedModel={{waypoint.place}} @placeholder={{concat (t "fleet-ops.operations.orders.index.new.select-waypoint-placeholder") " " (add index 1)}} @triggerClass="form-select form-input truncate max-w-300px" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}} @renderInPlace={{true}} @onChange={{fn this.setWaypointPlace index}} as |model|>
-                                    {{model.address}}
-                                </ModelSelect>
-
-                                {{#if (and this.isUsingIntegratedVendor (is-not-facilitator-supported-place this.order.facilitator waypoint.place))}}
-                                    <InfoBlock class="my-2 px-4 py-1.5 danger" @blockClass="flex flex-row items-center" @text={{concat this.order.facilitator.name (t "fleet-ops.operations.orders.index.new.infoblock-text")}} />
-                                {{/if}}
-
-                                {{#if waypoint.place.hasInvalidCoordinates}}
-                                    <div class="leading-5 text-sm text-red-400 mt-2">
-                                        <FaIcon @icon="exclamation-triangle" class="mr-1" />
-                                        {{t "fleet-ops.operations.orders.index.new.invalid-coordinates"}}
-                                    </div>
-                                {{/if}}
+                            <div class="flex-1 flex-col px-3">
+                                <div class="mb-2">
+                                    <ModelSelect @modelName="place" @selectedModel={{waypoint.place}} @placeholder={{concat (t "fleet-ops.operations.orders.index.new.select-waypoint-placeholder") " " (add index 1)}} @triggerClass="form-select form-input truncate max-w-300px" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}} @renderInPlace={{true}} @onChange={{fn this.setWaypointPlace index}} as |model|>
+                                        {{model.address}}
+                                    </ModelSelect>
+                                    {{#if (and this.isUsingIntegratedVendor (is-not-facilitator-supported-place this.order.facilitator waypoint.place))}}
+                                        <InfoBlock class="my-2 px-4 py-1.5 danger" @blockClass="flex flex-row items-center" @text={{concat this.order.facilitator.name (t "fleet-ops.operations.orders.index.new.infoblock-text")}} />
+                                    {{/if}}
+                                    {{#if waypoint.place.hasInvalidCoordinates}}
+                                        <div class="leading-5 text-sm text-red-400 mt-2">
+                                            <FaIcon @icon="exclamation-triangle" class="mr-1" />
+                                            {{t "fleet-ops.operations.orders.index.new.invalid-coordinates"}}
+                                        </div>
+                                    {{/if}}
+                                </div>
+                                <div>
+                                    <ModelSelect @modelName="customer" @selectedModel={{waypoint.customer}} @placeholder={{t "fleet-ops.operations.orders.index.new.customer-placeholder"}} @triggerClass="form-select form-input truncate max-w-300px" @infiniteScroll={{false}} @renderInPlace={{true}} @allowClear={{true}} @onChange={{fn this.setWaypointCustomer waypoint}} as |model|>
+                                        <div class="flex items-center">
+                                            <div class="w-7">
+                                                <FaIcon @icon={{if model.isVendor "warehouse" "user"}} />
+                                            </div>
+                                            <span class="uppercase">
+                                                {{model.name}}
+                                            </span>
+                                        </div>
+                                    </ModelSelect>
+                                </div>
                             </div>
 
                             <div class="flex items-center">
@@ -226,7 +242,7 @@
                         <div class="flex items-center justify-between">
                             <label>{{t "fleet-ops.operations.orders.index.new.pickup"}}</label>
 
-                            <div class="flex-row space-x-2 pr-0.5">
+                            <div class="flex-row space-x-1 pr-0.5">
                                 {{#if this.payload.pickup}}
                                     <a href="javascript:;" {{on "click" (fn this.editPlace this.payload.pickup)}}>
                                         <FaIcon @icon="edit" />
@@ -400,18 +416,7 @@
                                         <Input @value={{entity.sku}} @type="text" class="w-full form-input form-input-sm" placeholder={{t "fleet-ops.operations.orders.index.new.sku"}} />
                                     </div>
                                     {{#if this.waypoints.length}}
-                                        <select class="form-select w-full form-input-sm" {{on "change" (fn this.setEntityDestionation index)}}>
-                                            <option selected disabled>
-                                                {{t "fleet-ops.operations.orders.index.new.select-destination"}}
-                                            </option>
-                                            {{#each this.waypoints as |waypoint|}}
-                                                {{#if waypoint.place}}
-                                                    <option value={{waypoint.place.id}} selected={{eq entity.destionation_uuid waypoint.place.id}}>
-                                                        {{waypoint.place.address}}
-                                                    </option>
-                                                {{/if}}
-                                            {{/each}}
-                                        </select>
+                                        <Select @options={{this.waypoints}} @optionValue="place.id" @optionLabel="place.address" @placeholder={{t "fleet-ops.operations.orders.index.new.select-destination"}} @onChange={{fn this.setEntityDestionation index}} class="w-full form-input-sm" />
                                     {{/if}}
                                     <Button @icon="pencil" @text={{t "fleet-ops.operations.orders.index.new.edit-item"}} @size="sm" @onClick={{fn this.editEntity entity}} />
                                 </div>

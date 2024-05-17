@@ -7,6 +7,7 @@ import { task } from 'ember-concurrency-decorators';
 export default class DriverOnboardSettingsComponent extends Component {
     @service fetch;
     @service currentUser;
+    @service notifications;
     @tracked companyId;
     @tracked driverOnboardSettingsLoaded = false;
     @tracked driverOnboardSettings = {};
@@ -37,8 +38,18 @@ export default class DriverOnboardSettingsComponent extends Component {
 
     @task *saveDriverOnboardSettings() {
         const { driverOnboardSettings } = this;
-        const driverOnboardSettingsResponse = yield this.fetch.post('fleet-ops/settings/driver-onboard-settings', { driverOnboardSettings });
-        if (driverOnboardSettings?.enableDriverOnboardFromApp == false) this.driverOnboardSettings = driverOnboardSettingsResponse?.driverOnboardSettings;
+        let driverOnboardSettingsResponse;
+
+        try {
+            driverOnboardSettingsResponse = yield this.fetch.post('fleet-ops/settings/driver-onboard-settings', { driverOnboardSettings });
+        } catch (error) {
+            this.notifications.serverError(error);
+            return;
+        }
+
+        if (driverOnboardSettingsResponse && driverOnboardSettings && driverOnboardSettings.enableDriverOnboardFromApp == false) {
+            this.driverOnboardSettings = driverOnboardSettingsResponse.driverOnboardSettings;
+        }
     }
 
     @task *getDriverOnboardSettings() {

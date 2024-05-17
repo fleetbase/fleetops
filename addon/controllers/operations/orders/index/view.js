@@ -197,10 +197,8 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         // create groups
         this.model.payload.waypoints.forEach((waypoint) => {
             const destinationId = waypoint.id;
-
             if (destinationId) {
                 const entities = this.model.payload.entities.filter((entity) => entity.destination_uuid === destinationId);
-
                 if (entities.length === 0) {
                     return;
                 }
@@ -506,9 +504,18 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             },
             setDriver: (driver) => {
                 order.set('driver_assigned', driver);
+                if (driver && driver.vehicle) {
+                    order.set('vehicle_assigned', driver.vehicle);
+                }
 
                 if (!driver) {
                     order.set('driver_assigned_uuid', null);
+                }
+            },
+            setVehicle: (vehicle) => {
+                order.set('vehicle_assigned', vehicle);
+                if (!vehicle) {
+                    order.set('vehicle_assigned_uuid', null);
                 }
             },
             scheduleOrder: (dateInstance) => {

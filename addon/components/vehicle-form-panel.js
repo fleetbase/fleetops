@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 import Point from '@fleetbase/fleetops-data/utils/geojson/point';
@@ -38,11 +39,6 @@ export default class VehicleFormPanelComponent extends Component {
     @service hostRouter;
 
     /**
-     * @service loader
-     */
-    @service loader;
-
-    /**
      * @service contextPanel
      */
     @service contextPanel;
@@ -52,12 +48,6 @@ export default class VehicleFormPanelComponent extends Component {
      * @type {any}
      */
     @tracked context;
-
-    /**
-     * Indicates whether the component is in a loading state.
-     * @type {boolean}
-     */
-    @tracked isLoading = false;
 
     /**
      * Status options for vehicles.
@@ -113,37 +103,23 @@ export default class VehicleFormPanelComponent extends Component {
     }
 
     /**
-     * Saves the vehicle changes.
+     * Task to save vehicle.
      *
-     * @action
-     * @returns {Promise<any>}
+     * @return {void}
+     * @memberof VehicleFormPanelComponent
      */
-    @action save() {
-        const { vehicle } = this;
-
-        this.loader.showLoader('.next-content-overlay-panel-container', { loadingMessage: 'Saving vehicle...', preserveTargetPosition: true });
-        this.isLoading = true;
-
-        contextComponentCallback(this, 'onBeforeSave', vehicle);
+    @task *save() {
+        contextComponentCallback(this, 'onBeforeSave', this.vehicle);
 
         try {
-            return vehicle
-                .save()
-                .then((vehicle) => {
-                    this.notifications.success(this.intl.t('fleet-ops.component.vehicle-form-panel.success-message', { vehicleName: vehicle.displayName }));
-                    contextComponentCallback(this, 'onAfterSave', vehicle);
-                })
-                .catch((error) => {
-                    this.notifications.serverError(error);
-                })
-                .finally(() => {
-                    this.loader.removeLoader('.next-content-overlay-panel-container ');
-                    this.isLoading = false;
-                });
+            this.vehicle = yield this.vehicle.save();
         } catch (error) {
-            this.loader.removeLoader('.next-content-overlay-panel-container ');
-            this.isLoading = false;
+            this.notifications.serverError(error);
+            return;
         }
+
+        this.notifications.success(this.intl.t('fleet-ops.component.vehicle-form-panel.success-message', { vehicleName: this.vehicle.displayName }));
+        contextComponentCallback(this, 'onAfterSave', this.vehicle);
     }
 
     /**

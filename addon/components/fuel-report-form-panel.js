@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
@@ -15,6 +16,7 @@ export default class FuelReportFormPanelComponent extends Component {
      * @service notifications
      */
     @service notifications;
+
     /**
      * @service intl
      */
@@ -26,11 +28,6 @@ export default class FuelReportFormPanelComponent extends Component {
     @service hostRouter;
 
     /**
-     * @service loader
-     */
-    @service loader;
-
-    /**
      * @service contextPanel
      */
     @service contextPanel;
@@ -40,12 +37,6 @@ export default class FuelReportFormPanelComponent extends Component {
      * @type {any}
      */
     @tracked context;
-
-    /**
-     * Indicates whether the component is in a loading state.
-     * @type {boolean}
-     */
-    @tracked isLoading = false;
 
     /**
      * Fuel Report status
@@ -74,37 +65,23 @@ export default class FuelReportFormPanelComponent extends Component {
     }
 
     /**
-     * Saves the fuel report changes.
+     * Task to save fuel report.
      *
-     * @action
-     * @returns {Promise<any>}
+     * @return {void}
+     * @memberof FuelReportFormPanelComponent
      */
-    @action save() {
-        const { fuelReport } = this;
-
-        this.loader.showLoader('.next-content-overlay-panel-container', { loadingMessage: 'Saving fuel report...', preserveTargetPosition: true });
-        this.isLoading = true;
-
-        contextComponentCallback(this, 'onBeforeSave', fuelReport);
+    @task *save() {
+        contextComponentCallback(this, 'onBeforeSave', this.fuelReport);
 
         try {
-            return fuelReport
-                .save()
-                .then((fuelReport) => {
-                    this.notifications.success(this.intl.t('fleet-ops.component.fuel-report-form-panel.success-message'));
-                    contextComponentCallback(this, 'onAfterSave', fuelReport);
-                })
-                .catch((error) => {
-                    this.notifications.serverError(error);
-                })
-                .finally(() => {
-                    this.loader.removeLoader('.next-content-overlay-panel-container ');
-                    this.isLoading = false;
-                });
+            this.fuelReport = yield this.fuelReport.save();
         } catch (error) {
-            this.loader.removeLoader('.next-content-overlay-panel-container ');
-            this.isLoading = false;
+            this.notifications.serverError(error);
+            return;
         }
+
+        this.notifications.success(this.intl.t('fleet-ops.component.fuel-report-form-panel.success-message'));
+        contextComponentCallback(this, 'onAfterSave', this.fuelReport);
     }
 
     /**
