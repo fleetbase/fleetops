@@ -25,6 +25,8 @@ use Fleetbase\Models\CustomFieldValue;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
 use Illuminate\Http\Request;
+use Fleetbase\FleetOps\Exports\OrderExport;
+use Fleetbase\Http\Requests\ExportRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -657,5 +659,19 @@ class OrderController extends FleetOpsController
         }
 
         return response()->error('Unable to render label.');
+    }
+
+     /**
+     * Export the issue to excel or csv.
+     *
+     * @param ExportRequest $request
+     * @return \Illuminate\Http\Response
+     */
+    public function export(ExportRequest $request)
+    {
+        $format   = $request->input('format', 'xlsx');
+        $selections   = $request->array('selections');
+        $fileName = trim(Str::slug('order-' . date('Y-m-d-H:i')) . '.' . $format);
+        return Excel::download(new OrderExport($selections), $fileName);
     }
 }

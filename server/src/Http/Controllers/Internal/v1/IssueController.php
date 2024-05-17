@@ -5,7 +5,6 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\FleetOps\Exports\IssueExport;
 use Illuminate\Support\Str;
-use Fleetbase\FleetOps\Models\Issue;
 use Maatwebsite\Excel\Facades\Excel;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 
