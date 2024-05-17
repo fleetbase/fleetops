@@ -390,7 +390,7 @@ export default class ManagementIssuesIndexController extends BaseController {
      *
      * @void
      */
-    @action exportIssues() { 
+    @action exportIssues() {
         const selections = this.table.selectedRows.map((_) => _.id);
         this.crud.export('issue', { params: { selections } });
     }
