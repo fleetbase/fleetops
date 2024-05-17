@@ -99,6 +99,7 @@ fleet-ops:
     vehicle-name: Vehicle Name
     pickup: Pickup
     dropoff: Dropoff
+    import: Import
   component:
     activity-logic-builder:
       activity-logic: Activity Logic
