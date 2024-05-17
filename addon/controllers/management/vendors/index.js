@@ -365,7 +365,8 @@ export default class ManagementVendorsIndexController extends BaseController {
      * @void
      */
     @action exportVendors() {
-        this.crud.export('vendor');
+        const selections = this.table.selectedRows.map((_) => _.id);
+        this.crud.export('vendor', { params: { selections } });
     }
 
     /**

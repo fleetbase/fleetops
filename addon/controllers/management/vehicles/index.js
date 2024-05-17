@@ -467,7 +467,8 @@ export default class ManagementVehiclesIndexController extends BaseController {
      * @void
      */
     @action exportVehicles() {
-        this.crud.export('vehicle');
+        const selections = this.table.selectedRows.map((_) => _.id);
+        this.crud.export('vehicle', { params: { selections } });
     }
 
     /**

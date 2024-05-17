@@ -2,7 +2,7 @@
 
 namespace Fleetbase\FleetOps\Exports;
 
-use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\FuelReport;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
@@ -10,7 +10,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting, ShouldAutoSize
+class FuelReportExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting, ShouldAutoSize
 {
     protected array $selections = [];
 
@@ -19,17 +19,17 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
         $this->selections = $selections;
     }
 
-    public function map($place): array
+    public function map($fuelReport): array
     {
         return [
-            $place->public_id,
-            $place->name,
-            $place->phone,
-            strtoupper($place->address),
-            strtoupper($place->city),
-            $place->postal_code,
-            strtoupper($place->country_name),
-            $place->created_at,
+            $fuelReport->public_id,
+            $fuelReport->reporter,
+            $fuelReport->driver_name,
+            $fuelReport->vehicle_name,
+            $fuelReport->status,
+            $fuelReport->volume,
+            $fuelReport->odometer,
+            $fuelReport->created_at,
         ];
     }
 
@@ -37,12 +37,12 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
     {
         return [
             'ID',
-            'Name',
-            'Phone',
-            'Address',
-            'City',
-            'Postal Code',
-            'Country',
+            'Reporter',
+            'Driver',
+            'Vehicle',
+            'Status',
+            'Volume',
+            'Odometer',
             'Date Created',
         ];
     }
@@ -50,8 +50,6 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
     public function columnFormats(): array
     {
         return [
-            'C' => '+#',
-            'F' => NumberFormat::FORMAT_GENERAL,
             'H' => NumberFormat::FORMAT_DATE_DDMMYYYY,
         ];
     }
@@ -62,9 +60,11 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
     public function collection()
     {
         if ($this->selections) {
-            return Place::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->get();
+            return FuelReport::where('company_uuid', session('company'))
+                ->whereIn('uuid', $this->selections)
+                ->get();
         }
 
-        return Place::where('company_uuid', session('company'))->get();
+        return FuelReport::where('company_uuid', session('company'))->get();
     }
 }

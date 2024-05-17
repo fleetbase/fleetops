@@ -6,6 +6,7 @@ use Fleetbase\Exceptions\FleetbaseRequestValidationException;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Events\OrderReady;
 use Fleetbase\FleetOps\Events\OrderStarted;
+use Fleetbase\FleetOps\Exports\OrderExport;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
@@ -20,6 +21,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\Models\CustomFieldValue;
 use Fleetbase\Models\File;
@@ -657,5 +659,19 @@ class OrderController extends FleetOpsController
         }
 
         return response()->error('Unable to render label.');
+    }
+
+    /**
+     * Export the issue to excel or csv.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function export(ExportRequest $request)
+    {
+        $format       = $request->input('format', 'xlsx');
+        $selections   = $request->array('selections');
+        $fileName     = trim(Str::slug('order-' . date('Y-m-d-H:i')) . '.' . $format);
+
+        return Excel::download(new OrderExport($selections), $fileName);
     }
 }
