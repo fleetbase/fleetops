@@ -29,7 +29,7 @@ class OrderExport implements FromCollection, WithHeadings, WithMapping, WithColu
             $order->pickup_name,
             $order->dropoff_name,
             $order->scheduled_at,
-            data_get($this, 'trackingNumber.tracking_number'),
+            $order->trackingNumber ? $order->trackingNumber->tracking_number : null,
             $order->status,
             $order->created_at,
         ];
