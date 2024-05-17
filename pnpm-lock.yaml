@@ -5,11 +5,11 @@ dependencies:
     specifier: ^7.23.2
     version: 7.23.2
   '@fleetbase/ember-core':
-    specifier: ^0.2.9
-    version: 0.2.9(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
+    specifier: ^0.2.10
+    version: 0.2.10(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
   '@fleetbase/ember-ui':
-    specifier: ^0.2.14
-    version: 0.2.14(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0)
+    specifier: ^0.2.15
+    version: 0.2.15(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0)
   '@fleetbase/fleetops-data':
     specifier: ^0.1.15
     version: 0.1.15
@@ -1997,7 +1997,7 @@ packages:
       '@ember/edition-utils': 1.2.0
       '@ember/string': 3.1.1
       '@embroider/macros': 1.13.5
-      ember-auto-import: 2.6.3(webpack@5.89.0)
+      ember-auto-import: 2.7.2(webpack@5.89.0)
       ember-cli-babel: 7.26.11
     transitivePeerDependencies:
       - '@glint/template'
@@ -2496,8 +2496,8 @@ packages:
       - supports-color
     dev: false
 
-  /@fleetbase/ember-core@0.2.9(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0):
-    resolution: {integrity: sha512-Z4XU5QydqP4dqzyncYW1vKxsUn9VjPiJ/R7l/L+jHuJTMr2AbbkZV5LtoQ0nP+Ib2euhlLMgLuxwlVRWUv/C+g==}
+  /@fleetbase/ember-core@0.2.10(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0):
+    resolution: {integrity: sha512-K1k7+vNdYoJmJdViUj5tMJFpIfGA/a2SBmUk2QuFhk8PlHARhM8S8U7RxtgAIBA8C9VsQyO0Ekgr5WN3WU6aVQ==}
     engines: {node: '>= 18'}
     dependencies:
       '@babel/core': 7.23.2
@@ -2529,8 +2529,8 @@ packages:
       - webpack
     dev: false
 
-  /@fleetbase/ember-ui@0.2.14(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0):
-    resolution: {integrity: sha512-31FAddlqt9M4Gcnzsgot/2I+/yWg+iWOuRef0zKTOh58BBKE5mrPP9UaK+er6SShgPRyLDAirIwttha1AMXuNg==}
+  /@fleetbase/ember-ui@0.2.15(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0):
+    resolution: {integrity: sha512-nYuyN3ird4lCRUwozFQY3AK8NAnS1pdZB/SGD2vg8SOIr7CjfG7MjixmDbK+d9Vdt2t2QyhbUgzYHleLUAD4qw==}
     engines: {node: '>= 18'}
     dependencies:
       '@babel/core': 7.23.2
@@ -2640,8 +2640,8 @@ packages:
       osrm-text-instructions: 0.13.4
     dev: false
 
-  /@floating-ui/core@1.6.1:
-    resolution: {integrity: sha512-42UH54oPZHPdRHdw6BgoBD6cg/eVTmVrFcgeRDM3jbO7uxSoipVcmcIGFcA5jmOHO5apcyvBhkSKES3fQJnu7A==}
+  /@floating-ui/core@1.6.2:
+    resolution: {integrity: sha512-+2XpQV9LLZeanU4ZevzRnGFg2neDeKHgFLjP6YLW+tly0IvrhqT4u8enLGjLH3qeh85g19xY5rsAusfwTdn5lg==}
     dependencies:
       '@floating-ui/utils': 0.2.2
     dev: false
@@ -2649,7 +2649,7 @@ packages:
   /@floating-ui/dom@1.6.5:
     resolution: {integrity: sha512-Nsdud2X65Dz+1RHjAIP0t8z5e2ff/IRbei6BqFrl1urT8sDVzM1HMQ+R0XcU5ceRfyO3I6ayeqIfh+6Wb8LGTw==}
     dependencies:
-      '@floating-ui/core': 1.6.1
+      '@floating-ui/core': 1.6.2
       '@floating-ui/utils': 0.2.2
     dev: false
 
@@ -4309,7 +4309,7 @@ packages:
       postcss: ^8.1.0
     dependencies:
       browserslist: 4.23.0
-      caniuse-lite: 1.0.30001618
+      caniuse-lite: 1.0.30001620
       fraction.js: 4.3.7
       normalize-range: 0.1.2
       picocolors: 1.0.0
@@ -4507,7 +4507,7 @@ packages:
       glob: 8.1.0
       pkg-up: 3.1.0
       reselect: 4.1.8
-      resolve: 1.22.2
+      resolve: 1.22.8
     dev: false
 
   /babel-plugin-polyfill-corejs2@0.4.8(@babel/core@7.23.2):
@@ -5663,7 +5663,7 @@ packages:
     resolution: {integrity: sha512-bsTwuIg/BZZK/vreVTYYbSWoe2F+71P7K5QGEX+pT250DZbfU1MQ5prOKpPR+LL6uWKK3KMwMCAS74QB3Um1uw==}
     dependencies:
       browserslist: 4.23.0
-      caniuse-lite: 1.0.30001618
+      caniuse-lite: 1.0.30001620
       lodash.memoize: 4.1.2
       lodash.uniq: 4.5.0
     dev: false
@@ -5671,8 +5671,8 @@ packages:
   /caniuse-lite@1.0.30001588:
     resolution: {integrity: sha512-+hVY9jE44uKLkH0SrUTqxjxqNTOWHsbnQDIKjwkZ3lNTzUUVdBLBGXtj/q5Mp5u98r3droaZAewQuEDzjQdZlQ==}
 
-  /caniuse-lite@1.0.30001618:
-    resolution: {integrity: sha512-p407+D1tIkDvsEAPS22lJxLQQaG8OTBEqo0KhzfABGk0TU4juBNDSfH0hyAp/HRyx+M8L17z/ltyhxh27FTfQg==}
+  /caniuse-lite@1.0.30001620:
+    resolution: {integrity: sha512-WJvYsOjd1/BYUY6SNGUosK9DUidBPDTnOARHp3fSmFO1ekdxaY6nKRttEVrfMmYi80ctS0kz1wiWmm14fVc3ew==}
     dev: false
 
   /capture-exit@2.0.0:
@@ -7028,7 +7028,6 @@ packages:
       - '@glint/template'
       - supports-color
       - webpack
-    dev: false
 
   /ember-basic-dropdown@7.3.0(@babel/core@7.23.2)(@ember/string@3.1.1)(ember-source@5.4.0)(webpack@5.89.0):
     resolution: {integrity: sha512-XzLd1noCrHjG7O35HpZ+ljj7VwPPqon7svbvNJ2U7421e00eXBUVcCioGJFo1NnnPkjc14FTDc5UwktbGSbJdQ==}
@@ -7493,7 +7492,7 @@ packages:
       debug: 4.3.4
       execa: 4.1.0
       fs-extra: 9.1.0
-      resolve: 1.22.2
+      resolve: 1.22.8
       rsvp: 4.8.5
       semver: 7.6.0
       stagehand: 1.0.1
@@ -10322,7 +10321,7 @@ packages:
       heimdalljs: 0.2.6
       heimdalljs-logger: 0.1.10
       path-root: 0.1.1
-      resolve: 1.22.2
+      resolve: 1.22.8
       resolve-package-path: 1.2.7
     transitivePeerDependencies:
       - supports-color
@@ -13641,7 +13640,7 @@ packages:
     resolution: {integrity: sha512-fVEKHGeK85bGbVFuwO9o1aU0n3vqQGrezPc51JGu9UTXpFQfWq5qCeKxyaRUSvephs+06c5j5rPq/dzHGEo8+Q==}
     dependencies:
       path-root: 0.1.1
-      resolve: 1.22.2
+      resolve: 1.22.8
 
   /resolve-package-path@2.0.0:
     resolution: {integrity: sha512-/CLuzodHO2wyyHTzls5Qr+EFeG6RcW4u6//gjYvUfcfyuplIX1SSccU+A5A9A78Gmezkl3NBkFAMxLbzTY9TJA==}
@@ -13765,7 +13764,7 @@ packages:
       '@types/resolve': 0.0.8
       builtin-modules: 3.3.0
       is-module: 1.0.0
-      resolve: 1.22.2
+      resolve: 1.22.8
       rollup: 4.12.0
       rollup-pluginutils: 2.8.2
     dev: false
