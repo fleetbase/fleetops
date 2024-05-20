@@ -450,6 +450,19 @@ export default class ManagementPlacesIndexController extends BaseController {
     }
 
     /**
+     * Handles and prompts for spreadsheet imports of places.
+     *
+     * @void
+     */
+    @action importPlaces() {
+        this.crud.import('place', {
+            onImportCompleted: () => {
+                this.hostRouter.refresh();
+            },
+        });
+    }
+
+    /**
      * View a place location on map
      *
      * @param {PlaceModel} place

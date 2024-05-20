@@ -368,6 +368,19 @@ export default class ManagementContactsIndexController extends BaseController {
     }
 
     /**
+     * Handles and prompts for spreadsheet imports of contacts.
+     *
+     * @void
+     */
+    @action importContacts() {
+        this.crud.import('contact', {
+            onImportCompleted: () => {
+                this.hostRouter.refresh();
+            },
+        });
+    }
+
+    /**
      * Bulk deletes selected `contacts` via confirm prompt
      *
      * @param {Array} selected an array of selected models

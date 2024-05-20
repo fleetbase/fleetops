@@ -137,10 +137,6 @@ export default class ManagementDriversIndexController extends BaseController {
      */
     @tracked sort = '-created_at';
 
-    @tracked uploadQueue = [];
-
-    @tracked isMultipleDropoffOrder = false;
-
     /**
      * The filterable param `public_id`
      *
@@ -217,10 +213,6 @@ export default class ManagementDriversIndexController extends BaseController {
      * @memberof ManagementDriversIndexController
      */
     @tracked layout = 'table';
-
-    @tracked payload = this.store.createRecord('payload');
-
-    @tracked isUploadingFile = false;
 
     /**
      * True if the current layout style is grid.

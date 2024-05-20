@@ -520,6 +520,19 @@ export default class ManagementVehiclesIndexController extends BaseController {
     }
 
     /**
+     * Handles and prompts for spreadsheet imports of vehicles.
+     *
+     * @void
+     */
+    @action importVehicles() {
+        this.crud.import('vehicle', {
+            onImportCompleted: () => {
+                this.hostRouter.refresh();
+            },
+        });
+    }
+
+    /**
      * Allow user to assign driver to a `vehicle` via prompt
      *
      * @param {VehicleModel} vehicle

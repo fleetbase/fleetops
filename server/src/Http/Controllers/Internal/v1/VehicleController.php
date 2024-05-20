@@ -3,11 +3,14 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\VehicleExport;
+use Fleetbase\FleetOps\Imports\VehicleExport as VehicleExports;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\Http\Requests\ExportRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Fleetbase\Http\Requests\ImportRequest;
+use Fleetbase\Models\File;
 use Maatwebsite\Excel\Facades\Excel;
 
 class VehicleController extends FleetOpsController
@@ -63,4 +66,39 @@ class VehicleController extends FleetOpsController
 
         return Excel::download(new VehicleExport($selections), $fileName);
     }
+
+    /**
+     * Process import files (excel,csv) into Fleetbase order data.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function import(ImportRequest $request) {
+        $disk    = $request->input('disk', config('filesystems.default'));
+        $files   = $request->input('files');
+        $files   = File::whereIn('uuid', $files)->get();
+        $validFileTypes = ['csv', 'tsv', 'xls', 'xlsx'];
+        $imports        = collect();
+      
+        foreach ($files as $file) {
+          // validate file type
+          if (!Str::endsWith($file->path, $validFileTypes)) {
+              return response()->error('Invalid file uploaded, must be one of the following: ' . implode(', ', $validFileTypes));
+          }
+      
+          try {
+              $data = Excel::toArray(new VehicleExports(), $file->path, $disk);
+          } catch (\Exception $e) {
+              return response()->error('Invalid file, unable to proccess.');
+          }
+          
+          $imports = $imports->concat($data);
+        }
+        
+        Vehicle::insert($imports);
+        foreach ($imports as $row) {
+            Vehicle::insert($row);
+        }
+      
+        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => $imports->count()]);
+      }
 }

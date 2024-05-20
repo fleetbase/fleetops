@@ -9,7 +9,10 @@ use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Http\Requests\ImportRequest;
+use Fleetbase\FleetOps\Imports\VehicleExport;
 use Illuminate\Http\Request;
+use Fleetbase\Models\File;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -173,4 +176,40 @@ class PlaceController extends FleetOpsController
 
         return response()->json($options);
     }
+
+    
+   /**
+     * Process import files (excel,csv) into Fleetbase order data.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function import(ImportRequest $request) {
+        $disk    = $request->input('disk', config('filesystems.default'));
+        $files   = $request->input('files');
+        $files   = File::whereIn('uuid', $files)->get();
+        $validFileTypes = ['csv', 'tsv', 'xls', 'xlsx'];
+        $imports        = collect();
+      
+        foreach ($files as $file) {
+          // validate file type
+          if (!Str::endsWith($file->path, $validFileTypes)) {
+              return response()->error('Invalid file uploaded, must be one of the following: ' . implode(', ', $validFileTypes));
+          }
+      
+          try {
+              $data = Excel::toArray(new VehicleExport(), $file->path, $disk);
+          } catch (\Exception $e) {
+              return response()->error('Invalid file, unable to proccess.');
+          }
+          
+          $imports = $imports->concat($data);
+        }
+        
+        Place::insert($imports);
+        foreach ($imports as $row) {
+            Place::insert($row);
+        }
+      
+        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => $imports->count()]);
+      }
 }

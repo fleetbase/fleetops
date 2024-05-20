@@ -455,6 +455,19 @@ export default class ManagementVendorsIndexController extends BaseController {
     }
 
     /**
+     * Handles and prompts for spreadsheet imports of vendors.
+     *
+     * @void
+     */
+    @action importVendors() {
+        this.crud.import('vendor', {
+            onImportCompleted: () => {
+                this.hostRouter.refresh();
+            },
+        });
+    }
+
+    /**
      * Edit a vendor's current place
      *
      * @param {VendorModel} vendor

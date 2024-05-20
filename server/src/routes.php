@@ -281,6 +281,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             'contacts',
                             function ($router, $controller) {
                                 $router->match(['get', 'post'], 'export', $controller('export'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                                $router->post('import', $controller('import'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->get('facilitators/{id}', $controller('getAsFacilitator'));
                                 $router->get('customers/{id}', $controller('getAsCustomer'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
@@ -359,6 +360,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->get('avatars', $controller('avatars'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
+                                $router->post('import', $controller('import'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                             }
                         );
                         $router->fleetbaseRoutes('proofs');
@@ -394,6 +396,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->get('statuses', $controller('statuses'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->get('avatars', $controller('avatars'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->match(['get', 'post'], 'export', $controller('export'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                                $router->post('import', $controller('import'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
@@ -406,6 +409,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->get('facilitators/{id}', $controller('getAsFacilitator'));
                                 $router->get('customers/{id}', $controller('getAsCustomer'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
+                                $router->post('import', $controller('import'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                             }
                         );
                         $router->group(
