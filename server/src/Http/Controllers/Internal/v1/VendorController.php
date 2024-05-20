@@ -4,13 +4,15 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\VendorExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Imports\VendorImport;
+use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
-use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
-use Illuminate\Support\Facades\DB;
 use Fleetbase\Http\Requests\ImportRequest;
-use Fleetbase\FleetOps\Imports\VehicleExport;
+use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\Models\File;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -122,39 +124,73 @@ class VendorController extends FleetOpsController
         return response()->json($statuses);
     }
 
-
-     /**
+    /**
      * Process import files (excel,csv) into Fleetbase order data.
      *
      * @return \Illuminate\Http\Response
      */
-    public function import(ImportRequest $request) {
-        $disk    = $request->input('disk', config('filesystems.default'));
-        $files   = $request->input('files');
-        $files   = File::whereIn('uuid', $files)->get();
+    public function import(ImportRequest $request)
+    {
+        $disk           = $request->input('disk', config('filesystems.default'));
+        $files          = $request->input('files');
+        $files          = File::whereIn('uuid', $files)->get();
         $validFileTypes = ['csv', 'tsv', 'xls', 'xlsx'];
         $imports        = collect();
-      
+
         foreach ($files as $file) {
-          // validate file type
-          if (!Str::endsWith($file->path, $validFileTypes)) {
-              return response()->error('Invalid file uploaded, must be one of the following: ' . implode(', ', $validFileTypes));
-          }
-      
-          try {
-              $data = Excel::toArray(new VehicleExport(), $file->path, $disk);
-          } catch (\Exception $e) {
-              return response()->error('Invalid file, unable to proccess.');
-          }
-          
-          $imports = $imports->concat($data);
+            // validate file type
+            if (!Str::endsWith($file->path, $validFileTypes)) {
+                return response()->error('Invalid file uploaded, must be one of the following: ' . implode(', ', $validFileTypes));
+            }
+
+            try {
+                $data = Excel::toArray(new VendorImport(), $file->path, $disk);
+            } catch (\Exception $e) {
+                return response()->error('Invalid file, unable to proccess.');
+            }
+
+            if (count($data) === 1) {
+                $imports = $imports->concat($data[0]);
+            }
         }
-        
-        Vendor::insert($imports);
-        foreach ($imports as $row) {
-            Vendor::insert($row);
-        }
-      
-        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => $imports->count()]);
-      }
+
+        // prepare imports and fix phone
+        $imports = $imports->map(
+            function ($row) {
+                // fix phone
+                if (isset($row['phone'])) {
+                    $row['phone'] = Utils::fixPhone($row['phone']);
+                }
+
+                // handle address
+                if (isset($row['address'])) {
+                    $place = Place::createFromMixed($row['address']);
+                    if ($place) {
+                        $row['place_uuid'] = $place->uuid;
+                    }
+                    unset($row['address']);
+                }
+
+                // handle country
+                if (isset($row['country']) && is_string($row['country']) && strlen($row['country']) > 2) {
+                    $row['country'] = Utils::getCountryCodeByName($row['country']);
+                }
+
+                // handle website
+                if (isset($row['website'])) {
+                    $row['website_url'] = $row['website'];
+                    unset($row['website']);
+                }
+
+                // set default values
+                $row['status'] = 'active';
+                $row['type'] = 'vendor';
+
+                return $row;
+            })->values()->toArray();
+
+        Vendor::bulkInsert($imports);
+
+        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
+    }
 }

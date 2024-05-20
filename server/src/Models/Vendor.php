@@ -49,6 +49,7 @@ class Vendor extends Model
      */
     protected $fillable = [
         '_key',
+        'public_id',
         'internal_id',
         'company_uuid',
         'logo_uuid',
