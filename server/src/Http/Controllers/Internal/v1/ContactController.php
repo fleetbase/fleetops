@@ -4,12 +4,14 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\ContactExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Imports\ContactImport;
 use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\Http\Requests\ExportRequest;
-use Illuminate\Support\Str;
 use Fleetbase\Http\Requests\ImportRequest;
-use Fleetbase\FleetOps\Imports\VehicleExport;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\File;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ContactController extends FleetOpsController
@@ -76,33 +78,71 @@ class ContactController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
-    public function import(ImportRequest $request) {
-        $disk    = $request->input('disk', config('filesystems.default'));
-        $files   = $request->input('files');
-        $files   = File::whereIn('uuid', $files)->get();
+    public function import(ImportRequest $request)
+    {
+        $disk           = $request->input('disk', config('filesystems.default'));
+        $files          = $request->input('files');
+        $files          = File::whereIn('uuid', $files)->get();
         $validFileTypes = ['csv', 'tsv', 'xls', 'xlsx'];
         $imports        = collect();
-      
+    
         foreach ($files as $file) {
-          // validate file type
-          if (!Str::endsWith($file->path, $validFileTypes)) {
-              return response()->error('Invalid file uploaded, must be one of the following: ' . implode(', ', $validFileTypes));
-          }
-      
-          try {
-              $data = Excel::toArray(new VehicleExport(), $file->path, $disk);
-          } catch (\Exception $e) {
-              return response()->error('Invalid file, unable to proccess.');
-          }
-          
-          $imports = $imports->concat($data);
+            // validate file type
+            if (!Str::endsWith($file->path, $validFileTypes)) {
+                return response()->error('Invalid file uploaded, must be one of the following: ' . implode(', ', $validFileTypes));
+            }
+    
+            try {
+                $data = Excel::toArray(new ContactImport(), $file->path, $disk);
+            } catch (\Exception $e) {
+                return response()->error('Invalid file, unable to process.');
+            }
+    
+            if (count($data) === 1) {
+                $imports = $imports->concat($data[0]);
+                
+            }
         }
-        
+    
+        // Prepare imports and fix phone
+        $imports = $imports->map(function ($row) {
+            // Fix phone
+            if (isset($row['phone'])) {
+                $row['phone'] = Utils::fixPhone($row['phone']);
+            }
+
+            // Handle id
+            if (isset($row['id'])) {
+                $row['id'] = $row['id'];
+                unset($row['id']);
+            }
+
+            // handle address
+            if (isset($row['address'])) {
+                $place = Place::createFromMixed($row['address']);
+                if ($place) {
+                    $row['place_uuid'] = $place->uuid;
+                }
+                unset($row['address']);
+            }
+    
+            // Handle internal id
+            if (isset($row['internal id'])) {
+                $row['internal_id'] = $row['internal id'];
+                unset($row['internal id']);
+            }
+    
+            // Assign type
+            $row['type'] = 'vendor';
+    
+            return $row;
+        })->values()->toArray();
+
+    
+        // Bulk insert with excluding 'id' column
         Contact::insert($imports);
-        foreach ($imports as $row) {
-            Contact::insert($row);
-        }
-      
-        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => $imports->count()]);
-      }
+    
+        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
+    }
+    
 }
