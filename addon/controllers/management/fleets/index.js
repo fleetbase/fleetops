@@ -421,6 +421,19 @@ export default class ManagementFleetsIndexController extends BaseController {
     }
 
     /**
+     * Handles and prompts for spreadsheet imports of fleets.
+     *
+     * @void
+     */
+    @action importFleets() {
+        this.crud.import('fleet', {
+            onImportCompleted: () => {
+                this.hostRouter.refresh();
+            },
+        });
+    }
+
+    /**
      * Create a new `fleet` in modal
      *
      * @param {Object} options

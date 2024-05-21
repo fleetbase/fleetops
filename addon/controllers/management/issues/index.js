@@ -396,6 +396,19 @@ export default class ManagementIssuesIndexController extends BaseController {
     }
 
     /**
+     * Handles and prompts for spreadsheet imports of issues.
+     *
+     * @void
+     */
+    @action importIssues() {
+        this.crud.import('issue', {
+            onImportCompleted: () => {
+                this.hostRouter.refresh();
+            },
+        });
+    }
+
+    /**
      * Reload layout view.
      */
     @action reload() {

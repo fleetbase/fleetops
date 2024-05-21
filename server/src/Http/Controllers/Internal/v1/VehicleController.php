@@ -4,7 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\VehicleExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
-use Fleetbase\FleetOps\Imports\VehicleExport as VehicleExports;
+use Fleetbase\FleetOps\Imports\VehicleExport as VehicExports;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
@@ -87,19 +87,41 @@ class VehicleController extends FleetOpsController
             }
 
             try {
-                $data = Excel::toArray(new VehicleExports(), $file->path, $disk);
+                $data = Excel::toArray(new VehicExports(), $file->path, $disk);
             } catch (\Exception $e) {
                 return response()->error('Invalid file, unable to proccess.');
             }
 
-            $imports = $imports->concat($data);
+            if (count($data) === 1) {
+                $imports = $imports->concat($data[0]);
+            }
         }
 
-        Vehicle::insert($imports);
-        foreach ($imports as $row) {
-            Vehicle::insert($row);
-        }
+        // prepare imports and fix phone
+        $imports = $imports->map(
+            function ($row) {
 
-        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => $imports->count()]);
+               // handle created at
+                if (isset($row['created at'])) {
+                    $row['created_at'] = $row['created at'];
+                     unset($row['created at']);
+                }
+
+               // Handle id
+                if (isset($row['id'])) {
+                    $row['public_id'] = $row['id'];
+                    unset($row['id']);
+                }
+
+                // set default values
+                $row['status'] = 'active';
+                $row['online'] = 0;
+
+                return $row;
+            })->values()->toArray();
+
+        Vehicle::bulkInsert($imports);
+
+        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
     }
 }

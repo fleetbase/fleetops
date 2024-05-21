@@ -523,15 +523,21 @@ class DriverController extends FleetOpsController
     
         // Prepare imports and fix phone
         $imports = $imports->map(function ($row) {
-            // Fix phone
+            // Handle phone
             if (isset($row['phone'])) {
                 $row['phone'] = Utils::fixPhone($row['phone']);
+                unset($row['phone']);
             }
 
             // Handle id
             if (isset($row['id'])) {
-                $row['id'] = $row['id'];
+                $row['public_id'] = $row['id'];
                 unset($row['id']);
+            }
+            // Handle name
+            if (isset($row['name'])) {
+                $row['name'] = $row['name'];
+                unset($row['name']);
             }
 
             // Handle internal id
@@ -541,14 +547,13 @@ class DriverController extends FleetOpsController
             }
     
             // Assign type
-            $row['type'] = 'vendor';
+            $row['status'] = 'active';
+            $row['location'] = Utils::parsePointToWkt(new Point(0, 0));
     
             return $row;
         })->values()->toArray();
 
-    
-        // Bulk insert with excluding 'id' column
-        Driver::insert($imports);
+        // Driver::insert($imports);
     
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
     }

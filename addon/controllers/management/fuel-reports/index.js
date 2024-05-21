@@ -354,6 +354,19 @@ export default class ManagementFuelReportsIndexController extends BaseController
     }
 
     /**
+     * Handles and prompts for spreadsheet imports of fuel report.
+     *
+     * @void
+     */
+    @action importIssues() {
+        this.crud.import('fuel-report', {
+            onImportCompleted: () => {
+                this.hostRouter.refresh();
+            },
+        });
+    }
+
+    /**
      * View the selected fuel report
      *
      * @param {FuelReportModel} fuelReport

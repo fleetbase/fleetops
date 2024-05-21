@@ -4,10 +4,11 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\PlaceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
-use Fleetbase\FleetOps\Imports\VehicleExport;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\Http\Requests\ExportRequest;
+use Fleetbase\FleetOps\Imports\PlaceImport;
 use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
@@ -197,19 +198,44 @@ class PlaceController extends FleetOpsController
             }
 
             try {
-                $data = Excel::toArray(new VehicleExport(), $file->path, $disk);
+                $data = Excel::toArray(new PlaceImport(), $file->path, $disk);
             } catch (\Exception $e) {
                 return response()->error('Invalid file, unable to proccess.');
             }
 
-            $imports = $imports->concat($data);
+            if (count($data) === 1) {
+                $imports = $imports->concat($data[0]);
+            }
         }
 
-        Place::insert($imports);
-        foreach ($imports as $row) {
-            Place::insert($row);
-        }
+        $imports = $imports->map(
+            function ($row) {
 
-        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => $imports->count()]);
+                 // fix phone
+                 if (isset($row['phone'])) {
+                    $row['phone'] = Utils::fixPhone($row['phone']);
+                }
+
+               // handle created at
+                if (isset($row['created at'])) {
+                    $row['created_at'] = $row['created at'];
+                     unset($row['created at']);
+                }
+
+                // handle country
+                if (isset($row['country']) && is_string($row['country']) && strlen($row['country']) > 2) {
+                    $row['country'] = Utils::getCountryCodeByName($row['country']);
+                }
+
+               // Handle id
+                if (isset($row['id'])) {
+                    $row['public_id'] = $row['id'];
+                    unset($row['id']);
+                }
+
+                return $row;
+            })->values()->toArray();
+
+        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
     }
 }

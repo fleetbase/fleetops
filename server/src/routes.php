@@ -307,6 +307,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->post('assign-vehicle', $controller('assignVehicle'));
                                 $router->post('remove-vehicle', $controller('removeVehicle'));
                                 $router->match(['get', 'post'], 'export', $controller('export'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                                $router->post('import', $controller('import'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
@@ -314,6 +315,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             'fuel-reports',
                             function ($router, $controller) {
                                 $router->match(['get', 'post'], 'export', $controller('export'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                                $router->post('import', $controller('import'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
@@ -321,6 +323,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             'issues',
                             function ($router, $controller) {
                                 $router->match(['get', 'post'], 'export', $controller('export'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                                $router->post('import', $controller('import'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
