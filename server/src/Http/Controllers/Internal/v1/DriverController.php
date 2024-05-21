@@ -553,7 +553,7 @@ class DriverController extends FleetOpsController
             return $row;
         })->values()->toArray();
 
-        // Driver::insert($imports);
+        Driver::bulkInsert($imports);
     
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
     }

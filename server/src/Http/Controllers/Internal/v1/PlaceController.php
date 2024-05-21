@@ -211,9 +211,27 @@ class PlaceController extends FleetOpsController
         $imports = $imports->map(
             function ($row) {
 
-                 // fix phone
+                // fix phone
                  if (isset($row['phone'])) {
                     $row['phone'] = Utils::fixPhone($row['phone']);
+                }
+
+               // handle street1
+                if (isset($row['street1'])) {
+                $row['street1'] = $row['street1'];
+                 unset($row['street1']);
+                }
+                
+               // handle street2
+                if (isset($row['street2'])) {
+                $row['street2'] = $row['street2'];
+                 unset($row['street2']);
+                }
+
+              // handle postal_code
+               if (isset($row['postal_code'])) {
+                  $row['postal_code'] = $row['postal_code'];
+                   unset($row['postal_code']);
                 }
 
                // handle created at
@@ -232,10 +250,15 @@ class PlaceController extends FleetOpsController
                     $row['public_id'] = $row['id'];
                     unset($row['id']);
                 }
+            
+              // set default values
+               $row['company_uuid'] = session('company');
 
                 return $row;
             })->values()->toArray();
 
-        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
-    }
+            Place::bulkInsert($imports);
+
+            return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
+        }
 }

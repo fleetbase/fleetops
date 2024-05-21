@@ -134,6 +134,7 @@ class ContactController extends FleetOpsController
     
             // Assign type
             $row['type'] = 'vendor';
+            $row['company_uuid'] = session('company');
     
             return $row;
         })->values()->toArray();

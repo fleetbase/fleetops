@@ -90,14 +90,32 @@ class IssueController extends FleetOpsController
                     unset($row['internal id']);
                 }
 
+                if (isset($row['reporter'])) {
+                    $row['reporter_name'] = $row['reporter'];
+                    unset($row['reporter']);
+                }
+
+                if (isset($row['driver'])) {
+                    $row['driver_name'] = $row['driver'];
+                    unset($row['driver']);
+                }
+                
+                if (isset($row['vehicle'])) {
+                    $row['vehicle_name'] = $row['vehicle'];
+                    unset($row['vehicle']);
+                }
+
                 // set default values
                 $row['status'] = 'pending';
-                
+                $row['company_uuid'] = session('company');
+                unset($row['driver_name']);
+                unset($row['reporter']);
+                unset($row['vehicle']);
 
                 return $row;
             })->values()->toArray();
 
-        // dd($imports);
+            dd($imports);
         Issue::bulkInsert($imports);
 
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);

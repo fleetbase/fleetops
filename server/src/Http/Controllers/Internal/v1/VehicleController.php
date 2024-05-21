@@ -97,7 +97,6 @@ class VehicleController extends FleetOpsController
             }
         }
 
-        // prepare imports and fix phone
         $imports = $imports->map(
             function ($row) {
 
@@ -113,9 +112,17 @@ class VehicleController extends FleetOpsController
                     unset($row['id']);
                 }
 
+                // Handle assignee
+                if (isset($row['driver assigned'])) {
+                    $row['driver_name'] = $row['driver assigned'];
+                    unset($row['driver assigned']);
+                }
+
                 // set default values
                 $row['status'] = 'active';
                 $row['online'] = 0;
+                $row['company_uuid'] = session('company');
+                unset($row['name']);
 
                 return $row;
             })->values()->toArray();

@@ -358,7 +358,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      *
      * @void
      */
-    @action importIssues() {
+    @action importFuelReports() {
         this.crud.import('fuel-report', {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
