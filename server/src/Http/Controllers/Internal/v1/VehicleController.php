@@ -99,14 +99,13 @@ class VehicleController extends FleetOpsController
 
         $imports = $imports->map(
             function ($row) {
-
-               // handle created at
+                // handle created at
                 if (isset($row['created at'])) {
                     $row['created_at'] = $row['created at'];
-                     unset($row['created at']);
+                    unset($row['created at']);
                 }
 
-               // Handle id
+                // Handle id
                 if (isset($row['id'])) {
                     $row['public_id'] = $row['id'];
                     unset($row['id']);
@@ -119,8 +118,8 @@ class VehicleController extends FleetOpsController
                 }
 
                 // set default values
-                $row['status'] = 'active';
-                $row['online'] = 0;
+                $row['status']       = 'active';
+                $row['online']       = 0;
                 $row['company_uuid'] = session('company');
                 unset($row['name']);
 

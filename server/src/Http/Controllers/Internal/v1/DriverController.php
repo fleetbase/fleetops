@@ -502,25 +502,24 @@ class DriverController extends FleetOpsController
         $files          = File::whereIn('uuid', $files)->get();
         $validFileTypes = ['csv', 'tsv', 'xls', 'xlsx'];
         $imports        = collect();
-    
+
         foreach ($files as $file) {
             // validate file type
             if (!Str::endsWith($file->path, $validFileTypes)) {
                 return response()->error('Invalid file uploaded, must be one of the following: ' . implode(', ', $validFileTypes));
             }
-    
+
             try {
                 $data = Excel::toArray(new DriverImport(), $file->path, $disk);
             } catch (\Exception $e) {
                 return response()->error('Invalid file, unable to process.');
             }
-    
+
             if (count($data) === 1) {
                 $imports = $imports->concat($data[0]);
-                
             }
         }
-    
+
         // Prepare imports and fix phone
         $imports = $imports->map(function ($row) {
             // Handle phone
@@ -529,32 +528,21 @@ class DriverController extends FleetOpsController
                 unset($row['phone']);
             }
 
-            // Handle id
-            if (isset($row['id'])) {
-                $row['public_id'] = $row['id'];
-                unset($row['id']);
-            }
             // Handle name
             if (isset($row['name'])) {
                 $row['name'] = $row['name'];
                 unset($row['name']);
             }
 
-            // Handle internal id
-            if (isset($row['internal id'])) {
-                $row['internal_id'] = $row['internal id'];
-                unset($row['internal id']);
-            }
-    
             // Assign type
-            $row['status'] = 'active';
+            $row['status']   = 'active';
             $row['location'] = Utils::parsePointToWkt(new Point(0, 0));
-    
+
             return $row;
         })->values()->toArray();
 
         Driver::bulkInsert($imports);
-    
+
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
     }
 }

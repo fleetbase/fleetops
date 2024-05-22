@@ -4,11 +4,14 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\FuelReportExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
-use Fleetbase\Http\Requests\ExportRequest;
-use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Imports\FleetImport;
-use Fleetbase\Models\File;
+use Fleetbase\FleetOps\Models\FuelReport;
+use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Models\File;
+use Fleetbase\Models\User;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -62,20 +65,32 @@ class FuelReportController extends FleetOpsController
 
         $imports = $imports->map(
             function ($row) {
-
-               // handle created at
-                if (isset($row['created at'])) {
-                    $row['created_at'] = $row['created at'];
-                     unset($row['created at']);
+                // Handle driver
+                if (isset($row['driver'])) {
+                    $driverUser = User::where('name', 'like', '%' . $row['driver'] . '%')->where('company_uuid', session('user'))->first();
+                    if ($driverUser) {
+                        $row['driver_uuid'] = $driverUser->uuid;
+                    }
+                    unset($row['driver']);
                 }
 
-               // Handle id
-               if (isset($row['id'])) {
-                $row['public_id'] = $row['id'];
-                unset($row['id']);
-            }
-               // set default values
-               $row['company_uuid'] = session('company');
+                // Handle reporter
+                if (isset($row['reporter'])) {
+                    $reporterUser = User::where('name', 'like', '%' . $row['reporter'] . '%')->where('company_uuid', session('user'))->first();
+                    if ($reporterUser) {
+                        $row['reported_by_uuid'] = $reporterUser->uuid;
+                    }
+                    unset($row['reporter']);
+                }
+
+                // set default point for location columns if not set
+                if (!isset($row['location'])) {
+                    $row['location'] = Utils::parsePointToWkt(new Point(0, 0));
+                }
+
+                // set default values
+                $row['company_uuid'] = session('company');
+
                 return $row;
             })->values()->toArray();
 

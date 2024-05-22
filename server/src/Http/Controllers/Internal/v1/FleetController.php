@@ -5,15 +5,15 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 use Fleetbase\FleetOps\Exports\FleetExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Requests\Internal\FleetActionRequest;
+use Fleetbase\FleetOps\Imports\FleetImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\FleetDriver;
 use Fleetbase\FleetOps\Models\FleetVehicle;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\Http\Requests\ExportRequest;
-use Fleetbase\FleetOps\Imports\FleetImport;
-use Fleetbase\Models\File;
 use Fleetbase\Http\Requests\ImportRequest;
+use Fleetbase\Models\File;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -181,24 +181,11 @@ class FleetController extends FleetOpsController
 
         $imports = $imports->map(
             function ($row) {
-
-               // handle created at
-                if (isset($row['created at'])) {
-                    $row['created_at'] = $row['created at'];
-                     unset($row['created at']);
-                }
-
-               // Handle id
-                if (isset($row['id'])) {
-                    $row['id'] = $row['id'];
-                    unset($row['id']);
-                }
-
                 return $row;
             })->values()->toArray();
-        
-            
+
         Fleet::bulkInsert($imports);
+
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
     }
 }

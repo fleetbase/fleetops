@@ -4,11 +4,15 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\IssueExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
-use Fleetbase\Http\Requests\ExportRequest;
-use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\FleetOps\Imports\IssueImport;
 use Fleetbase\FleetOps\Models\Issue;
+use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Requests\ExportRequest;
+use Fleetbase\Http\Requests\ImportRequest;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\File;
+use Fleetbase\Models\User;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -35,7 +39,7 @@ class IssueController extends FleetOpsController
         return Excel::download(new IssueExport($selections), $fileName);
     }
 
-      /**
+    /**
      * Process import files (excel,csv) into Fleetbase order data.
      *
      * @return \Illuminate\Http\Response
@@ -68,54 +72,55 @@ class IssueController extends FleetOpsController
         // prepare imports and fix phone
         $imports = $imports->map(
             function ($row) {
-         
-               // handle created at
-               if (isset($row['created at'])) {
-                $row['created_at'] = $row['created at'];
-                 unset($row['created at']);
-                }
-
-               if (isset($row['assignee'])) {
-                   $row['assignee'] = $row['assignee'];
+                // Handle assignee
+                if (isset($row['assignee'])) {
+                    $assigneeUser = User::where('name', 'like', '%' . $row['assignee'] . '%')->where('company_uuid', session('user'))->first();
+                    if ($assigneeUser) {
+                        $row['assigned_to_uuid'] = $assigneeUser->uuid;
+                    }
                     unset($row['assignee']);
-                   }   
-
-               if (isset($row['driver'])) {
-                   $row['driver_name'] = $row['driver'];
-                   }
-                
-                // Handle internal id
-                if (isset($row['internal id'])) {
-                    $row['internal_id'] = $row['internal id'];
-                    unset($row['internal id']);
                 }
 
+                // Handle driver
+                if (isset($row['driver'])) {
+                    $driverUser = User::where('name', 'like', '%' . $row['driver'] . '%')->where('company_uuid', session('user'))->first();
+                    if ($driverUser) {
+                        $row['driver_uuid'] = $driverUser->uuid;
+                    }
+                    unset($row['driver']);
+                }
+
+                // Handle reporter
                 if (isset($row['reporter'])) {
-                    $row['reporter_name'] = $row['reporter'];
+                    $reporterUser = User::where('name', 'like', '%' . $row['reporter'] . '%')->where('company_uuid', session('user'))->first();
+                    if ($reporterUser) {
+                        $row['reported_by_uuid'] = $reporterUser->uuid;
+                    }
                     unset($row['reporter']);
                 }
 
-                if (isset($row['driver'])) {
-                    $row['driver_name'] = $row['driver'];
-                    unset($row['driver']);
-                }
-                
+                // Handle vehicle
                 if (isset($row['vehicle'])) {
-                    $row['vehicle_name'] = $row['vehicle'];
+                    $vehicle = Vehicle::search($row['vehicle'])->where('company_uuid', session('user'))->first();
+                    if ($vehicle) {
+                        $row['vehicle_uuid'] = $vehicle->uuid;
+                    }
                     unset($row['vehicle']);
                 }
 
+                // set default point for location columns if not set
+                if (!isset($row['location'])) {
+                    $row['location'] = Utils::parsePointToWkt(new Point(0, 0));
+                }
+
                 // set default values
-                $row['status'] = 'pending';
+                $row['status']       = 'pending';
                 $row['company_uuid'] = session('company');
-                unset($row['driver_name']);
-                unset($row['reporter']);
-                unset($row['vehicle']);
 
                 return $row;
             })->values()->toArray();
 
-            dd($imports);
+        // dd($imports);
         Issue::bulkInsert($imports);
 
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);

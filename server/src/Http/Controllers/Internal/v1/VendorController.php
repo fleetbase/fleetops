@@ -184,7 +184,7 @@ class VendorController extends FleetOpsController
 
                 // set default values
                 $row['status'] = 'active';
-                $row['type'] = 'vendor';
+                $row['type']   = 'vendor';
 
                 return $row;
             })->values()->toArray();

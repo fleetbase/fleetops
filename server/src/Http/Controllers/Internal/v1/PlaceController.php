@@ -4,11 +4,11 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\PlaceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
-use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\FleetOps\Imports\PlaceImport;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\Geocoding;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
-use Fleetbase\FleetOps\Imports\PlaceImport;
 use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
@@ -210,34 +210,22 @@ class PlaceController extends FleetOpsController
 
         $imports = $imports->map(
             function ($row) {
-
-                // fix phone
-                 if (isset($row['phone'])) {
-                    $row['phone'] = Utils::fixPhone($row['phone']);
-                }
-
-               // handle street1
+                // handle street1
                 if (isset($row['street1'])) {
-                $row['street1'] = $row['street1'];
-                 unset($row['street1']);
+                    $row['street1'] = $row['street1'];
+                    unset($row['street1']);
                 }
-                
-               // handle street2
+
+                // handle street2
                 if (isset($row['street2'])) {
-                $row['street2'] = $row['street2'];
-                 unset($row['street2']);
+                    $row['street2'] = $row['street2'];
+                    unset($row['street2']);
                 }
 
-              // handle postal_code
-               if (isset($row['postal_code'])) {
-                  $row['postal_code'] = $row['postal_code'];
-                   unset($row['postal_code']);
-                }
-
-               // handle created at
-                if (isset($row['created at'])) {
-                    $row['created_at'] = $row['created at'];
-                     unset($row['created at']);
+                // handle postal_code
+                if (isset($row['postal code'])) {
+                    $row['postal_code'] = $row['postal code'];
+                    unset($row['postal code']);
                 }
 
                 // handle country
@@ -245,20 +233,18 @@ class PlaceController extends FleetOpsController
                     $row['country'] = Utils::getCountryCodeByName($row['country']);
                 }
 
-               // Handle id
-                if (isset($row['id'])) {
-                    $row['public_id'] = $row['id'];
-                    unset($row['id']);
+                // set default point for location columns if not set
+                if (!isset($row['location'])) {
+                    $row['location'] = Utils::parsePointToWkt(new Point(0, 0));
                 }
-            
-              // set default values
-               $row['company_uuid'] = session('company');
+                // set default values
+                $row['company_uuid'] = session('company');
 
                 return $row;
             })->values()->toArray();
 
-            Place::bulkInsert($imports);
+        Place::bulkInsert($imports);
 
-            return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
-        }
+        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
+    }
 }
