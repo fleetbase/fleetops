@@ -37,13 +37,6 @@ export default class ManagementDriversIndexController extends BaseController {
     @service crud;
 
     /**
-     * Inject the `modalsManager` service
-     *
-     * @var {Service}
-     */
-    @service modalsManager;
-
-    /**
      * Inject the `driverActions` service
      *
      * @var {Service}
@@ -521,7 +514,7 @@ export default class ManagementDriversIndexController extends BaseController {
 
     /**
      * Handles and prompts for spreadsheet imports of drivers.
-     * 
+     *
      * @void
      */
     @action importDrivers() {

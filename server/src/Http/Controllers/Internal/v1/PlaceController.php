@@ -210,18 +210,7 @@ class PlaceController extends FleetOpsController
 
         $imports = $imports->map(
             function ($row) {
-                // handle street1
-                if (isset($row['street1'])) {
-                    $row['street1'] = $row['street1'];
-                    unset($row['street1']);
-                }
-
-                // handle street2
-                if (isset($row['street2'])) {
-                    $row['street2'] = $row['street2'];
-                    unset($row['street2']);
-                }
-
+                
                 // handle postal_code
                 if (isset($row['postal code'])) {
                     $row['postal_code'] = $row['postal code'];

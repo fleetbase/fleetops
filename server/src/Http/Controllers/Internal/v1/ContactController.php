@@ -108,10 +108,6 @@ class ContactController extends FleetOpsController
             if (isset($row['phone'])) {
                 $row['phone'] = Utils::fixPhone($row['phone']);
             }
-            // set default point for location columns if not set
-            if (!isset($row['location'])) {
-                $row['location'] = Utils::parsePointToWkt(new Point(0, 0));
-            }
 
             // Assign type
             $row['type']         = 'contact';
