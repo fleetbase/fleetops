@@ -211,11 +211,26 @@ class PlaceController extends FleetOpsController
         $imports = $imports->map(
             function ($row) {
                 
-                // handle postal_code
-                if (isset($row['postal code'])) {
-                    $row['postal_code'] = $row['postal code'];
-                    unset($row['postal code']);
+                 // Handle address
+                 if (isset($row['address'])) {
+                    $place = Place::createFromMixed($row['address']);
+                    if ($place) {
+                        $row['place_uuid'] = $place->uuid;
+                    }
+                    unset($row['address']);
                 }
+                unset($row['address']);
+
+            
+               // Combine address
+               if (!isset($row['address'])) {
+                $city = $row['city'] ?? '';
+                $state = $row['state'] ?? '';
+                $postal_code = $row['postal code'] ?? '';
+                $street = $row['street'] ?? '';
+                $row['address'] = trim(implode(', ', [$city, $state, $postal_code, $street]), ', ');
+                 }
+                 unset($row['address']);
 
                 // handle country
                 if (isset($row['country']) && is_string($row['country']) && strlen($row['country']) > 2) {
