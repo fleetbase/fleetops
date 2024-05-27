@@ -210,55 +210,8 @@ class PlaceController extends FleetOpsController
 
         $imports = $imports->map(
             function ($row) {
-                // handle address
-                if (isset($row['address']) || (isset($row['street']) && !isset($row['city']))) {
-                    $address = $this->parseAddress($row['address'] ?? $row['street']);
-
-                    $row['city']        = $address['city'] ?? '';
-                    $row['street1']     = $address['street'] ?? '';
-                    $row['state']       = $address['state'] ?? '';
-                    $row['postal_code'] = $address['zip'] ?? '';
-
-                    if (isset($row['address'])) {
-                        unset($row['address']);
-                    }
-
-                    if (isset($row['street'])) {
-                        unset($row['street']);
-                    }
-                }
-
-                unset($row['address']);
-
-                if (!isset($row['address'])) {
-                    $addressData = [
-                        'city'        => data_get($row, 'city', null),
-                        'state'       => data_get($row, 'state', null),
-                        'postal_code' => data_get($row, 'postal_code', null),
-                        'street1'     => data_get($row, 'street', null),
-                    ];
-
-                    $addressData = array_filter($addressData);
-                
-
-                    $row            = array_merge([], $addressData);
-                    $row['address'] = trim(implode(', ', $addressData), ', ');
-                }
-                unset($row['address']);
-
-                // handle country
-                if (isset($row['country']) && is_string($row['country']) && strlen($row['country']) > 2) {
-                    $row['country'] = Utils::getCountryCodeByName($row['country']);
-                }
-
-                // set default point for location columns if not set
-                if (!isset($row['location'])) {
-                    $row['location'] = Utils::parsePointToWkt(new Point(0, 0));
-                }
-                // set default values
-                $row['company_uuid'] = session('company');
+                $row = Place::createFromImport($row);
                 $row['public_id'] = Place::generatePublicId('place');
-
                 return $row;
             }
         )->values()->toArray();
@@ -268,27 +221,4 @@ class PlaceController extends FleetOpsController
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
     }
 
-    public function parseAddress($address)
-    {
-        // Split the address by commas (",")
-        $parts = explode(',', $address);
-
-        // Trim any leading/trailing spaces
-        $street       = trim($parts[0]);
-        $cityStateZip = trim($parts[1]);
-
-        // Further split city, state, and zip (assuming space separated)
-        $cityStateZipParts = explode(' ', $cityStateZip);
-        $city              = $cityStateZipParts[0];
-        $state             = $cityStateZipParts[1];
-        $zip               = $cityStateZipParts[2];
-
-        // Return an array containing all fields
-        return [
-          'street' => $street,
-          'city'   => $city,
-          'state'  => $state,
-          'zip'    => $zip,
-        ];
-    }
 }

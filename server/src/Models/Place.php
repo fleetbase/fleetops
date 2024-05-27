@@ -747,6 +747,64 @@ class Place extends Model
         return $place;
     }
 
+    public static function createFromImport(array $row): Place
+    {
+        // Handle address
+        if (isset($row['address']) || (isset($row['street']) && !isset($row['city']))) {
+            $address = static::parseAddress($row['address'] ?? $row['street']);
+    
+            $row['city'] = $address['city'] ?? '';
+            $row['street1'] = $address['street'] ?? '';
+            $row['state'] = $address['state'] ?? '';
+            $row['postal_code'] = $address['zip'] ?? '';
+    
+            // Unset unnecessary keys
+            unset($row['address']);
+            unset($row['street']);
+        }
+    
+        // Handle country
+        if (isset($row['country']) && is_string($row['country']) && strlen($row['country']) > 2) {
+            $row['country'] = Utils::getCountryCodeByName($row['country']);
+        }
+    
+        // Set default point for location columns if not set
+        if (!isset($row['location'])) {
+            $row['location'] = Utils::parsePointToWkt(new Point(0, 0));
+        }
+    
+        // Set default values
+        $row['company_uuid'] = session('company');
+    
+        // Assuming Place is a model and you want to create an instance of it
+        return Place::create($row);
+    }
+    
+
+    public static function parseAddress($address)
+    {
+        // Split the address by commas (",")
+        $parts = explode(',', $address);
+
+        // Trim any leading/trailing spaces
+        $street       = trim($parts[0]);
+        $cityStateZip = trim($parts[1]);
+
+        // Further split city, state, and zip (assuming space separated)
+        $cityStateZipParts = explode(' ', $cityStateZip);
+        $city              = $cityStateZipParts[0];
+        $state             = $cityStateZipParts[1];
+        $zip               = $cityStateZipParts[2];
+
+        // Return an array containing all fields
+        return [
+          'street' => $street,
+          'city'   => $city,
+          'state'  => $state,
+          'zip'    => $zip,
+        ];
+    }
+
     /**
      * Returns a formatted string representation of the address for this Place instance.
      *
