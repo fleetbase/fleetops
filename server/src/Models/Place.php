@@ -763,6 +763,13 @@ class Place extends Model
             unset($row['street']);
         }
     
+        $latitude = $row['latitude'] ?? null;
+        $longitude = $row['longitude'] ?? null;
+        if ($latitude !== null && $longitude !== null) {
+            $reverseGeocoded = Geocoding::reverseFromCoordinates($latitude, $longitude);
+            $row = array_merge($row, $reverseGeocoded);
+        }
+    
         // Handle country
         if (isset($row['country']) && is_string($row['country']) && strlen($row['country']) > 2) {
             $row['country'] = Utils::getCountryCodeByName($row['country']);
@@ -775,8 +782,7 @@ class Place extends Model
     
         // Set default values
         $row['company_uuid'] = session('company');
-    
-        // Assuming Place is a model and you want to create an instance of it
+
         return Place::create($row);
     }
     

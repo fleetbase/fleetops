@@ -204,20 +204,13 @@ class PlaceController extends FleetOpsController
             }
 
             if (count($data) === 1) {
-                $imports = $imports->concat($data[0]);
+                foreach ($data[0] as $row) {
+                    $importedRow = Place::createFromImport($row);
+                    Place::bulkInsert([$importedRow->toArray()]);
+                    $imports[] = $importedRow->toArray();
+                }
             }
         }
-
-        $imports = $imports->map(
-            function ($row) {
-                $row = Place::createFromImport($row);
-                $row['public_id'] = Place::generatePublicId('place');
-                return $row;
-            }
-        )->values()->toArray();
-
-        Place::bulkInsert($imports);
-
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
     }
 

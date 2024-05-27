@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Imports;
 
 use Illuminate\Support\Collection;
+use Fleetbase\FleetOps\Models\Place;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
@@ -13,6 +14,13 @@ class PlaceImport implements ToCollection, WithHeadingRow
      */
     public function collection(Collection $rows)
     {
-        return $rows;
+        $places = [];
+
+        foreach ($rows as $row) 
+        {
+            $places[] = Place::createFromImport($row);
+        }
+        
+        return $places;
     }
 }
