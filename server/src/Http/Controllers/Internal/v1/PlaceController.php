@@ -239,8 +239,7 @@ class PlaceController extends FleetOpsController
                     ];
 
                     $addressData = array_filter($addressData);
-                    info('row:::', $row);
-                    info('data:::', $addressData);
+                
 
                     $row            = array_merge([], $addressData);
                     $row['address'] = trim(implode(', ', $addressData), ', ');
@@ -258,6 +257,7 @@ class PlaceController extends FleetOpsController
                 }
                 // set default values
                 $row['company_uuid'] = session('company');
+                $row['public_id'] = Place::generatePublicId('place');
 
                 return $row;
             }
