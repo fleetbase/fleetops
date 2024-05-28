@@ -758,10 +758,24 @@ class Place extends Model
             $row['state'] = $address['state'] ?? '';
             $row['postal_code'] = $address['zip'] ?? '';
     
-            // Unset unnecessary keys
             unset($row['address']);
             unset($row['street']);
         }
+
+        if (!isset($row['address'])) {
+            $addressData = [
+                'city'        => data_get($row, 'city', null),
+                'state'       => data_get($row, 'state', null),
+                'postal_code' => data_get($row, 'postal_code', null),
+                'street1'     => data_get($row, 'street', null),
+            ];
+
+            $addressData = array_filter($addressData);
+            $row            = array_merge([], $addressData);
+            $row['address'] = trim(implode(', ', $addressData), ', ');
+        }
+
+        unset($row['address']);
     
         $latitude = $row['latitude'] ?? null;
         $longitude = $row['longitude'] ?? null;

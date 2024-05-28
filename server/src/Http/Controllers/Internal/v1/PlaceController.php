@@ -206,9 +206,9 @@ class PlaceController extends FleetOpsController
             if (count($data) === 1) {
                 foreach ($data[0] as $row) {
                     $importedRow = Place::createFromImport($row);
-                    Place::bulkInsert([$importedRow->toArray()]);
                     $imports[] = $importedRow->toArray();
                 }
+                Place::bulkInsert([$importedRow->toArray()]);
             }
         }
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
