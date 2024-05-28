@@ -14,13 +14,12 @@ class PlaceImport implements ToCollection, WithHeadingRow
      */
     public function collection(Collection $rows)
     {
-        $places = [];
+        foreach ($rows as $row) {
+            if ($row instanceof Collection) {
+                $row = array_filter($row->toArray());
+            }
 
-        foreach ($rows as $row) 
-        {
-            $places[] = Place::createFromImport($row);
+            Place::createFromImport($row, true);
         }
-        
-        return $places;
     }
 }

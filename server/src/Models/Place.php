@@ -667,7 +667,7 @@ class Place extends Model
      *
      * @return Place|null the newly created Place instance, or null if no valid address could be found
      */
-    public static function createFromImportRow($row, $importId, $country = null): ?Place
+    public static function createFromImportRow(array $row, ?string $importId = null, $country = null): ?Place
     {
         $addressFields = [
             'street_number' => ['alias' => ['number', 'house_number', 'st_number']],
@@ -719,7 +719,6 @@ class Place extends Model
         }
 
         $place = Place::createFromGeocodingLookup($address, false);
-
         foreach ($addressFields as $field => $options) {
             if ($place->isFillable($field) && empty($place->{$field})) {
                 $value = Utils::or($row, array_merge([$field], $options['alias']));
@@ -742,50 +741,59 @@ class Place extends Model
         $place->setMeta($meta);
 
         // set the import id
-        $place->setAttribute('_import_id', $importId);
+        if ($importId) {
+            $place->setAttribute('_import_id', $importId);
+        }
 
         return $place;
     }
 
-    public static function createFromImport(array $row): Place
+    public static function createFromImport(array $row, bool $saveInstance = false): Place
     {
-        // Handle address
-        if (isset($row['address']) || (isset($row['street']) && !isset($row['city']))) {
-            $address = static::parseAddress($row['address'] ?? $row['street']);
-    
-            $row['city'] = $address['city'] ?? '';
-            $row['street1'] = $address['street'] ?? '';
-            $row['state'] = $address['state'] ?? '';
-            $row['postal_code'] = $address['zip'] ?? '';
-    
-            // Unset unnecessary keys
-            unset($row['address']);
-            unset($row['street']);
-        }
-    
-        $latitude = $row['latitude'] ?? null;
-        $longitude = $row['longitude'] ?? null;
-        if ($latitude !== null && $longitude !== null) {
-            $reverseGeocoded = Geocoding::reverseFromCoordinates($latitude, $longitude);
-            $row = array_merge($row, $reverseGeocoded);
-        }
-    
-        // Handle country
-        if (isset($row['country']) && is_string($row['country']) && strlen($row['country']) > 2) {
-            $row['country'] = Utils::getCountryCodeByName($row['country']);
-        }
-    
-        // Set default point for location columns if not set
-        if (!isset($row['location'])) {
-            $row['location'] = Utils::parsePointToWkt(new Point(0, 0));
-        }
-    
-        // Set default values
-        $row['company_uuid'] = session('company');
+        // Filter array for null key values
+        $row = array_filter($row);
 
-        return Place::create($row);
+        // Handle single column imports
+        if (count(array_keys($row)) === 1) {
+            // Get the single column name
+            $columnName = array_keys($row)[0];
+
+            // Handle when only address column is provided
+            if (isset($row[$columnName])) {
+                $address = $row[$columnName];
+
+                // Do geocode on address to fill with google provided properties
+                $geocodingResults = Geocoding::query($address, null, null);
+                if ($geocodingResults->count()) {
+                    $place = $geocodingResults->first();
+                    if ($place instanceof Place) {
+                        // Set session values
+                        $place->setAttribute('company_uuid', session('company'));
+                        if ($saveInstance === true) {
+                            $place->save();
+                        }
+
+                        return $place;
+                    }
+                }
+
+                // If no geocoding results provided create place from string
+                return static::createFromMixed($address, ['company_uuid' => session('company')], $saveInstance);
+            }
+        }
+
+        // Handle multiple column import with address values
+        $place = static::createFromImportRow($row);
+        if ($place instanceof Place) {
+            $place->setAttribute('company_uuid', session('company'));
+            if ($saveInstance === true) {
+                $place->save();
+            }
+        }
+
+        return $place;
     }
-    
+
 
     public static function parseAddress($address)
     {

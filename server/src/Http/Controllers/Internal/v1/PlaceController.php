@@ -14,6 +14,7 @@ use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\File;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -186,32 +187,17 @@ class PlaceController extends FleetOpsController
     public function import(ImportRequest $request)
     {
         $disk           = $request->input('disk', config('filesystems.default'));
-        $files          = $request->input('files');
-        $files          = File::whereIn('uuid', $files)->get();
-        $validFileTypes = ['csv', 'tsv', 'xls', 'xlsx'];
-        $imports        = collect();
+        $files          = File::importsFromRequest($request);
 
         foreach ($files as $file) {
-            // validate file type
-            if (!Str::endsWith($file->path, $validFileTypes)) {
-                return response()->error('Invalid file uploaded, must be one of the following: ' . implode(', ', $validFileTypes));
-            }
-
             try {
-                $data = Excel::toArray(new PlaceImport(), $file->path, $disk);
-            } catch (\Exception $e) {
+                Excel::import(new PlaceImport(), $file->path, $disk);
+            } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to proccess.');
             }
-
-            if (count($data) === 1) {
-                foreach ($data[0] as $row) {
-                    $importedRow = Place::createFromImport($row);
-                    Place::bulkInsert([$importedRow->toArray()]);
-                    $imports[] = $importedRow->toArray();
-                }
-            }
         }
-        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
+
+        return response()->json(['status' => 'ok', 'message' => 'Import completed']);
     }
 
 }
