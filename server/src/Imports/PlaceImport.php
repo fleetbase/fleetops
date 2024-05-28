@@ -2,8 +2,8 @@
 
 namespace Fleetbase\FleetOps\Imports;
 
-use Illuminate\Support\Collection;
 use Fleetbase\FleetOps\Models\Place;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 

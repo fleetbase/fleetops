@@ -794,7 +794,6 @@ class Place extends Model
         return $place;
     }
 
-
     public static function parseAddress($address)
     {
         // Split the address by commas (",")

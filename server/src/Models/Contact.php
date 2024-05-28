@@ -239,17 +239,17 @@ class Contact extends Model
         $row = array_filter($row);
 
         // Get contact columns
-        $name = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
+        $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
         $phone = Utils::or($row, ['phone', 'phone_number', 'mobile', 'tel', 'telephone']);
         $email = Utils::or($row, ['email', 'email_address']);
 
         // Create contact
         $contact = new static([
             'company_uuid' => session('company'),
-            'name' => $name,
-            'phone' => Utils::fixPhone($phone),
-            'email' => $email,
-            'type' => 'contact'
+            'name'         => $name,
+            'phone'        => Utils::fixPhone($phone),
+            'email'        => $email,
+            'type'         => 'contact',
         ]);
 
         if ($saveInstance === true) {
