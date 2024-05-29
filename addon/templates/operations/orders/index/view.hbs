@@ -1,5 +1,12 @@
 <Overlay @position="right" @noBackdrop={{true}} @width="570px" @fullHeight={{true}} @isResizable={{true}} @onLoad={{this.setupInterface}} as |overlay|>
-    <Overlay::Header @overlay={{overlay}} @title={{@model.public_id}} @status={{@model.status}} @dispatched={{@model.dispatched}} @createdAt={{@model.createdAt}} @onPressCancel={{this.transitionBack}}>
+    <Overlay::Header
+        @overlay={{overlay}}
+        @title={{@model.public_id}}
+        @status={{@model.status}}
+        @dispatched={{@model.dispatched}}
+        @createdAt={{@model.createdAt}}
+        @onPressCancel={{this.transitionBack}}
+    >
         {{#if @model.canBeDispatched}}
             <Button @type="primary" @icon="paper-plane" @text={{t "fleet-ops.operations.orders.index.view.dispatch"}} class="mr-2" @onClick={{fn this.dispatchOrder @model}} />
         {{/if}}
@@ -81,7 +88,14 @@
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="new-order-overlay-body">
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.activity"}} @open={{true}} @pad={{false}} @isLoading={{not this.loadOrderRelations.isIdle}} @panelBodyWrapperClass="px-0 py-4" @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel
+            @title={{t "fleet-ops.operations.orders.index.view.activity"}}
+            @open={{true}}
+            @pad={{false}}
+            @isLoading={{not this.loadOrderRelations.isIdle}}
+            @panelBodyWrapperClass="px-0 py-4"
+            @panelBodyClass="bg-white dark:bg-gray-800"
+        >
             {{#if @model.tracking_statuses}}
                 <Timeline @activity={{@model.tracking_statuses}} @arrowClass="bg-gray-600 border border-gray-900 shadow-md" as |TimelineItem|>
                     <TimelineItem @activeStatus={{@model.status}} as |trackingStatus|>
@@ -123,7 +137,12 @@
                         <div class="flex flex-row space-x-2">
                             {{#each @model.payload.waypoints as |waypoint|}}
                                 <div class="flex flex-col items-center justify-center text-center">
-                                    <Image src={{avatar-url waypoint.customer.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} class="w-8 h-8 rounded-full shadow-sm mr-2" alt={{waypoint.customer.name}} />
+                                    <Image
+                                        src={{avatar-url waypoint.customer.photo_url}}
+                                        @fallbackSrc={{config "defaultValues.contactImage"}}
+                                        class="w-8 h-8 rounded-full shadow-sm mr-2"
+                                        alt={{waypoint.customer.name}}
+                                    />
                                     <div class="text-xs truncate mt-1 w-12">{{waypoint.customer.name}}</div>
                                     <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                                         <InputInfo>
@@ -140,7 +159,12 @@
                         <div class="field-name">{{t "fleet-ops.operations.orders.index.view.customer"}}</div>
                         <div class="flex flex-row">
                             <div>
-                                <Image src={{avatar-url @model.customer.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} class="w-8 h-8 rounded-md shadow-sm mr-2" alt={{@model.customer.name}} />
+                                <Image
+                                    src={{avatar-url @model.customer.photo_url}}
+                                    @fallbackSrc={{config "defaultValues.contactImage"}}
+                                    class="w-8 h-8 rounded-md shadow-sm mr-2"
+                                    alt={{@model.customer.name}}
+                                />
                             </div>
                             <div>
                                 <div class="field-value">{{n-a @model.customer.name "No Customer"}}</div>
@@ -155,10 +179,15 @@
                     <div class="field-name">{{t "fleet-ops.operations.orders.index.view.facilitator"}}</div>
                     <div class="flex flex-row">
                         <div>
-                            <Image src={{avatar-url @model.facilitator.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} class="w-8 h-8 rounded-md border border-gray-200 dark:border-gray-900 shadow-sm mr-2" alt={{@model.facilitator.name}} />
+                            <Image
+                                src={{avatar-url @model.facilitator.photo_url}}
+                                @fallbackSrc={{config "defaultValues.contactImage"}}
+                                class="w-8 h-8 rounded-md border border-gray-200 dark:border-gray-900 shadow-sm mr-2"
+                                alt={{@model.facilitator.name}}
+                            />
                         </div>
                         <div>
-                            <div class="field-value">{{n-a @model.facilitator.name  "No Facilitator"}}</div>
+                            <div class="field-value">{{n-a @model.facilitator.name "No Facilitator"}}</div>
                             {{#if @model.facilitator}}
                                 <div>{{n-a @model.facilitator.phone "No Phone"}}</div>
                             {{/if}}
@@ -172,7 +201,14 @@
                     <div>
                         <a href="javascript:;" class="flex flex-row" {{on "click" (fn this.focusOrderAssignedDriver @model)}}>
                             <div>
-                                <Image src={{avatar-url @model.driver_assigned.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} width="32" height="32" class="w-8 h-8 rounded-md shadow-sm mr-3 lg:mr-2" alt={{@model.driver_assigned.name}} />
+                                <Image
+                                    src={{avatar-url @model.driver_assigned.photo_url}}
+                                    @fallbackSrc={{config "defaultValues.driverImage"}}
+                                    width="32"
+                                    height="32"
+                                    class="w-8 h-8 rounded-md shadow-sm mr-3 lg:mr-2"
+                                    alt={{@model.driver_assigned.name}}
+                                />
                             </div>
                             <div class="field-value">
                                 <div>{{n-a @model.driver_assigned.name "No Driver"}}</div>
@@ -182,7 +218,13 @@
                             </div>
                         </a>
                         <div class="mt-1">
-                            <Button @size="xs" @type="default" @icon="edit" @text={{if @model.has_driver_assigned (t "fleet-ops.operations.orders.index.view.change-driver") (t "fleet-ops.operations.orders.index.view.assign-driver")}} @onClick={{fn this.assignDriver @model}} />
+                            <Button
+                                @size="xs"
+                                @type="default"
+                                @icon="edit"
+                                @text={{if @model.has_driver_assigned (t "fleet-ops.operations.orders.index.view.change-driver") (t "fleet-ops.operations.orders.index.view.assign-driver")}}
+                                @onClick={{fn this.assignDriver @model}}
+                            />
                         </div>
                     </div>
                 </div>
@@ -193,7 +235,14 @@
                     <div>
                         <a href="javascript:;" class="flex flex-row">
                             <div>
-                                <Image src={{@model.vehicle_assigned.avatar_url}} @fallbackSrc={{config "defaultValues.vehicleAvatar"}} width="24" height="24" class="w-6 h-6 rounded-md shadow-sm mr-3 lg:mr-2" alt={{@model.vehicle_assigned.display_name}} />
+                                <Image
+                                    src={{@model.vehicle_assigned.avatar_url}}
+                                    @fallbackSrc={{config "defaultValues.vehicleAvatar"}}
+                                    width="24"
+                                    height="24"
+                                    class="w-6 h-6 rounded-md shadow-sm mr-3 lg:mr-2"
+                                    alt={{@model.vehicle_assigned.display_name}}
+                                />
                             </div>
                             <div class="field-value">
                                 <div>{{n-a @model.vehicle_assigned.display_name "No Vehicle"}}</div>
@@ -283,7 +332,10 @@
                                     <span class="font-semibold">{{t "fleet-ops.common.total"}}</span>
                                 </td>
                                 <td class="border-b-0">
-                                    <div class="flex flex-row items-center justify-end">{{format-currency @model.purchase_rate.service_quote.amount @model.purchase_rate.service_quote.currency}}</div>
+                                    <div class="flex flex-row items-center justify-end">{{format-currency
+                                            @model.purchase_rate.service_quote.amount
+                                            @model.purchase_rate.service_quote.currency
+                                        }}</div>
                                 </td>
                             </tr>
                         </tbody>
@@ -292,11 +344,23 @@
             </ContentPanel>
         {{/if}}
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.notes-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.notesPanelButtons}}>
+        <ContentPanel
+            @title={{t "fleet-ops.operations.orders.index.view.notes-title"}}
+            @open={{true}}
+            @pad={{true}}
+            @panelBodyClass="bg-white dark:bg-gray-800"
+            @actionButtons={{this.notesPanelButtons}}
+        >
             {{#if this.isEditingOrderNotes}}
                 <Textarea @value={{@model.notes}} class="form-input w-full" placeholder={{t "fleet-ops.operations.orders.index.view.notes-placeholder"}} rows={{4}} />
                 <div class="flex items-center space-x-2">
-                    <Button @type="primary" @icon="save" @text={{t "fleet-ops.operations.orders.index.view.save-order-note"}} @onClick={{perform this.saveOrderNotes}} @isLoading={{not this.saveOrderNotes.isIdle}} />
+                    <Button
+                        @type="primary"
+                        @icon="save"
+                        @text={{t "fleet-ops.operations.orders.index.view.save-order-note"}}
+                        @onClick={{perform this.saveOrderNotes}}
+                        @isLoading={{not this.saveOrderNotes.isIdle}}
+                    />
                     <Button @type="default" @icon="times" @text={{t "fleet-ops.common.cancel"}} @onClick={{this.saveOrderNotes}} />
                 </div>
             {{else}}
@@ -305,13 +369,25 @@
         </ContentPanel>
 
         {{#if @model.isIntegratedVendorOrder}}
-            <ContentPanel @title={{concat @model.facilitator.name (t "fleet-ops.operations.orders.index.view.order-details-title")}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel
+                @title={{concat @model.facilitator.name (t "fleet-ops.operations.orders.index.view.order-details-title")}}
+                @open={{true}}
+                @pad={{true}}
+                @panelBodyClass="bg-white dark:bg-gray-800"
+            >
                 <IntegratedOrderDetails @integratedVendor={{@model.facilitator}} @details={{@model.meta.integrated_vendor_order}} />
             </ContentPanel>
         {{/if}}
 
         {{#if @model.tracking_number}}
-            <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.tracking"}} @prefixTitleRight={{@model.tracking}} @isLoading={{not this.loadOrderRelations.isIdle}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel
+                @title={{t "fleet-ops.operations.orders.index.view.tracking"}}
+                @prefixTitleRight={{@model.tracking}}
+                @isLoading={{not this.loadOrderRelations.isIdle}}
+                @open={{true}}
+                @pad={{true}}
+                @panelBodyClass="bg-white dark:bg-gray-800"
+            >
                 <div class="mb-4 flex justify-end">
                     <Button @size="xs" @type="default" @icon="barcode" @text="Get Order Label" @onClick={{fn this.viewOrderLabel @model}} />
                 </div>
@@ -326,7 +402,13 @@
             </ContentPanel>
         {{/if}}
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.route-panel-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.routePanelButtons}}>
+        <ContentPanel
+            @title={{t "fleet-ops.operations.orders.index.view.route-panel-title"}}
+            @open={{true}}
+            @pad={{true}}
+            @panelBodyClass="bg-white dark:bg-gray-800"
+            @actionButtons={{this.routePanelButtons}}
+        >
             {{#if @model.payload.isMultiDrop}}
                 <div>
                     <RouteList @order={{@model}} />
@@ -366,7 +448,12 @@
                                         <div class="field-info-container">
                                             <div class="flex flex-row">
                                                 <div>
-                                                    <Image src={{avatar-url group.waypoint.customer.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} class="w-8 h-8 rounded-md shadow-sm mr-2" alt={{group.waypoint.customer.name}} />
+                                                    <Image
+                                                        src={{avatar-url group.waypoint.customer.photo_url}}
+                                                        @fallbackSrc={{config "defaultValues.contactImage"}}
+                                                        class="w-8 h-8 rounded-md shadow-sm mr-2"
+                                                        alt={{group.waypoint.customer.name}}
+                                                    />
                                                 </div>
                                                 <div>
                                                     <div class="field-value">{{n-a group.waypoint.customer.name "No Customer"}}</div>
@@ -388,7 +475,15 @@
                                         <Badge @status={{group.waypoint.status_code}} />
                                     </div>
                                     <div class="flex items-start">
-                                        <DropdownButton @triggerClass="mr-2" @iconClass="icon-text-height" @buttonSize="sm" @icon="ellipsis-h" @iconPrefix="fas" @contentClass="dropdown-menu" as |dd|>
+                                        <DropdownButton
+                                            @triggerClass="mr-2"
+                                            @iconClass="icon-text-height"
+                                            @buttonSize="sm"
+                                            @icon="ellipsis-h"
+                                            @iconPrefix="fas"
+                                            @contentClass="dropdown-menu"
+                                            as |dd|
+                                        >
                                             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                                                 <div class="px-1">
                                                     <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-300">
@@ -406,7 +501,13 @@
                                                 </div>
                                             </div>
                                         </DropdownButton>
-                                        <Button @icon="plus" @iconPrefix="fas" @text={{t "fleet-ops.operations.orders.index.view.add-item-button"}} @size="sm" @onClick={{fn this.addEntity group.waypoint}} />
+                                        <Button
+                                            @icon="plus"
+                                            @iconPrefix="fas"
+                                            @text={{t "fleet-ops.operations.orders.index.view.add-item-button"}}
+                                            @size="sm"
+                                            @onClick={{fn this.addEntity group.waypoint}}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -424,7 +525,12 @@
                                                 <div class="dark:text-gray-100 truncate mb-2">
                                                     {{entity.tracking}}
                                                 </div>
-                                                <Button @icon="pencil" @text={{t "fleet-ops.operations.orders.index.view.edit-item-button"}} @size="xs" @onClick={{fn this.editEntity entity}} />
+                                                <Button
+                                                    @icon="pencil"
+                                                    @text={{t "fleet-ops.operations.orders.index.view.edit-item-button"}}
+                                                    @size="xs"
+                                                    @onClick={{fn this.editEntity entity}}
+                                                />
                                             </div>
                                             <div class="absolute top-0 right-0 p-2">
                                                 <Button @icon="times" @iconPrefix="fas" @type="danger" @size="xs" @onClick={{fn this.removeEntity entity}} />
@@ -454,7 +560,14 @@
                                     <Button @icon="pencil" @text={{t "fleet-ops.operations.orders.index.view.edit-item-button"}} @size="sm" @onClick={{fn this.editEntity entity}} />
                                 </div>
                                 <div class="absolute top-0 right-0 p-2">
-                                    <Button @icon="times" @iconPrefix="fas" @type="danger" @size="xs" @onClick={{fn this.removeEntity entity}} @wrapperClass={{if (eq index 0) "invisible"}} />
+                                    <Button
+                                        @icon="times"
+                                        @iconPrefix="fas"
+                                        @type="danger"
+                                        @size="xs"
+                                        @onClick={{fn this.removeEntity entity}}
+                                        @wrapperClass={{if (eq index 0) "invisible"}}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -466,7 +579,9 @@
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.documents-panel-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <div class="space-y-4">
                 {{#if this.isUploading}}
-                    <div class="dropzone w-full rounded-lg px-4 py-8 bg-gray-50 dark:bg-gray-900 bg-opacity-25 text-gray-900 dark:text-white text-center flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-indigo-500">
+                    <div
+                        class="dropzone w-full rounded-lg px-4 py-8 bg-gray-50 dark:bg-gray-900 bg-opacity-25 text-gray-900 dark:text-white text-center flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-indigo-500"
+                    >
                         <div class="flex items-center justify-center py-5">
                             <Spinner class="text-sm dar:text-gray-100" @loadingMessage={{t "fleet-ops.common.uploading"}} />
                         </div>

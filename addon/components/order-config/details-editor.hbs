@@ -14,16 +14,53 @@
 
             <InputGroup @name={{t "fleet-ops.common.name"}} @value={{@orderConfig.name}} />
             <InputGroup @name={{t "fleet-ops.common.description"}} @value={{@orderConfig.description}} />
-            <InputGroup @name={{t "fleet-ops.common.key"}} @value={{@orderConfig.key}} @disabled={{true}} readonly={{true}} @helpText={{t "fleet-ops.component.order-config.details-editor.key-text"}} />
-            <InputGroup @name={{t "fleet-ops.common.namespace"}} @value={{@orderConfig.namespace}} @disabled={{true}} readonly={{true}} @helpText={{t "fleet-ops.component.order-config.details-editor.namespace-text"}} />
-            <InputGroup @name={{t "fleet-ops.component.order-config.details-editor.id"}} @value={{@orderConfig.extension_id}} @disabled={{true}} readonly={{true}} @helpText={{t "fleet-ops.component.order-config.details-editor.id-text"}} />
-            <InputGroup @name={{t "fleet-ops.component.order-config.details-editor.version"}} @value={{@orderConfig.version}} @disabled={{true}} readonly={{true}} @helpText={{t "fleet-ops.component.order-config.details-editor.version-text"}} />
+            <InputGroup
+                @name={{t "fleet-ops.common.key"}}
+                @value={{@orderConfig.key}}
+                @disabled={{true}}
+                readonly={{true}}
+                @helpText={{t "fleet-ops.component.order-config.details-editor.key-text"}}
+            />
+            <InputGroup
+                @name={{t "fleet-ops.common.namespace"}}
+                @value={{@orderConfig.namespace}}
+                @disabled={{true}}
+                readonly={{true}}
+                @helpText={{t "fleet-ops.component.order-config.details-editor.namespace-text"}}
+            />
+            <InputGroup
+                @name={{t "fleet-ops.component.order-config.details-editor.id"}}
+                @value={{@orderConfig.extension_id}}
+                @disabled={{true}}
+                readonly={{true}}
+                @helpText={{t "fleet-ops.component.order-config.details-editor.id-text"}}
+            />
+            <InputGroup
+                @name={{t "fleet-ops.component.order-config.details-editor.version"}}
+                @value={{@orderConfig.version}}
+                @disabled={{true}}
+                readonly={{true}}
+                @helpText={{t "fleet-ops.component.order-config.details-editor.version-text"}}
+            />
         </div>
     </div>
     <div class="flex items-center justify-end">
-        <Button @type="default" @icon="clone" @text={{t "fleet-ops.component.order-config.details-editor.clone"}} @size="sm" @wrapperClass="mr-2" @onClick={{fn this.sendAction "clone" @orderConfig}} />
+        <Button
+            @type="default"
+            @icon="clone"
+            @text={{t "fleet-ops.component.order-config.details-editor.clone"}}
+            @size="sm"
+            @wrapperClass="mr-2"
+            @onClick={{fn this.sendAction "clone" @orderConfig}}
+        />
         {{#if @orderConfig.installed}}
-            <Button @type="danger" @icon="trash" @text={{t "fleet-ops.component.order-config.details-editor.uninstall"}} @size="sm" @onClick={{fn this.sendAction "uninstall" @orderConfig}} />
+            <Button
+                @type="danger"
+                @icon="trash"
+                @text={{t "fleet-ops.component.order-config.details-editor.uninstall"}}
+                @size="sm"
+                @onClick={{fn this.sendAction "uninstall" @orderConfig}}
+            />
         {{else}}
             <Button @type="danger" @icon="trash" @text={{t "fleet-ops.component.order-config.details-editor.delete"}} @size="sm" @onClick={{fn this.sendAction "delete" @orderConfig}} />
         {{/if}}

@@ -280,17 +280,19 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
     }
 
     /**
-     * Bulk deletes selected `order` via confirm prompt
+     * Bulk deletes selected `service rates` via confirm prompt
      *
-     * @param {Array} selected an array of selected models
      * @void
      */
-    @action bulkDeleteServiceRates(selected) {
+    @action bulkDeleteServiceRates() {
+        const selected = this.table.selectedRows;
+
         this.crud.bulkDelete(selected, {
             modelNamePath: `public_id`,
             acceptButtonText: this.intl.t('fleet-ops.operations.service-rates.index.accept-button'),
-            onSuccess: () => {
-                return this.hostRouter.refresh();
+            onSuccess: async () => {
+                await this.hostRouter.refresh();
+                this.table.untoggleSelectAll();
             },
         });
     }

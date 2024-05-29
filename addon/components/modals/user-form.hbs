@@ -25,14 +25,14 @@
                         <label>
                             {{t "fleet-ops.common.name"}}
                         </label>
-                        <Input @value={{@options.user.name}}  @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} />
+                        <Input @value={{@options.user.name}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} />
                     </div>
 
                     <div class="input-group">
                         <label>
                             {{t "fleet-ops.common.email"}}
                         </label>
-                        <Input @value={{@options.user.email}}  @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.email"}} />
+                        <Input @value={{@options.user.email}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.email"}} />
                     </div>
 
                     <div class="input-group">
@@ -46,7 +46,12 @@
                         <label>
                             {{t "fleet-ops.common.country"}}
                         </label>
-                        <CountrySelect class="w-full form-input form-select form-datalist" @value={{@options.user.country}} @onChange={{fn (mut @options.user.country)}} placeholder={{t "fleet-ops.common.country"}} />
+                        <CountrySelect
+                            class="w-full form-input form-select form-datalist"
+                            @value={{@options.user.country}}
+                            @onChange={{fn (mut @options.user.country)}}
+                            placeholder={{t "fleet-ops.common.country"}}
+                        />
                     </div>
                 </div>
             </div>

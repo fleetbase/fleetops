@@ -8,11 +8,30 @@
             <div class="flex-1 space-y-4">
                 <ContentPanel @title={{t "fleet-ops.common.details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
-                        <InputGroup @name={{t "fleet-ops.common.name"}} @value={{@options.entity.name}} @helpText={{t "fleet-ops.component.modals.entity-form.name-text"}} @wrapperClass="mb-2" />
-                        <InputGroup @name={{t "fleet-ops.common.internal-id"}} @value={{@options.entity.internal_id}} @helpText={{t "fleet-ops.component.modals.entity-form.id-text"}} @wrapperClass="mb-2" />
-                        <InputGroup @name={{t "fleet-ops.component.modals.entity-form.sku"}} @value={{@options.entity.sku}} @helpText={{t "fleet-ops.component.modals.entity-form.sku-text"}} @wrapperClass="mb-2" />
+                        <InputGroup
+                            @name={{t "fleet-ops.common.name"}}
+                            @value={{@options.entity.name}}
+                            @helpText={{t "fleet-ops.component.modals.entity-form.name-text"}}
+                            @wrapperClass="mb-2"
+                        />
+                        <InputGroup
+                            @name={{t "fleet-ops.common.internal-id"}}
+                            @value={{@options.entity.internal_id}}
+                            @helpText={{t "fleet-ops.component.modals.entity-form.id-text"}}
+                            @wrapperClass="mb-2"
+                        />
+                        <InputGroup
+                            @name={{t "fleet-ops.component.modals.entity-form.sku"}}
+                            @value={{@options.entity.sku}}
+                            @helpText={{t "fleet-ops.component.modals.entity-form.sku-text"}}
+                            @wrapperClass="mb-2"
+                        />
                         <div></div>
-                        <InputGroup @name={{t "fleet-ops.component.modals.entity-form.description"}} @helpText={{t "fleet-ops.component.modals.entity-form.description-text"}} @wrapperClass="col-span-2 mb-2">
+                        <InputGroup
+                            @name={{t "fleet-ops.component.modals.entity-form.description"}}
+                            @helpText={{t "fleet-ops.component.modals.entity-form.description-text"}}
+                            @wrapperClass="col-span-2 mb-2"
+                        >
                             <Textarea @value={{@options.entity.description}} type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.entity-form.description"}} />
                         </InputGroup>
                     </div>
@@ -21,13 +40,35 @@
                 <ContentPanel @title={{t "fleet-ops.component.modals.entity-form.price-title"}} @open={{false}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
                         <InputGroup @name={{t "fleet-ops.component.modals.entity-form.price"}} @helpText={{t "fleet-ops.component.modals.entity-form.price-text"}} @wrapperClass="mb-2">
-                            <MoneyInput class="w-full" @value={{@options.entity.price}} @currency={{@options.entity.currency}} @canSelectCurrency={{true}} @onCurrencyChange={{fn (mut @options.entity.currency)}} />
+                            <MoneyInput
+                                class="w-full"
+                                @value={{@options.entity.price}}
+                                @currency={{@options.entity.currency}}
+                                @canSelectCurrency={{true}}
+                                @onCurrencyChange={{fn (mut @options.entity.currency)}}
+                            />
                         </InputGroup>
-                        <InputGroup @name={{t "fleet-ops.component.modals.entity-form.sale-price"}} @helpText={{t "fleet-ops.component.modals.entity-form.sale-price-text"}} @wrapperClass="mb-2">
-                            <MoneyInput class="w-full" @value={{@options.entity.sale_price}} @currency={{@options.entity.currency}} @canSelectCurrency={{true}} @onCurrencyChange={{fn (mut @options.entity.currency)}} />
+                        <InputGroup
+                            @name={{t "fleet-ops.component.modals.entity-form.sale-price"}}
+                            @helpText={{t "fleet-ops.component.modals.entity-form.sale-price-text"}}
+                            @wrapperClass="mb-2"
+                        >
+                            <MoneyInput
+                                class="w-full"
+                                @value={{@options.entity.sale_price}}
+                                @currency={{@options.entity.currency}}
+                                @canSelectCurrency={{true}}
+                                @onCurrencyChange={{fn (mut @options.entity.currency)}}
+                            />
                         </InputGroup>
                         <InputGroup @name={{t "fleet-ops.component.modals.entity-form.declare"}} @helpText={{t "fleet-ops.component.modals.entity-form.declare-text"}} @wrapperClass="mb-2">
-                            <MoneyInput class="w-full" @value={{@options.entity.declared_value}} @currency={{@options.entity.currency}} @canSelectCurrency={{true}} @onCurrencyChange={{fn (mut @options.entity.currency)}} />
+                            <MoneyInput
+                                class="w-full"
+                                @value={{@options.entity.declared_value}}
+                                @currency={{@options.entity.currency}}
+                                @canSelectCurrency={{true}}
+                                @onCurrencyChange={{fn (mut @options.entity.currency)}}
+                            />
                         </InputGroup>
                     </div>
                 </ContentPanel>
@@ -35,19 +76,43 @@
                 <ContentPanel @title={{t "fleet-ops.component.modals.entity-form.measurement-title"}} @open={{false}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                     <div class="grid grid-cols-3 gap-1">
                         <InputGroup @name={{t "fleet-ops.component.modals.entity-form.length"}} @helpText={{t "fleet-ops.component.modals.entity-form.length-text"}} @wrapperClass="mb-2">
-                            <UnitInput class="w-full" @value={{@options.entity.length}} @unit={{@options.entity.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut @options.entity.dimensions_unit)}} />
+                            <UnitInput
+                                class="w-full"
+                                @value={{@options.entity.length}}
+                                @unit={{@options.entity.dimensions_unit}}
+                                @canSelectUnit={{true}}
+                                @onUnitChange={{fn (mut @options.entity.dimensions_unit)}}
+                            />
                         </InputGroup>
                         <InputGroup @name={{t "fleet-ops.component.modals.entity-form.width"}} @helpText={{t "fleet-ops.component.modals.entity-form.width-text"}} @wrapperClass="mb-2">
-                            <UnitInput class="w-full" @value={{@options.entity.width}} @unit={{@options.entity.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut @options.entity.dimensions_unit)}} />
+                            <UnitInput
+                                class="w-full"
+                                @value={{@options.entity.width}}
+                                @unit={{@options.entity.dimensions_unit}}
+                                @canSelectUnit={{true}}
+                                @onUnitChange={{fn (mut @options.entity.dimensions_unit)}}
+                            />
                         </InputGroup>
                         <InputGroup @name={{t "fleet-ops.component.modals.entity-form.height"}} @helpText={{t "fleet-ops.component.modals.entity-form.height-text"}} @wrapperClass="mb-2">
-                            <UnitInput class="w-full" @value={{@options.entity.height}} @unit={{@options.entity.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut @options.entity.dimensions_unit)}} />
+                            <UnitInput
+                                class="w-full"
+                                @value={{@options.entity.height}}
+                                @unit={{@options.entity.dimensions_unit}}
+                                @canSelectUnit={{true}}
+                                @onUnitChange={{fn (mut @options.entity.dimensions_unit)}}
+                            />
                         </InputGroup>
                     </div>
                     <div class="grid grid-cols-3 gap-1">
                         <InputGroup @name={{t "fleet-ops.component.modals.entity-form.weight"}} @helpText={{t "fleet-ops.component.modals.entity-form.weight-text"}} @wrapperClass="mb-2">
-                            <UnitInput class="w-full" @value={{@options.entity.weight}} @measurement="weight" @unit={{@options.entity.weight_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut
-                                                            @options.entity.weight_unit)}} />
+                            <UnitInput
+                                class="w-full"
+                                @value={{@options.entity.weight}}
+                                @measurement="weight"
+                                @unit={{@options.entity.weight_unit}}
+                                @canSelectUnit={{true}}
+                                @onUnitChange={{fn (mut @options.entity.weight_unit)}}
+                            />
                         </InputGroup>
                     </div>
                 </ContentPanel>

@@ -1,18 +1,40 @@
-<Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{or this.isResizable @isResizable}} @width={{or this.width @width "570px"}}>
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @onOpen={{this.onOpen}}
+    @onClose={{this.onClose}}
+    @onToggle={{this.onToggle}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizable={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "570px"}}
+>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
                 <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.contact-panel.edit-button"}} @onClick={{this.onEdit}} />
             </div>
             <div class="flex flex-1 justify-end">
-                <Button @type="default" @icon="times" @helpText={{if this.contact.id (t "fleet-ops.component.contact-panel.cancel-edit-button")(t "fleet-ops.component.contact-panel.cancel-new-button") }} @onClick={{this.onPressCancel}} />
+                <Button
+                    @type="default"
+                    @icon="times"
+                    @helpText={{if this.contact.id (t "fleet-ops.component.contact-panel.cancel-edit-button") (t "fleet-ops.component.contact-panel.cancel-new-button")}}
+                    @onClick={{this.onPressCancel}}
+                />
             </div>
         </div>
         <div class="flex flex-row justify-between w-full">
             <div class="flex flex-col flex-1 w-3/4">
                 <div class="flex flex-row">
                     <div class="w-14 flex items-center justify-start">
-                        <Image src={{this.contact.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} alt={{this.contact.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                        <Image
+                            src={{this.contact.photo_url}}
+                            @fallbackSrc={{config "defaultValues.contactImage"}}
+                            alt={{this.contact.name}}
+                            height="48"
+                            width="48"
+                            class="h-12 w-12 rounded-lg shadow-sm"
+                        />
                         <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                             <InputInfo @text={{this.contact.public_id}} />
                         </Attach::Tooltip>

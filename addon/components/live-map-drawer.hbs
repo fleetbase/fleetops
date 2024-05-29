@@ -2,7 +2,7 @@
     <div class="ui-tabs pt-4">
         <nav>
             {{#each this.tabs as |tab|}}
-                <a href="javascript:;" class="ui-tab {{if (eq this.tab.slug tab.slug) 'active' }}" {{on "click" (fn this.onTabChanged tab.slug)}}>
+                <a href="javascript:;" class="ui-tab {{if (eq this.tab.slug tab.slug) 'active'}}" {{on "click" (fn this.onTabChanged tab.slug)}}>
                     <FaIcon @icon={{tab.icon}} class="mr-1" />
                     <span>{{tab.title}}</span>
                 </a>

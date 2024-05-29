@@ -1,4 +1,14 @@
-<Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "570px"}}>
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @onOpen={{this.onOpen}}
+    @onClose={{this.onClose}}
+    @onToggle={{this.onToggle}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizeble={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "570px"}}
+>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
@@ -8,9 +18,21 @@
             </div>
             <div class="flex flex-1 justify-end">
                 <div class="mr-2">
-                    <Button @icon={{if this.vehicle.id "save" "check"}} @type="primary" @text={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.save-vehicle") (t "fleet-ops.component.vehicle-form-panel.create-vehicle")}} @onClick={{perform this.save}} @isLoading={{not this.save.isIdle}} />
+                    <Button
+                        @icon={{if this.vehicle.id "save" "check"}}
+                        @type="primary"
+                        @text={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.save-vehicle") (t "fleet-ops.component.vehicle-form-panel.create-vehicle")}}
+                        @onClick={{perform this.save}}
+                        @isLoading={{not this.save.isIdle}}
+                    />
                 </div>
-                <Button @type="default" @icon="times" @helpText={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.cancel-edit-vehicle") (t "fleet-ops.component.vehicle-form-panel.cancel-new-vehicle")}} @onClick={{this.onPressCancel}} @disabled={{this.isLoading}} />
+                <Button
+                    @type="default"
+                    @icon="times"
+                    @helpText={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.cancel-edit-vehicle") (t "fleet-ops.component.vehicle-form-panel.cancel-new-vehicle")}}
+                    @onClick={{this.onPressCancel}}
+                    @disabled={{this.isLoading}}
+                />
             </div>
         </div>
         <div class="flex flex-row justify-between w-full">
@@ -23,7 +45,15 @@
                                 <InputInfo @text={{t "fleet-ops.component.vehicle-form-panel.upload-photo"}} />
                             </Attach::Tooltip>
                             <div class="upload-avatar-button-wrapper rounded-lg">
-                                <UploadButton @name={{t "fleet-ops.common.photos"}} @accept="image/*" @onFileAdded={{this.onUploadNewPhoto}} @icon="upload" @hideButtonText={{true}} @labelClass="upload-avatar-label-overlay" class="w-12 btn-reset" />
+                                <UploadButton
+                                    @name={{t "fleet-ops.common.photos"}}
+                                    @accept="image/*"
+                                    @onFileAdded={{this.onUploadNewPhoto}}
+                                    @icon="upload"
+                                    @hideButtonText={{true}}
+                                    @labelClass="upload-avatar-label-overlay"
+                                    class="w-12 btn-reset"
+                                />
                             </div>
                         </div>
                     </div>
@@ -88,20 +118,42 @@
                     </InputGroup>
 
                     <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.driver-assigned"}}>
-                        <ModelSelect @modelName="driver" @selectedModel={{this.vehicle.driver}} @placeholder={{t "fleet-ops.component.vehicle-form-panel.select-driver"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.vehicle.driver)}} as |model|>
+                        <ModelSelect
+                            @modelName="driver"
+                            @selectedModel={{this.vehicle.driver}}
+                            @placeholder={{t "fleet-ops.component.vehicle-form-panel.select-driver"}}
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{fn (mut this.vehicle.driver)}}
+                            as |model|
+                        >
                             {{model.name}}
                         </ModelSelect>
                     </InputGroup>
 
                     <InputGroup @name={{t "fleet-ops.common.status"}}>
                         <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                            <PowerSelect @options={{this.vehicleStatusOptions}} @selected={{this.vehicle.status}} @onChange={{fn (mut this.vehicle.status)}} @placeholder={{t "fleet-ops.component.vehicle-form-panel.select-vehicle"}} @triggerClass="form-select form-input" as |status|>
+                            <PowerSelect
+                                @options={{this.vehicleStatusOptions}}
+                                @selected={{this.vehicle.status}}
+                                @onChange={{fn (mut this.vehicle.status)}}
+                                @placeholder={{t "fleet-ops.component.vehicle-form-panel.select-vehicle"}}
+                                @triggerClass="form-select form-input"
+                                as |status|
+                            >
                                 {{smart-humanize status}}
                             </PowerSelect>
                         </div>
                     </InputGroup>
                     <InputGroup @name={{t "fleet-ops.common.coordinates"}} @wrapperClass="col-span-2">
-                        <CoordinatesInput @value={{this.vehicle.location}} @onChange={{this.onCoordinatesChanged}} @onGeocode={{this.onAutocomplete}} @onUpdatedFromMap={{this.onCoordinatesChanged}} @onInit={{this.setCoordinatesInput}} />
+                        <CoordinatesInput
+                            @value={{this.vehicle.location}}
+                            @onChange={{this.onCoordinatesChanged}}
+                            @onGeocode={{this.onAutocomplete}}
+                            @onUpdatedFromMap={{this.onCoordinatesChanged}}
+                            @onInit={{this.setCoordinatesInput}}
+                        />
                     </InputGroup>
                 </div>
             </ContentPanel>

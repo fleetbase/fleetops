@@ -930,8 +930,9 @@ export default class OperationsOrdersIndexController extends BaseController {
         this.crud.bulkDelete(selected, {
             modelNamePath: `public_id`,
             acceptButtonText: 'Delete Orders',
-            onSuccess: () => {
-                return this.hostRouter.refresh();
+            onSuccess: async () => {
+                await this.hostRouter.refresh();
+                this.table.untoggleSelectAll();
             },
         });
     }
@@ -961,8 +962,9 @@ export default class OperationsOrdersIndexController extends BaseController {
                     order.set('status', 'canceled');
                 });
             },
-            onSuccess: () => {
-                return this.hostRouter.refresh();
+            onSuccess: async () => {
+                await this.hostRouter.refresh();
+                this.table.untoggleSelectAll();
             },
         });
     }

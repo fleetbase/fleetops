@@ -18,7 +18,7 @@
                 {{#if this.orderConfig.meta.entities}}
                     {{#each this.orderConfig.meta.entities as |entity index|}}
                         <div class="rounded shadow-sm border border-gray-300 dark:border-gray-700">
-                            <div class="border-b border-gray-300 dark:border-gray-700 dark:bg-gray-900 p-3 ">
+                            <div class="border-b border-gray-300 dark:border-gray-700 dark:bg-gray-900 p-3">
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <FaIcon @icon="box-alt" class="mr-2 dark:text-sky-300" />
@@ -29,7 +29,12 @@
                                         <a href="javascript:;" class="mr-2 btn btn-danger btn-sm" {{on "click" (fn this.removeEntity index)}}>
                                             <FaIcon @icon="trash" />
                                         </a>
-                                        <Button @text={{t "fleet-ops.component.order-config.entities-editor.add-meta"}} @icon="plus" @iconPrefix="fas" @onClick={{fn this.addMetaField index}} />
+                                        <Button
+                                            @text={{t "fleet-ops.component.order-config.entities-editor.add-meta"}}
+                                            @icon="plus"
+                                            @iconPrefix="fas"
+                                            @onClick={{fn this.addMetaField index}}
+                                        />
                                     </div>
                                 </div>
                             </div>

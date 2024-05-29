@@ -6,8 +6,12 @@
     </div>
     <div class="next-dd-menu-seperator"></div>
     <div class="px-1">
-        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn @dd this.triggerCallback "createServiceArea")}}>{{t "fleet-ops.component.map-container.zones-panel.create-service"}}</a>
-        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn @dd this.triggerCallback "focusAllServiceAreas")}}>{{t "fleet-ops.component.map-container.zones-panel.show"}}</a>
+        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn @dd this.triggerCallback "createServiceArea")}}>{{t
+                "fleet-ops.component.map-container.zones-panel.create-service"
+            }}</a>
+        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn @dd this.triggerCallback "focusAllServiceAreas")}}>{{t
+                "fleet-ops.component.map-container.zones-panel.show"
+            }}</a>
         <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn @dd this.triggerCallback "blurAllServiceAreas")}}>{{t "fleet-ops.component.map-container.zones-panel.hide"}}</a>
         {{#each this.serviceAreaRecords as |serviceArea|}}
             <BasicDropdownHover @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
@@ -25,13 +29,24 @@
                         </div>
                         <div class="next-dd-menu-seperator"></div>
                         <div class="px-1">
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "focusServiceArea" serviceArea)}}>{{t "fleet-ops.component.map-container.zones-panel.focus"}} {{serviceArea.name}}...</a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "focusServiceArea" serviceArea)}}>{{t
+                                    "fleet-ops.component.map-container.zones-panel.focus"
+                                }}
+                                {{serviceArea.name}}...</a>
                             {{#if (eq serviceArea this.liveMap.activeServiceArea)}}
-                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "blurServiceArea" serviceArea)}}>{{t "fleet-ops.component.map-container.zones-panel.blur"}}</a>
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "blurServiceArea" serviceArea)}}>{{t
+                                        "fleet-ops.component.map-container.zones-panel.blur"
+                                    }}</a>
                             {{/if}}
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "createZone" serviceArea)}}>{{t "fleet-ops.component.map-container.zones-panel.create-zone"}}</a>
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "editServiceAreaDetails" serviceArea)}}>{{t "fleet-ops.common.edit"}} {{serviceArea.name}}...</a>
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "deleteServiceArea" serviceArea)}}>{{t "fleet-ops.common.delete"}} {{serviceArea.name}}...</a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "createZone" serviceArea)}}>{{t
+                                    "fleet-ops.component.map-container.zones-panel.create-zone"
+                                }}</a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "editServiceAreaDetails" serviceArea)}}>{{t
+                                    "fleet-ops.common.edit"
+                                }}
+                                {{serviceArea.name}}...</a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.triggerCallback "deleteServiceArea" serviceArea)}}>{{t "fleet-ops.common.delete"}}
+                                {{serviceArea.name}}...</a>
                         </div>
                     </div>
                 </dd.Content>

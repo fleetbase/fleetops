@@ -13,7 +13,16 @@
         </div>
         <div class="w-56">
             {{#if @onAddDriver}}
-                <ModelSelect @modelName="driver" @selectedModel={{@options.selectedDriver}} @placeholder={{t "fleet-ops.component.fleet-driver-listing.add-driver"}} @triggerClass="form-select form-input form-select-sm form-input-sm" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{this.onAdd}} as |model|>
+                <ModelSelect
+                    @modelName="driver"
+                    @selectedModel={{@options.selectedDriver}}
+                    @placeholder={{t "fleet-ops.component.fleet-driver-listing.add-driver"}}
+                    @triggerClass="form-select form-input form-select-sm form-input-sm"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{this.onAdd}}
+                    as |model|
+                >
                     {{model.name}}
                 </ModelSelect>
             {{/if}}
@@ -49,7 +58,7 @@
                                 <div class="mr-2">
                                     <div class="relative">
                                         <img src={{driver.photo_url}} alt={{driver.name}} class="w-5 h-5" />
-                                        <FaIcon @icon="circle" class="absolute right-0 top-0 -mr-1 -mt-1 {{if driver.online "text-green-500" "text-yellow-200"}}" />
+                                        <FaIcon @icon="circle" class="absolute right-0 top-0 -mr-1 -mt-1 {{if driver.online 'text-green-500' 'text-yellow-200'}}" />
                                     </div>
                                 </div>
                                 <div>

@@ -1,4 +1,14 @@
-<Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "570px"}}>
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @onOpen={{this.onOpen}}
+    @onClose={{this.onClose}}
+    @onToggle={{this.onToggle}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizeble={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "570px"}}
+>
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i min-h-[127px]">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
@@ -8,9 +18,20 @@
             </div>
             <div class="flex flex-1 justify-end">
                 <div class="mr-2">
-                    <Button @icon={{if this.driver.id "save" "check"}} @type="primary" @text={{if this.driver.id (t "fleet-ops.component.driver-form-panel.save-driver")(t "fleet-ops.component.driver-form-panel.create-driver") }} @onClick={{perform this.save}} @isLoading={{not this.save.isIdle}} />
+                    <Button
+                        @icon={{if this.driver.id "save" "check"}}
+                        @type="primary"
+                        @text={{if this.driver.id (t "fleet-ops.component.driver-form-panel.save-driver") (t "fleet-ops.component.driver-form-panel.create-driver")}}
+                        @onClick={{perform this.save}}
+                        @isLoading={{not this.save.isIdle}}
+                    />
                 </div>
-                <Button @type="default" @icon="times" @helpText={{if this.driver.id (t "fleet-ops.component.driver-form-panel.cancel-edit-driver")(t "fleet-ops.component.driver-form-panel.cancel-new-driver") }} @onClick={{this.onPressCancel}} />
+                <Button
+                    @type="default"
+                    @icon="times"
+                    @helpText={{if this.driver.id (t "fleet-ops.component.driver-form-panel.cancel-edit-driver") (t "fleet-ops.component.driver-form-panel.cancel-new-driver")}}
+                    @onClick={{this.onPressCancel}}
+                />
             </div>
         </div>
         <div class="flex flex-row justify-between w-full">
@@ -18,12 +39,27 @@
                 <div class="flex flex-row">
                     <div class="w-14">
                         <div class="upload-avatar-overlay w-12 h-12 flex items-center justify-start rounded-lg">
-                            <Image src={{this.driver.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{this.driver.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
+                            <Image
+                                src={{this.driver.photo_url}}
+                                @fallbackSrc={{config "defaultValues.driverImage"}}
+                                alt={{this.driver.name}}
+                                height="48"
+                                width="48"
+                                class="h-12 w-12 rounded-lg shadow-sm"
+                            />
                             <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                                 <InputInfo @text={{t "fleet-ops.component.driver-form-panel.upload-new-photo"}} />
                             </Attach::Tooltip>
                             <div class="upload-avatar-button-wrapper rounded-lg">
-                                <UploadButton @name={{t "fleet-ops.common.photos"}} @accept="image/*" @onFileAdded={{this.onUploadNewPhoto}} @icon="upload" @hideButtonText={{true}} @labelClass="upload-avatar-label-overlay" class="w-12 btn-reset" />
+                                <UploadButton
+                                    @name={{t "fleet-ops.common.photos"}}
+                                    @accept="image/*"
+                                    @onFileAdded={{this.onUploadNewPhoto}}
+                                    @icon="upload"
+                                    @hideButtonText={{true}}
+                                    @labelClass="upload-avatar-label-overlay"
+                                    class="w-12 btn-reset"
+                                />
                             </div>
                         </div>
                     </div>
@@ -61,10 +97,26 @@
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4">
         <div class="flex-1 space-y-4">
-            <ContentPanel @title={{t "fleet-ops.component.driver-form-panel.user-account"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.userAccountActionButtons}}>
+            <ContentPanel
+                @title={{t "fleet-ops.component.driver-form-panel.user-account"}}
+                @open={{true}}
+                @pad={{true}}
+                @panelBodyClass="bg-white dark:bg-gray-800"
+                @actionButtons={{this.userAccountActionButtons}}
+            >
                 <div class="mb-4">
                     <InputGroup @name={{t "fleet-ops.component.driver-form-panel.user-account"}} @helpText={{t "fleet-ops.component.driver-form-panel.user-account-help-text"}}>
-                        <ModelSelect @modelName="user" @selectedModel={{this.driver.user}} @placeholder="Select User" @query={{hash doesnt_have_driver=true}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.driver.user)}} as |model|>
+                        <ModelSelect
+                            @modelName="user"
+                            @selectedModel={{this.driver.user}}
+                            @placeholder="Select User"
+                            @query={{hash doesnt_have_driver=true}}
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{fn (mut this.driver.user)}}
+                            as |model|
+                        >
                             <div class="flex flex-row">
                                 <div class="mr-2 w-6">
                                     <Image src={{model.avatar_url}} @fallbackSrc={{config "defaultValues.userImage"}} alt={{this.user.name}} class="w-6 h-6 rounded-md" />
@@ -105,13 +157,31 @@
                     </InputGroup>
 
                     <InputGroup @name={{t "fleet-ops.component.driver-form-panel.vendor"}}>
-                        <ModelSelect @modelName="vendor" @selectedModel={{this.driver.vendor}} @placeholder="Select Vendor" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.driver.vendor)}} as |model|>
+                        <ModelSelect
+                            @modelName="vendor"
+                            @selectedModel={{this.driver.vendor}}
+                            @placeholder="Select Vendor"
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{fn (mut this.driver.vendor)}}
+                            as |model|
+                        >
                             {{model.name}}
                         </ModelSelect>
                     </InputGroup>
 
                     <InputGroup @name={{t "fleet-ops.common.vehicle"}}>
-                        <ModelSelect @modelName="vehicle" @selectedModel={{this.driver.vehicle}} @placeholder={{t "fleet-ops.component.driver-form-panel.select-vehicle"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut this.driver.vehicle)}} as |model|>
+                        <ModelSelect
+                            @modelName="vehicle"
+                            @selectedModel={{this.driver.vehicle}}
+                            @placeholder={{t "fleet-ops.component.driver-form-panel.select-vehicle"}}
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{fn (mut this.driver.vehicle)}}
+                            as |model|
+                        >
                             {{model.display_name}}
                         </ModelSelect>
                     </InputGroup>
@@ -121,18 +191,37 @@
                     </InputGroup>
 
                     <InputGroup @name={{t "fleet-ops.common.country"}}>
-                        <CountrySelect class="w-full form-input form-select form-datalist" @value={{this.driver.country}} @onChange={{fn (mut this.driver.country)}} placeholder={{t "fleet-ops.common.country"}} />
+                        <CountrySelect
+                            class="w-full form-input form-select form-datalist"
+                            @value={{this.driver.country}}
+                            @onChange={{fn (mut this.driver.country)}}
+                            placeholder={{t "fleet-ops.common.country"}}
+                        />
                     </InputGroup>
 
                     <InputGroup @name={{t "fleet-ops.common.status"}}>
                         <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                            <PowerSelect @options={{this.driverStatusOptions}} @selected={{this.driver.status}} @onChange={{fn (mut this.driver.status)}} @placeholder={{t "fleet-ops.common.status"}} @triggerClass="form-select form-input" as |status|>
+                            <PowerSelect
+                                @options={{this.driverStatusOptions}}
+                                @selected={{this.driver.status}}
+                                @onChange={{fn (mut this.driver.status)}}
+                                @placeholder={{t "fleet-ops.common.status"}}
+                                @triggerClass="form-select form-input"
+                                as |status|
+                            >
                                 {{smart-humanize status}}
                             </PowerSelect>
                         </div>
                     </InputGroup>
                     <InputGroup @name={{t "fleet-ops.common.coordinates"}} @wrapperClass="col-span-2">
-                        <CoordinatesInput @value={{this.driver.location}} @onChange={{this.onCoordinatesChanged}} @onGeocode={{this.onAutocomplete}} @onUpdatedFromMap={{this.onCoordinatesChanged}} @onInit={{this.setCoordinatesInput}} @renderInPlace={{false}} />
+                        <CoordinatesInput
+                            @value={{this.driver.location}}
+                            @onChange={{this.onCoordinatesChanged}}
+                            @onGeocode={{this.onAutocomplete}}
+                            @onUpdatedFromMap={{this.onCoordinatesChanged}}
+                            @onInit={{this.setCoordinatesInput}}
+                            @renderInPlace={{false}}
+                        />
                     </InputGroup>
                 </div>
             </ContentPanel>

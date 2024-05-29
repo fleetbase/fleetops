@@ -35,7 +35,12 @@
                                 <div class="flex flex-row space-x-2">
                                     {{#each order.payload.waypoints as |waypoint|}}
                                         <div class="flex flex-col items-center justify-center text-center">
-                                            <Image src={{avatar-url waypoint.customer.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} class="w-8 h-8 rounded-full shadow-sm mr-2" alt={{waypoint.customer.name}} />
+                                            <Image
+                                                src={{avatar-url waypoint.customer.photo_url}}
+                                                @fallbackSrc={{config "defaultValues.contactImage"}}
+                                                class="w-8 h-8 rounded-full shadow-sm mr-2"
+                                                alt={{waypoint.customer.name}}
+                                            />
                                             <div class="text-xs truncate mt-1 w-12">{{waypoint.customer.name}}</div>
                                             <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                                                 <InputInfo>
@@ -52,7 +57,12 @@
                                 <div class="field-name">{{t "fleet-ops.operations.orders.index.view.customer"}}</div>
                                 <div class="flex flex-row">
                                     <div>
-                                        <Image src={{avatar-url order.customer.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} class="w-8 h-8 rounded-md shadow-sm mr-2" alt={{order.customer.name}} />
+                                        <Image
+                                            src={{avatar-url order.customer.photo_url}}
+                                            @fallbackSrc={{config "defaultValues.contactImage"}}
+                                            class="w-8 h-8 rounded-md shadow-sm mr-2"
+                                            alt={{order.customer.name}}
+                                        />
                                     </div>
                                     <div>
                                         <div class="field-value">{{n-a order.customer.name "No Customer"}}</div>
@@ -67,10 +77,15 @@
                             <div class="field-name">{{t "fleet-ops.operations.orders.index.view.facilitator"}}</div>
                             <div class="flex flex-row">
                                 <div>
-                                    <Image src={{avatar-url order.facilitator.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} class="w-8 h-8 rounded-md border border-gray-200 dark:border-gray-900 shadow-sm mr-2" alt={{order.facilitator.name}} />
+                                    <Image
+                                        src={{avatar-url order.facilitator.photo_url}}
+                                        @fallbackSrc={{config "defaultValues.contactImage"}}
+                                        class="w-8 h-8 rounded-md border border-gray-200 dark:border-gray-900 shadow-sm mr-2"
+                                        alt={{order.facilitator.name}}
+                                    />
                                 </div>
                                 <div>
-                                    <div class="field-value">{{n-a order.facilitator.name  "No Facilitator"}}</div>
+                                    <div class="field-value">{{n-a order.facilitator.name "No Facilitator"}}</div>
                                     {{#if order.facilitator}}
                                         <div>{{n-a order.facilitator.phone "No Phone"}}</div>
                                     {{/if}}
@@ -84,7 +99,14 @@
                             <div>
                                 <a href="javascript:;" class="flex flex-row">
                                     <div>
-                                        <Image src={{order.vehicle_assigned.avatar_url}} @fallbackSrc={{config "defaultValues.vehicleAvatar"}} width="24" height="24" class="w-6 h-6 rounded-md shadow-sm mr-3 lg:mr-2" alt={{order.vehicle_assigned.display_name}} />
+                                        <Image
+                                            src={{order.vehicle_assigned.avatar_url}}
+                                            @fallbackSrc={{config "defaultValues.vehicleAvatar"}}
+                                            width="24"
+                                            height="24"
+                                            class="w-6 h-6 rounded-md shadow-sm mr-3 lg:mr-2"
+                                            alt={{order.vehicle_assigned.display_name}}
+                                        />
                                     </div>
                                     <div class="field-value">
                                         <div>{{n-a order.vehicle_assigned.display_name "No Vehicle"}}</div>

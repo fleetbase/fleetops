@@ -1,5 +1,15 @@
 <OrderConfigManager as |Action Context|>
-    <Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{true}} @width="645px">
+    <Overlay
+        @onLoad={{this.setOverlayContext}}
+        @onOpen={{this.onOpen}}
+        @onClose={{this.onClose}}
+        @onToggle={{this.onToggle}}
+        @position="right"
+        @noBackdrop={{true}}
+        @fullHeight={{true}}
+        @isResizeble={{true}}
+        @width="645px"
+    >
         <Overlay::Header @title={{t "fleet-ops.component.order-config-manager.title"}} @onPressCancel={{this.onPressCancel}}>
             <Action.NewOrderConfigButton />
         </Overlay::Header>

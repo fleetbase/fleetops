@@ -3,7 +3,14 @@
         <div class="grid grid-cols-3 gap-1 text-xs dark:text-gray-100">
             <InputGroup @name={{t "fleet-ops.common.name"}} @autocomplete="nope" @value={{@options.place.name}} @wrapperClass="col-span-3" />
             <InputGroup @name={{t "fleet-ops.common.street-1"}} @value={{@options.place.street1}} @wrapperClass="col-span-3">
-                <AutocompleteInput @value={{@options.place.street1}} @fetchUrl="places/lookup" @onSelect={{@options.autocomplete}} placeholder={{t "fleet-ops.common.street-1"}} class="w-full" as |result|>
+                <AutocompleteInput
+                    @value={{@options.place.street1}}
+                    @fetchUrl="places/lookup"
+                    @onSelect={{@options.autocomplete}}
+                    placeholder={{t "fleet-ops.common.street-1"}}
+                    class="w-full"
+                    as |result|
+                >
                     {{result.address}}
                 </AutocompleteInput>
             </InputGroup>
@@ -15,10 +22,21 @@
             <InputGroup @name={{t "fleet-ops.common.city"}} @autocomplete="nope" @value={{@options.place.city}} />
             <InputGroup @name={{t "fleet-ops.common.state"}} @autocomplete="nope" @value={{@options.place.province}} />
             <InputGroup @name={{t "fleet-ops.common.country"}} @wrapperClass="col-span-2">
-                <CountrySelect class="w-full form-input form-select form-datalist" @value={{@options.place.country}} @onChange={{fn (mut @options.place.country)}} placeholder={{t "fleet-ops.common.country"}} />
+                <CountrySelect
+                    class="w-full form-input form-select form-datalist"
+                    @value={{@options.place.country}}
+                    @onChange={{fn (mut @options.place.country)}}
+                    placeholder={{t "fleet-ops.common.country"}}
+                />
             </InputGroup>
             <InputGroup @name={{t "fleet-ops.common.coordinates"}} @wrapperClass="col-span-2">
-                <CoordinatesInput @value={{@options.place.location}} @onChange={{@options.updatePlaceCoordinates}} @onGeocode={{@options.autocomplete}} @onUpdatedFromMap={{@options.reverseGeocode}} @onInit={{@options.setCoordinatesInput}} />
+                <CoordinatesInput
+                    @value={{@options.place.location}}
+                    @onChange={{@options.updatePlaceCoordinates}}
+                    @onGeocode={{@options.autocomplete}}
+                    @onUpdatedFromMap={{@options.reverseGeocode}}
+                    @onInit={{@options.setCoordinatesInput}}
+                />
             </InputGroup>
             <div class="col-span-1"></div>
             <InputGroup @name={{t "fleet-ops.common.phone"}}>

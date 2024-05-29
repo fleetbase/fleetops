@@ -12,7 +12,17 @@
         </div>
         <div class="w-56">
             {{#if @onAddVehicle}}
-                <ModelSelect @modelName="vehicle" @query={{hash assignedFleet=false}}  @selectedModel={{@options.selectedVehicle}} @placeholder={{t "fleet-ops.component.fleet-vehicle-listing.add-vehicle"}} @triggerClass="form-select form-input form-select-sm form-input-sm" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{this.onAdd}} as |model|>
+                <ModelSelect
+                    @modelName="vehicle"
+                    @query={{hash assignedFleet=false}}
+                    @selectedModel={{@options.selectedVehicle}}
+                    @placeholder={{t "fleet-ops.component.fleet-vehicle-listing.add-vehicle"}}
+                    @triggerClass="form-select form-input form-select-sm form-input-sm"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{this.onAdd}}
+                    as |model|
+                >
                     {{model.display_name}}
                 </ModelSelect>
             {{/if}}
@@ -48,7 +58,7 @@
                                 <div class="mr-2">
                                     <div class="relative">
                                         <img src={{vehicle.photo_url}} alt={{vehicle.display_name}} class="w-5 h-5" />
-                                        <FaIcon @icon="circle" class="absolute right-0 top-0 -mr-1 -mt-1 {{if vehicle.online "text-green-500" "text-yellow-200"}}" />
+                                        <FaIcon @icon="circle" class="absolute right-0 top-0 -mr-1 -mt-1 {{if vehicle.online 'text-green-500' 'text-yellow-200'}}" />
                                     </div>
                                 </div>
                                 <div>

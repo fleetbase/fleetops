@@ -5,24 +5,24 @@
     <div class="place-name">
         {{@place.name @place.street1}}
     </div>
-    <div class="place-street1 {{if this.noTitle "hidden"}}">
+    <div class="place-street1 {{if this.noTitle 'hidden'}}">
         {{@place.street1}}
     </div>
-    <div class="place-street2 {{unless @place.street2 "hidden"}}">
+    <div class="place-street2 {{unless @place.street2 'hidden'}}">
         {{@place.street2}}
     </div>
     <div class="flex flex-row place-location">
-        <div class="place-city {{unless @place.city "hidden"}}">
+        <div class="place-city {{unless @place.city 'hidden'}}">
             {{@place.city}}
         </div>
-        <div class="place-province {{unless @place.province "hidden"}}">
+        <div class="place-province {{unless @place.province 'hidden'}}">
             {{@place.province}}
         </div>
-        <div class="place-postalcode {{unless @place.postal_code "hidden"}}">
+        <div class="place-postalcode {{unless @place.postal_code 'hidden'}}">
             {{@place.postal_code}}
         </div>
     </div>
-    <div class="place-country {{unless @place.country "hidden"}}">
+    <div class="place-country {{unless @place.country 'hidden'}}">
         {{@place.country}}
     </div>
 
