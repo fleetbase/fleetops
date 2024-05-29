@@ -463,4 +463,31 @@ class Vehicle extends Model
 
         return $position;
     }
+
+    public static function createFromImport(array $row, bool $saveInstance = false): Vehicle
+    {
+        // Filter array for null key values
+        $row = array_filter($row);
+
+        // Get vehicle columns
+        $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
+        $driver_assigned = Utils::or($row, ['driver_assigned', 'driver_assignee']);
+
+        // Create vehicle
+        $vehicle = new static([
+            'company_uuid' => session('company'),
+            'name'         => $name,
+            'driver'       => $driver_assigned,
+            'type'         => 'contact',
+            'status'       => 'active',
+            'online'         => 0,
+            'status'       => 'active',
+        ]);
+
+        if ($saveInstance === true) {
+            $vehicle->save();
+        }
+
+        return $vehicle;
+    }
 }

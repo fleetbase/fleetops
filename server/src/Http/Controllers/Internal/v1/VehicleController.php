@@ -4,11 +4,10 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\VehicleExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
-use Fleetbase\FleetOps\Imports\VehicleExport as VehicExports;
+use Fleetbase\FleetOps\Imports\VehicleImport;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
-use Fleetbase\Models\File;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -75,59 +74,16 @@ class VehicleController extends FleetOpsController
     public function import(ImportRequest $request)
     {
         $disk           = $request->input('disk', config('filesystems.default'));
-        $files          = $request->input('files');
-        $files          = File::whereIn('uuid', $files)->get();
-        $validFileTypes = ['csv', 'tsv', 'xls', 'xlsx'];
-        $imports        = collect();
+        $files          = $request->resolveFilesFromIds();
 
         foreach ($files as $file) {
-            // validate file type
-            if (!Str::endsWith($file->path, $validFileTypes)) {
-                return response()->error('Invalid file uploaded, must be one of the following: ' . implode(', ', $validFileTypes));
-            }
-
             try {
-                $data = Excel::toArray(new VehicExports(), $file->path, $disk);
-            } catch (\Exception $e) {
+                Excel::import(new VehicleImport(), $file->path, $disk);
+            } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to proccess.');
-            }
-
-            if (count($data) === 1) {
-                $imports = $imports->concat($data[0]);
             }
         }
 
-        $imports = $imports->map(
-            function ($row) {
-                // handle created at
-                if (isset($row['created at'])) {
-                    $row['created_at'] = $row['created at'];
-                    unset($row['created at']);
-                }
-
-                // Handle id
-                if (isset($row['id'])) {
-                    $row['public_id'] = $row['id'];
-                    unset($row['id']);
-                }
-
-                // Handle assignee
-                if (isset($row['driver assigned'])) {
-                    $row['driver_name'] = $row['driver assigned'];
-                    unset($row['driver assigned']);
-                }
-
-                // set default values
-                $row['status']       = 'active';
-                $row['online']       = 0;
-                $row['company_uuid'] = session('company');
-                unset($row['name']);
-
-                return $row;
-            })->values()->toArray();
-
-        Vehicle::bulkInsert($imports);
-
-        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
+        return response()->json(['status' => 'ok', 'message' => 'Import completed']);
     }
 }

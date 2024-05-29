@@ -4,8 +4,10 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
+use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -207,4 +209,54 @@ class Issue extends Model
     {
         return data_get($this, 'assignee.name');
     }
+
+    public static function createFromImport(array $row, bool $saveInstance = false): Issue
+    {
+        // Filter array for null key values
+        $row = array_filter($row);
+
+
+        $assigneeUser = User::where('name', 'like', '%' . $row['assignee'] . '%')->where('company_uuid', session('user'))->first();
+        if ($assigneeUser) {
+            $row['assigned_to_uuid'] = $assigneeUser->uuid;
+        }
+
+        $driverUser = User::where('name', 'like', '%' . $row['driver'] . '%')->where('company_uuid', session('user'))->first();
+        if ($driverUser) {
+            $row['driver_uuid'] = $driverUser->uuid;
+        }
+
+        $reporterUser = User::where('name', 'like', '%' . $row['reporter'] . '%')->where('company_uuid', session('user'))->first();
+        if ($reporterUser) {
+            $row['reported_by_uuid'] = $reporterUser->uuid;
+        }
+
+        $vehicle = Vehicle::search($row['vehicle'])->where('company_uuid', session('user'))->first();
+        if ($vehicle) {
+            $row['vehicle_uuid'] = $vehicle->uuid;
+        }
+
+        // Get contact columns
+        $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
+
+        // Create contact
+        $issue = new static([
+            'company_uuid' => session('company'),
+            'name'         => $name,
+            'reporter'     => $reporterUser,
+            'assignee'     => $assigneeUser,
+            'vehicle'      => $vehicle,
+            'driver'       => $driverUser,
+            'location'     => Utils::parsePointToWkt(new Point(0, 0)),
+            'status'       => 'pending',
+        ]);
+
+        if ($saveInstance === true) {
+            $issue->save();
+        }
+
+        return $issue;
+    }
+
+    
 }

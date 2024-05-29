@@ -132,65 +132,16 @@ class VendorController extends FleetOpsController
     public function import(ImportRequest $request)
     {
         $disk           = $request->input('disk', config('filesystems.default'));
-        $files          = $request->input('files');
-        $files          = File::whereIn('uuid', $files)->get();
-        $validFileTypes = ['csv', 'tsv', 'xls', 'xlsx'];
-        $imports        = collect();
+        $files          = $request->resolveFilesFromIds();
 
         foreach ($files as $file) {
-            // validate file type
-            if (!Str::endsWith($file->path, $validFileTypes)) {
-                return response()->error('Invalid file uploaded, must be one of the following: ' . implode(', ', $validFileTypes));
-            }
-
             try {
-                $data = Excel::toArray(new VendorImport(), $file->path, $disk);
-            } catch (\Exception $e) {
+                Excel::import(new VendorImport(), $file->path, $disk);
+            } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to proccess.');
-            }
-
-            if (count($data) === 1) {
-                $imports = $imports->concat($data[0]);
             }
         }
 
-        // prepare imports and fix phone
-        $imports = $imports->map(
-            function ($row) {
-                // fix phone
-                if (isset($row['phone'])) {
-                    $row['phone'] = Utils::fixPhone($row['phone']);
-                }
-
-                // handle address
-                if (isset($row['address'])) {
-                    $place = Place::createFromMixed($row['address']);
-                    if ($place) {
-                        $row['place_uuid'] = $place->uuid;
-                    }
-                    unset($row['address']);
-                }
-
-                // handle country
-                if (isset($row['country']) && is_string($row['country']) && strlen($row['country']) > 2) {
-                    $row['country'] = Utils::getCountryCodeByName($row['country']);
-                }
-
-                // handle website
-                if (isset($row['website'])) {
-                    $row['website_url'] = $row['website'];
-                    unset($row['website']);
-                }
-
-                // set default values
-                $row['status'] = 'active';
-                $row['type']   = 'vendor';
-
-                return $row;
-            })->values()->toArray();
-
-        Vendor::bulkInsert($imports);
-
-        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
+        return response()->json(['status' => 'ok', 'message' => 'Import completed']);
     }
 }

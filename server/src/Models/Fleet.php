@@ -228,8 +228,6 @@ class Fleet extends Model
         $fleet = new static([
             'company_uuid' => session('company'),
             'name'         => $name,
-            'type'         => 'fleet',
-            'vendor'       => 'active',
         ]);
 
         if ($saveInstance === true) {

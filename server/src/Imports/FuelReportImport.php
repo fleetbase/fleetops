@@ -1,12 +1,12 @@
 <?php
 
 namespace Fleetbase\FleetOps\Imports;
-use Fleetbase\FleetOps\Models\Issue;
+use Fleetbase\FleetOps\Models\FuelReport;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
-class IssueImport implements ToCollection, WithHeadingRow
+class FuelReportImport implements ToCollection, WithHeadingRow
 {
     /**
      * @return Collection
@@ -18,7 +18,7 @@ class IssueImport implements ToCollection, WithHeadingRow
                 $row = array_filter($row->toArray());
             }
 
-            Issue::createFromImport($row, true);
+            FuelReport::createFromImport($row, true);
         }
     }
 }

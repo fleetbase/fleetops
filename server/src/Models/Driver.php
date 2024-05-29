@@ -629,4 +629,31 @@ class Driver extends Model
 
         return $user;
     }
+
+    public static function createFromImport(array $row, bool $saveInstance = false): Driver
+    {
+        // Filter array for null key values
+        $row = array_filter($row);
+
+        // Get driver columns
+        $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'driver', 'person']);
+        $phone = Utils::or($row, ['phone', 'phone_number', 'mobile', 'tel', 'telephone']);
+
+
+        // Create driver
+        $driver = new static([
+            'company_uuid' => session('company'),
+            'user_uuid' => session('user'),
+            'name'         => $name,
+            'phone'        => Utils::fixPhone($phone),
+            'status'       => 'active',
+            'location'     => Utils::parsePointToWkt(new Point(0, 0)),
+        ]);
+
+        if ($saveInstance === true) {
+            $driver->save();
+        }
+
+        return $driver;
+    }
 }

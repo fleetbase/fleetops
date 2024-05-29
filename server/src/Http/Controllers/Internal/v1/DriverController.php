@@ -16,7 +16,6 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
-use Fleetbase\Models\File;
 use Fleetbase\Models\Invite;
 use Fleetbase\Models\User;
 use Fleetbase\Models\VerificationCode;
@@ -498,51 +497,16 @@ class DriverController extends FleetOpsController
     public function import(ImportRequest $request)
     {
         $disk           = $request->input('disk', config('filesystems.default'));
-        $files          = $request->input('files');
-        $files          = File::whereIn('uuid', $files)->get();
-        $validFileTypes = ['csv', 'tsv', 'xls', 'xlsx'];
-        $imports        = collect();
+        $files          = $request->resolveFilesFromIds();
 
         foreach ($files as $file) {
-            // validate file type
-            if (!Str::endsWith($file->path, $validFileTypes)) {
-                return response()->error('Invalid file uploaded, must be one of the following: ' . implode(', ', $validFileTypes));
-            }
-
             try {
-                $data = Excel::toArray(new DriverImport(), $file->path, $disk);
-            } catch (\Exception $e) {
-                return response()->error('Invalid file, unable to process.');
-            }
-
-            if (count($data) === 1) {
-                $imports = $imports->concat($data[0]);
+                Excel::import(new DriverImport(), $file->path, $disk);
+            } catch (\Throwable $e) {
+                return response()->error('Invalid file, unable to proccess.');
             }
         }
 
-        // Prepare imports and fix phone
-        $imports = $imports->map(function ($row) {
-            // Handle phone
-            if (isset($row['phone'])) {
-                $row['phone'] = Utils::fixPhone($row['phone']);
-                unset($row['phone']);
-            }
-
-            // Handle name
-            if (isset($row['name'])) {
-                $row['name'] = $row['name'];
-                unset($row['name']);
-            }
-
-            // Assign type
-            $row['status']   = 'active';
-            $row['location'] = Utils::parsePointToWkt(new Point(0, 0));
-
-            return $row;
-        })->values()->toArray();
-
-        Driver::bulkInsert($imports);
-
-        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
+        return response()->json(['status' => 'ok', 'message' => 'Import completed']);
     }
 }
