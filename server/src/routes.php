@@ -385,6 +385,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                         $router->fleetbaseRoutes(
                             'service-rates',
                             function ($router, $controller) {
+                                $router->delete('bulk-delete', $controller('bulkDelete'));
                                 $router->get('for-route', $controller('getServicesForRoute'));
                                 $router->match(['get', 'post'], 'export', $controller('export'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->get('for-route', $controller('getServicesForRoute'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
