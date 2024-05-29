@@ -8,7 +8,6 @@ use Fleetbase\FleetOps\Imports\ContactImport;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
-use Fleetbase\Models\File;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -79,7 +78,7 @@ class ContactController extends FleetOpsController
     public function import(ImportRequest $request)
     {
         $disk           = $request->input('disk', config('filesystems.default'));
-        $files          = File::importsFromRequest($request);
+        $files          = $request->resolveFilesFromIds();
 
         foreach ($files as $file) {
             try {

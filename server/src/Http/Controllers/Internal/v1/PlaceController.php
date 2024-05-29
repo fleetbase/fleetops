@@ -11,7 +11,6 @@ use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
-use Fleetbase\Models\File;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -185,7 +184,7 @@ class PlaceController extends FleetOpsController
     public function import(ImportRequest $request)
     {
         $disk           = $request->input('disk', config('filesystems.default'));
-        $files          = $request->filesFromIds();
+        $files          = $request->resolveFilesFromIds();
 
         foreach ($files as $file) {
             try {
