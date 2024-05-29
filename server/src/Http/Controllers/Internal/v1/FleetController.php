@@ -157,35 +157,16 @@ class FleetController extends FleetOpsController
     public function import(ImportRequest $request)
     {
         $disk           = $request->input('disk', config('filesystems.default'));
-        $files          = $request->input('files');
-        $files          = File::whereIn('uuid', $files)->get();
-        $validFileTypes = ['csv', 'tsv', 'xls', 'xlsx'];
-        $imports        = collect();
+        $files          = File::importsFromRequest($request);
 
         foreach ($files as $file) {
-            // validate file type
-            if (!Str::endsWith($file->path, $validFileTypes)) {
-                return response()->error('Invalid file uploaded, must be one of the following: ' . implode(', ', $validFileTypes));
-            }
-
             try {
-                $data = Excel::toArray(new FleetImport(), $file->path, $disk);
-            } catch (\Exception $e) {
+                Excel::import(new FleetImport(), $file->path, $disk);
+            } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to proccess.');
-            }
-
-            if (count($data) === 1) {
-                $imports = $imports->concat($data[0]);
             }
         }
 
-        $imports = $imports->map(
-            function ($row) {
-                return $row;
-            })->values()->toArray();
-
-        Fleet::bulkInsert($imports);
-
-        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'count' => count($imports)]);
+        return response()->json(['status' => 'ok', 'message' => 'Import completed']);
     }
 }

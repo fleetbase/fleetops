@@ -79,7 +79,7 @@ class ContactController extends FleetOpsController
     public function import(ImportRequest $request)
     {
         $disk           = $request->input('disk', config('filesystems.default'));
-        $files          = File::importsFromRequest($request);
+        $files          = $request->filesFromIds();
 
         foreach ($files as $file) {
             try {
