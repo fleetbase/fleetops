@@ -111,7 +111,7 @@ class Issue extends Model
      */
     public function reportedBy()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
     /**
@@ -119,7 +119,7 @@ class Issue extends Model
      */
     public function reporter()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class, 'reported_by_uuid');
+        return $this->belongsTo(User::class, 'reported_by_uuid');
     }
 
     /**
@@ -127,7 +127,7 @@ class Issue extends Model
      */
     public function assignedTo()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
     /**
@@ -135,7 +135,7 @@ class Issue extends Model
      */
     public function assignee()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class, 'assigned_to_uuid');
+        return $this->belongsTo(User::class, 'assigned_to_uuid');
     }
 
     /**
@@ -215,29 +215,32 @@ class Issue extends Model
         // Filter array for null key values
         $row = array_filter($row);
 
+        // Get contact columns
+        $name      = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
+        $reporter  = Utils::or($row, ['reporter', 'report']);
+        $assignee  = Utils::or($row, ['assignee']);
+        $vehicle   = Utils::or($row, ['vehicle', 'vehicle_name']);
+        $driver    = Utils::or($row, ['driver']);
 
-        $assigneeUser = User::where('name', 'like', '%' . $row['assignee'] . '%')->where('company_uuid', session('user'))->first();
+        $assigneeUser = User::where('name', 'like', '%' . $assignee . '%')->where('company_uuid', session('user'))->first();
         if ($assigneeUser) {
             $row['assigned_to_uuid'] = $assigneeUser->uuid;
         }
 
-        $driverUser = User::where('name', 'like', '%' . $row['driver'] . '%')->where('company_uuid', session('user'))->first();
+        $driverUser = User::where('name', 'like', '%' . $driver . '%')->where('company_uuid', session('user'))->first();
         if ($driverUser) {
             $row['driver_uuid'] = $driverUser->uuid;
         }
 
-        $reporterUser = User::where('name', 'like', '%' . $row['reporter'] . '%')->where('company_uuid', session('user'))->first();
+        $reporterUser = User::where('name', 'like', '%' . $reporter . '%')->where('company_uuid', session('user'))->first();
         if ($reporterUser) {
             $row['reported_by_uuid'] = $reporterUser->uuid;
         }
 
-        $vehicle = Vehicle::search($row['vehicle'])->where('company_uuid', session('user'))->first();
+        $vehicle = Vehicle::search($vehicle)->where('company_uuid', session('user'))->first();
         if ($vehicle) {
             $row['vehicle_uuid'] = $vehicle->uuid;
         }
-
-        // Get contact columns
-        $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
 
         // Create contact
         $issue = new static([
@@ -257,6 +260,4 @@ class Issue extends Model
 
         return $issue;
     }
-
-    
 }

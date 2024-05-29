@@ -470,18 +470,18 @@ class Vehicle extends Model
         $row = array_filter($row);
 
         // Get vehicle columns
-        $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
+        $name            = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
         $driver_assigned = Utils::or($row, ['driver_assigned', 'driver_assignee']);
 
         // Create vehicle
         $vehicle = new static([
-            'company_uuid' => session('company'),
-            'name'         => $name,
-            'driver'       => $driver_assigned,
-            'type'         => 'contact',
-            'status'       => 'active',
+            'company_uuid'   => session('company'),
+            'name'           => $name,
+            'driver'         => $driver_assigned,
+            'type'           => 'contact',
+            'status'         => 'active',
             'online'         => 0,
-            'status'       => 'active',
+            'status'         => 'active',
         ]);
 
         if ($saveInstance === true) {

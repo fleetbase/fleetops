@@ -3,8 +3,8 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
-use Fleetbase\Models\Model;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasPublicId;
@@ -249,10 +249,10 @@ class Vendor extends Model
         $row = array_filter($row);
 
         // Get vendor columns
-        $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'person']);
-        $phone = Utils::or($row, ['phone', 'phone_number', 'mobile', 'tel', 'telephone']);
-        $email = Utils::or($row, ['email', 'email_address']);
-        $website = Utils::or($row, ['website', 'website_url','website url']);
+        $name    = Utils::or($row, ['name', 'full_name', 'first_name', 'person']);
+        $phone   = Utils::or($row, ['phone', 'phone_number', 'mobile', 'tel', 'telephone']);
+        $email   = Utils::or($row, ['email', 'email_address']);
+        $website = Utils::or($row, ['website', 'website_url', 'website url']);
         $country = Utils::or($row, ['country']);
 
         $place = Place::createFromMixed($row['address']);

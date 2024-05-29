@@ -1,6 +1,7 @@
 <?php
 
 namespace Fleetbase\FleetOps\Imports;
+
 use Fleetbase\FleetOps\Models\Vendor;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;

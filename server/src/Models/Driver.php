@@ -639,11 +639,9 @@ class Driver extends Model
         $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'driver', 'person']);
         $phone = Utils::or($row, ['phone', 'phone_number', 'mobile', 'tel', 'telephone']);
 
-
         // Create driver
         $driver = new static([
             'company_uuid' => session('company'),
-            'user_uuid' => session('user'),
             'name'         => $name,
             'phone'        => Utils::fixPhone($phone),
             'status'       => 'active',

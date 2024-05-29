@@ -259,5 +259,3 @@ class Contact extends Model
         return $contact;
     }
 }
-
-
