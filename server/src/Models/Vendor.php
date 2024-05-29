@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
 use Fleetbase\Models\Model;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasPublicId;
@@ -240,5 +241,42 @@ class Vendor extends Model
     public function setStatusAttribute(?string $status = 'active')
     {
         $this->attributes['status'] = $status ?? 'active';
+    }
+
+    public static function createFromImport(array $row, bool $saveInstance = false): Vendor
+    {
+        // Filter array for null key values
+        $row = array_filter($row);
+
+        // Get vendor columns
+        $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'person']);
+        $phone = Utils::or($row, ['phone', 'phone_number', 'mobile', 'tel', 'telephone']);
+        $email = Utils::or($row, ['email', 'email_address']);
+        $website = Utils::or($row, ['website', 'website_url','website url']);
+        $country = Utils::or($row, ['country']);
+
+        $place = Place::createFromMixed($row['address']);
+        if ($place) {
+            $row['place_uuid'] = $place->uuid;
+        }
+
+        // Create vendor
+        $vendor = new static([
+            'company_uuid' => session('company'),
+            'name'         => $name,
+            'phone'        => Utils::fixPhone($phone),
+            'address'      => $place,
+            'email'        => $email,
+            'type'         => 'vendor',
+            'country'      => Utils::getCountryCodeByName($country),
+            'status'       => 'active',
+            'website'      => $website,
+        ]);
+
+        if ($saveInstance === true) {
+            $vendor->save();
+        }
+
+        return $vendor;
     }
 }

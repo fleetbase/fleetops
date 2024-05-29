@@ -11,6 +11,7 @@ use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
+use Fleetbase\Models\User;
 use Fleetbase\Traits\TracksApiCredential;
 
 class FuelReport extends Model
@@ -172,5 +173,33 @@ class FuelReport extends Model
     public function getReporterNameAttribute()
     {
         return data_get($this, 'reportedBy.name');
+    }
+
+    public static function createFromImport(array $row, bool $saveInstance = false): FuelReport
+    {
+        // Filter array for null key values
+        $row = array_filter($row);
+
+        // Get fuelReport columns
+        $reporter = Utils::or($row, ['report','reporter', 'reported']);
+        $reported_user = User::where('name', 'like', '%' . $reporter . '%')->where('company_uuid', session('user'))->first();
+        if ($reported_user) {
+            $row['driver_uuid'] = $reported_user->uuid;
+        }
+        $email = Utils::or($row, ['email', 'email_address']);
+
+        // Create fuelReport
+        $fuelReport = new static([
+            'company_uuid' => session('company'),
+            'email'        => $email,
+            'report'       => $reported_user,
+            'odometer'     => 0,
+        ]);
+
+        if ($saveInstance === true) {
+            $fuelReport->save();
+        }
+
+        return $fuelReport;
     }
 }
