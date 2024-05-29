@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Models\Model;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -213,5 +214,28 @@ class Fleet extends Model
     public function getVehiclesOnlineCountAttribute()
     {
         return $this->vehicles()->where('online', 1)->count();
+    }
+
+    public static function createFromImport(array $row, bool $saveInstance = false): Fleet
+    {
+        // Filter array for null key values
+        $row = array_filter($row);
+
+        // Get fleet columns
+        $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
+
+        // Create contact
+        $fleet = new static([
+            'company_uuid' => session('company'),
+            'name'         => $name,
+            'type'         => 'fleet',
+            'vendor'       => 'active',
+        ]);
+
+        if ($saveInstance === true) {
+            $fleet->save();
+        }
+
+        return $fleet;
     }
 }
