@@ -24,7 +24,7 @@ class UserExpansion implements Expansion
     public static function driver()
     {
         return function () {
-            /* @var \Illuminate\Database\Eloquent\Model $this */
+            /** @var \Illuminate\Database\Eloquent\Model $this */
             return $this->hasOne(Driver::class)->without('user');
         };
     }
@@ -35,7 +35,7 @@ class UserExpansion implements Expansion
     public static function currentDriverSession()
     {
         return function () {
-            /* @var \Illuminate\Database\Eloquent\Model $this */
+            /** @var \Illuminate\Database\Eloquent\Model $this */
             return $this->driver()->where('company_uuid', session('company'));
         };
     }
@@ -46,7 +46,7 @@ class UserExpansion implements Expansion
     public static function driverProfiles()
     {
         return function () {
-            /* @var \Illuminate\Database\Eloquent\Model $this */
+            /** @var \Illuminate\Database\Eloquent\Model $this */
             return $this->hasMany(Driver::class)->without('user');
         };
     }
@@ -57,7 +57,7 @@ class UserExpansion implements Expansion
     public static function customer()
     {
         return function () {
-            /* @var \Illuminate\Database\Eloquent\Model $this */
+            /** @var \Illuminate\Database\Eloquent\Model $this */
             return $this->hasOne(Contact::class)->where('type', 'customer')->without('user');
         };
     }

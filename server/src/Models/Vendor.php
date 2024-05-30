@@ -249,16 +249,13 @@ class Vendor extends Model
         $row = array_filter($row);
 
         // Get vendor columns
-        $name    = Utils::or($row, ['name', 'full_name', 'first_name', 'person']);
-        $phone   = Utils::or($row, ['phone', 'phone_number', 'mobile', 'tel', 'telephone']);
+        $name    = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
+        $phone   = Utils::or($row, ['phone', 'mobile', 'phone_number', 'number', 'cell', 'cell_phone', 'mobile_number', 'contact_number', 'tel', 'telephone', 'telephone_number']);
         $email   = Utils::or($row, ['email', 'email_address']);
-        $website = Utils::or($row, ['website', 'website_url', 'website url']);
-        $country = Utils::or($row, ['country']);
-
-        $place = Place::createFromMixed($row['address']);
-        if ($place) {
-            $row['place_uuid'] = $place->uuid;
-        }
+        $website = Utils::or($row, ['website', 'website_url']);
+        $country = Utils::or($row, ['country', 'country_name']);
+        $address = Utils::or($row, ['address', 'street address', 'location']);
+        $place   = Place::createFromMixed($address);
 
         // Create vendor
         $vendor = new static([
@@ -272,6 +269,11 @@ class Vendor extends Model
             'status'       => 'active',
             'website'      => $website,
         ]);
+
+        // If place resolved
+        if ($place) {
+            $vendor->place_uuid = $place->uuid;
+        }
 
         if ($saveInstance === true) {
             $vendor->save();

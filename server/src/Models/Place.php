@@ -677,7 +677,7 @@ class Place extends Model
             'neighborhood'  => ['alias' => ['district']],
             'province'      => ['alias' => ['state']],
             'postal_code'   => ['alias' => ['postal', 'zip', 'zip_code']],
-            'phone'         => ['alias' => ['phone', 'mobile', 'phone_number', 'number', 'cell', 'cell_phone', 'mobile_number', 'contact_number']],
+            'phone'         => ['alias' => ['phone', 'mobile', 'phone_number', 'number', 'cell', 'cell_phone', 'mobile_number', 'contact_number', 'tel', 'telephone', 'telephone_number']],
             'location'      => ['alias' => ['position']],
             'latitude'      => ['alias' => ['lat', 'x']],
             'longitude'     => ['alias' => ['lon', 'lng', 'long', 'y']],

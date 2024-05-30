@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\FleetOps\Support\VehicleData;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
@@ -470,24 +471,85 @@ class Vehicle extends Model
         $row = array_filter($row);
 
         // Get vehicle columns
-        $name            = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
-        $driver_assigned = Utils::or($row, ['driver_assigned', 'driver_assignee']);
+        $vehicleName      = Utils::or($row, ['vehicle', 'vehicle_name', 'name']);
+        $make             = Utils::or($row, ['make', 'vehicle_make', 'manufacturer', 'brand']);
+        $model            = Utils::or($row, ['model', 'vehicle_model', 'brand_model']);
+        $year             = Utils::or($row, ['year', 'vehicle_year', 'build_year', 'release_year']);
+        $trim             = Utils::or($row, ['trim', 'vehicle_trim', 'brand_trim']);
+        $type             = Utils::or($row, ['type', 'vehicle_type'], 'vehicle');
+        $plateNumber      = Utils::or($row, ['plate_number', 'license_plate', 'license_place_number', 'vehicle_plate', 'registration_plate', 'tag_number', 'tail_number', 'head_number']);
+        $vin              = Utils::or($row, ['vin', 'vin_number', 'vin_id', 'vehicle_identification_number', 'serial_number']);
+        $driverAssigned   = Utils::or($row, ['driver', 'driver_name', 'driver_assigned', 'driver_assignee']);
+
+        // Handle when only a vehicle name is provided
+        if ($vehicleName && empty($make) && empty($model)) {
+            // extract make and model from vehicle name
+            $parsedVehicle = VehicleData::parse($vehicleName);
+
+            if (!empty($parsedVehicle['make'])) {
+                $make = $parsedVehicle['make'];
+            }
+
+            if (!empty($parsedVehicle['model'])) {
+                $model = $parsedVehicle['model'];
+            }
+
+            if (!empty($parsedVehicle['year'])) {
+                $year = $parsedVehicle['year'];
+            }
+
+            // if unable to extract set name to make
+            if (!$make) {
+                $make = $vehicleName;
+            }
+        }
+
+        // Attempt to resolve driver if driver name provided
+        $driver = null;
+        if ($driverAssigned) {
+            $driver = Driver::findByIdentifier($driverAssigned);
+        }
 
         // Create vehicle
         $vehicle = new static([
-            'company_uuid'   => session('company'),
-            'name'           => $name,
-            'driver'         => $driver_assigned,
-            'type'           => 'contact',
-            'status'         => 'active',
-            'online'         => 0,
-            'status'         => 'active',
+            'company_uuid'           => session('company'),
+            'make'                   => $make,
+            'model'                  => $model,
+            'year'                   => $year,
+            'trim'                   => $trim,
+            'plate_number'           => $plateNumber,
+            'vin'                    => $vin,
+            'type'                   => $type,
+            'status'                 => 'active',
+            'online'                 => 0,
+            'status'                 => 'active',
         ]);
+
+        // If driver was resolved assign driver to vehicle
+        if ($driver) {
+            $vehicle->save();
+            $driver->assignVehicle($vehicle);
+        }
 
         if ($saveInstance === true) {
             $vehicle->save();
         }
 
         return $vehicle;
+    }
+
+    public static function findByName(?string $vehicleName = null): ?Vehicle
+    {
+        if (is_null($vehicleName)) {
+            return null;
+        }
+
+        return static::where(function ($query) use ($vehicleName) {
+            $query->where('public_id', $vehicleName)
+                    ->orWhere('plate_number', $vehicleName)
+                    ->orWhere('vin', $vehicleName)
+                    ->orWhereRaw("CONCAT(make, ' ', model, ' ', year) LIKE ?", ["%{$vehicleName}%"])
+                    ->orWhereRaw("CONCAT(year, ' ', make, ' ', model) LIKE ?", ["%{$vehicleName}%"]);
+        })->first();
     }
 }

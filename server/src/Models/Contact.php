@@ -240,7 +240,7 @@ class Contact extends Model
 
         // Get contact columns
         $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
-        $phone = Utils::or($row, ['phone', 'phone_number', 'mobile', 'tel', 'telephone']);
+        $phone = Utils::or($row, ['phone', 'mobile', 'phone_number', 'number', 'cell', 'cell_phone', 'mobile_number', 'contact_number', 'tel', 'telephone', 'telephone_number']);
         $email = Utils::or($row, ['email', 'email_address']);
 
         // Create contact

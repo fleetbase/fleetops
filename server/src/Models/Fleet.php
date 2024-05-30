@@ -222,12 +222,13 @@ class Fleet extends Model
         $row = array_filter($row);
 
         // Get fleet columns
-        $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
+        $name  = Utils::or($row, ['name', 'fleet', 'fleet_name']);
 
-        // Create contact
+        // Create fleet
         $fleet = new static([
             'company_uuid' => session('company'),
             'name'         => $name,
+            'status'       => 'active',
         ]);
 
         if ($saveInstance === true) {

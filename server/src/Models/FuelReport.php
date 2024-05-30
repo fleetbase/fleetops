@@ -181,27 +181,46 @@ class FuelReport extends Model
         $row = array_filter($row);
 
         // Get fuelReport columns
-        $reporter = Utils::or($row, ['report', 'reporter', 'reported']);
-        $driver = Utils::or($row, ['driver', 'driver name']);
+        $reporterName  = Utils::or($row, ['reporter', 'reporter_name', 'reported_by', 'reported_by_name']);
+        $report        = Utils::or($row, ['report', 'fuel_report', 'content', 'info']);
+        $odometer      = Utils::or($row, ['odometer', 'usage']);
+        $amount        = Utils::or($row, ['amount', 'cost', 'price']);
+        $currency      = Utils::or($row, ['currency', 'amount_currency']);
+        $volume        = Utils::or($row, ['volume', 'fuel_amount', 'fuel_volume', 'gas_amount', 'gas_volume']);
+        $metricUnit    = Utils::or($row, ['volume_unit', 'fuel_unit', 'metric', 'metric_unit', 'gas_unit'], 'l');
+        $driverName    = Utils::or($row, ['driver', 'driver_name']);
+        $vehicleName   = Utils::or($row, ['vehicle', 'vehicle_name']);
+        $status        = Utils::or($row, ['status', 'fuel_status'], 'pending');
 
-        $reporterUser = User::where('name', 'like', '%' . $reporter . '%')->where('company_uuid', session('user'))->first();
-        if ($reporterUser) {
-            $row['reported_by_uuid'] = $reporterUser->uuid;
-        }
-
-        $driverUser = User::where('name', 'like', '%' . $driver. '%')->where('company_uuid', session('user'))->first();
-        if ($driverUser) {
-            $row['driver_uuid'] = $driverUser->uuid;
-        }
+        // Resolve relations
+        $reporter = is_string($reporterName) ? User::whereRaw('lower(name) like ?', ['%' . strtolower($reporterName) . '%'])->first() : null;
+        $driver   = is_string($driverName) ? Driver::findByIdentifier($driverName) : null;
+        $vehicle  = is_string($vehicleName) ? Vehicle::findByName($vehicleName) : null;
 
         // Create fuelReport
         $fuelReport = new static([
-            'company_uuid' => session('company'),
-            'reporter'     => $reporterUser,
-            'odometer'     => 0,
-            'driver'       => $driverUser,
-            'location'     => Utils::parsePointToWkt(new Point(0, 0)),
+            'company_uuid'    => session('company'),
+            'report'          => $report,
+            'odometer'        => $odometer,
+            'amount'          => Utils::numbersOnly($amount),
+            'currency'        => $currency,
+            'volume'          => $volume,
+            'metric_unit'     => $metricUnit,
+            'status'          => $status,
+            'location'        => Utils::parsePointToWkt(new Point(0, 0)),
         ]);
+
+        if ($reporter) {
+            $fuelReport->reported_by_uuid = $reporter->uuid;
+        }
+
+        if ($driver) {
+            $fuelReport->driver_uuid = $driver->uuid;
+        }
+
+        if ($vehicle) {
+            $fuelReport->vehicle_uuid = $vehicle->uuid;
+        }
 
         if ($saveInstance === true) {
             $fuelReport->save();

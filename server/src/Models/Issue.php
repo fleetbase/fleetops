@@ -215,44 +215,48 @@ class Issue extends Model
         // Filter array for null key values
         $row = array_filter($row);
 
-        // Get contact columns
-        $name      = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
-        $reporter  = Utils::or($row, ['reporter', 'report']);
-        $assignee  = Utils::or($row, ['assignee']);
-        $vehicle   = Utils::or($row, ['vehicle', 'vehicle_name']);
-        $driver    = Utils::or($row, ['driver']);
+        // Get issue columns
+        $priority      = Utils::or($row, ['priority', 'level', 'urgency']);
+        $report        = Utils::or($row, ['report', 'details', 'issue', 'content']);
+        $category      = Utils::or($row, ['category', 'issue_category']);
+        $type          = Utils::or($row, ['type', 'issue_type']);
+        $reporter      = Utils::or($row, ['reporter', 'report', 'reporter_name', 'reported_by', 'reported_by_name']);
+        $assignee      = Utils::or($row, ['assignee', 'assigned_to', 'assignee_name', 'assigned_to_name']);
+        $vehicle       = Utils::or($row, ['vehicle', 'vehicle_name']);
+        $driver        = Utils::or($row, ['driver', 'driver_name']);
 
-        $assigneeUser = User::where('name', 'like', '%' . $assignee . '%')->where('company_uuid', session('user'))->first();
-        if ($assigneeUser) {
-            $row['assigned_to_uuid'] = $assigneeUser->uuid;
-        }
+        // Resolve relations
+        $assigneeUser = is_string($assignee) ? User::where('name', 'like', '%' . $assignee . '%')->where('company_uuid', session('user'))->first() : null;
+        $driverUser   = is_string($driver) ? Driver::findByIdentifier($driver) : null;
+        $reporterUser = is_string($reporter) ? User::where('name', 'like', '%' . $reporter . '%')->where('company_uuid', session('user'))->first() : null;
+        $vehicle      = is_string($vehicle) ? Vehicle::findByName($vehicle) : null;
 
-        $driverUser = User::where('name', 'like', '%' . $driver . '%')->where('company_uuid', session('user'))->first();
-        if ($driverUser) {
-            $row['driver_uuid'] = $driverUser->uuid;
-        }
-
-        $reporterUser = User::where('name', 'like', '%' . $reporter . '%')->where('company_uuid', session('user'))->first();
-        if ($reporterUser) {
-            $row['reported_by_uuid'] = $reporterUser->uuid;
-        }
-
-        $vehicle = Vehicle::search($vehicle)->where('company_uuid', session('user'))->first();
-        if ($vehicle) {
-            $row['vehicle_uuid'] = $vehicle->uuid;
-        }
-
-        // Create contact
+        // Create issue
         $issue = new static([
             'company_uuid' => session('company'),
-            'name'         => $name,
-            'reporter'     => $reporterUser,
-            'assignee'     => $assigneeUser,
-            'vehicle'      => $vehicle,
-            'driver'       => $driverUser,
+            'priority'     => $priority,
+            'report'       => $report,
+            'category'     => $category,
+            'type'         => $type,
             'location'     => Utils::parsePointToWkt(new Point(0, 0)),
             'status'       => 'pending',
         ]);
+
+        if ($assigneeUser) {
+            $issue->assigned_to_uuuid = $assigneeUser->uuid;
+        }
+
+        if ($reporterUser) {
+            $issue->reported_by_uuid = $reporterUser->uuid;
+        }
+
+        if ($driverUser) {
+            $issue->driver_uuid = $driverUser->uuid;
+        }
+
+        if ($vehicle) {
+            $issue->vehicle_uuid = $vehicle->uuid;
+        }
 
         if ($saveInstance === true) {
             $issue->save();

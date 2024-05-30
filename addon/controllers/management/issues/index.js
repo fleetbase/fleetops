@@ -472,7 +472,7 @@ export default class ManagementIssuesIndexController extends BaseController {
         const selected = this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {
-            modelNamePath: `name`,
+            modelNamePath: 'id',
             acceptButtonText: this.intl.t('fleet-ops.management.issues.index.delete-button'),
             onSuccess: async () => {
                 await this.hostRouter.refresh();
