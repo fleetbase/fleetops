@@ -91,7 +91,7 @@ class DriverController extends FleetOpsController
 
                     // create driver profile for user
                     $input = collect($input)
-                        ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])
+                        ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid', 'status'])
                         ->filter()
                         ->toArray();
 
@@ -181,7 +181,7 @@ class DriverController extends FleetOpsController
 
                     // Prepare input
                     $input = $input
-                            ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])
+                            ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid', 'status'])
                             ->filter()
                             ->toArray();
 
