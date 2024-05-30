@@ -13,7 +13,6 @@ use Fleetbase\FleetOps\Models\FleetVehicle;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
-use Fleetbase\Models\File;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 

@@ -396,8 +396,8 @@ class Place extends Model
     /**
      * Creates a new Place instance from given coordinates.
      *
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point|array $coordinates
-     * @param bool                                             $saveInstance
+     * @param SpatialPoint|array $coordinates
+     * @param bool               $saveInstance
      *
      * @return \Fleetbase\Models\Place|null
      */
@@ -435,8 +435,8 @@ class Place extends Model
     /**
      * Inserts a new place into the database using latitude and longitude coordinates.
      *
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point|array        $coordinates
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point|string|array $coordinates the coordinates to use for the new place
+     * @param SpatialPoint|array        $coordinates
+     * @param SpatialPoint|string|array $coordinates the coordinates to use for the new place
      *
      * @return mixed returns the UUID of the new place on success or false on failure
      */

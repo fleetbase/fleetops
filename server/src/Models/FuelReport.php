@@ -7,11 +7,11 @@ use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
+use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
-use Fleetbase\Models\User;
 use Fleetbase\Traits\TracksApiCredential;
 
 class FuelReport extends Model
@@ -134,7 +134,7 @@ class FuelReport extends Model
      */
     public function reportedBy()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
     /**
@@ -142,7 +142,7 @@ class FuelReport extends Model
      */
     public function reporter()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class, 'reported_by_uuid');
+        return $this->belongsTo(User::class, 'reported_by_uuid');
     }
 
     /**
@@ -181,19 +181,26 @@ class FuelReport extends Model
         $row = array_filter($row);
 
         // Get fuelReport columns
-        $reporter = Utils::or($row, ['report','reporter', 'reported']);
-        $reported_user = User::where('name', 'like', '%' . $reporter . '%')->where('company_uuid', session('user'))->first();
-        if ($reported_user) {
-            $row['driver_uuid'] = $reported_user->uuid;
+        $reporter = Utils::or($row, ['report', 'reporter', 'reported']);
+        $driver = Utils::or($row, ['driver', 'driver name']);
+
+        $reporterUser = User::where('name', 'like', '%' . $reporter . '%')->where('company_uuid', session('user'))->first();
+        if ($reporterUser) {
+            $row['reported_by_uuid'] = $reporterUser->uuid;
         }
-        $email = Utils::or($row, ['email', 'email_address']);
+
+        $driverUser = User::where('name', 'like', '%' . $driver. '%')->where('company_uuid', session('user'))->first();
+        if ($driverUser) {
+            $row['driver_uuid'] = $driverUser->uuid;
+        }
 
         // Create fuelReport
         $fuelReport = new static([
             'company_uuid' => session('company'),
-            'email'        => $email,
-            'report'       => $reported_user,
+            'reporter'     => $reporterUser,
             'odometer'     => 0,
+            'driver'       => $driverUser,
+            'location'     => Utils::parsePointToWkt(new Point(0, 0)),
         ]);
 
         if ($saveInstance === true) {
