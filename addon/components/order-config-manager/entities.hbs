@@ -3,7 +3,14 @@
         <Button @type="primary" @icon="plus" @text={{t "fleet-ops.component.order-config-manager.entities.new-custom-entity"}} @onClick={{this.createNewCustomEntity}} />
     </div>
     {{#each this.customEntities as |customEntity index|}}
-        <ContentPanel @title={{customEntity.name}} @subtitle={{customEntity.description}} @panelSubtitleInlineClass="text-xs" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-900">
+        <ContentPanel
+            @title={{customEntity.name}}
+            @subtitle={{customEntity.description}}
+            @panelSubtitleInlineClass="text-xs"
+            @open={{true}}
+            @pad={{true}}
+            @panelBodyClass="bg-white dark:bg-gray-900"
+        >
             <div class="flex flex-row items-center py-2 space-x-2 mb-4">
                 <Button @type="default" @icon="pencil" @onClick={{fn this.editCustomEntity customEntity index}} />
                 <Button @type="danger" @icon="trash" @onClick={{fn this.deleteCustomEntity customEntity index}} />

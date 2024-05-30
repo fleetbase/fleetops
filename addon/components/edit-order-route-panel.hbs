@@ -1,4 +1,14 @@
-<Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizeble={{or this.isResizable @isResizable}} @width={{or this.width @width "570px"}}>
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @onOpen={{this.onOpen}}
+    @onClose={{this.onClose}}
+    @onToggle={{this.onToggle}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizeble={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "570px"}}
+>
     <Overlay::Header @title={{concat "Edit Order: " this.order.public_id " Route"}}>
         <Button @type="primary" @icon="check" @text="Save" @helpText="Save order route changes" @onClick={{perform this.save}} @isLoading={{this.save.isRunning}} @wrapperClass="mr-2" />
         <Button @type="default" @icon="times" @helpText={{t "fleet-ops.common.cancel"}} @onClick={{this.onPressCancel}} />
@@ -13,7 +23,13 @@
                 <div class="flex flex-1 justify-end space-x-2">
                     {{#if this.order.payload.isMultiDrop}}
                         {{!-- <Button @type="magic" @icon="magic" @text={{t "fleet-ops.component.modals.order-route-form.optimize"}} @size="sm" @onClick={{fn this.optimizeRoute}} @helpText={{t "fleet-ops.component.modals.order-route-form.optimize-text"}} @disabled={{lt this.order.payload.waypoints.length 3}} @isLoading={{this.isOptimizingRoute}} /> --}}
-                        <Button @icon="map-marked-alt" @text={{t "fleet-ops.component.modals.order-route-form.add"}} @size="sm" @onClick={{this.addWaypoint}} @helpText={{t "fleet-ops.component.modals.order-route-form.add-text"}} />
+                        <Button
+                            @icon="map-marked-alt"
+                            @text={{t "fleet-ops.component.modals.order-route-form.add"}}
+                            @size="sm"
+                            @onClick={{this.addWaypoint}}
+                            @helpText={{t "fleet-ops.component.modals.order-route-form.add-text"}}
+                        />
                     {{/if}}
                 </div>
             </div>
@@ -30,7 +46,18 @@
                             </div>
 
                             <div class="flex-1 px-4">
-                                <ModelSelect @modelName="place" @selectedModel={{waypoint}} @placeholder={{concat (t "fleet-ops.operations.orders.index.new.select-waypoint-placeholder") " " (add index 1)}} @triggerClass="form-select form-input truncate max-w-300px" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.latitude longitude=this.longitude}} @renderInPlace={{true}} @onChange={{fn this.setWaypointPlace index}} as |model|>
+                                <ModelSelect
+                                    @modelName="place"
+                                    @selectedModel={{waypoint}}
+                                    @placeholder={{concat (t "fleet-ops.operations.orders.index.new.select-waypoint-placeholder") " " (add index 1)}}
+                                    @triggerClass="form-select form-input truncate max-w-300px"
+                                    @infiniteScroll={{false}}
+                                    @customSearchEndpoint="places/search"
+                                    @query={{hash geo=true latitude=this.latitude longitude=this.longitude}}
+                                    @renderInPlace={{true}}
+                                    @onChange={{fn this.setWaypointPlace index}}
+                                    as |model|
+                                >
                                     {{model.address}}
                                 </ModelSelect>
 
@@ -62,7 +89,18 @@
                             {{/if}}
                         </div>
 
-                        <ModelSelect @modelName="place" @selectedModel={{this.order.payload.pickup}} @placeholder={{t "fleet-ops.component.modals.order-route-form.select-pickup"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.latitude longitude=this.longitude}} @renderInPlace={{true}} @onChange={{fn this.setPayloadPlace "pickup"}} as |model|>
+                        <ModelSelect
+                            @modelName="place"
+                            @selectedModel={{this.order.payload.pickup}}
+                            @placeholder={{t "fleet-ops.component.modals.order-route-form.select-pickup"}}
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @customSearchEndpoint="places/search"
+                            @query={{hash geo=true latitude=this.latitude longitude=this.longitude}}
+                            @renderInPlace={{true}}
+                            @onChange={{fn this.setPayloadPlace "pickup"}}
+                            as |model|
+                        >
                             {{model.address}}
                         </ModelSelect>
 
@@ -83,7 +121,18 @@
                             {{/if}}
                         </div>
 
-                        <ModelSelect @modelName="place" @selectedModel={{this.order.payload.dropoff}} @placeholder={{t "fleet-ops.component.modals.order-route-form.select-dropoff"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.latitude longitude=this.longitude}} @renderInPlace={{true}} @onChange={{fn this.setPayloadPlace "dropoff"}} as |model|>
+                        <ModelSelect
+                            @modelName="place"
+                            @selectedModel={{this.order.payload.dropoff}}
+                            @placeholder={{t "fleet-ops.component.modals.order-route-form.select-dropoff"}}
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @customSearchEndpoint="places/search"
+                            @query={{hash geo=true latitude=this.latitude longitude=this.longitude}}
+                            @renderInPlace={{true}}
+                            @onChange={{fn this.setPayloadPlace "dropoff"}}
+                            as |model|
+                        >
                             {{model.address}}
                         </ModelSelect>
 
@@ -104,7 +153,18 @@
                             {{/if}}
                         </div>
 
-                        <ModelSelect @modelName="place" @selectedModel={{this.order.payload.return}} @placeholder={{t "fleet-ops.component.modals.order-route-form.select-return"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @customSearchEndpoint="places/search" @query={{hash geo=true latitude=this.latitude longitude=this.longitude}} @renderInPlace={{true}} @onChange={{fn this.setPayloadPlace "return"}} as |model|>
+                        <ModelSelect
+                            @modelName="place"
+                            @selectedModel={{this.order.payload.return}}
+                            @placeholder={{t "fleet-ops.component.modals.order-route-form.select-return"}}
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @customSearchEndpoint="places/search"
+                            @query={{hash geo=true latitude=this.latitude longitude=this.longitude}}
+                            @renderInPlace={{true}}
+                            @onChange={{fn this.setPayloadPlace "return"}}
+                            as |model|
+                        >
                             {{model.address}}
                         </ModelSelect>
 

@@ -1,6 +1,27 @@
-<OrderConfigManager @tab={{this.tab}} @orderConfig={{this.config}} @context={{this.context}} @contextModel={{this.contextModel}} @onTabChanged={{this.onTabChanged}} @onConfigChanged={{this.onConfigChanged}} @onContextChanged={{this.onContextChanged}} as |Action Context|>
+<OrderConfigManager
+    @tab={{this.tab}}
+    @orderConfig={{this.config}}
+    @context={{this.context}}
+    @contextModel={{this.contextModel}}
+    @onTabChanged={{this.onTabChanged}}
+    @onConfigChanged={{this.onConfigChanged}}
+    @onContextChanged={{this.onContextChanged}}
+    as |Action Context|
+>
     <Layout::Section::Header @title={{t "fleet-ops.component.order-config-manager.title"}}>
-        <DropdownButton class="order-config-select-button mr-2" @disabled={{not Context.configs}} @text={{if Context.currentConfig.name Context.currentConfig.name (t "fleet-ops.component.order-config-manager.select-order-config")}} @textClass="text-sm mr-2" @buttonClass="flex-row-reverse w-44 justify-between" @icon="caret-down" @iconClass="mr-0i" @size="sm" @iconPrefix="fas" @triggerClass="hidden md:flex" as |dd|>
+        <DropdownButton
+            class="order-config-select-button mr-2"
+            @disabled={{not Context.configs}}
+            @text={{if Context.currentConfig.name Context.currentConfig.name (t "fleet-ops.component.order-config-manager.select-order-config")}}
+            @textClass="text-sm mr-2"
+            @buttonClass="flex-row-reverse w-44 justify-between"
+            @icon="caret-down"
+            @iconClass="mr-0i"
+            @size="sm"
+            @iconPrefix="fas"
+            @triggerClass="hidden md:flex"
+            as |dd|
+        >
             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                 <div class="p-1">
                     {{#each Context.configs as |orderConfig|}}

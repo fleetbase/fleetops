@@ -1,5 +1,5 @@
 {{#if @visible}}
-    <div class="next-map-search-bar-container {{if @visible "is-visible"}}" {{did-insert this.setupComponent}}>
+    <div class="next-map-search-bar-container {{if @visible 'is-visible'}}" {{did-insert this.setupComponent}}>
         <div class="next-map-search-bar">
             <FaIcon @icon="search" class="ml-4" />
             <Input @value={{@value}} {{on "input" this.search}} placeholder={{t "fleet-ops.component.global-search.search"}} />
@@ -9,7 +9,7 @@
                 {{/if}}
             </div>
         </div>
-        <div class="next-map-search-results flex flex-col {{if this.results "has-results"}}">
+        <div class="next-map-search-results flex flex-col {{if this.results 'has-results'}}">
             {{#each this.results as |result|}}
                 <a href="javascript:;" class="next-map-search-result" {{on "click" (fn this.onAction "onPressOrder" result)}}>
                     <div class="px-4">
@@ -19,7 +19,7 @@
                                 <div class="flex flex-row items-center space-x-2">
                                     <Badge @hideStatusDot={{true}} @status="default">{{result.createdAt}}</Badge>
                                     <Badge @hideStatusDot={{true}} @status={{if result.has_driver_assigned "assigned" "default"}}>
-                                        <div class="flex flex-row items-center {{if result.has_driver_assigned "text-indigo-900" "text-gray-900"}}">
+                                        <div class="flex flex-row items-center {{if result.has_driver_assigned 'text-indigo-900' 'text-gray-900'}}">
                                             <FaIcon @icon="steering-wheel" @size="xs" class="mr-1" />
                                             {{if result.has_driver_assigned result.driver_name "Unassigned"}}
                                         </div>

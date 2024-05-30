@@ -1,7 +1,13 @@
 {{#if this.customFieldComponent}}
-    <div class="{{if this.customField.meta.colSpan (concat "col-span-" this.customField.meta.colSpan) ''}}">
+    <div class="{{if this.customField.meta.colSpan (concat 'col-span-' this.customField.meta.colSpan) ''}}">
         {{#if (eq this.customFieldComponent "input")}}
-            <InputGroup @name={{this.customField.label}} @value={{this.value}} @required={{this.customField.required}} @helpText={{this.customField.help_text}} {{on "input" this.onChangeHandler}} />
+            <InputGroup
+                @name={{this.customField.label}}
+                @value={{this.value}}
+                @required={{this.customField.required}}
+                @helpText={{this.customField.help_text}}
+                {{on "input" this.onChangeHandler}}
+            />
         {{else if (eq this.customFieldComponent "select")}}
             <InputGroup @name={{this.customField.label}} @required={{this.customField.required}} @helpText={{this.customField.help_text}}>
                 <select class="form-select w-full has--placeholder" {{on "change" this.onChangeHandler}}>
@@ -25,7 +31,13 @@
             </InputGroup>
         {{else if (eq this.customFieldComponent "date-time-input")}}
             <InputGroup @name={{this.customField.label}} @required={{this.customField.required}} @helpText={{this.customField.help_text}}>
-                <DateTimeInput class="form-input" @value={{this.value}} @minDate={{format-date (now) "yyyy-MM-d" }} @minTime={{format-date (now) "HH:mm" }} @onUpdate={{this.onChangeHandler}} />
+                <DateTimeInput
+                    class="form-input"
+                    @value={{this.value}}
+                    @minDate={{format-date (now) "yyyy-MM-d"}}
+                    @minTime={{format-date (now) "HH:mm"}}
+                    @onUpdate={{this.onChangeHandler}}
+                />
             </InputGroup>
         {{else if (eq this.customFieldComponent "radio-button-select")}}
             <InputGroup @name={{this.customField.label}} @required={{this.customField.required}} @helpText={{this.customField.help_text}}>
@@ -33,7 +45,14 @@
                     {{#each this.customField.options as |radioOption index|}}
                         <div class="radio-group-item shadow-sm {{if (eq this.value radioOption) 'is-checked'}}">
                             <div class="flex items-center">
-                                <RadioButton @radioClass="focus:ring-blue-500" @radioId={{concat this.customField.name "-radio-option-" index}} @value={{radioOption}} @groupValue={{this.value}} @name={{radioOption}} @changed={{this.onChangeHandler}} />
+                                <RadioButton
+                                    @radioClass="focus:ring-blue-500"
+                                    @radioId={{concat this.customField.name "-radio-option-" index}}
+                                    @value={{radioOption}}
+                                    @groupValue={{this.value}}
+                                    @name={{radioOption}}
+                                    @changed={{this.onChangeHandler}}
+                                />
                                 <div class="ml-2 text-sm dark:text-gray-100 text-gray-900 truncate">{{radioOption}}</div>
                             </div>
                         </div>
@@ -43,7 +62,13 @@
         {{else if (eq this.customFieldComponent "file-upload")}}
             <InputGroup @name={{this.customField.label}} @required={{this.customField.required}} @helpText={{this.customField.help_text}}>
                 <div class="flex items-center">
-                    <FileUpload @name={{this.customField.name}} @for={{this.customField.name}} @accept={{join "," this.acceptedFileTypes}} @multiple={{false}} @onFileAdded={{this.onFileAddedHandler}}>
+                    <FileUpload
+                        @name={{this.customField.name}}
+                        @for={{this.customField.name}}
+                        @accept={{join "," this.acceptedFileTypes}}
+                        @multiple={{false}}
+                        @onFileAdded={{this.onFileAddedHandler}}
+                    >
                         <a tabindex={{0}} class="btn btn-default btn-xs cursor-pointer">
                             <FaIcon @icon="upload" @size="sm" class="mr-2" />{{t "common.select-file"}}
                         </a>

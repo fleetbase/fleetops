@@ -1,6 +1,11 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
-        <InputGroup @value={{@options.serviceArea.name}} @name={{t "fleet-ops.component.modals.service-area-form.name"}} @helpText={{t "fleet-ops.component.modals.service-area-form.name-text"}} @required={{true}} />
+        <InputGroup
+            @value={{@options.serviceArea.name}}
+            @name={{t "fleet-ops.component.modals.service-area-form.name"}}
+            @helpText={{t "fleet-ops.component.modals.service-area-form.name-text"}}
+            @required={{true}}
+        />
         <InputGroup @name={{t "fleet-ops.component.modals.service-area-form.type"}} @helpText={{t "fleet-ops.component.modals.service-area-form.type-text"}}>
             <Select
                 @options={{@options.serviceAreaTypes}}

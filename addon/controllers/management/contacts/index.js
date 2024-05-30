@@ -368,6 +368,19 @@ export default class ManagementContactsIndexController extends BaseController {
     }
 
     /**
+     * Handles and prompts for spreadsheet imports of contacts.
+     *
+     * @void
+     */
+    @action importContacts() {
+        this.crud.import('contact', {
+            onImportCompleted: () => {
+                this.hostRouter.refresh();
+            },
+        });
+    }
+
+    /**
      * Bulk deletes selected `contacts` via confirm prompt
      *
      * @param {Array} selected an array of selected models
@@ -379,8 +392,9 @@ export default class ManagementContactsIndexController extends BaseController {
         this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
             acceptButtonText: this.intl.t('fleet-ops.management.contacts.index.delete-button'),
-            onSuccess: () => {
-                return this.hostRouter.refresh();
+            onSuccess: async () => {
+                await this.hostRouter.refresh();
+                this.table.untoggleSelectAll();
             },
         });
     }

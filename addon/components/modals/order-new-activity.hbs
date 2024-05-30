@@ -13,12 +13,19 @@
             <legend class="sr-only">
                 {{t "fleet-ops.component.modals.order-new-activity.activity-options"}}
             </legend>
-        
+
             <div class="radio-group-condensed -space-y-px">
                 {{#each @options.activityOptions as |activity index|}}
                     <div class="radio-group-item shadow-sm {{if (eq @options.selected index) 'is-checked'}}">
                         <div class="flex items-center h-5">
-                            <RadioButton @radioClass="focus:ring-blue-500" @radioId={{concat "activity_" index}} @value={{index}} @groupValue={{@options.selected}} @name={{t "fleet-ops.component.modals.order-new-activity.activity"}} @changed={{fn (mut @options.selected)}} />
+                            <RadioButton
+                                @radioClass="focus:ring-blue-500"
+                                @radioId={{concat "activity_" index}}
+                                @value={{index}}
+                                @groupValue={{@options.selected}}
+                                @name={{t "fleet-ops.component.modals.order-new-activity.activity"}}
+                                @changed={{fn (mut @options.selected)}}
+                            />
                         </div>
                         <label for={{concat "activity_" index}} class="ml-3 flex flex-col cursor-pointer w-full">
                             <span class="block text-sm font-semibold">
@@ -28,7 +35,12 @@
                                 {{activity.details}}
 
                                 {{#if (eq activity.code "dispatched")}}
-                                    <InfoBlock class="warning xs mt-2" @icon="exclamation-triangle" @textClass="text-yellow-900 focus:text-yellow-900" @text={{t "fleet-ops.component.modals.order-new-activity.dispatch"}} />
+                                    <InfoBlock
+                                        class="warning xs mt-2"
+                                        @icon="exclamation-triangle"
+                                        @textClass="text-yellow-900 focus:text-yellow-900"
+                                        @text={{t "fleet-ops.component.modals.order-new-activity.dispatch"}}
+                                    />
                                 {{/if}}
                             </span>
                         </label>
@@ -40,8 +52,14 @@
 
                 <div class="radio-group-item shadow-sm {{if (eq @options.selected 'custom') 'is-checked'}}">
                     <div class="flex items-center h-5">
-                        <RadioButton @radioClass="focus:ring-blue-500" @radioId="activity_custom" @value="custom" @groupValue={{@options.selected}} @name={{t "fleet-ops.component.modals.order-new-activity.activity"}}
-                            @changed={{fn (mut @options.selected)}} />
+                        <RadioButton
+                            @radioClass="focus:ring-blue-500"
+                            @radioId="activity_custom"
+                            @value="custom"
+                            @groupValue={{@options.selected}}
+                            @name={{t "fleet-ops.component.modals.order-new-activity.activity"}}
+                            @changed={{fn (mut @options.selected)}}
+                        />
                     </div>
                     <label for="activity_custom" class="ml-3 flex flex-col cursor-pointer w-full pr-5">
                         <span class="block text-sm font-medium">

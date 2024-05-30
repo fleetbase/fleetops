@@ -21,6 +21,7 @@
         </DropdownButton>
     {{/if}}
     <Button @icon="plus" @iconPrefix="fas" @type="primary" @text={{t "fleet-ops.common.new"}} class="mr-2" @onClick={{this.createIssue}} />
+    <Button @icon="upload" @type="magic" @text={{t "fleet-ops.common.import"}} @wrapperClass="hidden md:flex" @onClick={{this.importIssues}} class="mr-2" />
     <Button @icon="long-arrow-up" @iconClass="rotate-icon-45" @text={{t "fleet-ops.common.export"}} @onClick={{this.exportIssues}} />
 </Layout::Section::Header>
 
@@ -35,8 +36,6 @@
         @paginationMeta={{@model.meta}}
         @page={{this.page}}
         @onPageChange={{fn (mut this.page)}}
-        @tfootVerticalOffset="53"
-        @tfootVerticalOffsetElements=".next-view-section-subheader"
     />
 </Layout::Section::Body>
 

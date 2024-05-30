@@ -101,7 +101,7 @@
                     <div class="field-name">{{smart-humanize key}}</div>
                     <div class="field-value">
                         {{#if (is-array value)}}
-                            {{join ', ' value}}
+                            {{join ", " value}}
                         {{else if (is-object value)}}
                             {{#each-in value as |k v|}}
                                 <div>{{smart-humanize k}}: {{v}}</div>

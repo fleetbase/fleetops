@@ -7,6 +7,7 @@ import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';
 import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
+import fromStore from '@fleetbase/ember-core/decorators/from-store';
 
 export default class OperationsOrdersIndexController extends BaseController {
     /**
@@ -326,6 +327,13 @@ export default class OperationsOrdersIndexController extends BaseController {
     @equal('layout', 'analytics') isAnalyticsLayout;
 
     /**
+     * All available order configs.
+     *
+     * @memberof OperationsOrdersIndexController
+     */
+    @fromStore('order-config', { limit: -1 }) orderConfigs;
+
+    /**
      * All columns applicable for orders
      *
      * @var {Array}
@@ -498,10 +506,10 @@ export default class OperationsOrdersIndexController extends BaseController {
             sortable: true,
             filterable: true,
             filterComponent: 'filter/select',
-            filterOptions: this.orderTypes,
+            filterOptions: this.orderConfigs,
             filterOptionLabel: 'name',
-            filterOptionValue: 'key',
-            filterComponentPlaceholder: 'Filter by order type',
+            filterOptionValue: 'id',
+            filterComponentPlaceholder: 'Filter by order config',
         },
         {
             label: this.intl.t('fleet-ops.common.status'),
@@ -930,8 +938,9 @@ export default class OperationsOrdersIndexController extends BaseController {
         this.crud.bulkDelete(selected, {
             modelNamePath: `public_id`,
             acceptButtonText: 'Delete Orders',
-            onSuccess: () => {
-                return this.hostRouter.refresh();
+            onSuccess: async () => {
+                await this.hostRouter.refresh();
+                this.table.untoggleSelectAll();
             },
         });
     }
@@ -961,8 +970,9 @@ export default class OperationsOrdersIndexController extends BaseController {
                     order.set('status', 'canceled');
                 });
             },
-            onSuccess: () => {
-                return this.hostRouter.refresh();
+            onSuccess: async () => {
+                await this.hostRouter.refresh();
+                this.table.untoggleSelectAll();
             },
         });
     }

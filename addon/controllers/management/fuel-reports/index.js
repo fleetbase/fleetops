@@ -354,6 +354,19 @@ export default class ManagementFuelReportsIndexController extends BaseController
     }
 
     /**
+     * Handles and prompts for spreadsheet imports of fuel report.
+     *
+     * @void
+     */
+    @action importFuelReports() {
+        this.crud.import('fuel-report', {
+            onImportCompleted: () => {
+                this.hostRouter.refresh();
+            },
+        });
+    }
+
+    /**
      * View the selected fuel report
      *
      * @param {FuelReportModel} fuelReport
@@ -418,8 +431,9 @@ export default class ManagementFuelReportsIndexController extends BaseController
         this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
             acceptButtonText: this.intl.t('fleet-ops.management.fuel-reports.index.delete-button'),
-            onSuccess: () => {
-                return this.hostRouter.refresh();
+            onSuccess: async () => {
+                await this.hostRouter.refresh();
+                this.table.untoggleSelectAll();
             },
         });
     }

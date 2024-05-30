@@ -420,8 +420,9 @@ export default class ManagementPlacesIndexController extends BaseController {
         this.crud.bulkDelete(selected, {
             modelNamePath: `address`,
             acceptButtonText: this.intl.t('fleet-ops.management.places.index.delete-button'),
-            onSuccess: () => {
-                return this.hostRouter.refresh();
+            onSuccess: async () => {
+                await this.hostRouter.refresh();
+                this.table.untoggleSelectAll();
             },
         });
     }
@@ -446,6 +447,19 @@ export default class ManagementPlacesIndexController extends BaseController {
                 });
             },
             ...options,
+        });
+    }
+
+    /**
+     * Handles and prompts for spreadsheet imports of places.
+     *
+     * @void
+     */
+    @action importPlaces() {
+        this.crud.import('place', {
+            onImportCompleted: () => {
+                this.hostRouter.refresh();
+            },
         });
     }
 

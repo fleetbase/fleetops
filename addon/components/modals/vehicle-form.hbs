@@ -2,7 +2,14 @@
     <div class="modal-body-container">
         <div class="flex">
             <div class="w-32 mb-6 mr-6">
-                <Image src={{@options.vehicle.photo_url}} @fallbackSrc={{config "defaultValues.vehicleImage"}} alt={{@options.vehicle.name}} height="128" width="128" class="h-32 w-32 rounded-md" />
+                <Image
+                    src={{@options.vehicle.photo_url}}
+                    @fallbackSrc={{config "defaultValues.vehicleImage"}}
+                    alt={{@options.vehicle.name}}
+                    height="128"
+                    width="128"
+                    class="h-32 w-32 rounded-md"
+                />
                 <UploadButton @name="photos" @accept="image/*" @onFileAdded={{@options.uploadNewPhoto}} class="w-32" />
             </div>
             <div class="flex-1 space-y-4">
@@ -54,7 +61,16 @@
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.driver-assigned"}}
                             </label>
-                            <ModelSelect @modelName="driver" @selectedModel={{@options.vehicle.driver}} @placeholder="Select Driver" @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut @options.vehicle.driver)}} as |model|>
+                            <ModelSelect
+                                @modelName="driver"
+                                @selectedModel={{@options.vehicle.driver}}
+                                @placeholder="Select Driver"
+                                @triggerClass="form-select form-input"
+                                @infiniteScroll={{false}}
+                                @renderInPlace={{true}}
+                                @onChange={{fn (mut @options.vehicle.driver)}}
+                                as |model|
+                            >
                                 {{model.name}}
                             </ModelSelect>
                         </div>
@@ -65,7 +81,15 @@
                     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
                         <div class="input-group mb-2">
                             <InputLabel @labelText={{t "fleet-ops.component.modals.vehicle-form.map-avatar"}} @helpText={{t "fleet-ops.component.modals.vehicle-form.map-avatar-text"}} />
-                            <FetchSelect @wrapperClass="w-60" @placeholder={{t "fleet-ops.component.modals.vehicle-form.select-avatar"}} @endpoint="vehicles/avatars" @selected={{this.vehicle.avatar_url}} @optionValue="value" @onChange={{fn (mut this.vehicle.avatar_url)}} as |option|>
+                            <FetchSelect
+                                @wrapperClass="w-60"
+                                @placeholder={{t "fleet-ops.component.modals.vehicle-form.select-avatar"}}
+                                @endpoint="vehicles/avatars"
+                                @selected={{this.vehicle.avatar_url}}
+                                @optionValue="value"
+                                @onChange={{fn (mut this.vehicle.avatar_url)}}
+                                as |option|
+                            >
                                 {{titleize (humanize option.key)}}
                             </FetchSelect>
                         </div>
@@ -81,7 +105,12 @@
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.acceleration"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_0_to_100_kph}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-details.acceleration"}} />
+                            <Input
+                                @value={{@options.vehicle.model_0_to_100_kph}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-details.acceleration"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
@@ -123,14 +152,24 @@
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.top-speed"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_top_speed_kph}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-form.top-speed"}} />
+                            <Input
+                                @value={{@options.vehicle.model_top_speed_kph}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-form.top-speed"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.transmission"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_transmission_type}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-form.transmission"}} />
+                            <Input
+                                @value={{@options.vehicle.model_transmission_type}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-form.transmission"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
@@ -144,7 +183,12 @@
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.wheelbase"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_wheelbase_mm}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-form.wheelbase"}} />
+                            <Input
+                                @value={{@options.vehicle.model_wheelbase_mm}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-form.wheelbase"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
@@ -162,7 +206,12 @@
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.engine-bore"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_engine_bore_mm}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-form.engine-bore"}} />
+                            <Input
+                                @value={{@options.vehicle.model_engine_bore_mm}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-form.engine-bore"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
@@ -176,7 +225,12 @@
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.compression"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_engine_compression}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-form.compression"}} />
+                            <Input
+                                @value={{@options.vehicle.model_engine_compression}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-form.compression"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
@@ -190,49 +244,84 @@
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.position"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_engine_position}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-form.position"}} />
+                            <Input
+                                @value={{@options.vehicle.model_engine_position}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-form.position"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.power-ps"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_engine_power_ps}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-form.power-ps"}} />
+                            <Input
+                                @value={{@options.vehicle.model_engine_power_ps}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-form.power-ps"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.power-rpm"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_engine_power_rpm}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-form.power-rpm"}} />
+                            <Input
+                                @value={{@options.vehicle.model_engine_power_rpm}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-form.power-rpm"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.stroke"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_engine_stroke_mm}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-form.stroke"}} />
+                            <Input
+                                @value={{@options.vehicle.model_engine_stroke_mm}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-form.stroke"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.torque-nm"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_engine_torque_nm}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-form.torque-nm"}} />
+                            <Input
+                                @value={{@options.vehicle.model_engine_torque_nm}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-form.torque-nm"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.torque-rpm"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_engine_torque_rpm}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-form.torque-rpm"}} />
+                            <Input
+                                @value={{@options.vehicle.model_engine_torque_rpm}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-form.torque-rpm"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.valves"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_engine_valves_per_cyl}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-details.valves"}} />
+                            <Input
+                                @value={{@options.vehicle.model_engine_valves_per_cyl}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-details.valves"}}
+                            />
                         </div>
                     </div>
                 </ContentPanel>
@@ -243,7 +332,12 @@
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.fuel"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_engine_fuel}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-form.fuel-type"}} />
+                            <Input
+                                @value={{@options.vehicle.model_engine_fuel}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-form.fuel-type"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
@@ -257,21 +351,36 @@
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.liters-city"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_lkm_city}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-details.liters-city"}} />
+                            <Input
+                                @value={{@options.vehicle.model_lkm_city}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-details.liters-city"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.liters-highway"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_lkm_hwy}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-details.liters-highway"}} />
+                            <Input
+                                @value={{@options.vehicle.model_lkm_hwy}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-details.liters-highway"}}
+                            />
                         </div>
 
                         <div class="input-group mb-2">
                             <label>
                                 {{t "fleet-ops.component.modals.vehicle-details.liters-mixed"}}
                             </label>
-                            <Input @value={{@options.vehicle.model_lkm_mixed}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.modals.vehicle-details.liters-mixed"}} />
+                            <Input
+                                @value={{@options.vehicle.model_lkm_mixed}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.modals.vehicle-details.liters-mixed"}}
+                            />
                         </div>
                     </div>
                 </ContentPanel>

@@ -4,8 +4,10 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
+use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -109,7 +111,7 @@ class Issue extends Model
      */
     public function reportedBy()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
     /**
@@ -117,7 +119,7 @@ class Issue extends Model
      */
     public function reporter()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class, 'reported_by_uuid');
+        return $this->belongsTo(User::class, 'reported_by_uuid');
     }
 
     /**
@@ -125,7 +127,7 @@ class Issue extends Model
      */
     public function assignedTo()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
     /**
@@ -133,7 +135,7 @@ class Issue extends Model
      */
     public function assignee()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class, 'assigned_to_uuid');
+        return $this->belongsTo(User::class, 'assigned_to_uuid');
     }
 
     /**
@@ -206,5 +208,60 @@ class Issue extends Model
     public function getAssigneeNameAttribute()
     {
         return data_get($this, 'assignee.name');
+    }
+
+    public static function createFromImport(array $row, bool $saveInstance = false): Issue
+    {
+        // Filter array for null key values
+        $row = array_filter($row);
+
+        // Get issue columns
+        $priority      = Utils::or($row, ['priority', 'level', 'urgency']);
+        $report        = Utils::or($row, ['report', 'details', 'issue', 'content']);
+        $category      = Utils::or($row, ['category', 'issue_category']);
+        $type          = Utils::or($row, ['type', 'issue_type']);
+        $reporter      = Utils::or($row, ['reporter', 'report', 'reporter_name', 'reported_by', 'reported_by_name']);
+        $assignee      = Utils::or($row, ['assignee', 'assigned_to', 'assignee_name', 'assigned_to_name']);
+        $vehicle       = Utils::or($row, ['vehicle', 'vehicle_name']);
+        $driver        = Utils::or($row, ['driver', 'driver_name']);
+
+        // Resolve relations
+        $assigneeUser = is_string($assignee) ? User::where('name', 'like', '%' . $assignee . '%')->where('company_uuid', session('user'))->first() : null;
+        $driverUser   = is_string($driver) ? Driver::findByIdentifier($driver) : null;
+        $reporterUser = is_string($reporter) ? User::where('name', 'like', '%' . $reporter . '%')->where('company_uuid', session('user'))->first() : null;
+        $vehicle      = is_string($vehicle) ? Vehicle::findByName($vehicle) : null;
+
+        // Create issue
+        $issue = new static([
+            'company_uuid' => session('company'),
+            'priority'     => $priority,
+            'report'       => $report,
+            'category'     => $category,
+            'type'         => $type,
+            'location'     => Utils::parsePointToWkt(new Point(0, 0)),
+            'status'       => 'pending',
+        ]);
+
+        if ($assigneeUser) {
+            $issue->assigned_to_uuuid = $assigneeUser->uuid;
+        }
+
+        if ($reporterUser) {
+            $issue->reported_by_uuid = $reporterUser->uuid;
+        }
+
+        if ($driverUser) {
+            $issue->driver_uuid = $driverUser->uuid;
+        }
+
+        if ($vehicle) {
+            $issue->vehicle_uuid = $vehicle->uuid;
+        }
+
+        if ($saveInstance === true) {
+            $issue->save();
+        }
+
+        return $issue;
     }
 }

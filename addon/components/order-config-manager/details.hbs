@@ -3,7 +3,16 @@
         <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.name"}} @value={{@config.name}} @disabled={{@config.core_service}} />
         <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.description"}} @value={{@config.description}} @disabled={{@config.core_service}} />
         <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.tags"}}>
-            <TagInput class="form-input" @placeholder={{t "fleet-ops.component.order-config-manager.details.add-tags"}} @allowSpacesInTags={{true}} @tags={{@config.tags}} @addTag={{@config.addTag}} @removeTagAtIndex={{@config.removeTag}} @disabled={{@config.core_service}} as |tag|>
+            <TagInput
+                class="form-input"
+                @placeholder={{t "fleet-ops.component.order-config-manager.details.add-tags"}}
+                @allowSpacesInTags={{true}}
+                @tags={{@config.tags}}
+                @addTag={{@config.addTag}}
+                @removeTagAtIndex={{@config.removeTag}}
+                @disabled={{@config.core_service}}
+                as |tag|
+            >
                 {{tag}}
             </TagInput>
         </InputGroup>

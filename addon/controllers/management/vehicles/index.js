@@ -431,8 +431,9 @@ export default class ManagementVehiclesIndexController extends BaseController {
         this.crud.bulkDelete(selectedRows, {
             modelNamePath: `display_name`,
             acceptButtonText: this.intl.t('fleet-ops.management.vehicles.index.delete-button'),
-            onSuccess: () => {
-                return this.hostRouter.refresh();
+            onSuccess: async () => {
+                await this.hostRouter.refresh();
+                this.table.untoggleSelectAll();
             },
         });
     }
@@ -516,6 +517,19 @@ export default class ManagementVehiclesIndexController extends BaseController {
                 return this.hostRouter.refresh();
             },
             ...options,
+        });
+    }
+
+    /**
+     * Handles and prompts for spreadsheet imports of vehicles.
+     *
+     * @void
+     */
+    @action importVehicles() {
+        this.crud.import('vehicle', {
+            onImportCompleted: () => {
+                this.hostRouter.refresh();
+            },
         });
     }
 

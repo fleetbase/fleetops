@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
+use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -133,7 +134,7 @@ class FuelReport extends Model
      */
     public function reportedBy()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
     /**
@@ -141,7 +142,7 @@ class FuelReport extends Model
      */
     public function reporter()
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class, 'reported_by_uuid');
+        return $this->belongsTo(User::class, 'reported_by_uuid');
     }
 
     /**
@@ -172,5 +173,59 @@ class FuelReport extends Model
     public function getReporterNameAttribute()
     {
         return data_get($this, 'reportedBy.name');
+    }
+
+    public static function createFromImport(array $row, bool $saveInstance = false): FuelReport
+    {
+        // Filter array for null key values
+        $row = array_filter($row);
+
+        // Get fuelReport columns
+        $reporterName  = Utils::or($row, ['reporter', 'reporter_name', 'reported_by', 'reported_by_name']);
+        $report        = Utils::or($row, ['report', 'fuel_report', 'content', 'info']);
+        $odometer      = Utils::or($row, ['odometer', 'usage']);
+        $amount        = Utils::or($row, ['amount', 'cost', 'price']);
+        $currency      = Utils::or($row, ['currency', 'amount_currency']);
+        $volume        = Utils::or($row, ['volume', 'fuel_amount', 'fuel_volume', 'gas_amount', 'gas_volume']);
+        $metricUnit    = Utils::or($row, ['volume_unit', 'fuel_unit', 'metric', 'metric_unit', 'gas_unit'], 'l');
+        $driverName    = Utils::or($row, ['driver', 'driver_name']);
+        $vehicleName   = Utils::or($row, ['vehicle', 'vehicle_name']);
+        $status        = Utils::or($row, ['status', 'fuel_status'], 'pending');
+
+        // Resolve relations
+        $reporter = is_string($reporterName) ? User::whereRaw('lower(name) like ?', ['%' . strtolower($reporterName) . '%'])->first() : null;
+        $driver   = is_string($driverName) ? Driver::findByIdentifier($driverName) : null;
+        $vehicle  = is_string($vehicleName) ? Vehicle::findByName($vehicleName) : null;
+
+        // Create fuelReport
+        $fuelReport = new static([
+            'company_uuid'    => session('company'),
+            'report'          => $report,
+            'odometer'        => $odometer,
+            'amount'          => Utils::numbersOnly($amount),
+            'currency'        => $currency,
+            'volume'          => $volume,
+            'metric_unit'     => $metricUnit,
+            'status'          => $status,
+            'location'        => Utils::parsePointToWkt(new Point(0, 0)),
+        ]);
+
+        if ($reporter) {
+            $fuelReport->reported_by_uuid = $reporter->uuid;
+        }
+
+        if ($driver) {
+            $fuelReport->driver_uuid = $driver->uuid;
+        }
+
+        if ($vehicle) {
+            $fuelReport->vehicle_uuid = $vehicle->uuid;
+        }
+
+        if ($saveInstance === true) {
+            $fuelReport->save();
+        }
+
+        return $fuelReport;
     }
 }

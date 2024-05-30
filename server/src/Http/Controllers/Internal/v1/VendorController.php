@@ -4,8 +4,10 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\VendorExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Imports\VendorImport;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\Http\Requests\ExportRequest;
+use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -117,5 +119,26 @@ class VendorController extends FleetOpsController
             ->values();
 
         return response()->json($statuses);
+    }
+
+    /**
+     * Process import files (excel,csv) into Fleetbase order data.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function import(ImportRequest $request)
+    {
+        $disk           = $request->input('disk', config('filesystems.default'));
+        $files          = $request->resolveFilesFromIds();
+
+        foreach ($files as $file) {
+            try {
+                Excel::import(new VendorImport(), $file->path, $disk);
+            } catch (\Throwable $e) {
+                return response()->error('Invalid file, unable to proccess.');
+            }
+        }
+
+        return response()->json(['status' => 'ok', 'message' => 'Import completed']);
     }
 }

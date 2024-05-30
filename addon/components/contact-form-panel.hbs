@@ -18,9 +18,20 @@
             </div>
             <div class="flex flex-1 justify-end">
                 <div class="mr-2">
-                    <Button @icon={{if this.contact.id "save" "check"}} @type="primary" @text={{if this.contact.id (t "fleet-ops.component.contact-form-panel.save-contact")(t "fleet-ops.component.contact-form-panel.create-contact") }} @onClick={{perform this.save}} @isLoading={{this.save.isRunning}} />
+                    <Button
+                        @icon={{if this.contact.id "save" "check"}}
+                        @type="primary"
+                        @text={{if this.contact.id (t "fleet-ops.component.contact-form-panel.save-contact") (t "fleet-ops.component.contact-form-panel.create-contact")}}
+                        @onClick={{perform this.save}}
+                        @isLoading={{this.save.isRunning}}
+                    />
                 </div>
-                <Button @type="default" @icon="times" @helpText={{if this.contact.id (t "fleet-ops.component.contact-form-panel.cancel-edit-button")(t "fleet-ops.component.contact-form-panel.cancel-new-button") }} @onClick={{this.onPressCancel}} />
+                <Button
+                    @type="default"
+                    @icon="times"
+                    @helpText={{if this.contact.id (t "fleet-ops.component.contact-form-panel.cancel-edit-button") (t "fleet-ops.component.contact-form-panel.cancel-new-button")}}
+                    @onClick={{this.onPressCancel}}
+                />
             </div>
         </div>
         <div class="flex flex-row justify-between w-full">
@@ -28,7 +39,7 @@
                 <div class="flex flex-row">
                     <div class="w-14">
                         <div class="upload-avatar-overlay w-12 h-12 flex items-center justify-start rounded-lg">
-                            <img src={{this.contact.photo_url}} alt={{this.contact.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm"  />
+                            <img src={{this.contact.photo_url}} alt={{this.contact.name}} height="48" width="48" class="h-12 w-12 rounded-lg shadow-sm" />
                             <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                                 <InputInfo @text={{this.contact.public_id}} />
                             </Attach::Tooltip>

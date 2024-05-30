@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
@@ -49,6 +50,7 @@ class Vendor extends Model
      */
     protected $fillable = [
         '_key',
+        'public_id',
         'internal_id',
         'company_uuid',
         'logo_uuid',
@@ -239,5 +241,44 @@ class Vendor extends Model
     public function setStatusAttribute(?string $status = 'active')
     {
         $this->attributes['status'] = $status ?? 'active';
+    }
+
+    public static function createFromImport(array $row, bool $saveInstance = false): Vendor
+    {
+        // Filter array for null key values
+        $row = array_filter($row);
+
+        // Get vendor columns
+        $name    = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
+        $phone   = Utils::or($row, ['phone', 'mobile', 'phone_number', 'number', 'cell', 'cell_phone', 'mobile_number', 'contact_number', 'tel', 'telephone', 'telephone_number']);
+        $email   = Utils::or($row, ['email', 'email_address']);
+        $website = Utils::or($row, ['website', 'website_url']);
+        $country = Utils::or($row, ['country', 'country_name']);
+        $address = Utils::or($row, ['address', 'street address', 'location']);
+        $place   = Place::createFromMixed($address);
+
+        // Create vendor
+        $vendor = new static([
+            'company_uuid' => session('company'),
+            'name'         => $name,
+            'phone'        => Utils::fixPhone($phone),
+            'address'      => $place,
+            'email'        => $email,
+            'type'         => 'vendor',
+            'country'      => Utils::getCountryCodeByName($country),
+            'status'       => 'active',
+            'website'      => $website,
+        ]);
+
+        // If place resolved
+        if ($place) {
+            $vendor->place_uuid = $place->uuid;
+        }
+
+        if ($saveInstance === true) {
+            $vendor->save();
+        }
+
+        return $vendor;
     }
 }

@@ -10,7 +10,17 @@
     </div>
     <div class="activity-event-selector-events-container">
         <div class="px-4 mb-2">
-            <DropdownButton @text={{t "fleet-ops.component.activity-event-selector.select-event-to-add"}} @buttonClass="flex-row-reverse justify-between w-48" @icon="caret-down" @iconClass="mr-0i" @size="sm" @iconPrefix="fas" @triggerClass="hidden md:flex" @helpText={{t "fleet-ops.component.activity-event-selector.activity-events-select-events-info"}} as |dd|>
+            <DropdownButton
+                @text={{t "fleet-ops.component.activity-event-selector.select-event-to-add"}}
+                @buttonClass="flex-row-reverse justify-between w-48"
+                @icon="caret-down"
+                @iconClass="mr-0i"
+                @size="sm"
+                @iconPrefix="fas"
+                @triggerClass="hidden md:flex"
+                @helpText={{t "fleet-ops.component.activity-event-selector.activity-events-select-events-info"}}
+                as |dd|
+            >
                 <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                     <div class="p-1 overflow-y-scroll h-40">
                         {{#each-in this.availableEvents as |eventName event|}}

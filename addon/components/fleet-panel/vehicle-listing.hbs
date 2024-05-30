@@ -3,7 +3,12 @@
         <div class="mb-3 flex items-center justify-between">
             <div class="flex items-center">
                 <div class="fleet-vehicle-listing-search">
-                    <Input @type="text" {{on "input" this.onInput}} placeholder={{t "fleet-ops.component.fleet-panel.vehicle-listing.search-vehicle"}} class="w-64 form-input form-input-sm" />
+                    <Input
+                        @type="text"
+                        {{on "input" this.onInput}}
+                        placeholder={{t "fleet-ops.component.fleet-panel.vehicle-listing.search-vehicle"}}
+                        class="w-64 form-input form-input-sm"
+                    />
                 </div>
                 {{#if this.search.isRunning}}
                     <div class="mx-2">
@@ -12,7 +17,16 @@
                 {{/if}}
             </div>
             <div class="w-56">
-                <ModelSelect @modelName="vehicle" @selectedModel={{this.selectedVehicle}} @placeholder={{t "fleet-ops.component.fleet-panel.vehicle-listing.add-vehicle"}} @triggerClass="form-select form-input form-select-sm form-input-sm" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{this.onAddVehicle}} as |model|>
+                <ModelSelect
+                    @modelName="vehicle"
+                    @selectedModel={{this.selectedVehicle}}
+                    @placeholder={{t "fleet-ops.component.fleet-panel.vehicle-listing.add-vehicle"}}
+                    @triggerClass="form-select form-input form-select-sm form-input-sm"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{this.onAddVehicle}}
+                    as |model|
+                >
                     {{model.displayName}}
                 </ModelSelect>
             </div>
@@ -49,7 +63,7 @@
                                     <div class="mr-2">
                                         <div class="relative">
                                             <Image src={{vehicle.photo_url}} alt={{vehicle.name}} class="w-5 h-5 rounded-md" @fallbackSrc={{config "defaultValues.vehicleImage"}} />
-                                            <FaIcon @icon="circle" class="absolute right-0 top-0 -mr-1 -mt-1 {{if vehicle.online "text-green-500" "text-yellow-200"}}" />
+                                            <FaIcon @icon="circle" class="absolute right-0 top-0 -mr-1 -mt-1 {{if vehicle.online 'text-green-500' 'text-yellow-200'}}" />
                                         </div>
                                     </div>
                                     <div>

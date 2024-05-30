@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -244,7 +245,7 @@ class Place extends Model
     /**
      * Returns a Point instance from the location of the model.
      */
-    public function getLocationAsPoint(): \Fleetbase\LaravelMysqlSpatial\Types\Point
+    public function getLocationAsPoint(): SpatialPoint
     {
         return Utils::getPointFromCoordinates($this->location);
     }
@@ -291,7 +292,7 @@ class Place extends Model
         }
 
         if ($coordinates = $address->getCoordinates()) {
-            $this->setAttribute('location', new \Fleetbase\LaravelMysqlSpatial\Types\Point($coordinates->getLatitude(), $coordinates->getLongitude()));
+            $this->setAttribute('location', new SpatialPoint($coordinates->getLatitude(), $coordinates->getLongitude()));
         }
 
         return $this;
@@ -318,7 +319,7 @@ class Place extends Model
         $attributes['city']         = $address->getLocality();
         $attributes['building']     = $address->getStreetNumber();
         $attributes['country']      = $address->getCountry() instanceof \Geocoder\Model\Country ? $address->getCountry()->getCode() : null;
-        $attributes['location']     = new \Fleetbase\LaravelMysqlSpatial\Types\Point($coordinates->getLatitude(), $coordinates->getLongitude());
+        $attributes['location']     = new SpatialPoint($coordinates->getLatitude(), $coordinates->getLongitude());
 
         return $attributes;
     }
@@ -376,7 +377,7 @@ class Place extends Model
      *
      * @return \Fleetbase\Models\Place|null
      */
-    public static function createFromReverseGeocodingLookup(\Fleetbase\LaravelMysqlSpatial\Types\Point $point, $saveInstance = false): ?Place
+    public static function createFromReverseGeocodingLookup(SpatialPoint $point, $saveInstance = false): ?Place
     {
         $results = Geocoding::reverseFromCoordinates($point->getLat(), $point->getLng());
         $place   = $results->first();
@@ -395,8 +396,8 @@ class Place extends Model
     /**
      * Creates a new Place instance from given coordinates.
      *
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point|array $coordinates
-     * @param bool                                             $saveInstance
+     * @param SpatialPoint|array $coordinates
+     * @param bool               $saveInstance
      *
      * @return \Fleetbase\Models\Place|null
      */
@@ -405,15 +406,15 @@ class Place extends Model
         $instance = new Place();
         $point    = Utils::getPointFromMixed($coordinates);
 
-        if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
+        if ($coordinates instanceof SpatialPoint) {
             $latitude               = $coordinates->getLat();
             $longitude              = $coordinates->getLng();
-        } elseif ($point instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
+        } elseif ($point instanceof SpatialPoint) {
             $latitude               = $point->getLat();
             $longitude              = $point->getLng();
         }
 
-        $instance->setAttribute('location', new \Fleetbase\LaravelMysqlSpatial\Types\Point($latitude, $longitude));
+        $instance->setAttribute('location', new SpatialPoint($latitude, $longitude));
         $instance->fill($attributes);
 
         $results = \Geocoder\Laravel\Facades\Geocoder::reverse($latitude, $longitude)->get();
@@ -434,8 +435,8 @@ class Place extends Model
     /**
      * Inserts a new place into the database using latitude and longitude coordinates.
      *
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point|array        $coordinates
-     * @param \Fleetbase\LaravelMysqlSpatial\Types\Point|string|array $coordinates the coordinates to use for the new place
+     * @param SpatialPoint|array        $coordinates
+     * @param SpatialPoint|string|array $coordinates the coordinates to use for the new place
      *
      * @return mixed returns the UUID of the new place on success or false on failure
      */
@@ -444,11 +445,11 @@ class Place extends Model
         $attributes = array_merge([], $attributes);
         $point      = Utils::getPointFromMixed($coordinates);
 
-        if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
+        if ($coordinates instanceof SpatialPoint) {
             $attributes['location'] = $coordinates;
             $latitude               = $coordinates->getLat();
             $longitude              = $coordinates->getLng();
-        } elseif ($point instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
+        } elseif ($point instanceof SpatialPoint) {
             $attributes['location'] = $point;
             $latitude               = $point->getLat();
             $longitude              = $point->getLng();
@@ -667,7 +668,7 @@ class Place extends Model
      *
      * @return Place|null the newly created Place instance, or null if no valid address could be found
      */
-    public static function createFromImportRow($row, $importId, $country = null): ?Place
+    public static function createFromImportRow(array $row, ?string $importId = null, $country = null): ?Place
     {
         $addressFields = [
             'street_number' => ['alias' => ['number', 'house_number', 'st_number']],
@@ -676,7 +677,7 @@ class Place extends Model
             'neighborhood'  => ['alias' => ['district']],
             'province'      => ['alias' => ['state']],
             'postal_code'   => ['alias' => ['postal', 'zip', 'zip_code']],
-            'phone'         => ['alias' => ['phone', 'mobile', 'phone_number', 'number', 'cell', 'cell_phone', 'mobile_number', 'contact_number']],
+            'phone'         => ['alias' => ['phone', 'mobile', 'phone_number', 'number', 'cell', 'cell_phone', 'mobile_number', 'contact_number', 'tel', 'telephone', 'telephone_number']],
             'location'      => ['alias' => ['position']],
             'latitude'      => ['alias' => ['lat', 'x']],
             'longitude'     => ['alias' => ['lon', 'lng', 'long', 'y']],
@@ -719,7 +720,6 @@ class Place extends Model
         }
 
         $place = Place::createFromGeocodingLookup($address, false);
-
         foreach ($addressFields as $field => $options) {
             if ($place->isFillable($field) && empty($place->{$field})) {
                 $value = Utils::or($row, array_merge([$field], $options['alias']));
@@ -741,8 +741,100 @@ class Place extends Model
         $meta = collect($row)->except(['name', ...$addressFields['street_number']['alias'], ...$addressFields['street2']['alias'], ...$addressFields['city']['alias'], ...$addressFields['neighborhood']['alias'], ...$addressFields['province']['alias'], ...$addressFields['postal_code']['alias'], ...$addressFields['phone']['alias']])->toArray();
         $place->setMeta($meta);
 
+        // Handle location
+        if (empty($place->location)) {
+            if ($latitude && $longitude) {
+                $place->location = new SpatialPoint($latitude, $longitude);
+            } else {
+                $place->location = new SpatialPoint(0, 0);
+            }
+        }
+
         // set the import id
-        $place->setAttribute('_import_id', $importId);
+        if ($importId) {
+            $place->setAttribute('_import_id', $importId);
+        }
+
+        return $place;
+    }
+
+    /**
+     * Creates a new Place instance from an imported row of data. This function primarily processes a
+     * single or multiple column import to create a Place. Single column imports are expected to contain
+     * an address, which is then geocoded. For multiple columns, the import is handled by another method,
+     * `createFromImportRow`, assuming these columns directly map to the Place model's attributes.
+     *
+     * In cases where geocoding is necessary and succeeds, the newly created Place is optionally saved
+     * to the database based on the $saveInstance parameter. If geocoding fails or no data is geocodable,
+     * the address or data is passed to `createFromMixed` for handling.
+     *
+     * @param array $row          an associative array representing a row of data to import, typically with keys
+     *                            as column names and values as the data entries
+     * @param bool  $saveInstance Optional. Whether to save the newly created Place instance to the
+     *                            database. Defaults to false, meaning the Place instance is not saved
+     *                            unless specified.
+     *
+     * @return Place Returns a Place instance populated with the provided data or with data derived
+     *               from the geocoding results. If the import data cannot directly create a valid Place,
+     *               an attempt is made to handle it as mixed data.
+     *
+     * @throws \Throwable Throws an exception if the geocoding request fails, which should be handled
+     *                    by the caller to manage any import or data entry errors.
+     *
+     * Example:
+     * $data = ['address' => '123 Main St, Anytown, USA'];
+     * $place = Place::createFromImport($data, true);
+     */
+    public static function createFromImport(array $row, bool $saveInstance = false): Place
+    {
+        // Filter array for null key values
+        $row = array_filter($row);
+
+        // Handle single column imports
+        if (count(array_keys($row)) === 1) {
+            // Get the single column name
+            $columnName = array_keys($row)[0];
+
+            // Handle when only address column is provided
+            if (isset($row[$columnName])) {
+                $address = $row[$columnName];
+
+                // Store geocoding results
+                $geocodingResults = collect();
+
+                // Try geocoding query
+                try {
+                    $geocodingResults = Geocoding::query($address, null, null);
+                } catch (\Throwable $e) {
+                    return static::createFromMixed($address, ['company_uuid' => session('company')], $saveInstance);
+                }
+
+                if ($geocodingResults->count()) {
+                    $place = $geocodingResults->first();
+                    if ($place instanceof Place) {
+                        // Set session values
+                        $place->setAttribute('company_uuid', session('company'));
+                        if ($saveInstance === true) {
+                            $place->save();
+                        }
+
+                        return $place;
+                    }
+                }
+
+                // If no geocoding results provided create place from string
+                return static::createFromMixed($address, ['company_uuid' => session('company')], $saveInstance);
+            }
+        }
+
+        // Handle multiple column import with address values
+        $place = static::createFromImportRow($row);
+        if ($place instanceof Place) {
+            $place->setAttribute('company_uuid', session('company'));
+            if ($saveInstance === true) {
+                $place->save();
+            }
+        }
 
         return $place;
     }

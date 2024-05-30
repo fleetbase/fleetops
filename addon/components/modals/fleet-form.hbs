@@ -5,20 +5,45 @@
                 <InputGroup @name={{t "fleet-ops.component.modals.fleet-form.title"}} @value={{@options.fleet.name}} />
             </div>
             <InputGroup @name={{t "fleet-ops.component.modals.fleet-form.assign"}} @value={{@options.fleet.service_area}}>
-                <ModelSelect @modelName="service-area" @selectedModel={{@options.fleet.service_area}} @placeholder={{t "fleet-ops.component.modals.fleet-form.assign-text"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut @options.fleet.service_area)}} as |model|>
+                <ModelSelect
+                    @modelName="service-area"
+                    @selectedModel={{@options.fleet.service_area}}
+                    @placeholder={{t "fleet-ops.component.modals.fleet-form.assign-text"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @options.fleet.service_area)}}
+                    as |model|
+                >
                     {{model.name}}
                 </ModelSelect>
             </InputGroup>
             {{#if @options.fleet.service_area}}
                 <InputGroup @name={{t "fleet-ops.component.modals.fleet-form.zone"}} @value={{@options.fleet.zone}}>
-                    <ModelSelect @modelName="zone" @selectedModel={{@options.fleet.zone}} @query={{hash service_area_uuid=@options.fleet.service_area.id}} @placeholder={{t "fleet-ops.component.modals.fleet-form.zone-text"}} @triggerClass="form-select form-input" @infiniteScroll={{false}} @renderInPlace={{true}} @onChange={{fn (mut @options.fleet.zone)}} as |model|>
+                    <ModelSelect
+                        @modelName="zone"
+                        @selectedModel={{@options.fleet.zone}}
+                        @query={{hash service_area_uuid=@options.fleet.service_area.id}}
+                        @placeholder={{t "fleet-ops.component.modals.fleet-form.zone-text"}}
+                        @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
+                        @onChange={{fn (mut @options.fleet.zone)}}
+                        as |model|
+                    >
                         {{model.name}}
                     </ModelSelect>
                 </InputGroup>
             {{/if}}
             <InputGroup @name={{t "fleet-ops.component.modals.fleet-form.task"}} @helpText={{t "fleet-ops.component.modals.fleet-form.task-text"}} @value={{@options.fleet.task}} />
             <InputGroup @name={{t "fleet-ops.common.status"}} @helpText={{t "fleet-ops.component.modals.fleet-form.status-text"}}>
-                <Select @options={{@options.statusOptions}} @value={{@options.fleet.status}} @onSelect={{fn (mut @options.fleet.status)}} @placeholder={{t "fleet-ops.component.modals.fleet-form.select-task"}} class="w-full" />
+                <Select
+                    @options={{@options.statusOptions}}
+                    @value={{@options.fleet.status}}
+                    @onSelect={{fn (mut @options.fleet.status)}}
+                    @placeholder={{t "fleet-ops.component.modals.fleet-form.select-task"}}
+                    class="w-full"
+                />
             </InputGroup>
         </div>
     </div>

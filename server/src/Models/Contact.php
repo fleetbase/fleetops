@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
@@ -230,5 +231,31 @@ class Contact extends Model
     public function routeNotificationForTwilio(): ?string
     {
         return $this->phone;
+    }
+
+    public static function createFromImport(array $row, bool $saveInstance = false): Contact
+    {
+        // Filter array for null key values
+        $row = array_filter($row);
+
+        // Get contact columns
+        $name  = Utils::or($row, ['name', 'full_name', 'first_name', 'contact', 'person']);
+        $phone = Utils::or($row, ['phone', 'mobile', 'phone_number', 'number', 'cell', 'cell_phone', 'mobile_number', 'contact_number', 'tel', 'telephone', 'telephone_number']);
+        $email = Utils::or($row, ['email', 'email_address']);
+
+        // Create contact
+        $contact = new static([
+            'company_uuid' => session('company'),
+            'name'         => $name,
+            'phone'        => Utils::fixPhone($phone),
+            'email'        => $email,
+            'type'         => 'contact',
+        ]);
+
+        if ($saveInstance === true) {
+            $contact->save();
+        }
+
+        return $contact;
     }
 }

@@ -4,9 +4,11 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\PlaceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Imports\PlaceImport;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\Http\Requests\ExportRequest;
+use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
@@ -172,5 +174,26 @@ class PlaceController extends FleetOpsController
         $options = Place::getAvatarOptions();
 
         return response()->json($options);
+    }
+
+    /**
+     * Process import files (excel,csv) into Fleetbase order data.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function import(ImportRequest $request)
+    {
+        $disk           = $request->input('disk', config('filesystems.default'));
+        $files          = $request->resolveFilesFromIds();
+
+        foreach ($files as $file) {
+            try {
+                Excel::import(new PlaceImport(), $file->path, $disk);
+            } catch (\Throwable $e) {
+                return response()->error('Invalid file, unable to proccess.');
+            }
+        }
+
+        return response()->json(['status' => 'ok', 'message' => 'Import completed']);
     }
 }

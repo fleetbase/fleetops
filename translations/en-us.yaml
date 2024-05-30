@@ -99,6 +99,7 @@ fleet-ops:
     vehicle-name: Vehicle Name
     pickup: Pickup
     dropoff: Dropoff
+    import: Import
   component:
     activity-logic-builder:
       activity-logic: Activity Logic
@@ -1166,6 +1167,10 @@ fleet-ops:
         title: Drivers
         delete-drivers: Delete Drivers  
         search-placeholder: Search Drivers 
+      new:
+         warning-message: No files in queue to upload!
+         import-success: Import completed.
+       
     fleets:
       index:
         view-fleet: View fleet details...

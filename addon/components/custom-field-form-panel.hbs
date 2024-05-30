@@ -1,8 +1,42 @@
-<Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{or this.isResizable @isResizable}} @width={{or this.width @width "570px"}}>
-    <Overlay::Header @title={{if this.customField.label (concat (t "fleet-ops.component.custom-field-form-panel.custom-field-title-concat") this.customField.label) (t "fleet-ops.component.custom-field-form-panel.new-custom-field") }} @hideStatusDot={{true}} @titleWrapperClass="leading-5">
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @onOpen={{this.onOpen}}
+    @onClose={{this.onClose}}
+    @onToggle={{this.onToggle}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizable={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "570px"}}
+>
+    <Overlay::Header
+        @title={{if
+            this.customField.label
+            (concat (t "fleet-ops.component.custom-field-form-panel.custom-field-title-concat") this.customField.label)
+            (t "fleet-ops.component.custom-field-form-panel.new-custom-field")
+        }}
+        @hideStatusDot={{true}}
+        @titleWrapperClass="leading-5"
+    >
         <div class="flex flex-1 justify-end">
-            <Button @icon={{if this.customField.id "save" "check"}} @type="primary" @text={{if this.customField.id (t "fleet-ops.component.custom-field-form-panel.save-custom-field")(t "fleet-ops.component.custom-field-form-panel.create-custom-field") }} @onClick={{perform this.save}} @isLoading={{not this.save.isIdle}} @wrapperClass="mr-2" />
-            <Button @type="default" @icon="times" @helpText={{if this.customField.id (t "fleet-ops.component.custom-field-form-panel.cancel-edit-custom-field")(t "fleet-ops.component.custom-field-form-panel.close-new-custom-field") }} @onClick={{this.onPressCancel}} />
+            <Button
+                @icon={{if this.customField.id "save" "check"}}
+                @type="primary"
+                @text={{if this.customField.id (t "fleet-ops.component.custom-field-form-panel.save-custom-field") (t "fleet-ops.component.custom-field-form-panel.create-custom-field")}}
+                @onClick={{perform this.save}}
+                @isLoading={{not this.save.isIdle}}
+                @wrapperClass="mr-2"
+            />
+            <Button
+                @type="default"
+                @icon="times"
+                @helpText={{if
+                    this.customField.id
+                    (t "fleet-ops.component.custom-field-form-panel.cancel-edit-custom-field")
+                    (t "fleet-ops.component.custom-field-form-panel.close-new-custom-field")
+                }}
+                @onClick={{this.onPressCancel}}
+            />
         </div>
     </Overlay::Header>
 
@@ -50,7 +84,17 @@
             </InputGroup>
         {{/if}}
         <InputGroup @name={{t "fleet-ops.component.custom-field-form-panel.meta-col-span"}}>
-            <DropdownButton @text={{concat (t "fleet-ops.component.custom-field-form-panel.col-span-size") ": " (n-a this.customField.meta.colSpan)}} @textClass="text-sm mr-2" @buttonClass="flex-row-reverse w-64 justify-between" @icon="caret-down" @iconClass="mr-0i" @size="sm" @iconPrefix="fas" @triggerClass="hidden md:flex" as |dd|>
+            <DropdownButton
+                @text={{concat (t "fleet-ops.component.custom-field-form-panel.col-span-size") ": " (n-a this.customField.meta.colSpan)}}
+                @textClass="text-sm mr-2"
+                @buttonClass="flex-row-reverse w-64 justify-between"
+                @icon="caret-down"
+                @iconClass="mr-0i"
+                @size="sm"
+                @iconPrefix="fas"
+                @triggerClass="hidden md:flex"
+                as |dd|
+            >
                 <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                     <div class="p-1">
                         {{#each this.colSpanSizeOptions as |size|}}

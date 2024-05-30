@@ -5,11 +5,11 @@ dependencies:
     specifier: ^7.23.2
     version: 7.23.2
   '@fleetbase/ember-core':
-    specifier: ^0.2.10
-    version: 0.2.10(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
+    specifier: ^0.2.11
+    version: 0.2.11(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
   '@fleetbase/ember-ui':
-    specifier: ^0.2.15
-    version: 0.2.15(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0)
+    specifier: ^0.2.16
+    version: 0.2.16(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0)
   '@fleetbase/fleetops-data':
     specifier: ^0.1.15
     version: 0.1.15
@@ -1918,13 +1918,13 @@ packages:
       postcss: 8.4.35
     dev: false
 
-  /@csstools/selector-resolve-nested@1.1.0(postcss-selector-parser@6.0.15):
+  /@csstools/selector-resolve-nested@1.1.0(postcss-selector-parser@6.1.0):
     resolution: {integrity: sha512-uWvSaeRcHyeNenKg8tp17EVDRkpflmdyvbE0DHo6D/GdBb6PDnCYYU6gRpXhtICMGMcahQmj2zGxwFM/WC8hCg==}
     engines: {node: ^14 || ^16 || >=18}
     peerDependencies:
       postcss-selector-parser: ^6.0.13
     dependencies:
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /@csstools/selector-specificity@3.0.2(postcss-selector-parser@6.0.15):
@@ -1943,6 +1943,15 @@ packages:
       postcss-selector-parser: ^6.0.13
     dependencies:
       postcss-selector-parser: 6.0.15
+    dev: false
+
+  /@csstools/selector-specificity@3.1.1(postcss-selector-parser@6.1.0):
+    resolution: {integrity: sha512-a7cxGcJ2wIlMFLlh8z2ONm+715QkPHiyJcxwQlKOz/03GPw1COpfhcmC9wm4xlZfp//jWHNNMwzjtqHXVWU9KA==}
+    engines: {node: ^14 || ^16 || >=18}
+    peerDependencies:
+      postcss-selector-parser: ^6.0.13
+    dependencies:
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /@csstools/utilities@1.0.0(postcss@8.4.35):
@@ -2496,8 +2505,8 @@ packages:
       - supports-color
     dev: false
 
-  /@fleetbase/ember-core@0.2.10(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0):
-    resolution: {integrity: sha512-K1k7+vNdYoJmJdViUj5tMJFpIfGA/a2SBmUk2QuFhk8PlHARhM8S8U7RxtgAIBA8C9VsQyO0Ekgr5WN3WU6aVQ==}
+  /@fleetbase/ember-core@0.2.11(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0):
+    resolution: {integrity: sha512-ogf1J1Yv1kJ3/8eUGzdS2l1UjDZE4b4u3q/86Ue0X2tskzTNSto3P8MWt/BaXAke1E0UbDXOq4aeB624OgTm7w==}
     engines: {node: '>= 18'}
     dependencies:
       '@babel/core': 7.23.2
@@ -2529,8 +2538,8 @@ packages:
       - webpack
     dev: false
 
-  /@fleetbase/ember-ui@0.2.15(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0):
-    resolution: {integrity: sha512-nYuyN3ird4lCRUwozFQY3AK8NAnS1pdZB/SGD2vg8SOIr7CjfG7MjixmDbK+d9Vdt2t2QyhbUgzYHleLUAD4qw==}
+  /@fleetbase/ember-ui@0.2.16(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0):
+    resolution: {integrity: sha512-RLdqzTDAEbOyIfSrNb3JsS/i9wZ5hy0/CnfK68ccIpC6AePImxBrmqUUYDiTzN3afUFjBGpg7P+uwNT8FwM2nw==}
     engines: {node: '>= 18'}
     dependencies:
       '@babel/core': 7.23.2
@@ -2544,18 +2553,18 @@ packages:
       '@fortawesome/fontawesome-svg-core': 6.4.0
       '@fortawesome/free-brands-svg-icons': 6.5.2
       '@fortawesome/free-solid-svg-icons': 6.4.0
-      '@fullcalendar/core': 6.1.11
-      '@fullcalendar/daygrid': 6.1.11(@fullcalendar/core@6.1.11)
-      '@fullcalendar/interaction': 6.1.11(@fullcalendar/core@6.1.11)
+      '@fullcalendar/core': 6.1.13
+      '@fullcalendar/daygrid': 6.1.13(@fullcalendar/core@6.1.13)
+      '@fullcalendar/interaction': 6.1.13(@fullcalendar/core@6.1.13)
       '@makepanic/ember-power-calendar-date-fns': 0.4.2
       '@tailwindcss/forms': 0.5.7(tailwindcss@3.4.3)
-      air-datepicker: 3.5.1
+      air-datepicker: 3.5.3
       autonumeric: 4.10.5
       autoprefixer: 10.4.19(postcss@8.4.35)
       broccoli-funnel: 3.0.8
       broccoli-merge-trees: 4.2.0
-      chart.js: 4.4.2
-      chartjs-adapter-date-fns: 3.0.0(chart.js@4.4.2)(date-fns@2.30.0)
+      chart.js: 4.4.3
+      chartjs-adapter-date-fns: 3.0.0(chart.js@4.4.3)(date-fns@2.30.0)
       date-fns: 2.30.0
       ember-animated: 1.1.4(@ember/test-helpers@3.2.0)(ember-source@5.4.0)
       ember-auto-import: 2.7.2(webpack@5.89.0)
@@ -2591,7 +2600,7 @@ packages:
       postcss-each: 1.1.0(postcss@8.4.35)
       postcss-import: 15.1.0(postcss@8.4.35)
       postcss-mixins: 9.0.4(postcss@8.4.35)
-      postcss-preset-env: 9.5.13(postcss@8.4.35)
+      postcss-preset-env: 9.5.14(postcss@8.4.35)
       tailwindcss: 3.4.3
     transitivePeerDependencies:
       - '@ember/test-helpers'
@@ -2810,26 +2819,26 @@ packages:
       '@fortawesome/fontawesome-common-types': 6.4.0
     dev: false
 
-  /@fullcalendar/core@6.1.11:
-    resolution: {integrity: sha512-TjG7c8sUz+Vkui2FyCNJ+xqyu0nq653Ibe99A66LoW95oBo6tVhhKIaG1Wh0GVKymYiqAQN/OEdYTuj4ay27kA==}
+  /@fullcalendar/core@6.1.13:
+    resolution: {integrity: sha512-Cps/hMQan4kwnsBhFf2+m2mijbGoWs6r18ZzxBnAAOkkNHtPmHU8EdR6lF+ZLsiVvb7nsC4H/ZKqnxXWwgpoPw==}
     dependencies:
       preact: 10.12.1
     dev: false
 
-  /@fullcalendar/daygrid@6.1.11(@fullcalendar/core@6.1.11):
-    resolution: {integrity: sha512-hF5jJB7cgUIxWD5MVjj8IU407HISyLu7BWXcEIuTytkfr8oolOXeCazqnnjmRbnFOncoJQVstTtq6SIhaT32Xg==}
+  /@fullcalendar/daygrid@6.1.13(@fullcalendar/core@6.1.13):
+    resolution: {integrity: sha512-0I0hL1kgGjkZuc7Qt8mu4jjrqIL5PZzd58bEpTxoXRKI5UBZ9KbshGVMryQSXYANlrRtkPnXVt90VIDrxZbDrA==}
     peerDependencies:
-      '@fullcalendar/core': ~6.1.11
+      '@fullcalendar/core': ~6.1.13
     dependencies:
-      '@fullcalendar/core': 6.1.11
+      '@fullcalendar/core': 6.1.13
     dev: false
 
-  /@fullcalendar/interaction@6.1.11(@fullcalendar/core@6.1.11):
-    resolution: {integrity: sha512-ynOKjzuPwEAMgTQ6R/Z2zvzIIqG4p8/Qmnhi1q0vzPZZxSIYx3rlZuvpEK2WGBZZ1XEafDOP/LGfbWoNZe+qdg==}
+  /@fullcalendar/interaction@6.1.13(@fullcalendar/core@6.1.13):
+    resolution: {integrity: sha512-r1w+jqCRGZZyxKFquueDSFvbsFhJLhc1BX8Nlyz684lYxS1SiToYJW9Q8X/XkySCzpjO3KOnxEp2jVOn1Usyjg==}
     peerDependencies:
-      '@fullcalendar/core': ~6.1.11
+      '@fullcalendar/core': ~6.1.13
     dependencies:
-      '@fullcalendar/core': 6.1.11
+      '@fullcalendar/core': 6.1.13
     dev: false
 
   /@glimmer/compiler@0.27.0:
@@ -3939,8 +3948,8 @@ packages:
       sc-errors: 3.0.0
     dev: false
 
-  /air-datepicker@3.5.1:
-    resolution: {integrity: sha512-Wj0vE+0eH5jp3HuEhlkrFUzrnuGEld8H7yo9+CcPlkkqnFos/rDgLLgLjdkyuGaEFGpdsty8f9O/f12IVKXiuw==}
+  /air-datepicker@3.5.3:
+    resolution: {integrity: sha512-Elf9gLhv/jidN1+TfeRJYMQRUfYx5apXw2dY5DuAMPRnNtQ4Iw9fTTJK772osmXSUB9xQ2Y8Q1Pt6pgBOQLPQw==}
     dev: false
 
   /ajv-errors@1.0.1(ajv@6.12.6):
@@ -4309,7 +4318,7 @@ packages:
       postcss: ^8.1.0
     dependencies:
       browserslist: 4.23.0
-      caniuse-lite: 1.0.30001620
+      caniuse-lite: 1.0.30001625
       fraction.js: 4.3.7
       normalize-range: 0.1.2
       picocolors: 1.0.0
@@ -5663,7 +5672,7 @@ packages:
     resolution: {integrity: sha512-bsTwuIg/BZZK/vreVTYYbSWoe2F+71P7K5QGEX+pT250DZbfU1MQ5prOKpPR+LL6uWKK3KMwMCAS74QB3Um1uw==}
     dependencies:
       browserslist: 4.23.0
-      caniuse-lite: 1.0.30001620
+      caniuse-lite: 1.0.30001625
       lodash.memoize: 4.1.2
       lodash.uniq: 4.5.0
     dev: false
@@ -5671,8 +5680,8 @@ packages:
   /caniuse-lite@1.0.30001588:
     resolution: {integrity: sha512-+hVY9jE44uKLkH0SrUTqxjxqNTOWHsbnQDIKjwkZ3lNTzUUVdBLBGXtj/q5Mp5u98r3droaZAewQuEDzjQdZlQ==}
 
-  /caniuse-lite@1.0.30001620:
-    resolution: {integrity: sha512-WJvYsOjd1/BYUY6SNGUosK9DUidBPDTnOARHp3fSmFO1ekdxaY6nKRttEVrfMmYi80ctS0kz1wiWmm14fVc3ew==}
+  /caniuse-lite@1.0.30001625:
+    resolution: {integrity: sha512-4KE9N2gcRH+HQhpeiRZXd+1niLB/XNLAhSy4z7fI8EzcbcPoAqjNInxVHTiTwWfTIV4w096XG8OtCOCQQKPv3w==}
     dev: false
 
   /capture-exit@2.0.0:
@@ -5730,20 +5739,20 @@ packages:
       inherits: 2.0.4
     dev: true
 
-  /chart.js@4.4.2:
-    resolution: {integrity: sha512-6GD7iKwFpP5kbSD4MeRRRlTnQvxfQREy36uEtm1hzHzcOqwWx0YEHuspuoNlslu+nciLIB7fjjsHkUv/FzFcOg==}
+  /chart.js@4.4.3:
+    resolution: {integrity: sha512-qK1gkGSRYcJzqrrzdR6a+I0vQ4/R+SoODXyAjscQ/4mzuNzySaMCd+hyVxitSY1+L2fjPD1Gbn+ibNqRmwQeLw==}
     engines: {pnpm: '>=8'}
     dependencies:
       '@kurkle/color': 0.3.2
     dev: false
 
-  /chartjs-adapter-date-fns@3.0.0(chart.js@4.4.2)(date-fns@2.30.0):
+  /chartjs-adapter-date-fns@3.0.0(chart.js@4.4.3)(date-fns@2.30.0):
     resolution: {integrity: sha512-Rs3iEB3Q5pJ973J93OBTpnP7qoGwvq3nUnoMdtxO+9aoJof7UFcRbWcIDteXuYd1fgAvct/32T9qaLyLuZVwCg==}
     peerDependencies:
       chart.js: '>=2.8.0'
       date-fns: '>=2.0.0'
     dependencies:
-      chart.js: 4.4.2
+      chart.js: 4.4.3
       date-fns: 2.30.0
     dev: false
 
@@ -6337,6 +6346,7 @@ packages:
 
   /copy-concurrently@1.0.5:
     resolution: {integrity: sha512-f2domd9fsVDFtaFcbaRZuYXwtdmnzqbADSwhSWYxYB/Q8zsdUUFMXVRwXGDMWmbEzAn1kdRrtI1T/KTFOL4X2A==}
+    deprecated: This package is no longer supported.
     dependencies:
       aproba: 1.2.0
       fs-write-stream-atomic: 1.0.10
@@ -6544,8 +6554,8 @@ packages:
     resolution: {integrity: sha512-IiJwMC8rdZE0+xiEZHeru6YoONC4rfPMqGm2W85jMIbkFvv5nFTwJVFHam2eFrN6txmoUYFAFXiv8ICVeTO0MA==}
     dev: false
 
-  /cssdb@8.0.1:
-    resolution: {integrity: sha512-diegY/vnOYmPXY0bOBj5jeHaiK8MMpjgPuipirY8pF9AthtqEXgqVdKF5tnb6RTc/ZdhQqG0TBnInQ5CbbUW7Q==}
+  /cssdb@8.0.2:
+    resolution: {integrity: sha512-zbOCmmbcHvr2lP+XrZSgftGMGumbosC6IM3dbxwifwPEBD70pVJaH3Ho191VBEqDg644AM7PPPVj0ZXokTjZng==}
     dev: false
 
   /cssesc@3.0.0:
@@ -9846,6 +9856,7 @@ packages:
 
   /fs-write-stream-atomic@1.0.10:
     resolution: {integrity: sha512-gehEzmPn2nAwr39eay+x3X34Ra+M2QlVUTLhkXPjWdeO8RF9kszk116avgBJM3ZyNHgHXBNx+VmPaFC36k0PzA==}
+    deprecated: This package is no longer supported.
     dependencies:
       graceful-fs: 4.2.11
       iferr: 0.1.5
@@ -10009,15 +10020,15 @@ packages:
   /glob-to-regexp@0.4.1:
     resolution: {integrity: sha512-lkX1HJXwyMcprw/5YUZc2s7DrpAiHB21/V+E1rHUrVNokkvB6bqMzT0VfV6/86ZNabt1k14YOIaT7nDvOX3Iiw==}
 
-  /glob@10.3.15:
-    resolution: {integrity: sha512-0c6RlJt1TICLyvJYIApxb8GsXoai0KUP7AxKKAtsYXdgJR1mGEUa7DgwShbdk1nly0PYoZj01xd4hzbq3fsjpw==}
+  /glob@10.4.1:
+    resolution: {integrity: sha512-2jelhlq3E4ho74ZyVLN03oKdAZVUa6UDZzFLVH1H7dnoax+y9qyaq8zBkfDIggjniU19z0wU18y16jMB2eyVIw==}
     engines: {node: '>=16 || 14 >=14.18'}
     hasBin: true
     dependencies:
       foreground-child: 3.1.1
-      jackspeak: 2.3.6
+      jackspeak: 3.1.2
       minimatch: 9.0.4
-      minipass: 7.0.4
+      minipass: 7.1.2
       path-scurry: 1.11.1
     dev: false
 
@@ -10982,8 +10993,8 @@ packages:
       editions: 2.3.1
       textextensions: 2.6.0
 
-  /jackspeak@2.3.6:
-    resolution: {integrity: sha512-N3yCS/NegsOBokc8GAdM8UcmfsKiSS8cipheD/nivzr700H+nsMOxJjQnvwOcRYVuFkdH0wGUvW2WbXGmrZGbQ==}
+  /jackspeak@3.1.2:
+    resolution: {integrity: sha512-kWmLKn2tRtfYMF/BakihVVRzBKOxz4gJMiL2Rj91WnAB5TPZumSH99R/Yf1qE1u4uRimvCSJfm6hnxohXeEXjQ==}
     engines: {node: '>=14'}
     dependencies:
       '@isaacs/cliui': 8.0.2
@@ -11827,6 +11838,12 @@ packages:
   /minipass@7.0.4:
     resolution: {integrity: sha512-jYofLM5Dam9279rdkWzqHozUo4ybjdZmCsDHePy5V/PbBcVMiSZR97gmAy45aqi8CK1lG2ECd356FU86avfwUQ==}
     engines: {node: '>=16 || 14 >=14.17'}
+    dev: true
+
+  /minipass@7.1.2:
+    resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
+    engines: {node: '>=16 || 14 >=14.17'}
+    dev: false
 
   /mississippi@3.0.0:
     resolution: {integrity: sha512-x471SsVjUtBRtcvd4BzKE9kFC+/2TeWgKCgw0bZcw1b9l2X3QX5vCWgF+KaZaYm87Ss//rHnWryupDrgLvmSkA==}
@@ -11887,6 +11904,7 @@ packages:
 
   /move-concurrently@1.0.1:
     resolution: {integrity: sha512-hdrFxZOycD/g6A6SoI2bB5NA/5NEqD0569+S47WZhPvm46sD50ZHdYaFmnua5lndde9rCHGjmfK7Z8BuCt/PcQ==}
+    deprecated: This package is no longer supported.
     dependencies:
       aproba: 1.2.0
       copy-concurrently: 1.0.5
@@ -12534,7 +12552,7 @@ packages:
     engines: {node: '>=16 || 14 >=14.18'}
     dependencies:
       lru-cache: 10.2.0
-      minipass: 7.0.4
+      minipass: 7.1.2
     dev: false
 
   /path-to-regexp@0.1.7:
@@ -12953,16 +12971,16 @@ packages:
       postcss-selector-parser: 6.0.15
     dev: false
 
-  /postcss-nesting@12.1.4(postcss@8.4.35):
-    resolution: {integrity: sha512-CcHOq94K137E+U4Ommu7pexcpp0Tjm24zl4UcqWs1oSLAr5cLI+jLrqQ5h/bdjhMX6cMbzunyustVNnvrzF8Zg==}
+  /postcss-nesting@12.1.5(postcss@8.4.35):
+    resolution: {integrity: sha512-N1NgI1PDCiAGWPTYrwqm8wpjv0bgDmkYHH72pNsqTCv9CObxjxftdYu6AKtGN+pnJa7FQjMm3v4sp8QJbFsYdQ==}
     engines: {node: ^14 || ^16 || >=18}
     peerDependencies:
       postcss: ^8.4
     dependencies:
-      '@csstools/selector-resolve-nested': 1.1.0(postcss-selector-parser@6.0.15)
-      '@csstools/selector-specificity': 3.1.1(postcss-selector-parser@6.0.15)
+      '@csstools/selector-resolve-nested': 1.1.0(postcss-selector-parser@6.1.0)
+      '@csstools/selector-specificity': 3.1.1(postcss-selector-parser@6.1.0)
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /postcss-opacity-percentage@2.0.0(postcss@8.4.35):
@@ -13002,8 +13020,8 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-preset-env@9.5.13(postcss@8.4.35):
-    resolution: {integrity: sha512-YQMwWu6MAc4Envrjf/mW2BTrb5J8WkrJ4dV2VostZVDhrmEPpYREOyhmvtlFLDxK1/AmTDY8aXjZViMC1qKu/w==}
+  /postcss-preset-env@9.5.14(postcss@8.4.35):
+    resolution: {integrity: sha512-gTMi+3kENN/mN+K59aR+vEOjlkujTmmXJcM9rnAqGh9Y/euQ/ypdp9rd8mO1eoIjAD8vNS15+xbkBxoi+65BqQ==}
     engines: {node: ^14 || ^16 || >=18}
     peerDependencies:
       postcss: ^8.4
@@ -13042,7 +13060,7 @@ packages:
       css-blank-pseudo: 6.0.2(postcss@8.4.35)
       css-has-pseudo: 6.0.5(postcss@8.4.35)
       css-prefers-color-scheme: 9.0.1(postcss@8.4.35)
-      cssdb: 8.0.1
+      cssdb: 8.0.2
       postcss: 8.4.35
       postcss-attribute-case-insensitive: 6.0.3(postcss@8.4.35)
       postcss-clamp: 4.1.0(postcss@8.4.35)
@@ -13061,7 +13079,7 @@ packages:
       postcss-image-set-function: 6.0.3(postcss@8.4.35)
       postcss-lab-function: 6.0.16(postcss@8.4.35)
       postcss-logical: 7.0.1(postcss@8.4.35)
-      postcss-nesting: 12.1.4(postcss@8.4.35)
+      postcss-nesting: 12.1.5(postcss@8.4.35)
       postcss-opacity-percentage: 2.0.0(postcss@8.4.35)
       postcss-overflow-shorthand: 5.0.1(postcss@8.4.35)
       postcss-page-break: 3.0.4(postcss@8.4.35)
@@ -13118,6 +13136,14 @@ packages:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
+
+  /postcss-selector-parser@6.1.0:
+    resolution: {integrity: sha512-UMz42UD0UY0EApS0ZL9o1XnLhSTtvvvLe5Dc2H2O56fvRZi+KulDyf5ctDhhtYJBGKStV2FL1fy6253cmLgqVQ==}
+    engines: {node: '>=4'}
+    dependencies:
+      cssesc: 3.0.0
+      util-deprecate: 1.0.2
+    dev: false
 
   /postcss-simple-vars@6.0.3(postcss@8.4.35):
     resolution: {integrity: sha512-fkNn4Zio8vN4vIig9IFdb8lVlxWnYR769RgvxCM6YWlFKie/nQaOcaMMMFz/s4gsfHW4/5bJW+i57zD67mQU7g==}
@@ -14722,7 +14748,7 @@ packages:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.3
       commander: 4.1.1
-      glob: 10.3.15
+      glob: 10.4.1
       lines-and-columns: 1.2.4
       mz: 2.7.0
       pirates: 4.0.6

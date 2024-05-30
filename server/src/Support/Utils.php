@@ -1336,8 +1336,17 @@ class Utils extends FleetbaseUtils
      *
      * @return bool returns true if the provided object is an instance of Activity, false otherwise
      */
-    public static function isActivity($activity)
+    public static function isActivity($activity): bool
     {
         return $activity && $activity instanceof Activity && !empty($activity->code);
+    }
+
+    public static function fixPhone(string $phone): string
+    {
+        if (!Str::startsWith($phone, '+')) {
+            $phone = '+' . $phone;
+        }
+
+        return $phone;
     }
 }

@@ -1,5 +1,19 @@
-<Overlay @onLoad={{this.setOverlayContext}} @onOpen={{this.onOpen}} @onClose={{this.onClose}} @onToggle={{this.onToggle}} @position="right" @noBackdrop={{true}} @fullHeight={{true}} @isResizable={{or this.isResizable @isResizable}} @width={{or this.width @width "570px"}}>
-    <Overlay::Header @title={{if this.customEntity.name this.customEntity.name (t "fleet-ops.component.custom-entity-issue-form-panel.new-custom-entity")}} @hideStatusDot={{true}} @titleWrapperClass="leading-5">
+<Overlay
+    @onLoad={{this.setOverlayContext}}
+    @onOpen={{this.onOpen}}
+    @onClose={{this.onClose}}
+    @onToggle={{this.onToggle}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizable={{or this.isResizable @isResizable}}
+    @width={{or this.width @width "570px"}}
+>
+    <Overlay::Header
+        @title={{if this.customEntity.name this.customEntity.name (t "fleet-ops.component.custom-entity-issue-form-panel.new-custom-entity")}}
+        @hideStatusDot={{true}}
+        @titleWrapperClass="leading-5"
+    >
         <div class="flex flex-1 justify-end">
             <Button @icon={{if this.customEntity.id "save" "check"}} @type="primary" @text="Save Changes" @onClick={{this.save}} @wrapperClass="mr-2" />
             <Button @type="default" @icon="times" @onClick={{this.onPressCancel}} />
@@ -23,17 +37,58 @@
             </ContentPanel>
             <ContentPanel @title={{t "fleet-ops.component.custom-entity-issue-form-panel.measurements"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="grid grid-cols-2 gap-1">
-                    <InputGroup @name={{t "fleet-ops.component.custom-entity-issue-form-panel.length"}} @helpText={{t "fleet-ops.component.custom-entity-issue-form-panel.length-text"}} @wrapperClass="mb-2">
-                        <UnitInput class="w-full" @value={{this.customEntity.length}} @unit={{this.customEntity.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{this.updateCustomEntityDimensionsUnit}} />
+                    <InputGroup
+                        @name={{t "fleet-ops.component.custom-entity-issue-form-panel.length"}}
+                        @helpText={{t "fleet-ops.component.custom-entity-issue-form-panel.length-text"}}
+                        @wrapperClass="mb-2"
+                    >
+                        <UnitInput
+                            class="w-full"
+                            @value={{this.customEntity.length}}
+                            @unit={{this.customEntity.dimensions_unit}}
+                            @canSelectUnit={{true}}
+                            @onUnitChange={{this.updateCustomEntityDimensionsUnit}}
+                        />
                     </InputGroup>
-                    <InputGroup @name={{t "fleet-ops.component.custom-entity-issue-form-panel.width"}} @helpText={{t "fleet-ops.component.custom-entity-issue-form-panel.width-text"}} @wrapperClass="mb-2">
-                        <UnitInput class="w-full" @value={{this.customEntity.width}} @unit={{this.customEntity.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{this.updateCustomEntityDimensionsUnit}} />
+                    <InputGroup
+                        @name={{t "fleet-ops.component.custom-entity-issue-form-panel.width"}}
+                        @helpText={{t "fleet-ops.component.custom-entity-issue-form-panel.width-text"}}
+                        @wrapperClass="mb-2"
+                    >
+                        <UnitInput
+                            class="w-full"
+                            @value={{this.customEntity.width}}
+                            @unit={{this.customEntity.dimensions_unit}}
+                            @canSelectUnit={{true}}
+                            @onUnitChange={{this.updateCustomEntityDimensionsUnit}}
+                        />
                     </InputGroup>
-                    <InputGroup @name={{t "fleet-ops.component.custom-entity-issue-form-panel.height"}} @helpText={{t "fleet-ops.component.custom-entity-issue-form-panel.height-text"}} @wrapperClass="mb-2">
-                        <UnitInput class="w-full" @value={{this.customEntity.height}} @unit={{this.customEntity.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{this.updateCustomEntityDimensionsUnit}} />
+                    <InputGroup
+                        @name={{t "fleet-ops.component.custom-entity-issue-form-panel.height"}}
+                        @helpText={{t "fleet-ops.component.custom-entity-issue-form-panel.height-text"}}
+                        @wrapperClass="mb-2"
+                    >
+                        <UnitInput
+                            class="w-full"
+                            @value={{this.customEntity.height}}
+                            @unit={{this.customEntity.dimensions_unit}}
+                            @canSelectUnit={{true}}
+                            @onUnitChange={{this.updateCustomEntityDimensionsUnit}}
+                        />
                     </InputGroup>
-                    <InputGroup @name={{t "fleet-ops.component.custom-entity-issue-form-panel.weight"}} @helpText={{t "fleet-ops.component.custom-entity-issue-form-panel.weight-text"}} @wrapperClass="mb-2">
-                        <UnitInput class="w-full" @value={{this.customEntity.weight}} @measurement="weight" @unit={{this.customEntity.weight_unit}} @canSelectUnit={{true}} @onUnitChange={{this.updateCustomEntityWeightUnit}} />
+                    <InputGroup
+                        @name={{t "fleet-ops.component.custom-entity-issue-form-panel.weight"}}
+                        @helpText={{t "fleet-ops.component.custom-entity-issue-form-panel.weight-text"}}
+                        @wrapperClass="mb-2"
+                    >
+                        <UnitInput
+                            class="w-full"
+                            @value={{this.customEntity.weight}}
+                            @measurement="weight"
+                            @unit={{this.customEntity.weight_unit}}
+                            @canSelectUnit={{true}}
+                            @onUnitChange={{this.updateCustomEntityWeightUnit}}
+                        />
                     </InputGroup>
                 </div>
             </ContentPanel>

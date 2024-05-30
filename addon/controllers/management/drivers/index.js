@@ -494,8 +494,9 @@ export default class ManagementDriversIndexController extends BaseController {
         this.crud.bulkDelete(selected, {
             modelNamePath: `name`,
             acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.delete-button'),
-            onSuccess: () => {
-                return this.hostRouter.refresh();
+            onSuccess: async () => {
+                await this.hostRouter.refresh();
+                this.table.untoggleSelectAll();
             },
         });
     }
@@ -510,6 +511,19 @@ export default class ManagementDriversIndexController extends BaseController {
     @action exportDrivers() {
         const selections = this.table.selectedRows.map((_) => _.id);
         this.crud.export('driver', { params: { selections } });
+    }
+
+    /**
+     * Handles and prompts for spreadsheet imports of drivers.
+     *
+     * @void
+     */
+    @action importDrivers() {
+        this.crud.import('driver', {
+            onImportCompleted: () => {
+                this.hostRouter.refresh();
+            },
+        });
     }
 
     /**

@@ -9,10 +9,12 @@ use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Requests\Internal\AssignOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\Internal\CreateDriverRequest;
 use Fleetbase\FleetOps\Http\Requests\Internal\UpdateDriverRequest;
+use Fleetbase\FleetOps\Imports\DriverImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
+use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Invite;
 use Fleetbase\Models\User;
@@ -89,7 +91,7 @@ class DriverController extends FleetOpsController
 
                     // create driver profile for user
                     $input = collect($input)
-                        ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])
+                        ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid', 'status'])
                         ->filter()
                         ->toArray();
 
@@ -179,7 +181,7 @@ class DriverController extends FleetOpsController
 
                     // Prepare input
                     $input = $input
-                            ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])
+                            ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid', 'status'])
                             ->filter()
                             ->toArray();
 
@@ -485,5 +487,26 @@ class DriverController extends FleetOpsController
         }
 
         return $phone;
+    }
+
+    /**
+     * Process import files (excel,csv) into Fleetbase order data.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function import(ImportRequest $request)
+    {
+        $disk           = $request->input('disk', config('filesystems.default'));
+        $files          = $request->resolveFilesFromIds();
+
+        foreach ($files as $file) {
+            try {
+                Excel::import(new DriverImport(), $file->path, $disk);
+            } catch (\Throwable $e) {
+                return response()->error('Invalid file, unable to proccess.');
+            }
+        }
+
+        return response()->json(['status' => 'ok', 'message' => 'Import completed']);
     }
 }

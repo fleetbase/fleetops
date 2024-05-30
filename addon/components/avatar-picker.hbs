@@ -1,7 +1,15 @@
 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
     <div class="input-group mb-2">
         <InputLabel @labelText={{t "fleet-ops.component.avatar-picker.select-map-avatar"}} @helpText={{t "fleet-ops.component.avatar-picker.select-avatar-rendering"}} />
-        <FetchSelect @wrapperClass="w-60" @placeholder={{t "fleet-ops.component.avatar-picker.select-avatar"}} @endpoint={{this.endpoint}} @selected={{this.model.avatar_value}} @optionValue="value" @onChange={{this.selectAvatar}} as |option|>
+        <FetchSelect
+            @wrapperClass="w-60"
+            @placeholder={{t "fleet-ops.component.avatar-picker.select-avatar"}}
+            @endpoint={{this.endpoint}}
+            @selected={{this.model.avatar_value}}
+            @optionValue="value"
+            @onChange={{this.selectAvatar}}
+            as |option|
+        >
             {{titleize (humanize option.key)}}
         </FetchSelect>
     </div>
