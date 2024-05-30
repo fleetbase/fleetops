@@ -182,17 +182,25 @@ class FuelReport extends Model
 
         // Get fuelReport columns
         $reporter = Utils::or($row, ['report', 'reporter', 'reported']);
+        $driver = Utils::or($row, ['driver', 'driver name']);
 
         $reporterUser = User::where('name', 'like', '%' . $reporter . '%')->where('company_uuid', session('user'))->first();
         if ($reporterUser) {
             $row['reported_by_uuid'] = $reporterUser->uuid;
         }
 
+        $driverUser = User::where('name', 'like', '%' . $driver. '%')->where('company_uuid', session('user'))->first();
+        if ($driverUser) {
+            $row['driver_uuid'] = $driverUser->uuid;
+        }
+
         // Create fuelReport
         $fuelReport = new static([
             'company_uuid' => session('company'),
-            'report'       => $reporterUser,
+            'reporter'     => $reporterUser,
             'odometer'     => 0,
+            'driver'       => $driverUser,
+            'location'     => Utils::parsePointToWkt(new Point(0, 0)),
         ]);
 
         if ($saveInstance === true) {
