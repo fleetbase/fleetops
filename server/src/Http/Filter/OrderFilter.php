@@ -127,7 +127,23 @@ class OrderFilter extends Filter
 
     public function type(string $type)
     {
-        $this->builder->where('type', $type);
+        $this->builder->where(function ($query) use ($type) {
+            $query->where('type', $type);
+            $query->orWhereHas('orderConfig', function ($query) use ($type) {
+                $query->where('uuid', $type);
+                $query->orWhere('public_id', $type);
+                $query->orWhere('key', $type);
+            });
+        });
+    }
+
+    public function orderConfig(string $orderConfig)
+    {
+        $this->builder->whereHas('orderConfig', function ($query) use ($orderConfig) {
+            $query->where('uuid', $orderConfig);
+            $query->orWhere('public_id', $orderConfig);
+            $query->orWhere('key', $orderConfig);
+        });
     }
 
     public function payload(string $payload)
