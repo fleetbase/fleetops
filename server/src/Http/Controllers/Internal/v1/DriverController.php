@@ -91,7 +91,7 @@ class DriverController extends FleetOpsController
 
                     // create driver profile for user
                     $input = collect($input)
-                        ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid', 'status'])
+                        ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])
                         ->filter()
                         ->toArray();
 
@@ -181,7 +181,7 @@ class DriverController extends FleetOpsController
 
                     // Prepare input
                     $input = $input
-                            ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid', 'status'])
+                            ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])
                             ->filter()
                             ->toArray();
 
@@ -338,9 +338,11 @@ class DriverController extends FleetOpsController
     {
         $format       = $request->input('format', 'xlsx');
         $selections   = $request->array('selections');
+        $template     = $request->input('template', false);
+
         $fileName     = trim(Str::slug('drivers-' . date('Y-m-d-H:i')) . '.' . $format);
 
-        return Excel::download(new DriverExport($selections), $fileName);
+        return Excel::download(new DriverExport($selections, $template), $fileName);
     }
 
     /**

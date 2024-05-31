@@ -520,6 +520,20 @@ export default class ManagementDriversIndexController extends BaseController {
      */
     @action importDrivers() {
         this.crud.import('driver', {
+            onExportTemplate: () => {
+                this.fetch
+                    .download(
+                        `drivers/export`,
+                        {
+                            format: 'xlsx',
+                            template: true,
+                        },
+                        {
+                            method: 'POST',
+                            fileName: `driver-template.xlsx`,
+                        }
+                    )
+            },
             onImportCompleted: () => {
                 this.hostRouter.refresh();
             },
