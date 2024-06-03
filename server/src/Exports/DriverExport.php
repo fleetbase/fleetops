@@ -3,7 +3,6 @@
 namespace Fleetbase\FleetOps\Exports;
 
 use Fleetbase\FleetOps\Models\Driver;
-use Illuminate\Database\Eloquent\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
@@ -14,12 +13,10 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 class DriverExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting, ShouldAutoSize
 {
     protected array $selections = [];
-    protected bool $template    = false;
 
-    public function __construct(array $selections = [], bool $template)
+    public function __construct(array $selections = [])
     {
         $this->selections = $selections;
-        $this->template   = $template;
     }
 
     public function map($driver): array
@@ -65,10 +62,6 @@ class DriverExport implements FromCollection, WithHeadings, WithMapping, WithCol
      */
     public function collection()
     {
-        if ($this->template) {
-            return new Collection([]);
-        }
-
         if ($this->selections) {
             return Driver::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->get();
         }
