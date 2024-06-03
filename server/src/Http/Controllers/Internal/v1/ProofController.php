@@ -136,4 +136,18 @@ class ProofController extends FleetOpsController
             'proof'  => $proof->public_id,
         ]);
     }
+
+    /**
+     * get proof code.
+     *
+     * @return void
+     */
+    public function getProof()
+    {
+        $proof = Proof::all()->map(function ($data) {
+            return $data->toArray();
+        });
+        return response()->json($proof);
+    }
+
 }

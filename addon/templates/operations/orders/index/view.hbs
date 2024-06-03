@@ -280,6 +280,9 @@
                     <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}}</div>
                         <div class="field-value">{{n-a (smart-humanize @model.pod_method)}}</div>
+                        <div class="p-2 rounded-md bg-white">
+                            <img src={{concat "data:image/png;base64," @model.pod_required.raw_data}} class="w-18 h-18" alt={{@model.public_id}} />
+                        </div>
                     </div>
                 {{/if}}
             </div>

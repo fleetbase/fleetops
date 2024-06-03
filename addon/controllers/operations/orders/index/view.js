@@ -843,6 +843,30 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     }
 
     /**
+     * View proof label
+     */
+    @action async viewProofLabel() {
+        // render dialog to display label within
+     
+
+        // load the pdf label from base64
+        // eslint-disable-next-line no-undef
+        const fileReader = new FileReader();
+        const image = await this.fetch.get('drivers/query').then((res) => res.raw_data);
+
+        console.log('image', JSON.stringify(image));
+        // eslint-disable-next-line no-undef
+        const base64 = await fetch(`data:application/pdf;base64,${image}`);
+        const blob = await base64.blob();
+        // load into file reader
+        fileReader.onload = (event) => {
+            const data = event.target.result;
+            // this.modalsManager.setOption('data', data);
+        };
+        fileReader.readAsDataURL(blob);
+    }
+
+    /**
      * Reloads tracking activity for this order.
      *
      * @void

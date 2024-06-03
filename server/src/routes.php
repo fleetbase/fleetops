@@ -365,7 +365,11 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->post('import', $controller('import'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                             }
                         );
-                        $router->fleetbaseRoutes('proofs');
+                        $router->fleetbaseRoutes(
+                            'proofs',
+                            function ($router, $controller) {
+                                $router->get('query', $controller('getProof'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                            });
                         $router->fleetbaseRoutes('purchase-rates');
                         $router->fleetbaseRoutes('routes');
                         $router->fleetbaseRoutes(
