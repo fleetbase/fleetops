@@ -297,9 +297,9 @@
                 <div class="mb-4 flex justify-end">
                     <Button @size="xs" @type="default" {{on "click" this.downloadImage}}>{{t "fleet-ops.operations.orders.index.view.download"}}</Button>
                 </div>
-                <div class="flex flex-row ml-6">
+                <div class="flex flex-row justify-center mx-8">
                     <div class="p-2 rounded-md bg-white">
-                        <img src={{this.proof.raw_data}} class="w-40 h-16" alt={{@model.public_id}} />
+                        <img src={{this.proof.raw_data}} class="w-56 h-14" alt={{@model.public_id}} />
                     </div>
                 </div>
             </ContentPanel>
