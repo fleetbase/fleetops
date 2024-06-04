@@ -116,6 +116,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @tracked commentInput = '';
     @tracked customFieldGroups = [];
     @tracked customFields = [];
+    @tracked proof;
     @tracked uploadQueue = [];
     acceptedFileTypes = [
         'application/vnd.ms-excel',
@@ -245,6 +246,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         yield order.loadPurchaseRate();
         yield order.loadFiles();
         this.loadCustomFields.perform(order);
+        this.viewProofLabel.perform(order.id);
     }
 
     /**
@@ -845,25 +847,21 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     /**
      * View proof label
      */
-    @action async viewProofLabel() {
-        // render dialog to display label within
-     
-
-        // load the pdf label from base64
+    @task *viewProofLabel(orderId) {
         // eslint-disable-next-line no-undef
         const fileReader = new FileReader();
-        const image = await this.fetch.get('drivers/query').then((res) => res.raw_data);
+        const image = yield this.fetch.get(`proofs/query/${orderId}`).then((res) => res[0]);
+        this.proof = image;
+    }
 
-        console.log('image', JSON.stringify(image));
-        // eslint-disable-next-line no-undef
-        const base64 = await fetch(`data:application/pdf;base64,${image}`);
-        const blob = await base64.blob();
-        // load into file reader
-        fileReader.onload = (event) => {
-            const data = event.target.result;
-            // this.modalsManager.setOption('data', data);
-        };
-        fileReader.readAsDataURL(blob);
+    @action downloadImage() {
+        const base64Data = this.proof.raw_data;
+        const link = document.createElement('a');
+        link.href = base64Data;
+        link.download = 'downloaded_image.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     /**

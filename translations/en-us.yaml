@@ -1429,6 +1429,7 @@ fleet-ops:
           order-title: Order Label
           waypoint-title: Waypoint Label
           proof-of-delivery: Proof of Delivery
+          download: Download Image
           notes-placeholder: Enter order notes here....
           save-order-note: Save Order Note
           order-notes-updated: Order notes updated.

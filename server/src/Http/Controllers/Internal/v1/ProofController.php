@@ -142,12 +142,12 @@ class ProofController extends FleetOpsController
      *
      * @return void
      */
-    public function getProof()
+    public function getProof(Request $request, string $orderId)
     {
-        $proof = Proof::all()->map(function ($data) {
+        $proof = Proof::where('order_uuid', $orderId)->get()->map(function ($data) {
             return $data->toArray();
         });
+
         return response()->json($proof);
     }
-
 }

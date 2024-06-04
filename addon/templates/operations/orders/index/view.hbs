@@ -280,13 +280,30 @@
                     <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}}</div>
                         <div class="field-value">{{n-a (smart-humanize @model.pod_method)}}</div>
-                        <div class="p-2 rounded-md bg-white">
-                            <img src={{concat "data:image/png;base64," @model.pod_required.raw_data}} class="w-18 h-18" alt={{@model.public_id}} />
-                        </div>
                     </div>
                 {{/if}}
             </div>
         </ContentPanel>
+
+        {{#if this.proof}}
+            <ContentPanel
+                @title={{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}}
+                @prefixTitleRight={{@model.pod_method}}
+                @isLoading={{not this.loadOrderRelations.isIdle}}
+                @open={{true}}
+                @pad={{true}}
+                @panelBodyClass="bg-white dark:bg-gray-800"
+            >
+                <div class="mb-4 flex justify-end">
+                    <Button @size="xs" @type="default" {{on "click" this.downloadImage}}>{{t "fleet-ops.operations.orders.index.view.download"}}</Button>
+                </div>
+                <div class="flex flex-row ml-6">
+                    <div class="p-2 rounded-md bg-white">
+                        <img src={{this.proof.raw_data}} class="w-40 h-16" alt={{@model.public_id}} />
+                    </div>
+                </div>
+            </ContentPanel>
+        {{/if}}
 
         {{#if @model.order_config}}
             {{#each this.customFieldGroups as |group|}}
