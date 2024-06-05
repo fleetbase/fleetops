@@ -74,7 +74,7 @@ export default class FleetOpsEngine extends Engine {
             'contextmenu:driver',
             'fleet-ops:template:operations:orders:view',
             'fleet-ops:template:operations:orders:new',
-            'fleet-ops:template:operations:orders:new:entities-input'
+            'fleet-ops:template:operations:orders:new:entities-input',
         ]);
     };
 }
