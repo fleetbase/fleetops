@@ -281,11 +281,9 @@
                         <div class="field-name">{{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}}</div>
                         <div class="field-value">{{n-a (smart-humanize @model.pod_method)}}</div>
                         {{#if this.proof}}
-                            <div class="mb-4 flex justify-end">
-                                <Button @size="xs" @type="default" {{on "click" this.downloadImage}} title="fleet-ops.operations.orders.index.view.download">
-                                    {{t "fleet-ops.operations.orders.index.view.download"}}
-                                </Button>
-                            </div>
+                            <Button @size="xs" @type="default" {{on "click" this.downloadImage}} title="{{t 'fleet-ops.operations.orders.index.view.download'}}">
+                                {{t "fleet-ops.operations.orders.index.view.download"}}
+                            </Button>
                         {{/if}}
                     </div>
                 {{/if}}
