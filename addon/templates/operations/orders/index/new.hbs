@@ -526,7 +526,7 @@
 
         {{#if this.renderableComponents}}
             {{#each this.renderableComponents as |renderableComponent|}}
-                {{component renderableComponent order=this.order}}
+                {{component renderableComponent order=this.order controller=this}}
             {{/each}}
         {{/if}}
 
@@ -567,6 +567,11 @@
                                 {{/each}}
                             </div>
                         </DropdownButton>
+                    {{/if}}
+                    {{#if this.renderableEntityInputComponents}}
+                        {{#each this.renderableEntityInputComponents as |renderableEntityInputComponent|}}
+                            {{component renderableEntityInputComponent order=this.order controller=this}}
+                        {{/each}}
                     {{/if}}
                 </div>
             {{/if}}
