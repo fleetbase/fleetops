@@ -849,7 +849,6 @@ export default class OperationsOrdersIndexViewController extends BaseController 
      */
     @task *viewProofLabel(orderId) {
         // eslint-disable-next-line no-undef
-        const fileReader = new FileReader();
         const image = yield this.fetch.get(`proofs/query/${orderId}`).then((res) => res[0]);
         this.proof = image;
     }
