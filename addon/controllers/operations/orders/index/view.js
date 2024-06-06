@@ -849,7 +849,6 @@ export default class OperationsOrdersIndexViewController extends BaseController 
      */
     @task *viewProofLabel(orderId) {
         const response = yield this.fetch.get('proofs', { subject_uuid: orderId });
-
         this.proofs = response.proofs;
     }
 
