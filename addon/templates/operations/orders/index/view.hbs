@@ -280,31 +280,14 @@
                     <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}}</div>
                         <div class="field-value">{{n-a (smart-humanize @model.pod_method)}}</div>
-                        {{#if this.isMultiDropOrder}}
-                            {{#each this.waypoints as |waypoint|}}
-                                <div class="waypoint-container">
-                                    <div class="text-xs">{{format-date waypoint.proof.created_at "d MMM yyyy"}}</div>
-                                    {{#if waypoint.proof.raw}}
-                                        <Button
-                                            @size="xs"
-                                            @type="default"
-                                            {{on "click" (fn this.downloadImage waypoint.proof)}}
-                                            title="{{t 'fleet-ops.operations.orders.index.view.download'}}"
-                                        >
-                                            {{t "fleet-ops.operations.orders.index.view.download"}}
-                                        </Button>
-                                    {{else}}
-                                        <div class="text-sm">{{format-date waypoint.proof.created_at "d MMM yyyy"}}</div>
-                                    {{/if}}
-                                </div>
-                            {{/each}}
-                        {{else}}
-                            <div class="text-xs">{{format-date this.proof.created_at "d MMM yyyy"}}</div>
-                            {{#if this.proof.raw}}
-                                <Button @size="xs" @type="default" {{on "click" this.downloadImage}} title="{{t 'fleet-ops.operations.orders.index.view.download'}}">
+                        {{#if this.proofs}}
+                            {{#each this.proofs as |proof|}}
+                                <Button @size="xs" @type="default" {{on "click" (fn this.downloadImage proof)}} title="{{t 'fleet-ops.operations.orders.index.view.download'}}">
                                     {{t "fleet-ops.operations.orders.index.view.download"}}
                                 </Button>
-                            {{else}}
+                            {{/each}}
+                        {{else}}
+                            {{#if this.proof.created_at}}
                                 <div class="text-sm">{{format-date this.proof.created_at "d MMM yyyy"}}</div>
                             {{/if}}
                         {{/if}}
