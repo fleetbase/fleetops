@@ -52,7 +52,7 @@ class DriverController extends Controller
         $userDetails                 = $request->only(['name', 'password', 'email', 'phone', 'timezone']);
 
         // Get current company session
-        $company                   = Auth::getCompany();
+        $company                   = $input['company_uuid'] ? Company::select('*')->where('uuid', $input['company_uuid'])->first() : Auth::getCompany();
 
         // Apply user infos
         $userDetails = User::applyUserInfoFromRequest($request, $userDetails);
