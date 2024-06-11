@@ -36,11 +36,9 @@ class DriverController extends Controller
     /**
      * Creates a new Fleetbase Driver resource.
      *
-     * @param \Fleetbase\Http\Requests\CreateDriverRequest $request
-     *
      * @return \Fleetbase\Http\Resources\Driver
      */
-    public function create(CreateDriverRequest $request)
+    public function create(Request $request)
     {
         // get request input
         $input = $request->except(['name', 'password', 'email', 'phone', 'location', 'altitude', 'heading', 'speed', 'meta']);
@@ -52,14 +50,13 @@ class DriverController extends Controller
         $userDetails                 = $request->only(['name', 'password', 'email', 'phone', 'timezone']);
 
         // Get current company session
-        $company                   = $input['company_uuid'] ? Company::select('*')->where('uuid', $input['company_uuid'])->first() : Auth::getCompany();
+        $company                     = $request->has('company_uuid') ? Auth::getCompanyFromRequest($request) : Auth::getCompany();
 
         // Apply user infos
         $userDetails = User::applyUserInfoFromRequest($request, $userDetails);
 
         // create user account for driver
         $user = User::create($userDetails);
-
         // Assign company
         if ($company) {
             $user->assignCompany($company);
@@ -75,6 +72,7 @@ class DriverController extends Controller
         // set user id
         $input['user_uuid']    = $user->uuid;
         $input['company_uuid'] = $company->uuid;
+        
 
         // vehicle assignment public_id -> uuid
         if ($request->has('vehicle')) {
