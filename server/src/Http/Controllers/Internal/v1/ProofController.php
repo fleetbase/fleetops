@@ -136,18 +136,4 @@ class ProofController extends FleetOpsController
             'proof'  => $proof->public_id,
         ]);
     }
-
-    /**
-     * get proof code.
-     *
-     * @return void
-     */
-    public function getProof(Request $request, string $orderId)
-    {
-        $proof = Proof::where('order_uuid', $orderId)->get()->map(function ($data) {
-            return $data->toArray();
-        });
-
-        return response()->json($proof);
-    }
 }

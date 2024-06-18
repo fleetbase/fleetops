@@ -116,7 +116,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @tracked commentInput = '';
     @tracked customFieldGroups = [];
     @tracked customFields = [];
-    @tracked proof;
+    @tracked proofs;
     @tracked uploadQueue = [];
     acceptedFileTypes = [
         'application/vnd.ms-excel',
@@ -848,18 +848,12 @@ export default class OperationsOrdersIndexViewController extends BaseController 
      * View proof label
      */
     @task *viewProofLabel(orderId) {
-        console.log('[viewProofLabel]', orderId);
-        // eslint-disable-next-line no-undef
-        const fileReader = new FileReader();
-        try {
-            this.proof = yield this.fetch.get(`proofs/query/${orderId}`).then((res) => res[0]);
-        } catch (error) {
-            console.log(error);
-        }
+        const response = yield this.fetch.get('proofs', { subject_uuid: orderId });
+        this.proofs = response.proofs;
     }
 
-    @action downloadImage() {
-        const base64Data = this.proof.raw_data;
+    @action downloadImage(proof) {
+        const base64Data = proof.raw;
         const link = document.createElement('a');
         link.href = base64Data;
         link.download = 'downloaded_image.png';
