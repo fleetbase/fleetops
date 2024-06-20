@@ -3,7 +3,6 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Events\DriverLocationChanged;
-use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest;
 use Fleetbase\FleetOps\Http\Requests\DriverSimulationRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateDriverRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
@@ -50,13 +49,21 @@ class DriverController extends Controller
         $userDetails                 = $request->only(['name', 'password', 'email', 'phone', 'timezone']);
 
         // Get current company session
-        $company                     = $request->has('company_uuid') ? Auth::getCompanyFromRequest($request) : Auth::getCompany();
+        $company = $request->has('company_uuid') ? Auth::getCompanyFromRequest($request) : Auth::getCompany();
+
+        dd( $company);
+
+        // Debugging: Ensure company is retrieved correctly
+        if (!$company) {
+            return response()->apiError('Company not found.');
+        }
 
         // Apply user infos
         $userDetails = User::applyUserInfoFromRequest($request, $userDetails);
 
         // create user account for driver
         $user = User::create($userDetails);
+
         // Assign company
         if ($company) {
             $user->assignCompany($company);
@@ -71,14 +78,13 @@ class DriverController extends Controller
 
         // set user id
         $input['user_uuid']    = $user->uuid;
-        $input['company_uuid'] = $company->uuid;
-        
+        $input['company_uuid'] = $company->uuid;  // Ensure correct company_uuid is set
 
         // vehicle assignment public_id -> uuid
         if ($request->has('vehicle')) {
             $input['vehicle_uuid'] = Utils::getUuid('vehicles', [
                 'public_id'    => $request->input('vehicle'),
-                'company_uuid' => session('company'),
+                'company_uuid' => $company->uuid,  // Use $company->uuid instead of session
             ]);
         }
 
@@ -86,7 +92,7 @@ class DriverController extends Controller
         if ($request->has('vendor')) {
             $input['vendor_uuid'] = Utils::getUuid('vendors', [
                 'public_id'    => $request->input('vendor'),
-                'company_uuid' => session('company'),
+                'company_uuid' => $company->uuid,  // Use $company->uuid instead of session
             ]);
         }
 
@@ -94,7 +100,7 @@ class DriverController extends Controller
         if ($request->has('job')) {
             $input['current_job_uuid'] = Utils::getUuid('orders', [
                 'public_id'    => $request->input('job'),
-                'company_uuid' => session('company'),
+                'company_uuid' => $company->uuid,  // Use $company->uuid instead of session
             ]);
         }
 
