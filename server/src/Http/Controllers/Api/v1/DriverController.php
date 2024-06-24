@@ -49,9 +49,8 @@ class DriverController extends Controller
         $userDetails                 = $request->only(['name', 'password', 'email', 'phone', 'timezone']);
 
         // Get current company session
-        $company = $request->has('company_uuid') ? Auth::getCompanyFromRequest($request) : Auth::getCompany();
+        $company = $request->has('company') ? Auth::getCompanyFromRequest($request) : Auth::getCompany();
 
-        dd( $company);
 
         // Debugging: Ensure company is retrieved correctly
         if (!$company) {
