@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\Http\Controllers\Controller;
+use Fleetbase\Models\Company;
 use Fleetbase\Models\Setting;
 
 class NavigatorController extends Controller
@@ -25,7 +26,9 @@ class NavigatorController extends Controller
      */
     public function getDriverOnboardSettings($companyId)
     {
-        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings.' . $companyId)->value('value');
+
+        $company = Company::select()->where('public_id', $companyId)->first();
+        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings.' . $company->uuid)->value('value');
         if (!$driverOnboardSettings) {
             $driverOnboardSettings = [];
         }
