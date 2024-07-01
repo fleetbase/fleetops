@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Events\DriverLocationChanged;
+use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest;
 use Fleetbase\FleetOps\Http\Requests\DriverSimulationRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateDriverRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
@@ -37,7 +38,7 @@ class DriverController extends Controller
      *
      * @return \Fleetbase\Http\Resources\Driver
      */
-    public function create(Request $request)
+    public function create(CreateDriverRequest $request)
     {
         // get request input
         $input = $request->except(['name', 'password', 'email', 'phone', 'location', 'altitude', 'heading', 'speed', 'meta']);
