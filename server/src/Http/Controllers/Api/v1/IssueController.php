@@ -30,6 +30,7 @@ class IssueController extends Controller
             'type',
             'report',
             'priority',
+            'status',
         ]);
 
         // Find driver who is reporting
@@ -83,6 +84,7 @@ class IssueController extends Controller
                 'type',
                 'report',
                 'priority',
+                'status',
             ]);
 
         // update the issue

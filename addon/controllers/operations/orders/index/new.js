@@ -196,6 +196,11 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         return renderableComponents;
     }
 
+    get renderableEntityInputComponents() {
+        const renderableComponents = this.universe.getRenderableComponentsFromRegistry('fleet-ops:template:operations:orders:new:entities-input');
+        return renderableComponents;
+    }
+
     @not('isServicable') isNotServicable;
     @alias('currentUser.latitude') userLatitude;
     @alias('currentUser.longitude') userLongitude;
@@ -1416,6 +1421,12 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         });
 
         this.entities.pushObject(entity);
+    }
+
+    @action addEntities(entities = []) {
+        if (isArray(entities)) {
+            this.entities.pushObjects(entities);
+        }
     }
 
     @action addEntity(importId = null) {
