@@ -30,6 +30,7 @@ class IssueController extends Controller
             'type',
             'report',
             'priority',
+            'status',
         ]);
 
         // Find driver who is reporting
@@ -51,6 +52,7 @@ class IssueController extends Controller
 
         // create the entity
         $entity = Issue::create($input);
+
 
         // response the driver resource
         return new IssueResource($entity);
@@ -83,6 +85,7 @@ class IssueController extends Controller
                 'type',
                 'report',
                 'priority',
+                'status',
             ]);
 
         // update the issue
