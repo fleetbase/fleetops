@@ -53,7 +53,6 @@ class IssueController extends Controller
         // create the entity
         $entity = Issue::create($input);
 
-
         // response the driver resource
         return new IssueResource($entity);
     }

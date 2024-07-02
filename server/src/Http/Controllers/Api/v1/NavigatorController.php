@@ -26,8 +26,7 @@ class NavigatorController extends Controller
      */
     public function getDriverOnboardSettings($companyId)
     {
-
-        $company = Company::select()->where('public_id', $companyId)->first();
+        $company                = Company::select()->where('public_id', $companyId)->first();
         $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings.' . $company->uuid)->value('value');
         if (!$driverOnboardSettings) {
             $driverOnboardSettings = [];

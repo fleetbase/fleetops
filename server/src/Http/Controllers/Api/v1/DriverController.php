@@ -52,7 +52,6 @@ class DriverController extends Controller
         // Get current company session
         $company = $request->has('company') ? Auth::getCompanyFromRequest($request) : Auth::getCompany();
 
-
         // Debugging: Ensure company is retrieved correctly
         if (!$company) {
             return response()->apiError('Company not found.');
