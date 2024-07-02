@@ -8,8 +8,8 @@ dependencies:
     specifier: ^0.2.11
     version: 0.2.11(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
   '@fleetbase/ember-ui':
-    specifier: ^0.2.16
-    version: 0.2.16(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0)
+    specifier: ^0.2.17
+    version: 0.2.17(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0)
   '@fleetbase/fleetops-data':
     specifier: ^0.1.15
     version: 0.1.15
@@ -1591,9 +1591,9 @@ packages:
     peerDependencies:
       postcss: ^8.4
     dependencies:
-      '@csstools/selector-specificity': 3.1.1(postcss-selector-parser@6.0.15)
+      '@csstools/selector-specificity': 3.1.1(postcss-selector-parser@6.1.0)
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /@csstools/postcss-color-function@3.0.16(postcss@8.4.35):
@@ -1714,9 +1714,9 @@ packages:
     peerDependencies:
       postcss: ^8.4
     dependencies:
-      '@csstools/selector-specificity': 3.1.1(postcss-selector-parser@6.0.15)
+      '@csstools/selector-specificity': 3.1.1(postcss-selector-parser@6.1.0)
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /@csstools/postcss-light-dark-function@1.0.5(postcss@8.4.35):
@@ -1871,7 +1871,7 @@ packages:
       postcss: ^8.4
     dependencies:
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /@csstools/postcss-stepped-value-functions@3.0.8(postcss@8.4.35):
@@ -1935,15 +1935,6 @@ packages:
     dependencies:
       postcss-selector-parser: 6.0.15
     dev: true
-
-  /@csstools/selector-specificity@3.1.1(postcss-selector-parser@6.0.15):
-    resolution: {integrity: sha512-a7cxGcJ2wIlMFLlh8z2ONm+715QkPHiyJcxwQlKOz/03GPw1COpfhcmC9wm4xlZfp//jWHNNMwzjtqHXVWU9KA==}
-    engines: {node: ^14 || ^16 || >=18}
-    peerDependencies:
-      postcss-selector-parser: ^6.0.13
-    dependencies:
-      postcss-selector-parser: 6.0.15
-    dev: false
 
   /@csstools/selector-specificity@3.1.1(postcss-selector-parser@6.1.0):
     resolution: {integrity: sha512-a7cxGcJ2wIlMFLlh8z2ONm+715QkPHiyJcxwQlKOz/03GPw1COpfhcmC9wm4xlZfp//jWHNNMwzjtqHXVWU9KA==}
@@ -2538,8 +2529,8 @@ packages:
       - webpack
     dev: false
 
-  /@fleetbase/ember-ui@0.2.16(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0):
-    resolution: {integrity: sha512-RLdqzTDAEbOyIfSrNb3JsS/i9wZ5hy0/CnfK68ccIpC6AePImxBrmqUUYDiTzN3afUFjBGpg7P+uwNT8FwM2nw==}
+  /@fleetbase/ember-ui@0.2.17(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0):
+    resolution: {integrity: sha512-eJLMBZfIotEeGH7QjlAA2Ns/K83QQztVlnWzvLBjD5YxvQflw2dAJE6EPxPWxbjeCi8B9hOoyIP4ZmtSdcz6mQ==}
     engines: {node: '>= 18'}
     dependencies:
       '@babel/core': 7.23.2
@@ -6487,7 +6478,7 @@ packages:
       postcss: ^8.4
     dependencies:
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /css-color-converter@2.0.0:
@@ -6509,9 +6500,9 @@ packages:
     peerDependencies:
       postcss: ^8.4
     dependencies:
-      '@csstools/selector-specificity': 3.1.1(postcss-selector-parser@6.0.15)
+      '@csstools/selector-specificity': 3.1.1(postcss-selector-parser@6.1.0)
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -12670,7 +12661,7 @@ packages:
       postcss: ^8.4
     dependencies:
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /postcss-clamp@4.1.0(postcss@8.4.35):
@@ -12766,7 +12757,7 @@ packages:
       '@csstools/css-parser-algorithms': 2.6.3(@csstools/css-tokenizer@2.3.1)
       '@csstools/css-tokenizer': 2.3.1
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /postcss-dir-pseudo-class@8.0.1(postcss@8.4.35):
@@ -12776,7 +12767,7 @@ packages:
       postcss: ^8.4
     dependencies:
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /postcss-double-position-gradients@5.0.6(postcss@8.4.35):
@@ -12807,7 +12798,7 @@ packages:
       postcss: ^8.4
     dependencies:
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /postcss-focus-within@8.0.1(postcss@8.4.35):
@@ -12817,7 +12808,7 @@ packages:
       postcss: ^8.4
     dependencies:
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /postcss-font-variant@5.0.0(postcss@8.4.35):
@@ -12968,7 +12959,7 @@ packages:
       postcss: ^8.2.14
     dependencies:
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /postcss-nesting@12.1.5(postcss@8.4.35):
@@ -13096,7 +13087,7 @@ packages:
       postcss: ^8.4
     dependencies:
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /postcss-replace-overflow-wrap@4.0.0(postcss@8.4.35):
@@ -13127,7 +13118,7 @@ packages:
       postcss: ^8.4
     dependencies:
       postcss: 8.4.35
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
     dev: false
 
   /postcss-selector-parser@6.0.15:
@@ -14881,7 +14872,7 @@ packages:
       postcss-js: 4.0.1(postcss@8.4.35)
       postcss-load-config: 4.0.2(postcss@8.4.35)
       postcss-nested: 6.0.1(postcss@8.4.35)
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 6.1.0
       resolve: 1.22.8
       sucrase: 3.35.0
     transitivePeerDependencies:
