@@ -316,7 +316,7 @@ class Payload extends Model
             }
 
             // Handle customer assosciation for waypoint
-            if (is_array($attributes) && array_key_exists('customer_uuid', $attributes) && array_key_exists('customer_type', $attributes)) {
+            if (is_array($attributes) && Utils::notEmpty($attributes['customer_uuid']) && Utils::notEmpty($attributes['customer_type'])) {
                 $customerTypeNamespace = Utils::getMutationType($attributes['customer_type']);
                 $customerExists        = app($customerTypeNamespace)->where('uuid', $attributes['customer_uuid'])->exists();
                 if ($customerExists) {
@@ -371,7 +371,7 @@ class Payload extends Model
             }
 
             // Handle customer assosciation for waypoint
-            if (is_array($attributes) && array_key_exists('customer_uuid', $attributes) && array_key_exists('customer_type', $attributes)) {
+            if (is_array($attributes) && Utils::notEmpty($attributes['customer_uuid']) && Utils::notEmpty($attributes['customer_type'])) {
                 $customerTypeNamespace = Utils::getMutationType($attributes['customer_type']);
                 $customerExists        = app($customerTypeNamespace)->where('uuid', $attributes['customer_uuid'])->exists();
                 if ($customerExists) {
