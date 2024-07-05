@@ -11,8 +11,8 @@ dependencies:
     specifier: ^0.2.18
     version: 0.2.18(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0)
   '@fleetbase/fleetops-data':
-    specifier: ^0.1.15
-    version: 0.1.15
+    specifier: ^0.1.17
+    version: 0.1.17(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
   '@fleetbase/leaflet-routing-machine':
     specifier: ^3.2.16
     version: 3.2.16
@@ -2612,16 +2612,24 @@ packages:
       - webpack-command
     dev: false
 
-  /@fleetbase/fleetops-data@0.1.15:
-    resolution: {integrity: sha512-vASD94APnJqtikQJ8RIqmARmGv9V16pxBJ74azzT/0hNQS9n1VUDiluIJEyuNGnb/BceYIIODdQ7+qi2/cktGw==}
+  /@fleetbase/fleetops-data@0.1.17(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0):
+    resolution: {integrity: sha512-cT3MgW0klMByRtUZMJO5d5CfaWCg4Ss9vVr/YA1iUL5DtHP5RgpCmndFLqa0nyYpncIwhkCykfWAUts4PUl+sg==}
     engines: {node: '>= 18'}
     dependencies:
       '@babel/core': 7.23.2
+      '@fleetbase/ember-core': 0.2.12(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
       date-fns: 2.30.0
       ember-cli-babel: 8.2.0(@babel/core@7.23.2)
       ember-cli-htmlbars: 6.3.0
     transitivePeerDependencies:
+      - '@ember/test-helpers'
+      - '@glint/template'
+      - bufferutil
+      - ember-source
       - supports-color
+      - typescript
+      - utf-8-validate
+      - webpack
     dev: false
 
   /@fleetbase/intl-lint@0.0.1:
