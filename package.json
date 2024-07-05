@@ -1,6 +1,6 @@
 {
     "name": "@fleetbase/fleetops-engine",
-    "version": "0.5.1",
+    "version": "0.5.2",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "fleetbase": {
         "route": "fleet-ops"
@@ -15,7 +15,7 @@
         "ember-engine"
     ],
     "repository": "https://github.com/fleetbase/fleetops",
-    "license": "MIT",
+    "license": "AGPL-3.0-or-later",
     "author": "Fleetbase Pte Ltd <hello@fleetbase.io>",
     "directories": {
         "app": "app",
