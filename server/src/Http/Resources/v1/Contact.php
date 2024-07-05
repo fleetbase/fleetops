@@ -26,6 +26,8 @@ class Contact extends FleetbaseResource
             'email'       => $this->email ?? null,
             'phone'       => $this->phone ?? null,
             'photo_url'   => $this->photo_url ?? null,
+            'address'     => null,
+            'addresses'   => [],
             'type'        => $this->type ?? null,
             'meta'        => $this->meta ?? [],
             'slug'        => $this->slug ?? null,
