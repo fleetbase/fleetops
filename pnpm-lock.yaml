@@ -5,11 +5,11 @@ dependencies:
     specifier: ^7.23.2
     version: 7.23.2
   '@fleetbase/ember-core':
-    specifier: ^0.2.12
-    version: 0.2.12(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
+    specifier: ^0.2.13
+    version: 0.2.13(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
   '@fleetbase/ember-ui':
-    specifier: ^0.2.18
-    version: 0.2.18(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0)
+    specifier: ^0.2.19
+    version: 0.2.19(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(tracked-built-ins@3.3.0)(webpack@5.89.0)
   '@fleetbase/fleetops-data':
     specifier: ^0.1.17
     version: 0.1.17(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
@@ -17,13 +17,13 @@ dependencies:
     specifier: ^3.2.16
     version: 3.2.16
   '@fortawesome/ember-fontawesome':
-    specifier: ^0.4.1
-    version: 0.4.1(rollup@4.12.0)
+    specifier: ^2.0.0
+    version: 2.0.0(ember-source@5.4.0)(webpack@5.89.0)
   '@fortawesome/fontawesome-svg-core':
-    specifier: ^6.4.0
+    specifier: 6.4.0
     version: 6.4.0
   '@fortawesome/free-solid-svg-icons':
-    specifier: ^6.4.0
+    specifier: 6.4.0
     version: 6.4.0
   '@joint/core':
     specifier: ^4.0.1
@@ -2496,8 +2496,8 @@ packages:
       - supports-color
     dev: false
 
-  /@fleetbase/ember-core@0.2.12(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0):
-    resolution: {integrity: sha512-/ZoZsoGKqtw6AhvK5UYQm24+xyzRo10x8V8g7bEvO4tuPKmtXQj67RcIojh2yplWZNow5LyT8oYZZU3Ft35JXg==}
+  /@fleetbase/ember-core@0.2.13(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0):
+    resolution: {integrity: sha512-XIKDaUX+VIjGnrRXZi2f0DoMUPT7Sr0VpOmIGFI7kfBwIOCroZ4yoh/7Pr9Y7AnZ/a0g4+pab9i69SNDfRHpKA==}
     engines: {node: '>= 18'}
     dependencies:
       '@babel/core': 7.23.2
@@ -2529,8 +2529,8 @@ packages:
       - webpack
     dev: false
 
-  /@fleetbase/ember-ui@0.2.18(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(rollup@4.12.0)(tracked-built-ins@3.3.0)(webpack@5.89.0):
-    resolution: {integrity: sha512-lOwUmwstfM/o1NdlB1jv6mPdyGfmcZuJGFdYdITfayMCW7CwAZBY84czwV5w53AQbFCt4A5nkGXxV6EGUDjA4A==}
+  /@fleetbase/ember-ui@0.2.19(@ember/test-helpers@3.2.0)(@glimmer/component@1.1.2)(@glimmer/tracking@1.1.2)(ember-source@5.4.0)(postcss@8.4.35)(tracked-built-ins@3.3.0)(webpack@5.89.0):
+    resolution: {integrity: sha512-VxWjr56T7CpkjTBNquGSyZIQz+cpIzJW26UY0DVnPYgczRXq/h0XgBzyxSc5Ubr6IeLKxhK0r1+lcKvdSLCw+w==}
     engines: {node: '>= 18'}
     dependencies:
       '@babel/core': 7.23.2
@@ -2540,9 +2540,9 @@ packages:
       '@embroider/macros': 1.13.5
       '@fleetbase/ember-accounting': 0.0.1(ember-source@5.4.0)
       '@floating-ui/dom': 1.6.5
-      '@fortawesome/ember-fontawesome': 1.0.3(rollup@4.12.0)(webpack@5.89.0)
+      '@fortawesome/ember-fontawesome': 2.0.0(ember-source@5.4.0)(webpack@5.89.0)
       '@fortawesome/fontawesome-svg-core': 6.4.0
-      '@fortawesome/free-brands-svg-icons': 6.5.2
+      '@fortawesome/free-brands-svg-icons': 6.4.0
       '@fortawesome/free-solid-svg-icons': 6.4.0
       '@fullcalendar/core': 6.1.13
       '@fullcalendar/daygrid': 6.1.13(@fullcalendar/core@6.1.13)
@@ -2617,7 +2617,7 @@ packages:
     engines: {node: '>= 18'}
     dependencies:
       '@babel/core': 7.23.2
-      '@fleetbase/ember-core': 0.2.12(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
+      '@fleetbase/ember-core': 0.2.13(@ember/test-helpers@3.2.0)(ember-source@5.4.0)(webpack@5.89.0)
       date-fns: 2.30.0
       ember-cli-babel: 8.2.0(@babel/core@7.23.2)
       ember-cli-htmlbars: 6.3.0
@@ -2732,49 +2732,29 @@ packages:
       tslib: 2.6.2
     dev: false
 
-  /@fortawesome/ember-fontawesome@0.4.1(rollup@4.12.0):
-    resolution: {integrity: sha512-drBupV++kJP2rmyfxg55e4NeaezGEk1Ng9QMTFvEURIkFQfd3QPAxBdC9CLuAWKtzgF6zACGyv/9D2AzF45juQ==}
-    engines: {node: 12.* || 14.* || >= 16}
+  /@fortawesome/ember-fontawesome@2.0.0(ember-source@5.4.0)(webpack@5.89.0):
+    resolution: {integrity: sha512-lUyMvocZZzMuCwr8pkKhejXKBj5RGnIs8YUHc/tCNSEyHSx7/E5xAhtE4fa5B1c9+UO789Kng8z6DQ9E/agVGA==}
+    engines: {node: 14.* || 16.* || >= 18}
+    peerDependencies:
+      ember-source: ^4.0.0 || >=5.0.0
     dependencies:
       '@fortawesome/fontawesome-svg-core': 6.4.0
-      broccoli-file-creator: 2.1.1
-      broccoli-merge-trees: 4.2.0
-      broccoli-plugin: 4.0.7
-      broccoli-rollup: 4.1.1
-      broccoli-source: 3.0.1
-      camel-case: 4.1.2
-      ember-ast-helpers: 0.3.5
-      ember-cli-babel: 7.26.11
-      ember-cli-htmlbars: 5.7.2
-      ember-get-config: 2.1.1
-      find-yarn-workspace-root: 2.0.0
-      glob: 7.2.3
-      rollup-plugin-node-resolve: 5.2.0(rollup@4.12.0)
-    transitivePeerDependencies:
-      - '@glint/template'
-      - rollup
-      - supports-color
-    dev: false
-
-  /@fortawesome/ember-fontawesome@1.0.3(rollup@4.12.0)(webpack@5.89.0):
-    resolution: {integrity: sha512-KGw4a4moLo9wcGwFU05Y7yV2/va2R/lN7rO3cw6ZBrnMigyAReYH9XcK4zkiAXGaLAbzc/mOyP19ofr2rc7HBg==}
-    engines: {node: 12.* || 14.* || >= 16}
-    dependencies:
-      '@fortawesome/fontawesome-svg-core': 6.4.0
-      '@rollup/plugin-node-resolve': 15.2.3(rollup@4.12.0)
+      '@rollup/plugin-node-resolve': 15.2.3
+      array-unique: 0.3.2
       broccoli-file-creator: 2.1.1
       broccoli-merge-trees: 4.2.0
       broccoli-plugin: 4.0.7
       broccoli-rollup: 5.0.0
       broccoli-source: 3.0.1
       camel-case: 4.1.2
-      ember-ast-helpers: 0.3.5
+      ember-ast-helpers: 0.4.0
       ember-auto-import: 2.7.2(webpack@5.89.0)
       ember-cli-babel: 7.26.11
-      ember-cli-htmlbars: 5.7.2
+      ember-cli-htmlbars: 6.3.0
       ember-get-config: 2.1.1
+      ember-source: 5.4.0(@babel/core@7.23.2)(@glimmer/component@1.1.2)(rsvp@4.8.5)(webpack@5.89.0)
       find-yarn-workspace-root: 2.0.0
-      glob: 7.2.3
+      glob: 10.4.1
     transitivePeerDependencies:
       - '@glint/template'
       - rollup
@@ -2788,12 +2768,6 @@ packages:
     requiresBuild: true
     dev: false
 
-  /@fortawesome/fontawesome-common-types@6.5.2:
-    resolution: {integrity: sha512-gBxPg3aVO6J0kpfHNILc+NMhXnqHumFxOmjYCFfOiLZfwhnnfhtsdA2hfJlDnj+8PjAs6kKQPenOTKj3Rf7zHw==}
-    engines: {node: '>=6'}
-    requiresBuild: true
-    dev: false
-
   /@fortawesome/fontawesome-svg-core@6.4.0:
     resolution: {integrity: sha512-Bertv8xOiVELz5raB2FlXDPKt+m94MQ3JgDfsVbrqNpLU9+UE2E18GKjLKw+d3XbeYPqg1pzyQKGsrzbw+pPaw==}
     engines: {node: '>=6'}
@@ -2802,12 +2776,12 @@ packages:
       '@fortawesome/fontawesome-common-types': 6.4.0
     dev: false
 
-  /@fortawesome/free-brands-svg-icons@6.5.2:
-    resolution: {integrity: sha512-zi5FNYdmKLnEc0jc0uuHH17kz/hfYTg4Uei0wMGzcoCL/4d3WM3u1VMc0iGGa31HuhV5i7ZK8ZlTCQrHqRHSGQ==}
+  /@fortawesome/free-brands-svg-icons@6.4.0:
+    resolution: {integrity: sha512-qvxTCo0FQ5k2N+VCXb/PZQ+QMhqRVM4OORiO6MXdG6bKolIojGU/srQ1ptvKk0JTbRgaJOfL2qMqGvBEZG7Z6g==}
     engines: {node: '>=6'}
     requiresBuild: true
     dependencies:
-      '@fortawesome/fontawesome-common-types': 6.5.2
+      '@fortawesome/fontawesome-common-types': 6.4.0
     dev: false
 
   /@fortawesome/free-solid-svg-icons@6.4.0:
@@ -2838,16 +2812,6 @@ packages:
       '@fullcalendar/core': ~6.1.13
     dependencies:
       '@fullcalendar/core': 6.1.13
-    dev: false
-
-  /@glimmer/compiler@0.27.0:
-    resolution: {integrity: sha512-SJUUEpkFCL+GTpEK6c2EhZQJant67ahGLF6M1xRmIsq6E+AtbHgu+y8mWvFbtpb7lx4gqNKpXSEwlHUTTuxVGw==}
-    dependencies:
-      '@glimmer/interfaces': 0.27.0
-      '@glimmer/syntax': 0.27.0
-      '@glimmer/util': 0.27.0
-      '@glimmer/wire-format': 0.27.0
-      simple-html-tokenizer: 0.3.0
     dev: false
 
   /@glimmer/compiler@0.84.3:
@@ -2906,12 +2870,6 @@ packages:
     resolution: {integrity: sha512-8Oy9Wg5IZxMEeAnVmzD2NkObf89BeHoFSzJgJROE/deutd3rxg83mvlOez4zBBGYwnTb+VGU2LYRpet92egJjA==}
     dependencies:
       '@glimmer/env': 0.1.7
-
-  /@glimmer/interfaces@0.27.0:
-    resolution: {integrity: sha512-Uz9txXB0Agnac6vUOAk6uZIB7SeS/fFrdjyNsNJnge5XeojvOQs1YyIFqOhky3G7NHO/mcx3Tdt8PXggFakVtQ==}
-    dependencies:
-      '@glimmer/wire-format': 0.27.0
-    dev: false
 
   /@glimmer/interfaces@0.84.3:
     resolution: {integrity: sha512-dk32ykoNojt0mvEaIW6Vli5MGTbQo58uy3Epj7ahCgTHmWOKuw/0G83f2UmFprRwFx689YTXG38I/vbpltEjzg==}
@@ -2993,15 +2951,6 @@ packages:
       '@glimmer/wire-format': 0.84.3
       '@simple-dom/interface': 1.4.0
 
-  /@glimmer/syntax@0.27.0:
-    resolution: {integrity: sha512-IC+JaGkfF+J3e5jUXrW4SkVAAgI6WyN4kzfJKqWEnjMAa6pB8XGEDkaaMhoMrxjfK+R0Us2PO45CWhGB3FqsKg==}
-    dependencies:
-      '@glimmer/interfaces': 0.27.0
-      '@glimmer/util': 0.27.0
-      handlebars: 4.7.8
-      simple-html-tokenizer: 0.3.0
-    dev: false
-
   /@glimmer/syntax@0.84.3:
     resolution: {integrity: sha512-ioVbTic6ZisLxqTgRBL2PCjYZTFIwobifCustrozRU2xGDiYvVIL0vt25h2c1ioDsX59UgVlDkIK4YTAQQSd2A==}
     dependencies:
@@ -3015,10 +2964,6 @@ packages:
     dependencies:
       '@glimmer/env': 0.1.7
       '@glimmer/validator': 0.44.0
-
-  /@glimmer/util@0.27.0:
-    resolution: {integrity: sha512-GxER83ZuyEyZ5Phn86VkHcjjN/3MagK0MMr91S5t62IVSW/zyFevpaVV26YKmisDqOe4918nvwGqn543O5gGXw==}
-    dev: false
 
   /@glimmer/util@0.44.0:
     resolution: {integrity: sha512-duAsm30uVK9jSysElCbLyU6QQYO2X9iLDLBIBUcCqck9qN1o3tK2qWiHbGK5d6g8E2AJ4H88UrfElkyaJlGrwg==}
@@ -3051,12 +2996,6 @@ packages:
     dependencies:
       '@glimmer/interfaces': 0.84.3
       '@glimmer/util': 0.84.3
-
-  /@glimmer/wire-format@0.27.0:
-    resolution: {integrity: sha512-gNhityUr9HODYH9GydHVk7C6NZ57MqSbdGzC5TM8VdPibtd72N3+3Zggrm12Faw4E4zTvTM1692Sz/bNwMxLNw==}
-    dependencies:
-      '@glimmer/util': 0.27.0
-    dev: false
 
   /@glimmer/wire-format@0.84.3:
     resolution: {integrity: sha512-aZVfQhqv4k7tTo2vwjy+b4mAxKt7cHH75JR3zAeCilimApa+yYTYUyY73NDNSUVbelgAlQ5s6vTiMSQ55WwVow==}
@@ -3260,7 +3199,7 @@ packages:
       find-up: 5.0.0
     dev: true
 
-  /@rollup/plugin-node-resolve@15.2.3(rollup@4.12.0):
+  /@rollup/plugin-node-resolve@15.2.3:
     resolution: {integrity: sha512-j/lym8nf5E21LwBT4Df1VD6hRO2L2iwUeUmP7litikRsVp1H6NWx20NEp0Y7su+7XGc476GnXXc4kFeZNGmaSQ==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
@@ -3269,16 +3208,15 @@ packages:
       rollup:
         optional: true
     dependencies:
-      '@rollup/pluginutils': 5.1.0(rollup@4.12.0)
+      '@rollup/pluginutils': 5.1.0
       '@types/resolve': 1.20.2
       deepmerge: 4.3.1
       is-builtin-module: 3.2.1
       is-module: 1.0.0
       resolve: 1.22.8
-      rollup: 4.12.0
     dev: false
 
-  /@rollup/pluginutils@5.1.0(rollup@4.12.0):
+  /@rollup/pluginutils@5.1.0:
     resolution: {integrity: sha512-XTIWOPPcpvyKI6L1NHo0lFlCyznUEyPmPY1mc3KpPVDYulHSTvyeLNVW00QTLIAFNhR3kYnJTQHeGqU4M3n09g==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
@@ -3290,112 +3228,7 @@ packages:
       '@types/estree': 1.0.5
       estree-walker: 2.0.2
       picomatch: 2.3.1
-      rollup: 4.12.0
     dev: false
-
-  /@rollup/rollup-android-arm-eabi@4.12.0:
-    resolution: {integrity: sha512-+ac02NL/2TCKRrJu2wffk1kZ+RyqxVUlbjSagNgPm94frxtr+XDL12E5Ll1enWskLrtrZ2r8L3wED1orIibV/w==}
-    cpu: [arm]
-    os: [android]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@rollup/rollup-android-arm64@4.12.0:
-    resolution: {integrity: sha512-OBqcX2BMe6nvjQ0Nyp7cC90cnumt8PXmO7Dp3gfAju/6YwG0Tj74z1vKrfRz7qAv23nBcYM8BCbhrsWqO7PzQQ==}
-    cpu: [arm64]
-    os: [android]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@rollup/rollup-darwin-arm64@4.12.0:
-    resolution: {integrity: sha512-X64tZd8dRE/QTrBIEs63kaOBG0b5GVEd3ccoLtyf6IdXtHdh8h+I56C2yC3PtC9Ucnv0CpNFJLqKFVgCYe0lOQ==}
-    cpu: [arm64]
-    os: [darwin]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@rollup/rollup-darwin-x64@4.12.0:
-    resolution: {integrity: sha512-cc71KUZoVbUJmGP2cOuiZ9HSOP14AzBAThn3OU+9LcA1+IUqswJyR1cAJj3Mg55HbjZP6OLAIscbQsQLrpgTOg==}
-    cpu: [x64]
-    os: [darwin]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@rollup/rollup-linux-arm-gnueabihf@4.12.0:
-    resolution: {integrity: sha512-a6w/Y3hyyO6GlpKL2xJ4IOh/7d+APaqLYdMf86xnczU3nurFTaVN9s9jOXQg97BE4nYm/7Ga51rjec5nfRdrvA==}
-    cpu: [arm]
-    os: [linux]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@rollup/rollup-linux-arm64-gnu@4.12.0:
-    resolution: {integrity: sha512-0fZBq27b+D7Ar5CQMofVN8sggOVhEtzFUwOwPppQt0k+VR+7UHMZZY4y+64WJ06XOhBTKXtQB/Sv0NwQMXyNAA==}
-    cpu: [arm64]
-    os: [linux]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@rollup/rollup-linux-arm64-musl@4.12.0:
-    resolution: {integrity: sha512-eTvzUS3hhhlgeAv6bfigekzWZjaEX9xP9HhxB0Dvrdbkk5w/b+1Sxct2ZuDxNJKzsRStSq1EaEkVSEe7A7ipgQ==}
-    cpu: [arm64]
-    os: [linux]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@rollup/rollup-linux-riscv64-gnu@4.12.0:
-    resolution: {integrity: sha512-ix+qAB9qmrCRiaO71VFfY8rkiAZJL8zQRXveS27HS+pKdjwUfEhqo2+YF2oI+H/22Xsiski+qqwIBxVewLK7sw==}
-    cpu: [riscv64]
-    os: [linux]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@rollup/rollup-linux-x64-gnu@4.12.0:
-    resolution: {integrity: sha512-TenQhZVOtw/3qKOPa7d+QgkeM6xY0LtwzR8OplmyL5LrgTWIXpTQg2Q2ycBf8jm+SFW2Wt/DTn1gf7nFp3ssVA==}
-    cpu: [x64]
-    os: [linux]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@rollup/rollup-linux-x64-musl@4.12.0:
-    resolution: {integrity: sha512-LfFdRhNnW0zdMvdCb5FNuWlls2WbbSridJvxOvYWgSBOYZtgBfW9UGNJG//rwMqTX1xQE9BAodvMH9tAusKDUw==}
-    cpu: [x64]
-    os: [linux]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@rollup/rollup-win32-arm64-msvc@4.12.0:
-    resolution: {integrity: sha512-JPDxovheWNp6d7AHCgsUlkuCKvtu3RB55iNEkaQcf0ttsDU/JZF+iQnYcQJSk/7PtT4mjjVG8N1kpwnI9SLYaw==}
-    cpu: [arm64]
-    os: [win32]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@rollup/rollup-win32-ia32-msvc@4.12.0:
-    resolution: {integrity: sha512-fjtuvMWRGJn1oZacG8IPnzIV6GF2/XG+h71FKn76OYFqySXInJtseAqdprVTDTyqPxQOG9Exak5/E9Z3+EJ8ZA==}
-    cpu: [ia32]
-    os: [win32]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@rollup/rollup-win32-x64-msvc@4.12.0:
-    resolution: {integrity: sha512-ZYmr5mS2wd4Dew/JjT0Fqi2NPB/ZhZ2VvPp7SmvPZb4Y1CG/LRcS6tcRo2cYU7zLK5A7cdbhWnnWmUjoI4qapg==}
-    cpu: [x64]
-    os: [win32]
-    requiresBuild: true
-    dev: false
-    optional: true
 
   /@simple-dom/document@1.4.0:
     resolution: {integrity: sha512-/RUeVH4kuD3rzo5/91+h4Z1meLSLP66eXqpVAw/4aZmYozkeqUkMprq0znL4psX/adEed5cBgiNJcfMz/eKZLg==}
@@ -3446,10 +3279,6 @@ packages:
       '@types/connect': 3.4.38
       '@types/node': 20.11.19
     dev: true
-
-  /@types/broccoli-plugin@1.3.0:
-    resolution: {integrity: sha512-SLk4/hFc2kGvgwNFrpn2O1juxFOllcHAywvlo7VwxfExLzoz1GGJ0oIZCwj5fwSpvHw4AWpZjJ1fUvb62PDayQ==}
-    dev: false
 
   /@types/broccoli-plugin@3.0.0:
     resolution: {integrity: sha512-f+TcsARR2PovfFRKFdCX0kfH/QoM3ZVD2h1rl2mNvrKO0fq2uBNCBsTU3JanfU4COCt5cXpTfARyUsERlC8vIw==}
@@ -3589,12 +3418,6 @@ packages:
   /@types/range-parser@1.2.7:
     resolution: {integrity: sha512-hKormJbkJqzQGhziax5PItDUTMAM9uE2XXQmM37dyd4hVM+5aVl7oVxMVUiVQn2oCQFN/LKCZdvSM0pFRqbSmQ==}
     dev: true
-
-  /@types/resolve@0.0.8:
-    resolution: {integrity: sha512-auApPaJf3NPfe18hSoJkp8EbZzer2ISk7o8mCC3M9he/a04+gbMF97NkpD2S8riMGvm4BMRI59/SZQSaLTKpsQ==}
-    dependencies:
-      '@types/node': 20.11.19
-    dev: false
 
   /@types/resolve@1.20.2:
     resolution: {integrity: sha512-60BCwRFOZCQhDncwQdxxeOEEkbc5dIMccYLwbxsS4TUNeVECQ/pBJ0j09mrHOl/JJvpRPGwO9SvE4nR2Nb/a4Q==}
@@ -3920,12 +3743,6 @@ packages:
 
   /acorn@6.4.2:
     resolution: {integrity: sha512-XtGIhXwF8YM8bJhGxG5kXgjkEuNGLTkoYqVE+KMR+aspr4KGYmKYg7yUe3KghyQ9yheNwLnjmzh/7+gfDBmHCQ==}
-    engines: {node: '>=0.4.0'}
-    hasBin: true
-    dev: false
-
-  /acorn@7.4.1:
-    resolution: {integrity: sha512-nQyp0o1/mNdbTO1PO6kHkwSrmgZ0MT/jCCpNiwbUjGoRN4dlBhqJtoQuCnEOKzgTVwg0ZWiCoQy6SxMebQVh8A==}
     engines: {node: '>=0.4.0'}
     hasBin: true
     dev: false
@@ -5268,23 +5085,6 @@ packages:
       minimist: 1.2.8
       object-assign: 4.1.1
       postcss: 8.4.35
-    transitivePeerDependencies:
-      - supports-color
-    dev: false
-
-  /broccoli-rollup@4.1.1:
-    resolution: {integrity: sha512-hkp0dB5chiemi32t6hLe5bJvxuTOm1TU+SryFlZIs95KT9+94uj0C8w6k6CsZ2HuIdIZg6D252t4gwOlcTXrpA==}
-    engines: {node: '>=8.0'}
-    dependencies:
-      '@types/broccoli-plugin': 1.3.0
-      broccoli-plugin: 2.1.0
-      fs-tree-diff: 2.0.1
-      heimdalljs: 0.2.6
-      node-modules-path: 1.0.2
-      rollup: 1.32.1
-      rollup-pluginutils: 2.8.2
-      symlink-or-copy: 1.3.1
-      walk-sync: 1.1.4
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -6908,12 +6708,9 @@ packages:
       - supports-color
     dev: false
 
-  /ember-ast-helpers@0.3.5:
-    resolution: {integrity: sha512-ZtaGAUDvRX13G9D4t4WbTMhcUzqsw6KqhcHreIiZi3ZhRFlSZ3BumgyJ6buDZj+tCBLiQsxRv7l5AY6imqNR6Q==}
+  /ember-ast-helpers@0.4.0:
+    resolution: {integrity: sha512-3gBsatspW3AT2hwzD27aQbgyWA29RXeMxCnMYgFBYtmS/T1M6TxuatEgfpofKqai4OC/JijftmN4s6dydeXGzQ==}
     engines: {node: '>= 6'}
-    dependencies:
-      '@glimmer/compiler': 0.27.0
-      '@glimmer/syntax': 0.27.0
     dev: false
 
   /ember-auto-import@1.12.2:
@@ -7423,7 +7220,7 @@ packages:
       ember-cli-babel-plugin-helpers: 1.1.1
       execa: 1.0.0
       fs-extra: 7.0.1
-      resolve: 1.22.2
+      resolve: 1.22.8
       rsvp: 4.8.5
       semver: 6.3.1
       stagehand: 1.0.1
@@ -7465,7 +7262,7 @@ packages:
       ember-cli-babel-plugin-helpers: 1.1.1
       execa: 3.4.0
       fs-extra: 8.1.0
-      resolve: 1.22.2
+      resolve: 1.22.8
       rsvp: 4.8.5
       semver: 6.3.1
       stagehand: 1.0.1
@@ -10033,6 +9830,7 @@ packages:
 
   /glob@5.0.15:
     resolution: {integrity: sha512-c9IPMazfRITpmAAKi22dK1VKxGDX9ehhqfABDriL/lzO92xcUKEJPQHrVA/2YHSNFB4iFlykVmWvwo48nr3OxA==}
+    deprecated: Glob versions prior to v9 are no longer supported
     dependencies:
       inflight: 1.0.6
       inherits: 2.0.4
@@ -10067,7 +9865,7 @@ packages:
       fs.realpath: 1.0.0
       minimatch: 8.0.4
       minipass: 4.2.8
-      path-scurry: 1.10.1
+      path-scurry: 1.11.1
     dev: true
 
   /global-modules@1.0.0:
@@ -11834,15 +11632,9 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /minipass@7.0.4:
-    resolution: {integrity: sha512-jYofLM5Dam9279rdkWzqHozUo4ybjdZmCsDHePy5V/PbBcVMiSZR97gmAy45aqi8CK1lG2ECd356FU86avfwUQ==}
-    engines: {node: '>=16 || 14 >=14.17'}
-    dev: true
-
   /minipass@7.1.2:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
     engines: {node: '>=16 || 14 >=14.17'}
-    dev: false
 
   /mississippi@3.0.0:
     resolution: {integrity: sha512-x471SsVjUtBRtcvd4BzKE9kFC+/2TeWgKCgw0bZcw1b9l2X3QX5vCWgF+KaZaYm87Ss//rHnWryupDrgLvmSkA==}
@@ -12538,21 +12330,12 @@ packages:
     dependencies:
       path-root-regex: 0.1.2
 
-  /path-scurry@1.10.1:
-    resolution: {integrity: sha512-MkhCqzzBEpPvxxQ71Md0b1Kk51W01lrYvlMzSUaIzNsODdd7mqhiimSZlr+VegAz5Z6Vzt9Xg2ttE//XBhH3EQ==}
-    engines: {node: '>=16 || 14 >=14.17'}
-    dependencies:
-      lru-cache: 10.2.0
-      minipass: 7.0.4
-    dev: true
-
   /path-scurry@1.11.1:
     resolution: {integrity: sha512-Xa4Nw17FS9ApQFJ9umLiJS4orGjm7ZzwUrwamcGQuHSzDyth9boKDaycYdDcZDuqYATXw4HFXgaqWTctW/v1HA==}
     engines: {node: '>=16 || 14 >=14.18'}
     dependencies:
       lru-cache: 10.2.0
       minipass: 7.1.2
-    dev: false
 
   /path-to-regexp@0.1.7:
     resolution: {integrity: sha512-5DFkuoqlv1uYQKxy8omFBeJPQcdoE07Kv2sferDCrAq1ohOU+MSDswDIbnx3YAM60qIOnYa53wBhXW0EbMonrQ==}
@@ -13763,12 +13546,14 @@ packages:
 
   /rimraf@2.7.1:
     resolution: {integrity: sha512-uWjbaKIK3T1OSVptzX7Nl6PvQ3qAGtKEtVRjRuazjfL3Bx5eI409VZSqgND+4UNnmzLVdPj9FqFJNPqBZFve4w==}
+    deprecated: Rimraf versions prior to v4 are no longer supported
     hasBin: true
     dependencies:
       glob: 7.2.3
 
   /rimraf@3.0.2:
     resolution: {integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==}
+    deprecated: Rimraf versions prior to v4 are no longer supported
     hasBin: true
     dependencies:
       glob: 7.2.3
@@ -13780,33 +13565,10 @@ packages:
       inherits: 2.0.4
     dev: false
 
-  /rollup-plugin-node-resolve@5.2.0(rollup@4.12.0):
-    resolution: {integrity: sha512-jUlyaDXts7TW2CqQ4GaO5VJ4PwwaV8VUGA7+km3n6k6xtOEacf61u0VXwN80phY/evMcaS+9eIeJ9MOyDxt5Zw==}
-    deprecated: This package has been deprecated and is no longer maintained. Please use @rollup/plugin-node-resolve.
-    peerDependencies:
-      rollup: '>=1.11.0'
-    dependencies:
-      '@types/resolve': 0.0.8
-      builtin-modules: 3.3.0
-      is-module: 1.0.0
-      resolve: 1.22.8
-      rollup: 4.12.0
-      rollup-pluginutils: 2.8.2
-    dev: false
-
   /rollup-pluginutils@2.8.2:
     resolution: {integrity: sha512-EEp9NhnUkwY8aif6bxgovPHMoMoNr2FulJziTndpt5H9RdwC47GSGuII9XxpSdzVGM0GWrNPHV6ie1LTNJPaLQ==}
     dependencies:
       estree-walker: 0.6.1
-
-  /rollup@1.32.1:
-    resolution: {integrity: sha512-/2HA0Ec70TvQnXdzynFffkjA6XN+1e2pEv/uKS5Ulca40g2L7KuOE3riasHoNVHOsFD5KKZgDsMk1CP3Tw9s+A==}
-    hasBin: true
-    dependencies:
-      '@types/estree': 1.0.5
-      '@types/node': 20.11.19
-      acorn: 7.4.1
-    dev: false
 
   /rollup@2.79.1:
     resolution: {integrity: sha512-uKxbd0IhMZOhjAiD5oAFp7BqvkA4Dv47qpOCtaNvng4HBwdbWtdOh8f5nZNuk2rp51PMGk3bzfWu5oayNEuYnw==}
@@ -13814,29 +13576,6 @@ packages:
     hasBin: true
     optionalDependencies:
       fsevents: 2.3.3
-
-  /rollup@4.12.0:
-    resolution: {integrity: sha512-wz66wn4t1OHIJw3+XU7mJJQV/2NAfw5OAk6G6Hoo3zcvz/XOfQ52Vgi+AN4Uxoxi0KBBwk2g8zPrTDA4btSB/Q==}
-    engines: {node: '>=18.0.0', npm: '>=8.0.0'}
-    hasBin: true
-    dependencies:
-      '@types/estree': 1.0.5
-    optionalDependencies:
-      '@rollup/rollup-android-arm-eabi': 4.12.0
-      '@rollup/rollup-android-arm64': 4.12.0
-      '@rollup/rollup-darwin-arm64': 4.12.0
-      '@rollup/rollup-darwin-x64': 4.12.0
-      '@rollup/rollup-linux-arm-gnueabihf': 4.12.0
-      '@rollup/rollup-linux-arm64-gnu': 4.12.0
-      '@rollup/rollup-linux-arm64-musl': 4.12.0
-      '@rollup/rollup-linux-riscv64-gnu': 4.12.0
-      '@rollup/rollup-linux-x64-gnu': 4.12.0
-      '@rollup/rollup-linux-x64-musl': 4.12.0
-      '@rollup/rollup-win32-arm64-msvc': 4.12.0
-      '@rollup/rollup-win32-ia32-msvc': 4.12.0
-      '@rollup/rollup-win32-x64-msvc': 4.12.0
-      fsevents: 2.3.3
-    dev: false
 
   /route-recognizer@0.3.4:
     resolution: {integrity: sha512-2+MhsfPhvauN1O8KaXpXAOfR/fwe8dnUXVM+xw7yt40lJRfPVQxV6yryZm0cgRvAj5fMF/mdRZbL2ptwbs5i2g==}
@@ -14190,10 +13929,6 @@ packages:
       debug: 2.6.9
     transitivePeerDependencies:
       - supports-color
-
-  /simple-html-tokenizer@0.3.0:
-    resolution: {integrity: sha512-cuUWLyKJbCExtBmxJWhmIk/KIbMF1yOuNaansJiPEdxqitM7r7So3a1M4Sw2uqfNYWjBTiVVdJjb7vtYIaEjhw==}
-    dev: false
 
   /simple-html-tokenizer@0.5.11:
     resolution: {integrity: sha512-C2WEK/Z3HoSFbYq8tI7ni3eOo/NneSPRoPpcM7WdLjFOArFuyXEjAoCdOC3DgMfRyziZQ1hCNR4mrNdWEvD0og==}
