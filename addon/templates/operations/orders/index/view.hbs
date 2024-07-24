@@ -280,6 +280,18 @@
                     <div class="field-info-container space-y-2">
                         <div class="field-name">{{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}}</div>
                         <div class="field-value">{{n-a (smart-humanize @model.pod_method)}}</div>
+                        {{#if this.proofs}}
+                            {{#each this.proofs as |proof|}}
+                                {{#if proof.raw}}
+                                    <Button @size="xs" @type="default" {{on "click" (fn this.downloadImage proof)}} title="{{t 'fleet-ops.operations.orders.index.view.download'}}">
+                                        {{t "fleet-ops.operations.orders.index.view.download"}}
+                                    </Button>
+                                {{else}}
+                                    <div class="text-sm">{{format-date proof.created_at "d MMM yyyy"}}</div>
+
+                                {{/if}}
+                            {{/each}}
+                        {{/if}}
                     </div>
                 {{/if}}
             </div>
