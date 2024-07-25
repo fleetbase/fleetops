@@ -72,7 +72,7 @@ export default class VendorPanelComponent extends Component {
      * @type {Array}
      */
     get tabs() {
-        const registeredTabs = this.universe.getMenuItemsFromRegistry('component:vendor-panel');
+        const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:vendor-panel');
         // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: VendorPanelTrackingComponent }),
         const defaultTabs = [this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: VendorPanelDetailComponent })];
 

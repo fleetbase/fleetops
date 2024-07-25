@@ -71,7 +71,7 @@ export default class IssuePanelComponent extends Component {
      * @type {Array}
      */
     get tabs() {
-        const registeredTabs = this.universe.getMenuItemsFromRegistry('component:issue-panel');
+        const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:issue-panel');
         // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: IssuePanelTrackingComponent }),
         const defaultTabs = [this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: IssuePanelDetailComponent })];
 

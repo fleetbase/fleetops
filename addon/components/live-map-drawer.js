@@ -39,7 +39,7 @@ export default class LiveMapDrawerComponent extends Component {
      * @type {Array}
      */
     get tabs() {
-        const registeredTabs = this.universe.getMenuItemsFromRegistry('component:live-map-drawer');
+        const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:live-map-drawer');
         const defaultTabs = [
             this.universe._createMenuItem('Vehicles', null, { icon: 'car', component: LiveMapDrawerVehicleListingComponent }),
             this.universe._createMenuItem('Drivers', null, { icon: 'id-card', component: LiveMapDrawerDriverListingComponent }),

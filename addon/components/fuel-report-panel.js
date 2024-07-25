@@ -72,7 +72,7 @@ export default class FuelReportPanelComponent extends Component {
      * @type {Array}
      */
     get tabs() {
-        const registeredTabs = this.universe.getMenuItemsFromRegistry('component:fuel-report-panel');
+        const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:fuel-report-panel');
         // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: VehiclePanelTrackingComponent }),
         const defaultTabs = [this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: FuelReportPanelDetailsComponent })];
 

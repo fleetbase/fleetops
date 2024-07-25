@@ -72,7 +72,7 @@ export default class ContactPanelComponent extends Component {
      * @type {Array}
      */
     get tabs() {
-        const registeredTabs = this.universe.getMenuItemsFromRegistry('component:contact-panel');
+        const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:contact-panel');
         // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: contactPanelTrackingComponent }),
         const defaultTabs = [this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: ContactPanelDetailComponent })];
 

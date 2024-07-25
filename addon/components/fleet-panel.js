@@ -74,7 +74,7 @@ export default class FleetPanelComponent extends Component {
      * @type {Array}
      */
     get tabs() {
-        const registeredTabs = this.universe.getMenuItemsFromRegistry('component:fleet-panel');
+        const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:fleet-panel');
         const defaultTabs = [
             this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: FleetPanelDetailComponent }),
             this.universe._createMenuItem('Vehicles', null, {
