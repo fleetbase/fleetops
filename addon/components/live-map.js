@@ -1547,7 +1547,7 @@ export default class LiveMapComponent extends Component {
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu('map', map, contextmenuItems);
 
         // trigger that contextmenu registry was created
-        this.universe.createRegistryEvent('contextmenu:map', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+        this.universe.createRegistryEvent('fleet-ops:contextmenu:map', 'created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
     }
@@ -1592,7 +1592,7 @@ export default class LiveMapComponent extends Component {
         ];
 
         // append items from universe registry
-        const registeredContextMenuItems = this.universe.getMenuItemsFromRegistry('contextmenu:driver');
+        const registeredContextMenuItems = this.universe.getMenuItemsFromRegistry('fleet-ops:contextmenu:driver');
         if (isArray(registeredContextMenuItems)) {
             contextmenuItems = [
                 ...contextmenuItems,
@@ -1617,7 +1617,7 @@ export default class LiveMapComponent extends Component {
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`driver:${driver.public_id}`, layer, contextmenuItems, { driver });
 
         // trigger that contextmenu registry was created
-        this.universe.createRegistryEvent('contextmenu:driver', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+        this.universe.createRegistryEvent('fleet-ops:contextmenu:driver', 'created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
     }
@@ -1649,7 +1649,7 @@ export default class LiveMapComponent extends Component {
         ];
 
         // append items from universe registry
-        const registeredContextMenuItems = this.universe.getMenuItemsFromRegistry('contextmenu:vehicle');
+        const registeredContextMenuItems = this.universe.getMenuItemsFromRegistry('fleet-ops:contextmenu:vehicle');
         if (isArray(registeredContextMenuItems)) {
             contextmenuItems = [
                 ...contextmenuItems,
@@ -1674,7 +1674,7 @@ export default class LiveMapComponent extends Component {
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`vehicle:${vehicle.public_id}`, layer, contextmenuItems, { vehicle });
 
         // trigger that contextmenu registry was created
-        this.universe.createRegistryEvent('contextmenu:vehicle', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+        this.universe.createRegistryEvent('fleet-ops:contextmenu:vehicle', 'created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
     }
@@ -1714,7 +1714,7 @@ export default class LiveMapComponent extends Component {
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`zone:${zone.public_id}`, layer, contextmenuItems, { zone });
 
         // trigger that contextmenu registry was created
-        this.universe.createRegistryEvent('contextmenu:zone', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+        this.universe.createRegistryEvent('fleet-ops:contextmenu:zone', 'created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
     }
@@ -1763,7 +1763,7 @@ export default class LiveMapComponent extends Component {
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`service-area:${serviceArea.public_id}`, layer, contextmenuItems, { serviceArea });
 
         // trigger that contextmenu registry was created
-        this.universe.createRegistryEvent('contextmenu:service-area', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+        this.universe.createRegistryEvent('fleet-ops:contextmenu:service-area', 'created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
     }

@@ -19,6 +19,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     @tracked routePrefix = 'console.fleet-ops.';
     @tracked menuPanels = [];
     @tracked universeMenuItems = [];
+    @tracked universeSettingsMenuItems = [];
     @tracked universeMenuPanels = [];
 
     constructor() {
@@ -28,8 +29,10 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     }
 
     createMenuItemsFromUniverseRegistry() {
-        this.universeMenuItems = this.universe.getMenuItemsFromRegistry('engine:fleet-ops');
+        const registeredMenuItems = this.universe.getMenuItemsFromRegistry('engine:fleet-ops');
         this.universeMenuPanels = this.universe.getMenuPanelsFromRegistry('engine:fleet-ops');
+        this.universeMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === undefined);
+        this.universeSettingsMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'settings');
     }
 
     /**
@@ -70,6 +73,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
         const createPanel = (title, routePrefix, items = []) => ({
             title,
+            routePrefix,
             open: true,
             visible: this.isPanelVisible(routePrefix),
             items: items

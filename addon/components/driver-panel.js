@@ -73,7 +73,7 @@ export default class DriverPanelComponent extends Component {
      * @type {Array}
      */
     get tabs() {
-        const registeredTabs = this.universe.getMenuItemsFromRegistry('component:driver-panel');
+        const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:driver-panel');
         // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: DriverPanelTrackingComponent }),
         const defaultTabs = [
             this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: DriverPanelDetailComponent }),

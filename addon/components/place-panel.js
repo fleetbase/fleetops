@@ -72,7 +72,7 @@ export default class PlacePanelComponent extends Component {
      * @type {Array}
      */
     get tabs() {
-        const registeredTabs = this.universe.getMenuItemsFromRegistry('component:place-panel');
+        const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:place-panel');
         // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: placePanelTrackingComponent }),
         const defaultTabs = [this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: PlacePanelDetailComponent })];
 

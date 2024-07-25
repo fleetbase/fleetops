@@ -109,6 +109,37 @@
                 >{{menuItem.title}}</Layout::Sidebar::Item>
             {{/if}}
         {{/each}}
+        {{#if (eq menuPanel.routePrefix "settings")}}
+            {{#each this.universeSettingsMenuItems as |menuItem|}}
+                {{#if menuItem.renderComponentInPlace}}
+                    {{component menuItem.component}}
+                {{else}}
+                    <Layout::Sidebar::Item
+                        @onClick={{fn this.universe.transitionMenuItem (concat this.routePrefix "virtual") menuItem}}
+                        @menuItem={{menuItem}}
+                        @icon={{menuItem.icon}}
+                        @rightSideComponent={{menuItem.rightSideComponent}}
+                        @rightSideComponentContext={{menuItem.rightSideComponentContext}}
+                        @rightSideStatus={{menuItem.rightSideStatus}}
+                        @rightSideStatusText={{menuItem.rightSideStatusText}}
+                        @hideRightSideStatusDot={{menuItem.hideRightSideStatusDot}}
+                        @rightSideStatusClass={{menuItem.rightSideStatusClass}}
+                        @disableRightSideStatusHumanize={{menuItem.disableRightSideStatusHumanize}}
+                        @dropdownButton={{menuItem.dropdownButton}}
+                        @dropdownButtonActions={{menuItem.dropdownButtonActions}}
+                        @dropdownButtonIcon={{menuItem.dropdownButtonIcon}}
+                        @dropdownButtonIconPrefix={{menuItem.dropdownButtonIconPrefix}}
+                        @dropdownButtonText={{menuItem.dropdownButtonText}}
+                        @dropdownButtonCalculatePosition={{menuItem.dropdownButtonCalculatePosition}}
+                        @dropdownButtonRenderInPlace={{menuItem.dropdownButtonRenderInPlace}}
+                        @dropdownButtonMenuLabel={{menuItem.dropdownButtonMenuLabel}}
+                        @dropdownButtonWrapperClass={{menuItem.dropdownButtonWrapperClass}}
+                        @dropdownButtonTriggerClass={{menuItem.dropdownButtonTriggerClass}}
+                        @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
+                    >{{menuItem.title}}</Layout::Sidebar::Item>
+                {{/if}}
+            {{/each}}
+        {{/if}}
     </Layout::Sidebar::Panel>
 {{/each}}
 {{#each this.universeMenuPanels as |menuPanel|}}

@@ -67,12 +67,12 @@ export default class FleetOpsEngine extends Engine {
         // create all registries necessary
         universe.createRegistries([
             'engine:fleet-ops',
-            'component:live-map-drawer',
-            'component:vehicle-panel',
-            'component:driver-panel',
-            'component:order-config-manager',
-            'contextmenu:vehicle',
-            'contextmenu:driver',
+            'fleet-ops:component:live-map-drawer',
+            'fleet-ops:component:vehicle-panel',
+            'fleet-ops:component:driver-panel',
+            'fleet-ops:component:order-config-manager',
+            'fleet-ops:contextmenu:vehicle',
+            'fleet-ops:contextmenu:driver',
             'fleet-ops:template:operations:orders:view',
             'fleet-ops:template:operations:orders:new',
             'fleet-ops:template:operations:orders:new:entities-input',
