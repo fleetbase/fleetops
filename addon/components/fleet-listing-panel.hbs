@@ -14,6 +14,7 @@
             @depth={{add @depth 1}}
             @itemDropdownButton={{@itemDropdownButton}}
             @itemDropdownButtonActions={{@itemDropdownButtonActions}}
+            @permission={{@permission}}
         />
     {{/each}}
     {{#each this.fleet.vehicles as |vehicle|}}
@@ -40,6 +41,7 @@
             @dropdownButtonWrapperClass={{@itemDropdownButtonWrapperClass}}
             @dropdownButtonTriggerClass={{@itemDropdownButtonTriggerClass}}
             @registerDropdownButtonAPI={{@itemRegisterDropdownButtonAPI}}
+            @permission={{@permission}}
             @dropdownButtonRenderInPlace={{false}}
         >{{vehicle.displayName}}</Layout::Sidebar::Item>
     {{/each}}

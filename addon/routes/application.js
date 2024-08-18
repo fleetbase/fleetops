@@ -5,7 +5,6 @@ import getResourceNameFromTransition from '@fleetbase/ember-core/utils/get-resou
 
 export default class ApplicationRoute extends Route {
     @service loader;
-    @service fetch;
     @service intl;
     @service location;
 
@@ -18,9 +17,5 @@ export default class ApplicationRoute extends Route {
 
     beforeModel() {
         this.location.getUserLocation();
-    }
-
-    model() {
-        return this.fetch.get('fleet-ops/settings/visibility');
     }
 }

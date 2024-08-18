@@ -524,11 +524,15 @@
             {{/if}}
         </ContentPanel>
 
-        {{#if this.renderableComponents}}
+        <RegistryYield @registry="fleet-ops:template:operations:orders:new" as |RegistryComponent|>
+            <RegistryComponent @order={{this.order}} @controller={{this}} />
+        </RegistryYield>
+
+        {{!-- {{#if this.renderableComponents}}
             {{#each this.renderableComponents as |renderableComponent|}}
                 {{component renderableComponent order=this.order controller=this}}
             {{/each}}
-        {{/if}}
+        {{/if}} --}}
 
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.payload-entities"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if this.isNotCsvImportedOrder}}

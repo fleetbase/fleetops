@@ -17,7 +17,7 @@ class FleetOps
     /**
      * Guards these permissions should apply to.
      */
-    public array $guards = ['web', 'api'];
+    public array $guards = ['sanctum'];
 
     /**
      * The permission schema resources.

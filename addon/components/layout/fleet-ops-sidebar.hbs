@@ -37,6 +37,7 @@
             @dropdownButtonWrapperClass={{menuItem.dropdownButtonWrapperClass}}
             @dropdownButtonTriggerClass={{menuItem.dropdownButtonTriggerClass}}
             @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
+            @permission={{menuItem.permission}}
         >{{menuItem.title}}</Layout::Sidebar::Item>
     {{/if}}
 {{/each}}
@@ -82,6 +83,7 @@
                     dropdownButtonWrapperClass=menuItem.dropdownButtonWrapperClass
                     dropdownButtonTriggerClass=menuItem.dropdownButtonTriggerClass
                     registerDropdownButtonAPI=menuItem.registerDropdownButtonAPI
+                    permission=menuItem.permission
                 }}
             {{else}}
                 <Layout::Sidebar::Item
@@ -106,6 +108,7 @@
                     @dropdownButtonWrapperClass={{menuItem.dropdownButtonWrapperClass}}
                     @dropdownButtonTriggerClass={{menuItem.dropdownButtonTriggerClass}}
                     @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
+                    @permission={{menuItem.permission}}
                 >{{menuItem.title}}</Layout::Sidebar::Item>
             {{/if}}
         {{/each}}
@@ -136,6 +139,7 @@
                         @dropdownButtonWrapperClass={{menuItem.dropdownButtonWrapperClass}}
                         @dropdownButtonTriggerClass={{menuItem.dropdownButtonTriggerClass}}
                         @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
+                        @permission={{menuItem.permission}}
                     >{{menuItem.title}}</Layout::Sidebar::Item>
                 {{/if}}
             {{/each}}
@@ -180,6 +184,7 @@
                 @dropdownButtonWrapperClass={{menuItem.dropdownButtonWrapperClass}}
                 @dropdownButtonTriggerClass={{menuItem.dropdownButtonTriggerClass}}
                 @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
+                @permission={{menuItem.permission}}
             >{{menuItem.title}}</Layout::Sidebar::Item>
         {{/each}}
     </Layout::Sidebar::Panel>

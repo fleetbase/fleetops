@@ -3,9 +3,8 @@ import loadInitializers from 'ember-load-initializers';
 import Resolver from 'ember-resolver';
 import config from './config/environment';
 import services from '@fleetbase/ember-core/exports/services';
-import AdminVisibilityControlsComponent from './components/admin/visibility-controls';
 import NavigatorAppConfigComponent from './components/admin/navigator-app';
-import FleetOpsKeyMetricsWidget from './components/widget/fleet-ops-key-metrics';
+import WidgetFleetOpsKeyMetricsComponent from './components/widget/fleet-ops-key-metrics';
 import AdminAvatarManagementComponent from './components/admin/avatar-management';
 
 const { modulePrefix } = config;
@@ -26,11 +25,6 @@ export default class FleetOpsEngine extends Engine {
         universe.registerAdminMenuPanel(
             'Fleet-Ops Config',
             [
-                {
-                    title: 'Visibility Controls',
-                    icon: 'eye',
-                    component: AdminVisibilityControlsComponent,
-                },
                 {
                     title: 'Navigator App',
                     icon: 'location-arrow',
@@ -53,7 +47,7 @@ export default class FleetOpsEngine extends Engine {
             name: 'Fleet-Ops Metrics',
             description: 'Key metrics from Fleet-Ops.',
             icon: 'truck',
-            component: FleetOpsKeyMetricsWidget,
+            component: WidgetFleetOpsKeyMetricsComponent,
             grid_options: { w: 12, h: 12, minW: 8, minH: 12 },
             options: {
                 title: 'Fleet-Ops Metrics',
