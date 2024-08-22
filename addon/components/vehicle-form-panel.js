@@ -8,39 +8,12 @@ import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-co
 import Point from '@fleetbase/fleetops-data/utils/geojson/point';
 
 export default class VehicleFormPanelComponent extends Component {
-    /**
-     * @service store
-     */
     @service store;
-
-    /**
-     * @service fetch
-     */
     @service fetch;
-
-    /**
-     * @service intl
-     */
     @service intl;
-
-    /**
-     * @service currentUser
-     */
     @service currentUser;
-
-    /**
-     * @service notifications
-     */
     @service notifications;
-
-    /**
-     * @service hostRouter
-     */
     @service hostRouter;
-
-    /**
-     * @service contextPanel
-     */
     @service contextPanel;
 
     /**
@@ -56,11 +29,19 @@ export default class VehicleFormPanelComponent extends Component {
     @tracked vehicleStatusOptions = ['active', 'pending'];
 
     /**
+     * Permission needed to update or create record.
+     *
+     * @memberof DriverFormPanelComponent
+     */
+    @tracked savePermission;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor() {
+    constructor (owner, { vehicle = null }) {
         super(...arguments);
-        this.vehicle = this.args.vehicle;
+        this.vehicle = vehicle;
+        this.savePermission = vehicle && vehicle.isNew ? 'fleet-ops create vehicle' : 'fleet-ops update vehicle';
         applyContextComponentArguments(this);
     }
 
@@ -70,7 +51,7 @@ export default class VehicleFormPanelComponent extends Component {
      * @action
      * @param {OverlayContextObject} overlayContext
      */
-    @action setOverlayContext(overlayContext) {
+    @action setOverlayContext (overlayContext) {
         this.context = overlayContext;
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
@@ -84,7 +65,7 @@ export default class VehicleFormPanelComponent extends Component {
      * @param {string} option.value - The URL or value associated with the avatar.
      * @memberof VehicleFormPanelComponent
      */
-    @action updateAvatarUrl(option) {
+    @action updateAvatarUrl (option) {
         if (option.key === 'custom_avatar') {
             this.vehicle.avatar_url = option.value;
         } else {
@@ -98,7 +79,7 @@ export default class VehicleFormPanelComponent extends Component {
      * @action
      * @param {string} url - The URL of the selected image.
      */
-    @action updateSelectedImage(url) {
+    @action updateSelectedImage (url) {
         this.vehicle.avatar_url = url;
     }
 
@@ -108,7 +89,7 @@ export default class VehicleFormPanelComponent extends Component {
      * @return {void}
      * @memberof VehicleFormPanelComponent
      */
-    @task *save() {
+    @task *save () {
         contextComponentCallback(this, 'onBeforeSave', this.vehicle);
 
         try {
@@ -128,7 +109,7 @@ export default class VehicleFormPanelComponent extends Component {
      * @param {File} file
      * @memberof DriverFormPanelComponent
      */
-    @action onUploadNewPhoto(file) {
+    @action onUploadNewPhoto (file) {
         this.fetch.uploadFile.perform(
             file,
             {
@@ -137,7 +118,7 @@ export default class VehicleFormPanelComponent extends Component {
                 subject_type: 'fleet-ops:vehicle',
                 type: 'vehicle_photo',
             },
-            (uploadedFile) => {
+            uploadedFile => {
                 this.vehicle.setProperties({
                     photo_uuid: uploadedFile.id,
                     photo_url: uploadedFile.url,
@@ -152,7 +133,7 @@ export default class VehicleFormPanelComponent extends Component {
      *
      * @action
      */
-    @action onViewDetails() {
+    @action onViewDetails () {
         const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.vehicle);
 
         if (!isActionOverrided) {
@@ -166,7 +147,7 @@ export default class VehicleFormPanelComponent extends Component {
      * @action
      * @returns {any}
      */
-    @action onPressCancel() {
+    @action onPressCancel () {
         return contextComponentCallback(this, 'onPressCancel', this.vehicle);
     }
 
@@ -176,7 +157,7 @@ export default class VehicleFormPanelComponent extends Component {
      * @param {AutocompleteEvent} { location }
      * @memberof VehicleFormPanelComponent
      */
-    @action onAutocomplete({ location }) {
+    @action onAutocomplete ({ location }) {
         if (location) {
             this.vehicle.setProperties({ location });
 
@@ -193,7 +174,7 @@ export default class VehicleFormPanelComponent extends Component {
      * @param {Object} coordinatesInputComponent - The coordinates input component to be set.
      * @memberof PlaceFormPanelComponent
      */
-    @action setCoordinatesInput(coordinatesInputComponent) {
+    @action setCoordinatesInput (coordinatesInputComponent) {
         this.coordinatesInputComponent = coordinatesInputComponent;
     }
 
@@ -206,7 +187,7 @@ export default class VehicleFormPanelComponent extends Component {
      * @param {number} coordinates.longitude - Longitude value.
      * @memberof PlaceFormPanelComponent
      */
-    @action onCoordinatesChanged({ latitude, longitude }) {
+    @action onCoordinatesChanged ({ latitude, longitude }) {
         const location = new Point(longitude, latitude);
 
         this.vehicle.setProperties({ location });

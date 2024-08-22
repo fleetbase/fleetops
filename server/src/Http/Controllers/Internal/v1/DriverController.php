@@ -194,7 +194,9 @@ class DriverController extends FleetOpsController
                     }
 
                     // Set user type as driver
-                    $user->setUserType('driver');
+                    if (!$user->type) {
+                        $user->setUserType('driver');
+                    }
 
                     // send invitation to user
                     $invitation = Invite::create([

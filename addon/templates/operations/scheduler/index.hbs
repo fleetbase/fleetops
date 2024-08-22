@@ -15,7 +15,7 @@
                 >
                     <div class="space-y-4">
                         {{#each this.unscheduledOrders as |order|}}
-                            <FullCalendar::Draggable @eventData={{json-hash id=order.id title=order.eventTitle allDay=true}}>
+                            <FullCalendar::Draggable @eventData={{json-hash id=order.id title=order.eventTitle allDay=true}} @disabled={{cannot "fleet-ops update order"}}>
                                 <Order::ScheduleCard @order={{order}} @titleClass="cursor-move" @onTitleClick={{fn this.viewEvent order}} />
                             </FullCalendar::Draggable>
                         {{/each}}
@@ -39,6 +39,14 @@
             </div>
 
             <div id="fleet-ops-scheduler-calendar" class="col-span-2 py-4 px-2">
+                {{#if (cannot "fleet-ops update order")}}
+                    <div class="flex flex-row items-center text-xs bg-yellow-800 border border-yellow-600 px-2 py-2 rounded-md text-yellow-100 mb-4 space-x-2">
+                        <FaIcon @icon="triangle-exclamation" @size="sm" />
+                        <div class="flex-1">
+                            {{t "fleet-ops.operations.scheduler.index.unauthorized-to-schedule"}}
+                        </div>
+                    </div>
+                {{/if}}
                 <FullCalendar
                     @events={{this.events}}
                     @editable={{true}}

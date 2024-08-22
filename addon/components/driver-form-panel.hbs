@@ -13,7 +13,7 @@
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
                 {{#if this.driver.id}}
-                    <Button @type="default" @icon="id-card" @helpText={{t "fleet-ops.component.driver-form-panel.driver-detail"}} @onClick={{this.onViewDetails}} />
+                    <Button @type="default" @icon="id-card" @helpText={{t "fleet-ops.component.driver-form-panel.driver-detail"}} @onClick={{this.onViewDetails}} @permission="fleet-ops view driver" />
                 {{/if}}
             </div>
             <div class="flex flex-1 justify-end">
@@ -24,6 +24,7 @@
                         @text={{if this.driver.id (t "fleet-ops.component.driver-form-panel.save-driver") (t "fleet-ops.component.driver-form-panel.create-driver")}}
                         @onClick={{perform this.save}}
                         @isLoading={{not this.save.isIdle}}
+                        @permission={{this.savePermission}}
                     />
                 </div>
                 <Button
@@ -58,6 +59,7 @@
                                     @icon="upload"
                                     @hideButtonText={{true}}
                                     @labelClass="upload-avatar-label-overlay"
+                                    @permission={{this.savePermission}}
                                     class="w-12 btn-reset"
                                 />
                             </div>
@@ -115,6 +117,7 @@
                             @infiniteScroll={{false}}
                             @renderInPlace={{true}}
                             @onChange={{fn (mut this.driver.user)}}
+                            @permission={{this.savePermission}}
                             as |model|
                         >
                             <div class="flex flex-row">
@@ -149,11 +152,11 @@
             <ContentPanel @title={{t "fleet-ops.component.driver-form-panel.driver-details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
                     <InputGroup @name={{t "fleet-ops.common.internal-id"}}>
-                        <Input @value={{this.driver.internal_id}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.internal-id"}} />
+                        <Input @value={{this.driver.internal_id}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.internal-id"}} disabled={{cannot this.savePermission}} />
                     </InputGroup>
 
                     <InputGroup @name={{t "fleet-ops.common.driver-license"}}>
-                        <Input @value={{this.driver.drivers_license_number}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.driver-license"}} />
+                        <Input @value={{this.driver.drivers_license_number}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.driver-license"}} disabled={{cannot this.savePermission}} />
                     </InputGroup>
 
                     <InputGroup @name={{t "fleet-ops.component.driver-form-panel.vendor"}}>
@@ -165,6 +168,7 @@
                             @infiniteScroll={{false}}
                             @renderInPlace={{true}}
                             @onChange={{fn (mut this.driver.vendor)}}
+                            @permission={{this.savePermission}}
                             as |model|
                         >
                             {{model.name}}
@@ -180,6 +184,7 @@
                             @infiniteScroll={{false}}
                             @renderInPlace={{true}}
                             @onChange={{fn (mut this.driver.vehicle)}}
+                            @permission={{this.savePermission}}
                             as |model|
                         >
                             {{model.display_name}}
@@ -187,7 +192,7 @@
                     </InputGroup>
 
                     <InputGroup @name={{t "fleet-ops.common.city"}}>
-                        <Input @value={{this.driver.city}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.city"}} />
+                        <Input @value={{this.driver.city}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.city"}} disabled={{cannot this.savePermission}} />
                     </InputGroup>
 
                     <InputGroup @name={{t "fleet-ops.common.country"}}>
@@ -196,6 +201,7 @@
                             @value={{this.driver.country}}
                             @onChange={{fn (mut this.driver.country)}}
                             placeholder={{t "fleet-ops.common.country"}}
+                            disabled={{cannot this.savePermission}}
                         />
                     </InputGroup>
 
@@ -207,6 +213,7 @@
                                 @onChange={{fn (mut this.driver.status)}}
                                 @placeholder={{t "fleet-ops.common.status"}}
                                 @triggerClass="form-select form-input"
+                                @disabled={{cannot this.savePermission}}
                                 as |status|
                             >
                                 {{smart-humanize status}}
@@ -221,6 +228,7 @@
                             @onUpdatedFromMap={{this.onCoordinatesChanged}}
                             @onInit={{this.setCoordinatesInput}}
                             @renderInPlace={{false}}
+                            @disabled={{cannot this.savePermission}}
                         />
                     </InputGroup>
                 </div>

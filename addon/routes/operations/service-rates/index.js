@@ -5,6 +5,10 @@ import isNestedRouteTransition from '@fleetbase/ember-core/utils/is-nested-route
 
 export default class OperationsServiceRatesIndexRoute extends Route {
     @service store;
+    @service notifications;
+    @service hostRouter;
+    @service abilities;
+    @service intl;
 
     queryParams = {
         page: { refreshModel: true },
@@ -19,6 +23,13 @@ export default class OperationsServiceRatesIndexRoute extends Route {
         if (isNestedRouteTransition(transition)) {
             set(this.queryParams, 'page.refreshModel', false);
             set(this.queryParams, 'sort.refreshModel', false);
+        }
+    }
+
+    beforeModel() {
+        if (this.abilities.cannot('fleet-ops list service-rate')) {
+            this.notifications.warning(this.intl.t('common.unauthorized-access'));
+            return this.hostRouter.transitionTo('console.fleet-ops');
         }
     }
 

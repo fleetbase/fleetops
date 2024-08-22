@@ -1,7 +1,7 @@
 {{#if this.driver}}
     <div class="relative flex items-center" ...attributes>
         <img src={{this.driver.photo_url}} alt={{this.driver.name}} {{fallback-img-src (config "defaultValues.driverImage")}} class="w-5 h-5 mr-2 rounded-md" />
-        <a href="javascript:;" class="relative flex flex-row items-center" {{on "click" (fn this.onClick this.driver)}}>
+        <a href="javascript:;" class="relative flex flex-row items-center" disabled={{and @column.permission (cannot @column.permission)}} {{on "click" (fn this.onClick this.driver)}}>
             <span>{{get-default-value this.driver.name}}</span>
             {{#if @row.vehicle_assigned}}
                 <div class="ml-2 rounded-lg bg-gray-300 dark:bg-gray-800 opacity-50 px-1 text-xs">

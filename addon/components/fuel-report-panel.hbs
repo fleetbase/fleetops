@@ -10,7 +10,14 @@
     @width={{or this.width @width "570px"}}
 >
     <Overlay::Header @title={{t "fleet-ops.component.fuel-report-panel.title"}} @status={{this.fuelReport.public_id}} @hideStatusDot={{true}} @createdAt={{this.fuelReport.createdAt}}>
-        <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.fuel-report-panel.edit-button"}} @onClick={{this.onEdit}} @wrapperClass="mr-2" />
+        <Button
+            @type="default"
+            @icon="pen"
+            @helpText={{t "fleet-ops.component.fuel-report-panel.edit-button"}}
+            @onClick={{this.onEdit}}
+            @wrapperClass="mr-2"
+            @permission="fleet-ops update fuel-report"
+        />
         <Button
             @type="default"
             @icon="times"

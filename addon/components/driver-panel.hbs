@@ -13,7 +13,7 @@
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
                 {{!-- <Button @type="default" @icon="location-arrow" @helpText={{t "fleet-ops.component.driver-panel.locate-button-text"}} @onClick={{@onPressCancel}} /> --}}
-                <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.driver-panel.edit-button-text"}} @onClick={{this.onEdit}} />
+                <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.driver-panel.edit-button-text"}} @onClick={{this.onEdit}} @permission="fleet-ops update driver" />
             </div>
             <div class="flex flex-1 justify-end">
                 <Button @type="default" @icon="times" @helpText={{t "fleet-ops.component.driver-panel.close-button-text"}} @onClick={{this.onPressCancel}} />

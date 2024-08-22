@@ -16,35 +16,13 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
  * @extends Component
  */
 export default class OrderConfigManagerCustomFieldsComponent extends Component {
-    /**
-     * Store service for handling data operations.
-     * @service
-     */
     @service store;
-
-    /**
-     * Notifications service for displaying user feedback.
-     * @service
-     */
     @service notifications;
-
-    /**
-     * Modals manager service for handling modal dialogs.
-     * @service
-     */
     @service modalsManager;
-
-    /**
-     * Context panel service for managing UI contexts.
-     * @service
-     */
     @service contextPanel;
-
-    /**
-     * Internationalization service for handling translations.
-     * @service
-     */
     @service intl;
+    @service abilities;
+    @service notifications;
 
     /**
      * Tracked array of field groups.
@@ -70,12 +48,12 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * @param {Object} owner - The owner of the component.
      * @param {Object} args - The arguments passed to the component, including the configuration.
      */
-    constructor(owner, { config, configManagerContext }) {
+    constructor (owner, { config, configManagerContext }) {
         super(...arguments);
         this.config = config;
         this.loadCustomFields.perform();
 
-        configManagerContext.on('onConfigChanged', (newConfig) => {
+        configManagerContext.on('onConfigChanged', newConfig => {
             this.changeConfig(newConfig);
         });
     }
@@ -86,7 +64,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * @param {number} size - The selected grid size.
      * @action
      */
-    @action selectGridSize(group, size) {
+    @action selectGridSize (group, size) {
         if (!isObject(group.meta)) {
             group.set('meta', {});
         }
@@ -100,7 +78,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * @param {Object} group - The group to add the new custom field to.
      * @action
      */
-    @action createNewCustomField(group) {
+    @action createNewCustomField (group) {
         const customField = this.store.createRecord('custom-field', {
             category_uuid: group.id,
             subject_uuid: this.config.id,
@@ -118,7 +96,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * @param {Object} customField - The custom field to edit.
      * @action
      */
-    @action editCustomField(customField) {
+    @action editCustomField (customField) {
         contextComponentCallback(this, 'onContextChanged', customField);
         this.contextPanel.focus(customField, 'editing', {
             args: {
@@ -141,13 +119,21 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * @param {Object} customField - The custom field to delete.
      * @action
      */
-    @action deleteCustomField(customField) {
+    @action deleteCustomField (customField) {
         this.modalsManager.confirm({
             title: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-prompt.modal-title'),
             body: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-prompt.delete-body-message'),
             acceptButtonText: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-prompt.confirm-delete'),
-            confirm: () => {
-                return customField.destroyRecord();
+            confirm: async () => {
+                modal.startLoading();
+
+                try {
+                    await customField.destroyRecord();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
             },
         });
     }
@@ -156,7 +142,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * Action method to create a new field group for custom fields.
      * @action
      */
-    @action createNewFieldGroup() {
+    @action createNewFieldGroup () {
         const customFieldGroup = this.store.createRecord('category', {
             owner_uuid: this.config.id,
             owner_type: 'order-config',
@@ -170,20 +156,21 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
             declineButtonIcon: 'times',
             declineButtonIconPrefix: 'fas',
             customFieldGroup,
-            confirm: (modal) => {
+            confirm: async modal => {
                 if (!customFieldGroup.name) {
                     return;
                 }
 
                 modal.startLoading();
-                return customFieldGroup
-                    .save()
-                    .then(() => {
-                        this.loadCustomFields.perform();
-                    })
-                    .catch((error) => {
-                        this.notifications.serverError(error);
-                    });
+
+                try {
+                    await customFieldGroup.save();
+                    this.loadCustomFields.perform();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
             },
         });
     }
@@ -193,13 +180,21 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * @param {Object} group - The field group to delete.
      * @action
      */
-    @action deleteCustomFieldGroup(group) {
+    @action deleteCustomFieldGroup (group) {
         this.modalsManager.confirm({
             title: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-group-prompt.modal-title'),
             body: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-group-prompt.delete-body-message'),
             acceptButtonText: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-group-prompt.confirm-delete'),
-            confirm: () => {
-                return group.destroyRecord();
+            confirm: async modal => {
+                modal.startLoading();
+
+                try {
+                    await group.destroyRecord();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
             },
         });
     }
@@ -208,7 +203,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * A task method to load custom fields from the store and group them.
      * @task
      */
-    @task *loadCustomFields() {
+    @task *loadCustomFields () {
         this.groups = yield this.store.query('category', { owner_uuid: this.config.id, for: 'custom_field_group' });
         this.customFields = yield this.store.query('custom-field', { subject_uuid: this.config.id });
         this.groupCustomFields();
@@ -220,7 +215,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      *
      * @memberof OrderConfigManagerCustomFieldsComponent
      */
-    initializeContext() {
+    initializeContext () {
         later(
             this,
             () => {
@@ -242,7 +237,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * @param {OrderConfigModel} newConfig
      * @memberof OrderConfigManagerCustomFieldsComponent
      */
-    changeConfig(newConfig) {
+    changeConfig (newConfig) {
         this.config = newConfig;
         this.loadCustomFields.perform();
     }
@@ -252,7 +247,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * @param {Object} customField - The custom field to add.
      * @param {Object} group - The group to add the custom field to.
      */
-    addCustomFieldToGroup(customField, group) {
+    addCustomFieldToGroup (customField, group) {
         if (!isArray(group.customFields)) {
             group.customFields = [];
         }
@@ -262,12 +257,12 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
     /**
      * Organizes custom fields into their respective groups.
      */
-    groupCustomFields() {
+    groupCustomFields () {
         for (let i = 0; i < this.groups.length; i++) {
             const group = this.groups[i];
             group.set(
                 'customFields',
-                this.customFields.filter((customField) => {
+                this.customFields.filter(customField => {
                     return customField.category_uuid === group.id;
                 })
             );

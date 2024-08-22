@@ -47,7 +47,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @param {Object} owner - The owner of the component.
      * @param {Object} args - Arguments passed to the component, including the order.
      */
-    constructor(owner, { order }) {
+    constructor (owner, { order }) {
         super(...arguments);
         this.loadDriverFromOrder(order);
         this.loadPayloadFromOrder(order);
@@ -59,7 +59,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @param {DriverModel} driver - The clicked driver object.
      * @memberof OrderScheduleCardComponent
      */
-    @action onClickDriver(driver) {
+    @action onClickDriver (driver) {
         this.contextPanel.focus(driver);
     }
 
@@ -69,7 +69,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @param {VehicleModel} vehicle - The clicked vehicle object.
      * @memberof OrderScheduleCardComponent
      */
-    @action onClickVehicle(vehicle) {
+    @action onClickVehicle (vehicle) {
         this.contextPanel.focus(vehicle);
     }
 
@@ -78,7 +78,10 @@ export default class OrderScheduleCardComponent extends Component {
      * @action
      * @memberof OrderScheduleCardComponent
      */
-    @action startAssignDriver() {
+    @action startAssignDriver () {
+        if (this.abilities.cannot('fleet-ops assign-driver-for order')) {
+            return;
+        }
         this.isAssigningDriver = !this.isAssigningDriver;
     }
 
@@ -88,7 +91,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @param {DriverModel} driver - The driver to be assigned.
      * @memberof OrderScheduleCardComponent
      */
-    @action assignDriver(driver) {
+    @action assignDriver (driver) {
         const order = this.args.order;
 
         if (isBlank(driver)) {
@@ -104,14 +107,14 @@ export default class OrderScheduleCardComponent extends Component {
 
                     return order
                         .save()
-                        .catch((error) => {
+                        .catch(error => {
                             this.notifications.serverError(error);
                         })
                         .finally(() => {
                             this.isAssigningDriver = false;
                         });
                 },
-                decline: (modal) => {
+                decline: modal => {
                     this.isAssigningDriver = false;
                     modal.done();
                 },
@@ -126,14 +129,14 @@ export default class OrderScheduleCardComponent extends Component {
                 order.set('driver_assigned_uuid', driver.id);
                 return order
                     .save()
-                    .catch((error) => {
+                    .catch(error => {
                         this.notifications.serverError(error);
                     })
                     .finally(() => {
                         this.isAssigningDriver = false;
                     });
             },
-            decline: (modal) => {
+            decline: modal => {
                 this.isAssigningDriver = false;
                 modal.done();
             },
@@ -146,7 +149,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @param {OrderModel} order - The order associated with the clicked title.
      * @memberof OrderScheduleCardComponent
      */
-    @action onTitleClick(order) {
+    @action onTitleClick (order) {
         const { onTitleClick } = this.args;
 
         if (typeof onTitleClick === 'function') {
@@ -159,7 +162,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @param {OrderModel} order - The order to load the driver from.
      * @memberof OrderScheduleCardComponent
      */
-    loadDriverFromOrder(order) {
+    loadDriverFromOrder (order) {
         if (order && typeof order.loadDriver === 'function') {
             order.loadDriver();
         }
@@ -170,7 +173,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @param {OrderModel} order - The order to load the payload from.
      * @memberof OrderScheduleCardComponent
      */
-    loadPayloadFromOrder(order) {
+    loadPayloadFromOrder (order) {
         if (order && typeof order.loadPayload === 'function') {
             order.loadPayload();
         }

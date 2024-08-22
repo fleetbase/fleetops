@@ -120,7 +120,7 @@ export default class FleetPanelVehicleListingComponent extends Component {
     @action onAddVehicle(vehicle) {
         this.fetch.post('fleets/assign-vehicle', { vehicle: vehicle.id, fleet: this.fleet.id }).then(() => {
             this.vehicles.pushObject(vehicle);
-            this.universe.trigger('fleet.vehicle.assigned', this.fleet, vehicle);
+            this.universe.trigger('fleet-ops.fleet.vehicle_assigned', this.fleet, vehicle);
         });
     }
 
@@ -133,7 +133,7 @@ export default class FleetPanelVehicleListingComponent extends Component {
     @action onRemoveVehicle(vehicle) {
         this.fetch.post('fleets/remove-vehicle', { vehicle: vehicle.id, fleet: this.fleet.id }).then(() => {
             this.vehicles.removeObject(vehicle);
-            this.universe.trigger('fleet.vehicle.unassigned', this.fleet, vehicle);
+            this.universe.trigger('fleet-ops.fleet.vehicle_unassigned', this.fleet, vehicle);
         });
     }
 

@@ -8,7 +8,14 @@
         @onPressCancel={{this.transitionBack}}
     >
         {{#if @model.canBeDispatched}}
-            <Button @type="primary" @icon="paper-plane" @text={{t "fleet-ops.operations.orders.index.view.dispatch"}} class="mr-2" @onClick={{fn this.dispatchOrder @model}} />
+            <Button
+                @type="primary"
+                @icon="paper-plane"
+                @text={{t "fleet-ops.operations.orders.index.view.dispatch"}}
+                class="mr-2"
+                @onClick={{fn this.dispatchOrder @model}}
+                @permission="fleet-ops dispatch order"
+            />
         {{/if}}
         <DropdownButton @icon="ellipsis-h" @size="sm" @iconPrefix="fas" as |dd|>
             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
@@ -19,40 +26,76 @@
                 </div>
                 <div class="next-dd-menu-seperator"></div>
                 <div class="px-1">
-                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.editOrder @model)}}>
-                        <div class="w-6">
-                            <FaIcon @icon="edit" />
+                    {{#let (cannot "fleet-ops update order") as |unauthorized|}}
+                        <div>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.editOrder @model)}} disabled={{unauthorized}}>
+                                <div class="w-6">
+                                    <FaIcon @icon="edit" />
+                                </div>
+                                <span>{{t "fleet-ops.operations.orders.index.view.edit-details"}}</span>
+                            </a>
+                            {{#if unauthorized}}
+                                <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                                    <InputInfo @text={{t "common.unauthorized"}} />
+                                </Attach::Tooltip>
+                            {{/if}}
                         </div>
-                        <span>{{t "fleet-ops.operations.orders.index.view.edit-details"}}</span>
-                    </a>
+                    {{/let}}
                     {{#unless @model.isIntegratedVendorOrder}}
-                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.createNewActivity @model)}}>
-                            <div class="w-6">
-                                <FaIcon @icon="signal" />
+                        {{#let (cannot "fleet-ops update order") as |unauthorized|}}
+                            <div>
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.createNewActivity @model)}} disabled={{unauthorized}}>
+                                    <div class="w-6">
+                                        <FaIcon @icon="signal" />
+                                    </div>
+                                    <span>{{t "fleet-ops.operations.orders.index.view.update-activity"}}</span>
+                                </a>
+                                {{#if unauthorized}}
+                                    <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                                        <InputInfo @text={{t "common.unauthorized"}} />
+                                    </Attach::Tooltip>
+                                {{/if}}
                             </div>
-                            <span>{{t "fleet-ops.operations.orders.index.view.update-activity"}}</span>
-                        </a>
-                        {{#if @model.driver_assigned_uuid}}
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.unassignDriver @model)}}>
-                                <div class="w-6">
-                                    <FaIcon @icon="user-xmark" />
-                                </div>
-                                <span>{{t "fleet-ops.operations.orders.index.view.unassign-driver"}}</span>
-                            </a>
-                        {{else}}
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.assignDriver @model)}}>
-                                <div class="w-6">
-                                    <FaIcon @icon="user-check" />
-                                </div>
-                                <span>{{t "fleet-ops.operations.orders.index.view.assign-driver"}}</span>
-                            </a>
-                        {{/if}}
-                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.viewOrderLabel @model)}}>
-                            <div class="w-6">
-                                <FaIcon @icon="file-invoice" />
+                        {{/let}}
+                        {{#let (cannot "fleet-ops update order") as |unauthorized|}}
+                            <div>
+                                {{#if @model.driver_assigned_uuid}}
+                                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.unassignDriver @model)}} disabled={{unauthorized}}>
+                                        <div class="w-6">
+                                            <FaIcon @icon="user-xmark" />
+                                        </div>
+                                        <span>{{t "fleet-ops.operations.orders.index.view.unassign-driver"}}</span>
+                                    </a>
+                                {{else}}
+                                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.assignDriver @model)}} disabled={{unauthorized}}>
+                                        <div class="w-6">
+                                            <FaIcon @icon="user-check" />
+                                        </div>
+                                        <span>{{t "fleet-ops.operations.orders.index.view.assign-driver"}}</span>
+                                    </a>
+                                {{/if}}
+                                {{#if unauthorized}}
+                                    <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                                        <InputInfo @text={{t "common.unauthorized"}} />
+                                    </Attach::Tooltip>
+                                {{/if}}
                             </div>
-                            <span>{{t "fleet-ops.operations.orders.index.view.get-order-label"}}</span>
-                        </a>
+                        {{/let}}
+                        {{#let (cannot "fleet-ops view order") as |unauthorized|}}
+                            <div>
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.viewOrderLabel @model)}} disabled={{unauthorized}}>
+                                    <div class="w-6">
+                                        <FaIcon @icon="file-invoice" />
+                                    </div>
+                                    <span>{{t "fleet-ops.operations.orders.index.view.get-order-label"}}</span>
+                                </a>
+                                {{#if unauthorized}}
+                                    <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                                        <InputInfo @text={{t "common.unauthorized"}} />
+                                    </Attach::Tooltip>
+                                {{/if}}
+                            </div>
+                        {{/let}}
                     {{/unless}}
                     <div class="next-dd-menu-seperator"></div>
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.listenToSocket @model)}}>
@@ -61,27 +104,54 @@
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.view.listen-socket-channel"}}</span>
                     </a>
-                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.viewOrderMeta @model)}}>
-                        <div class="w-6">
-                            <FaIcon @icon="table" />
+                    {{#let (cannot "fleet-ops view order") as |unauthorized|}}
+                        <div>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.viewOrderMeta @model)}} disabled={{unauthorized}}>
+                                <div class="w-6">
+                                    <FaIcon @icon="table" />
+                                </div>
+                                <span>{{t "fleet-ops.operations.orders.index.view.view-metadata"}}</span>
+                            </a>
+                            {{#if unauthorized}}
+                                <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                                    <InputInfo @text={{t "common.unauthorized"}} />
+                                </Attach::Tooltip>
+                            {{/if}}
                         </div>
-                        <span>{{t "fleet-ops.operations.orders.index.view.view-metadata"}}</span>
-                    </a>
+                    {{/let}}
                     {{#unless @model.isCanceled}}
-                        <div class="next-dd-menu-seperator"></div>
-                        <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (dropdown-fn dd this.cancelOrder @model)}}>
-                            <div class="w-6">
-                                <FaIcon @icon="ban" class="text-danger" />
+                        {{#let (cannot "fleet-ops cancel order") as |unauthorized|}}
+                            <div class="next-dd-menu-seperator"></div>
+                            <div>
+                                <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (dropdown-fn dd this.cancelOrder @model)}} disabled={{unauthorized}}>
+                                    <div class="w-6">
+                                        <FaIcon @icon="ban" class="text-danger" />
+                                    </div>
+                                    <span>{{t "fleet-ops.operations.orders.index.view.cancel-order"}}</span>
+                                </a>
+                                {{#if unauthorized}}
+                                    <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                                        <InputInfo @text={{t "common.unauthorized"}} />
+                                    </Attach::Tooltip>
+                                {{/if}}
                             </div>
-                            <span>{{t "fleet-ops.operations.orders.index.view.cancel-order"}}</span>
-                        </a>
+                        {{/let}}
                     {{/unless}}
-                    <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (dropdown-fn dd this.deleteOrder @model)}}>
-                        <div class="w-6">
-                            <FaIcon @icon="trash" class="text-danger" />
+                    {{#let (cannot "fleet-ops delete order") as |unauthorized|}}
+                        <div>
+                            <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (dropdown-fn dd this.deleteOrder @model)}} disabled={{unauthorized}}>
+                                <div class="w-6">
+                                    <FaIcon @icon="trash" class="text-danger" />
+                                </div>
+                                <span>{{t "fleet-ops.operations.orders.index.view.delete-order"}}</span>
+                            </a>
+                            {{#if unauthorized}}
+                                <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                                    <InputInfo @text={{t "common.unauthorized"}} />
+                                </Attach::Tooltip>
+                            {{/if}}
                         </div>
-                        <span>{{t "fleet-ops.operations.orders.index.view.delete-order"}}</span>
-                    </a>
+                    {{/let}}
                 </div>
             </div>
         </DropdownButton>
@@ -224,6 +294,7 @@
                                 @icon="edit"
                                 @text={{if @model.has_driver_assigned (t "fleet-ops.operations.orders.index.view.change-driver") (t "fleet-ops.operations.orders.index.view.assign-driver")}}
                                 @onClick={{fn this.assignDriver @model}}
+                                @permission="fleet-ops assign-driver-for order"
                             />
                         </div>
                     </div>
@@ -389,7 +460,7 @@
                 @panelBodyClass="bg-white dark:bg-gray-800"
             >
                 <div class="mb-4 flex justify-end">
-                    <Button @size="xs" @type="default" @icon="barcode" @text="Get Order Label" @onClick={{fn this.viewOrderLabel @model}} />
+                    <Button @size="xs" @type="default" @icon="barcode" @text="Get Order Label" @onClick={{fn this.viewOrderLabel @model}} @permission="fleet-ops view order" />
                 </div>
                 <div class="flex flex-row items-center justify-center space-x-4">
                     <div class="p-2 rounded-md bg-white">
@@ -492,7 +563,7 @@
                                                 </div>
                                                 <div class="next-dd-menu-seperator"></div>
                                                 <div class="px-1">
-                                                    <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.viewWaypointLabel group.waypoint dd)}}>
+                                                    <a href="javascript:;" class="next-dd-item" disabled={{cannot "fleet-ops view order"}} {{on "click" (fn this.viewWaypointLabel group.waypoint dd)}}>
                                                         {{t "fleet-ops.operations.orders.index.view.get-label"}}
                                                     </a>
                                                     {{!-- <a href="javascript:;" class="next-dd-item">
@@ -507,6 +578,7 @@
                                             @text={{t "fleet-ops.operations.orders.index.view.add-item-button"}}
                                             @size="sm"
                                             @onClick={{fn this.addEntity group.waypoint}}
+                                            @permission="fleet-ops update order"
                                         />
                                     </div>
                                 </div>
@@ -530,10 +602,11 @@
                                                     @text={{t "fleet-ops.operations.orders.index.view.edit-item-button"}}
                                                     @size="xs"
                                                     @onClick={{fn this.editEntity entity}}
+                                                    @permission="fleet-ops update order"
                                                 />
                                             </div>
                                             <div class="absolute top-0 right-0 p-2">
-                                                <Button @icon="times" @iconPrefix="fas" @type="danger" @size="xs" @onClick={{fn this.removeEntity entity}} />
+                                                <Button @icon="times" @iconPrefix="fas" @type="danger" @size="xs" @onClick={{fn this.removeEntity entity}} @permission="fleet-ops update order" />
                                             </div>
                                         </div>
                                     </div>
@@ -557,7 +630,7 @@
                                     <div class="dark:text-gray-100 truncate mb-2">
                                         {{entity.tracking}}
                                     </div>
-                                    <Button @icon="pencil" @text={{t "fleet-ops.operations.orders.index.view.edit-item-button"}} @size="sm" @onClick={{fn this.editEntity entity}} />
+                                    <Button @icon="pencil" @text={{t "fleet-ops.operations.orders.index.view.edit-item-button"}} @size="sm" @onClick={{fn this.editEntity entity}} @permission="fleet-ops update order" />
                                 </div>
                                 <div class="absolute top-0 right-0 p-2">
                                     <Button
@@ -567,6 +640,7 @@
                                         @size="xs"
                                         @onClick={{fn this.removeEntity entity}}
                                         @wrapperClass={{if (eq index 0) "invisible"}}
+                                        @permission="fleet-ops update order"
                                     />
                                 </div>
                             </div>
@@ -610,7 +684,7 @@
                                     {{#if dropzone.supported}}
                                         <p class="text-sm my-5">{{t "component.dropzone.dropzone-supported-files"}}</p>
                                     {{/if}}
-                                    <FileUpload @name="files" @for="files" @accept={{join "," this.acceptedFileTypes}} @multiple={{true}} @onFileAdded={{this.queueFile}}>
+                                    <FileUpload @name="files" @for="files" @accept={{join "," this.acceptedFileTypes}} @multiple={{true}} @onFileAdded={{this.queueFile}} @disabled={{cannot "fleet-ops update order"}}>
                                         <a tabindex={{0}} class="btn btn-magic cursor-pointer ml-1">{{t "component.dropzone.or-select-button-text"}}</a>
                                     </FileUpload>
                                 </div>

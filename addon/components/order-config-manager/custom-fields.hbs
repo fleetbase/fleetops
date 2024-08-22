@@ -1,6 +1,6 @@
 <div class="px-6 space-y-4">
     <div class="flex flex-row items-center py-2 space-x-4">
-        <Button @type="primary" @icon="square-plus" @text={{t "fleet-ops.component.order-config-manager.custom-fields.new-field-group"}} @onClick={{this.createNewFieldGroup}} />
+        <Button @type="primary" @icon="square-plus" @text={{t "fleet-ops.component.order-config-manager.custom-fields.new-field-group"}} @onClick={{this.createNewFieldGroup}} @permission="fleet-ops update order-config" />
     </div>
     {{#each this.groups as |group|}}
         <ContentPanel @title={{group.name}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-900">
@@ -10,6 +10,7 @@
                     @icon="square-plus"
                     @text={{t "fleet-ops.component.order-config-manager.custom-fields.new-custom-field"}}
                     @onClick={{fn this.createNewCustomField group}}
+                    @permission="fleet-ops update order-config"
                 />
                 <DropdownButton
                     @text={{concat (t "fleet-ops.component.order-config-manager.custom-fields.grid-size") ": " (or group.meta.grid_size 1)}}
@@ -20,12 +21,13 @@
                     @size="sm"
                     @iconPrefix="fas"
                     @triggerClass="hidden md:flex"
+                    @permission="fleet-ops update order-config"
                     as |dd|
                 >
                     <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                         <div class="p-1">
                             {{#each this.gridSizeOptions as |size|}}
-                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.selectGridSize group size)}}>
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.selectGridSize group size)}} disabled={{cannot "fleet-ops update order-config"}}>
                                     <div class="flex-1 flex flex-row items-center">
                                         <div class="w-6">
                                             <FaIcon @icon="grip" />
@@ -42,7 +44,7 @@
                         </div>
                     </div>
                 </DropdownButton>
-                <Button @type="danger" @icon="trash" @onClick={{fn this.deleteCustomFieldGroup group}} />
+                <Button @type="danger" @icon="trash" @onClick={{fn this.deleteCustomFieldGroup group}} @permission="fleet-ops update order-config" />
             </div>
             <div class="grid grid-cols-{{or group.meta.grid_size 1}} gap-2">
                 {{#each group.customFields as |customField|}}
@@ -54,8 +56,8 @@
                             </div>
                         </div>
                         <div class="flex flex-row items-center space-x-2">
-                            <Button @type="default" @icon="pencil" @onClick={{fn this.editCustomField customField}} />
-                            <Button @type="danger" @icon="trash" @onClick={{fn this.deleteCustomField customField}} />
+                            <Button @type="default" @icon="pencil" @onClick={{fn this.editCustomField customField}} @permission="fleet-ops update order-config" />
+                            <Button @type="danger" @icon="trash" @onClick={{fn this.deleteCustomField customField}} @permission="fleet-ops update order-config" />
                         </div>
                     </div>
                 {{/each}}

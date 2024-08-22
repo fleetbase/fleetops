@@ -6,11 +6,12 @@
     @toggleOnCaretOnly={{true}}
     @onClickPanelTitle={{this.transitionToRoute}}
     @wrapperClass="next-driver-listing"
-    @dropdownButton={{this.displayPanelDropdown}}
+    @dropdownButton={{if (can 'fleet-ops create driver') this.displayPanelDropdown}}
     @dropdownButtonActions={{this.panelDropdownButtonActions}}
     @dropdownButtonRenderInPlace={{false}}
-    @dropdownHorizontalPosition="left"
+    @dropdownButtonCalculatePosition={{this.calculateDropdownPosition}}
     @dropdownButtonMenuLabel={{t "fleet-ops.component.layout.fleet-ops-sidebar.drivers"}}
+    @dropdownMenuWrapperClass="next-sidebar-panel-menu-dropdown"
 >
     {{#each this.drivers as |driver|}}
         <Layout::Sidebar::Item
@@ -25,12 +26,12 @@
             @dropdownButtonIcon={{@itemDropdownButtonIcon}}
             @dropdownButtonIconPrefix={{@itemDropdownButtonIconPrefix}}
             @dropdownButtonText={{@itemDropdownButtonText}}
-            @dropdownButtonCalculatePosition={{@itemDropdownButtonCalculatePosition}}
+            @dropdownButtonCalculatePosition={{this.calculateDropdownItemPosition}}
             @dropdownButtonRenderInPlace={{false}}
             @dropdownButtonMenuLabel={{driver.name}}
+            @dropdownMenuWrapperClass="next-sidebar-panel-menu-dropdown"
             @dropdownButtonWrapperClass={{@itemDropdownButtonWrapperClass}}
             @dropdownButtonTriggerClass={{@itemDropdownButtonTriggerClass}}
-            @dropdownHorizontalPosition="left"
             @registerDropdownButtonAPI={{@itemRegisterDropdownButtonAPI}}
             @rightSideComponent={{@itemRightSideComponent}}
             @rightSideComponentContext={{@itemRightSideComponentContext}}

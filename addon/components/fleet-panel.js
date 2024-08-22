@@ -10,46 +10,11 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
 export default class FleetPanelComponent extends Component {
-    /**
-     * Service for fetching data.
-     *
-     * @type {Service}
-     */
     @service fetch;
-
-    /**
-     * Service for managing modals.
-     *
-     * @type {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Universe service for managing global data and settings.
-     *
-     * @type {Service}
-     */
     @service universe;
-
-    /**
-     * Ember data store service.
-     *
-     * @type {Service}
-     */
     @service store;
-
-    /**
-     * Service for managing routing within the host app.
-     *
-     * @type {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Service for managing the context panel.
-     *
-     * @type {Service}
-     */
     @service contextPanel;
 
     /**
@@ -73,7 +38,7 @@ export default class FleetPanelComponent extends Component {
      *
      * @type {Array}
      */
-    get tabs() {
+    get tabs () {
         const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:fleet-panel');
         const defaultTabs = [
             this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: FleetPanelDetailComponent }),
@@ -99,7 +64,7 @@ export default class FleetPanelComponent extends Component {
     /**
      * Initializes the vehicle panel component.
      */
-    constructor() {
+    constructor () {
         super(...arguments);
         this.fleet = this.args.fleet;
         this.tab = this.getTabUsingSlug(this.args.tab);
@@ -112,7 +77,7 @@ export default class FleetPanelComponent extends Component {
      * @action
      * @param {OverlayContextObject} overlayContext
      */
-    @action setOverlayContext(overlayContext) {
+    @action setOverlayContext (overlayContext) {
         this.context = overlayContext;
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
@@ -124,7 +89,7 @@ export default class FleetPanelComponent extends Component {
      * @param {String} tab - The new tab to switch to.
      * @action
      */
-    @action onTabChanged(tab) {
+    @action onTabChanged (tab) {
         this.tab = this.getTabUsingSlug(tab);
         contextComponentCallback(this, 'onTabChanged', tab);
     }
@@ -135,7 +100,7 @@ export default class FleetPanelComponent extends Component {
      * @method
      * @action
      */
-    @action onEdit() {
+    @action onEdit () {
         const isActionOverrided = contextComponentCallback(this, 'onEdit', this.fleet);
 
         if (!isActionOverrided) {
@@ -154,7 +119,7 @@ export default class FleetPanelComponent extends Component {
      * @action
      * @returns {Boolean} Indicates whether the cancel action was overridden.
      */
-    @action onPressCancel() {
+    @action onPressCancel () {
         return contextComponentCallback(this, 'onPressCancel', this.fleet);
     }
 
@@ -164,7 +129,7 @@ export default class FleetPanelComponent extends Component {
      * @param {String} tabSlug - The slug of the tab.
      * @returns {Object|null} The found tab or null.
      */
-    getTabUsingSlug(tabSlug) {
+    getTabUsingSlug (tabSlug) {
         if (tabSlug) {
             return this.tabs.find(({ slug }) => slug === tabSlug);
         }

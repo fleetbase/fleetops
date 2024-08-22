@@ -148,6 +148,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             text: 'Edit',
             icon: 'pencil',
             iconPrefix: 'fas',
+            permission: 'fleet-ops update order',
             onClick: () => {
                 const order = this.model;
                 this.editOrder(order);
@@ -161,6 +162,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             text: 'Edit',
             icon: 'pencil',
             iconPrefix: 'fas',
+            permission: 'fleet-ops update-route-for order',
             onClick: () => {
                 const order = this.model;
                 this.editOrderRoute(order);
@@ -174,6 +176,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             text: 'Edit',
             icon: 'pencil',
             iconPrefix: 'fas',
+            permission: 'fleet-ops update order',
             onClick: () => {
                 this.editOrderNotes();
             },
@@ -791,6 +794,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             title: 'Order Label',
             modalClass: 'modal-xl',
             acceptButtonText: 'Done',
+            hideDeclineButton: true,
             order,
         });
 
@@ -825,6 +829,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             title: 'Waypoint Label',
             modalClass: 'modal-xl',
             acceptButtonText: 'Done',
+            hideDeclineButton: true
         });
 
         // load the pdf label from base64

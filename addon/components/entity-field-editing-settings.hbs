@@ -72,6 +72,7 @@
                     @text={{t "fleet-ops.common.save-changes"}}
                     @onClick={{perform this.saveEntityEditingSettings}}
                     @isLoading={{not this.saveEntityEditingSettings.isIdle}}
+                    @permission="fleet-ops update navigator-settings"
                 />
             </div>
         {{/let}}

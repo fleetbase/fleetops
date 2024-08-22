@@ -7,60 +7,13 @@ import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 
 export default class ManagementContactsIndexController extends BaseController {
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
     @service intl;
-
-    /**
-     * Inject the `modals-manager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `crud` service
-     *
-     * @var {Service}
-     */
     @service crud;
-
-    /**
-     * Inject the `filters` service
-     *
-     * @var {Service}
-     */
     @service filters;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
 
     /**
@@ -159,6 +112,7 @@ export default class ManagementContactsIndexController extends BaseController {
             width: '170px',
             cellComponent: 'table/cell/media-name',
             action: this.viewContact,
+            permission: 'fleet-ops view contact',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -260,10 +214,12 @@ export default class ManagementContactsIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.contacts.index.view-contact'),
                     fn: this.viewContact,
+                    permission: 'fleet-ops view contact',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.contacts.index.edit-contact'),
                     fn: this.editContact,
+                    permission: 'fleet-ops update contact',
                 },
                 {
                     separator: true,
@@ -271,6 +227,7 @@ export default class ManagementContactsIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.contacts.index.delete-contact'),
                     fn: this.deleteContact,
+                    permission: 'fleet-ops delete contact',
                 },
             ],
             sortable: false,
@@ -285,7 +242,7 @@ export default class ManagementContactsIndexController extends BaseController {
      *
      * @void
      */
-    @task({ restartable: true }) *search({ target: { value } }) {
+    @task({ restartable: true }) *search ({ target: { value } }) {
         // if no query don't search
         if (isBlank(value)) {
             this.query = null;
@@ -307,7 +264,7 @@ export default class ManagementContactsIndexController extends BaseController {
     /**
      * Reload layout view.
      */
-    @action reload() {
+    @action reload () {
         return this.hostRouter.refresh();
     }
 
@@ -316,8 +273,8 @@ export default class ManagementContactsIndexController extends BaseController {
      *
      * @void
      */
-    @action exportContacts() {
-        const selections = this.table.selectedRows.map((_) => _.id);
+    @action exportContacts () {
+        const selections = this.table.selectedRows.map(_ => _.id);
         this.crud.export('contact', { params: { selections } });
     }
 
@@ -327,7 +284,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @param {ContactModel} contact
      * @void
      */
-    @action viewContact(contact) {
+    @action viewContact (contact) {
         return this.transitionToRoute('management.contacts.index.details', contact);
     }
 
@@ -336,7 +293,7 @@ export default class ManagementContactsIndexController extends BaseController {
      *
      * @void
      */
-    @action createContact() {
+    @action createContact () {
         return this.transitionToRoute('management.contacts.index.new');
     }
 
@@ -346,7 +303,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @param {ContactModel} contact
      * @void
      */
-    @action editContact(contact) {
+    @action editContact (contact) {
         return this.transitionToRoute('management.contacts.index.edit', contact);
     }
 
@@ -357,7 +314,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action deleteContact(contact, options = {}) {
+    @action deleteContact (contact, options = {}) {
         this.crud.delete(contact, {
             acceptButtonIcon: 'trash',
             onConfirm: () => {
@@ -372,7 +329,7 @@ export default class ManagementContactsIndexController extends BaseController {
      *
      * @void
      */
-    @action importContacts() {
+    @action importContacts () {
         this.crud.import('contact', {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
@@ -386,7 +343,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @param {Array} selected an array of selected models
      * @void
      */
-    @action bulkDeleteContacts() {
+    @action bulkDeleteContacts () {
         const selected = this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {

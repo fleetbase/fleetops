@@ -1,4 +1,4 @@
-import Service from '@ember/service';
+import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { camelize } from '@ember/string';
@@ -14,6 +14,10 @@ import isObject from '@fleetbase/ember-core/utils/is-object';
  * @extends Service
  */
 export default class ContextPanelService extends Service {
+    @service abilities;
+    @service notifications;
+    @service intl;
+
     /**
      * Registry mapping model names to their corresponding component details.
      * @type {Object}
@@ -188,6 +192,12 @@ export default class ContextPanelService extends Service {
         }
 
         const modelName = getModelName(model);
+        const intentModelName = this.getIntentModelName(model);
+        const ability = this.getIntentAbility(intent, model);
+        if (this.abilities.cannot(`fleet-ops ${ability} ${intentModelName}`)) {
+            return this.notifications.warning(this.intl.t('common.unauthorized'));
+        }
+
         const registry = this.getRegistryFromModelName(modelName);
         const dynamicArgs = getWithDefault(options, 'args', {});
         if (registry && registry[intent]) {
@@ -198,6 +208,42 @@ export default class ContextPanelService extends Service {
 
             return this;
         }
+    }
+
+    /**
+     * Get the ability the user is attempting based on the model and intent.
+     *
+     * @param {String} intent
+     * @param {Model} model
+     * @return {String} 
+     * @memberof ContextPanelService
+     */
+    getIntentAbility(intent, model) {
+        if (intent === 'viewing') {
+            return 'view';
+        }
+
+        if (isObject(model) && model.isNew && intent === 'editing') {
+            return 'create';
+        }
+
+        return 'update';
+    }
+
+    /**
+     * Get the model name for the current intent.
+     *
+     * @param {Model} model
+     * @return {String} 
+     * @memberof ContextPanelService
+     */
+    getIntentModelName(model) {
+        let modelName = getModelName(model);
+        if (modelName === 'activity') {
+            return 'order-config';
+        }
+
+        return modelName;
     }
 
     /**

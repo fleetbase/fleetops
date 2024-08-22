@@ -5,39 +5,10 @@ import { action, computed } from '@ember/object';
 import { isBlank } from '@ember/utils';
 
 export default class OperationsServiceRatesIndexNewController extends BaseController {
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
     @service intl;
-
-    /**
-     * Inject the `loader` service
-     *
-     * @var {Service}
-     */
     @service loader;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
 
     /**
@@ -167,11 +138,21 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
     @tracked _rateFees = [];
 
     /**
+     * The current ability permission based on record id.
+     *
+     * @readonly
+     * @memberof OperationsServiceRatesIndexNewController
+     */
+    @computed('serviceRate.id') get abilityPermission() {
+        return this.serviceRate.id ? 'fleet-ops update service-rate' : 'fleet-ops create service-rate';
+    }
+
+    /**
      * The rate feess for per km
      *
      * @var {Array}
      */
-    @computed('fixedMeterMaxDistance', 'fixedMeterUnit', 'serviceRate.currency', '_rateFees') get rateFees() {
+    @computed('fixedMeterMaxDistance', 'fixedMeterUnit', 'serviceRate.currency', '_rateFees') get rateFees () {
         if (!isBlank(this._rateFees)) {
             return this._rateFees;
         }
@@ -194,7 +175,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
     }
 
     /** setter for rate fee's */
-    set rateFees(rateFees) {
+    set rateFees (rateFees) {
         this._rateFees = rateFees;
     }
 
@@ -270,7 +251,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
     /**
      * Adds a per drop-off rate fee
      */
-    @action addPerDropoffRateFee() {
+    @action addPerDropoffRateFee () {
         const rateFees = this.perDropRateFees;
         const currency = this.serviceRate.currency;
 
@@ -286,7 +267,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
         });
     }
 
-    @action setConfig(event) {
+    @action setConfig (event) {
         const orderConfigId = event.target.value;
         if (!orderConfigId) {
             return;
@@ -303,7 +284,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
     /**
      * Adds a per drop-off rate fee
      */
-    @action removePerDropoffRateFee(index) {
+    @action removePerDropoffRateFee (index) {
         this.perDropRateFees.removeAt(index);
     }
 
@@ -312,7 +293,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
      *
      * @void
      */
-    @action createServiceRate() {
+    @action async createServiceRate () {
         const { serviceRate, rateFees, parcelFees } = this;
 
         serviceRate.setServiceRateFees(rateFees).setServiceRateParcelFees(parcelFees);
@@ -324,22 +305,18 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
         this.isCreatingServiceRate = true;
         this.loader.showLoader('.overlay-inner-content', { loadingMessage: 'Creating service rate...' });
 
-        return serviceRate
-            .save()
-            .then((serviceRate) => {
-                return this.transitionToRoute('operations.service-rates.index').then(() => {
-                    this.notifications.success(this.intl.t('fleet-ops.operations.service-rates.index.new.success-message', { serviceName: serviceRate.service_name }));
-                    this.resetForm();
-                    return this.hostRouter.refresh();
-                });
-            })
-            .catch((error) => {
-                this.notifications.serverError(error);
-            })
-            .finally(() => {
-                this.isCreatingServiceRate = false;
-                this.loader.removeLoader();
+        try {
+            await serviceRate.save();
+            this.isCreatingServiceRate = false;
+            this.loader.removeLoader();
+            return this.transitionToRoute('operations.service-rates.index').then(() => {
+                this.notifications.success(this.intl.t('fleet-ops.operations.service-rates.index.new.success-message', { serviceName: serviceRate.service_name }));
+                this.resetForm();
+                return this.hostRouter.refresh();
             });
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**
@@ -348,12 +325,12 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
      * @param {String} serviceAreaId
      * @memberof OperationsServiceRatesIndexNewController
      */
-    @action selectServiceArea(serviceAreaId) {
+    @action selectServiceArea (serviceAreaId) {
         if (typeof serviceAreaId === 'string' && !isBlank(serviceAreaId)) {
             this.serviceRate.service_area_uuid = serviceAreaId;
 
             // load zones for this service area
-            this.store.query('zone', { service_area_uuid: serviceAreaId }).then((zones) => {
+            this.store.query('zone', { service_area_uuid: serviceAreaId }).then(zones => {
                 this.zones = zones;
             });
         } else {
@@ -366,11 +343,11 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
      *
      * @void
      */
-    @action resetForm() {
+    @action resetForm () {
         this.serviceRate = this.store.createRecord('service-rate');
         this.byKmMaxDistance = 5;
-        this.rateFees = this.rateFees.map((rateFee) => ({ ...rateFee, fee: 0 }));
-        this.parcelFees = this.parcelFees.map((parcelFee) => ({
+        this.rateFees = this.rateFees.map(rateFee => ({ ...rateFee, fee: 0 }));
+        this.parcelFees = this.parcelFees.map(parcelFee => ({
             ...parcelFee,
             fee: 0,
             dimensions_unit: 'cm',
@@ -383,7 +360,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
      *
      * @return {Transition}
      */
-    @action transitionBack() {
+    @action transitionBack () {
         return this.transitionToRoute('operations.service-rates.index').then(() => {
             this.resetForm();
         });

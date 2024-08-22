@@ -6,60 +6,13 @@ import { isBlank } from '@ember/utils';
 import { task, timeout } from 'ember-concurrency';
 
 export default class ManagementPlacesIndexController extends BaseController {
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `modals-manager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
     @service intl;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
-
-    /**
-     * Inject the `filters` service
-     *
-     * @var {Service}
-     */
     @service filters;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `crud` service
-     *
-     * @var {Service}
-     */
     @service crud;
 
     /**
@@ -152,6 +105,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
             action: this.viewPlace,
+            permission: 'fleet-ops view place',
             hidden: true,
             resizable: true,
             sortable: true,
@@ -164,6 +118,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             valuePath: 'address',
             cellComponent: 'table/cell/anchor',
             action: this.viewPlace,
+            permission: 'fleet-ops view place',
             width: '320px',
             resizable: true,
             sortable: true,
@@ -187,6 +142,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
             action: this.viewPlace,
+            permission: 'fleet-ops view place',
             width: '100px',
             hidden: true,
             resizable: true,
@@ -201,6 +157,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
             action: this.viewPlace,
+            permission: 'fleet-ops view place',
             width: '100px',
             hidden: true,
             resizable: true,
@@ -214,6 +171,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             valuePath: 'postal_code',
             cellComponent: 'table/cell/anchor',
             action: this.viewPlace,
+            permission: 'fleet-ops view place',
             width: '100px',
             resizable: true,
             sortable: true,
@@ -238,6 +196,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
             action: this.viewPlace,
+            permission: 'fleet-ops view place',
             width: '100px',
             hidden: true,
             resizable: true,
@@ -293,10 +252,12 @@ export default class ManagementPlacesIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.places.index.view-details'),
                     fn: this.viewPlace,
+                    permission: 'fleet-ops view place',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.places.index.edit-place'),
                     fn: this.editPlace,
+                    permission: 'fleet-ops update place',
                 },
                 {
                     separator: true,
@@ -304,6 +265,7 @@ export default class ManagementPlacesIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.places.index.view-place'),
                     fn: this.viewOnMap,
+                    permission: 'fleet-ops view place',
                 },
                 {
                     separator: true,
@@ -311,6 +273,7 @@ export default class ManagementPlacesIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.places.index.delete'),
                     fn: this.deletePlace,
+                    permission: 'fleet-ops delete place',
                 },
             ],
             sortable: false,
@@ -325,7 +288,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      *
      * @void
      */
-    @task({ restartable: true }) *search({ target: { value } }) {
+    @task({ restartable: true }) *search ({ target: { value } }) {
         // if no query don't search
         if (isBlank(value)) {
             this.query = null;
@@ -349,8 +312,8 @@ export default class ManagementPlacesIndexController extends BaseController {
      *
      * @void
      */
-    @action exportPlaces() {
-        const selections = this.table.selectedRows.map((_) => _.id);
+    @action exportPlaces () {
+        const selections = this.table.selectedRows.map(_ => _.id);
         this.crud.export('place', { params: { selections } });
     }
 
@@ -361,14 +324,14 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @return {Promise}
      * @memberof ManagementPlacesIndexController
      */
-    @action viewPlace(place) {
+    @action viewPlace (place) {
         return this.transitionToRoute('management.places.index.details', place);
     }
 
     /**
      * Reload layout view.
      */
-    @action reload() {
+    @action reload () {
         return this.hostRouter.refresh();
     }
     /**
@@ -377,7 +340,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @return {Promise}
      * @memberof ManagementPlacesIndexController
      */
-    @action createPlace() {
+    @action createPlace () {
         return this.transitionToRoute('management.places.index.new');
     }
 
@@ -388,7 +351,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @return {Promise}
      * @memberof ManagementPlacesIndexController
      */
-    @action editPlace(place) {
+    @action editPlace (place) {
         return this.transitionToRoute('management.places.index.edit', place);
     }
 
@@ -399,7 +362,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action deletePlace(place, options = {}) {
+    @action deletePlace (place, options = {}) {
         this.crud.delete(place, {
             onConfirm: () => {
                 return this.hostRouter.refresh();
@@ -414,7 +377,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @param {Array} selected an array of selected models
      * @void
      */
-    @action bulkDeletePlaces() {
+    @action bulkDeletePlaces () {
         const selected = this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {
@@ -434,13 +397,13 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action assignVendor(place, options = {}) {
+    @action assignVendor (place, options = {}) {
         this.modalsManager.show('modals/place-assign-vendor', {
             title: this.intl.t('fleet-ops.management.places.index.title'),
             acceptButtonText: this.intl.t('fleet-ops.management.places.index.confirm-button'),
             hideDeclineButton: true,
             place,
-            confirm: (modal) => {
+            confirm: modal => {
                 modal.startLoading();
                 return place.save().then(() => {
                     this.notifications.success(this.intl.t('fleet-ops.management.places.index.success-message', { placeName: place.name }));
@@ -455,7 +418,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      *
      * @void
      */
-    @action importPlaces() {
+    @action importPlaces () {
         this.crud.import('place', {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
@@ -470,7 +433,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action viewOnMap(place, options = {}) {
+    @action viewOnMap (place, options = {}) {
         const { latitude, longitude } = place;
 
         this.modalsManager.show('modals/point-map', {
@@ -490,7 +453,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @param {PlaceModel} place
      * @void
      */
-    @action async viewPlaceVendor(place) {
+    @action async viewPlaceVendor (place) {
         const vendor = await this.store.findRecord('vendor', place.vendor_uuid);
 
         if (vendor) {

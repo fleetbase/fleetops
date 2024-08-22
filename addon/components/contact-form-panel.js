@@ -7,39 +7,12 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
 export default class ContactFormPanelComponent extends Component {
-    /**
-     * @service store
-     */
     @service store;
-
-    /**
-     * @service intl
-     */
     @service intl;
-
-    /**
-     * @service fetch
-     */
     @service fetch;
-
-    /**
-     * @service currentUser
-     */
     @service currentUser;
-
-    /**
-     * @service notifications
-     */
     @service notifications;
-
-    /**
-     * @service hostRouter
-     */
     @service hostRouter;
-
-    /**
-     * @service contextPanel
-     */
     @service contextPanel;
 
     /**
@@ -63,11 +36,19 @@ export default class ContactFormPanelComponent extends Component {
     @tracked contactStatusOptions = ['pending', 'active', 'do-not-contact', 'prospective', 'archived'];
 
     /**
+     * Permission needed to update or create record.
+     *
+     * @memberof DriverFormPanelComponent
+     */
+    @tracked savePermission;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor() {
+    constructor (owner, { contact = null }) {
         super(...arguments);
-        this.contact = this.args.contact;
+        this.contact = contact;
+        this.savePermission = contact && contact.isNew ? 'fleet-ops create contact' : 'fleet-ops update contact';
         applyContextComponentArguments(this);
     }
 
@@ -77,7 +58,7 @@ export default class ContactFormPanelComponent extends Component {
      * @action
      * @param {OverlayContextObject} overlayContext
      */
-    @action setOverlayContext(overlayContext) {
+    @action setOverlayContext (overlayContext) {
         this.context = overlayContext;
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
@@ -88,7 +69,7 @@ export default class ContactFormPanelComponent extends Component {
      * @return {void}
      * @memberof ContactFormPanelComponent
      */
-    @task *save() {
+    @task *save () {
         contextComponentCallback(this, 'onBeforeSave', this.contact);
 
         try {
@@ -108,7 +89,7 @@ export default class ContactFormPanelComponent extends Component {
      * @param {File} file
      * @memberof DriverFormPanelComponent
      */
-    @action onUploadNewPhoto(file) {
+    @action onUploadNewPhoto (file) {
         this.fetch.uploadFile.perform(
             file,
             {
@@ -117,7 +98,7 @@ export default class ContactFormPanelComponent extends Component {
                 subject_type: 'fleet-ops:contact',
                 type: 'contact_photo',
             },
-            (uploadedFile) => {
+            uploadedFile => {
                 this.contact.setProperties({
                     photo_uuid: uploadedFile.id,
                     photo_url: uploadedFile.url,
@@ -132,7 +113,7 @@ export default class ContactFormPanelComponent extends Component {
      *
      * @action
      */
-    @action onViewDetails() {
+    @action onViewDetails () {
         const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.contact);
 
         if (!isActionOverrided) {
@@ -146,7 +127,7 @@ export default class ContactFormPanelComponent extends Component {
      * @action
      * @returns {any}
      */
-    @action onPressCancel() {
+    @action onPressCancel () {
         return contextComponentCallback(this, 'onPressCancel', this.contact);
     }
 
@@ -155,7 +136,7 @@ export default class ContactFormPanelComponent extends Component {
      *
      * @param {File} file
      */
-    uploadContactPhoto(file) {
+    uploadContactPhoto (file) {
         this.fetch.uploadFile.perform(
             file,
             {
@@ -164,7 +145,7 @@ export default class ContactFormPanelComponent extends Component {
                 subject_type: 'fleet-ops:contact',
                 type: 'contact_photo',
             },
-            (uploadedFile) => {
+            uploadedFile => {
                 this.contact.setProperties({
                     photo_uuid: uploadedFile.id,
                     photo_url: uploadedFile.url,

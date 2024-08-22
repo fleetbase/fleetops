@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Requests\Internal;
 
 use Fleetbase\Http\Requests\FleetbaseRequest;
+use Fleetbase\Support\Auth;
 
 class FleetActionRequest extends FleetbaseRequest
 {
@@ -13,7 +14,7 @@ class FleetActionRequest extends FleetbaseRequest
      */
     public function authorize()
     {
-        return request()->session()->has('company');
+        return Auth::can('fleet-ops update fleet');
     }
 
     /**

@@ -7,67 +7,14 @@ import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 
 export default class ManagementFuelReportsIndexController extends BaseController {
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `modals-manager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var intl
-     */
     @service intl;
-
-    /**
-     * Inject the `crud` service
-     *
-     * @var {Service}
-     */
     @service crud;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `contextPanel` service
-     *
-     * @var {Service}
-     */
     @service contextPanel;
-
-    /**
-     * Inject the `filters` service
-     *
-     * @var {Service}
-     */
     @service filters;
-
-    /**
-     * Inject the `loader` service
-     *
-     * @var {Service}
-     */
     @service loader;
 
     /**
@@ -176,8 +123,8 @@ export default class ManagementFuelReportsIndexController extends BaseController
             valuePath: 'reporter_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
-            onClick: async (issue) => {
-                let reporter = await issue.loadDReporter();
+            onClick: async fuelReport => {
+                let reporter = await this.store.findRecord('user', fuelReport.reported_by_uuid);
 
                 if (reporter) {
                     this.contextPanel.focus(reporter);
@@ -196,7 +143,8 @@ export default class ManagementFuelReportsIndexController extends BaseController
             valuePath: 'driver_name',
             width: '120px',
             cellComponent: 'table/cell/anchor',
-            onClick: async (fuelReport) => {
+            permission: 'fleet-ops view driver',
+            onClick: async fuelReport => {
                 let driver = await fuelReport.loadDriver();
 
                 if (driver) {
@@ -216,8 +164,9 @@ export default class ManagementFuelReportsIndexController extends BaseController
             valuePath: 'vehicle_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
-            onClick: async (issue) => {
-                let vehicle = await issue.loadVehicle();
+            permission: 'fleet-ops view vehicle',
+            onClick: async fuelReport => {
+                let vehicle = await fuelReport.loadVehicle();
 
                 if (vehicle) {
                     this.contextPanel.focus(vehicle);
@@ -300,10 +249,12 @@ export default class ManagementFuelReportsIndexController extends BaseController
                 {
                     label: this.intl.t('fleet-ops.management.fuel-reports.index.view'),
                     fn: this.viewFuelReport,
+                    permission: 'fleet-ops view fuel-report',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.fuel-reports.index.edit-fuel'),
                     fn: this.editFuelReport,
+                    permission: 'fleet-ops update fuel-report',
                 },
                 {
                     separator: true,
@@ -311,6 +262,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
                 {
                     label: this.intl.t('fleet-ops.management.fuel-reports.index.delete'),
                     fn: this.deleteFuelReport,
+                    permission: 'fleet-ops delete fuel-report',
                 },
             ],
             sortable: false,
@@ -325,7 +277,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      *
      * @void
      */
-    @task({ restartable: true }) *search({ target: { value } }) {
+    @task({ restartable: true }) *search ({ target: { value } }) {
         // if no query don't search
         if (isBlank(value)) {
             this.query = null;
@@ -349,7 +301,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      *
      * @void
      */
-    @action exportFuelReports() {
+    @action exportFuelReports () {
         this.crud.export('fuel-report');
     }
 
@@ -358,7 +310,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      *
      * @void
      */
-    @action importFuelReports() {
+    @action importFuelReports () {
         this.crud.import('fuel-report', {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
@@ -373,14 +325,14 @@ export default class ManagementFuelReportsIndexController extends BaseController
      * @param {Object} options
      * @void
      */
-    @action viewFuelReport(fuelReport) {
+    @action viewFuelReport (fuelReport) {
         this.transitionToRoute('management.fuel-reports.index.details', fuelReport);
     }
 
     /**
      * Reload layout view.
      */
-    @action reload() {
+    @action reload () {
         return this.hostRouter.refresh();
     }
 
@@ -389,7 +341,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      *
      * @void
      */
-    @action createFuelReport() {
+    @action createFuelReport () {
         this.transitionToRoute('management.fuel-reports.index.new');
     }
 
@@ -399,7 +351,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      * @param {FuelReportModel} fuelReport
      * @void
      */
-    @action editFuelReport(fuelReport) {
+    @action editFuelReport (fuelReport) {
         this.transitionToRoute('management.fuel-reports.index.edit', fuelReport);
     }
 
@@ -410,7 +362,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      * @param {Object} options
      * @void
      */
-    @action deleteFuelReport(fuelReport, options = {}) {
+    @action deleteFuelReport (fuelReport, options = {}) {
         this.crud.delete(fuelReport, {
             onConfirm: () => {
                 this.hostRouter.refresh();
@@ -425,7 +377,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      * @param {Array} selected an array of selected models
      * @void
      */
-    @action bulkDeleteFuelReports() {
+    @action bulkDeleteFuelReports () {
         const selected = this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {

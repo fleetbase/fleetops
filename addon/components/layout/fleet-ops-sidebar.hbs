@@ -7,8 +7,10 @@
         @iconPrefix="fas"
         @iconSize="sm"
         @wrapperClass="w-full create-order-button-wrapper"
-        class="w-full create-order-button"
         @onClick={{this.onClickCreateOrder}}
+        @permission="fleet-ops create order"
+        @tooltipPlacement="right"
+        class="w-full create-order-button"
     />
 </div>
 {{#each this.universeMenuItems as |menuItem|}}
@@ -38,6 +40,7 @@
             @dropdownButtonTriggerClass={{menuItem.dropdownButtonTriggerClass}}
             @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
             @permission={{menuItem.permission}}
+            @visible={{menuItem.visible}}
         >{{menuItem.title}}</Layout::Sidebar::Item>
     {{/if}}
 {{/each}}
@@ -84,6 +87,7 @@
                     dropdownButtonTriggerClass=menuItem.dropdownButtonTriggerClass
                     registerDropdownButtonAPI=menuItem.registerDropdownButtonAPI
                     permission=menuItem.permission
+                    visible=menuItem.visible
                 }}
             {{else}}
                 <Layout::Sidebar::Item
@@ -109,6 +113,7 @@
                     @dropdownButtonTriggerClass={{menuItem.dropdownButtonTriggerClass}}
                     @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
                     @permission={{menuItem.permission}}
+                    @visible={{menuItem.visible}}
                 >{{menuItem.title}}</Layout::Sidebar::Item>
             {{/if}}
         {{/each}}
@@ -140,6 +145,7 @@
                         @dropdownButtonTriggerClass={{menuItem.dropdownButtonTriggerClass}}
                         @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
                         @permission={{menuItem.permission}}
+                        @visible={{menuItem.visible}}
                     >{{menuItem.title}}</Layout::Sidebar::Item>
                 {{/if}}
             {{/each}}
@@ -185,6 +191,7 @@
                 @dropdownButtonTriggerClass={{menuItem.dropdownButtonTriggerClass}}
                 @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
                 @permission={{menuItem.permission}}
+                @visible={{menuItem.visible}}
             >{{menuItem.title}}</Layout::Sidebar::Item>
         {{/each}}
     </Layout::Sidebar::Panel>

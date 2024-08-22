@@ -13,6 +13,7 @@
                 @text={{t "fleet-ops.operations.service-rates.index.new.save-service-button"}}
                 @onClick={{this.updateServiceRate}}
                 @isLoading={{this.isUpdatingServiceRate}}
+                @permission="fleet-ops update service-rate"
             />
         {{else}}
             <Button
@@ -21,6 +22,7 @@
                 @text={{t "fleet-ops.operations.service-rates.index.new.create-service-button"}}
                 @onClick={{this.createServiceRate}}
                 @isLoading={{this.isCreatingServiceRate}}
+                @permission="fleet-ops create service-rate"
             />
         {{/if}}
     </Overlay::Header>
@@ -34,7 +36,13 @@
                         @helpText={{t "fleet-ops.operations.service-rates.index.new.service-name-help-text"}}
                         @required={{true}}
                     />
-                    <Input @type="text" @value={{this.serviceRate.service_name}} placeholder={{t "fleet-ops.operations.service-rates.index.new.service-name"}} class="form-input w-full" />
+                    <Input
+                        @type="text"
+                        @value={{this.serviceRate.service_name}}
+                        placeholder={{t "fleet-ops.operations.service-rates.index.new.service-name"}}
+                        disabled={{cannot this.abilityPermission}}
+                        class="form-input w-full"
+                    />
                 </div>
 
                 <div class="input-group">
@@ -42,7 +50,7 @@
                         @labelText={{t "fleet-ops.operations.service-rates.index.new.service-order-label"}}
                         @helpText={{t "fleet-ops.operations.service-rates.index.new.service-order-help-text"}}
                     />
-                    <select class="form-select w-full has--placeholder" {{on "change" this.setConfig}}>
+                    <select class="form-select w-full has--placeholder" disabled={{cannot this.abilityPermission}} {{on "change" this.setConfig}}>
                         <option selected disabled>
                             {{t "fleet-ops.operations.service-rates.index.new.service-order-placeholder"}}
                         </option>
@@ -66,6 +74,7 @@
                         @currency={{this.serviceRate.currency}}
                         @canSelectCurrency={{true}}
                         @onCurrencyChange={{fn (mut this.serviceRate.currency)}}
+                        @disabled={{cannot this.abilityPermission}}
                     />
                 </div>
 
@@ -76,13 +85,14 @@
                         @required={{true}}
                     />
                     <Select
-                        class="w-full"
                         @options={{this.calculationMethods}}
                         @value={{this.serviceRate.rate_calculation_method}}
                         @optionLabel="name"
                         @optionValue="key"
                         @onSelect={{fn (mut this.serviceRate.rate_calculation_method)}}
                         @placeholder={{t "fleet-ops.operations.service-rates.index.new.rate-calculation-placeholder"}}
+                        @disabled={{cannot this.abilityPermission}}
+                        class="w-full"
                     />
                 </div>
             </div>
@@ -96,7 +106,13 @@
                     @required={{true}}
                 />
 
-                <Input @type="number" @value={{this.serviceRate.estimated_days}} placeholder={{t "fleet-ops.operations.service-rates.index.new.estimated-days"}} class="form-input w-full" />
+                <Input
+                    @type="number"
+                    @value={{this.serviceRate.estimated_days}}
+                    placeholder={{t "fleet-ops.operations.service-rates.index.new.estimated-days"}}
+                    disabled={{cannot this.abilityPermission}}
+                    class="form-input w-full"
+                />
             </div>
         {{/if}}
 
@@ -110,6 +126,7 @@
                 @type="text"
                 @value={{this.serviceRate.duration_terms}}
                 placeholder={{t "fleet-ops.operations.service-rates.index.new.duration-terms-placeholder"}}
+                disabled={{cannot this.abilityPermission}}
                 class="form-input w-full"
             />
         </div>
@@ -128,7 +145,13 @@
                         @helpText={{t "fleet-ops.operations.service-rates.index.new.maximum-distance-help-text"}}
                         @required={{true}}
                     />
-                    <Input @type="number" @value={{this.fixedMeterMaxDistance}} placeholder={{t "fleet-ops.operations.service-rates.index.new.maximum-distance"}} class="form-input w-full" />
+                    <Input
+                        @type="number"
+                        @value={{this.fixedMeterMaxDistance}}
+                        placeholder={{t "fleet-ops.operations.service-rates.index.new.maximum-distance"}}
+                        disabled={{cannot this.abilityPermission}}
+                        class="form-input w-full"
+                    />
                 </div>
 
                 <div class="table-scrolling-height overflow-y-scroll">
@@ -147,7 +170,7 @@
                                             {{this.fixedMeterUnit}}
                                         </td>
                                         <td>
-                                            <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{rateFee.fee}} />
+                                            <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{rateFee.fee}} disabled={{cannot this.abilityPermission}} />
                                         </td>
                                     </tr>
                                 {{/each}}
@@ -165,7 +188,13 @@
                 />
 
                 <div class="input-group">
-                    <Button @text={{t "fleet-ops.operations.service-rates.index.new.add-drop-off-button"}} @icon="plus" @iconPrefix="fas" @onClick={{this.addPerDropoffRateFee}} />
+                    <Button
+                        @text={{t "fleet-ops.operations.service-rates.index.new.add-drop-off-button"}}
+                        @icon="plus"
+                        @iconPrefix="fas"
+                        @permission={{this.abilityPermission}}
+                        @onClick={{this.addPerDropoffRateFee}}
+                    />
                 </div>
 
                 <div class="table-wrapper table-fluid rounded-none">
@@ -182,18 +211,33 @@
                             {{#each this.perDropRateFees as |rateFee index|}}
                                 <tr>
                                     <td>
-                                        <Input @type="number" @value={{rateFee.min}} placeholder={{t "fleet-ops.operations.service-rates.index.new.min"}} class="form-input w-16" />
+                                        <Input
+                                            @type="number"
+                                            @value={{rateFee.min}}
+                                            placeholder={{t "fleet-ops.operations.service-rates.index.new.min"}}
+                                            disabled={{cannot this.abilityPermission}}
+                                            class="form-input w-16"
+                                        />
                                     </td>
                                     <td>
-                                        <Input @type="number" @value={{rateFee.max}} placeholder={{t "fleet-ops.operations.service-rates.index.new.max"}} class="form-input w-16" />
+                                        <Input
+                                            @type="number"
+                                            @value={{rateFee.max}}
+                                            placeholder={{t "fleet-ops.operations.service-rates.index.new.max"}}
+                                            disabled={{cannot this.abilityPermission}}
+                                            class="form-input w-16"
+                                        />
                                     </td>
                                     <td>
-                                        <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{rateFee.fee}} />
+                                        <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{rateFee.fee}} disabled={{cannot this.abilityPermission}} />
                                     </td>
                                     <td>
-                                        <a href="javascript:;" class="text-danger text-red-500 font-semibold" {{on "click" (fn this.removePerDropoffRateFee index)}}>{{t
-                                                "fleet-ops.common.remove"
-                                            }}</a>
+                                        <a
+                                            href="javascript:;"
+                                            class="text-danger text-red-500 font-semibold"
+                                            disabled={{cannot this.abilityPermission}}
+                                            {{on "click" (fn this.removePerDropoffRateFee index)}}
+                                        >{{t "fleet-ops.common.remove"}}</a>
                                     </td>
                                 </tr>
                             {{/each}}
@@ -216,7 +260,7 @@
                             @helpText={{t "fleet-ops.operations.service-rates.index.new.per-meter-rate-fee-help-text"}}
                             @required={{true}}
                         />
-                        <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{this.serviceRate.per_meter_flat_rate_fee}} />
+                        <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{this.serviceRate.per_meter_flat_rate_fee}} disabled={{cannot this.abilityPermission}} />
                     </div>
 
                     <div class="input-group">
@@ -226,13 +270,14 @@
                             @required={{true}}
                         />
                         <Select
-                            class="w-full"
                             @options={{this.distanceUnits}}
                             @value={{this.serviceRate.per_meter_unit}}
                             @optionLabel="name"
                             @optionValue="key"
                             @onSelect={{fn (mut this.serviceRate.per_meter_unit)}}
-                            placeholder={{t "fleet-ops.operations.service-rates.index.new.distance-unit-placeholder"}}
+                            @disabled={{cannot this.abilityPermission}}
+                            @placeholder={{t "fleet-ops.operations.service-rates.index.new.distance-unit-placeholder"}}
+                            class="w-full"
                         />
                     </div>
 
@@ -283,6 +328,7 @@
                         @type="tel"
                         @value={{this.serviceRate.algorithm}}
                         placeholder={{t "fleet-ops.operations.service-rates.index.new.algorithm-placeholder"}}
+                        disabled={{cannot this.abilityPermission}}
                         class="form-input w-full"
                     />
                 </div>
@@ -306,6 +352,7 @@
                                             <Input
                                                 @type="tel"
                                                 @value={{parcelFee.length}}
+                                                disabled={{cannot this.abilityPermission}}
                                                 placeholder={{t "fleet-ops.operations.service-rates.index.new.length-placeholder" htmlSafe=true parcelFeeDimension=@parcelFee.dimension_unit}}
                                                 class="form-input w-4/5"
                                             />
@@ -316,6 +363,7 @@
                                             <Input
                                                 @type="tel"
                                                 @value={{parcelFee.width}}
+                                                disabled={{cannot this.abilityPermission}}
                                                 placeholder={{t "fleet-ops.operations.service-rates.index.new.width-placeholder" htmlSafe=true parcelFeeDimension=@parcelFee.dimension_unit}}
                                                 class="form-input w-4/5"
                                             />
@@ -326,6 +374,7 @@
                                             <Input
                                                 @type="tel"
                                                 @value={{parcelFee.height}}
+                                                disabled={{cannot this.abilityPermission}}
                                                 placeholder={{t "fleet-ops.operations.service-rates.index.new.height-placeholder" htmlSafe=true parcelFeeDimension=@parcelFee.dimension_unit}}
                                                 class="form-input w-4/5"
                                             />
@@ -336,6 +385,7 @@
                                             <Input
                                                 @type="tel"
                                                 @value={{parcelFee.weight}}
+                                                disabled={{cannot this.abilityPermission}}
                                                 placeholder={{t "fleet-ops.operations.service-rates.index.new.weight-label" htmlSafe=true parcelFeeWeight=@parcelFee.weight_unit}}
                                                 class="form-input w-4/5"
                                             />
@@ -345,26 +395,28 @@
                                         <div class="input-group">
                                             <InputLabel @labelText={{t "fleet-ops.operations.service-rates.index.new.deminsions-unit"}} />
                                             <Select
-                                                class="w-full"
                                                 @options={{this.dimensionUnits}}
                                                 @value={{parcelFee.dimension_unit}}
-                                                placeholder={{t "fleet-ops.operations.service-rates.index.new.select-unit-placeholder"}}
+                                                @disabled={{cannot this.abilityPermission}}
+                                                @placeholder={{t "fleet-ops.operations.service-rates.index.new.select-unit-placeholder"}}
+                                                class="w-full"
                                             />
                                         </div>
 
                                         <div class="input-group">
                                             <InputLabel @labelText={{t "fleet-ops.operations.service-rates.index.new.weight-unit"}} />
                                             <Select
-                                                class="w-full"
                                                 @options={{this.weightUnits}}
                                                 @value={{parcelFee.weight_unit}}
-                                                placeholder={{t "fleet-ops.operations.service-rates.index.new.select-unit-placeholder"}}
+                                                @disabled={{cannot this.abilityPermission}}
+                                                @placeholder={{t "fleet-ops.operations.service-rates.index.new.select-unit-placeholder"}}
+                                                class="w-full"
                                             />
                                         </div>
 
                                         <div class="input-group">
                                             <InputLabel @labelText={{t "fleet-ops.operations.service-rates.index.new.additional-fee"}} />
-                                            <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{parcelFee.fee}} />
+                                            <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{parcelFee.fee}} disabled={{cannot this.abilityPermission}} />
                                         </div>
                                     </div>
                                 </div>
@@ -381,6 +433,7 @@
                 @label={{t "fleet-ops.operations.service-rates.index.new.cash-delivery-label"}}
                 @isToggled={{this.serviceRate.has_cod_fee}}
                 @onToggle={{fn (mut this.serviceRate.has_cod_fee)}}
+                @disabled={{cannot this.abilityPermission}}
             />
 
             {{#if this.serviceRate.has_cod_fee}}
@@ -392,13 +445,14 @@
                             @required={{true}}
                         />
                         <Select
-                            class="w-full"
                             @options={{this.codCalculationMethods}}
                             @optionLabel="name"
                             @optionValue="key"
                             @value={{this.serviceRate.cod_calculation_method}}
                             @onSelect={{fn (mut this.serviceRate.cod_calculation_method)}}
                             @placeholder={{t "fleet-ops.operations.service-rates.index.new.calculation-method-placeholder"}}
+                            @disabled={{cannot this.abilityPermission}}
+                            class="w-full"
                         />
                     </div>
 
@@ -409,7 +463,7 @@
                                 @helpText={{t "fleet-ops.operations.service-rates.index.new.delivery-flat-fee-help-text"}}
                                 @required={{true}}
                             />
-                            <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{this.serviceRate.cod_flat_fee}} />
+                            <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{this.serviceRate.cod_flat_fee}} disabled={{cannot this.abilityPermission}} />
                         </div>
                     {{else if this.serviceRate.hasCodPercentageFee}}
                         <div class="input-group">
@@ -420,9 +474,10 @@
                             />
                             <Input
                                 @type="number"
+                                @value={{this.serviceRate.cod_percent}}
                                 min="0"
                                 max="100"
-                                @value={{this.serviceRate.cod_percent}}
+                                disabled={{cannot this.abilityPermission}}
                                 placeholder={{t "fleet-ops.operations.service-rates.index.new.percentage-placeholder"}}
                                 class="form-input w-full"
                             />
@@ -449,7 +504,7 @@
                             @required={{true}}
                         />
 
-                        <Input @type="time" @value={{this.serviceRate.peak_hours_start}} class="form-input w-full" />
+                        <Input @type="time" @value={{this.serviceRate.peak_hours_start}} disabled={{cannot this.abilityPermission}} class="form-input w-full" />
                     </div>
 
                     <div class="input-group">
@@ -459,7 +514,7 @@
                             @required={{true}}
                         />
 
-                        <Input @type="time" @value={{this.serviceRate.peak_hours_end}} class="form-input w-full" />
+                        <Input @type="time" @value={{this.serviceRate.peak_hours_end}} disabled={{cannot this.abilityPermission}} class="form-input w-full" />
                     </div>
                 </div>
 
@@ -470,13 +525,14 @@
                         @required={{true}}
                     />
                     <Select
-                        class="w-full"
                         @options={{this.peakHourCalculationMethods}}
                         @optionLabel="name"
                         @optionValue="key"
                         @value={{this.serviceRate.peak_hours_calculation_method}}
                         @onSelect={{fn (mut this.serviceRate.peak_hours_calculation_method)}}
                         @placeholder={{t "fleet-ops.operations.service-rates.index.new.peak-hours-fee-placeholder"}}
+                        @disabled={{cannot this.abilityPermission}}
+                        class="w-full"
                     />
                 </div>
 
@@ -487,7 +543,7 @@
                             @helpText={{t "fleet-ops.operations.service-rates.index.new.flat-fee-help-text"}}
                             @required={{true}}
                         />
-                        <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{this.serviceRate.peak_hours_flat_fee}} />
+                        <MoneyInput class="w-full" @currency={{this.serviceRate.currency}} @value={{this.serviceRate.peak_hours_flat_fee}} disabled={{cannot this.abilityPermission}} />
                     </div>
                 {{else if this.serviceRate.hasPeakHoursPercentageFee}}
                     <div class="input-group">
@@ -498,10 +554,11 @@
                         />
                         <Input
                             @type="number"
+                            @value={{this.serviceRate.peak_hours_percent}}
                             min="0"
                             max="100"
-                            @value={{this.serviceRate.peak_hours_percent}}
                             placeholder={{t "fleet-ops.operations.service-rates.index.new.percentage-placeholder"}}
+                            disabled={{cannot this.abilityPermission}}
                             class="form-input w-full"
                         />
                     </div>
@@ -516,14 +573,14 @@
                     @helpText={{t "fleet-ops.operations.service-rates.index.new.service-area-help-text"}}
                 />
                 <Select
-                    class="w-full"
                     @options={{this.serviceAreas}}
                     @optionLabel="name"
                     @optionValue="id"
                     @value={{this.serviceRate.service_area_uuid}}
                     @onSelect={{this.selectServiceArea}}
                     @placeholder={{t "fleet-ops.operations.service-rates.index.new.service-area-placeholder"}}
-                    @disabled={{not this.serviceAreas.length}}
+                    @disabled={{or (cannot this.abilityPermission) (not this.serviceAreas.length)}}
+                    class="w-full"
                 />
             </div>
 
@@ -531,14 +588,14 @@
                 <div class="input-group">
                     <InputLabel @labelText={{t "fleet-ops.operations.service-rates.index.new.zone-label"}} @helpText={{t "fleet-ops.operations.service-rates.index.new.zone-help-text"}} />
                     <Select
-                        class="w-full"
                         @options={{this.zones}}
                         @optionLabel="name"
                         @optionValue="id"
                         @value={{this.serviceRate.zone_uuid}}
                         @onSelect={{fn (mut this.serviceRate.zone_uuid)}}
                         @placeholder={{t "fleet-ops.operations.service-rates.index.new.zone-placeholder"}}
-                        @disabled={{not this.zones.length}}
+                        @disabled={{or (cannot this.abilityPermission) (not this.zones.length)}}
+                        class="w-full"
                     />
                 </div>
             {{/if}}

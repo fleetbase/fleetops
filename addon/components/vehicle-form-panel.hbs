@@ -13,7 +13,14 @@
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
                 {{#if this.vehicle.id}}
-                    <Button @type="default" @icon="car" @helpText={{t "fleet-ops.component.vehicle-form-panel.view-details"}} @onClick={{this.onViewDetails}} @disabled={{this.isLoading}} />
+                    <Button
+                        @type="default"
+                        @icon="car"
+                        @helpText={{t "fleet-ops.component.vehicle-form-panel.view-details"}}
+                        @onClick={{this.onViewDetails}}
+                        @disabled={{this.isLoading}}
+                        @permission="fleet-ops view vehicle"
+                    />
                 {{/if}}
             </div>
             <div class="flex flex-1 justify-end">
@@ -24,6 +31,7 @@
                         @text={{if this.vehicle.id (t "fleet-ops.component.vehicle-form-panel.save-vehicle") (t "fleet-ops.component.vehicle-form-panel.create-vehicle")}}
                         @onClick={{perform this.save}}
                         @isLoading={{not this.save.isIdle}}
+                        @permission={{this.savePermission}}
                     />
                 </div>
                 <Button
@@ -52,6 +60,7 @@
                                     @icon="upload"
                                     @hideButtonText={{true}}
                                     @labelClass="upload-avatar-label-overlay"
+                                    @permission={{this.savePermission}}
                                     class="w-12 btn-reset"
                                 />
                             </div>
@@ -90,78 +99,113 @@
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4">
-        <div class="flex-1 space-y-4">
-            <ContentPanel @title="Details" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
-                    <InputGroup @name={{t "fleet-ops.common.internal-id"}}>
-                        <Input @value={{this.vehicle.internal_id}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.internal-id"}} />
-                    </InputGroup>
+        {{#let (cannot this.savePermission) as |unauthorized|}}
+            <div class="flex-1 space-y-4">
+                <ContentPanel @title="Details" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
+                        <InputGroup @name={{t "fleet-ops.common.internal-id"}}>
+                            <Input @value={{this.vehicle.internal_id}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.internal-id"}} disabled={{unauthorized}} />
+                        </InputGroup>
 
-                    <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.plate-number"}}>
-                        <Input @value={{this.vehicle.plate_number}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.vehicle-form-panel.plate-number"}} />
-                    </InputGroup>
+                        <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.plate-number"}}>
+                            <Input
+                                @value={{this.vehicle.plate_number}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.vehicle-form-panel.plate-number"}}
+                                disabled={{unauthorized}}
+                            />
+                        </InputGroup>
 
-                    <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.vin-number"}}>
-                        <Input @value={{this.vehicle.vin}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.vehicle-form-panel.vin-number"}} />
-                    </InputGroup>
+                        <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.vin-number"}}>
+                            <Input
+                                @value={{this.vehicle.vin}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.vehicle-form-panel.vin-number"}}
+                                disabled={{unauthorized}}
+                            />
+                        </InputGroup>
 
-                    <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.make"}}>
-                        <Input @value={{this.vehicle.make}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.vehicle-form-panel.vehicle-make"}} />
-                    </InputGroup>
+                        <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.make"}}>
+                            <Input
+                                @value={{this.vehicle.make}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.vehicle-form-panel.vehicle-make"}}
+                                disabled={{unauthorized}}
+                            />
+                        </InputGroup>
 
-                    <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.model"}}>
-                        <Input @value={{this.vehicle.model}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.vehicle-form-panel.vehicle-model"}} />
-                    </InputGroup>
+                        <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.model"}}>
+                            <Input
+                                @value={{this.vehicle.model}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.vehicle-form-panel.vehicle-model"}}
+                                disabled={{unauthorized}}
+                            />
+                        </InputGroup>
 
-                    <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.year"}}>
-                        <Input @value={{this.vehicle.year}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.component.vehicle-form-panel.vehicle-year"}} />
-                    </InputGroup>
+                        <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.year"}}>
+                            <Input
+                                @value={{this.vehicle.year}}
+                                @type="text"
+                                class="w-full form-input"
+                                placeholder={{t "fleet-ops.component.vehicle-form-panel.vehicle-year"}}
+                                disabled={{unauthorized}}
+                            />
+                        </InputGroup>
 
-                    <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.driver-assigned"}}>
-                        <ModelSelect
-                            @modelName="driver"
-                            @selectedModel={{this.vehicle.driver}}
-                            @placeholder={{t "fleet-ops.component.vehicle-form-panel.select-driver"}}
-                            @triggerClass="form-select form-input"
-                            @infiniteScroll={{false}}
-                            @renderInPlace={{true}}
-                            @onChange={{fn (mut this.vehicle.driver)}}
-                            as |model|
-                        >
-                            {{model.name}}
-                        </ModelSelect>
-                    </InputGroup>
-
-                    <InputGroup @name={{t "fleet-ops.common.status"}}>
-                        <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                            <PowerSelect
-                                @options={{this.vehicleStatusOptions}}
-                                @selected={{this.vehicle.status}}
-                                @onChange={{fn (mut this.vehicle.status)}}
-                                @placeholder={{t "fleet-ops.component.vehicle-form-panel.select-vehicle"}}
+                        <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.driver-assigned"}}>
+                            <ModelSelect
+                                @modelName="driver"
+                                @selectedModel={{this.vehicle.driver}}
+                                @placeholder={{t "fleet-ops.component.vehicle-form-panel.select-driver"}}
                                 @triggerClass="form-select form-input"
-                                as |status|
+                                @infiniteScroll={{false}}
+                                @renderInPlace={{true}}
+                                @onChange={{fn (mut this.vehicle.driver)}}
+                                @disabled={{unauthorized}}
+                                as |model|
                             >
-                                {{smart-humanize status}}
-                            </PowerSelect>
-                        </div>
-                    </InputGroup>
-                    <InputGroup @name={{t "fleet-ops.common.coordinates"}} @wrapperClass="col-span-2">
-                        <CoordinatesInput
-                            @value={{this.vehicle.location}}
-                            @onChange={{this.onCoordinatesChanged}}
-                            @onGeocode={{this.onAutocomplete}}
-                            @onUpdatedFromMap={{this.onCoordinatesChanged}}
-                            @onInit={{this.setCoordinatesInput}}
-                        />
-                    </InputGroup>
-                </div>
-            </ContentPanel>
+                                {{model.name}}
+                            </ModelSelect>
+                        </InputGroup>
 
-            <ContentPanel @title={{t "fleet-ops.component.avatar-picker.avatar"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-                <AvatarPicker @model={{this.vehicle}} @defaultAvatar={{config "defaultValues.vehicleAvatar"}} />
-            </ContentPanel>
-        </div>
+                        <InputGroup @name={{t "fleet-ops.common.status"}}>
+                            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                                <PowerSelect
+                                    @options={{this.vehicleStatusOptions}}
+                                    @selected={{this.vehicle.status}}
+                                    @onChange={{fn (mut this.vehicle.status)}}
+                                    @placeholder={{t "fleet-ops.component.vehicle-form-panel.select-vehicle"}}
+                                    @triggerClass="form-select form-input"
+                                    @disabled={{unauthorized}}
+                                    as |status|
+                                >
+                                    {{smart-humanize status}}
+                                </PowerSelect>
+                            </div>
+                        </InputGroup>
+                        <InputGroup @name={{t "fleet-ops.common.coordinates"}} @wrapperClass="col-span-2">
+                            <CoordinatesInput
+                                @value={{this.vehicle.location}}
+                                @onChange={{this.onCoordinatesChanged}}
+                                @onGeocode={{this.onAutocomplete}}
+                                @onUpdatedFromMap={{this.onCoordinatesChanged}}
+                                @onInit={{this.setCoordinatesInput}}
+                                @disabled={{unauthorized}}
+                            />
+                        </InputGroup>
+                    </div>
+                </ContentPanel>
+
+                <ContentPanel @title={{t "fleet-ops.component.avatar-picker.avatar"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <AvatarPicker @model={{this.vehicle}} @defaultAvatar={{config "defaultValues.vehicleAvatar"}} @disabled={{unauthorized}} />
+                </ContentPanel>
+            </div>
+        {{/let}}
 
         <Spacer @height="300px" />
     </Overlay::Body>

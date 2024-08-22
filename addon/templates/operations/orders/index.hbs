@@ -76,18 +76,18 @@
             <DropdownButton @icon="layer-group" @type="magic" @text={{t "fleet-ops.common.bulk-action"}} @size="sm" @buttonWrapperClass="mr-2" as |dd|>
                 <div class="next-dd-menu mt-2 mx-0">
                     <div class="px-1">
-                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.bulkCancelOrders)}}>
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.bulkCancelOrders)}} disabled={{cannot "fleet-ops cancel order"}}>
                             {{t "fleet-ops.operations.orders.index.cancel-orders"}}
                         </a>
-                        <a href="javascript:;" class="text-red-500 next-dd-item" {{on "click" (dropdown-fn dd this.bulkDeleteOrders)}}>
+                        <a href="javascript:;" class="text-red-500 next-dd-item" {{on "click" (dropdown-fn dd this.bulkDeleteOrders)}} disabled={{cannot "fleet-ops delete order"}}>
                             {{t "fleet-ops.operations.orders.index.delete-orders"}}
                         </a>
                     </div>
                 </div>
             </DropdownButton>
         {{/if}}
-        <Button @type="primary" @icon="plus" @iconPrefix="fas" @text={{t "fleet-ops.common.new"}} @wrapperClass="mr-2" @onClick={{fn (transition-to "operations.orders.index.new")}} />
-        <Button @icon="long-arrow-up" @iconClass="rotate-icon-45" @text={{t "fleet-ops.common.export"}} @onClick={{this.exportOrders}} />
+        <Button @type="primary" @icon="plus" @iconPrefix="fas" @text={{t "fleet-ops.common.new"}} @wrapperClass="mr-2" @onClick={{fn (transition-to "operations.orders.index.new")}} @permission="fleet-ops create order" />
+        <Button @icon="long-arrow-up" @iconClass="rotate-icon-45" @text={{t "fleet-ops.common.export"}} @onClick={{this.exportOrders}} @permission="fleet-ops export order" />
     </Layout::Section::Header>
     <Layout::Section::Body>
         <Table

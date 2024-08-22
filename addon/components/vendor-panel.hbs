@@ -12,7 +12,7 @@
     <Overlay::Header @hideLeftSection={{true}} @actionsWrapperClass="flex-1 flex-col py-3" class="h-auto-i">
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
-                <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.vendor-panel.edit"}} @onClick={{this.onEdit}} />
+                <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.vendor-panel.edit"}} @onClick={{this.onEdit}} @permission="fleet-ops update vendor" />
             </div>
             <div class="flex flex-1 justify-end">
                 <Button @type="default" @icon="times" @helpText={{t "fleet-ops.component.vendor-panel.close"}} @onClick={{this.onPressCancel}} />

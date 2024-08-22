@@ -10,7 +10,7 @@
     @width={{or this.width @width "570px"}}
 >
     <Overlay::Header @title={{t "fleet-ops.component.issue-panel.title"}} @status={{this.issue.public_id}} @hideStatusDot={{true}} @createdAt={{this.issue.createdAt}}>
-        <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.issue-panel.edit-issue"}} @onClick={{this.onEdit}} @wrapperClass="mr-2" />
+        <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.issue-panel.edit-issue"}} @onClick={{this.onEdit}} @wrapperClass="mr-2" @permission="fleet-ops update issue" />
         <Button
             @type="default"
             @icon="times"

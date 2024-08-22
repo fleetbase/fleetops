@@ -3,6 +3,8 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { format, isValid as isValidDate } from 'date-fns';
+import isObject from '@fleetbase/ember-core/utils/is-object';
+import isJson from '@fleetbase/ember-core/utils/is-json';
 import createFullCalendarEventFromOrder, { createOrderEventTitle } from '../../../utils/create-full-calendar-event-from-order';
 
 export default class OperationsSchedulerIndexController extends BaseController {
@@ -15,14 +17,13 @@ export default class OperationsSchedulerIndexController extends BaseController {
     @tracked unscheduledOrders = [];
     @tracked events = [];
 
-    @action setCalendarApi(calendar) {
+    @action setCalendarApi (calendar) {
         this.calendar = calendar;
-
         // setup some custom post initialization stuff here
         // calendar.setOption('height', 800);
     }
 
-    @action viewEvent(order) {
+    @action viewEvent (order) {
         // get the event from the calendar
         let event = this.calendar.getEventById(order.id);
 
@@ -32,7 +33,7 @@ export default class OperationsSchedulerIndexController extends BaseController {
             acceptButtonIcon: 'save',
             hideDeclineButton: true,
             order,
-            reschedule: (date) => {
+            reschedule: date => {
                 if (date && typeof date.toDate === 'function') {
                     date = date.toDate();
                 }
@@ -42,17 +43,18 @@ export default class OperationsSchedulerIndexController extends BaseController {
             unschedule: () => {
                 order.set('scheduled_at', null);
             },
-            confirm: (modal) => {
+            confirm: async modal => {
                 modal.startLoading();
 
                 if (!order.get('hasDirtyAttributes')) {
                     return modal.done();
                 }
 
-                return order.save().then((order) => {
+                try {
+                    await order.save();
                     // remove event from calendar
                     if (event) {
-                        event.remove();
+                        this.removeEvent(event);
                     }
 
                     if (order.scheduled_at) {
@@ -70,33 +72,40 @@ export default class OperationsSchedulerIndexController extends BaseController {
                     }
 
                     // refresh route
-                    this.hostRouter.refresh();
-                });
+                    return this.hostRouter.refresh();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
             },
         });
     }
 
-    @action viewOrderAsEvent(eventClickInfo) {
+    @action viewOrderAsEvent (eventClickInfo) {
         const { event } = eventClickInfo;
         const order = this.store.peekRecord('order', event.id);
 
         this.viewEvent(order, eventClickInfo);
     }
 
-    @action scheduleEventFromDrop(dropInfo) {
+    @action async scheduleEventFromDrop (dropInfo) {
         const { draggedEl, date } = dropInfo;
         const { dataset } = draggedEl;
         const { event } = dataset;
         const data = JSON.parse(event);
         const order = this.store.peekRecord('order', data.id);
 
-        order.set('scheduled_at', date);
-        return order.save().then(() => {
-            this.hostRouter.refresh();
-        });
+        try {
+            order.set('scheduled_at', date);
+            await order.save();
+            return this.hostRouter.refresh();
+        } catch (error) {
+            this.notifications.serverError(error);
+            this.removeEvent(event);
+        }
     }
 
-    @action receivedEvent(eventReceivedInfo) {
+    @action receivedEvent (eventReceivedInfo) {
         const { event } = eventReceivedInfo;
         const order = this.store.peekRecord('order', event.id);
 
@@ -106,7 +115,7 @@ export default class OperationsSchedulerIndexController extends BaseController {
         }
     }
 
-    @action rescheduleEventFromDrag(eventDropInfo) {
+    @action async rescheduleEventFromDrag (eventDropInfo) {
         const { event } = eventDropInfo;
         const { start } = event;
         const order = this.store.peekRecord('order', event.id);
@@ -115,15 +124,45 @@ export default class OperationsSchedulerIndexController extends BaseController {
         const scheduledTime = order.scheduledAtTime;
         const newDate = new Date(`${format(start, 'PP')} ${scheduledTime}`);
 
-        // set and save order props
-        order.set('scheduled_at', isValidDate(newDate) ? newDate : start);
-        order.save().then(() => {
-            this.hostRouter.refresh();
-        });
+        try {
+            // set and save order props
+            order.set('scheduled_at', isValidDate(newDate) ? newDate : start);
+            await order.save();
+            return this.hostRouter.refresh();
 
-        // update event props
-        if (typeof event.setProp === 'function') {
-            event.setProp('title', createOrderEventTitle(order));
+            // update event props
+            if (typeof event.setProp === 'function') {
+                event.setProp('title', createOrderEventTitle(order));
+            }
+        } catch (error) {
+            this.notifications.serverError(error);
+            this.removeEvent(event);
         }
+    }
+
+    removeEvent (event) {
+        if (isObject(event) && typeof event.remove === 'function') {
+            event.remove();
+            return true;
+        }
+
+        if (isObject(event) && typeof event.id === 'string') {
+            return this.removeEvent(event.id);
+        }
+
+        if (isJson(event)) {
+            event = JSON.parse(event);
+            return this.removeEvent(event.id);
+        }
+
+        if (typeof event === 'string') {
+            event = this.calendar.getEventById(event);
+            if (typeof event.remove === 'function') {
+                event.remove();
+                return true;
+            }
+        }
+
+        return false;
     }
 }

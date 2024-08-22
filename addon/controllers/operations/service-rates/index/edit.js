@@ -7,7 +7,7 @@ export default class OperationsServiceRatesIndexEditController extends Operation
      *
      * @void
      */
-    @action updateServiceRate() {
+    @action async updateServiceRate () {
         const { serviceRate, rateFees, perDropRateFees, parcelFees } = this;
 
         if (serviceRate.isFixedMeter) {
@@ -25,18 +25,16 @@ export default class OperationsServiceRatesIndexEditController extends Operation
         this.isUpdatingServiceRate = true;
         this.loader.showLoader('.overlay-inner-content', { loadingMessage: 'Updating service rate...' });
 
-        return serviceRate
-            .save()
-            .then((serviceRate) => {
-                return this.transitionToRoute('operations.service-rates.index').then(() => {
-                    this.notifications.success(this.intl.t('fleet-ops.operations.service-rates.index.edit.success-message', { serviceName: serviceRate.service_name }));
-                    this.resetForm();
-                });
-            })
-            .catch(this.notifications.serverError)
-            .finally(() => {
-                this.isUpdatingServiceRate = false;
-                this.loader.removeLoader();
+        try {
+            await serviceRate.save();
+            this.isUpdatingServiceRate = false;
+            this.loader.removeLoader();
+            return this.transitionToRoute('operations.service-rates.index').then(() => {
+                this.notifications.success(this.intl.t('fleet-ops.operations.service-rates.index.edit.success-message', { serviceName: serviceRate.service_name }));
+                this.resetForm();
             });
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 }

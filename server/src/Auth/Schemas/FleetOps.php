@@ -25,7 +25,11 @@ class FleetOps
     public array $resources = [
         [
             'name'    => 'order',
-            'actions' => ['dispatch', 'cancel', 'optimize', 'export', 'batch-delete', 'batch-cancel'],
+            'actions' => ['dispatch', 'cancel', 'optimize', 'export', 'import', 'assign-driver-for', 'assign-vehicle-for', 'update-route-for'],
+        ],
+        [
+            'name'    => 'order-config',
+            'actions' => ['clone'],
         ],
         [
             'name'    => 'route',
@@ -33,7 +37,7 @@ class FleetOps
         ],
         [
             'name'    => 'service-rate',
-            'actions' => [],
+            'actions' => ['import'],
         ],
         [
             'name'    => 'zone',
@@ -45,31 +49,56 @@ class FleetOps
         ],
         [
             'name'    => 'driver',
-            'actions' => ['notify', 'assign-vehicle-for', 'assign-order-for', 'dispatch-order-for', 'export'],
+            'actions' => ['notify', 'assign-vehicle-for', 'assign-order-for', 'dispatch-order-for', 'export', 'import'],
         ],
         [
             'name'    => 'vehicle',
-            'actions' => ['assign-driver-for', 'export'],
+            'actions' => ['assign-driver-for', 'export', 'import'],
+        ],
+        [
+            'name'    => 'fleet',
+            'actions' => ['assign-driver-for', 'assign-vehicle-for', 'export', 'import'],
         ],
         [
             'name'    => 'vendor',
-            'actions' => ['subcontract', 'create-order-for', 'export'],
+            'actions' => ['subcontract', 'create-order-for', 'export', 'import'],
         ],
         [
             'name'    => 'contact',
-            'actions' => ['subcontract', 'create-order-for', 'export'],
+            'actions' => ['subcontract', 'create-order-for', 'export', 'import'],
+        ],
+        [
+            'name'    => 'customer',
+            'actions' => [],
+        ],
+        [
+            'name'    => 'facilitator',
+            'actions' => [],
+        ],
+        [
+            'name'    => 'entity',
+            'actions' => [],
+        ],
+        [
+            'name'    => 'activity',
+            'actions' => [],
         ],
         [
             'name'    => 'place',
-            'actions' => ['export'],
+            'actions' => ['export', 'import'],
         ],
         [
             'name'    => 'fuel-report',
-            'actions' => ['export'],
+            'actions' => ['export', 'import'],
         ],
         [
             'name'    => 'issue',
-            'actions' => ['export'],
+            'actions' => ['export', 'import'],
+        ],
+        [
+            'name'           => 'navigator-settings',
+            'action'         => [],
+            'remove_actions' => ['delete', 'export'],
         ],
     ];
 }

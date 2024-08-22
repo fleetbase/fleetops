@@ -120,7 +120,7 @@ export default class FleetPanelDriverListingComponent extends Component {
     @action onAddDriver(driver) {
         this.fetch.post('fleets/assign-driver', { driver: driver.id, fleet: this.fleet.id }).then(() => {
             this.drivers.pushObject(driver);
-            this.universe.trigger('fleet.driver.assigned', this.fleet, driver);
+            this.universe.trigger('fleet-ops.fleet.driver_assigned', this.fleet, driver);
         });
     }
 
@@ -133,7 +133,7 @@ export default class FleetPanelDriverListingComponent extends Component {
     @action onRemoveDriver(driver) {
         this.fetch.post('fleets/remove-driver', { driver: driver.id, fleet: this.fleet.id }).then(() => {
             this.drivers.removeObject(driver);
-            this.universe.trigger('fleet.driver.unassigned', this.fleet, driver);
+            this.universe.trigger('fleet-ops.fleet.driver_unassigned', this.fleet, driver);
         });
     }
 
