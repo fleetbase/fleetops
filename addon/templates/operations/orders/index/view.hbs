@@ -57,7 +57,7 @@
                                 {{/if}}
                             </div>
                         {{/let}}
-                        {{#let (cannot "fleet-ops update order") as |unauthorized|}}
+                        {{#let (cannot "fleet-ops assign-driver-for order") as |unauthorized|}}
                             <div>
                                 {{#if @model.driver_assigned_uuid}}
                                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.unassignDriver @model)}} disabled={{unauthorized}}>
