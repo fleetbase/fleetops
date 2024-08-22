@@ -152,7 +152,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
      *
      * @var {Array}
      */
-    @computed('fixedMeterMaxDistance', 'fixedMeterUnit', 'serviceRate.currency', '_rateFees') get rateFees () {
+    @computed('fixedMeterMaxDistance', 'fixedMeterUnit', 'serviceRate.currency', '_rateFees') get rateFees() {
         if (!isBlank(this._rateFees)) {
             return this._rateFees;
         }
@@ -175,7 +175,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
     }
 
     /** setter for rate fee's */
-    set rateFees (rateFees) {
+    set rateFees(rateFees) {
         this._rateFees = rateFees;
     }
 
@@ -251,7 +251,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
     /**
      * Adds a per drop-off rate fee
      */
-    @action addPerDropoffRateFee () {
+    @action addPerDropoffRateFee() {
         const rateFees = this.perDropRateFees;
         const currency = this.serviceRate.currency;
 
@@ -267,7 +267,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
         });
     }
 
-    @action setConfig (event) {
+    @action setConfig(event) {
         const orderConfigId = event.target.value;
         if (!orderConfigId) {
             return;
@@ -284,7 +284,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
     /**
      * Adds a per drop-off rate fee
      */
-    @action removePerDropoffRateFee (index) {
+    @action removePerDropoffRateFee(index) {
         this.perDropRateFees.removeAt(index);
     }
 
@@ -293,7 +293,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
      *
      * @void
      */
-    @action async createServiceRate () {
+    @action async createServiceRate() {
         const { serviceRate, rateFees, parcelFees } = this;
 
         serviceRate.setServiceRateFees(rateFees).setServiceRateParcelFees(parcelFees);
@@ -325,12 +325,12 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
      * @param {String} serviceAreaId
      * @memberof OperationsServiceRatesIndexNewController
      */
-    @action selectServiceArea (serviceAreaId) {
+    @action selectServiceArea(serviceAreaId) {
         if (typeof serviceAreaId === 'string' && !isBlank(serviceAreaId)) {
             this.serviceRate.service_area_uuid = serviceAreaId;
 
             // load zones for this service area
-            this.store.query('zone', { service_area_uuid: serviceAreaId }).then(zones => {
+            this.store.query('zone', { service_area_uuid: serviceAreaId }).then((zones) => {
                 this.zones = zones;
             });
         } else {
@@ -343,11 +343,11 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
      *
      * @void
      */
-    @action resetForm () {
+    @action resetForm() {
         this.serviceRate = this.store.createRecord('service-rate');
         this.byKmMaxDistance = 5;
-        this.rateFees = this.rateFees.map(rateFee => ({ ...rateFee, fee: 0 }));
-        this.parcelFees = this.parcelFees.map(parcelFee => ({
+        this.rateFees = this.rateFees.map((rateFee) => ({ ...rateFee, fee: 0 }));
+        this.parcelFees = this.parcelFees.map((parcelFee) => ({
             ...parcelFee,
             fee: 0,
             dimensions_unit: 'cm',
@@ -360,7 +360,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
      *
      * @return {Transition}
      */
-    @action transitionBack () {
+    @action transitionBack() {
         return this.transitionToRoute('operations.service-rates.index').then(() => {
             this.resetForm();
         });

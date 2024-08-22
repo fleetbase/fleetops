@@ -69,7 +69,7 @@ export default class IssueFormPanelComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor (owner, { issue = null }) {
+    constructor(owner, { issue = null }) {
         super(...arguments);
         this.issue = issue;
         this.issueCategories = getWithDefault(this.issueCategoriesByType, getWithDefault(issue, 'type', 'operational'), []);
@@ -83,7 +83,7 @@ export default class IssueFormPanelComponent extends Component {
      * @action
      * @param {OverlayContextObject} overlayContext
      */
-    @action setOverlayContext (overlayContext) {
+    @action setOverlayContext(overlayContext) {
         this.context = overlayContext;
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
@@ -94,7 +94,7 @@ export default class IssueFormPanelComponent extends Component {
      * @return {void}
      * @memberof IssueFormPanelComponent
      */
-    @task *save () {
+    @task *save() {
         contextComponentCallback(this, 'onBeforeSave', this.issue);
 
         try {
@@ -114,7 +114,7 @@ export default class IssueFormPanelComponent extends Component {
      * @param {String} type
      * @memberof IssueFormPanelComponent
      */
-    @action onSelectIssueType (type) {
+    @action onSelectIssueType(type) {
         this.issue.type = type;
         this.issue.category = null;
         this.issueCategories = getWithDefault(this.issueCategoriesByType, type, []);
@@ -126,7 +126,7 @@ export default class IssueFormPanelComponent extends Component {
      * @param {String} tag
      * @memberof IssueFormPanelComponent
      */
-    @action addTag (tag) {
+    @action addTag(tag) {
         if (!isArray(this.issue.tags)) {
             this.issue.tags = [];
         }
@@ -140,7 +140,7 @@ export default class IssueFormPanelComponent extends Component {
      * @param {Number} index
      * @memberof IssueFormPanelComponent
      */
-    @action removeTag (index) {
+    @action removeTag(index) {
         this.issue.tags.removeAt(index);
     }
 
@@ -149,7 +149,7 @@ export default class IssueFormPanelComponent extends Component {
      *
      * @action
      */
-    @action onViewDetails () {
+    @action onViewDetails() {
         const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.issue);
 
         if (!isActionOverrided) {
@@ -163,7 +163,7 @@ export default class IssueFormPanelComponent extends Component {
      * @action
      * @returns {any}
      */
-    @action onPressCancel () {
+    @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.issue);
     }
 }

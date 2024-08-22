@@ -15,7 +15,7 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
     @service notifications;
     @tracked fleets = [];
 
-    constructor () {
+    constructor() {
         super(...arguments);
         this.fetchFleets.perform();
         this.listenForChanges();
@@ -24,19 +24,19 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
     dropdownButtonActions = [
         {
             label: 'View vehicle details...',
-            onClick: vehicle => {
+            onClick: (vehicle) => {
                 this.contextPanel.focus(vehicle);
             },
         },
         {
             label: 'Edit vehicle...',
-            onClick: vehicle => {
+            onClick: (vehicle) => {
                 this.contextPanel.focus(vehicle, 'editing');
             },
         },
         {
             label: 'Locate vehicle...',
-            onClick: vehicle => {
+            onClick: (vehicle) => {
                 // If currently on the operations dashboard focus driver on the map
                 if (typeof this.hostRouter.currentRouteName === 'string' && this.hostRouter.currentRouteName.startsWith('console.fleet-ops.operations.orders')) {
                     return this.onVehicleClicked(vehicle);
@@ -50,13 +50,13 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         },
         {
             label: 'Delete vehicle...',
-            onClick: vehicle => {
+            onClick: (vehicle) => {
                 this.vehicleActions.delete(vehicle);
             },
         },
     ];
 
-    @action transitionToRoute (toggleApiContext) {
+    @action transitionToRoute(toggleApiContext) {
         if (typeof this.args.route === 'string') {
             if (typeof this.hostRouter.currentRouteName === 'string' && this.hostRouter.currentRouteName.startsWith('console.fleet-ops.management.fleets.index')) {
                 if (typeof toggleApiContext.toggle === 'function') {
@@ -68,7 +68,7 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         }
     }
 
-    @action onVehicleClicked (vehicle) {
+    @action onVehicleClicked(vehicle) {
         // Transition to dashboard/map display
         return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } }).then(() => {
             // Focus vehicle on live map
@@ -81,7 +81,17 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         });
     }
 
-    @action focusVehicleOnMap (vehicle) {
+    @action calculateDropdownItemPosition(trigger) {
+        let { top, left, width } = trigger.getBoundingClientRect();
+        let style = {
+            left: 11 + left + width,
+            top: top + 2,
+        };
+
+        return { style };
+    }
+
+    @action focusVehicleOnMap(vehicle) {
         const liveMap = this.universe.get('component:fleet-ops:live-map');
 
         if (liveMap) {
@@ -104,7 +114,7 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         }
     }
 
-    listenForChanges () {
+    listenForChanges() {
         // when a vehicle is assigned/ or unassigned reload
         this.universe.on('fleet-ops.fleet.vehicle_assigned', () => {
             this.fetchFleets.perform();
@@ -114,9 +124,19 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         this.universe.on('fleet-ops.fleet.vehicle_unassigned', () => {
             this.fetchFleets.perform();
         });
+
+        // when a driver is assigned/ or unassigned reload
+        this.universe.on('fleet-ops.fleet.driver_assigned', () => {
+            this.fetchFleets.perform();
+        });
+
+        // when a driver is assigned/ or unassigned reload
+        this.universe.on('fleet-ops.fleet.driver_unassigned', () => {
+            this.fetchFleets.perform();
+        });
     }
 
-    @task *fetchFleets () {
+    @task *fetchFleets() {
         if (this.abilities.cannot('fleet-ops list fleet')) {
             return;
         }

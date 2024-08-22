@@ -242,7 +242,7 @@ export default class ManagementContactsIndexController extends BaseController {
      *
      * @void
      */
-    @task({ restartable: true }) *search ({ target: { value } }) {
+    @task({ restartable: true }) *search({ target: { value } }) {
         // if no query don't search
         if (isBlank(value)) {
             this.query = null;
@@ -264,7 +264,7 @@ export default class ManagementContactsIndexController extends BaseController {
     /**
      * Reload layout view.
      */
-    @action reload () {
+    @action reload() {
         return this.hostRouter.refresh();
     }
 
@@ -273,8 +273,8 @@ export default class ManagementContactsIndexController extends BaseController {
      *
      * @void
      */
-    @action exportContacts () {
-        const selections = this.table.selectedRows.map(_ => _.id);
+    @action exportContacts() {
+        const selections = this.table.selectedRows.map((_) => _.id);
         this.crud.export('contact', { params: { selections } });
     }
 
@@ -284,7 +284,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @param {ContactModel} contact
      * @void
      */
-    @action viewContact (contact) {
+    @action viewContact(contact) {
         return this.transitionToRoute('management.contacts.index.details', contact);
     }
 
@@ -293,7 +293,7 @@ export default class ManagementContactsIndexController extends BaseController {
      *
      * @void
      */
-    @action createContact () {
+    @action createContact() {
         return this.transitionToRoute('management.contacts.index.new');
     }
 
@@ -303,7 +303,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @param {ContactModel} contact
      * @void
      */
-    @action editContact (contact) {
+    @action editContact(contact) {
         return this.transitionToRoute('management.contacts.index.edit', contact);
     }
 
@@ -314,7 +314,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action deleteContact (contact, options = {}) {
+    @action deleteContact(contact, options = {}) {
         this.crud.delete(contact, {
             acceptButtonIcon: 'trash',
             onConfirm: () => {
@@ -329,7 +329,7 @@ export default class ManagementContactsIndexController extends BaseController {
      *
      * @void
      */
-    @action importContacts () {
+    @action importContacts() {
         this.crud.import('contact', {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
@@ -343,7 +343,7 @@ export default class ManagementContactsIndexController extends BaseController {
      * @param {Array} selected an array of selected models
      * @void
      */
-    @action bulkDeleteContacts () {
+    @action bulkDeleteContacts() {
         const selected = this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {

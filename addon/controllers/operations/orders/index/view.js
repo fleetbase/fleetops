@@ -829,7 +829,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             title: 'Waypoint Label',
             modalClass: 'modal-xl',
             acceptButtonText: 'Done',
-            hideDeclineButton: true
+            hideDeclineButton: true,
         });
 
         // load the pdf label from base64

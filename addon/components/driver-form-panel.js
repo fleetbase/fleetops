@@ -63,7 +63,7 @@ export default class DriverFormPanelComponent extends Component {
                 this.modalsManager.show('modals/user-form', {
                     title: 'Create a new user',
                     user,
-                    uploadNewPhoto: file => {
+                    uploadNewPhoto: (file) => {
                         this.fetch.uploadFile.perform(
                             file,
                             {
@@ -72,7 +72,7 @@ export default class DriverFormPanelComponent extends Component {
                                 key_type: 'user',
                                 type: 'user_photo',
                             },
-                            uploadedFile => {
+                            (uploadedFile) => {
                                 user.setProperties({
                                     avatar_uuid: uploadedFile.id,
                                     avatar_url: uploadedFile.url,
@@ -81,7 +81,7 @@ export default class DriverFormPanelComponent extends Component {
                             }
                         );
                     },
-                    confirm: async modal => {
+                    confirm: async (modal) => {
                         modal.startLoading();
 
                         try {
@@ -101,7 +101,7 @@ export default class DriverFormPanelComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor (owner, { driver = null }) {
+    constructor(owner, { driver = null }) {
         super(...arguments);
         this.driver = driver;
         this.savePermission = driver && driver.isNew ? 'fleet-ops create driver' : 'fleet-ops update driver';
@@ -114,7 +114,7 @@ export default class DriverFormPanelComponent extends Component {
      * @action
      * @param {OverlayContextObject} overlayContext
      */
-    @action setOverlayContext (overlayContext) {
+    @action setOverlayContext(overlayContext) {
         this.context = overlayContext;
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
@@ -125,7 +125,7 @@ export default class DriverFormPanelComponent extends Component {
      * @return {void}
      * @memberof DriverFormPanelComponent
      */
-    @task *save () {
+    @task *save() {
         contextComponentCallback(this, 'onBeforeSave', this.driver);
 
         try {
@@ -146,7 +146,7 @@ export default class DriverFormPanelComponent extends Component {
      * @param {File} file
      * @memberof DriverFormPanelComponent
      */
-    @action onUploadNewPhoto (file) {
+    @action onUploadNewPhoto(file) {
         this.fetch.uploadFile.perform(
             file,
             {
@@ -155,7 +155,7 @@ export default class DriverFormPanelComponent extends Component {
                 subject_type: 'fleet-ops:driver',
                 type: 'driver_photo',
             },
-            uploadedFile => {
+            (uploadedFile) => {
                 this.driver.setProperties({
                     photo_uuid: uploadedFile.id,
                     photo_url: uploadedFile.url,
@@ -170,7 +170,7 @@ export default class DriverFormPanelComponent extends Component {
      *
      * @action
      */
-    @action onViewDetails () {
+    @action onViewDetails() {
         const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.driver);
 
         if (!isActionOverrided) {
@@ -184,7 +184,7 @@ export default class DriverFormPanelComponent extends Component {
      * @action
      * @returns {any}
      */
-    @action onPressCancel () {
+    @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.driver);
     }
 
@@ -197,7 +197,7 @@ export default class DriverFormPanelComponent extends Component {
      * @param {Object} selected.location - The location data of the selected item.
      * @memberof DriverFormPanelComponent
      */
-    @action onAutocomplete ({ location }) {
+    @action onAutocomplete({ location }) {
         if (location) {
             this.driver.set('location', location);
             if (this.coordinatesInputComponent) {
@@ -213,7 +213,7 @@ export default class DriverFormPanelComponent extends Component {
      * @param {Object} coordinatesInputComponent - The coordinates input component to be set.
      * @memberof DriverFormPanelComponent
      */
-    @action setCoordinatesInput (coordinatesInputComponent) {
+    @action setCoordinatesInput(coordinatesInputComponent) {
         this.coordinatesInputComponent = coordinatesInputComponent;
     }
 
@@ -226,7 +226,7 @@ export default class DriverFormPanelComponent extends Component {
      * @param {number} coordinates.longitude - Longitude value.
      * @memberof DriverFormPanelComponent
      */
-    @action onCoordinatesChanged ({ latitude, longitude }) {
+    @action onCoordinatesChanged({ latitude, longitude }) {
         const location = new Point(longitude, latitude);
         this.driver.setProperties({ location });
     }

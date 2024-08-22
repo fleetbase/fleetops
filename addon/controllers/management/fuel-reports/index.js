@@ -123,7 +123,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
             valuePath: 'reporter_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
-            onClick: async fuelReport => {
+            onClick: async (fuelReport) => {
                 let reporter = await this.store.findRecord('user', fuelReport.reported_by_uuid);
 
                 if (reporter) {
@@ -144,7 +144,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
             width: '120px',
             cellComponent: 'table/cell/anchor',
             permission: 'fleet-ops view driver',
-            onClick: async fuelReport => {
+            onClick: async (fuelReport) => {
                 let driver = await fuelReport.loadDriver();
 
                 if (driver) {
@@ -165,7 +165,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
             width: '100px',
             cellComponent: 'table/cell/anchor',
             permission: 'fleet-ops view vehicle',
-            onClick: async fuelReport => {
+            onClick: async (fuelReport) => {
                 let vehicle = await fuelReport.loadVehicle();
 
                 if (vehicle) {
@@ -277,7 +277,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      *
      * @void
      */
-    @task({ restartable: true }) *search ({ target: { value } }) {
+    @task({ restartable: true }) *search({ target: { value } }) {
         // if no query don't search
         if (isBlank(value)) {
             this.query = null;
@@ -301,7 +301,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      *
      * @void
      */
-    @action exportFuelReports () {
+    @action exportFuelReports() {
         this.crud.export('fuel-report');
     }
 
@@ -310,7 +310,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      *
      * @void
      */
-    @action importFuelReports () {
+    @action importFuelReports() {
         this.crud.import('fuel-report', {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
@@ -325,14 +325,14 @@ export default class ManagementFuelReportsIndexController extends BaseController
      * @param {Object} options
      * @void
      */
-    @action viewFuelReport (fuelReport) {
+    @action viewFuelReport(fuelReport) {
         this.transitionToRoute('management.fuel-reports.index.details', fuelReport);
     }
 
     /**
      * Reload layout view.
      */
-    @action reload () {
+    @action reload() {
         return this.hostRouter.refresh();
     }
 
@@ -341,7 +341,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      *
      * @void
      */
-    @action createFuelReport () {
+    @action createFuelReport() {
         this.transitionToRoute('management.fuel-reports.index.new');
     }
 
@@ -351,7 +351,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      * @param {FuelReportModel} fuelReport
      * @void
      */
-    @action editFuelReport (fuelReport) {
+    @action editFuelReport(fuelReport) {
         this.transitionToRoute('management.fuel-reports.index.edit', fuelReport);
     }
 
@@ -362,7 +362,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      * @param {Object} options
      * @void
      */
-    @action deleteFuelReport (fuelReport, options = {}) {
+    @action deleteFuelReport(fuelReport, options = {}) {
         this.crud.delete(fuelReport, {
             onConfirm: () => {
                 this.hostRouter.refresh();
@@ -377,7 +377,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
      * @param {Array} selected an array of selected models
      * @void
      */
-    @action bulkDeleteFuelReports () {
+    @action bulkDeleteFuelReports() {
         const selected = this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {

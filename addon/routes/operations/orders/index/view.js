@@ -11,7 +11,7 @@ export default class OperationsOrdersIndexViewRoute extends Route {
     @service abilities;
     @service intl;
 
-    @action willTransition (transition) {
+    @action willTransition(transition) {
         const shouldReset = typeof transition.to.name === 'string' && !transition.to.name.includes('operations.orders');
 
         if (this.controller) {
@@ -23,19 +23,19 @@ export default class OperationsOrdersIndexViewRoute extends Route {
         }
     }
 
-    @action error (error) {
+    @action error(error) {
         this.notifications.serverError(error);
         return this.transitionTo('operations.orders.index');
     }
 
-    beforeModel () {
+    beforeModel() {
         if (this.abilities.cannot('fleet-ops view order')) {
             this.notifications.warning(this.intl.t('common.unauthorized-access'));
             return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index');
         }
     }
 
-    model ({ public_id }) {
+    model({ public_id }) {
         return this.store.queryRecord('order', {
             public_id,
             single: true,
@@ -49,7 +49,7 @@ export default class OperationsOrdersIndexViewRoute extends Route {
      * @param {OrderModel} model
      * @memberof OperationsOrdersIndexViewRoute
      */
-    afterModel (model) {
+    afterModel(model) {
         this.listenForOrderEvents(model);
     }
 
@@ -59,7 +59,7 @@ export default class OperationsOrdersIndexViewRoute extends Route {
      * @param {OrderModel} model
      * @memberof OperationsOrdersIndexViewRoute
      */
-    async listenForOrderEvents (model) {
+    async listenForOrderEvents(model) {
         // Get socket instance
         const socket = this.socket.instance();
 
@@ -86,7 +86,7 @@ export default class OperationsOrdersIndexViewRoute extends Route {
         });
     }
 
-    async setupController (controller, model) {
+    async setupController(controller, model) {
         super.setupController(controller, model);
         controller.loadOrderRelations.perform(model);
     }

@@ -38,13 +38,12 @@
                             <InputGroup
                                 @name={{smart-humanize param.key}}
                                 @value="*********"
-                                @disabled="true"
+                                @disabled={{true}}
                                 @helpText={{concat
                                     (t "fleet-ops.component.vendor-form-panel.create-form.optionally")
                                     (smart-humanize param.key)
                                     (t "fleet-ops.component.vendor-form-panel.create-form.configure-vendor")
                                 }}
-                                @disabled={{unauthorized}}
                             />
                         {{/each}}
                     </div>

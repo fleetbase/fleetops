@@ -14,6 +14,24 @@ class FleetActionRequest extends FleetbaseRequest
      */
     public function authorize()
     {
+        $action = $this->route()->getActionMethod();
+
+        if ($action === 'assignVehicle') {
+            return Auth::can('fleet-ops assign-vehicle-for fleet');
+        }
+
+        if ($action === 'assignDriver') {
+            return Auth::can('fleet-ops assign-driver-for fleet');
+        }
+
+        if ($action === 'removeVehicle') {
+            return Auth::can('fleet-ops remove-vehicle-for fleet');
+        }
+
+        if ($action === 'removeDriver') {
+            return Auth::can('fleet-ops remove-driver-for fleet');
+        }
+
         return Auth::can('fleet-ops update fleet');
     }
 

@@ -534,7 +534,7 @@ export default class OperationsOrdersIndexController extends BaseController {
                     icon: 'paper-plane',
                     fn: this.dispatchOrder,
                     permission: 'fleet-ops dispatch order',
-                    isVisible: order => order.canBeDispatched,
+                    isVisible: (order) => order.canBeDispatched,
                 },
                 {
                     label: this.intl.t('fleet-ops.operations.orders.index.cancel-order'),
@@ -563,7 +563,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * Creates an instance of OperationsOrdersIndexController.
      * @memberof OperationsOrdersIndexController
      */
-    constructor () {
+    constructor() {
         super(...arguments);
         this.listenForOrderEvents();
     }
@@ -573,7 +573,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      *
      * @memberof OperationsOrdersIndexController
      */
-    @action async listenForOrderEvents () {
+    @action async listenForOrderEvents() {
         // wait for user to be loaded into service
         this.currentUser.on('user.loaded', () => {
             // Get socket instance
@@ -612,7 +612,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      *
      * @void
      */
-    @task({ restartable: true }) *search ({ target: { value } }) {
+    @task({ restartable: true }) *search({ target: { value } }) {
         // if no query don't search
         if (isBlank(value)) {
             this.query = null;
@@ -634,7 +634,7 @@ export default class OperationsOrdersIndexController extends BaseController {
     /**
      * Reload layout view.
      */
-    @action reload () {
+    @action reload() {
         return this.hostRouter.refresh();
     }
 
@@ -643,7 +643,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action resetView () {
+    @action resetView() {
         if (this.leafletMap && this.leafletMap.liveMap) {
             this.leafletMap.liveMap.hideAll();
         }
@@ -654,7 +654,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action toggleSearch () {
+    @action toggleSearch() {
         this.isSearchVisible = !this.isSearchVisible;
     }
 
@@ -663,7 +663,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action toggleOrdersPanel () {
+    @action toggleOrdersPanel() {
         this.isOrdersPanelVisible = !this.isOrdersPanelVisible;
     }
 
@@ -672,7 +672,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action hideOrdersPanel () {
+    @action hideOrdersPanel() {
         this.isOrdersPanelVisible = false;
     }
 
@@ -681,7 +681,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action showOrdersPanel () {
+    @action showOrdersPanel() {
         this.isOrdersPanelVisible = true;
     }
 
@@ -691,7 +691,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action zoomMap (direction = 'in') {
+    @action zoomMap(direction = 'in') {
         if (direction === 'in') {
             this.leafletMap?.zoomIn();
         } else {
@@ -705,7 +705,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action setLayoutMode (mode) {
+    @action setLayoutMode(mode) {
         this.layout = mode;
 
         if (mode === 'table') {
@@ -726,7 +726,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action setMapReference ({ target, target: { liveMap } }) {
+    @action setMapReference({ target, target: { liveMap } }) {
         this.leafletMap = target;
         this.liveMap = liveMap;
     }
@@ -737,7 +737,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @param {Object} drawerApi
      * @memberof OperationsOrdersIndexController
      */
-    @action setDrawerContext (drawerApi) {
+    @action setDrawerContext(drawerApi) {
         this.drawer = drawerApi;
     }
 
@@ -746,10 +746,10 @@ export default class OperationsOrdersIndexController extends BaseController {
      *
      * @memberof OperationsOrdersIndexController
      */
-    @action onPressLiveMapDrawerToggle () {
+    @action onPressLiveMapDrawerToggle() {
         if (this.drawer) {
             this.drawer.toggleMinimize({
-                onToggle: drawerApi => {
+                onToggle: (drawerApi) => {
                     this.drawerOpen = drawerApi.isMinimized ? 0 : 1;
                 },
             });
@@ -763,7 +763,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @params {Object.drawerPanelNode|HTMLElement}
      * @memberof OperationsOrdersIndexController
      */
-    @action onDrawerResizeEnd ({ drawerPanelNode }) {
+    @action onDrawerResizeEnd({ drawerPanelNode }) {
         const rect = drawerPanelNode.getBoundingClientRect();
 
         if (rect.height === 0) {
@@ -773,7 +773,7 @@ export default class OperationsOrdersIndexController extends BaseController {
         }
     }
 
-    @action onDrawerTabChanged (tabName) {
+    @action onDrawerTabChanged(tabName) {
         this.drawerTab = tabName;
     }
 
@@ -782,8 +782,8 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action exportOrders () {
-        const selections = this.table.selectedRows.map(_ => _.id);
+    @action exportOrders() {
+        const selections = this.table.selectedRows.map((_) => _.id);
         this.crud.export('order', { params: { selections } });
     }
 
@@ -792,7 +792,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action createOrder () {
+    @action createOrder() {
         return this.transitionToRoute('operations.orders.index.new');
     }
 
@@ -802,7 +802,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action viewOrder (order) {
+    @action viewOrder(order) {
         return this.transitionToRoute('operations.orders.index.view', order);
     }
 
@@ -813,12 +813,12 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action cancelOrder (order, options = {}) {
+    @action cancelOrder(order, options = {}) {
         this.modalsManager.confirm({
             title: this.intl.t('fleet-ops.operations.orders.index.cancel-title'),
             body: this.intl.t('fleet-ops.operations.orders.index.cancel-body'),
             order,
-            confirm: async modal => {
+            confirm: async (modal) => {
                 modal.startLoading();
 
                 try {
@@ -842,7 +842,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action dispatchOrder (order, options = {}) {
+    @action dispatchOrder(order, options = {}) {
         this.modalsManager.confirm({
             title: this.intl.t('fleet-ops.operations.orders.index.dispatch-title'),
             body: this.intl.t('fleet-ops.operations.orders.index.dispatch-body'),
@@ -850,7 +850,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             acceptButtonText: 'Dispatch',
             acceptButtonIcon: 'paper-plane',
             order,
-            confirm: async modal => {
+            confirm: async (modal) => {
                 modal.startLoading();
 
                 try {
@@ -874,7 +874,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action deleteOrder (order, options = {}) {
+    @action deleteOrder(order, options = {}) {
         this.crud.delete(order, {
             onSuccess: () => {
                 return this.hostRouter.refresh();
@@ -889,7 +889,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action bulkDeleteOrders (selected = []) {
+    @action bulkDeleteOrders(selected = []) {
         selected = selected.length > 0 ? selected : this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {
@@ -908,7 +908,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action bulkCancelOrders (selected = []) {
+    @action bulkCancelOrders(selected = []) {
         selected = selected.length > 0 ? selected : this.table.selectedRows;
 
         if (!isArray(selected) || selected.length === 0) {
@@ -922,8 +922,8 @@ export default class OperationsOrdersIndexController extends BaseController {
             modelNamePath: `public_id`,
             actionPath: `orders/bulk-cancel`,
             actionMethod: `PATCH`,
-            onConfirm: canceledOrders => {
-                canceledOrders.forEach(order => {
+            onConfirm: (canceledOrders) => {
+                canceledOrders.forEach((order) => {
                     order.set('status', 'canceled');
                 });
             },
@@ -939,7 +939,7 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action onMapContainerReady () {
+    @action onMapContainerReady() {
         this.fetchActiveOrdersCount();
     }
 
@@ -948,8 +948,8 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action fetchActiveOrdersCount () {
-        this.fetch.get('fleet-ops/metrics', { discover: ['orders_in_progress'] }).then(response => {
+    @action fetchActiveOrdersCount() {
+        this.fetch.get('fleet-ops/metrics', { discover: ['orders_in_progress'] }).then((response) => {
             this.activeOrdersCount = response.orders_in_progress;
         });
     }

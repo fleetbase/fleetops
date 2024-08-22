@@ -288,7 +288,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      *
      * @void
      */
-    @task({ restartable: true }) *search ({ target: { value } }) {
+    @task({ restartable: true }) *search({ target: { value } }) {
         // if no query don't search
         if (isBlank(value)) {
             this.query = null;
@@ -312,8 +312,8 @@ export default class ManagementPlacesIndexController extends BaseController {
      *
      * @void
      */
-    @action exportPlaces () {
-        const selections = this.table.selectedRows.map(_ => _.id);
+    @action exportPlaces() {
+        const selections = this.table.selectedRows.map((_) => _.id);
         this.crud.export('place', { params: { selections } });
     }
 
@@ -324,14 +324,14 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @return {Promise}
      * @memberof ManagementPlacesIndexController
      */
-    @action viewPlace (place) {
+    @action viewPlace(place) {
         return this.transitionToRoute('management.places.index.details', place);
     }
 
     /**
      * Reload layout view.
      */
-    @action reload () {
+    @action reload() {
         return this.hostRouter.refresh();
     }
     /**
@@ -340,7 +340,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @return {Promise}
      * @memberof ManagementPlacesIndexController
      */
-    @action createPlace () {
+    @action createPlace() {
         return this.transitionToRoute('management.places.index.new');
     }
 
@@ -351,7 +351,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @return {Promise}
      * @memberof ManagementPlacesIndexController
      */
-    @action editPlace (place) {
+    @action editPlace(place) {
         return this.transitionToRoute('management.places.index.edit', place);
     }
 
@@ -362,7 +362,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action deletePlace (place, options = {}) {
+    @action deletePlace(place, options = {}) {
         this.crud.delete(place, {
             onConfirm: () => {
                 return this.hostRouter.refresh();
@@ -377,7 +377,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @param {Array} selected an array of selected models
      * @void
      */
-    @action bulkDeletePlaces () {
+    @action bulkDeletePlaces() {
         const selected = this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {
@@ -397,13 +397,13 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action assignVendor (place, options = {}) {
+    @action assignVendor(place, options = {}) {
         this.modalsManager.show('modals/place-assign-vendor', {
             title: this.intl.t('fleet-ops.management.places.index.title'),
             acceptButtonText: this.intl.t('fleet-ops.management.places.index.confirm-button'),
             hideDeclineButton: true,
             place,
-            confirm: modal => {
+            confirm: (modal) => {
                 modal.startLoading();
                 return place.save().then(() => {
                     this.notifications.success(this.intl.t('fleet-ops.management.places.index.success-message', { placeName: place.name }));
@@ -418,7 +418,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      *
      * @void
      */
-    @action importPlaces () {
+    @action importPlaces() {
         this.crud.import('place', {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
@@ -433,7 +433,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action viewOnMap (place, options = {}) {
+    @action viewOnMap(place, options = {}) {
         const { latitude, longitude } = place;
 
         this.modalsManager.show('modals/point-map', {
@@ -453,7 +453,7 @@ export default class ManagementPlacesIndexController extends BaseController {
      * @param {PlaceModel} place
      * @void
      */
-    @action async viewPlaceVendor (place) {
+    @action async viewPlaceVendor(place) {
         const vendor = await this.store.findRecord('vendor', place.vendor_uuid);
 
         if (vendor) {

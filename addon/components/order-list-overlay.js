@@ -52,7 +52,7 @@ export default class OrderListOverlayComponent extends Component {
      * Creates an instance of OrderListOverlayComponent.
      * @memberof OrderListOverlayComponent
      */
-    constructor () {
+    constructor() {
         super(...arguments);
 
         this.loadFleets.perform();
@@ -66,7 +66,7 @@ export default class OrderListOverlayComponent extends Component {
      * @param {OrderModel} order
      * @memberof OrderListOverlayComponent
      */
-    @action selectOrder (order) {
+    @action selectOrder(order) {
         if (this.selectedOrders.includes(order)) {
             this.selectedOrders.removeObject(order);
         } else {
@@ -81,7 +81,7 @@ export default class OrderListOverlayComponent extends Component {
      * @return {Transition<Promise>}
      * @memberof OrderListOverlayComponent
      */
-    @action viewOrder (order) {
+    @action viewOrder(order) {
         const router = this.router ?? this.hostRouter;
 
         return router.transitionTo('console.fleet-ops.operations.orders.index.view', order);
@@ -94,7 +94,7 @@ export default class OrderListOverlayComponent extends Component {
      * @param {...} params
      * @memberof OrderListOverlayComponent
      */
-    @action onAction (actionName, ...params) {
+    @action onAction(actionName, ...params) {
         params.pushObject(this);
 
         if (typeof this[actionName] === 'function') {
@@ -114,7 +114,7 @@ export default class OrderListOverlayComponent extends Component {
      * @param {...} params
      * @memberof OrderListOverlayComponent
      */
-    @action onDropdownAction (dd, actionName, ...params) {
+    @action onDropdownAction(dd, actionName, ...params) {
         if (typeof dd?.actions?.close === 'function') {
             dd.actions.close();
         }
@@ -125,7 +125,7 @@ export default class OrderListOverlayComponent extends Component {
     /**
      * Load fleet records.
      */
-    @task *loadFleets () {
+    @task *loadFleets() {
         if (this.abilities.cannot('fleet-ops list fleet')) {
             return;
         }
@@ -160,9 +160,9 @@ export default class OrderListOverlayComponent extends Component {
         if (this.abilities.cannot('fleet-ops list order')) {
             return;
         }
-        
+
         try {
-            this.activeOrders = this.fetch.get(
+            this.activeOrders = yield this.fetch.get(
                 'fleet-ops/live/orders',
                 {},
                 {

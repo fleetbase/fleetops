@@ -215,7 +215,7 @@ export default class ContextPanelService extends Service {
      *
      * @param {String} intent
      * @param {Model} model
-     * @return {String} 
+     * @return {String}
      * @memberof ContextPanelService
      */
     getIntentAbility(intent, model) {
@@ -234,7 +234,7 @@ export default class ContextPanelService extends Service {
      * Get the model name for the current intent.
      *
      * @param {Model} model
-     * @return {String} 
+     * @return {String}
      * @memberof ContextPanelService
      */
     getIntentModelName(model) {

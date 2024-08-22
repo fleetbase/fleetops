@@ -57,7 +57,7 @@ class FleetOps
         ],
         [
             'name'    => 'fleet',
-            'actions' => ['assign-driver-for', 'assign-vehicle-for', 'export', 'import'],
+            'actions' => ['assign-driver-for', 'assign-vehicle-for', 'remove-driver-for', 'remove-vehicle-for', 'export', 'import'],
         ],
         [
             'name'    => 'vendor',
@@ -98,7 +98,7 @@ class FleetOps
         [
             'name'           => 'navigator-settings',
             'action'         => [],
-            'remove_actions' => ['delete', 'export'],
+            'remove_actions' => ['delete', 'export', 'list', 'create'],
         ],
     ];
 }

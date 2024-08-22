@@ -7,7 +7,7 @@ export default class OperationsServiceRatesIndexEditController extends Operation
      *
      * @void
      */
-    @action async updateServiceRate () {
+    @action async updateServiceRate() {
         const { serviceRate, rateFees, perDropRateFees, parcelFees } = this;
 
         if (serviceRate.isFixedMeter) {

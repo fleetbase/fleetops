@@ -17,13 +17,13 @@ export default class OperationsSchedulerIndexController extends BaseController {
     @tracked unscheduledOrders = [];
     @tracked events = [];
 
-    @action setCalendarApi (calendar) {
+    @action setCalendarApi(calendar) {
         this.calendar = calendar;
         // setup some custom post initialization stuff here
         // calendar.setOption('height', 800);
     }
 
-    @action viewEvent (order) {
+    @action viewEvent(order) {
         // get the event from the calendar
         let event = this.calendar.getEventById(order.id);
 
@@ -33,7 +33,7 @@ export default class OperationsSchedulerIndexController extends BaseController {
             acceptButtonIcon: 'save',
             hideDeclineButton: true,
             order,
-            reschedule: date => {
+            reschedule: (date) => {
                 if (date && typeof date.toDate === 'function') {
                     date = date.toDate();
                 }
@@ -43,7 +43,7 @@ export default class OperationsSchedulerIndexController extends BaseController {
             unschedule: () => {
                 order.set('scheduled_at', null);
             },
-            confirm: async modal => {
+            confirm: async (modal) => {
                 modal.startLoading();
 
                 if (!order.get('hasDirtyAttributes')) {
@@ -67,9 +67,7 @@ export default class OperationsSchedulerIndexController extends BaseController {
                     }
 
                     // update event props
-                    if (event && typeof event.setProp === 'function') {
-                        event.setProp('title', createOrderEventTitle(order));
-                    }
+                    this.setEventProperty(event, 'title', createOrderEventTitle(order));
 
                     // refresh route
                     return this.hostRouter.refresh();
@@ -81,14 +79,14 @@ export default class OperationsSchedulerIndexController extends BaseController {
         });
     }
 
-    @action viewOrderAsEvent (eventClickInfo) {
+    @action viewOrderAsEvent(eventClickInfo) {
         const { event } = eventClickInfo;
         const order = this.store.peekRecord('order', event.id);
 
         this.viewEvent(order, eventClickInfo);
     }
 
-    @action async scheduleEventFromDrop (dropInfo) {
+    @action async scheduleEventFromDrop(dropInfo) {
         const { draggedEl, date } = dropInfo;
         const { dataset } = draggedEl;
         const { event } = dataset;
@@ -105,22 +103,17 @@ export default class OperationsSchedulerIndexController extends BaseController {
         }
     }
 
-    @action receivedEvent (eventReceivedInfo) {
+    @action receivedEvent(eventReceivedInfo) {
         const { event } = eventReceivedInfo;
         const order = this.store.peekRecord('order', event.id);
 
-        // update event props
-        if (typeof event.setProp === 'function') {
-            event.setProp('title', createOrderEventTitle(order));
-        }
+        this.setEventProperty(event, 'title', createOrderEventTitle(order));
     }
 
-    @action async rescheduleEventFromDrag (eventDropInfo) {
+    @action async rescheduleEventFromDrag(eventDropInfo) {
         const { event } = eventDropInfo;
         const { start } = event;
         const order = this.store.peekRecord('order', event.id);
-
-        // retain time, only change date
         const scheduledTime = order.scheduledAtTime;
         const newDate = new Date(`${format(start, 'PP')} ${scheduledTime}`);
 
@@ -128,19 +121,16 @@ export default class OperationsSchedulerIndexController extends BaseController {
             // set and save order props
             order.set('scheduled_at', isValidDate(newDate) ? newDate : start);
             await order.save();
-            return this.hostRouter.refresh();
+            this.setEventProperty(event, 'title', createOrderEventTitle(order));
 
-            // update event props
-            if (typeof event.setProp === 'function') {
-                event.setProp('title', createOrderEventTitle(order));
-            }
+            return this.hostRouter.refresh();
         } catch (error) {
             this.notifications.serverError(error);
             this.removeEvent(event);
         }
     }
 
-    removeEvent (event) {
+    removeEvent(event) {
         if (isObject(event) && typeof event.remove === 'function') {
             event.remove();
             return true;
@@ -161,6 +151,29 @@ export default class OperationsSchedulerIndexController extends BaseController {
                 event.remove();
                 return true;
             }
+        }
+
+        return false;
+    }
+
+    getEvent(event) {
+        if (isJson(event)) {
+            event = JSON.parse(event);
+            return this.calendar.getEventById(event.id);
+        }
+
+        if (typeof event === 'string') {
+            return this.calendar.getEventById(event);
+        }
+
+        return event;
+    }
+
+    setEventProperty(event, prop, value) {
+        const eventInstance = this.getEvent(event);
+        if (typeof eventInstance.setProp === 'function') {
+            eventInstance.setProp(prop, value);
+            return true;
         }
 
         return false;

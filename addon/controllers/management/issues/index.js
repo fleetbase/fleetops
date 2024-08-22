@@ -180,7 +180,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             width: '100px',
             cellComponent: 'table/cell/anchor',
             permission: 'iam view user',
-            onClick: async issue => {
+            onClick: async (issue) => {
                 let reporter = await this.store.findRecord('user', issue.reported_by_uuid);
 
                 if (reporter) {
@@ -201,7 +201,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             width: '100px',
             cellComponent: 'table/cell/anchor',
             permission: 'iam view user',
-            onClick: async issue => {
+            onClick: async (issue) => {
                 let assignee = await this.store.findRecord('user', issue.assigned_to_uuid);
 
                 if (assignee) {
@@ -222,7 +222,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             width: '100px',
             cellComponent: 'table/cell/anchor',
             permission: 'fleet-ops view driver',
-            onClick: async issue => {
+            onClick: async (issue) => {
                 let driver = await issue.loadDriver();
 
                 if (driver) {
@@ -243,7 +243,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             width: '100px',
             cellComponent: 'table/cell/anchor',
             permission: 'fleet-ops view vehicle',
-            onClick: async issue => {
+            onClick: async (issue) => {
                 let vehicle = await issue.loadVehicle();
 
                 if (vehicle) {
@@ -333,7 +333,7 @@ export default class ManagementIssuesIndexController extends BaseController {
      *
      * @void
      */
-    @task({ restartable: true }) *search ({ target: { value } }) {
+    @task({ restartable: true }) *search({ target: { value } }) {
         // if no query don't search
         if (isBlank(value)) {
             this.query = null;
@@ -357,8 +357,8 @@ export default class ManagementIssuesIndexController extends BaseController {
      *
      * @void
      */
-    @action exportIssues () {
-        const selections = this.table.selectedRows.map(_ => _.id);
+    @action exportIssues() {
+        const selections = this.table.selectedRows.map((_) => _.id);
         this.crud.export('issue', { params: { selections } });
     }
 
@@ -367,7 +367,7 @@ export default class ManagementIssuesIndexController extends BaseController {
      *
      * @void
      */
-    @action importIssues () {
+    @action importIssues() {
         this.crud.import('issue', {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
@@ -378,7 +378,7 @@ export default class ManagementIssuesIndexController extends BaseController {
     /**
      * Reload layout view.
      */
-    @action reload () {
+    @action reload() {
         return this.hostRouter.refresh();
     }
 
@@ -389,7 +389,7 @@ export default class ManagementIssuesIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action viewIssue (issue) {
+    @action viewIssue(issue) {
         return this.transitionToRoute('management.issues.index.details', issue);
     }
 
@@ -398,7 +398,7 @@ export default class ManagementIssuesIndexController extends BaseController {
      *
      * @void
      */
-    @action createIssue () {
+    @action createIssue() {
         return this.transitionToRoute('management.issues.index.new');
     }
 
@@ -408,7 +408,7 @@ export default class ManagementIssuesIndexController extends BaseController {
      * @param {IssueModel} issue
      * @void
      */
-    @action editIssue (issue) {
+    @action editIssue(issue) {
         return this.transitionToRoute('management.issues.index.edit', issue);
     }
 
@@ -419,7 +419,7 @@ export default class ManagementIssuesIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action deleteIssue (issue, options = {}) {
+    @action deleteIssue(issue, options = {}) {
         this.crud.delete(issue, {
             acceptButtonIcon: 'trash',
             onConfirm: () => {
@@ -435,7 +435,7 @@ export default class ManagementIssuesIndexController extends BaseController {
      * @param {Array} selected an array of selected models
      * @void
      */
-    @action bulkDeleteIssues () {
+    @action bulkDeleteIssues() {
         const selected = this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {

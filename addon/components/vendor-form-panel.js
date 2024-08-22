@@ -53,7 +53,7 @@ export default class VendorFormPanelComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor (owner, { vendor = null }) {
+    constructor(owner, { vendor = null }) {
         super(...arguments);
         this.vendor = vendor;
         this.savePermission = vendor && vendor.isNew ? 'fleet-ops create vendor' : 'fleet-ops update vendor';
@@ -67,7 +67,7 @@ export default class VendorFormPanelComponent extends Component {
      * @action
      * @param {OverlayContextObject} overlayContext
      */
-    @action setOverlayContext (overlayContext) {
+    @action setOverlayContext(overlayContext) {
         this.context = overlayContext;
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
@@ -78,7 +78,7 @@ export default class VendorFormPanelComponent extends Component {
      * @return {void}
      * @memberof VendorFormPanelComponent
      */
-    @task *save () {
+    @task *save() {
         contextComponentCallback(this, 'onBeforeSave', this.vendor);
 
         try {
@@ -98,7 +98,7 @@ export default class VendorFormPanelComponent extends Component {
      * @param {File} file
      * @memberof DriverFormPanelComponent
      */
-    @action onUploadNewPhoto (file) {
+    @action onUploadNewPhoto(file) {
         this.fetch.uploadFile.perform(
             file,
             {
@@ -107,7 +107,7 @@ export default class VendorFormPanelComponent extends Component {
                 subject_type: 'fleet-ops:vendor',
                 type: 'vendor_logo',
             },
-            uploadedFile => {
+            (uploadedFile) => {
                 this.vendor.setProperties({
                     logo_uuid: uploadedFile.id,
                     logo_url: uploadedFile.url,
@@ -123,7 +123,7 @@ export default class VendorFormPanelComponent extends Component {
      * @param {VendorModel} vendor
      * @memberof VendorFormPanelComponent
      */
-    @action onVendorChanged (vendor) {
+    @action onVendorChanged(vendor) {
         this.vendor = vendor;
     }
 
@@ -132,7 +132,7 @@ export default class VendorFormPanelComponent extends Component {
      *
      * @action
      */
-    @action onViewDetails () {
+    @action onViewDetails() {
         const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.vendor);
 
         if (!isActionOverrided) {
@@ -146,7 +146,7 @@ export default class VendorFormPanelComponent extends Component {
      * @action
      * @returns {any}
      */
-    @action onPressCancel () {
+    @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.vendor);
     }
 }

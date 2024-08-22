@@ -35,7 +35,7 @@ export default class FuelReportFormPanelComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor (owner, { fuelReport = null }) {
+    constructor(owner, { fuelReport = null }) {
         super(...arguments);
         this.fuelReport = fuelReport;
         this.savePermission = fuelReport && fuelReport.isNew ? 'fleet-ops create fuel-report' : 'fleet-ops update fuel-report';
@@ -48,7 +48,7 @@ export default class FuelReportFormPanelComponent extends Component {
      * @action
      * @param {OverlayContextObject} overlayContext
      */
-    @action setOverlayContext (overlayContext) {
+    @action setOverlayContext(overlayContext) {
         this.context = overlayContext;
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
@@ -59,7 +59,7 @@ export default class FuelReportFormPanelComponent extends Component {
      * @return {void}
      * @memberof FuelReportFormPanelComponent
      */
-    @task *save () {
+    @task *save() {
         contextComponentCallback(this, 'onBeforeSave', this.fuelReport);
 
         try {
@@ -78,7 +78,7 @@ export default class FuelReportFormPanelComponent extends Component {
      *
      * @action
      */
-    @action onViewDetails () {
+    @action onViewDetails() {
         const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.fuelReport);
 
         if (!isActionOverrided) {
@@ -92,7 +92,7 @@ export default class FuelReportFormPanelComponent extends Component {
      * @action
      * @returns {any}
      */
-    @action onPressCancel () {
+    @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.fuelReport);
     }
 }

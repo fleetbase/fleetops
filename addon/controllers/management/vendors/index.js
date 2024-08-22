@@ -297,7 +297,7 @@ export default class ManagementVendorsIndexController extends BaseController {
      *
      * @void
      */
-    @task({ restartable: true }) *search ({ target: { value } }) {
+    @task({ restartable: true }) *search({ target: { value } }) {
         // if no query don't search
         if (isBlank(value)) {
             this.query = null;
@@ -321,8 +321,8 @@ export default class ManagementVendorsIndexController extends BaseController {
      *
      * @void
      */
-    @action exportVendors () {
-        const selections = this.table.selectedRows.map(_ => _.id);
+    @action exportVendors() {
+        const selections = this.table.selectedRows.map((_) => _.id);
         this.crud.export('vendor', { params: { selections } });
     }
 
@@ -332,14 +332,14 @@ export default class ManagementVendorsIndexController extends BaseController {
      * @param {VendorModel} vendor
      * @void
      */
-    @action viewVendor (vendor) {
+    @action viewVendor(vendor) {
         return this.transitionToRoute('management.vendors.index.details', vendor);
     }
 
     /**
      * Reload layout view.
      */
-    @action reload () {
+    @action reload() {
         return this.hostRouter.refresh();
     }
 
@@ -348,7 +348,7 @@ export default class ManagementVendorsIndexController extends BaseController {
      *
      * @void
      */
-    @action async createVendor () {
+    @action async createVendor() {
         return this.transitionToRoute('management.vendors.index.new');
     }
 
@@ -358,7 +358,7 @@ export default class ManagementVendorsIndexController extends BaseController {
      * @param {VendorModel} vendor
      * @void
      */
-    @action editVendor (vendor) {
+    @action editVendor(vendor) {
         return this.transitionToRoute('management.vendors.index.edit', vendor);
     }
 
@@ -369,7 +369,7 @@ export default class ManagementVendorsIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action deleteVendor (vendor, options = {}) {
+    @action deleteVendor(vendor, options = {}) {
         this.crud.delete(vendor, {
             acceptButtonIcon: 'trash',
             onSuccess: () => {
@@ -385,7 +385,7 @@ export default class ManagementVendorsIndexController extends BaseController {
      * @param {Array} selected an array of selected models
      * @void
      */
-    @action bulkDeleteVendors () {
+    @action bulkDeleteVendors() {
         const selected = this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {
@@ -404,7 +404,7 @@ export default class ManagementVendorsIndexController extends BaseController {
      * @param {VendorModel} vendor
      * @void
      */
-    @action async viewVendorPlace (vendor) {
+    @action async viewVendorPlace(vendor) {
         const place = await this.store.findRecord('place', vendor.place_uuid);
 
         if (place) {
@@ -417,7 +417,7 @@ export default class ManagementVendorsIndexController extends BaseController {
      *
      * @void
      */
-    @action importVendors () {
+    @action importVendors() {
         this.crud.import('vendor', {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
@@ -431,7 +431,7 @@ export default class ManagementVendorsIndexController extends BaseController {
      * @param {VendorModel} vendor
      * @void
      */
-    @action async editVendorPlace (vendor) {
+    @action async editVendorPlace(vendor) {
         const place = await this.store.findRecord('place', vendor.place_uuid);
 
         if (place) {
@@ -445,11 +445,11 @@ export default class ManagementVendorsIndexController extends BaseController {
      * @param {VendorModel} vendor
      * @void
      */
-    @action async createVendorPlace (vendor) {
+    @action async createVendorPlace(vendor) {
         const place = this.store.createRecord('place');
 
         this.contextPanel.focus(place, 'editing', {
-            onAfterSave: place => {
+            onAfterSave: (place) => {
                 vendor.set('place_uuid', place.id);
                 vendor.save();
             },

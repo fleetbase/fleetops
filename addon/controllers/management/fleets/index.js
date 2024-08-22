@@ -305,7 +305,7 @@ export default class ManagementFleetsIndexController extends BaseController {
      *
      * @void
      */
-    @task({ restartable: true }) *search ({ target: { value } }) {
+    @task({ restartable: true }) *search({ target: { value } }) {
         // if no query don't search
         if (isBlank(value)) {
             this.query = null;
@@ -330,7 +330,7 @@ export default class ManagementFleetsIndexController extends BaseController {
      * @param {Array} selected an array of selected models
      * @void
      */
-    @action bulkDeleteFleets () {
+    @action bulkDeleteFleets() {
         const selected = this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {
@@ -346,7 +346,7 @@ export default class ManagementFleetsIndexController extends BaseController {
     /**
      * Reload layout view.
      */
-    @action reload () {
+    @action reload() {
         return this.hostRouter.refresh();
     }
 
@@ -355,8 +355,8 @@ export default class ManagementFleetsIndexController extends BaseController {
      *
      * @void
      */
-    @action exportFleets () {
-        const selections = this.table.selectedRows.map(_ => _.id);
+    @action exportFleets() {
+        const selections = this.table.selectedRows.map((_) => _.id);
         this.crud.export('fleet', { params: { selections } });
     }
 
@@ -367,7 +367,7 @@ export default class ManagementFleetsIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action viewFleet (fleet) {
+    @action viewFleet(fleet) {
         return this.transitionToRoute('management.fleets.index.details', fleet);
     }
 
@@ -376,7 +376,7 @@ export default class ManagementFleetsIndexController extends BaseController {
      *
      * @void
      */
-    @action importFleets () {
+    @action importFleets() {
         this.crud.import('fleet', {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
@@ -390,7 +390,7 @@ export default class ManagementFleetsIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action createFleet () {
+    @action createFleet() {
         return this.transitionToRoute('management.fleets.index.new');
     }
 
@@ -401,7 +401,7 @@ export default class ManagementFleetsIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action editFleet (fleet) {
+    @action editFleet(fleet) {
         return this.transitionToRoute('management.fleets.index.edit', fleet);
     }
 
@@ -412,7 +412,7 @@ export default class ManagementFleetsIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action deleteFleet (fleet, options = {}) {
+    @action deleteFleet(fleet, options = {}) {
         this.crud.delete(fleet, {
             onSuccess: () => {
                 return this.hostRouter.refresh();
@@ -428,7 +428,7 @@ export default class ManagementFleetsIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action viewServiceArea (fleet, options = {}) {
+    @action viewServiceArea(fleet, options = {}) {
         this.serviceAreas.viewServiceAreaInDialog(fleet.get('service_area'), options);
     }
 
@@ -439,7 +439,7 @@ export default class ManagementFleetsIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action viewZone (fleet, options = {}) {
+    @action viewZone(fleet, options = {}) {
         this.serviceAreas.viewZoneInDialog(fleet.zone, options);
     }
 }

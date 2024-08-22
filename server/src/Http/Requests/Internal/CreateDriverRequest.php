@@ -30,8 +30,8 @@ class CreateDriverRequest extends CreateDriverApiRequest
             'password' => 'nullable|string',
             'country'  => 'nullable|size:2',
             'city'     => 'nullable|string',
-            'status' => 'nullable|string|in:active,inactive',
-            'job' => 'nullable|exists:orders,public_id',
+            'status'   => 'nullable|string|in:active,inactive',
+            'job'      => 'nullable|exists:orders,public_id',
         ];
     }
 }

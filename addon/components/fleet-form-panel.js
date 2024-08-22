@@ -39,7 +39,7 @@ export default class FleetFormPanelComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor (owner, { fleet = null }) {
+    constructor(owner, { fleet = null }) {
         super(...arguments);
         this.fleet = fleet;
         this.savePermission = fleet && fleet.isNew ? 'fleet-ops create fleet' : 'fleet-ops update fleet';
@@ -53,7 +53,7 @@ export default class FleetFormPanelComponent extends Component {
      * @param {OverlayContextObject} overlayContext
      * @memberof FleetFormPanelComponent
      */
-    @action setOverlayContext (overlayContext) {
+    @action setOverlayContext(overlayContext) {
         this.context = overlayContext;
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
@@ -64,7 +64,7 @@ export default class FleetFormPanelComponent extends Component {
      * @return {void}
      * @memberof FleetFormPanelComponent
      */
-    @task *save () {
+    @task *save() {
         contextComponentCallback(this, 'onBeforeSave', this.fleet);
 
         try {
@@ -84,7 +84,7 @@ export default class FleetFormPanelComponent extends Component {
      * @action
      * @memberof FleetFormPanelComponent
      */
-    @action onViewDetails () {
+    @action onViewDetails() {
         const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.fleet);
 
         if (!isActionOverrided) {
@@ -99,7 +99,7 @@ export default class FleetFormPanelComponent extends Component {
      * @returns {any}
      * @memberof FleetFormPanelComponent
      */
-    @action onPressCancel () {
+    @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.fleet);
     }
 
@@ -110,7 +110,7 @@ export default class FleetFormPanelComponent extends Component {
      * @param {Model|null} value
      * @memberof FleetFormPanelComponent
      */
-    @action updateRelationship (relation, value) {
+    @action updateRelationship(relation, value) {
         this.fleet.set(relation, value);
 
         if (!value) {

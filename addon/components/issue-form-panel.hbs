@@ -138,8 +138,7 @@
                             @onChange={{fn (mut this.issue.category)}}
                             @placeholder={{t "fleet-ops.component.issue-form-panel.select-category"}}
                             @triggerClass="form-select form-input"
-                            @disabled={{not this.issueCategories}}
-                            @disabled={{unauthorized}}
+                            @disabled={{or unauthorized (not this.issueCategories)}}
                             as |category|
                         >
                             {{smart-humanize category}}

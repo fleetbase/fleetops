@@ -29,7 +29,7 @@ export default class OrderConfigManagerDetailsComponent extends Component {
      * @param {Object} owner - The owner of the component.
      * @param {Object} args - The arguments passed to the component, including the configuration.
      */
-    constructor (owner, { config }) {
+    constructor(owner, { config }) {
         super(...arguments);
         this.config = config;
     }
@@ -39,7 +39,7 @@ export default class OrderConfigManagerDetailsComponent extends Component {
      * Provides user feedback and executes callback on successful update.
      * @action
      */
-    @task *save () {
+    @task *save() {
         try {
             yield this.config.save();
             this.notifications.success(this.intl.t('fleet-ops.component.order-config-manager.saved-success-message', { orderConfigName: this.config.name }));
@@ -56,12 +56,12 @@ export default class OrderConfigManagerDetailsComponent extends Component {
      * Provides a confirmation modal and executes callback on successful deletion.
      * @action
      */
-    @action delete () {
+    @action delete() {
         this.modalsManager.confirm({
             title: this.intl.t('fleet-ops.component.order-config-manager.details.delete.delete-title'),
             body: this.intl.t('fleet-ops.component.order-config-manager.details.delete.delete-body-message'),
             acceptButtonText: this.intl.t('fleet-ops.component.order-config-manager.details.delete.confirm-delete'),
-            confirm: async modal => {
+            confirm: async (modal) => {
                 if (typeof this.args.onConfigDeleting === 'function') {
                     this.args.onConfigDeleting(this.config);
                 }
@@ -84,7 +84,7 @@ export default class OrderConfigManagerDetailsComponent extends Component {
      *
      * @memberof OrderConfigManagerDetailsComponent
      */
-    @task *deleteConfig () {
+    @task *deleteConfig() {
         try {
             yield this.config.destroyRecord();
             if (typeof this.args.onConfigDeleted === 'function') {

@@ -200,7 +200,7 @@ export default class ManagementDriversIndexController extends BaseController {
             label: this.intl.t('fleet-ops.common.vendor'),
             cellComponent: 'table/cell/anchor',
             permission: 'fleet-ops view vendor',
-            onClick: async driver => {
+            onClick: async (driver) => {
                 const vendor = await driver.loadVendor();
 
                 if (vendor) {
@@ -221,13 +221,13 @@ export default class ManagementDriversIndexController extends BaseController {
             label: this.intl.t('fleet-ops.common.vehicle'),
             cellComponent: 'table/cell/anchor',
             permission: 'fleet-ops view vehicle',
-            onClick: driver => {
+            onClick: (driver) => {
                 return driver
                     .loadVehicle()
-                    .then(vehicle => {
+                    .then((vehicle) => {
                         return this.contextPanel.focus(vehicle);
                     })
-                    .catch(error => {
+                    .catch((error) => {
                         this.notifications.serverError(error);
                     });
             },
@@ -245,7 +245,7 @@ export default class ManagementDriversIndexController extends BaseController {
             label: this.intl.t('fleet-ops.common.fleet'),
             cellComponent: 'table/cell/link-list',
             cellComponentLabelPath: 'name',
-            action: fleet => {
+            action: (fleet) => {
                 this.contextPanel.focus(fleet);
             },
             valuePath: 'fleets',
@@ -391,7 +391,7 @@ export default class ManagementDriversIndexController extends BaseController {
      *
      * @void
      */
-    @task({ restartable: true }) *search ({ target: { value } }) {
+    @task({ restartable: true }) *search({ target: { value } }) {
         // if no query don't search
         if (isBlank(value)) {
             this.query = null;
@@ -416,14 +416,14 @@ export default class ManagementDriversIndexController extends BaseController {
      * @param {String} layout
      * @memberof ManagementDriversIndexController
      */
-    @action changeLayout (layout) {
+    @action changeLayout(layout) {
         this.layout = layout;
     }
 
     /**
      * Reload layout view.
      */
-    @action reload () {
+    @action reload() {
         return this.hostRouter.refresh();
     }
 
@@ -433,7 +433,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @param {Array} selected an array of selected models
      * @void
      */
-    @action bulkDeleteDrivers () {
+    @action bulkDeleteDrivers() {
         const selected = this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {
@@ -453,8 +453,8 @@ export default class ManagementDriversIndexController extends BaseController {
      *
      * @void
      */
-    @action exportDrivers () {
-        const selections = this.table.selectedRows.map(_ => _.id);
+    @action exportDrivers() {
+        const selections = this.table.selectedRows.map((_) => _.id);
         this.crud.export('driver', { params: { selections } });
     }
 
@@ -463,7 +463,7 @@ export default class ManagementDriversIndexController extends BaseController {
      *
      * @void
      */
-    @action importDrivers () {
+    @action importDrivers() {
         this.crud.import('driver', {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
@@ -478,7 +478,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action viewDriver (driver) {
+    @action viewDriver(driver) {
         return this.transitionToRoute('management.drivers.index.details', driver);
     }
 
@@ -488,7 +488,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action createDriver () {
+    @action createDriver() {
         return this.transitionToRoute('management.drivers.index.new');
     }
 
@@ -499,7 +499,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action editDriver (driver) {
+    @action editDriver(driver) {
         return this.transitionToRoute('management.drivers.index.edit', driver);
     }
 
@@ -510,7 +510,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action deleteDriver (driver, options = {}) {
+    @action deleteDriver(driver, options = {}) {
         this.driverActions.delete(driver, {
             onSuccess: () => {
                 return this.hostRouter.refresh();
@@ -526,7 +526,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action assignOrder (driver, options = {}) {
+    @action assignOrder(driver, options = {}) {
         this.driverActions.assignOrder(driver, options);
     }
 
@@ -537,7 +537,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @param {Object} options
      * @void
      */
-    @action assignVehicle (driver, options = {}) {
+    @action assignVehicle(driver, options = {}) {
         this.driverActions.assignVehicle(driver, options);
     }
 
@@ -547,7 +547,7 @@ export default class ManagementDriversIndexController extends BaseController {
      * @param {DriverModel} driver
      * @void
      */
-    @action locateDriver (driver, options = {}) {
+    @action locateDriver(driver, options = {}) {
         this.driverActions.locate(driver, options);
     }
 }

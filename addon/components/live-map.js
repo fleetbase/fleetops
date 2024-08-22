@@ -415,7 +415,7 @@ export default class LiveMapComponent extends Component {
         if (this.abilities.cannot(`fleet-ops list ${path}`)) {
             return [];
         }
-        
+
         const internalName = camelize(path);
         const callbackFnName = `on${internalName}Loaded`;
         const params = getWithDefault(options, 'params', {});

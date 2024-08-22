@@ -36,7 +36,7 @@ export default class OrderConfigManagerComponent extends Component {
      *
      * @type {Array}
      */
-    get tabs () {
+    get tabs() {
         const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:order-config-manager');
         const defaultTabs = [
             this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: OrderConfigManagerDetailsComponent }),
@@ -55,7 +55,7 @@ export default class OrderConfigManagerComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor (owner, { tab, context, contextModel }) {
+    constructor(owner, { tab, context, contextModel }) {
         super(...arguments);
         applyContextComponentArguments(this);
 
@@ -76,14 +76,14 @@ export default class OrderConfigManagerComponent extends Component {
      * @task
      * @generator
      */
-    @task *loadOrderConfigs (options = {}) {
+    @task *loadOrderConfigs(options = {}) {
         this.configs = yield this.store.findAll('order-config').then(Array.from);
 
         let currentConfig;
         let initialOrderConfig = this.args.orderConfig;
         if (isArray(this.configs) && this.configs.length > 0) {
             if (initialOrderConfig) {
-                currentConfig = this.configs.find(config => {
+                currentConfig = this.configs.find((config) => {
                     if (isModel(initialOrderConfig)) {
                         return config.id === initialOrderConfig.id;
                     }
@@ -113,7 +113,7 @@ export default class OrderConfigManagerComponent extends Component {
      *
      * @memberof OrderConfigManagerComponent
      */
-    @action onContextChanged (context) {
+    @action onContextChanged(context) {
         const isValidContext = context && isModel(context);
         if (context === null || !isValidContext) {
             this.context = undefined;
@@ -136,7 +136,7 @@ export default class OrderConfigManagerComponent extends Component {
      * for the confirm action. The confirm action includes validation and saving of the
      * new order configuration, along with success and warning notifications.
      */
-    @action createNewOrderConfig () {
+    @action createNewOrderConfig() {
         const orderConfig = this.store.createRecord('order-config', {
             tags: [],
         });
@@ -148,13 +148,13 @@ export default class OrderConfigManagerComponent extends Component {
             declineButtonIcon: 'times',
             declineButtonIconPrefix: 'fas',
             orderConfig,
-            addTag: tag => {
+            addTag: (tag) => {
                 orderConfig.addTag(tag);
             },
-            removeTag: index => {
+            removeTag: (index) => {
                 orderConfig.removeTag(index);
             },
-            confirm: modal => {
+            confirm: (modal) => {
                 if (!orderConfig.name) {
                     return this.notifications.warning(this.intl.t('fleet-ops.component.order-config-manager.create-warning-message'));
                 }
@@ -163,7 +163,7 @@ export default class OrderConfigManagerComponent extends Component {
                 orderConfig.set('key', dasherize(orderConfig.name));
                 orderConfig
                     .save()
-                    .then(newOrderConfig => {
+                    .then((newOrderConfig) => {
                         this.notifications.success(this.intl.t('fleet-ops.component.order-config-manager.create-success-message'));
                         this.loadOrderConfigs.perform({
                             onAfter: () => {
@@ -172,12 +172,12 @@ export default class OrderConfigManagerComponent extends Component {
                         });
                         modal.done();
                     })
-                    .catch(error => {
+                    .catch((error) => {
                         modal.stopLoading();
                         this.notifications.serverError(error);
                     });
             },
-            decline: modal => {
+            decline: (modal) => {
                 orderConfig.destroyRecord();
                 modal.done();
             },
@@ -192,7 +192,7 @@ export default class OrderConfigManagerComponent extends Component {
      *
      * @param {Object} config - The order configuration object to be selected.
      */
-    @action selectConfig (config) {
+    @action selectConfig(config) {
         this.currentConfig = config;
         this.configManagerContext.set('currentConfig', config);
         this.configManagerContext.trigger('onConfigChanged', config);
@@ -206,7 +206,7 @@ export default class OrderConfigManagerComponent extends Component {
      * It deselects the current configuration and performs additional operations defined
      * in 'contextComponentCallback'.
      */
-    @action onConfigDeleting () {
+    @action onConfigDeleting() {
         this.selectConfig(null);
         this.configManagerContext.trigger('onConfigDeleting');
         contextComponentCallback(this, 'onConfigDeleting', ...arguments);
@@ -218,7 +218,7 @@ export default class OrderConfigManagerComponent extends Component {
      * Once a configuration is deleted, this action reloads the order configurations and
      * executes additional operations defined in 'contextComponentCallback'.
      */
-    @action onConfigDeleted () {
+    @action onConfigDeleted() {
         this.loadOrderConfigs.perform();
         this.configManagerContext.trigger('onConfigDeleted');
         contextComponentCallback(this, 'onConfigDeleted', ...arguments);
@@ -230,7 +230,7 @@ export default class OrderConfigManagerComponent extends Component {
      * This action is triggered when an order configuration update occurs.
      * It primarily executes additional operations defined in 'contextComponentCallback'.
      */
-    @action onConfigUpdated () {
+    @action onConfigUpdated() {
         this.configManagerContext.trigger('onConfigUpdated');
         contextComponentCallback(this, 'onConfigUpdated', ...arguments);
     }
@@ -241,7 +241,7 @@ export default class OrderConfigManagerComponent extends Component {
      * @action
      * @param {OverlayContextObject} overlayContext
      */
-    @action setOverlayContext (overlayContext) {
+    @action setOverlayContext(overlayContext) {
         this.context = overlayContext;
         this.configManagerContext.trigger('onLoad');
         contextComponentCallback(this, 'onLoad', ...arguments);
@@ -254,7 +254,7 @@ export default class OrderConfigManagerComponent extends Component {
      * @param {String} tab - The new tab to switch to.
      * @action
      */
-    @action onTabChanged (tab) {
+    @action onTabChanged(tab) {
         this.tab = this.getTabUsingSlug(tab);
         this.configManagerContext.trigger('onTabChanged');
         contextComponentCallback(this, 'onTabChanged', tab);
@@ -266,7 +266,7 @@ export default class OrderConfigManagerComponent extends Component {
      * @method
      * @action
      */
-    @action onEdit () {
+    @action onEdit() {
         const isActionOverrided = contextComponentCallback(this, 'onEdit');
 
         if (!isActionOverrided) {
@@ -281,7 +281,7 @@ export default class OrderConfigManagerComponent extends Component {
      * @action
      * @returns {Boolean} Indicates whether the cancel action was overridden.
      */
-    @action onPressCancel () {
+    @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel');
     }
 
@@ -291,7 +291,7 @@ export default class OrderConfigManagerComponent extends Component {
      * @param {String} tabSlug - The slug of the tab.
      * @returns {Object|null} The found tab or null.
      */
-    getTabUsingSlug (tabSlug) {
+    getTabUsingSlug(tabSlug) {
         if (tabSlug) {
             return this.tabs.find(({ slug }) => slug === tabSlug);
         }

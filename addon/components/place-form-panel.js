@@ -45,7 +45,7 @@ export default class PlaceFormPanelComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor (owner, { place = null }) {
+    constructor(owner, { place = null }) {
         super(...arguments);
         this.place = place;
         this.savePermission = place && place.isNew ? 'fleet-ops create place' : 'fleet-ops update place';
@@ -58,7 +58,7 @@ export default class PlaceFormPanelComponent extends Component {
      * @action
      * @param {OverlayContextObject} overlayContext
      */
-    @action setOverlayContext (overlayContext) {
+    @action setOverlayContext(overlayContext) {
         this.context = overlayContext;
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
@@ -69,7 +69,7 @@ export default class PlaceFormPanelComponent extends Component {
      * @return {void}
      * @memberof PlaceFormPanelComponent
      */
-    @task *save () {
+    @task *save() {
         contextComponentCallback(this, 'onBeforeSave', this.place);
 
         try {
@@ -88,7 +88,7 @@ export default class PlaceFormPanelComponent extends Component {
      *
      * @action
      */
-    @action onViewDetails () {
+    @action onViewDetails() {
         const isActionOverrided = contextComponentCallback(this, 'onViewDetails', this.place);
 
         if (!isActionOverrided) {
@@ -102,7 +102,7 @@ export default class PlaceFormPanelComponent extends Component {
      * @action
      * @returns {any}
      */
-    @action onPressCancel () {
+    @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.place);
     }
 
@@ -115,7 +115,7 @@ export default class PlaceFormPanelComponent extends Component {
      * @param {Object} selected.location - The location data of the selected item.
      * @memberof PlaceFormPanelComponent
      */
-    @action onAutocomplete (selected) {
+    @action onAutocomplete(selected) {
         this.place.setProperties({ ...selected });
 
         if (this.coordinatesInputComponent) {
@@ -133,8 +133,8 @@ export default class PlaceFormPanelComponent extends Component {
      * @returns {Promise} A promise that resolves with the reverse geocoding result.
      * @memberof PlaceFormPanelComponent
      */
-    @action onReverseGeocode ({ latitude, longitude }) {
-        return this.fetch.get('geocoder/reverse', { coordinates: [latitude, longitude].join(','), single: true }).then(result => {
+    @action onReverseGeocode({ latitude, longitude }) {
+        return this.fetch.get('geocoder/reverse', { coordinates: [latitude, longitude].join(','), single: true }).then((result) => {
             if (isBlank(result)) {
                 return;
             }
@@ -150,7 +150,7 @@ export default class PlaceFormPanelComponent extends Component {
      * @param {Object} coordinatesInputComponent - The coordinates input component to be set.
      * @memberof PlaceFormPanelComponent
      */
-    @action setCoordinatesInput (coordinatesInputComponent) {
+    @action setCoordinatesInput(coordinatesInputComponent) {
         this.coordinatesInputComponent = coordinatesInputComponent;
     }
 
@@ -163,7 +163,7 @@ export default class PlaceFormPanelComponent extends Component {
      * @param {number} coordinates.longitude - Longitude value.
      * @memberof PlaceFormPanelComponent
      */
-    @action updatePlaceCoordinates ({ latitude, longitude }) {
+    @action updatePlaceCoordinates({ latitude, longitude }) {
         const location = new Point(longitude, latitude);
 
         this.place.setProperties({ location });
