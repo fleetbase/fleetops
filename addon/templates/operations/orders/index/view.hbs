@@ -423,7 +423,7 @@
             @actionButtons={{this.notesPanelButtons}}
         >
             {{#if this.isEditingOrderNotes}}
-                <Textarea @value={{@model.notes}} class="form-input w-full" placeholder={{t "fleet-ops.operations.orders.index.view.notes-placeholder"}} rows={{4}} />
+                <Textarea @value={{@model.notes}} class="form-input w-full" placeholder={{t "fleet-ops.operations.orders.index.view.notes-placeholder"}} rows={{4}} disabled={{cannot "fleet-ops update order"}} />
                 <div class="flex items-center space-x-2">
                     <Button
                         @type="primary"
@@ -431,8 +431,9 @@
                         @text={{t "fleet-ops.operations.orders.index.view.save-order-note"}}
                         @onClick={{perform this.saveOrderNotes}}
                         @isLoading={{not this.saveOrderNotes.isIdle}}
+                        @permission="fleet-ops update order"
                     />
-                    <Button @type="default" @icon="times" @text={{t "fleet-ops.common.cancel"}} @onClick={{this.saveOrderNotes}} />
+                    <Button @type="default" @icon="times" @text={{t "fleet-ops.common.cancel"}} @onClick={{this.cancelEditOrderNotes}} />
                 </div>
             {{else}}
                 <p class="text-gray-700 dark:text-gray-300 leading-5 text-sm">{{n-a @model.notes}}</p>

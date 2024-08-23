@@ -74,7 +74,11 @@ export default class EntityFieldEditingSettingsComponent extends Component {
 
     @task *saveEntityEditingSettings() {
         const { entityEditingSettings } = this;
-        yield this.fetch.post('fleet-ops/settings/entity-editing-settings', { entityEditingSettings });
+        try {
+            yield this.fetch.post('fleet-ops/settings/entity-editing-settings', { entityEditingSettings });
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     orderConfigDoesntHaveSettings(orderConfig) {

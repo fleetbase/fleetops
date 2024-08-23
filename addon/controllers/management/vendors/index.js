@@ -449,9 +449,13 @@ export default class ManagementVendorsIndexController extends BaseController {
         const place = this.store.createRecord('place');
 
         this.contextPanel.focus(place, 'editing', {
-            onAfterSave: (place) => {
+            onAfterSave: async (place) => {
                 vendor.set('place_uuid', place.id);
-                vendor.save();
+                try {
+                    await vendor.save();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                }
             },
         });
     }

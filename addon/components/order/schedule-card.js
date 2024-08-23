@@ -99,20 +99,22 @@ export default class OrderScheduleCardComponent extends Component {
                 title: this.intl.t('fleet-ops.component.order.schedule-card.unassign-driver'),
                 body: this.intl.t('fleet-ops.component.order.schedule-card.unassign-text', { orderId: order.public_id }),
                 acceptButtonText: this.intl.t('fleet-ops.component.order.schedule-card.unassign-button'),
-                confirm: () => {
+                confirm: async (modal) => {
                     order.setProperties({
                         driver_assigned: null,
                         driver_assigned_uuid: null,
                     });
 
-                    return order
-                        .save()
-                        .catch((error) => {
-                            this.notifications.serverError(error);
-                        })
-                        .finally(() => {
-                            this.isAssigningDriver = false;
-                        });
+                    modal.startLoading();
+
+                    try {
+                        await order.save();
+                        this.isAssigningDriver = false;
+                        modal.done();
+                    } catch (error) {
+                        this.notifications.serverError(error);
+                        modal.stopLoading();
+                    }
                 },
                 decline: (modal) => {
                     this.isAssigningDriver = false;

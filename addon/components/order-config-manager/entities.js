@@ -18,17 +18,9 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
  * @extends Component
  */
 export default class OrderConfigManagerEntitiesComponent extends Component {
-    /**
-     * Context panel service for managing UI contexts.
-     * @service
-     */
     @service contextPanel;
-
-    /**
-     * Modals manager service for handling modal dialogs.
-     * @service
-     */
     @service modalsManager;
+    @service notifications;
 
     /**
      * Internationalization service for handling translations.
@@ -135,10 +127,14 @@ export default class OrderConfigManagerEntitiesComponent extends Component {
      */
     @task *save() {
         this.config.set('entities', this.serializeEntities());
-        yield this.config.save().then((config) => {
+
+        try {
+            const config = yield this.config.save();
             this.config = config;
             this.customEntities = this.getEntitiesFromConfig(config);
-        });
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**
