@@ -63,6 +63,7 @@ export default class DriverFormPanelComponent extends Component {
                 this.modalsManager.show('modals/user-form', {
                     title: 'Create a new user',
                     user,
+                    formPermission: 'iam create user',
                     uploadNewPhoto: (file) => {
                         this.fetch.uploadFile.perform(
                             file,
@@ -135,6 +136,7 @@ export default class DriverFormPanelComponent extends Component {
             return;
         }
 
+        this.hostRouter.refresh();
         this.notifications.success(this.intl.t('fleet-ops.component.driver-form-panel.success-message', { driverName: this.driver.name }));
         this.universe.trigger('fleet-ops.driver.saved', this.driver);
         contextComponentCallback(this, 'onAfterSave', this.driver);

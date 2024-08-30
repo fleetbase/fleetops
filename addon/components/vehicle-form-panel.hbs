@@ -166,7 +166,7 @@
                                 @infiniteScroll={{false}}
                                 @renderInPlace={{true}}
                                 @onChange={{fn (mut this.vehicle.driver)}}
-                                @disabled={{unauthorized}}
+                                @permission="fleet-ops assign-driver-for vehicle"
                                 as |model|
                             >
                                 {{model.name}}

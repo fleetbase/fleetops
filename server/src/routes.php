@@ -275,7 +275,15 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 );
 
                 $router->group(
-                    ['prefix' => 'v1', 'namespace' => 'v1', 'middleware' => ['fleetbase.protected', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class]],
+                    [
+                        'prefix'     => 'v1',
+                        'namespace'  => 'v1',
+                        'middleware' => [
+                            'fleetbase.protected',
+                            Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class,
+                            Fleetbase\FleetOps\Http\Middleware\SetupDriverSession::class,
+                        ],
+                    ],
                     function ($router) {
                         $router->fleetbaseRoutes(
                             'contacts',

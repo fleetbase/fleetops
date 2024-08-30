@@ -213,4 +213,9 @@ class Geocoding
 
         return $reverseQueryResults->merge($geodingQueryResults)->unique('street1');
     }
+
+    public static function canGoogleGeocode(): bool
+    {
+        return Utils::notEmpty(config('services.google_maps.api_key'));
+    }
 }

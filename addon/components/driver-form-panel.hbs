@@ -117,7 +117,7 @@
                             @infiniteScroll={{false}}
                             @renderInPlace={{true}}
                             @onChange={{fn (mut this.driver.user)}}
-                            @permission={{this.savePermission}}
+                            @permission="fleet-ops update-user-for driver"
                             as |model|
                         >
                             <div class="flex flex-row">
@@ -184,7 +184,7 @@
                             @infiniteScroll={{false}}
                             @renderInPlace={{true}}
                             @onChange={{fn (mut this.driver.vehicle)}}
-                            @permission={{this.savePermission}}
+                            @permission="fleet-ops assign-vehicle-for driver"
                             as |model|
                         >
                             {{model.display_name}}

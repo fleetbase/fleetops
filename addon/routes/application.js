@@ -7,6 +7,9 @@ export default class ApplicationRoute extends Route {
     @service loader;
     @service intl;
     @service location;
+    @service abilities;
+    @service hostRouter;
+    @service notifications;
 
     @action loading(transition) {
         const resourceName = getResourceNameFromTransition(transition, { humanize: true });
@@ -16,6 +19,11 @@ export default class ApplicationRoute extends Route {
     }
 
     beforeModel() {
+        if (this.abilities.cannot('fleet-ops see extension')) {
+            this.notifications.warning(this.intl.t('common.unauthorized-access'));
+            return this.hostRouter.transitionTo('console');
+        }
+
         this.location.getUserLocation();
     }
 }
