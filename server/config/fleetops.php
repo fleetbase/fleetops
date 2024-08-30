@@ -28,7 +28,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'osrm' => [
-        'host' => env('OSRM_HOST', 'https://bundle.routing.fleetbase.io')
+        'host' => env('OSRM_HOST', 'https://router.project-osrm.org')
     ],
 
      /*

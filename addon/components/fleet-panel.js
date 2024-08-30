@@ -10,46 +10,11 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
 export default class FleetPanelComponent extends Component {
-    /**
-     * Service for fetching data.
-     *
-     * @type {Service}
-     */
     @service fetch;
-
-    /**
-     * Service for managing modals.
-     *
-     * @type {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Universe service for managing global data and settings.
-     *
-     * @type {Service}
-     */
     @service universe;
-
-    /**
-     * Ember data store service.
-     *
-     * @type {Service}
-     */
     @service store;
-
-    /**
-     * Service for managing routing within the host app.
-     *
-     * @type {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Service for managing the context panel.
-     *
-     * @type {Service}
-     */
     @service contextPanel;
 
     /**

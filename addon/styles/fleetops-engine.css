@@ -457,3 +457,21 @@ body[data-theme='light'] .activity-logic-builder .activity-logic-builder-conditi
 .x-fleetops-input-height {
     height: 38px;
 }
+
+body[data-theme='dark'] .next-map-container-toolbar-panel.next-map-container-toolbar-actions .toolbar-button:disabled,
+body[data-theme='dark'] .next-map-container-toolbar-panel.next-map-container-toolbar-actions .toolbar-button:disabled:hover,
+body[data-theme='dark']
+    .next-map-container.next-map-container-layout-map
+    .next-map-container-toolbar-container
+    .toolbar-button.is-action:disabled:hover
+    .next-map-container-toolbar-panel.next-map-container-toolbar-actions
+    .toolbar-button:disabled,
+.next-map-container-toolbar-panel.next-map-container-toolbar-actions .toolbar-button:disabled:hover,
+.next-map-container.next-map-container-layout-map .next-map-container-toolbar-container .toolbar-button.is-action:disabled:hover {
+    opacity: 0.5;
+    background-color: transparent;
+}
+
+.next-map-container-toolbar-panel.next-map-container-toolbar-actions .toolbar-button.unauthorized:disabled {
+    cursor: not-allowed;
+}

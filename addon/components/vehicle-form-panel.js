@@ -8,39 +8,12 @@ import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-co
 import Point from '@fleetbase/fleetops-data/utils/geojson/point';
 
 export default class VehicleFormPanelComponent extends Component {
-    /**
-     * @service store
-     */
     @service store;
-
-    /**
-     * @service fetch
-     */
     @service fetch;
-
-    /**
-     * @service intl
-     */
     @service intl;
-
-    /**
-     * @service currentUser
-     */
     @service currentUser;
-
-    /**
-     * @service notifications
-     */
     @service notifications;
-
-    /**
-     * @service hostRouter
-     */
     @service hostRouter;
-
-    /**
-     * @service contextPanel
-     */
     @service contextPanel;
 
     /**
@@ -56,11 +29,19 @@ export default class VehicleFormPanelComponent extends Component {
     @tracked vehicleStatusOptions = ['active', 'pending'];
 
     /**
+     * Permission needed to update or create record.
+     *
+     * @memberof DriverFormPanelComponent
+     */
+    @tracked savePermission;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor() {
+    constructor(owner, { vehicle = null }) {
         super(...arguments);
-        this.vehicle = this.args.vehicle;
+        this.vehicle = vehicle;
+        this.savePermission = vehicle && vehicle.isNew ? 'fleet-ops create vehicle' : 'fleet-ops update vehicle';
         applyContextComponentArguments(this);
     }
 

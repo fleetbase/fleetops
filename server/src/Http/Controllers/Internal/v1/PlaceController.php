@@ -54,7 +54,7 @@ class PlaceController extends FleetOpsController
 
         $results = $query->get();
 
-        if ($geo) {
+        if ($geo && Geocoding::canGoogleGeocode()) {
             if ($searchQuery) {
                 try {
                     $geocodingResults = Geocoding::query($searchQuery, $latitude, $longitude);
@@ -93,7 +93,7 @@ class PlaceController extends FleetOpsController
         $longitude   = $request->input('longitude', false);
         $results     = collect();
 
-        if ($searchQuery) {
+        if ($searchQuery && Geocoding::canGoogleGeocode()) {
             try {
                 $geocodingResults = Geocoding::query($searchQuery, $latitude, $longitude);
 

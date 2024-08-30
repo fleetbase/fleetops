@@ -32,6 +32,7 @@ class LiveController extends Controller
         // Fetch active orders for the current company
         $orders = Order::where('company_uuid', session('company'))
             ->whereNotIn('status', ['canceled', 'completed'])
+            ->applyDirectivesForPermissions('fleet-ops list order')
             ->get();
 
         // Loop through each order to get its current destination location
@@ -59,6 +60,7 @@ class LiveController extends Controller
                     $q->whereNull('deleted_at');
                 }
             )
+            ->applyDirectivesForPermissions('fleet-ops list route')
             ->get();
 
         return response()->json($routes);
@@ -76,6 +78,7 @@ class LiveController extends Controller
             ->whereNotIn('status', ['canceled', 'completed'])
             ->whereNotNull('driver_assigned_uuid')
             ->whereNull('deleted_at')
+            ->applyDirectivesForPermissions('fleet-ops list order')
             ->get();
 
         return OrderResource::collection($orders);
@@ -88,7 +91,9 @@ class LiveController extends Controller
      */
     public function drivers()
     {
-        $drivers = Driver::where(['company_uuid' => session('company')])->get();
+        $drivers = Driver::where(['company_uuid' => session('company')])
+            ->applyDirectivesForPermissions('fleet-ops list driver')
+            ->get();
 
         return DriverResource::collection($drivers);
     }
@@ -101,7 +106,10 @@ class LiveController extends Controller
     public function vehicles()
     {
         // Fetch vehicles that are online
-        $vehicles = Vehicle::where(['company_uuid' => session('company')])->with(['devices'])->get();
+        $vehicles = Vehicle::where(['company_uuid' => session('company')])
+            ->with(['devices'])
+            ->applyDirectivesForPermissions('fleet-ops list vehicle')
+            ->get();
 
         return VehicleResource::collection($vehicles);
     }
@@ -116,6 +124,7 @@ class LiveController extends Controller
         // Query places based on filters
         $places = Place::where(['company_uuid' => session('company')])
             ->filter(new PlaceFilter($request))
+            ->applyDirectivesForPermissions('fleet-ops list place')
             ->get();
 
         return PlaceResource::collection($places);

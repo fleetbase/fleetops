@@ -8,29 +8,10 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
 export default class FleetFormPanelComponent extends Component {
-    /**
-     * @service store
-     */
     @service store;
-
-    /**
-     * @service notifications
-     */
     @service notifications;
-
-    /**
-     * @service hostRouter
-     */
     @service hostRouter;
-
-    /**
-     * @service intl
-     */
     @service intl;
-
-    /**
-     * @service contextPanel
-     */
     @service contextPanel;
 
     /**
@@ -49,11 +30,19 @@ export default class FleetFormPanelComponent extends Component {
     @tracked statusOptions = ['active', 'disabled', 'decommissioned'];
 
     /**
+     * Permission needed to update or create record.
+     *
+     * @memberof DriverFormPanelComponent
+     */
+    @tracked savePermission;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor() {
+    constructor(owner, { fleet = null }) {
         super(...arguments);
-        this.fleet = this.args.fleet;
+        this.fleet = fleet;
+        this.savePermission = fleet && fleet.isNew ? 'fleet-ops create fleet' : 'fleet-ops update fleet';
         applyContextComponentArguments(this);
     }
 

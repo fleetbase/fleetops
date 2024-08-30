@@ -16,35 +16,12 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
  * @extends Component
  */
 export default class OrderConfigManagerCustomFieldsComponent extends Component {
-    /**
-     * Store service for handling data operations.
-     * @service
-     */
     @service store;
-
-    /**
-     * Notifications service for displaying user feedback.
-     * @service
-     */
     @service notifications;
-
-    /**
-     * Modals manager service for handling modal dialogs.
-     * @service
-     */
     @service modalsManager;
-
-    /**
-     * Context panel service for managing UI contexts.
-     * @service
-     */
     @service contextPanel;
-
-    /**
-     * Internationalization service for handling translations.
-     * @service
-     */
     @service intl;
+    @service abilities;
 
     /**
      * Tracked array of field groups.
@@ -146,8 +123,16 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
             title: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-prompt.modal-title'),
             body: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-prompt.delete-body-message'),
             acceptButtonText: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-prompt.confirm-delete'),
-            confirm: () => {
-                return customField.destroyRecord();
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await customField.destroyRecord();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
             },
         });
     }
@@ -170,20 +155,21 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
             declineButtonIcon: 'times',
             declineButtonIconPrefix: 'fas',
             customFieldGroup,
-            confirm: (modal) => {
+            confirm: async (modal) => {
                 if (!customFieldGroup.name) {
                     return;
                 }
 
                 modal.startLoading();
-                return customFieldGroup
-                    .save()
-                    .then(() => {
-                        this.loadCustomFields.perform();
-                    })
-                    .catch((error) => {
-                        this.notifications.serverError(error);
-                    });
+
+                try {
+                    await customFieldGroup.save();
+                    this.loadCustomFields.perform();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
             },
         });
     }
@@ -198,8 +184,16 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
             title: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-group-prompt.modal-title'),
             body: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-group-prompt.delete-body-message'),
             acceptButtonText: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-group-prompt.confirm-delete'),
-            confirm: () => {
-                return group.destroyRecord();
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await group.destroyRecord();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
             },
         });
     }

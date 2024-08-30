@@ -106,6 +106,11 @@ class DriverController extends FleetOpsController
                         $input['location'] = new Point(0, 0);
                     }
 
+                    // If user is a regular user set type and role
+                    if ($existingUser->isNotAdmin()) {
+                        $existingUser->assignSingleRole('Driver');
+                    }
+
                     // create the profile
                     $driverProfile = Driver::create($input);
 
@@ -159,6 +164,9 @@ class DriverController extends FleetOpsController
                             ->filter()
                             ->toArray();
 
+                        // Set user type to driver
+                        $userInput['type'] = 'driver';
+
                         // handle `photo_uuid`
                         if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
                             $userInput['avatar_uuid'] = $input['photo_uuid'];
@@ -193,8 +201,10 @@ class DriverController extends FleetOpsController
                         throw new \Exception('Unable to assign driver to company.');
                     }
 
-                    // Set user type as driver
-                    $user->setUserType('driver');
+                    // Set user type as driver and set role to driver
+                    if ($user->isNotAdmin()) {
+                        $user->assignSingleRole('Driver');
+                    }
 
                     // send invitation to user
                     $invitation = Invite::create([

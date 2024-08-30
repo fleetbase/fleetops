@@ -5,39 +5,10 @@ import { action, computed } from '@ember/object';
 import { isBlank } from '@ember/utils';
 
 export default class OperationsServiceRatesIndexNewController extends BaseController {
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
     @service intl;
-
-    /**
-     * Inject the `loader` service
-     *
-     * @var {Service}
-     */
     @service loader;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
 
     /**
@@ -165,6 +136,16 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
      * @var {Array}
      */
     @tracked _rateFees = [];
+
+    /**
+     * The current ability permission based on record id.
+     *
+     * @readonly
+     * @memberof OperationsServiceRatesIndexNewController
+     */
+    @computed('serviceRate.id') get abilityPermission() {
+        return this.serviceRate.id ? 'fleet-ops update service-rate' : 'fleet-ops create service-rate';
+    }
 
     /**
      * The rate feess for per km
@@ -312,7 +293,7 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
      *
      * @void
      */
-    @action createServiceRate() {
+    @action async createServiceRate() {
         const { serviceRate, rateFees, parcelFees } = this;
 
         serviceRate.setServiceRateFees(rateFees).setServiceRateParcelFees(parcelFees);
@@ -324,22 +305,18 @@ export default class OperationsServiceRatesIndexNewController extends BaseContro
         this.isCreatingServiceRate = true;
         this.loader.showLoader('.overlay-inner-content', { loadingMessage: 'Creating service rate...' });
 
-        return serviceRate
-            .save()
-            .then((serviceRate) => {
-                return this.transitionToRoute('operations.service-rates.index').then(() => {
-                    this.notifications.success(this.intl.t('fleet-ops.operations.service-rates.index.new.success-message', { serviceName: serviceRate.service_name }));
-                    this.resetForm();
-                    return this.hostRouter.refresh();
-                });
-            })
-            .catch((error) => {
-                this.notifications.serverError(error);
-            })
-            .finally(() => {
-                this.isCreatingServiceRate = false;
-                this.loader.removeLoader();
+        try {
+            await serviceRate.save();
+            this.isCreatingServiceRate = false;
+            this.loader.removeLoader();
+            return this.transitionToRoute('operations.service-rates.index').then(() => {
+                this.notifications.success(this.intl.t('fleet-ops.operations.service-rates.index.new.success-message', { serviceName: serviceRate.service_name }));
+                this.resetForm();
+                return this.hostRouter.refresh();
             });
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**

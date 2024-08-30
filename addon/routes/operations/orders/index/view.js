@@ -7,6 +7,9 @@ export default class OperationsOrdersIndexViewRoute extends Route {
     @service notifications;
     @service store;
     @service socket;
+    @service hostRouter;
+    @service abilities;
+    @service intl;
 
     @action willTransition(transition) {
         const shouldReset = typeof transition.to.name === 'string' && !transition.to.name.includes('operations.orders');
@@ -23,6 +26,13 @@ export default class OperationsOrdersIndexViewRoute extends Route {
     @action error(error) {
         this.notifications.serverError(error);
         return this.transitionTo('operations.orders.index');
+    }
+
+    beforeModel() {
+        if (this.abilities.cannot('fleet-ops view order')) {
+            this.notifications.warning(this.intl.t('common.unauthorized-access'));
+            return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index');
+        }
     }
 
     model({ public_id }) {

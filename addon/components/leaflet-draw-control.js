@@ -56,7 +56,7 @@ export default class LeafletDrawControl extends BaseLayer {
     createLayer() {
         const { onDrawFeatureGroupCreated } = this.args;
         const drawingLayerGroup = new this.L.FeatureGroup();
-        const showDrawingLayer = getWithDefault(this.args, 'showDrawingLayer', true);
+        const showDrawingLayer = getWithDefault(this.args, 'showDrawingLayer', false);
 
         if (showDrawingLayer) {
             if (typeof onDrawFeatureGroupCreated === 'function') {
@@ -71,7 +71,7 @@ export default class LeafletDrawControl extends BaseLayer {
 
     didCreateLayer() {
         const { onDrawControlCreated, onDrawControlAddedToMap } = this.args;
-        const showDrawingLayer = getWithDefault(this.args, 'showDrawingLayer', true);
+        const showDrawingLayer = getWithDefault(this.args, 'showDrawingLayer', false);
 
         if (this.map && this._layer && this.L.drawLocal) {
             this.options.edit = Object.assign({ featureGroup: this._layer }, this.options.edit);
@@ -86,7 +86,9 @@ export default class LeafletDrawControl extends BaseLayer {
             }
 
             // Add the draw control to the map
-            this.map.addControl(drawControl);
+            if (showDrawingLayer) {
+                this.map.addControl(drawControl);
+            }
 
             // trigger action/event draw control added to map
             if (typeof onDrawControlAddedToMap === 'function') {

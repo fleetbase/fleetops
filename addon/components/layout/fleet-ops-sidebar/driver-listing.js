@@ -11,17 +11,23 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
     @service contextPanel;
     @service driverActions;
     @service hostRouter;
+    @service abilities;
+    @service notifications;
     @tracked drivers = [];
 
     constructor() {
         super(...arguments);
         this.fetchDrivers.perform();
+        this.universe.on('fleet-ops.driver.saved', () => {
+            this.fetchDrivers.perform();
+        });
     }
 
     displayPanelDropdown = true;
     panelDropdownButtonActions = [
         {
             label: 'Create new driver...',
+            disabled: this.abilities.cannot('fleet-ops create driver'),
             onClick: () => {
                 const driver = this.store.createRecord('driver');
                 this.contextPanel.focus(driver, 'editing');
@@ -32,12 +38,14 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
     dropdownButtonActions = [
         {
             label: 'View driver details...',
+            disabled: this.abilities.cannot('fleet-ops view driver'),
             onClick: (driver) => {
                 this.contextPanel.focus(driver);
             },
         },
         {
             label: 'Edit driver details...',
+            disabled: this.abilities.cannot('fleet-ops update driver'),
             onClick: (driver) => {
                 this.contextPanel.focus(driver, 'editing');
             },
@@ -47,18 +55,21 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
         },
         {
             label: 'Assign order to driver...',
+            disabled: this.abilities.cannot('fleet-ops assign-order-for driver'),
             onClick: (driver) => {
                 this.driverActions.assignOrder(driver);
             },
         },
         {
             label: 'Assign vehicle to driver...',
+            disabled: this.abilities.cannot('fleet-ops assign-vehicle-for driver'),
             onClick: (driver) => {
                 this.driverActions.assignVehicle(driver);
             },
         },
         {
             label: 'Locate driver on map...',
+            disabled: this.abilities.cannot('fleet-ops view driver'),
             onClick: (driver) => {
                 // If currently on the operations dashboard focus driver on the map
                 if (typeof this.hostRouter.currentRouteName === 'string' && this.hostRouter.currentRouteName.startsWith('console.fleet-ops.operations.orders')) {
@@ -73,11 +84,33 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
         },
         {
             label: 'Delete driver...',
+            disabled: this.abilities.cannot('fleet-ops delete driver'),
             onClick: (driver) => {
                 this.driverActions.delete(driver);
             },
         },
     ];
+
+    @action calculateDropdownPosition(trigger, content) {
+        let { top, left, width, height } = trigger.getBoundingClientRect();
+        let { height: contentHeight } = content.getBoundingClientRect();
+        let style = {
+            left: 3 + left + width,
+            top: 29 + top + window.pageYOffset + height / 2 - contentHeight / 2,
+        };
+
+        return { style };
+    }
+
+    @action calculateDropdownItemPosition(trigger) {
+        let { top, left, width } = trigger.getBoundingClientRect();
+        let style = {
+            left: 11 + left + width,
+            top: top + 2,
+        };
+
+        return { style };
+    }
 
     @action transitionToRoute(toggleApiContext) {
         if (typeof this.args.route === 'string') {
@@ -128,6 +161,10 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
     }
 
     @task *fetchDrivers() {
-        this.drivers = yield this.store.query('driver', { limit: 20 });
+        try {
+            this.drivers = yield this.store.query('driver', { limit: 20 });
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 }

@@ -148,6 +148,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             text: 'Edit',
             icon: 'pencil',
             iconPrefix: 'fas',
+            permission: 'fleet-ops update order',
             onClick: () => {
                 const order = this.model;
                 this.editOrder(order);
@@ -161,6 +162,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             text: 'Edit',
             icon: 'pencil',
             iconPrefix: 'fas',
+            permission: 'fleet-ops update-route-for order',
             onClick: () => {
                 const order = this.model;
                 this.editOrderRoute(order);
@@ -174,6 +176,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             text: 'Edit',
             icon: 'pencil',
             iconPrefix: 'fas',
+            permission: 'fleet-ops update order',
             onClick: () => {
                 this.editOrderNotes();
             },
@@ -523,16 +526,17 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             },
             driversQuery: {},
             order,
-            confirm: (modal) => {
+            confirm: async (modal) => {
                 modal.startLoading();
-                return order
-                    .save()
-                    .then(() => {
-                        this.notifications.success(options.successNotification || this.intl.t('fleet-ops.operations.orders.index.view.update-success', { orderId: order.public_id }));
-                    })
-                    .catch((error) => {
-                        this.notifications.serverError(error);
-                    });
+
+                try {
+                    await order.save();
+                    this.notifications.success(options.successNotification || this.intl.t('fleet-ops.operations.orders.index.view.update-success', { orderId: order.public_id }));
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
             },
             decline: () => {
                 order.payload.rollbackAttributes();
@@ -563,12 +567,19 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         this.isEditingOrderNotes = true;
     }
 
+    @action cancelEditOrderNotes() {
+        this.isEditingOrderNotes = false;
+    }
+
     @task *saveOrderNotes() {
         const { notes } = this.model;
-        yield this.model.persistProperty('notes', notes).then(() => {
+        try {
+            yield this.model.persistProperty('notes', notes);
             this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.order-notes-updated'));
-        });
-        this.isEditingOrderNotes = false;
+            this.isEditingOrderNotes = false;
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**
@@ -583,7 +594,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             title: this.intl.t('fleet-ops.operations.orders.index.view.edit-order-title', { driverName: order.driver_assigned.name }),
             body: this.intl.t('fleet-ops.operations.orders.index.view.unassign-body'),
             order,
-            confirm: (modal) => {
+            confirm: async (modal) => {
                 modal.startLoading();
 
                 order.setProperties({
@@ -591,14 +602,14 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                     driver_assigned_uuid: null,
                 });
 
-                return order
-                    .save()
-                    .then(() => {
-                        this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.unassign-success'));
-                    })
-                    .catch((error) => {
-                        this.notifications.serverError(error);
-                    });
+                try {
+                    await order.save();
+                    this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.unassign-success'));
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
             },
             ...options,
         });
@@ -714,7 +725,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             },
             order,
             activityOptions,
-            confirm: (modal) => {
+            confirm: async (modal) => {
                 modal.startLoading();
 
                 let { selected, custom } = modal.getOptions(['custom', 'selected']);
@@ -730,24 +741,20 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                     activity = custom;
                 }
 
-                return this.fetch
-                    .patch(`orders/update-activity/${order.id}`, {
-                        activity,
-                    })
-                    .then(() => {
-                        modal.stopLoading();
-                        return later(
-                            this,
-                            () => {
-                                return this.hostRouter.refresh();
-                            },
-                            100
-                        );
-                    })
-                    .catch((error) => {
-                        modal.stopLoading();
-                        this.notifications.serverError(error);
-                    });
+                try {
+                    await this.fetch.patch(`orders/update-activity/${order.id}`, { activity });
+                    modal.stopLoading();
+                    return later(
+                        this,
+                        () => {
+                            return this.hostRouter.refresh();
+                        },
+                        100
+                    );
+                } catch (error) {
+                    modal.stopLoading();
+                    this.notifications.serverError(error);
+                }
             },
         });
     }
@@ -770,11 +777,17 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             title: order.driver_uuid ? this.intl.t('fleet-ops.operations.orders.index.view.change-order') : this.intl.t('fleet-ops.operations.orders.index.view.assign-order'),
             acceptButtonText: 'Save Changes',
             order,
-            confirm: (modal) => {
+            confirm: async (modal) => {
                 modal.startLoading();
-                return order.save().then(() => {
+
+                try {
+                    await order.save();
                     this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.assign-success', { orderId: order.public_id }));
-                });
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
             },
         });
     }
@@ -791,6 +804,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             title: 'Order Label',
             modalClass: 'modal-xl',
             acceptButtonText: 'Done',
+            hideDeclineButton: true,
             order,
         });
 
@@ -825,6 +839,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             title: 'Waypoint Label',
             modalClass: 'modal-xl',
             acceptButtonText: 'Done',
+            hideDeclineButton: true,
         });
 
         // load the pdf label from base64
@@ -956,11 +971,16 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                 modal.startLoading();
 
                 const pendingFileUpload = modal.getOption('pendingFileUpload');
-                return entity.save().then(() => {
+
+                try {
+                    await entity.save();
                     if (pendingFileUpload) {
                         return modal.invoke('uploadNewPhoto', pendingFileUpload);
                     }
-                });
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
             },
         });
     }

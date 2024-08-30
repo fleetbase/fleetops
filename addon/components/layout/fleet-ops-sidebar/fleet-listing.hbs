@@ -5,6 +5,7 @@
     @hideCaret={{true}}
     @toggleOnCaretOnly={{true}}
     @onClickPanelTitle={{this.transitionToRoute}}
+    @permission={{@permission}}
     @wrapperClass="next-fleet-summary"
 >
     {{#each this.fleets as |fleet|}}
@@ -13,6 +14,8 @@
             @onVehicleClicked={{this.onVehicleClicked}}
             @depth={{1}}
             @open={{true}}
+            @itemDropdownMenuWrapperClass="next-sidebar-panel-menu-dropdown"
+            @itemDropdownButtonCalculatePosition={{this.calculateDropdownItemPosition}}
             @itemDropdownButton={{true}}
             @itemDropdownButtonActions={{this.dropdownButtonActions}}
         />

@@ -8,82 +8,18 @@ import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 
 export default class ManagementDriversIndexController extends BaseController {
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `modals-manager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
     @service intl;
-
-    /**
-     * Inject the `crud` service
-     *
-     * @var {Service}
-     */
     @service crud;
-
-    /**
-     * Inject the `driverActions` service
-     *
-     * @var {Service}
-     */
     @service driverActions;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `filters` service
-     *
-     * @var {Service}
-     */
     @service filters;
-
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
-     */
     @service currentUser;
-
-    /**
-     * Inject the `contextPanel` service
-     *
-     * @var {Service}
-     */
     @service contextPanel;
+    @service abilities;
 
     /**
      * Queryable parameters for this controller's model
@@ -232,6 +168,7 @@ export default class ManagementDriversIndexController extends BaseController {
             valuePath: 'name',
             width: '200px',
             cellComponent: 'table/cell/driver-name',
+            permission: 'fleet-ops view driver',
             action: this.viewDriver,
             resizable: true,
             sortable: true,
@@ -262,6 +199,7 @@ export default class ManagementDriversIndexController extends BaseController {
         {
             label: this.intl.t('fleet-ops.common.vendor'),
             cellComponent: 'table/cell/anchor',
+            permission: 'fleet-ops view vendor',
             onClick: async (driver) => {
                 const vendor = await driver.loadVendor();
 
@@ -282,6 +220,7 @@ export default class ManagementDriversIndexController extends BaseController {
         {
             label: this.intl.t('fleet-ops.common.vehicle'),
             cellComponent: 'table/cell/anchor',
+            permission: 'fleet-ops view vehicle',
             onClick: (driver) => {
                 return driver
                     .loadVehicle()
@@ -406,10 +345,12 @@ export default class ManagementDriversIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.drivers.index.view-details'),
                     fn: this.viewDriver,
+                    permission: 'fleet-ops view driver',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.drivers.index.edit-details'),
                     fn: this.editDriver,
+                    permission: 'fleet-ops update driver',
                 },
                 {
                     separator: true,
@@ -417,14 +358,17 @@ export default class ManagementDriversIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.drivers.index.assign-order-driver'),
                     fn: this.assignOrder,
+                    permission: 'fleet-ops assign-order-for driver',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.drivers.index.assign-vehicle-driver'),
                     fn: this.assignVehicle,
+                    permission: 'fleet-ops assign-vehicle-for driver',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.drivers.index.locate-driver-map'),
                     fn: this.locateDriver,
+                    permission: 'fleet-ops view driver',
                 },
                 {
                     separator: true,
@@ -432,6 +376,7 @@ export default class ManagementDriversIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.drivers.index.delete-driver'),
                     fn: this.deleteDriver,
+                    permission: 'fleet-ops delete driver',
                 },
             ],
             sortable: false,

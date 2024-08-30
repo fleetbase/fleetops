@@ -70,7 +70,7 @@
     </Overlay::Header>
 
     <Overlay::Body>
-        {{#if this.isLoading}}
+        {{#if (or this.loadFleets.isRunning this.loadUnassignedOrders.isRunning this.loadActiveOrders.isRunning)}}
             <div class="flex items-center p-4">
                 <Spinner class="mr-2" />
                 <span>{{t "fleet-ops.common.loading"}}</span>

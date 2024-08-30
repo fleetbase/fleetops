@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Illuminate\Support\Str;
 
 class Fleet extends FleetbaseResource
 {
@@ -16,6 +17,14 @@ class Fleet extends FleetbaseResource
      */
     public function toArray($request)
     {
+        if ($request->isArray('with')) {
+            $with = array_map(function ($relation) {
+                return Str::camel($relation);
+            }, $request->array('with'));
+
+            $this->load($with);
+        }
+
         return [
             'id'                    => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'uuid'                  => $this->when(Http::isInternalRequest(), $this->uuid),

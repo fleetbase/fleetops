@@ -8,31 +8,9 @@ import { task } from 'ember-concurrency-decorators';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 
 export default class FleetPanelDriverListingComponent extends Component {
-    /**
-     * Ember data store service.
-     *
-     * @type {Service}
-     */
     @service store;
-
-    /**
-     * The fetch wrapper service.
-     *
-     * @type {Service}
-     */
     @service fetch;
-
-    /**
-     * Service for intl.
-     * @service
-     */
     @service intl;
-
-    /**
-     * The universe service.
-     *
-     * @type {Service}
-     */
     @service universe;
 
     /**
@@ -117,11 +95,14 @@ export default class FleetPanelDriverListingComponent extends Component {
      * @param {DriverModel} driver - The driver to be added.
      * @memberof FleetPanelDriverListringComponent
      */
-    @action onAddDriver(driver) {
-        this.fetch.post('fleets/assign-driver', { driver: driver.id, fleet: this.fleet.id }).then(() => {
+    @action async onAddDriver(driver) {
+        try {
+            await this.fetch.post('fleets/assign-driver', { driver: driver.id, fleet: this.fleet.id });
             this.drivers.pushObject(driver);
-            this.universe.trigger('fleet.driver.assigned', this.fleet, driver);
-        });
+            this.universe.trigger('fleet-ops.fleet.driver_assigned', this.fleet, driver);
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**
@@ -130,11 +111,14 @@ export default class FleetPanelDriverListingComponent extends Component {
      * @param {DriverModel} driver - The driver to be removed.
      * @memberof FleetPanelDriverListringComponent
      */
-    @action onRemoveDriver(driver) {
-        this.fetch.post('fleets/remove-driver', { driver: driver.id, fleet: this.fleet.id }).then(() => {
+    @action async onRemoveDriver(driver) {
+        try {
+            await this.fetch.post('fleets/remove-driver', { driver: driver.id, fleet: this.fleet.id });
             this.drivers.removeObject(driver);
-            this.universe.trigger('fleet.driver.unassigned', this.fleet, driver);
-        });
+            this.universe.trigger('fleet-ops.fleet.driver_unassigned', this.fleet, driver);
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**

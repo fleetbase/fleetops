@@ -2,50 +2,16 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { all } from 'rsvp';
+import { task } from 'ember-concurrency';
 
 export default class OrderListOverlayComponent extends Component {
-    /**
-     * Inject the `store` service
-     *
-     * @memberof OrderListOverlayComponent
-     */
     @service store;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @memberof OrderListOverlayComponent
-     */
     @service fetch;
-
-    /**
-     * Inject the `appCache` service
-     *
-     * @memberof OrderListOverlayComponent
-     */
     @service appCache;
-
-    /**
-     * Inject the `router` service
-     *
-     * @memberof OrderListOverlayComponent
-     */
     @service router;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof OrderListOverlayComponent
-     */
     @service hostRouter;
-
-    /**
-     * The loading state of the orders overlay
-     *
-     * @memberof OrderListOverlayComponent
-     */
-    @tracked isLoading = false;
+    @service notifications;
+    @service abilities;
 
     /**
      * The loaded fleet records.
@@ -89,7 +55,9 @@ export default class OrderListOverlayComponent extends Component {
     constructor() {
         super(...arguments);
 
-        all([this.fetchFleets(), this.fetchUnassignedOrders(), this.fetchActiveOrders()]);
+        this.loadFleets.perform();
+        this.loadUnassignedOrders.perform();
+        this.loadActiveOrders.perform();
     }
 
     /**
@@ -110,7 +78,7 @@ export default class OrderListOverlayComponent extends Component {
      * Transitions to view the order.
      *
      * @param {OrderModel} order
-     * @return {Promise}
+     * @return {Transition<Promise>}
      * @memberof OrderListOverlayComponent
      */
     @action viewOrder(order) {
@@ -155,59 +123,46 @@ export default class OrderListOverlayComponent extends Component {
     }
 
     /**
-     * Loads fleets records.
-     *
-     * @return {Promise}
-     * @memberof OrderListOverlayComponent
+     * Load fleet records.
      */
-    @action fetchFleets() {
-        this.isLoading = true;
+    @task *loadFleets() {
+        if (this.abilities.cannot('fleet-ops list fleet')) {
+            return;
+        }
 
-        // if (this.appCache.has('fleets')) {
-        //     this.fleets = this.appCache.getEmberData('fleets', 'fleet');
-        // }
-
-        return this.store
-            .query('fleet', { with: ['serviceArea', 'drivers.jobs', 'drivers.currentJob'], without: ['drivers.fleets'] })
-            .then((fleets) => {
-                this.fleets = fleets;
-                this.appCache.setEmberData('fleets', fleets);
-            })
-            .finally(() => {
-                this.isLoading = false;
-            });
+        try {
+            this.fleets = yield this.store.query('fleet', { with: ['serviceArea', 'drivers.jobs', 'drivers.currentJob'], without: ['drivers.fleets'] });
+            this.appCache.setEmberData('fleets', this.fleets);
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**
-     * Loads unassinged orders records.
-     *
-     * @return {Promise}
-     * @memberof OrderListOverlayComponent
+     * Load unassigned order records.
      */
-    @action fetchUnassignedOrders() {
-        this.isLoading = true;
+    @task *loadUnassignedOrders() {
+        if (this.abilities.cannot('fleet-ops list order')) {
+            return;
+        }
 
-        return this.store
-            .query('order', { unassigned: 1 })
-            .then((unassignedOrders) => {
-                this.unassignedOrders = unassignedOrders;
-            })
-            .finally(() => {
-                this.isLoading = false;
-            });
+        try {
+            this.unassignedOrders = yield this.store.query('order', { unassigned: 1 });
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**
-     * Loads active order records.
-     *
-     * @return {Promise}
-     * @memberof OrderListOverlayComponent
+     * Load active order records.
      */
-    @action fetchActiveOrders() {
-        this.isLoading = true;
+    @task *loadActiveOrders() {
+        if (this.abilities.cannot('fleet-ops list order')) {
+            return;
+        }
 
-        return this.fetch
-            .get(
+        try {
+            this.activeOrders = yield this.fetch.get(
                 'fleet-ops/live/orders',
                 {},
                 {
@@ -216,12 +171,9 @@ export default class OrderListOverlayComponent extends Component {
                     expirationInterval: 5,
                     expirationIntervalUnit: 'minute',
                 }
-            )
-            .then((orders) => {
-                this.activeOrders = orders;
-            })
-            .finally(() => {
-                this.isLoading = false;
-            });
+            );
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 }

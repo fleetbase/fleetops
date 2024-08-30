@@ -11,6 +11,8 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
     @service contextPanel;
     @service vehicleActions;
     @service hostRouter;
+    @service abilities;
+    @service notifications;
     @tracked fleets = [];
 
     constructor() {
@@ -79,6 +81,16 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         });
     }
 
+    @action calculateDropdownItemPosition(trigger) {
+        let { top, left, width } = trigger.getBoundingClientRect();
+        let style = {
+            left: 11 + left + width,
+            top: top + 2,
+        };
+
+        return { style };
+    }
+
     @action focusVehicleOnMap(vehicle) {
         const liveMap = this.universe.get('component:fleet-ops:live-map');
 
@@ -104,17 +116,35 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
 
     listenForChanges() {
         // when a vehicle is assigned/ or unassigned reload
-        this.universe.on('fleet.vehicle.assigned', () => {
+        this.universe.on('fleet-ops.fleet.vehicle_assigned', () => {
             this.fetchFleets.perform();
         });
 
         // when a vehicle is assigned/ or unassigned reload
-        this.universe.on('fleet.vehicle.unassigned', () => {
+        this.universe.on('fleet-ops.fleet.vehicle_unassigned', () => {
+            this.fetchFleets.perform();
+        });
+
+        // when a driver is assigned/ or unassigned reload
+        this.universe.on('fleet-ops.fleet.driver_assigned', () => {
+            this.fetchFleets.perform();
+        });
+
+        // when a driver is assigned/ or unassigned reload
+        this.universe.on('fleet-ops.fleet.driver_unassigned', () => {
             this.fetchFleets.perform();
         });
     }
 
     @task *fetchFleets() {
-        this.fleets = yield this.store.query('fleet', { with: ['vehicles', 'subfleets'], parents_only: true });
+        if (this.abilities.cannot('fleet-ops list fleet')) {
+            return;
+        }
+
+        try {
+            this.fleets = yield this.store.query('fleet', { with: ['vehicles', 'subfleets'], parents_only: true });
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 }

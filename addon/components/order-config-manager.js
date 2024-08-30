@@ -29,6 +29,7 @@ export default class OrderConfigManagerComponent extends Component {
     @tracked configManagerContext;
     @tracked context;
     @tracked contextModel;
+    @tracked ready = false;
 
     /**
      * Returns the array of tabs available for the panel.
@@ -76,7 +77,7 @@ export default class OrderConfigManagerComponent extends Component {
      * @generator
      */
     @task *loadOrderConfigs(options = {}) {
-        this.configs = yield this.store.findAll('order-config');
+        this.configs = yield this.store.findAll('order-config').then(Array.from);
 
         let currentConfig;
         let initialOrderConfig = this.args.orderConfig;
@@ -103,6 +104,8 @@ export default class OrderConfigManagerComponent extends Component {
         if (typeof options.onAfter === 'function') {
             options.onAfter(this.configs, currentConfig);
         }
+
+        this.ready = true;
     }
 
     /**

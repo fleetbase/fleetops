@@ -11,34 +11,11 @@ import getIssueTypes from '../utils/get-issue-types';
 import getIssueCategories from '../utils/get-issue-categories';
 
 export default class IssueFormPanelComponent extends Component {
-    /**
-     * @service store
-     */
     @service store;
-
-    /**
-     * @service fetch
-     */
     @service fetch;
-
-    /**
-     * @service intl
-     */
     @service intl;
-
-    /**
-     * @service notifications
-     */
     @service notifications;
-
-    /**
-     * @service hostRouter
-     */
     @service hostRouter;
-
-    /**
-     * @service contextPanel
-     */
     @service contextPanel;
 
     /**
@@ -83,12 +60,20 @@ export default class IssueFormPanelComponent extends Component {
     @tracked issuePriorityOptions = ['low', 'medium', 'high', 'critical', 'scheduled-maintenance', 'operational-suggestion'];
 
     /**
+     * Permission needed to update or create record.
+     *
+     * @memberof DriverFormPanelComponent
+     */
+    @tracked savePermission;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor() {
+    constructor(owner, { issue = null }) {
         super(...arguments);
-        this.issue = this.args.issue;
-        this.issueCategories = getWithDefault(this.issueCategoriesByType, getWithDefault(this.issue, 'type', 'operational'), []);
+        this.issue = issue;
+        this.issueCategories = getWithDefault(this.issueCategoriesByType, getWithDefault(issue, 'type', 'operational'), []);
+        this.savePermission = issue && issue.isNew ? 'fleet-ops create issue' : 'fleet-ops update issue';
         applyContextComponentArguments(this);
     }
 

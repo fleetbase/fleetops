@@ -7,29 +7,10 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
 export default class FuelReportFormPanelComponent extends Component {
-    /**
-     * @service store
-     */
     @service store;
-
-    /**
-     * @service notifications
-     */
     @service notifications;
-
-    /**
-     * @service intl
-     */
     @service intl;
-
-    /**
-     * @service hostRouter
-     */
     @service hostRouter;
-
-    /**
-     * @service contextPanel
-     */
     @service contextPanel;
 
     /**
@@ -45,11 +26,19 @@ export default class FuelReportFormPanelComponent extends Component {
     @tracked statusOptions = ['draft', 'pending-approval', 'approved', 'rejected', 'revised', 'submitted', 'in-review', 'confirmed', 'processed', 'archived', 'cancelled'];
 
     /**
+     * Permission needed to update or create record.
+     *
+     * @memberof DriverFormPanelComponent
+     */
+    @tracked savePermission;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor() {
+    constructor(owner, { fuelReport = null }) {
         super(...arguments);
-        this.fuelReport = this.args.fuelReport;
+        this.fuelReport = fuelReport;
+        this.savePermission = fuelReport && fuelReport.isNew ? 'fleet-ops create fuel-report' : 'fleet-ops update fuel-report';
         applyContextComponentArguments(this);
     }
 

@@ -7,74 +7,15 @@ import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 
 export default class ManagementFleetsIndexController extends BaseController {
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `modals-manager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var intl
-     */
     @service intl;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `crud` service
-     *
-     * @var {Service}
-     */
     @service crud;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `universe` service
-     *
-     * @var {Service}
-     */
     @service universe;
-
-    /**
-     * Inject the `filters` service
-     *
-     * @var {Service}
-     */
     @service filters;
-
-    /**
-     * Inject the `serviceAreas` service
-     *
-     * @var {Service}
-     */
     @service serviceAreas;
 
     /**
@@ -184,6 +125,7 @@ export default class ManagementFleetsIndexController extends BaseController {
             valuePath: 'name',
             width: '150px',
             cellComponent: 'table/cell/anchor',
+            permission: 'fleet-ops view fleet',
             action: this.viewFleet.bind(this),
             resizable: true,
             sortable: true,
@@ -195,6 +137,7 @@ export default class ManagementFleetsIndexController extends BaseController {
             label: this.intl.t('fleet-ops.common.service-area'),
             cellComponent: 'table/cell/anchor',
             action: this.viewServiceArea.bind(this),
+            permission: 'fleet-ops view service-area',
             valuePath: 'service_area.name',
             resizable: true,
             width: '130px',
@@ -207,7 +150,8 @@ export default class ManagementFleetsIndexController extends BaseController {
         {
             label: this.intl.t('fleet-ops.common.parent-fleet'),
             cellComponent: 'table/cell/anchor',
-            // action: this.viewServiceArea.bind(this),
+            permission: 'fleet-ops view fleet',
+            // action: this.viewParentFleet.bind(this),
             valuePath: 'parent_fleet.name',
             resizable: true,
             width: '130px',
@@ -220,7 +164,8 @@ export default class ManagementFleetsIndexController extends BaseController {
         {
             label: this.intl.t('fleet-ops.common.vendor'),
             cellComponent: 'table/cell/anchor',
-            action: this.viewServiceArea.bind(this),
+            permission: 'fleet-ops view vendor',
+            // action: this.viewVendor.bind(this),
             valuePath: 'vendor.name',
             resizable: true,
             width: '130px',
@@ -233,6 +178,7 @@ export default class ManagementFleetsIndexController extends BaseController {
         {
             label: this.intl.t('fleet-ops.common.zone'),
             cellComponent: 'table/cell/anchor',
+            permission: 'fleet-ops view zone',
             action: this.viewZone.bind(this),
             valuePath: 'zone.name',
             resizable: true,
@@ -326,13 +272,16 @@ export default class ManagementFleetsIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.fleets.index.view-fleet'),
                     fn: this.viewFleet,
+                    permission: 'fleet-ops view fleet',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.fleets.index.edit-fleet'),
                     fn: this.editFleet,
+                    permission: 'fleet-ops update fleet',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.fleets.index.assign-driver'),
+                    permission: 'fleet-ops assign-driver-for fleet',
                     fn: () => {},
                 },
                 {
@@ -341,6 +290,7 @@ export default class ManagementFleetsIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.fleets.index.delete-fleet'),
                     fn: this.deleteFleet,
+                    permission: 'fleet-ops delete fleet',
                 },
             ],
             sortable: false,

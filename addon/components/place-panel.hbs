@@ -11,7 +11,7 @@
     @overlayClass="place-panel"
 >
     <Overlay::Header @title={{this.place.address}} @status={{this.place.public_id}} @hideStatusDot={{true}}>
-        <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.place-panel.edit-place"}} @onClick={{this.onEdit}} @wrapperClass="mr-2" />
+        <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.place-panel.edit-place"}} @onClick={{this.onEdit}} @wrapperClass="mr-2" @permission="fleet-ops update place" />
         <Button
             @type="default"
             @icon="times"

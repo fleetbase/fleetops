@@ -16,100 +16,20 @@ import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
  * @class
  */
 export default class LiveMapComponent extends Component {
-    /**
-     * Inject the `store` service.
-     *
-     * @memberof LiveMapComponent
-     */
     @service store;
-
-    /**
-     * @service intl
-     */
     @service intl;
-
-    /**
-     * Inject the `fetch` service.
-     *
-     * @memberof LiveMapComponent
-     */
     @service fetch;
-
-    /**
-     * Inject the `socket` service.
-     *
-     * @memberof LiveMapComponent
-     */
     @service socket;
-
-    /**
-     * Inject the `currentUser` service.
-     *
-     * @memberof LiveMapComponent
-     */
     @service currentUser;
-
-    /**
-     * Inject the `notifications` service.
-     *
-     * @memberof LiveMapComponent
-     */
     @service notifications;
-
-    /**
-     * Inject the `serviceAreas` service.
-     *
-     * @memberof LiveMapComponent
-     */
     @service serviceAreas;
-
-    /**
-     * Inject the `location` service.
-     *
-     * @memberof LiveMapComponent
-     */
     @service location;
-
-    /**
-     * Inject the `appCache` service.
-     *
-     * @memberof LiveMapComponent
-     */
     @service appCache;
-
-    /**
-     * Inject the `universe` service.
-     *
-     * @memberof LiveMapComponent
-     */
     @service universe;
-
-    /**
-     * Inject the `crud` service.
-     *
-     * @memberof LiveMapComponent
-     */
+    @service abilities;
     @service crud;
-
-    /**
-     * Inject the `contextPanel` service.
-     *
-     * @memberof LiveMapComponent
-     */
     @service contextPanel;
-
-    /**
-     * Inject the `leafletMapManager` service.
-     *
-     * @memberof LiveMapComponent
-     */
     @service leafletMapManager;
-
-    /**
-     * Inject the `leafletContextmenuManager` service.
-     *
-     * @memberof LiveMapComponent
-     */
     @service leafletContextmenuManager;
 
     /**
@@ -469,50 +389,6 @@ export default class LiveMapComponent extends Component {
     }
 
     /**
-     * Fetches live data from the specified path and updates the component state accordingly.
-     *
-     * @memberof LiveMapComponent
-     * @function
-     * @param {string} path - The path to fetch live data from.
-     * @param {Object} [options={}] - Optional configuration options.
-     * @param {Object} [options.params={}] - Additional parameters to include in the request.
-     * @param {Function} [options.onLoaded] - A callback function to execute when the data is loaded.
-     * @returns {Promise} A promise that resolves with the fetched data.
-     */
-    fetchLiveData(path, options = {}) {
-        this.isLoading = true;
-
-        const internalName = camelize(path);
-        const callbackFnName = `on${internalName}Loaded`;
-        const params = getWithDefault(options, 'params', {});
-        const url = `fleet-ops/live/${path}`;
-
-        return this.fetch
-            .get(url, params, { normalizeToEmberData: true, normalizeModelType: singularize(internalName) })
-            .then((data) => {
-                this.triggerAction(callbackFnName);
-                this.createVisibilityControl(internalName);
-                this[internalName] = data;
-                // cache as resource
-                this.cacheOriginalResources(internalName);
-
-                if (typeof options.onLoaded === 'function') {
-                    options.onLoaded(data);
-                }
-
-                return data;
-            })
-            .catch((error) => {
-                if (typeof options.onFailure === 'function') {
-                    options.onFailure(error);
-                }
-            })
-            .finally(() => {
-                this.isLoading = false;
-            });
-    }
-
-    /**
      * Asynchronously loads live data for a specified path and updates the component's state.
      * This function uses Ember Concurrency to handle the asynchronous operation, ensuring
      * better handling of concurrency and potential task cancellation.
@@ -536,6 +412,10 @@ export default class LiveMapComponent extends Component {
      * });
      */
     @task *loadLiveData(path, options = {}) {
+        if (this.abilities.cannot(`fleet-ops list ${path}`)) {
+            return [];
+        }
+
         const internalName = camelize(path);
         const callbackFnName = `on${internalName}Loaded`;
         const params = getWithDefault(options, 'params', {});
@@ -1916,6 +1796,10 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @task *loadServiceAreas() {
+        if (this.abilities.cannot('fleet-ops list service-area')) {
+            return [];
+        }
+
         if (this.serviceAreas && typeof this.serviceAreas.getFromCache === 'function') {
             const cachedRecords = this.serviceAreas.getFromCache('serviceAreas', 'service-area');
 

@@ -31,9 +31,16 @@
                 </div>
                 <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.driver-assigned"}}</span>
                 <div class="ml-1">
-                    <a href="javascript:;" class="text-blue-400 text-xs hover:opacity-75" {{on "click" this.startAssignDriver}}>
-                        <FaIcon @icon="edit" @size="xs" />
-                    </a>
+                    {{#let (cannot "fleet-ops assign-driver-for order") as |unauthorized|}}
+                        <a href="javascript:;" class="text-blue-400 text-xs hover:opacity-75 {{if unauthorized 'opacity-50 disabled'}}" {{on "click" this.startAssignDriver}} disabled={{unauthorized}}>
+                            <FaIcon @icon="edit" @size="xs" />
+                        </a>
+                        {{#if unauthorized}}
+                            <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                                <InputInfo @text={{t "common.unauthorized"}} />
+                            </Attach::Tooltip>
+                        {{/if}}
+                    {{/let}}
                 </div>
             </div>
             <div>
@@ -48,6 +55,7 @@
                         @allowClear={{true}}
                         @disabled={{@model.isLoading}}
                         @onChange={{this.assignDriver}}
+                        @permission="fleet-ops assign-driver-for order"
                         as |model|
                     >
                         <div class="flex flex-row items-center truncate uppercase">
@@ -86,6 +94,8 @@
                     class={{unless @order.driver_assigned.vehicle_uuid "dark:text-gray-600 text-gray-400"}}
                     {{on "click" (fn this.onClickVehicle @order.driver_assigned.vehicle)}}
                 >{{n-a @order.driver_assigned.vehicle_name (t "fleet-ops.component.order.schedule-card.no-vehicle")}}</a>
+            {{else}}
+                <div class="dark:text-gray-600 text-gray-400">{{t "fleet-ops.component.order.schedule-card.no-vehicle"}}</div>
             {{/if}}
         </div>
         <div class="flex items-center justify-between">

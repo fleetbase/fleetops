@@ -7,74 +7,15 @@ import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 
 export default class ManagementVehiclesIndexController extends BaseController {
-    /**
-     * Inject the `contextPanel` service
-     *
-     * @var {Service}
-     */
     @service contextPanel;
-
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `vehicleActions` service
-     *
-     * @var {Service}
-     */
     @service vehicleActions;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
     @service intl;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
-
-    /**
-     * Inject the `crud` service
-     *
-     * @var {Service}
-     */
     @service crud;
-
-    /**
-     * Inject the `filters` service
-     *
-     * @var {Service}
-     */
     @service filters;
-
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
-     */
     @service currentUser;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
 
     /**
@@ -239,6 +180,7 @@ export default class ManagementVehiclesIndexController extends BaseController {
             photoPath: 'avatar_url',
             width: '200px',
             cellComponent: 'table/cell/vehicle-name',
+            permission: 'fleet-ops view vehicle',
             action: this.viewVehicle,
             resizable: true,
             sortable: true,
@@ -261,6 +203,7 @@ export default class ManagementVehiclesIndexController extends BaseController {
         {
             label: 'Driver Assigned',
             cellComponent: 'table/cell/anchor',
+            permission: 'fleet-ops view driver',
             action: async (vehicle) => {
                 const driver = await vehicle.loadDriver();
 
@@ -323,6 +266,7 @@ export default class ManagementVehiclesIndexController extends BaseController {
         {
             label: this.intl.t('fleet-ops.common.vendor'),
             cellComponent: 'table/cell/anchor',
+            permission: 'fleet-ops view vendor',
             action: async ({ vendor_uuid }) => {
                 const vendor = await this.store.findRecord('vendor', vendor_uuid);
 
@@ -388,14 +332,17 @@ export default class ManagementVehiclesIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.vehicles.index.view-vehicle'),
                     fn: this.viewVehicle,
+                    permission: 'fleet-ops view vehicle',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.vehicles.index.edit-vehicle'),
                     fn: this.editVehicle,
+                    permission: 'fleet-ops update vehicle',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.vehicles.index.locate-action-title'),
                     fn: this.locateVehicle,
+                    permission: 'fleet-ops view vehicle',
                 },
                 {
                     separator: true,
@@ -403,6 +350,7 @@ export default class ManagementVehiclesIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.vehicles.index.delete-vehicle'),
                     fn: this.deleteVehicle,
+                    permission: 'fleet-ops delete vehicle',
                 },
             ],
             sortable: false,

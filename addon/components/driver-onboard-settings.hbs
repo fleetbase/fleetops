@@ -57,6 +57,7 @@
                 @text={{t "fleet-ops.common.save-changes"}}
                 @onClick={{perform this.saveDriverOnboardSettings}}
                 @isLoading={{not this.saveDriverOnboardSettings.isIdle}}
+                @permission="fleet-ops update navigator-settings"
             />
         </div>
     {{/if}}

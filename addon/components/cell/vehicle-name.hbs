@@ -7,7 +7,7 @@
         class="w-4 h-4 rounded-md {{if @column.hasOnline 'mx-2' 'mr-2'}}"
     />
     <span class="relative block">
-        <a href="javascript:;" class="relative block" {{on "click" this.onClick}}>
+        <a href="javascript:;" class="relative block" disabled={{and @column.permission (cannot @column.permission)}} {{on "click" this.onClick}}>
             {{#if (has-block)}}
                 {{yield}}
             {{else}}

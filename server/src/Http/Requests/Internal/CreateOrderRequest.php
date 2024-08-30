@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Requests\Internal;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\FleetbaseRequest;
 use Fleetbase\Rules\ExistsInAny;
+use Fleetbase\Support\Auth;
 
 class CreateOrderRequest extends FleetbaseRequest
 {
@@ -15,7 +16,7 @@ class CreateOrderRequest extends FleetbaseRequest
      */
     public function authorize()
     {
-        return request()->session()->has('company');
+        return Auth::can('fleet-ops create order');
     }
 
     /**

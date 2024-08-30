@@ -8,31 +8,9 @@ import { task } from 'ember-concurrency-decorators';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 
 export default class FleetPanelVehicleListingComponent extends Component {
-    /**
-     * Ember data store service.
-     *
-     * @type {Service}
-     */
     @service store;
-
-    /**
-     * The fetch wrapper service.
-     *
-     * @type {Service}
-     */
     @service fetch;
-
-    /**
-     * Service for intl.
-     * @service
-     */
     @service intl;
-
-    /**
-     * The universe service.
-     *
-     * @type {Service}
-     */
     @service universe;
 
     /**
@@ -117,11 +95,14 @@ export default class FleetPanelVehicleListingComponent extends Component {
      * @param {VehicleModel} vehicle - The vehicle to be added.
      * @memberof FleetPanelVehicleListringComponent
      */
-    @action onAddVehicle(vehicle) {
-        this.fetch.post('fleets/assign-vehicle', { vehicle: vehicle.id, fleet: this.fleet.id }).then(() => {
+    @action async onAddVehicle(vehicle) {
+        try {
+            await this.fetch.post('fleets/assign-vehicle', { vehicle: vehicle.id, fleet: this.fleet.id });
             this.vehicles.pushObject(vehicle);
-            this.universe.trigger('fleet.vehicle.assigned', this.fleet, vehicle);
-        });
+            this.universe.trigger('fleet-ops.fleet.vehicle_assigned', this.fleet, vehicle);
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**
@@ -130,11 +111,14 @@ export default class FleetPanelVehicleListingComponent extends Component {
      * @param {VehicleModel} vehicle - The vehicle to be removed.
      * @memberof FleetPanelVehicleListringComponent
      */
-    @action onRemoveVehicle(vehicle) {
-        this.fetch.post('fleets/remove-vehicle', { vehicle: vehicle.id, fleet: this.fleet.id }).then(() => {
+    @action async onRemoveVehicle(vehicle) {
+        try {
+            await this.fetch.post('fleets/remove-vehicle', { vehicle: vehicle.id, fleet: this.fleet.id });
             this.vehicles.removeObject(vehicle);
-            this.universe.trigger('fleet.vehicle.unassigned', this.fleet, vehicle);
-        });
+            this.universe.trigger('fleet-ops.fleet.vehicle_unassigned', this.fleet, vehicle);
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**

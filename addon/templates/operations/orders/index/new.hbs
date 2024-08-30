@@ -3,25 +3,25 @@
         <DropdownButton @icon="ellipsis-h" @size="sm" @iconPrefix="fas" @triggerClass="mr-2 hidden md:flex" as |dd|>
             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                 <div class="p-1">
-                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newCustomer)}}>
+                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newCustomer)}} disabled={{cannot "fleet-ops create customer"}}>
                         <div class="w-6">
                             <FaIcon @icon="user-plus" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.create-new-customer"}}</span>
                     </a>
-                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newFacilitator)}}>
+                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newFacilitator)}} disabled={{cannot "fleet-ops create facilitator"}}>
                         <div class="w-6">
                             <FaIcon @icon="truck" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.create-new-facilitator"}}</span>
                     </a>
-                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.createPlace)}}>
+                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.createPlace)}} disabled={{cannot "fleet-ops create place"}}>
                         <div class="w-6">
                             <FaIcon @icon="map-pin" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.create-new-place"}}</span>
                     </a>
-                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.addEntity)}}>
+                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.addEntity)}} disabled={{cannot "fleet-ops create entity"}}>
                         <div class="w-6">
                             <FaIcon @icon="box" />
                         </div>
@@ -36,8 +36,8 @@
                 </div>
             </div>
         </DropdownButton>
-        <Button @icon="upload" @type="magic" @text={{if (media "isMobile") "" "Import"}} @onClick={{this.importOrder}} @disabled={{this.isCreatingOrder}} class="mr-2" />
-        <Button @icon="check" @type="primary" @text={{if (media "isMobile") "" "Submit"}} @onClick={{this.createOrder}} @isLoading={{this.isCreatingOrder}} @disabled={{not this.isValid}} />
+        <Button @icon="upload" @type="magic" @text={{if (media "isMobile") "" "Import"}} @onClick={{this.importOrder}} @disabled={{this.isCreatingOrder}} @permission="fleet-ops import order" class="mr-2" />
+        <Button @icon="check" @type="primary" @text={{if (media "isMobile") "" "Submit"}} @onClick={{this.createOrder}} @isLoading={{this.isCreatingOrder}} @permission="fleet-ops create order" @disabled={{not this.isValid}} />
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="new-order-overlay-body">
@@ -51,6 +51,7 @@
                         @optionLabel="name"
                         @onChange={{this.setConfig}}
                         @placeholder={{t "fleet-ops.operations.orders.index.new.order-type-placeholder"}}
+                        @disabled={{cannot "fleet-ops create order"}}
                         class="w-full"
                     />
                 </div>
@@ -59,6 +60,7 @@
                     @name={{t "fleet-ops.operations.orders.index.new.internal-id"}}
                     @value={{this.order.internal_id}}
                     @helpText={{t "fleet-ops.operations.orders.index.new.internal-id-help-text"}}
+                    @disabled={{cannot "fleet-ops create order"}}
                 />
 
                 <InputGroup>
@@ -69,7 +71,7 @@
                         @minDate={{format-date (now) "yyyy-MM-dd"}}
                         @minTime={{format-date (now) "HH:mm"}}
                         @onUpdate={{this.scheduleOrder}}
-                        @disabled={{this.order.dispatched}}
+                        @disabled={{or this.order.dispatched (cannot "fleet-ops create order")}}
                     />
                 </InputGroup>
 
@@ -83,6 +85,7 @@
                         @renderInPlace={{true}}
                         @allowClear={{true}}
                         @disabled={{this.isMultipleDropoffOrder}}
+                        @permission="fleet-ops create order"
                         @onChange={{this.setOrderCustomer}}
                         as |model|
                     >
@@ -106,6 +109,7 @@
                         @allowClear={{true}}
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}
+                        @permission="fleet-ops create order"
                         @onChange={{this.setOrderFacilitator}}
                         as |model|
                     >
@@ -137,6 +141,7 @@
                             @optionValue="key"
                             @onSelect={{this.selectIntegratedServiceType}}
                             @placeholder={{t "fleet-ops.operations.orders.index.new.service-type-placeholder"}}
+                            @disabled={{cannot "fleet-ops create order"}}
                         />
                     </InputGroup>
                 {{/if}}
@@ -152,6 +157,7 @@
                         @renderInPlace={{true}}
                         @allowClear={{true}}
                         @disabled={{this.isUsingIntegratedVendor}}
+                        @permission="fleet-ops create order"
                         @onChange={{this.selectDriver}}
                         as |model|
                     >
@@ -185,6 +191,7 @@
                         @renderInPlace={{true}}
                         @allowClear={{true}}
                         @disabled={{this.isUsingIntegratedVendor}}
+                        @permission="fleet-ops create order"
                         @onChange={{fn (mut this.order.vehicle_assigned)}}
                         as |model|
                     >
@@ -211,6 +218,7 @@
                             @value={{this.order.pod_method}}
                             @onSelect={{fn (mut this.order.pod_method)}}
                             @placeholder={{t "fleet-ops.operations.orders.index.new.proof-delivery-placeholder"}}
+                            @disabled={{cannot "fleet-ops create order"}}
                         />
                     </InputGroup>
                 {{/if}}
@@ -238,7 +246,7 @@
                             @wrapperClass="justify-start-i"
                             @isToggled={{this.order.adhoc}}
                             @onToggle={{this.toggleAdhoc}}
-                            @disabled={{this.isUsingIntegratedVendor}}
+                            @disabled={{or (cannot "fleet-ops create order") this.isUsingIntegratedVendor}}
                             @helpText={{t "fleet-ops.operations.orders.index.new.ad-hoc-help-text"}}
                         />
                     </InputGroup>
@@ -251,7 +259,7 @@
                             @wrapperClass="justify-start-i"
                             @isToggled={{this.order.dispatched}}
                             @onToggle={{fn (mut this.order.dispatched)}}
-                            @disabled={{this.isUsingIntegratedVendor}}
+                            @disabled={{or (cannot "fleet-ops create order") this.isUsingIntegratedVendor}}
                             @helpText={{t "fleet-ops.operations.orders.index.new.dispatch-help-text"}}
                         />
                     </InputGroup>
@@ -264,6 +272,7 @@
                             @wrapperClass="justify-start-i"
                             @isToggled={{this.order.pod_required}}
                             @onToggle={{this.toggleProofOfDelivery}}
+                            @disabled={{cannot "fleet-ops create order"}}
                             @helpText={{t "fleet-ops.operations.orders.index.new.require-proof-help-text"}}
                         />
                     </InputGroup>
@@ -296,6 +305,7 @@
                             @text={{t "fleet-ops.operations.orders.index.new.optimize-route"}}
                             @size="sm"
                             @onClick={{this.optimizeRoute}}
+                            @permission="fleet-ops optimize order"
                             @helpText={{t "fleet-ops.operations.orders.index.new.optimize-route-help-text"}}
                             @disabled={{lt this.waypoints.length 3}}
                             @isLoading={{this.isOptimizingRoute}}
@@ -306,6 +316,7 @@
                             @size="sm"
                             @onClick={{this.addWaypoint}}
                             @helpText={{t "fleet-ops.operations.orders.index.new.add-waypoint-help-text"}}
+                            @permission="fleet-ops create order"
                         />
                     {{/if}}
                 </div>
@@ -334,6 +345,7 @@
                                         @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}}
                                         @renderInPlace={{true}}
                                         @onChange={{fn this.setWaypointPlace index}}
+                                        @permission="fleet-ops create order"
                                         as |model|
                                     >
                                         {{model.address}}
@@ -362,6 +374,7 @@
                                         @renderInPlace={{true}}
                                         @allowClear={{true}}
                                         @onChange={{fn this.setWaypointCustomer waypoint}}
+                                        @permission="fleet-ops create order"
                                         as |model|
                                     >
                                         <div class="flex items-center">
@@ -378,7 +391,7 @@
 
                             <div class="flex items-center">
                                 {{#if waypoint.place}}
-                                    <Button class="mr-2" @icon="edit" @size="sm" @onClick={{fn this.editPlace waypoint.place}} />
+                                    <Button class="mr-2" @icon="edit" @size="sm" @onClick={{fn this.editPlace waypoint.place}} @permission="fleet-ops update place" />
                                 {{/if}}
                                 <Button @type="danger" @icon="trash" @size="sm" @onClick={{fn this.removeWaypoint waypoint}} />
                             </div>
@@ -413,6 +426,7 @@
                             @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}}
                             @renderInPlace={{true}}
                             @onChange={{fn this.setPayloadPlace "pickup"}}
+                            @permission="fleet-ops create order"
                             as |model|
                         >
                             {{model.address}}
@@ -440,7 +454,7 @@
 
                             <div class="flex-row space-x-2 pr-0.5">
                                 {{#if this.payload.dropoff}}
-                                    <a href="javascript:;" {{on "click" (fn this.editPlace this.payload.dropoff)}}>
+                                    <a href="javascript:;" {{on "click" (fn this.editPlace this.payload.dropoff)}} disaled={{cannot "fleet-ops update place"}}>
                                         <FaIcon @icon="edit" />
                                     </a>
                                     <a href="javascript:;" {{on "click" (fn this.setPayloadPlace "dropoff" null)}}>
@@ -460,6 +474,7 @@
                             @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}}
                             @renderInPlace={{true}}
                             @onChange={{fn this.setPayloadPlace "dropoff"}}
+                            @permission="fleet-ops create order"
                             as |model|
                         >
                             {{model.address}}
@@ -500,6 +515,7 @@
                             @query={{hash geo=true latitude=this.userLatitude longitude=this.userLongitude}}
                             @renderInPlace={{true}}
                             @onChange={{fn this.setPayloadPlace "return"}}
+                            @permission="fleet-ops create order"
                             as |model|
                         >
                             {{model.address}}
@@ -524,11 +540,15 @@
             {{/if}}
         </ContentPanel>
 
-        {{#if this.renderableComponents}}
+        <RegistryYield @registry="fleet-ops:template:operations:orders:new" as |RegistryComponent|>
+            <RegistryComponent @order={{this.order}} @controller={{this}} />
+        </RegistryYield>
+
+        {{!-- {{#if this.renderableComponents}}
             {{#each this.renderableComponents as |renderableComponent|}}
                 {{component renderableComponent order=this.order controller=this}}
             {{/each}}
-        {{/if}}
+        {{/if}} --}}
 
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.payload-entities"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if this.isNotCsvImportedOrder}}
@@ -540,6 +560,7 @@
                         @text={{t "fleet-ops.operations.orders.index.new.add-item-order"}}
                         @size="sm"
                         @onClick={{this.addEntity}}
+                        @permission="fleet-ops create order"
                     />
                     {{#if this.orderConfig.entities}}
                         <DropdownButton
@@ -549,6 +570,7 @@
                             @iconPrefix="fas"
                             @text={{t "fleet-ops.operations.orders.index.new.add-entity"}}
                             @triggerClass="mr-2 hidden md:flex"
+                            @permission="fleet-ops create order"
                             as |dd|
                         >
                             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
@@ -682,7 +704,7 @@
                 @wrapperClass="justify-start-i mb-4"
                 @isToggled={{this.servicable}}
                 @onToggle={{this.checkServiceRates}}
-                @disabled={{this.isNotServicable}}
+                @disabled={{or (cannot "fleet-ops create order") this.isNotServicable}}
                 @helpText={{t "fleet-ops.operations.orders.index.new.service-help-text"}}
             />
 
@@ -794,7 +816,7 @@
         </ContentPanel>
 
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.notes-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-            <Textarea @value={{this.order.notes}} class="form-input w-full" placeholder={{t "fleet-ops.operations.orders.index.new.notes-placeholder"}} rows={{4}} />
+            <Textarea @value={{this.order.notes}} class="form-input w-full" placeholder={{t "fleet-ops.operations.orders.index.new.notes-placeholder"}} disabled={{cannot "fleet-ops create order"}} rows={{4}} />
         </ContentPanel>
 
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.documents-panel-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
@@ -809,7 +831,7 @@
                     </div>
                 {{else}}
                     {{#let (file-queue name="files" onFileAdded=this.queueFile accept=(join "," this.acceptedFileTypes)) as |queue|}}
-                        <FileDropzone @queue={{queue}} class="dropzone file-dropzone" as |dropzone|>
+                        <FileDropzone @queue={{queue}} class="dropzone file-dropzone" @disabled={{cannot "fleet-ops create order"}} as |dropzone|>
                             {{#if dropzone.active}}
                                 {{#if dropzone.valid}}
                                     {{t "component.dropzone.drop-to-upload"}}
@@ -831,7 +853,7 @@
                                     {{#if dropzone.supported}}
                                         <p class="text-sm my-5">{{t "component.dropzone.dropzone-supported-files"}}</p>
                                     {{/if}}
-                                    <FileUpload @name="files" @for="files" @accept={{join "," this.acceptedFileTypes}} @multiple={{true}} @onFileAdded={{this.queueFile}}>
+                                    <FileUpload @name="files" @for="files" @accept={{join "," this.acceptedFileTypes}} @multiple={{true}} @onFileAdded={{this.queueFile}} @disabled={{cannot "fleet-ops create order"}}>
                                         <a tabindex={{0}} class="btn btn-magic cursor-pointer ml-1">{{t "component.dropzone.or-select-button-text"}}</a>
                                     </FileUpload>
                                 </div>

@@ -49,6 +49,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\FixDriverCompanies::class,
         \Fleetbase\FleetOps\Console\Commands\FixLegacyOrderConfigs::class,
         \Fleetbase\FleetOps\Console\Commands\FixInvalidPolymorphicRelationTypeNamespaces::class,
+        \Fleetbase\FleetOps\Console\Commands\AssignDriverRoles::class,
     ];
 
     /**
@@ -97,7 +98,9 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../../config/dompdf.php', 'dompdf');
 
         // Register the GeometryEngine for GEOSEngine
-        GeometryEngineRegistry::set(new GEOSEngine());
+        if (Utils::classExists(GeometryEngineRegistry::class)) {
+            GeometryEngineRegistry::set(new GEOSEngine());
+        }
     }
 
     public function registerNotifications()

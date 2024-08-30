@@ -13,7 +13,7 @@
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
                 {{#if this.vendor.id}}
-                    <Button @type="default" @icon="warehouse" @helpText={{t "fleet-ops.component.vendor-form-panel.view-details"}} @onClick={{this.onViewDetails}} />
+                    <Button @type="default" @icon="warehouse" @helpText={{t "fleet-ops.component.vendor-form-panel.view-details"}} @onClick={{this.onViewDetails}} @permission="fleet-ops view vendor" />
                 {{/if}}
             </div>
             <div class="flex flex-1 justify-end">
@@ -24,6 +24,7 @@
                         @text={{if this.vendor.id (t "fleet-ops.component.vendor-form-panel.save-vendor") (t "fleet-ops.component.vendor-form-panel.create-vendor")}}
                         @onClick={{perform this.save}}
                         @isLoading={{not this.save.isIdle}}
+                        @permission={{this.savePermission}}
                     />
                 </div>
                 <Button
@@ -51,6 +52,7 @@
                                     @icon="upload"
                                     @hideButtonText={{true}}
                                     @labelClass="upload-avatar-label-overlay"
+                                    @permission={{this.savePermission}}
                                     class="w-12 btn-reset"
                                 />
                             </div>

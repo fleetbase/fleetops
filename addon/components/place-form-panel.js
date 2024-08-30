@@ -9,34 +9,11 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
 export default class PlaceFormPanelComponent extends Component {
-    /**
-     * @service store
-     */
     @service store;
-
-    /**
-     * @service fetch
-     */
     @service fetch;
-
-    /**
-     * @service intl
-     */
     @service intl;
-
-    /**
-     * @service notifications
-     */
     @service notifications;
-
-    /**
-     * @service hostRouter
-     */
     @service hostRouter;
-
-    /**
-     * @service contextPanel
-     */
     @service contextPanel;
 
     /**
@@ -59,11 +36,19 @@ export default class PlaceFormPanelComponent extends Component {
     @tracked placeTypes = ['place', 'customer'];
 
     /**
+     * Permission needed to update or create record.
+     *
+     * @memberof DriverFormPanelComponent
+     */
+    @tracked savePermission;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor() {
+    constructor(owner, { place = null }) {
         super(...arguments);
-        this.place = this.args.place;
+        this.place = place;
+        this.savePermission = place && place.isNew ? 'fleet-ops create place' : 'fleet-ops update place';
         applyContextComponentArguments(this);
     }
 

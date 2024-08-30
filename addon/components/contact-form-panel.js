@@ -7,39 +7,12 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
 export default class ContactFormPanelComponent extends Component {
-    /**
-     * @service store
-     */
     @service store;
-
-    /**
-     * @service intl
-     */
     @service intl;
-
-    /**
-     * @service fetch
-     */
     @service fetch;
-
-    /**
-     * @service currentUser
-     */
     @service currentUser;
-
-    /**
-     * @service notifications
-     */
     @service notifications;
-
-    /**
-     * @service hostRouter
-     */
     @service hostRouter;
-
-    /**
-     * @service contextPanel
-     */
     @service contextPanel;
 
     /**
@@ -63,11 +36,19 @@ export default class ContactFormPanelComponent extends Component {
     @tracked contactStatusOptions = ['pending', 'active', 'do-not-contact', 'prospective', 'archived'];
 
     /**
+     * Permission needed to update or create record.
+     *
+     * @memberof DriverFormPanelComponent
+     */
+    @tracked savePermission;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor() {
+    constructor(owner, { contact = null }) {
         super(...arguments);
-        this.contact = this.args.contact;
+        this.contact = contact;
+        this.savePermission = contact && contact.isNew ? 'fleet-ops create contact' : 'fleet-ops update contact';
         applyContextComponentArguments(this);
     }
 

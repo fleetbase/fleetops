@@ -3,7 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Requests\Internal;
 
 use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest as CreateDriverApiRequest;
-use Illuminate\Validation\Rule;
+use Fleetbase\Support\Auth;
 
 class CreateDriverRequest extends CreateDriverApiRequest
 {
@@ -14,7 +14,7 @@ class CreateDriverRequest extends CreateDriverApiRequest
      */
     public function authorize()
     {
-        return request()->session()->has('company');
+        return Auth::can('fleet-ops create driver');
     }
 
     /**
@@ -27,16 +27,11 @@ class CreateDriverRequest extends CreateDriverApiRequest
         $isCreating = $this->isMethod('POST');
 
         return [
-            // 'name'     => [Rule::requiredIf($isCreating)],
-            // 'email'    => [Rule::requiredIf($isCreating), Rule::when($this->filled('email'), ['email']), Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])],
-            // 'phone'    => [Rule::requiredIf($isCreating), Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])],
             'password' => 'nullable|string',
             'country'  => 'nullable|size:2',
             'city'     => 'nullable|string',
-            // 'vehicle' => 'nullable|exists:vehicles,uuid',
-            'status' => 'nullable|string|in:active,inactive',
-            // 'vendor' => 'nullable|exists:vendors,public_id',
-            'job' => 'nullable|exists:orders,public_id',
+            'status'   => 'nullable|string|in:active,inactive',
+            'job'      => 'nullable|exists:orders,public_id',
         ];
     }
 }

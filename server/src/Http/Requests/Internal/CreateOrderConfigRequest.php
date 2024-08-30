@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Requests\Internal;
 
 use Fleetbase\Http\Requests\FleetbaseRequest;
+use Fleetbase\Support\Auth;
 use Illuminate\Validation\Rule;
 
 class CreateOrderConfigRequest extends FleetbaseRequest
@@ -14,7 +15,7 @@ class CreateOrderConfigRequest extends FleetbaseRequest
      */
     public function authorize()
     {
-        return request()->session()->has('company');
+        return Auth::can('fleet-ops create order-config');
     }
 
     /**

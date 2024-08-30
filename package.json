@@ -1,6 +1,6 @@
 {
     "name": "@fleetbase/fleetops-engine",
-    "version": "0.5.5",
+    "version": "0.5.6",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "fleetbase": {
         "route": "fleet-ops"
@@ -42,13 +42,14 @@
     },
     "dependencies": {
         "@babel/core": "^7.23.2",
-        "@fleetbase/ember-core": "^0.2.14",
-        "@fleetbase/ember-ui": "^0.2.19",
+        "@fleetbase/ember-core": "^0.2.17",
+        "@fleetbase/ember-ui": "^0.2.24",
         "@fleetbase/fleetops-data": "^0.1.17",
         "@fleetbase/leaflet-routing-machine": "^3.2.16",
         "@fortawesome/ember-fontawesome": "^2.0.0",
         "@fortawesome/fontawesome-svg-core": "6.4.0",
         "@fortawesome/free-solid-svg-icons": "6.4.0",
+        "@fortawesome/free-brands-svg-icons": "6.4.0",
         "@joint/core": "^4.0.1",
         "@joint/layout-directed-graph": "^4.0.1",
         "@terraformer/spatial": "^2.1.2",
@@ -81,7 +82,7 @@
         "broccoli-asset-rev": "^3.0.0",
         "concurrently": "^8.2.2",
         "dragula": "^3.7.3",
-        "ember-auto-import": "^2.6.3",
+        "ember-auto-import": "^2.7.4",
         "ember-cli": "~5.4.1",
         "ember-cli-clean-css": "^3.0.0",
         "ember-cli-dependency-checker": "^3.3.2",

@@ -8,45 +8,15 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
 export default class DriverFormPanelComponent extends Component {
-    /**
-     * @service store
-     */
     @service store;
-
-    /**
-     * @service fetch
-     */
     @service fetch;
-
-    /**
-     * @service intl
-     */
     @service intl;
-
-    /**
-     * @service currentUser
-     */
     @service currentUser;
-
-    /**
-     * @service notifications
-     */
     @service notifications;
-
-    /**
-     * @service hostRouter
-     */
     @service hostRouter;
-
-    /**
-     * @service contextPanel
-     */
     @service contextPanel;
-
-    /**
-     * @service modalsManager
-     */
     @service modalsManager;
+    @service universe;
 
     /**
      * Overlay context.
@@ -67,6 +37,13 @@ export default class DriverFormPanelComponent extends Component {
     @tracked coordinatesInputComponent;
 
     /**
+     * Permission needed to update or create record.
+     *
+     * @memberof DriverFormPanelComponent
+     */
+    @tracked savePermission;
+
+    /**
      * Action to create a new user quickly
      *
      * @memberof DriverFormPanelComponent
@@ -76,6 +53,7 @@ export default class DriverFormPanelComponent extends Component {
             text: 'Create new user',
             icon: 'user-plus',
             size: 'xs',
+            permission: 'iam create user',
             onClick: () => {
                 const user = this.store.createRecord('user', {
                     status: 'pending',
@@ -85,6 +63,7 @@ export default class DriverFormPanelComponent extends Component {
                 this.modalsManager.show('modals/user-form', {
                     title: 'Create a new user',
                     user,
+                    formPermission: 'iam create user',
                     uploadNewPhoto: (file) => {
                         this.fetch.uploadFile.perform(
                             file,
@@ -103,17 +82,17 @@ export default class DriverFormPanelComponent extends Component {
                             }
                         );
                     },
-                    confirm: (modal) => {
+                    confirm: async (modal) => {
                         modal.startLoading();
 
-                        return user
-                            .save()
-                            .then(() => {
-                                this.notifications.success('New user created successfully!');
-                            })
-                            .catch((error) => {
-                                this.notifications.serverError(error);
-                            });
+                        try {
+                            await user.save();
+                            this.notifications.success('New user created successfully!');
+                            modal.done();
+                        } catch (error) {
+                            this.notifications.serverError(error);
+                            modal.stopLoading();
+                        }
                     },
                 });
             },
@@ -123,9 +102,10 @@ export default class DriverFormPanelComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor() {
+    constructor(owner, { driver = null }) {
         super(...arguments);
-        this.driver = this.args.driver;
+        this.driver = driver;
+        this.savePermission = driver && driver.isNew ? 'fleet-ops create driver' : 'fleet-ops update driver';
         applyContextComponentArguments(this);
     }
 
@@ -156,7 +136,9 @@ export default class DriverFormPanelComponent extends Component {
             return;
         }
 
+        this.hostRouter.refresh();
         this.notifications.success(this.intl.t('fleet-ops.component.driver-form-panel.success-message', { driverName: this.driver.name }));
+        this.universe.trigger('fleet-ops.driver.saved', this.driver);
         contextComponentCallback(this, 'onAfterSave', this.driver);
     }
 

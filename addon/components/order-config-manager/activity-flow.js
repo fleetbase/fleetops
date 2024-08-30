@@ -16,23 +16,10 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
  * @extends Component
  */
 export default class OrderConfigManagerActivityFlowComponent extends Component {
-    /**
-     * Service to manage context panel interactions.
-     * @type {Service}
-     */
     @service contextPanel;
-
-    /**
-     * Service to fire notifications.
-     * @type {Service}
-     */
     @service notifications;
-
-    /**
-     * Service for internationalization.
-     * @type {Service}
-     */
     @service intl;
+    @service abilities;
 
     /**
      * Represents the current state of the activity flow.
@@ -420,8 +407,8 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @param {Object} elementView - The JointJS element view of the clicked activity.
      */
     onActivityClicked(elementView) {
-        // Disable editing activity if core service
-        if (this.config.core_service) {
+        // Disable editing activity if core service or if cannot view order config
+        if (this.config.core_service || this.abilities.cannot('fleet-ops view order-config')) {
             return;
         }
         const { model } = elementView;
@@ -670,11 +657,11 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             tools = [];
         }
 
-        if (activity.get('code') === 'started') {
+        if (activity.get('code') === 'started' && this.abilities.can('fleet-ops update order-config')) {
             tools = [addButton];
         }
 
-        if (!this.immutableActivities.includes(activity.get('code'))) {
+        if (!this.immutableActivities.includes(activity.get('code')) && this.abilities.can('fleet-ops update order-config')) {
             tools = [removeButton, addButton];
         }
 

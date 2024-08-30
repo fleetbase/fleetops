@@ -9,53 +9,12 @@ import getIssueTypes from '../../../utils/get-issue-types';
 import getIssueCategories from '../../../utils/get-issue-categories';
 
 export default class ManagementIssuesIndexController extends BaseController {
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `modals-manager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var intl
-     */
     @service intl;
-
-    /**
-     * Inject the `crud` service
-     *
-     * @var {Service}
-     */
     @service crud;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `filters` service
-     *
-     * @var {Service}
-     */
     @service filters;
 
     /**
@@ -177,6 +136,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             valuePath: 'public_id',
             cellComponent: 'table/cell/anchor',
             action: this.viewIssue,
+            permission: 'fleet-ops view issue',
             width: '110px',
             resizable: true,
             sortable: true,
@@ -219,8 +179,9 @@ export default class ManagementIssuesIndexController extends BaseController {
             valuePath: 'reporter_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
+            permission: 'iam view user',
             onClick: async (issue) => {
-                let reporter = await issue.loadDReporter();
+                let reporter = await this.store.findRecord('user', issue.reported_by_uuid);
 
                 if (reporter) {
                     this.contextPanel.focus(reporter);
@@ -239,8 +200,9 @@ export default class ManagementIssuesIndexController extends BaseController {
             valuePath: 'assignee_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
+            permission: 'iam view user',
             onClick: async (issue) => {
-                let assignee = await issue.loadDAssignee();
+                let assignee = await this.store.findRecord('user', issue.assigned_to_uuid);
 
                 if (assignee) {
                     this.contextPanel.focus(assignee);
@@ -259,6 +221,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             valuePath: 'driver_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
+            permission: 'fleet-ops view driver',
             onClick: async (issue) => {
                 let driver = await issue.loadDriver();
 
@@ -279,6 +242,7 @@ export default class ManagementIssuesIndexController extends BaseController {
             valuePath: 'vehicle_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
+            permission: 'fleet-ops view vehicle',
             onClick: async (issue) => {
                 let vehicle = await issue.loadVehicle();
 
@@ -341,10 +305,12 @@ export default class ManagementIssuesIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.issues.index.view'),
                     fn: this.viewIssue,
+                    permission: 'fleet-ops view issue',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.issues.index.edit-issues'),
                     fn: this.editIssue,
+                    permission: 'fleet-ops update issue',
                 },
                 {
                     separator: true,
@@ -352,6 +318,7 @@ export default class ManagementIssuesIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.issues.index.delete'),
                     fn: this.deleteIssue,
+                    permission: 'fleet-ops delete issue',
                 },
             ],
             sortable: false,

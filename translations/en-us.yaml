@@ -100,6 +100,9 @@ fleet-ops:
     pickup: Pickup
     dropoff: Dropoff
     import: Import
+    order: Order
+    create-order: Create Order
+    dispatch-order: Dispatch Order
   component:
     activity-logic-builder:
       activity-logic: Activity Logic
@@ -1260,6 +1263,7 @@ fleet-ops:
         view-order: View Order
         cancel-order: Cancel Order
         delete-order: Delete Order
+        dispatch-order: Dispatch Order
         cancel-title: Are you sure you wish to cancel this order?
         cancel-body: Once this order is canceled, the order record will still be visible but activity cannot be added to this order.
         cancel-success: Order {orderId} has been canceled.
@@ -1447,6 +1451,7 @@ fleet-ops:
         title: Scheduler
         unscheduled-orders: Unscheduled Orders
         scheduled-orders: Scheduled Orders
+        unauthorized-to-schedule: You are not authorized to schedule orders.
     service-rates:
       index:
         edit-service: Edit Service Rate

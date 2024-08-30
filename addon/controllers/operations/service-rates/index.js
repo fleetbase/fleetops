@@ -7,74 +7,15 @@ import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 
 export default class OperationsServiceRatesIndexController extends BaseController {
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
-     */
     @service currentUser;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
     @service intl;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
-
-    /**
-     * Inject the `filters` service
-     *
-     * @var {Service}
-     */
     @service filters;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service crud;
-
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `modalsManager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `loader` service
-     *
-     * @var {Service}
-     */
     @service loader;
 
     /**
@@ -123,6 +64,7 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
             valuePath: 'public_id',
             width: '150px',
             cellComponent: 'table/cell/anchor',
+            permission: 'fleet-ops view service-rate',
             onClick: this.editServiceRate,
             resizable: true,
             sortable: true,
@@ -198,10 +140,12 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
                 {
                     label: this.intl.t('fleet-ops.operations.service-rates.index.edit-service'),
                     fn: this.editServiceRate,
+                    permission: 'fleet-ops view service-rate',
                 },
                 {
                     label: this.intl.t('fleet-ops.operations.service-rates.index.delete-service'),
                     fn: this.deleteServiceRate,
+                    permission: 'fleet-ops delete service-rate',
                 },
             ],
             sortable: false,

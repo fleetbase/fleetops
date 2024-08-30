@@ -14,6 +14,17 @@ const getScheduledOrder = (order) => {
 
 export default class OperationsSchedulerIndexRoute extends Route {
     @service store;
+    @service notifications;
+    @service hostRouter;
+    @service abilities;
+    @service intl;
+
+    beforeModel() {
+        if (this.abilities.cannot('fleet-ops list order')) {
+            this.notifications.warning(this.intl.t('common.unauthorized-access'));
+            return this.hostRouter.transitionTo('console.fleet-ops');
+        }
+    }
 
     model() {
         return this.store.query('order', { status: 'created', with: ['payload', 'driverAssigned.vehicle'] });

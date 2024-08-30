@@ -5,9 +5,11 @@ import getResourceNameFromTransition from '@fleetbase/ember-core/utils/get-resou
 
 export default class ApplicationRoute extends Route {
     @service loader;
-    @service fetch;
     @service intl;
     @service location;
+    @service abilities;
+    @service hostRouter;
+    @service notifications;
 
     @action loading(transition) {
         const resourceName = getResourceNameFromTransition(transition, { humanize: true });
@@ -17,10 +19,11 @@ export default class ApplicationRoute extends Route {
     }
 
     beforeModel() {
-        this.location.getUserLocation();
-    }
+        if (this.abilities.cannot('fleet-ops see extension')) {
+            this.notifications.warning(this.intl.t('common.unauthorized-access'));
+            return this.hostRouter.transitionTo('console');
+        }
 
-    model() {
-        return this.fetch.get('fleet-ops/settings/visibility');
+        this.location.getUserLocation();
     }
 }

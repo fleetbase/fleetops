@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Requests\Internal;
 
 use Fleetbase\Http\Requests\FleetbaseRequest;
+use Fleetbase\Support\Auth;
 
 class FleetActionRequest extends FleetbaseRequest
 {
@@ -13,7 +14,25 @@ class FleetActionRequest extends FleetbaseRequest
      */
     public function authorize()
     {
-        return request()->session()->has('company');
+        $action = $this->route()->getActionMethod();
+
+        if ($action === 'assignVehicle') {
+            return Auth::can('fleet-ops assign-vehicle-for fleet');
+        }
+
+        if ($action === 'assignDriver') {
+            return Auth::can('fleet-ops assign-driver-for fleet');
+        }
+
+        if ($action === 'removeVehicle') {
+            return Auth::can('fleet-ops remove-vehicle-for fleet');
+        }
+
+        if ($action === 'removeDriver') {
+            return Auth::can('fleet-ops remove-driver-for fleet');
+        }
+
+        return Auth::can('fleet-ops update fleet');
     }
 
     /**

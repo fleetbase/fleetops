@@ -7,67 +7,14 @@ import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 
 export default class ManagementFuelReportsIndexController extends BaseController {
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `modals-manager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var intl
-     */
     @service intl;
-
-    /**
-     * Inject the `crud` service
-     *
-     * @var {Service}
-     */
     @service crud;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `contextPanel` service
-     *
-     * @var {Service}
-     */
     @service contextPanel;
-
-    /**
-     * Inject the `filters` service
-     *
-     * @var {Service}
-     */
     @service filters;
-
-    /**
-     * Inject the `loader` service
-     *
-     * @var {Service}
-     */
     @service loader;
 
     /**
@@ -176,8 +123,8 @@ export default class ManagementFuelReportsIndexController extends BaseController
             valuePath: 'reporter_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
-            onClick: async (issue) => {
-                let reporter = await issue.loadDReporter();
+            onClick: async (fuelReport) => {
+                let reporter = await this.store.findRecord('user', fuelReport.reported_by_uuid);
 
                 if (reporter) {
                     this.contextPanel.focus(reporter);
@@ -196,6 +143,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
             valuePath: 'driver_name',
             width: '120px',
             cellComponent: 'table/cell/anchor',
+            permission: 'fleet-ops view driver',
             onClick: async (fuelReport) => {
                 let driver = await fuelReport.loadDriver();
 
@@ -216,8 +164,9 @@ export default class ManagementFuelReportsIndexController extends BaseController
             valuePath: 'vehicle_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
-            onClick: async (issue) => {
-                let vehicle = await issue.loadVehicle();
+            permission: 'fleet-ops view vehicle',
+            onClick: async (fuelReport) => {
+                let vehicle = await fuelReport.loadVehicle();
 
                 if (vehicle) {
                     this.contextPanel.focus(vehicle);
@@ -300,10 +249,12 @@ export default class ManagementFuelReportsIndexController extends BaseController
                 {
                     label: this.intl.t('fleet-ops.management.fuel-reports.index.view'),
                     fn: this.viewFuelReport,
+                    permission: 'fleet-ops view fuel-report',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.fuel-reports.index.edit-fuel'),
                     fn: this.editFuelReport,
+                    permission: 'fleet-ops update fuel-report',
                 },
                 {
                     separator: true,
@@ -311,6 +262,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
                 {
                     label: this.intl.t('fleet-ops.management.fuel-reports.index.delete'),
                     fn: this.deleteFuelReport,
+                    permission: 'fleet-ops delete fuel-report',
                 },
             ],
             sortable: false,

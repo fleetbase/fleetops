@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 
 /**
  * Component class for managing the details of an order configuration.
@@ -11,28 +12,9 @@ import { action } from '@ember/object';
  * @extends Component
  */
 export default class OrderConfigManagerDetailsComponent extends Component {
-    /**
-     * Modals manager service for handling modal dialogs.
-     * @service
-     */
     @service modalsManager;
-
-    /**
-     * Notifications service for displaying user feedback.
-     * @service
-     */
     @service notifications;
-
-    /**
-     * Internationalization service for handling translations.
-     * @service
-     */
     @service intl;
-
-    /**
-     * Store service for handling data storage and retrieval.
-     * @service
-     */
     @service store;
 
     /**
@@ -53,22 +35,20 @@ export default class OrderConfigManagerDetailsComponent extends Component {
     }
 
     /**
-     * Action method to save the current configuration.
+     * Task method to save the current configuration.
      * Provides user feedback and executes callback on successful update.
      * @action
      */
-    @action save() {
-        return this.config
-            .save()
-            .then(() => {
-                this.notifications.success(this.intl.t('fleet-ops.component.order-config-manager.saved-success-message', { orderConfigName: this.config.name }));
-                if (typeof this.args.onConfigUpdated === 'function') {
-                    this.args.onConfigUpdated(this.config);
-                }
-            })
-            .catch((error) => {
-                this.notifications.serverError(error);
-            });
+    @task *save() {
+        try {
+            yield this.config.save();
+            this.notifications.success(this.intl.t('fleet-ops.component.order-config-manager.saved-success-message', { orderConfigName: this.config.name }));
+            if (typeof this.args.onConfigUpdated === 'function') {
+                this.args.onConfigUpdated(this.config);
+            }
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**
@@ -81,26 +61,37 @@ export default class OrderConfigManagerDetailsComponent extends Component {
             title: this.intl.t('fleet-ops.component.order-config-manager.details.delete.delete-title'),
             body: this.intl.t('fleet-ops.component.order-config-manager.details.delete.delete-body-message'),
             acceptButtonText: this.intl.t('fleet-ops.component.order-config-manager.details.delete.confirm-delete'),
-            confirm: (modal) => {
+            confirm: async (modal) => {
                 if (typeof this.args.onConfigDeleting === 'function') {
                     this.args.onConfigDeleting(this.config);
                 }
 
                 modal.startLoading();
-                return this.config
-                    .destroyRecord()
-                    .then(() => {
-                        if (typeof this.args.onConfigDeleted === 'function') {
-                            this.args.onConfigDeleted(this.config);
-                        }
-                    })
-                    .catch((error) => {
-                        this.notifications.serverError(error);
-                    })
-                    .finally(() => {
-                        modal.done();
-                    });
+
+                try {
+                    await this.deleteConfig.perform();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
             },
         });
+    }
+
+    /**
+     * Task to delete current order config.
+     *
+     * @memberof OrderConfigManagerDetailsComponent
+     */
+    @task *deleteConfig() {
+        try {
+            yield this.config.destroyRecord();
+            if (typeof this.args.onConfigDeleted === 'function') {
+                this.args.onConfigDeleted(this.config);
+            }
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 }

@@ -75,6 +75,9 @@ class DriverController extends Controller
         // Set user type
         $user->setUserType('driver');
 
+        // assign driver role
+        $user->assignSingleRole('Driver');
+
         // set user id
         $input['user_uuid']    = $user->uuid;
         $input['company_uuid'] = $company->uuid;  // Ensure correct company_uuid is set

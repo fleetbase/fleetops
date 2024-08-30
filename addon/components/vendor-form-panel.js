@@ -9,39 +9,12 @@ import getVendorTypeOptions from '../utils/get-vendor-type-options';
 import getVendorStatusOptions from '../utils/get-vendor-status-options';
 
 export default class VendorFormPanelComponent extends Component {
-    /**
-     * @service store
-     */
     @service store;
-
-    /**
-     * @service fetch
-     */
     @service fetch;
-
-    /**
-     * @service intl
-     */
     @service intl;
-
-    /**
-     * @service currentUser
-     */
     @service currentUser;
-
-    /**
-     * @service notifications
-     */
     @service notifications;
-
-    /**
-     * @service hostRouter
-     */
     @service hostRouter;
-
-    /**
-     * @service contextPanel
-     */
     @service contextPanel;
 
     /**
@@ -71,13 +44,21 @@ export default class VendorFormPanelComponent extends Component {
     @tracked vendorStatusOptions = getVendorStatusOptions();
 
     /**
+     * Permission needed to update or create record.
+     *
+     * @memberof DriverFormPanelComponent
+     */
+    @tracked savePermission;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor() {
+    constructor(owner, { vendor = null }) {
         super(...arguments);
-        this.vendor = this.args.vendor;
+        this.vendor = vendor;
+        this.savePermission = vendor && vendor.isNew ? 'fleet-ops create vendor' : 'fleet-ops update vendor';
+        this.isEditing = vendor && !vendor.isNew;
         applyContextComponentArguments(this);
-        this.isEditing = this.vendor && typeof this.vendor.id === 'string';
     }
 
     /**

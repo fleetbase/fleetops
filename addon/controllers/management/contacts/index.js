@@ -7,60 +7,13 @@ import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
 
 export default class ManagementContactsIndexController extends BaseController {
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
     @service intl;
-
-    /**
-     * Inject the `modals-manager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `crud` service
-     *
-     * @var {Service}
-     */
     @service crud;
-
-    /**
-     * Inject the `filters` service
-     *
-     * @var {Service}
-     */
     @service filters;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
 
     /**
@@ -159,6 +112,7 @@ export default class ManagementContactsIndexController extends BaseController {
             width: '170px',
             cellComponent: 'table/cell/media-name',
             action: this.viewContact,
+            permission: 'fleet-ops view contact',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -260,10 +214,12 @@ export default class ManagementContactsIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.contacts.index.view-contact'),
                     fn: this.viewContact,
+                    permission: 'fleet-ops view contact',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.contacts.index.edit-contact'),
                     fn: this.editContact,
+                    permission: 'fleet-ops update contact',
                 },
                 {
                     separator: true,
@@ -271,6 +227,7 @@ export default class ManagementContactsIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.contacts.index.delete-contact'),
                     fn: this.deleteContact,
+                    permission: 'fleet-ops delete contact',
                 },
             ],
             sortable: false,

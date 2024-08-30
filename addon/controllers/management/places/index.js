@@ -6,60 +6,13 @@ import { isBlank } from '@ember/utils';
 import { task, timeout } from 'ember-concurrency';
 
 export default class ManagementPlacesIndexController extends BaseController {
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `modals-manager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
     @service intl;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
-
-    /**
-     * Inject the `filters` service
-     *
-     * @var {Service}
-     */
     @service filters;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `crud` service
-     *
-     * @var {Service}
-     */
     @service crud;
 
     /**
@@ -152,6 +105,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
             action: this.viewPlace,
+            permission: 'fleet-ops view place',
             hidden: true,
             resizable: true,
             sortable: true,
@@ -164,6 +118,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             valuePath: 'address',
             cellComponent: 'table/cell/anchor',
             action: this.viewPlace,
+            permission: 'fleet-ops view place',
             width: '320px',
             resizable: true,
             sortable: true,
@@ -187,6 +142,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
             action: this.viewPlace,
+            permission: 'fleet-ops view place',
             width: '100px',
             hidden: true,
             resizable: true,
@@ -201,6 +157,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
             action: this.viewPlace,
+            permission: 'fleet-ops view place',
             width: '100px',
             hidden: true,
             resizable: true,
@@ -214,6 +171,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             valuePath: 'postal_code',
             cellComponent: 'table/cell/anchor',
             action: this.viewPlace,
+            permission: 'fleet-ops view place',
             width: '100px',
             resizable: true,
             sortable: true,
@@ -238,6 +196,7 @@ export default class ManagementPlacesIndexController extends BaseController {
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
             action: this.viewPlace,
+            permission: 'fleet-ops view place',
             width: '100px',
             hidden: true,
             resizable: true,
@@ -293,10 +252,12 @@ export default class ManagementPlacesIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.places.index.view-details'),
                     fn: this.viewPlace,
+                    permission: 'fleet-ops view place',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.places.index.edit-place'),
                     fn: this.editPlace,
+                    permission: 'fleet-ops update place',
                 },
                 {
                     separator: true,
@@ -304,6 +265,7 @@ export default class ManagementPlacesIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.places.index.view-place'),
                     fn: this.viewOnMap,
+                    permission: 'fleet-ops view place',
                 },
                 {
                     separator: true,
@@ -311,6 +273,7 @@ export default class ManagementPlacesIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.management.places.index.delete'),
                     fn: this.deletePlace,
+                    permission: 'fleet-ops delete place',
                 },
             ],
             sortable: false,
