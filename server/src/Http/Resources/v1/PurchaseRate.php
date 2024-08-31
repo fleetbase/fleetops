@@ -2,7 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 
@@ -62,14 +61,8 @@ class PurchaseRate extends FleetbaseResource
      */
     public function serviceQuote()
     {
-        if (Utils::notEmpty($this->service_quote_uuid) && Utils::isEmpty($this->serviceQuote)) {
-            $this->load(['serviceArea']);
-        }
+        $this->loadMissing('serviceQuote');
 
-        if (Utils::isEmpty($this->serviceQuote)) {
-            return null;
-        }
-
-        return new ServiceQuote($this->serviceQuote);
+        return $this->serviceQuote ? new ServiceQuote($this->serviceQuote) : null;
     }
 }
