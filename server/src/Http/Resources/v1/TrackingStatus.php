@@ -2,7 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
@@ -68,14 +67,8 @@ class TrackingStatus extends FleetbaseResource
      */
     public function trackingNumber()
     {
-        if (Utils::notEmpty($this->tracking_number_uuid) && Utils::isEmpty($this->trackingNumber)) {
-            $this->load(['trackingNumber']);
-        }
+        $this->loadMissing('trackingNumner');
 
-        if (Utils::isEmpty($this->trackingNumber)) {
-            return null;
-        }
-
-        return new TrackingNumber($this->trackingNumber);
+        return $this->trackingNumber ? new TrackingNumber($this->trackingNumber) : null;
     }
 }
