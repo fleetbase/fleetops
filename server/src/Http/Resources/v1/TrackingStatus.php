@@ -67,7 +67,7 @@ class TrackingStatus extends FleetbaseResource
      */
     public function trackingNumber()
     {
-        $this->loadMissing('trackingNumner');
+        $this->loadMissing('trackingNumber');
 
         return $this->trackingNumber ? new TrackingNumber($this->trackingNumber) : null;
     }
