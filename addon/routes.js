@@ -68,6 +68,11 @@ export default buildRoutes(function () {
                 this.route('details', { path: '/:public_id' });
                 this.route('edit', { path: '/edit/:public_id' });
             });
+            this.route('customers', function () {
+                this.route('new');
+                this.route('details', { path: '/:public_id' });
+                this.route('edit', { path: '/edit/:public_id' });
+            });
         });
         this.route('fuel-reports', function () {
             this.route('index', { path: '/' }, function () {

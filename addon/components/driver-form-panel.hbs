@@ -111,7 +111,7 @@
                         <ModelSelect
                             @modelName="user"
                             @selectedModel={{this.driver.user}}
-                            @placeholder="Select User"
+                            @placeholder={{t "fleet-ops.component.driver-form-panel.select-user"}}
                             @query={{hash doesnt_have_driver=true}}
                             @triggerClass="form-select form-input"
                             @infiniteScroll={{false}}
@@ -133,7 +133,7 @@
                     </InputGroup>
                 </div>
                 {{#if this.driver.user}}
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs dark:text-gray-100">
                         <InputGroup @name={{t "fleet-ops.common.name"}} @wrapperClass="col-span-2">
                             <Input @value={{this.driver.user.name}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} disabled={{true}} />
                         </InputGroup>
@@ -150,7 +150,7 @@
             </ContentPanel>
 
             <ContentPanel @title={{t "fleet-ops.component.driver-form-panel.driver-details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs dark:text-gray-100">
                     <InputGroup @name={{t "fleet-ops.common.internal-id"}}>
                         <Input @value={{this.driver.internal_id}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.internal-id"}} disabled={{cannot this.savePermission}} />
                     </InputGroup>

@@ -4,31 +4,31 @@
             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                 <div class="p-1">
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newCustomer)}} disabled={{cannot "fleet-ops create customer"}}>
-                        <div class="w-6">
+                        <div class="w-7 flex-grow-0 flex-shrink-0">
                             <FaIcon @icon="user-plus" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.create-new-customer"}}</span>
                     </a>
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newFacilitator)}} disabled={{cannot "fleet-ops create facilitator"}}>
-                        <div class="w-6">
+                        <div class="w-7 flex-grow-0 flex-shrink-0">
                             <FaIcon @icon="truck" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.create-new-facilitator"}}</span>
                     </a>
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.createPlace)}} disabled={{cannot "fleet-ops create place"}}>
-                        <div class="w-6">
+                        <div class="w-7 flex-grow-0 flex-shrink-0">
                             <FaIcon @icon="map-pin" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.create-new-place"}}</span>
                     </a>
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.addEntity)}} disabled={{cannot "fleet-ops create entity"}}>
-                        <div class="w-6">
+                        <div class="w-7 flex-grow-0 flex-shrink-0">
                             <FaIcon @icon="box" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.add-order"}}</span>
                     </a>
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.editMetaData)}}>
-                        <div class="w-6">
+                        <div class="w-7 flex-grow-0 flex-shrink-0">
                             <FaIcon @icon="table" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.edit-order"}}</span>
@@ -90,7 +90,7 @@
                         as |model|
                     >
                         <div class="flex items-center">
-                            <div class="w-7">
+                            <div class="w-7 flex-grow-0 flex-shrink-0">
                                 <FaIcon @icon={{if model.isVendor "warehouse" "user"}} />
                             </div>
                             <span class="uppercase">
@@ -114,7 +114,7 @@
                         as |model|
                     >
                         <div class="flex items-center">
-                            <div class="w-7">
+                            <div class="w-7 flex-grow-0 flex-shrink-0">
                                 {{#if model.isIntegratedVendor}}
                                     <Image src={{model.photo_url}} alt={{model.name}} class="w-4 h-4" width="16" height="16" />
                                 {{else}}
@@ -162,7 +162,7 @@
                         as |model|
                     >
                         <div class="flex items-center">
-                            <div class="w-6">
+                            <div class="w-7 flex-grow-0 flex-shrink-0">
                                 <FaIcon @icon="id-card-alt" />
                             </div>
                             <div class="flex-1 flex flex-row truncate">
@@ -196,7 +196,7 @@
                         as |model|
                     >
                         <div class="flex items-center">
-                            <div class="w-6">
+                            <div class="w-7 flex-grow-0 flex-shrink-0">
                                 <Image @src={{model.avatar_url}} @fallbackSrc={{config "defaultValues.vehicleAvatar"}} class="w-4 h-4 shadow-sm rounded-md" />
                             </div>
                             <div class="flex-1 flex flex-row truncate">
@@ -577,7 +577,7 @@
                                 {{#each this.orderConfig.entities as |customEntity|}}
                                     <div class="p-1">
                                         <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.addFromCustomEntity customEntity)}}>
-                                            <div class="w-6">
+                                            <div class="w-7 flex-grow-0 flex-shrink-0">
                                                 <FaIcon @icon="cube" />
                                             </div>
                                             <div>

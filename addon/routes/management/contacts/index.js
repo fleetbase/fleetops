@@ -5,6 +5,8 @@ import isNestedRouteTransition from '@fleetbase/ember-core/utils/is-nested-route
 
 export default class ManagementContactsIndexRoute extends Route {
     @service store;
+    @service loader;
+    @service intl;
 
     queryParams = {
         page: { refreshModel: true },
@@ -22,6 +24,12 @@ export default class ManagementContactsIndexRoute extends Route {
         updatedAt: { refreshModel: true },
     };
 
+    @action loading(transition) {
+        this.loader.showOnInitialTransition(transition, 'section.next-view-section', {
+            loadingMessage: this.intl.t('fleet-ops.common.loading-resource', { resourceName: 'Contacts' }),
+        });
+    }
+
     @action willTransition(transition) {
         if (isNestedRouteTransition(transition)) {
             set(this.queryParams, 'page.refreshModel', false);
@@ -30,6 +38,6 @@ export default class ManagementContactsIndexRoute extends Route {
     }
 
     model(params) {
-        return this.store.query('contact', params);
+        return this.store.query('contact', { ...params, type: 'contact' });
     }
 }

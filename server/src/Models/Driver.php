@@ -18,7 +18,12 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
@@ -90,6 +95,7 @@ class Driver extends Model
         'currency',
         'city',
         'online',
+        'current_status',
         'slug',
         'status',
         'meta,',
@@ -190,7 +196,7 @@ class Driver extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function user()
     {
@@ -198,7 +204,7 @@ class Driver extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function company()
     {
@@ -206,7 +212,7 @@ class Driver extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function vehicle()
     {
@@ -226,86 +232,58 @@ class Driver extends Model
         ]);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function vendor()
+    public function vendor(): BelongsTo|Builder
     {
         return $this->belongsTo(Vendor::class)->select(['id', 'uuid', 'public_id', 'name']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function currentJob()
+    public function currentJob(): BelongsTo|Builder
     {
         return $this->belongsTo(Order::class)->select(['id', 'uuid', 'public_id', 'payload_uuid', 'driver_assigned_uuid'])->without(['driver']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function currentOrder()
+    public function currentOrder(): BelongsTo|Builder
     {
         return $this->belongsTo(Order::class, 'current_job_uuid')->select(['id', 'uuid', 'public_id', 'payload_uuid', 'driver_assigned_uuid'])->without(['driver']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function jobs()
+    public function jobs(): HasMany|Builder
     {
         return $this->hasMany(Order::class, 'driver_assigned_uuid')->without(['driver']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function orders()
+    public function orders(): HasMany|Builder
     {
         return $this->hasMany(Order::class, 'driver_assigned_uuid')->without(['driver']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function pings()
+    public function pings(): HasMany
     {
         return $this->hasMany(Ping::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function positions()
+    public function positions(): HasMany
     {
         return $this->hasMany(Position::class, 'subject_uuid');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasManyThrough
-     */
-    public function fleets()
+    public function fleets(): HasManyThrough
     {
         return $this->hasManyThrough(Fleet::class, FleetDriver::class, 'driver_uuid', 'uuid', 'uuid', 'fleet_uuid');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function devices()
+    public function devices(): HasMany
     {
         return $this->hasMany(\Fleetbase\Models\UserDevice::class, 'user_uuid', 'user_uuid');
     }
 
     /**
      * Get avatar url.
-     *
-     * @return string|null
      */
-    public function getAvatarUrlAttribute($value)
+    public function getAvatarUrlAttribute($value): ?string
     {
         // if vehicle assigned us the vehicle avatar
+        $this->loadMissing('vehicle');
         if ($this->vehicle) {
             return $this->vehicle->avatar_url;
         }
@@ -342,10 +320,8 @@ class Driver extends Model
 
     /**
      * Get all avatar options for a vehicle.
-     *
-     * @return \Illuminate\Support\Collection
      */
-    public static function getAvatarOptions()
+    public static function getAvatarOptions(): Collection
     {
         $options = [
             'moto-driver.png',
@@ -374,10 +350,8 @@ class Driver extends Model
 
     /**
      * Specifies the user's FCM tokens.
-     *
-     * @return array
      */
-    public function routeNotificationForFcm()
+    public function routeNotificationForFcm(): array
     {
         return $this->devices
             ->where('platform', 'android')->map(
@@ -390,10 +364,8 @@ class Driver extends Model
 
     /**
      * Specifies the user's APNS tokens.
-     *
-     * @return array
      */
-    public function routeNotificationForApn()
+    public function routeNotificationForApn(): array
     {
         return $this->devices
             ->where('platform', 'ios')->map(
@@ -408,7 +380,7 @@ class Driver extends Model
      *
      * @param \Illuminate\Notifications\Notification $notification
      *
-     * @return array
+     * @return Channel
      */
     public function receivesBroadcastNotificationsOn($notification)
     {
@@ -418,7 +390,7 @@ class Driver extends Model
     /**
      * Get the drivers rotation.
      */
-    public function getRotationAttribute()
+    public function getRotationAttribute(): float
     {
         return round($this->heading / 360 + 180);
     }
@@ -426,25 +398,27 @@ class Driver extends Model
     /**
      * Get assigned vehicle assigned name.
      */
-    public function getCurrentJobIdAttribute()
+    public function getCurrentJobIdAttribute(): ?string
     {
-        return data_get($this, 'currentJob.public_id');
+        return $this->currentJob()->value('public_id');
     }
 
     /**
      * Get assigned vehicle assigned name.
      */
-    public function getVehicleNameAttribute()
+    public function getVehicleNameAttribute(): ?string
     {
-        return data_get($this, 'vehicle.display_name');
+        $this->loadMissing('vehicle');
+
+        return $this->vehicle ? $this->vehicle->display_name : null;
     }
 
     /**
      * Get assigned vehicles public ID.
      */
-    public function getVehicleIdAttribute()
+    public function getVehicleIdAttribute(): ?string
     {
-        return data_get($this, 'vehicle.public_id');
+        return $this->vehicle()->value('public_id');
     }
 
     /**
@@ -456,7 +430,7 @@ class Driver extends Model
             return Vehicle::getAvatar();
         }
 
-        return data_get($this, 'vehicle.avatar_url');
+        return $this->vehicle()->value('avatar_url');
     }
 
     /**
@@ -464,7 +438,7 @@ class Driver extends Model
      */
     public function getVendorIdAttribute()
     {
-        return data_get($this, 'vendor.public_id');
+        return $this->vendor()->select(['uuid', 'public_id', 'name'])->value('public_id');
     }
 
     /**
@@ -472,7 +446,7 @@ class Driver extends Model
      */
     public function getVendorNameAttribute()
     {
-        return data_get($this, 'vendor.name');
+        return $this->vendor()->select(['uuid', 'public_id', 'name'])->value('name');
     }
 
     /**

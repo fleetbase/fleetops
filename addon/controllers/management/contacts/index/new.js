@@ -4,32 +4,9 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 
 export default class ManagementContactsIndexNewController extends BaseController {
-    /**
-     * Inject the `store` service
-     *
-     * @memberof ManagementcontactsIndexNewController
-     */
     @service store;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementcontactsIndexNewController
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @memberof intl
-     */
     @service intl;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementcontactsIndexNewController
-     */
     @service modalsManager;
 
     /**

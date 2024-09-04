@@ -4,25 +4,8 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
 export default class ManagementContactsIndexEditController extends BaseController {
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementcontactsIndexEditController
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementcontactsIndexEditController
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @memberof intl
-     */
     @service intl;
 
     /**

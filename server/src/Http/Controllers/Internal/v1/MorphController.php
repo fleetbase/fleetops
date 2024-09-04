@@ -30,6 +30,7 @@ class MorphController extends Controller
         $resourceType = Str::lower(Utils::singularize($type));
 
         $contactsQuery = Contact::searchWhere('name', $query)
+            ->where('type', $resourceType === 'customer' ? '=' : '!=', 'customer')
             ->where('company_uuid', session('company'))
             ->filter(new ContactFilter($request));
 

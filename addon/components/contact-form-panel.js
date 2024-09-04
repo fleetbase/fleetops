@@ -22,13 +22,6 @@ export default class ContactFormPanelComponent extends Component {
     @tracked context;
 
     /**
-     * All possible contact types.
-     *
-     * @var {String}
-     */
-    @tracked contactTypeOptions = ['contact', 'customer'];
-
-    /**
      * All possible contact status options.
      *
      * @var {String}
@@ -38,7 +31,7 @@ export default class ContactFormPanelComponent extends Component {
     /**
      * Permission needed to update or create record.
      *
-     * @memberof DriverFormPanelComponent
+     * @memberof ContactFormPanelComponent
      */
     @tracked savePermission;
 
@@ -93,7 +86,7 @@ export default class ContactFormPanelComponent extends Component {
         this.fetch.uploadFile.perform(
             file,
             {
-                path: `uploads/${this.currentUser.companyId}/drivers/${this.contact.id}`,
+                path: `uploads/${this.currentUser.companyId}/contacts/${this.contact.id}`,
                 subject_uuid: this.contact.id,
                 subject_type: 'fleet-ops:contact',
                 type: 'contact_photo',
@@ -122,6 +115,40 @@ export default class ContactFormPanelComponent extends Component {
     }
 
     /**
+     * Edit contact's primary address.
+     *
+     * @return {void}
+     * @memberof ContactFormPanelComponent
+     */
+    @action async editAddress() {
+        let place;
+
+        if (this.contact.has_place) {
+            place = await this.contact.place;
+        } else {
+            place = this.store.createRecord('place');
+        }
+
+        return this.contextPanel.focus(place, 'editing', {
+            onAfterSave: (place) => {
+                this.selectVendorAddress(place);
+                this.contextPanel.clear();
+            },
+        });
+    }
+
+    /**
+     * Select and set the contact's primary address.
+     *
+     * @param {PlaceModel} place
+     * @memberof ContactFormPanelComponent
+     */
+    @action selectContactAddress(place) {
+        this.contact.place = place;
+        this.contact.place_uuid = place.id;
+    }
+
+    /**
      * Handles cancel button press.
      *
      * @action
@@ -129,29 +156,5 @@ export default class ContactFormPanelComponent extends Component {
      */
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.contact);
-    }
-
-    /**
-     * Uploads a file to the server for the contact.
-     *
-     * @param {File} file
-     */
-    uploadContactPhoto(file) {
-        this.fetch.uploadFile.perform(
-            file,
-            {
-                path: `uploads/${this.contact.company_uuid}/contacts/${this.contact.slug}`,
-                subject_uuid: this.contact.id,
-                subject_type: 'fleet-ops:contact',
-                type: 'contact_photo',
-            },
-            (uploadedFile) => {
-                this.contact.setProperties({
-                    photo_uuid: uploadedFile.id,
-                    photo_url: uploadedFile.url,
-                    photo: uploadedFile,
-                });
-            }
-        );
     }
 }

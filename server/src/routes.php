@@ -419,6 +419,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->match(['get', 'post'], 'export', $controller('export'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->get('facilitators/{id}', $controller('getAsFacilitator'));
                                 $router->get('customers/{id}', $controller('getAsCustomer'));
+                                $router->post('{id}/assign-driver', $controller('assignDriver'));
+                                $router->post('{id}/remove-driver', $controller('removeDriver'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                                 $router->post('import', $controller('import'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                             }

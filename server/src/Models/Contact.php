@@ -3,8 +3,12 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\Invite;
 use Fleetbase\Models\Model;
+use Fleetbase\Models\User;
+use Fleetbase\Notifications\UserInvited;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -13,7 +17,11 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -61,7 +69,7 @@ class Contact extends Model
      *
      * @var array
      */
-    protected $fillable = ['_key', 'public_id', 'internal_id', 'company_uuid', 'user_uuid', 'photo_uuid', 'name', 'title', 'email', 'phone', 'type', 'meta', 'slug'];
+    protected $fillable = ['_key', 'public_id', 'internal_id', 'company_uuid', 'user_uuid', 'place_uuid', 'photo_uuid', 'name', 'title', 'email', 'phone', 'type', 'meta', 'slug'];
 
     /**
      * The attributes that should be cast to native types.
@@ -111,60 +119,50 @@ class Contact extends Model
             ->saveSlugsTo('slug');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function company()
+    public function company(): BelongsTo
     {
-        return $this->belongsTo(\Fleetbase\Models\Company::class);
+        return $this->belongsTo(\Fleetbase\Models\Company::class, 'company_uuid');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function user()
+    public function user(): BelongsTo|Builder
     {
-        return $this->belongsTo(\Fleetbase\Models\User::class);
+        return $this->belongsTo(User::class, 'user_uuid')->where('type', $this->type);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function photo()
+    public function photo(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\File::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function devices()
+    public function place(): BelongsTo
+    {
+        return $this->belongsTo(Place::class, 'place_uuid');
+    }
+
+    public function devices(): HasMany
     {
         return $this->hasMany(\Fleetbase\Models\UserDevice::class, 'user_uuid', 'user_uuid');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function address()
-    {
-        return $this->hasOne(Place::class, 'owner_uuid');
-    }
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function addresses()
+    public function places(): HasMany
     {
         return $this->hasMany(Place::class, 'owner_uuid');
     }
 
+    public function facilitatorOrders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'facilitator_uuid', 'uuid');
+    }
+
+    public function customerOrders(): HasMany|Builder
+    {
+        return $this->hasMany(Order::class, 'customer_uuid')->whereNull('deleted_at')->withoutGlobalScopes();
+    }
+
     /**
      * Specifies the user's FCM tokens.
-     *
-     * @return string|array
      */
-    public function routeNotificationForFcm()
+    public function routeNotificationForFcm(): array
     {
         return $this->devices
             ->where('platform', 'android')
@@ -177,10 +175,8 @@ class Contact extends Model
 
     /**
      * Specifies the user's APNS tokens.
-     *
-     * @return string|array
      */
-    public function routeNotificationForApn()
+    public function routeNotificationForApn(): array
     {
         return $this->devices
             ->where('platform', 'ios')
@@ -192,40 +188,6 @@ class Contact extends Model
     }
 
     /**
-     * Get avatar URL attribute.
-     */
-    public function getPhotoUrlAttribute()
-    {
-        return data_get($this, 'photo.url', 'https://s3.ap-southeast-1.amazonaws.com/flb-assets/static/no-avatar.png');
-    }
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function facilitatorOrders()
-    {
-        return $this->hasMany(Order::class, 'facilitator_uuid', 'uuid');
-    }
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function customerOrders()
-    {
-        return $this->hasMany(Order::class, 'customer_uuid')->whereNull('deleted_at')->withoutGlobalScopes();
-    }
-
-    /**
-     * The number of orders by this user.
-     *
-     * @return int
-     */
-    public function getCustomerOrdersCountAttribute()
-    {
-        return $this->customerOrders()->count();
-    }
-
-    /**
      * The attribute to route notifications to.
      */
     public function routeNotificationForTwilio(): ?string
@@ -233,6 +195,33 @@ class Contact extends Model
         return $this->phone;
     }
 
+    /**
+     * Get avatar URL attribute.
+     */
+    public function getPhotoUrlAttribute(): string
+    {
+        return data_get($this, 'photo.url', 'https://s3.ap-southeast-1.amazonaws.com/flb-assets/static/no-avatar.png');
+    }
+
+    /**
+     * The number of orders by this user.
+     */
+    public function getCustomerOrdersCountAttribute(): int
+    {
+        return $this->customerOrders()->count();
+    }
+
+    /**
+     * Determines if user is a customer.
+     */
+    public function getIsCustomerAttribute(): bool
+    {
+        return $this->type === 'customer';
+    }
+
+    /**
+     * Creates a new contact from an import row.
+     */
     public static function createFromImport(array $row, bool $saveInstance = false): Contact
     {
         // Filter array for null key values
@@ -257,5 +246,108 @@ class Contact extends Model
         }
 
         return $contact;
+    }
+
+    /**
+     * Creates a new user from the given contact and optionally sends an invitation.
+     *
+     * This method first checks if a user with the same email or phone number as the contact already exists.
+     * If such a user exists, it throws a UserAlreadyExistsException. Otherwise, it proceeds to create a new
+     * user record using the contact's details, assigns the user to the contact's company, and links the
+     * user to the contact. Optionally, it sends an invitation to the newly created user via email.
+     *
+     * @param Contact $contact    the contact instance from which the user should be created
+     * @param bool    $sendInvite (optional) Whether to send an invitation to the newly created user. Default is true.
+     *
+     * @return User the newly created user instance
+     *
+     * @throws UserAlreadyExistsException if a user with the same email or phone number already exists
+     */
+    public static function createUserFromContact(Contact $contact, bool $sendInvite = true): User
+    {
+        // Check if user already exist with email or phone number
+        $userAlreadyExists = User::where('type', $contact->type)->where(function ($query) use ($contact) {
+            $query->where('email', $contact->email);
+            $query->orWhere('phone', $contact->phone);
+        })->first();
+        if ($userAlreadyExists) {
+            throw new UserAlreadyExistsException('User already exists, try to assign the user to this contact.');
+        }
+
+        // Load company
+        $contact->loadMissing('company');
+
+        // Create the user record
+        $user = User::create([
+            'company_uuid' => $contact->company_uuid,
+            'name'         => $contact->name,
+            'email'        => $contact->email,
+            'phone'        => $contact->phone,
+            'username'     => Str::slug($contact->name . '_' . Str::random(4), '_'),
+            'password'     => Str::random(),
+            'timezone'     => $contact->company->timezone ?? date_default_timezone_get(),
+            'status'       => 'pending',
+        ]);
+
+        // Set user type
+        $user->setType($contact->type);
+
+        // Assing to company
+        $user->assignCompany($contact->company);
+
+        // Assign customer role
+        if ($user->type === 'customer') {
+            $user->assignSingleRole('Fleet-Ops Customer');
+        }
+
+        // Set user to contact
+        $contact->update(['user_uuid' => $user->uuid]);
+
+        // Optionally, send invite
+        if ($sendInvite) {
+            // send invitation to user
+            $invitation = Invite::create([
+                'company_uuid'    => $user->company_uuid,
+                'created_by_uuid' => session('user'),
+                'subject_uuid'    => $user->company_uuid,
+                'subject_type'    => Utils::getMutationType('company'),
+                'protocol'        => 'email',
+                'recipients'      => [$user->email],
+                'reason'          => 'join_company',
+            ]);
+
+            // notify user
+            $user->notify(new UserInvited($invitation));
+        }
+
+        return $user;
+    }
+
+    /**
+     * Creates a new user from the current contact instance and optionally sends an invitation.
+     *
+     * This method is a wrapper around the createUserFromContact method. It allows creating a user directly
+     * from a contact instance and, optionally, sending an invitation to the newly created user.
+     *
+     * @param bool $sendInvite (optional) Whether to send an invitation to the newly created user. Default is true.
+     *
+     * @return User the newly created user instance
+     */
+    public function createUser(bool $sendInvite = true): User
+    {
+        return static::createUserFromContact($this, $sendInvite);
+    }
+
+    /**
+     * Deletes the contact's assosciated user.
+     */
+    public function deleteUser(): ?bool
+    {
+        $this->loadMissing('user');
+        if ($this->user && $this->user->type === $this->type) {
+            return $this->user->delete();
+        }
+
+        return false;
     }
 }

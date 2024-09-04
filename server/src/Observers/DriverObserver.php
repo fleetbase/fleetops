@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Observers;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Models\User;
 
 class DriverObserver
 {
@@ -41,5 +42,11 @@ class DriverObserver
     {
         // Unassign them from any order they are assigned to
         Order::where(['driver_assigned_uuid' => $driver->uuid])->update(['driver_assigned_uuid' => null]);
+
+        // If the driver had a user account with the role driver and type user delete it
+        $user = User::where(['uuid' => $driver->user_uuid, 'type' => 'user'])->first();
+        if ($user && $user->hasRole('Driver')) {
+            $user->delete();
+        }
     }
 }

@@ -10,7 +10,7 @@ export default class ManagementIssuesIndexNewRoute extends Route {
     beforeModel() {
         if (this.abilities.cannot('fleet-ops create issue')) {
             this.notifications.warning(this.intl.t('common.unauthorized-access'));
-            return this.hostRouter.transitionTo('console.fleet-ops.issues.index');
+            return this.hostRouter.transitionTo('console.fleet-ops.management.issues.index');
         }
     }
 }

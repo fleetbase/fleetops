@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\Http\Resources\FleetbaseResource;
+use Fleetbase\Http\Resources\User;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
 
@@ -26,10 +27,10 @@ class Issue extends FleetbaseResource
             'vehicle_uuid'               => $this->when(Http::isInternalRequest(), $this->vehicle_uuid),
             'assigned_to_uuid'           => $this->when(Http::isInternalRequest(), $this->assigned_to_uuid),
             'reported_by_uuid'           => $this->when(Http::isInternalRequest(), $this->reported_by_uuid),
-            'assignee'                   => $this->whenLoaded('assignee', $this->assignee),
-            'reporter'                   => $this->whenLoaded('reporter', $this->reporter),
-            'vehicle'                    => $this->whenLoaded('vehicle', new Vehicle($this->vehicle)),
-            'driver'                     => $this->whenLoaded('driver', new Driver($this->driver)),
+            'assignee'                   => $this->whenLoaded('assignee', fn () => new User($this->assignee)),
+            'reporter'                   => $this->whenLoaded('reporter', fn () => new User($this->reporter)),
+            'vehicle'                    => $this->whenLoaded('vehicle', fn () => new Vehicle($this->vehicle)),
+            'driver'                     => $this->whenLoaded('driver', fn () => new Driver($this->driver)),
             'driver_name'                => $this->driver_name,
             'vehicle_name'               => $this->vehicle_name,
             'assignee_name'              => $this->assignee_name,

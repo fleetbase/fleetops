@@ -475,3 +475,15 @@ body[data-theme='dark']
 .next-map-container-toolbar-panel.next-map-container-toolbar-actions .toolbar-button.unauthorized:disabled {
     cursor: not-allowed;
 }
+
+#next-view-section-subheader.fleet-ops-contacts-section-header > #next-view-section-subheader-left > .next-view-section-subheader-left-inner-wrapper {
+    min-width: 0;
+}
+
+#next-view-section-subheader.fleet-ops-contacts-section-header > #next-view-section-subheader-left > .next-view-section-subheader-left-inner-wrapper + input.form-input {
+    margin-left: 0;
+}
+
+.no-input-group-padding .input-group {
+    margin-bottom: 0 !important;
+}

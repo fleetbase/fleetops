@@ -767,12 +767,34 @@ fleet-ops:
       cancel-edit-button: Cancel edit contact
       cancel-new-button: Cancel new contact
       new-contact: New Contact
+      select-address: Select Address
+      edit: Edit
+      new-address: New Address
+      contact-details: Contact Details
+    customer-form-panel:
+      success-message: Customer {customerName} saved successfully.
+      view-customer-button: View customer details
+      save-customer: Save Customer
+      create-customer: Create Customer
+      cancel-edit-button: Cancel edit customer
+      cancel-new-button: Cancel new customer
+      new-customer: New Customer
+      select-address: Select Address
+      edit: Edit
+      new-address: New Address
+      customer-details: Customer Details
     contact-panel:
       details:
         web-url: Website URL
       edit-button: Edit contact
       cancel-edit-button: Cancel edit contact
       cancel-new-button: Cancel new contact
+    customer-panel:
+      details:
+        web-url: Website URL
+      edit-button: Edit customer
+      cancel-edit-button: Cancel edit customer
+      cancel-new-button: Cancel new customer
     display-panel:
       no-address: No {type} address!
       no-address-message: No address!
@@ -794,6 +816,7 @@ fleet-ops:
       select-vehicle: Select Vehicle
       driver-status: Select driver status
       order-history: Order History
+      select-user: Select User
     driver-panel:
       user-account: User Account
       driver-details: Driver Details
@@ -1130,6 +1153,10 @@ fleet-ops:
       edit: Edit vendor
       close: Close vendor details
       new-vendor: New Vendor
+      drivers:
+        search-driver: Search vendor drivers
+        add-driver: Assign driver to vendor
+        loading-driver: Loading vendor drivers...
   management:
     contacts:
       index:
@@ -1145,6 +1172,19 @@ fleet-ops:
           button: Continue without saving
         title: Contacts
         delete-contacts: Delete Contacts
+      customers:
+        delete-button: Delete Customers
+        updated: Updated At
+        created: Created At
+        view-customer: View Customer Details
+        edit-customer: Edit Customer
+        delete-customer: Delete Customer
+        edit:
+          title: Continue Without Saving?
+          body: Unsaved changes to this customer will be lost. Click continue to proceed.
+          button: Continue without saving
+        title: Customers
+        delete-customers: Delete Customers
     drivers:
       index:
         assign-driver: Assign Driver

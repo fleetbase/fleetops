@@ -41,7 +41,7 @@ class Place extends FleetbaseResource
             'country_name'         => $this->when(Http::isInternalRequest(), $this->country_name),
             'phone'                => $this->phone ?? null,
             'owner'                => $this->when(!Http::isInternalRequest(), Resolve::resourceForMorph($this->owner_type, $this->owner_uuid)),
-            'tracking_number'      => $this->whenLoaded('trackingNumber', $this->trackingNumber),
+            'tracking_number'      => $this->whenLoaded('trackingNumber', fn () => $this->trackingNumber),
             'type'                 => $this->type,
             'meta'                 => data_get($this, 'meta', []),
             'updated_at'           => $this->updated_at,

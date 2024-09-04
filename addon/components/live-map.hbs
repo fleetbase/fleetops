@@ -75,7 +75,7 @@
                             <div>{{place.address}}</div>
                             <div>{{format-point place.location}}</div>
                         </marker.popup>
-                        <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="bottom">{{place.name}}</marker.tooltip>
+                        <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="bottom">{{or place.name place.address}}</marker.tooltip>
                     </layers.marker>
                 {{/each}}
             {{/if}}

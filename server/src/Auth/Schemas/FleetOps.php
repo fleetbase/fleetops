@@ -355,5 +355,18 @@ class FleetOps
                 'DriverOperations',
             ],
         ],
+        [
+            'name'           => 'Fleet-Ops Customer',
+            'description'    => 'Role for customers with the necessary access to view their orders.',
+            'permissions'    => [
+                'see extension',
+                'list order',
+                'view order',
+            ],
+            'directives' => [
+                'list order'    => ['where', 'orders.customer_uuid', '=', 'session.user'],
+                'view order'    => ['where', 'orders.customer_uuid', '=', 'session.user'],
+            ],
+        ],
     ];
 }

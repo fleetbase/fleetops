@@ -25,7 +25,7 @@ class VehicleWithoutDriver extends FleetbaseResource
             'name'                   => $this->display_name,
             'display_name'           => $this->when(Http::isInternalRequest(), $this->display_name),
             'vin'                    => $this->vin ?? null,
-            'devices'                => $this->whenLoaded('devices', $this->devices),
+            'devices'                => $this->whenLoaded('devices', fn () => $this->devices),
             'photo_url'              => $this->photo_url,
             'avatar_url'             => $this->avatar_url,
             'make'                   => $this->make,

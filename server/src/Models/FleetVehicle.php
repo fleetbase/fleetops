@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasUuid;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FleetVehicle extends Model
 {
@@ -52,21 +53,17 @@ class FleetVehicle extends Model
     protected $hidden = [];
 
     /**
-     * The group of the membership.
-     *
-     * @var Model
+     * The fleet.
      */
-    public function fleet()
+    public function fleet(): BelongsTo
     {
         return $this->belongsTo(Fleet::class);
     }
 
     /**
-     * The driver.
-     *
-     * @var Model
+     * The vehicle.
      */
-    public function vehicle()
+    public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class);
     }

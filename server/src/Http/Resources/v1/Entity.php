@@ -34,7 +34,7 @@ class Entity extends FleetbaseResource
             'payload'          => $this->when(Http::isPublicRequest(), data_get($this, 'payload.public_id')),
             'destination'      => $this->when(Http::isPublicRequest(), data_get($this, 'destination.public_id')),
             'customer'         => $this->setCustomerType(Resolve::resourceForMorph($this->customer_type, $this->customer_uuid)),
-            'supplier'         => $this->whenLoaded('supplier', $this->supplier),
+            'supplier'         => $this->whenLoaded('supplier', fn () => $this->supplier),
             'tracking_number'  => new TrackingNumber($this->trackingNumber),
             'description'      => data_get($this, 'description'),
             'photo_url'        => data_get($this, 'photo_url'),
