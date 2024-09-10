@@ -15,6 +15,7 @@ import OrderConfigManagerDetailsComponent from './order-config-manager/details';
 import OrderConfigManagerCustomFieldsComponent from './order-config-manager/custom-fields';
 import OrderConfigManagerActivityFlowComponent from './order-config-manager/activity-flow';
 import OrderConfigManagerEntitiesComponent from './order-config-manager/entities';
+import findActiveTab from '../utils/find-active-tab';
 
 const configManagerContext = EmberObject.extend(Evented);
 export default class OrderConfigManagerComponent extends Component {
@@ -62,7 +63,7 @@ export default class OrderConfigManagerComponent extends Component {
         this.context = context;
         this.contextModel = contextModel;
         this.configManagerContext = configManagerContext.create();
-        this.tab = this.getTabUsingSlug(tab);
+        this.tab = findActiveTab(this.tabs, tab);
         this.loadOrderConfigs.perform();
     }
 
@@ -255,7 +256,7 @@ export default class OrderConfigManagerComponent extends Component {
      * @action
      */
     @action onTabChanged(tab) {
-        this.tab = this.getTabUsingSlug(tab);
+        this.tab = findActiveTab(this.tabs, tab);
         this.configManagerContext.trigger('onTabChanged');
         contextComponentCallback(this, 'onTabChanged', tab);
     }
@@ -283,19 +284,5 @@ export default class OrderConfigManagerComponent extends Component {
      */
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel');
-    }
-
-    /**
-     * Finds and returns a tab based on its slug.
-     *
-     * @param {String} tabSlug - The slug of the tab.
-     * @returns {Object|null} The found tab or null.
-     */
-    getTabUsingSlug(tabSlug) {
-        if (tabSlug) {
-            return this.tabs.find(({ slug }) => slug === tabSlug);
-        }
-
-        return this.tabs[0];
     }
 }

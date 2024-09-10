@@ -76,7 +76,7 @@ export default class FleetOpsEngine extends Engine {
         // Add menu items to customer portal
         if (universe.didBootEngine('@fleetbase/customer-portal-engine')) {
             universe.registerMenuItems('customer-portal:sidebar', [
-                universe._createMenuItem('Orders', 'customer-portal.portal.virtual', { icon: 'boxes-packing', component: CustomerOrdersComponent }),
+                universe._createMenuItem('Orders', 'customer-portal.portal.virtual', { icon: 'boxes-packing', component: CustomerOrdersComponent, view: '' }),
             ]);
         }
     };

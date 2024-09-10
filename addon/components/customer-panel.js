@@ -6,6 +6,7 @@ import { isArray } from '@ember/array';
 import CustomerPanelDetailComponent from './customer-panel/details';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
+import findActiveTab from '../utils/find-active-tab';
 
 export default class CustomerPanelComponent extends Component {
     @service fetch;
@@ -53,7 +54,7 @@ export default class CustomerPanelComponent extends Component {
     constructor() {
         super(...arguments);
         this.customer = this.args.customer;
-        this.tab = this.getTabUsingSlug(this.args.tab);
+        this.tab = findActiveTab(this.tabs, this.args.tab);
         applyContextComponentArguments(this);
     }
 
@@ -76,7 +77,7 @@ export default class CustomerPanelComponent extends Component {
      * @action
      */
     @action onTabChanged(tab) {
-        this.tab = this.getTabUsingSlug(tab);
+        this.tab = findActiveTab(this.tabs, tab);
         contextComponentCallback(this, 'onTabChanged', tab);
     }
 
@@ -107,19 +108,5 @@ export default class CustomerPanelComponent extends Component {
      */
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.customer);
-    }
-
-    /**
-     * Finds and returns a tab based on its slug.
-     *
-     * @param {String} tabSlug - The slug of the tab.
-     * @returns {Object|null} The found tab or null.
-     */
-    getTabUsingSlug(tabSlug) {
-        if (tabSlug) {
-            return this.tabs.find(({ slug }) => slug === tabSlug);
-        }
-
-        return this.tabs[0];
     }
 }
