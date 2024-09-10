@@ -433,10 +433,10 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             }
                         );
                         $router->group(
-                            ['prefix' => 'geocoder'],
+                            ['prefix' => 'geocoder', ['middleware' => [Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]]],
                             function ($router) {
-                                $router->get('reverse', 'GeocoderController@reverse')->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
-                                $router->get('query', 'GeocoderController@geocode')->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                                $router->get('reverse', 'GeocoderController@reverse');
+                                $router->get('query', 'GeocoderController@geocode');
                             }
                         );
                         $router->group(
@@ -461,7 +461,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                     }
                                 );
                                 $router->group(
-                                    ['prefix' => 'settings'],
+                                    ['prefix' => 'settings', 'middleware' => [Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]],
                                     function ($router) {
                                         $router->get('visibility', 'SettingController@getVisibilitySettings');
                                         $router->post('visibility', 'SettingController@saveVisibilitySettings');

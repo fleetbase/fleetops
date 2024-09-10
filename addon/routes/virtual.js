@@ -10,8 +10,8 @@ export default class VirtualRoute extends Route {
         },
     };
 
-    model({ slug }, transition) {
+    model({ section = null, slug }, transition) {
         const view = this.universe.getViewFromTransition(transition);
-        return this.universe.lookupMenuItemFromRegistry('engine:fleet-ops', slug, view);
+        return this.universe.lookupMenuItemFromRegistry('engine:fleet-ops', slug, view, section);
     }
 }
