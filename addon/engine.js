@@ -6,6 +6,7 @@ import services from '@fleetbase/ember-core/exports/services';
 import NavigatorAppConfigComponent from './components/admin/navigator-app';
 import WidgetFleetOpsKeyMetricsComponent from './components/widget/fleet-ops-key-metrics';
 import AdminAvatarManagementComponent from './components/admin/avatar-management';
+import CustomerOrdersComponent from './components/customer/orders';
 
 const { modulePrefix } = config;
 const externalRoutes = ['console', 'extensions'];
@@ -71,6 +72,13 @@ export default class FleetOpsEngine extends Engine {
             'fleet-ops:template:operations:orders:new',
             'fleet-ops:template:operations:orders:new:entities-input',
         ]);
+
+        // Add menu items to customer portal
+        if (universe.didBootEngine('@fleetbase/customer-portal-engine')) {
+            universe.registerMenuItems('customer-portal:sidebar', [
+                universe._createMenuItem('Orders', 'customer-portal.portal.virtual', { icon: 'boxes-packing', component: CustomerOrdersComponent }),
+            ]);
+        }
     };
 }
 

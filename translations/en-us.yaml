@@ -360,7 +360,7 @@ fleet-ops:
         hide: Hide all service areas
         action: Actions...
         focus: Focus
-        blur: Blur service area...
+        blur: Hide service area...
         create-zone: Create zone inside...
       toolbar:
         create: Create Order
@@ -941,7 +941,7 @@ fleet-ops:
       edit-zone: 'Edit zone: {zoneName}'
       delete-zone: 'Delete zone: {zoneName}'
       assign-zone: 'Assign Fleet to Zone: {zoneName}'
-      blur-service: 'Blur Service Area: {serviceName}'
+      blur-service: 'Hide Service Area: {serviceName}'
       create-zone: 'Create Zone within: {serviceName}'
       assign-fleet: 'Assign Fleet to Service Area: {serviceName}'
       edit-service: 'Edit Service Area: {serviceName}'

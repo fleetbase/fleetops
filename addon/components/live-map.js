@@ -232,6 +232,7 @@ export default class LiveMapComponent extends Component {
                 },
             }),
             this.loadLiveData.perform('places'),
+            this.loadServiceAreas.perform(),
         ]);
     }
 
@@ -244,14 +245,10 @@ export default class LiveMapComponent extends Component {
      * @param {Promise[]} liveDataPromises - An array of promises that fetch live data.
      * @returns {Promise} A promise that resolves when all data-fetching promises have settled.
      */
-    completeSetup(liveDataPromises) {
-        return allSettled(liveDataPromises)
-            .then(() => {
-                this.isDataLoaded = true;
-            })
-            .finally(() => {
-                this.listen();
-            });
+    async completeSetup(liveDataPromises) {
+        await allSettled(liveDataPromises);
+        this.isDataLoaded = true;
+        this.listen();
     }
 
     /**
@@ -273,6 +270,7 @@ export default class LiveMapComponent extends Component {
                 },
             }),
             this.loadLiveData.perform('places'),
+            this.loadServiceAreas.perform(),
         ]);
     }
 
@@ -1066,7 +1064,7 @@ export default class LiveMapComponent extends Component {
     @action hideDrawControls(options = {}) {
         this.hide('drawControls');
 
-        const text = getWithDefault(options, 'text');
+        const text = getWithDefault(options, 'text', true);
         const callback = getWithDefault(options, 'callback');
 
         if (typeof callback === 'function') {
@@ -1177,7 +1175,7 @@ export default class LiveMapComponent extends Component {
         // map except into ids only
         except = except
             .filter(Boolean)
-            .filter((record) => !record?.id)
+            .filter((record) => typeof record !== 'string' && !record?.id)
             .map((record) => record.id);
 
         for (let i = 0; i < this.activeServiceAreas.length; i++) {
@@ -1215,7 +1213,7 @@ export default class LiveMapComponent extends Component {
         // map except into ids only
         except = except
             .filter(Boolean)
-            .filter((record) => !record?.id)
+            .filter((record) => typeof record !== 'string' && !record?.id)
             .map((record) => record.id);
 
         for (let i = 0; i < this.serviceAreaRecords.length; i++) {
@@ -1795,7 +1793,7 @@ export default class LiveMapComponent extends Component {
      * @returns {Promise} A promise that resolves to an array of service area records.
      * @memberof LiveMapComponent
      */
-    @task *loadServiceAreas() {
+    @task *loadServiceAreas(options = {}) {
         if (this.abilities.cannot('fleet-ops list service-area')) {
             return [];
         }
@@ -1804,15 +1802,28 @@ export default class LiveMapComponent extends Component {
             const cachedRecords = this.serviceAreas.getFromCache('serviceAreas', 'service-area');
 
             if (cachedRecords) {
+                this.serviceAreaRecords = cachedRecords;
+                if (typeof options.onLoaded === 'function') {
+                    options.onLoaded(cachedRecords);
+                }
+
                 return cachedRecords;
             }
         }
 
-        const serviceAreaRecords = yield this.store.query('service-area', { with: ['zones'] });
-        if (serviceAreaRecords) {
-            this.appCache.setEmberData('serviceAreas', serviceAreaRecords);
-        }
+        try {
+            this.serviceAreaRecords = yield this.store.query('service-area', { with: ['zones'] });
+            if (this.serviceAreaRecords) {
+                this.appCache.setEmberData('serviceAreas', this.serviceAreaRecords);
+            }
 
-        return serviceAreaRecords;
+            if (typeof options.onLoaded === 'function') {
+                options.onLoaded(this.serviceAreaRecords);
+            }
+
+            return this.serviceAreaRecords;
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 }

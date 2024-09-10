@@ -117,7 +117,19 @@ class OrderFilter extends Filter
 
     public function customer(string $customer)
     {
-        $this->builder->where('customer_uuid', $customer);
+        $this->builder->where(function ($query) use ($customer) {
+            $query->where('customer_uuid', $customer);
+            $query->orWhereHas('authenticatableCustomer', function ($query) use ($customer) {
+                $query->where('user_uuid', $customer);
+            });
+        });
+    }
+
+    public function authenticatedCustomer(string $authenticatedCustomer)
+    {
+        $this->builder->whereHas('authenticatableCustomer', function ($query) use ($authenticatedCustomer) {
+            $query->where('user_uuid', $authenticatedCustomer);
+        });
     }
 
     public function facilitator(string $facilitator)

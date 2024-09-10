@@ -26,6 +26,11 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
@@ -243,180 +248,137 @@ class Order extends Model
         ])->render();
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function orderConfig()
+    public function orderConfig(): BelongsTo
     {
         return $this->belongsTo(OrderConfig::class)->withTrashed();
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function transaction()
+    public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function route()
+    public function route(): BelongsTo
     {
         return $this->belongsTo(Route::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function payload()
+    public function payload(): BelongsTo
     {
         return $this->belongsTo(Payload::class)->with(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function company()
+    public function company(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\Company::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function createdBy()
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(\Fleetbase\Models\User::class);
+    }
+
+    public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\User::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
-    public function updatedBy()
-    {
-        return $this->belongsTo(\Fleetbase\Models\User::class);
-    }
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function driverAssigned()
+    public function driverAssigned(): BelongsTo|Builder
     {
         return $this->belongsTo(Driver::class)->without(['devices', 'vendor']);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
-    public function driver()
+    public function driver(): BelongsTo|Builder
     {
         return $this->belongsTo(Driver::class)->without(['devices', 'vendor']);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
-    public function vehicleAssigned()
+    public function vehicleAssigned(): BelongsTo|Builder
     {
         return $this->belongsTo(Vehicle::class)->without(['devices', 'vendor', 'fleets']);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
-    public function vehicle()
+    public function vehicle(): BelongsTo|Builder
     {
         return $this->belongsTo(Vehicle::class)->without(['devices', 'vendor', 'fleets']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function comments()
+    public function comments(): HasMany
     {
         return $this->hasMany(\Fleetbase\Models\Comment::class, 'subject_uuid')->whereNull('parent_comment_uuid')->latest();
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function files()
+    public function files(): HasMany
     {
         return $this->hasMany(\Fleetbase\Models\File::class, 'subject_uuid')->latest();
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function customFields()
+    public function customFields(): HasMany
     {
         return $this->hasMany(CustomField::class, 'subject_uuid')->orderBy('order');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function customFieldValues()
+    public function customFieldValues(): HasMany
     {
         return $this->hasMany(CustomFieldValue::class, 'subject_uuid');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasManyThrough
-     */
-    public function drivers()
+    public function drivers(): HasManyThrough
     {
         return $this->hasManyThrough(Driver::class, Entity::class, 'tracking_number_uuid', 'tracking_number_uuid');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function trackingNumber()
+    public function trackingNumber(): BelongsTo
     {
         return $this->belongsTo(TrackingNumber::class)->without(['owner']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function trackingStatuses()
+    public function trackingStatuses(): HasMany
     {
         return $this->hasMany(TrackingStatus::class, 'tracking_number_uuid', 'tracking_number_uuid');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function proofs()
+    public function proofs(): HasMany
     {
         return $this->hasMany(Proof::class, 'subject_uuid');
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * @return HasMany
      */
-    public function purchaseRate()
+    public function purchaseRate(): BelongsTo
     {
         return $this->belongsTo(PurchaseRate::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
+     * @return MorphTo
      */
-    public function facilitator()
+    public function facilitator(): MorphTo|Builder
     {
         return $this->morphTo(__FUNCTION__, 'facilitator_type', 'facilitator_uuid')->withTrashed();
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
-     */
-    public function customer()
+    public function customer(): MorphTo
     {
         return $this->morphTo(__FUNCTION__, 'customer_type', 'customer_uuid');
+    }
+
+    public function authenticatableCustomer(): BelongsTo
+    {
+        return $this->belongsTo(Contact::class, 'customer_uuid')->where('type', 'customer');
     }
 
     /**
