@@ -4,7 +4,7 @@ export default buildRoutes(function () {
     this.route('settings', function () {
         this.route('navigator-app');
     });
-    this.route('virtual', { path: '/:slug/:view' });
+    this.route('virtual', { path: '/:section/:slug' });
     this.route('operations', { path: '/' }, function () {
         this.route('dispatch');
         this.route('zones', function () {});

@@ -3,5 +3,5 @@ export default function findActiveTab(tabs = [], identifier) {
         return tabs.find(({ slug, id }) => slug === identifier || id === identifier);
     }
 
-    return this.tabs[0];
+    return tabs[0];
 }

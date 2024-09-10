@@ -11,11 +11,6 @@ import LiveMapDrawerPlaceListingComponent from './live-map-drawer/place-listing'
 import findActiveTab from '../utils/find-active-tab';
 
 export default class LiveMapDrawerComponent extends Component {
-    /**
-     * Universe service for managing global data and settings.
-     *
-     * @type {Service}
-     */
     @service universe;
 
     /**
