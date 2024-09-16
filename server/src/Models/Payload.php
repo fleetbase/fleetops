@@ -456,7 +456,7 @@ class Payload extends Model
      */
     public function getDropoffOrLastWaypoint(): ?Place
     {
-        $this->load(['dropoff', 'waypoints']);
+        $this->loadMissing(['dropoff', 'waypoints']);
 
         if ($this->dropoff instanceof Place) {
             return $this->dropoff;
@@ -476,7 +476,7 @@ class Payload extends Model
      */
     public function getPickupOrFirstWaypoint(): ?Place
     {
-        $this->load(['pickup', 'waypoints']);
+        $this->loadMissing(['pickup', 'waypoints']);
 
         if ($this->pickup instanceof Place) {
             return $this->pickup;
@@ -496,7 +496,7 @@ class Payload extends Model
      */
     public function getPickupOrCurrentWaypoint(): ?Place
     {
-        $this->load(['pickup', 'dropoff', 'waypoints']);
+        $this->loadMissing(['pickup', 'dropoff', 'waypoints']);
 
         if ($this->pickup instanceof Place) {
             return $this->pickup;
@@ -517,7 +517,7 @@ class Payload extends Model
         if ($this->waypoints()->count()) {
             $destination = null;
 
-            if ($this->current_waypoint_uuid) {
+            if (Str::isUuid($this->current_waypoint_uuid)) {
                 $destination = $this->waypoints->firstWhere('uuid', $this->current_waypoint_uuid);
             }
 

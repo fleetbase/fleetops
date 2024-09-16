@@ -25,7 +25,7 @@ class DistanceMatrix implements \JsonSerializable
         $this->time     = $time;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): mixed
     {
         return [
             'distance' => $this->distance,

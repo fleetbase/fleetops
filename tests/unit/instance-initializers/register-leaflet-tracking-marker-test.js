@@ -1,12 +1,12 @@
 import Application from '@ember/application';
 
 import config from 'dummy/config/environment';
-import { initialize } from 'dummy/instance-initializers/register-leaflet-drift-marker';
+import { initialize } from 'dummy/instance-initializers/register-leaflet-tracking-marker';
 import { module, test } from 'qunit';
 import Resolver from 'ember-resolver';
 import { run } from '@ember/runloop';
 
-module('Unit | Instance Initializer | register-leaflet-drift-marker', function (hooks) {
+module('Unit | Instance Initializer | register-leaflet-tracking-marker', function (hooks) {
     hooks.beforeEach(function () {
         this.TestApplication = class TestApplication extends Application {
             modulePrefix = config.modulePrefix;

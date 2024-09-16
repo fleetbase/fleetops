@@ -349,6 +349,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->get('types', $controller('types'));
                                 $router->get('label/{id}', $controller('label'));
                                 $router->get('next-activity/{id}', $controller('nextActivity'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                                $router->get('{id}/tracker', 'OrderController@trackerInfo')->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->post('process-imports', $controller('importFromFiles'));
                                 $router->patch('route/{id}', $controller('editOrderRoute'));
                                 $router->patch('update-activity/{id}', $controller('updateActivity'));

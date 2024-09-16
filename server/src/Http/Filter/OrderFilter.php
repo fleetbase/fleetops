@@ -270,7 +270,7 @@ class OrderFilter extends Filter
                 break;
 
             case 'customer':
-                $this->builder->select(['orders.*', 'vendors.name as customer_name']);
+                $this->builder->select(['orders.*', 'contacts.name as customer_name']);
                 $this->builder->join('contacts', 'contacts.uuid', '=', 'orders.customer_uuid')->orderBy('customer_name', $direction);
                 break;
 

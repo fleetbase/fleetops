@@ -1,0 +1,44 @@
+<a href="javascript:;" class="order-progress-card" {{on "click" this.handleClick}} ...attributes>
+    <div class="order-progress-card-header">
+        <div class="order-progress-card-header-id">
+            <div class="order-progress-card-header-id-icon-wrapper">
+                <FaIcon @icon="box" />
+            </div>
+            <h1>{{this.order.public_id}}</h1>
+        </div>
+        <div class="order-progress-card-header-status">
+            <Badge @hideStatusDot={{true}} @status={{this.order.status}}>{{smart-humanize this.order.status}}</Badge>
+        </div>
+    </div>
+    <div class="order-progress-card-progress">
+        <OrderProgressBar @order={{this.order}} @progress={{this.trackerData.progress_percentage}} />
+    </div>
+    <div class="order-progress-card-details">
+        <div class="order-progress-card-details-address start">
+            {{this.order.payload.pickup.address}}
+        </div>
+        <div class="order-progress-card-details-address end">
+            {{this.order.payload.dropoff.address}}
+        </div>
+    </div>
+    <div class="order-progress-card-footer">
+        <div class="grid grid-cols-2 gap-2 mt-1 px-1">
+            <div class="flex flex-col text-xs">
+                <div class="font-semibold">Current ETA:</div>
+                <div class="">{{format-duration this.trackerData.current_destination_eta}}</div>
+            </div>
+            <div class="flex flex-col text-xs">
+                <div class="font-semibold">ECT:</div>
+                <div class="">{{n-a this.trackerData.estimated_completion_time_formatted}}</div>
+            </div>
+            <div class="flex flex-col text-xs">
+                <div class="font-semibold">Tracking Number:</div>
+                <div class="">{{n-a this.order.tracking_number.tracking_number}}</div>
+            </div>
+            <div class="flex flex-col text-xs">
+                <div class="font-semibold">Current Destination:</div>
+                <div class="truncate">{{n-a this.trackerData.current_destination.address}}</div>
+            </div>
+        </div>
+    </div>
+</a>

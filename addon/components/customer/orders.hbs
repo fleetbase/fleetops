@@ -1,22 +1,130 @@
 <div class="portal-content-wrapper">
     <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-        <div class="lg:col-span-2 md:col-span-3">
+        <div class="lg:col-span-3 md:col-span-4">
             <div class="customer-orders-section-header">
                 <div>
-                    <h1 class="text-lg font-bold">Orders</h1>
+                    <h1 class="text-lg font-bold mb-4">Orders</h1>
+                </div>
+                <div class="mb-6">
+                    <Input @value={{this.query}} class="form-input form-input-lg w-full" {{on "input" (perform this.searchOrders)}} placeholder="Search orders" />
                 </div>
                 <div class="customer-orders-list-content">
                     {{#each this.orders as |order|}}
-                        <a href="javascript:;" class="flex border border-black rounded-md shadow-sm bg-gray-200 px-4 mb-2" {{on "click" (fn this.selectOrder order)}}>{{order.public_id}}</a>
+                        <OrderProgressCard
+                            @order={{order}}
+                            @onClick={{this.viewOrder}}
+                            @onTrackerDataLoaded={{this.onTrackerDataLoaded}}
+                            class="{{if (eq this.selectedOrder.id order.id) 'active'}}"
+                        />
                     {{/each}}
                 </div>
             </div>
         </div>
-        <div class="lg:col-span-10 md:col-span-9">
-            <div class="font-semibold">
-                Render order here using selected order:
-                {{n-a this.selectedOrder.id}}
-            </div>
+        <div class="lg:col-span-9 md:col-span-8">
+            {{#if this.selectedOrder}}
+                {{#let this.selectedOrder as |order|}}
+                    {{#if this.mapReady}}
+                        <div class="customer-live-map-wrapper">
+                            <LeafletMap
+                                class={{@mapClass}}
+                                @lat={{this.latitude}}
+                                @lng={{this.longitude}}
+                                @zoom={{this.zoom}}
+                                @zoomControl={{@zoomControl}}
+                                @onLoad={{this.setupMap}}
+                                {{will-destroy this.closeChannels}}
+                                ...attributes
+                                as |layers|
+                            >
+                                <layers.tile @url={{this.tileSourceUrl}} />
+                                {{#let order.driver_assigned as |driver|}}
+                                    {{#if driver}}
+                                        {{!-- template-lint-disable no-log --}}
+                                        {{log (or driver.vehicle_avatar (config "defaultValues.vehicleAvatar"))}}
+                                        {{!-- <layers.drift-marker
+                                            @id={{driver.id}}
+                                            @rotationAngle={{driver.heading}}
+                                            @duration={{300}}
+                                            @icon={{icon iconUrl=(or driver.vehicle_avatar (config "defaultValues.vehicleAvatar")) iconSize=(array 24 24)}}
+                                            @location={{driver.coordinates}}
+                                            @publicId={{driver.public_id}}
+                                            @onAdd={{this.startTrackingDriverPosition}}
+                                            as |marker|
+                                        >
+                                            <marker.tooltip @permanent={{false}} @sticky={{true}}>
+                                                <div class="text-sm font-semibold">{{driver.name}}</div>
+                                                <div class="text-sm">{{driver.phone}}</div>
+                                            </marker.tooltip>
+                                        </layers.drift-marker> --}}
+
+                                        <layers.marker
+                                            @icon={{icon iconUrl=(or driver.vehicle_avatar (config "defaultValues.vehicleAvatar")) iconSize=(array 24 24)}}
+                                            @location={{driver.coordinates}}
+                                            @publicId={{driver.public_id}}
+                                            @onAdd={{this.startTrackingDriverPosition}}
+                                            as |marker|
+                                        >
+                                            <marker.tooltip @permanent={{false}} @sticky={{true}}>
+                                                <div class="text-sm font-semibold">{{driver.name}}</div>
+                                                <div class="text-sm">{{driver.phone}}</div>
+                                            </marker.tooltip>
+                                        </layers.marker>
+                                    {{/if}}
+                                {{/let}}
+                            </LeafletMap>
+
+                            <div class="customer-order-details-container">
+                                <div class="customer-order-details">
+                                    <div class="flex flex-row justify-between">
+                                        <div>
+                                            <h1 class="font-bold text-sm">{{order.tracking_number.tracking_number}}</h1>
+                                            <div class="flex flex-row">
+                                                <div class="text-xs font-semibold mr-1">Date Created:</div>
+                                                <div class="text-xs">{{order.createdAtShort}}</div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="flex flew-row space-x-2">
+                                                <Button @helpText="View Route" @icon="route" @onClick={{this.locateOrderRoute}} />
+                                                <Button @helpText="Locate Driver" @icon="truck" @onClick={{this.locateDriver}} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="customer-order-details-seperator"></div>
+                                    <div>
+                                        <div class="mb-2 ml-1">
+                                            <h1 class="font-bold text-sm">Activity:</h1>
+                                        </div>
+                                        <div class="space-y-2">
+                                            {{#each order.tracking_statuses as |trackingStatus|}}
+                                                <div class="activity-detail">
+                                                    <div class="flex flex-row space-x-1">
+                                                        <h3 class="font-semibold text-sm">{{trackingStatus.status}}</h3>
+                                                        <div class="text-sm">{{trackingStatus.createdAtShortWithTime}}</div>
+                                                    </div>
+                                                    <div class="text-sm">{{n-a trackingStatus.details}}</div>
+                                                </div>
+                                            {{else}}
+                                                <div class="px-10 py-2 flex items-center justify-center">
+                                                    <p class="text-red-600 dark:text-red-100">{{t "fleet-ops.operations.orders.index.view.unable-load-order-activity"}}</p>
+                                                </div>
+                                            {{/each}}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {{else}}
+                        <div class="flex-1 w-full h-full flex items-center justify-center">
+                            <Spinner @loadingMessage="Loading order details..." @loadingMessageClass="dark:text-gray-100 test-sm ml-2" class="flex flex-row items-center" />
+                        </div>
+                    {{/if}}
+                {{/let}}
+            {{else}}
+                <div class="flex-1 w-full h-full flex items-center justify-center">
+                    <div class="text-base">Select an Order to view Details</div>
+                </div>
+            {{/if}}
         </div>
     </div>
 </div>

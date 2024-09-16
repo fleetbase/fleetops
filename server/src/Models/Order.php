@@ -10,6 +10,7 @@ use Fleetbase\FleetOps\Events\OrderCompleted;
 use Fleetbase\FleetOps\Events\OrderDispatched;
 use Fleetbase\FleetOps\Events\OrderDriverAssigned;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
@@ -801,13 +802,31 @@ class Order extends Model
      *
      * @return Payload|null the Payload model associated with the order
      */
-    public function getPayload()
+    public function getPayload(?\Closure $callback = null): ?Payload
     {
+        $this->loadMissing('payload');
         if ($this->payload) {
+            if (is_callable($callback)) {
+                $callback($this->payload);
+            }
+
             return $this->payload;
         }
 
-        $this->load('payload');
+        if (Str::isUuid($this->payload_uuid)) {
+            $payload = Payload::where('uuid', $this->payload_uuid)->first();
+            if ($payload) {
+                if (is_callable($callback)) {
+                    $callback($payload);
+                }
+
+                return $payload;
+            }
+        }
+
+        if (is_callable($callback)) {
+            $callback($this->payload);
+        }
 
         return $this->payload;
     }
@@ -1235,7 +1254,7 @@ class Order extends Model
         if (is_string($type)) {
             $isNotNamespace           = !Str::contains($type, '\\');
             $doesNotStartWithFleetOps = !Str::startsWith($type, 'fleet-ops');
-            $isValidType              = $type === 'customer' || $type === 'vendor';
+            $isValidType              = $type === 'contact' || $type === 'vendor';
 
             // preprend fleet-ops IF not a namespace and does not start with fleet-ops
             // this is for handling ember style registry spacing
@@ -1258,7 +1277,7 @@ class Order extends Model
         if (is_string($type)) {
             $isNotNamespace           = !Str::contains($type, '\\');
             $doesNotStartWithFleetOps = !Str::startsWith($type, 'fleet-ops');
-            $isValidType              = $type === 'customer' || $type === 'vendor';
+            $isValidType              = $type === 'contact' || $type === 'vendor';
 
             // preprend fleet-ops IF not a namespace and does not start with fleet-ops
             // this is for handling ember style registry spacing
@@ -1713,5 +1732,33 @@ class Order extends Model
         }
 
         return $value;
+    }
+
+    public function loadAssignedDriver(): self
+    {
+        $this->loadMissing(['driverAssigned']);
+        $driverAssigned = $this->driverAssigned;
+
+        if ($driverAssigned) {
+            $this->setRelation('driverAssigned', $driverAssigned);
+
+            return $this;
+        }
+
+        if (Str::isUuid($this->driver_assigned_uuid)) {
+            $driverAssigned = Driver::where('uuid', $this->driver_assigned_uuid)->first();
+            if ($driverAssigned) {
+                $this->setRelation('driverAssigned', $driverAssigned);
+
+                return $this;
+            }
+        }
+
+        return $this;
+    }
+
+    public function tracker()
+    {
+        return new OrderTracker($this);
     }
 }

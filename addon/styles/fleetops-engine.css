@@ -487,3 +487,274 @@ body[data-theme='dark']
 .no-input-group-padding .input-group {
     margin-bottom: 0 !important;
 }
+
+.customer-orders-section-header {
+    margin-bottom: 2rem;
+}
+
+.order-progress-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px #d1d5db solid;
+    border-radius: 0.5rem;
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
+    padding: 0.5rem;
+    background-color: #fff;
+    color: #000;
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+body[data-theme='dark'] .order-progress-card {
+    border: 1px #374151 solid;
+    background-color: #111827;
+    color: #f3f4f6;
+}
+
+.order-progress-card.active {
+    outline: 2px solid #60a5fa;
+    outline-offset: 1px;
+}
+
+.order-progress-card:hover {
+    opacity: 0.75;
+}
+
+.order-progress-card > .order-progress-card-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.order-progress-card > .order-progress-card-header > .order-progress-card-header-id {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.order-progress-card > .order-progress-card-header > .order-progress-card-header-id h1 {
+    font-weight: 500;
+    font-size: 1rem;
+    letter-spacing: 0.035rem;
+}
+
+.order-progress-card > .order-progress-card-header > .order-progress-card-header-status .status-badge > span {
+    padding: 0.35rem;
+}
+
+.order-progress-card > .order-progress-card-header > .order-progress-card-header-id > .order-progress-card-header-id-icon-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    height: 1.75rem;
+    width: 1.75rem;
+    font-size: 1rem;
+    border: 1px #d1d5db solid;
+    border-radius: 0.25rem;
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
+    background-color: #fff;
+    margin-right: 0.5rem;
+    color: #000;
+}
+
+.order-progress-card-details {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 0.35rem;
+}
+
+.order-progress-card-details > .order-progress-card-details-address {
+    flex: 1;
+    font-size: 0.6rem;
+    padding: 0.5rem 0.15rem;
+    border-bottom: 2px #e5e7eb solid;
+    margin-bottom: 0.25rem;
+}
+
+body[data-theme='dark'] .order-progress-card-details > .order-progress-card-details-address {
+    border-bottom: 2px #374151 solid;
+}
+
+.order-progress-card-details > .order-progress-card-details-address.start {
+    text-align: left;
+}
+
+.order-progress-card-details > .order-progress-card-details-address.end {
+    text-align: right;
+}
+
+body[data-theme='dark'] .order-progress-card > .order-progress-card-header > .order-progress-card-header-id > .order-progress-card-header-id-icon-wrapper {
+    color: #f3f4f6;
+    background-color: #030712;
+    border: 1px #374151 solid;
+}
+
+.order-progress-bar {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    padding: 0.5rem 0.15rem;
+}
+
+.order-progress-bar > .order-progress-bar-marker-wrapper {
+    border: 5px #e5e7eb solid;
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
+    border-radius: 100%;
+}
+
+.order-progress-bar > .order-progress-bar-marker-wrapper > .order-progress-bar-marker {
+    height: 0.75rem;
+    width: 0.75rem;
+    border: 1px #e5e7eb solid;
+    background-color: #6b7280;
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
+    border-radius: 100%;
+    outline: 0.25rem solid #fff;
+}
+
+body[data-theme='dark'] .order-progress-bar > .order-progress-bar-marker-wrapper > .order-progress-bar-marker {
+    background-color: #4b5563;
+    outline: 0.25rem solid #cbd5e1;
+}
+
+.order-progress-bar > .order-progress-bar-marker-wrapper.completed > .order-progress-bar-marker {
+    border: 1px #166534 solid;
+    background-color: #16a34a;
+}
+
+.order-progress-bar > .order-progress-bar-wrapper {
+    position: relative;
+    display: flex;
+    flex: 1;
+    padding: 0.6rem 1rem 0;
+}
+
+.order-progress-bar > .order-progress-bar-wrapper > .order-progress-bar-track {
+    display: flex;
+    flex: 1;
+    border-top: 4px dashed #d1d5db;
+    width: 100%;
+}
+
+.order-progress-bar > .order-progress-bar-wrapper > .order-progress-bar-progression {
+    display: flex;
+    flex: 1;
+    border-top: 4px dashed #16a34a;
+    width: calc(100% - 2rem);
+    position: absolute;
+    top: 0.6rem;
+    left: 1rem;
+    right: 0;
+}
+
+.order-progress-bar > .order-progress-bar-wrapper > .order-progress-bar-truck-icon {
+    display: flex;
+    flex: 1;
+    padding-left: calc(100% - 2rem);
+    position: absolute;
+    top: -0.085rem;
+    left: 1rem;
+    right: 0;
+}
+
+.order-progress-bar > .order-progress-bar-wrapper > .order-progress-bar-truck-icon > .truck-icon-wrapper {
+    padding: 0 0.35rem;
+    border-radius: 0.25rem;
+    border: 1px #d1d5db solid;
+    background-color: #fff;
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
+}
+
+body[data-theme='dark'] .order-progress-bar > .order-progress-bar-wrapper > .order-progress-bar-truck-icon > .truck-icon-wrapper {
+    border: 1px #374151 solid;
+    background-color: #1f2937;
+}
+
+.customer-live-map-wrapper {
+    width: 100%;
+    height: 700px;
+    border-radius: 0.5rem;
+    position: relative;
+}
+
+.customer-live-map-wrapper > .leaflet-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 0.5rem;
+}
+
+.customer-live-map-wrapper .customer-order-details-container {
+    position: absolute;
+    z-index: 9999;
+    bottom: 0;
+    top: 0;
+    right: 0;
+    width: 40%;
+    max-width: 40%;
+    height: 100%;
+    padding: 1rem;
+}
+
+.customer-live-map-wrapper .customer-order-details-container > .customer-order-details {
+    height: 100%;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
+    border: 1px #d1d5db solid;
+    border-radius: 0.5rem;
+    background-color: #fff;
+    padding: 0.75rem;
+}
+
+body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-container > .customer-order-details {
+    border: 1px #374151 solid;
+    background-color: #1f2937;
+}
+
+.customer-live-map-wrapper .customer-order-details-container > .customer-order-details .customer-order-details-seperator {
+    display: flex;
+    width: 100%;
+    height: 1px;
+    background-color: #e5e7eb;
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+    align-items: center;
+}
+
+body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-container > .customer-order-details .customer-order-details-seperator {
+    background-color: #374151;
+}
+
+.customer-live-map-wrapper .customer-order-details-container > .customer-order-details .activity-detail {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem;
+    border: 1px #e5e7eb solid;
+    border-radius: 0.5rem;
+    background-color: #f9fafb;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
+}
+
+body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-container > .customer-order-details .activity-detail {
+    border: 1px #374151 solid;
+    background-color: #111827;
+}
+
+body.fleetbase-console .leaflet-popup-content {
+    margin: 0.25rem 0.5rem;
+}

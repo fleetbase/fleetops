@@ -10,102 +10,19 @@ import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-ma
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 
 export default class OperationsOrdersIndexViewController extends BaseController {
-    /**
-     * Inject the `operations.orders.index` controller
-     *
-     * @var {Controller}
-     */
     @controller('operations.orders.index') ordersController;
-
-    /**
-     * Inject the `management.contacts.index` controller
-     *
-     * @var {Controller}
-     */
     @controller('management.contacts.index') contactsController;
-
-    /**
-     * Inject the `management.vendors.index` controller
-     *
-     * @var {Controller}
-     */
     @controller('management.vendors.index') vendorsController;
-
-    /**
-     * Inject the `management.drivers.index` controller
-     *
-     * @var {Controller}
-     */
     @controller('management.drivers.index') driversController;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `modalsManager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
     @service intl;
-
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
-     */
     @service currentUser;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `socket` service
-     *
-     * @var {Service}
-     */
     @service socket;
-
-    /**
-     * Inject the `universe` service
-     *
-     * @var {Service}
-     */
     @service universe;
-
-    /**
-     * Inject the `contextPanel` service
-     *
-     * @var {Service}
-     */
     @service contextPanel;
 
     @tracked isLoadingAdditionalData = false;
@@ -219,6 +136,16 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         return groups;
     }
 
+    @computed('model.payload.waypoints') get orderWaypoints() {
+        const { payload } = this.model;
+
+        if (payload.waypoints && typeof payload.waypoints.toArray === 'function') {
+            return payload.waypoints.toArray();
+        }
+
+        return payload.waypoints;
+    }
+
     @computed('model.payload.{dropoff,pickup,waypoints}') get routeWaypoints() {
         const { payload } = this.model;
         let waypoints = [];
@@ -294,8 +221,10 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     }
 
     @action resetInterface() {
-        if (this.leafletMap && this.leafletMap.liveMap) {
-            this.leafletMap.liveMap.show(['drivers', 'routes']);
+        const liveMap = this.leafletMap ? this.leafletMap.liveMap : null;
+        if (liveMap) {
+            liveMap.reload();
+            liveMap.showAll();
         }
     }
 
@@ -337,17 +266,20 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         // always set map layout
         this.ordersController.setLayoutMode('map');
 
-        // create initial setup function which runs 600ms after invoked
-        const setup = (ms = 600) => {
+        // create initial setup function which runs 1200ms after invoked
+        const setup = (ms = 1200) => {
             return later(
                 this,
                 () => {
-                    if (this.leafletMap && this.leafletMap.liveMap) {
-                        this.leafletMap.liveMap.hideAll();
+                    const liveMap = this.leafletMap ? this.leafletMap.liveMap : null;
+                    if (liveMap) {
+                        liveMap.drivers = [];
+                        liveMap.vehicles = [];
+                        liveMap.places = [];
                     }
 
-                    // display order route on map
                     this.displayOrderRoute();
+                    this.displayOrderDriverAssigned();
                 },
                 ms
             );
@@ -461,6 +393,14 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             },
             300
         );
+    }
+
+    @action displayOrderDriverAssigned() {
+        const driverAssigned = this.model.driver_assigned;
+        if (driverAssigned) {
+            this.leafletMap.liveMap.drivers = [driverAssigned];
+            this.leafletMap.liveMap.show('drivers');
+        }
     }
 
     /**

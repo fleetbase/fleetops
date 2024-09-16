@@ -4,6 +4,8 @@ import { scheduleOnce } from '@ember/runloop';
 import { classify, camelize } from '@ember/string';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
+// const L = window.L;
+// console.log(L);
 export default class LeafletDrawControl extends BaseLayer {
     leafletEvents = [
         L.Draw.Event.CREATED,

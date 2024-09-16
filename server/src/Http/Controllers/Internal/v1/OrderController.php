@@ -555,7 +555,7 @@ class OrderController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
-    public function nextActivity(string $id, Request $request)
+    public function nextActivity(string $id)
     {
         $order = Order::withoutGlobalScopes()
             ->where('uuid', $id)
@@ -569,6 +569,27 @@ class OrderController extends FleetOpsController
         $nextActivities = $order->config()->nextActivity();
 
         return response()->json($nextActivities);
+    }
+
+    /**
+     * Finds and responds with the orders next activity update based on the orders configuration.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function trackerInfo(string $id)
+    {
+        $order = Order::withoutGlobalScopes()
+            ->where('uuid', $id)
+            ->orWhere('public_id', $id)
+            ->first();
+
+        if (!$order) {
+            return response()->error('No order found.');
+        }
+
+        $trackerInfo = $order->tracker()->toArray();
+
+        return response()->json($trackerInfo);
     }
 
     /**

@@ -13,7 +13,12 @@ use Illuminate\Support\Facades\Http;
  */
 class OSRM
 {
-    protected static $baseUrl = 'https://bundle.routing.fleetbase.io';
+    /**
+     * The ORSM server API URL.
+     *
+     * @var string
+     */
+    protected static $baseUrl = 'https://router.project-osrm.org';
 
     /**
      * Get the route between two points.
@@ -37,6 +42,38 @@ class OSRM
         $coordinates = "{$start->getLng()},{$start->getLat()};{$end->getLng()},{$end->getLat()}";
 
         return static::getRouteFromCoordinatesString($coordinates, $queryParameters);
+    }
+
+    public static function getRouteFromPoints(array $points, array $queryParameters = [])
+    {
+        // Check if there are at least two points (start and end)
+        if (count($points) < 2) {
+            throw new \InvalidArgumentException('At least two points (start and end) are required.');
+        }
+
+        // Generate a unique cache key based on the points and query parameters
+        $cacheKey = 'getRouteFromPoints:' . md5(serialize($points) . serialize($queryParameters));
+
+        // Return the cached result if it exists
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
+        // Convert the array of Point objects into an OSRM-compatible string
+        $coordinates = array_map(function (Point $point) {
+            return "{$point->getLng()},{$point->getLat()}";
+        }, $points);
+
+        // Join the coordinates with a semicolon
+        $coordinatesString = implode(';', $coordinates);
+
+        // Call the getRouteFromCoordinatesString method with the constructed coordinates string
+        $routeData = static::getRouteFromCoordinatesString($coordinatesString, $queryParameters);
+
+        // Store the result in cache for 60 minutes
+        Cache::put($cacheKey, $routeData, 60 * 60);
+
+        return $routeData;
     }
 
     public static function getRouteFromCoordinatesString(string $coordinates, array $queryParameters = [])

@@ -12,6 +12,7 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Route;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 

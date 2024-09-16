@@ -2,6 +2,8 @@
 
 namespace Fleetbase\FleetOps\Auth\Schemas;
 
+use Fleetbase\FleetOps\Auth\Directives\CustomerOrders;
+
 class FleetOps
 {
     /**
@@ -364,8 +366,8 @@ class FleetOps
                 'view order',
             ],
             'directives' => [
-                'list order'    => ['where', 'orders.customer_uuid', '=', 'session.user'],
-                'view order'    => ['where', 'orders.customer_uuid', '=', 'session.user'],
+                'list order'    => [CustomerOrders::class],
+                'view order'    => [CustomerOrders::class],
             ],
         ],
     ];
