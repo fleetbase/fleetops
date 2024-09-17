@@ -60,7 +60,8 @@ export class EventBuffer {
             // get movingObject marker
             const marker = this.model._layer || this.model._marker;
             if (marker) {
-                if (typeof marker.setRotationAngle === 'function') {
+                console.log(this.model, marker, marker.slideTo);
+                if (typeof marker.setRotationAngle === 'function' && data.heading) {
                     marker.setRotationAngle(data.heading);
                 }
 
@@ -80,14 +81,8 @@ export class EventBuffer {
 }
 
 export default class MovementTrackerService extends Service {
-    @service('socket') socketCluster;
-    @tracked socket;
+    @service socket;
     @tracked channels = [];
-
-    constructor() {
-        super(...arguments);
-        this.socket = this.socketCluster.instance();
-    }
 
     closeChannels() {
         this.channels.forEach((channel) => {
@@ -102,6 +97,9 @@ export default class MovementTrackerService extends Service {
     }
 
     async track(model) {
+        // Create socket instance
+        const socket = this.socket.instance();
+
         // Get model type and identifier
         const type = getModelName(model);
         const identifier = model.id;
@@ -109,7 +107,7 @@ export default class MovementTrackerService extends Service {
 
         // Listen on the specific channel
         const channelId = `${type}.${identifier}`;
-        const channel = this.socket.subscribe(channelId);
+        const channel = socket.subscribe(channelId);
 
         // Track the channel
         this.channels.pushObject(channel);

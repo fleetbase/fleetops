@@ -15,6 +15,7 @@ use Fleetbase\FleetOps\Imports\OrdersImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
@@ -84,6 +85,14 @@ class OrderController extends FleetOpsController
                     // if no status is set its default to `created`
                     if (!isset($input['status'])) {
                         $input['status'] = 'created';
+                    }
+
+                    // Set order config
+                    if (!isset($input['order_config_uuid'])) {
+                        $defaultOrderConfig = OrderConfig::default();
+                        if ($defaultOrderConfig) {
+                            $input['order_config_uuid'] = $defaultOrderConfig->uuid;
+                        }
                     }
                 },
                 function (&$request, Order &$order, &$requestInput) {
@@ -386,6 +395,19 @@ class OrderController extends FleetOpsController
          * @var \Fleetbase\Models\Order
          */
         $order = Order::select(['uuid', 'driver_assigned_uuid', 'order_config_uuid', 'adhoc', 'dispatched', 'dispatched_at'])->where('uuid', $request->input('order'))->withoutGlobalScopes()->first();
+        if (!$order) {
+            return response()->error('No order found to dispatch.');
+        }
+
+        // if order has no config set, set default config
+        $order->loadMissing('orderConfig');
+        if (!$order->orderConfig) {
+            $defaultOrderConfig = OrderConfig::default();
+            if ($defaultOrderConfig) {
+                $order->update(['order_config_uuid' => $defaultOrderConfig->uuid]);
+                $order->loadMissing('orderConfig');
+            }
+        }
 
         if (!$order->hasDriverAssigned && !$order->adhoc) {
             return response()->error('No driver assigned to dispatch!');

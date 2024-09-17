@@ -27,7 +27,7 @@ class OrderTracker
     protected Payload $payload;
 
     /** @var Driver The driver assigned to the order */
-    protected Driver $driver;
+    protected ?Driver $driver;
 
     /** @var bool Flag to indicate if the order has multiple dropoff points */
     protected bool $isMultipleDropOrder = false;
@@ -77,6 +77,25 @@ class OrderTracker
     {
         $totalDistance     = $this->getTotalDistance();
         $completedDistance = $this->getCompletedDistance();
+
+        // Get order percentage by activity if distance-based progress is not available
+        $shouldCalculateProgressByActivity = empty($completedDistance) && $this->order->status !== 'created';
+        if ($shouldCalculateProgressByActivity) {
+            /** @var Collection $activities */
+            $activities    = $this->order->orderConfig->activities();
+            $totalActivity = $activities->count();
+            if ($totalActivity === 0) {
+                return 100; // No activities, so treat it as 100% complete
+            }
+
+            // Calculate completed activities
+            $completedActivity = $activities->filter(function ($activity) {
+                return $activity->isCompleted($this->order);
+            })->count();
+
+            // Return progress percentage based on completed activities
+            return round(($completedActivity / $totalActivity) * 100, 2);
+        }
 
         if ($totalDistance === 0) {
             return 100;
@@ -134,8 +153,16 @@ class OrderTracker
      */
     public function getCurrentDestinationETA(): float
     {
-        $start    = $this->getDriverCurrentLocation();
-        $end      = $this->getCurrentDestination()->location;
+        $start              = $this->getDriverCurrentLocation();
+        $currentDestination = $this->getCurrentDestination();
+        $end                = $currentDestination->location;
+        if ($start == $end) {
+            $nextDestination = $this->getNextDestination();
+            if ($nextDestination) {
+                $end = $nextDestination->location;
+            }
+        }
+
         $response = OSRM::getRoute($start, $end);
         if (isset($response['code']) && $response['code'] === 'Ok') {
             $route = Arr::first($response['routes']);
@@ -265,7 +292,7 @@ class OrderTracker
                 function (Waypoint $waypoint) {
                     return $this->isWaypointCompleted($waypoint);
                 }
-            )->get()->map(
+            )->map(
                 function (Waypoint $waypoint) {
                     $waypoint->loadMissing('place');
 
@@ -282,7 +309,7 @@ class OrderTracker
             return collect([$this->getPickup(), $this->getDropoff()]);
         }
 
-        return collect([$this->payload->getPickup()]);
+        return collect([$this->getPickup()]);
     }
 
     /**
@@ -356,6 +383,12 @@ class OrderTracker
      */
     public function isWaypointCurrentDestination(Waypoint $waypoint): bool
     {
+        if (!$this->payload->current_waypoint_uuid) {
+            $currentDestination = $this->getCurrentDestination();
+
+            return $currentDestination->uuid === $waypoint->place_uuid;
+        }
+
         return $waypoint->place_uuid === $this->payload->current_waypoint_uuid;
     }
 
@@ -397,10 +430,11 @@ class OrderTracker
     public function toArray(): array
     {
         $estimatedCompletionTime = $this->getEstimatedCompletionTime();
+        $orderProgressPercentage = $this->getOrderProgressPercentage();
 
         return [
             'driver_current_location'             => $this->getDriverCurrentLocation(),
-            'progress_percentage'                 => $this->getOrderProgressPercentage(),
+            'progress_percentage'                 => $orderProgressPercentage,
             'total_distance'                      => $this->getTotalDistance(),
             'completed_distance'                  => $this->getCompletedDistance(),
             'current_destination_eta'             => $this->getCurrentDestinationETA(),
@@ -411,6 +445,8 @@ class OrderTracker
             'completion_time'                     => $this->getOrderCompletionTime(),
             'current_destination'                 => $this->getCurrentDestination(),
             'next_destination'                    => $this->getNextDestination(),
+            'first_waypoint_completed'            => $orderProgressPercentage > 10,
+            'last_waypoint_completed'             => $orderProgressPercentage === 100 || $this->order->status === 'completed',
         ];
     }
 }

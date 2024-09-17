@@ -3,13 +3,11 @@
 namespace Fleetbase\FleetOps\Console\Commands;
 
 use Fleetbase\FleetOps\Events\DriverSimulatedLocationChanged;
-use Fleetbase\FleetOps\Jobs\SimulateWaypointReached;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Console\Command;
-use Illuminate\Support\Arr;
 
 class SimulateOrderRouteNavigation extends Command
 {
@@ -38,7 +36,7 @@ class SimulateOrderRouteNavigation extends Command
         ini_set('max_execution_time', 0);
 
         $orderId = $this->argument('order');
-        $order = Order::where('public_id', $orderId)->orWhere('uuid', $orderId)->first();
+        $order   = Order::where('public_id', $orderId)->orWhere('uuid', $orderId)->first();
         if (!$order) {
             return $this->error('Order not found to simulate driving for.');
         }
@@ -112,14 +110,15 @@ class SimulateOrderRouteNavigation extends Command
         }
 
         $this->info('Route navigation simulation completed.');
+
         return Command::SUCCESS;
     }
 
     /**
- * Prompt for missing input arguments using the returned questions.
- *
- * @return array<string, string>
- */
+     * Prompt for missing input arguments using the returned questions.
+     *
+     * @return array<string, string>
+     */
     protected function promptForMissingArgumentsUsing(): array
     {
         return [

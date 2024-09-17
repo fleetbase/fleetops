@@ -266,8 +266,8 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         // always set map layout
         this.ordersController.setLayoutMode('map');
 
-        // create initial setup function which runs 1200ms after invoked
-        const setup = (ms = 1200) => {
+        // create initial setup function which runs 600ms after invoked
+        const setup = (ms = 600) => {
             return later(
                 this,
                 () => {

@@ -7,8 +7,11 @@ import { later } from '@ember/runloop';
 import { task, timeout } from 'ember-concurrency';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
+import engineService from '@fleetbase/ember-core/decorators/engine-service';
 import registerComponent from '../../utils/register-component';
 import OrderProgressCardComponent from '../order-progress-card';
+import LeafletTrackingMarkerComponent from '../leaflet-tracking-marker';
+import DisplayPlaceComponent from '../display-place';
 
 function removeParamFromCurrentUrl(paramToRemove) {
     const url = new URL(window.location.href);
@@ -22,6 +25,22 @@ function addParamToCurrentUrl(paramName, paramValue) {
     window.history.pushState({ path: url.href }, '', url.href);
 }
 
+function registerTrackingMarker(owner, componentClass) {
+    let emberLeafletService = owner.lookup('service:ember-leaflet');
+
+    if (emberLeafletService) {
+        const alreadyRegistered = emberLeafletService.components.find((registeredComponent) => registeredComponent.name === 'leaflet-tracking-marker');
+        if (alreadyRegistered) {
+            return;
+        }
+        // we then invoke the `registerComponent` method
+        emberLeafletService.registerComponent('leaflet-tracking-marker', {
+            as: 'tracking-marker',
+            component: componentClass,
+        });
+    }
+}
+
 const MAP_TARGET_FOCUS_PADDING_BOTTOM_RIGHT = [200, 0];
 const MAP_TARGET_FOCUS_REFOCUS_PANBY = [150, 0];
 export default class CustomerOrdersComponent extends Component {
@@ -31,10 +50,9 @@ export default class CustomerOrdersComponent extends Component {
     @service universe;
     @service urlSearchParams;
     @service socket;
+    @engineService('@fleetbase/fleetops-engine') movementTracker;
     @tracked orders = [];
     @tracked selectedOrder;
-    @tracked channels = [];
-    @tracked eventBuffer = [];
     @tracked zoom = 12;
     @tracked map;
     @tracked mapReady = false;
@@ -44,7 +62,10 @@ export default class CustomerOrdersComponent extends Component {
 
     constructor(owner) {
         super(...arguments);
+        this.movementTracker.socket = this.socket;
         registerComponent(owner, OrderProgressCardComponent);
+        registerComponent(owner, DisplayPlaceComponent);
+        registerTrackingMarker(owner, LeafletTrackingMarkerComponent);
         this.loadCustomerOrders.perform();
     }
 
@@ -80,6 +101,7 @@ export default class CustomerOrdersComponent extends Component {
 
     @action viewOrder(order) {
         this.selectedOrder = order;
+        this.resetOrderRoute();
         addParamToCurrentUrl('order', order.public_id);
         const driverCurrentLocation = order.get('trackerData.driver_current_location');
         if (driverCurrentLocation) {
@@ -100,14 +122,14 @@ export default class CustomerOrdersComponent extends Component {
         }
     }
 
-    @action closeChannels() {}
-
     @action setupMap({ target }) {
         this.map = target;
-        this.displayOrderRoute();
+        if (!this.routeControl) {
+            this.displayOrderRoute();
+        }
     }
 
-    displayOrderRoute() {
+    @action displayOrderRoute() {
         const waypoints = this.getRouteCoordinatesFromOrder(this.selectedOrder);
         const routingHost = getRoutingHost();
         if (this.cannotRouteWaypoints(waypoints)) {
@@ -161,12 +183,25 @@ export default class CustomerOrdersComponent extends Component {
         );
     }
 
-    @action startTrackingDriverPosition({ target }) {
-        console.log('startTrackingDriverPosition()', ...arguments);
+    @action resetOrderRoute() {
+        const { routeControl } = this;
+        if (routeControl instanceof RoutingControl) {
+            try {
+                routeControl.remove();
+            } catch (e) {
+                // silent
+            }
+        }
+
+        this.displayOrderRoute();
+    }
+
+    @action startTrackingDriverPosition(event) {
+        const { target } = event;
         const driver = this.selectedOrder.driver;
         if (driver) {
             driver.set('_layer', target);
-            this.trackDriverMovement(driver);
+            this.movementTracker.track(driver);
         }
     }
 
@@ -196,69 +231,6 @@ export default class CustomerOrdersComponent extends Component {
                 this.map.panBy(MAP_TARGET_FOCUS_REFOCUS_PANBY);
             });
         }
-    }
-
-    async trackDriverMovement(driver) {
-        // Create socket instance
-        const socket = this.socket.instance();
-
-        // Listen on the specific channel
-        const channelId = `driver.${driver.id}`;
-        const channel = socket.subscribe(channelId);
-
-        // Track the channel
-        this.channels.pushObject(channel);
-
-        // Listen to the channel for events
-        await channel.listener('subscribe').once();
-
-        // Time to wait in milliseconds before processing buffered events
-        const bufferTime = 1000 * 10;
-
-        // Start a timer to process the buffer at intervals
-        setInterval(() => {
-            this.processLocationChangeBuffer.perform(driver);
-        }, bufferTime);
-
-        // Get incoming data and console out
-        (async () => {
-            for await (let output of channel) {
-                const { event } = output;
-
-                if (event === `driver.location_changed` || event === `driver.simulated_location_changed`) {
-                    // Add the incoming event to the buffer
-                    this.eventBuffer.push(output);
-                }
-            }
-        })();
-    }
-
-    @task *processLocationChangeBuffer(driver) {
-        // Sort events by created_at
-        this.eventBuffer = this.eventBuffer.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
-        // Process sorted events
-        for (const output of this.eventBuffer) {
-            const { event, data } = output;
-
-            // log incoming event
-            console.log(`${event} - #${data.additionalData.index} (${output.created_at}) [ ${data.location.coordinates.join(' ')} ]`);
-
-            // get movingObject marker
-            const objectMarker = driver._layer;
-
-            if (objectMarker) {
-                objectMarker.setLatLng(data.location.coordinates);
-                yield timeout(1000);
-                // // Update the object's heading degree
-                // objectMarker.setRotationAngle(data.heading);
-                // // Move the object's marker to new coordinates
-                // objectMarker.slideTo(data.location.coordinates, { duration: 2000 });
-            }
-        }
-
-        // Clear the buffer
-        this.eventBuffer.length = 0;
     }
 
     cannotRouteWaypoints(waypoints = []) {

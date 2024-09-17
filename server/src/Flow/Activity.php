@@ -236,4 +236,9 @@ class Activity extends FlowResource
     {
         return $this->complete();
     }
+
+    public function isCompleted(Order $order): bool
+    {
+        return $order->hasCompletedActivity($this);
+    }
 }

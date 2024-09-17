@@ -1757,8 +1757,20 @@ class Order extends Model
         return $this;
     }
 
-    public function tracker()
+    public function tracker(): OrderTracker
     {
         return new OrderTracker($this);
+    }
+
+    public function hasCompletedActivity(Activity $activity): bool
+    {
+        $this->loadMissing('trackingStatuses');
+        if ($this->trackingStatuses) {
+            return $this->trackingStatuses->contains(function ($trackingStatus) use ($activity) {
+                return strtolower($trackingStatus->code) === strtolower($activity->code);
+            });
+        }
+
+        return false;
     }
 }

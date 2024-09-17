@@ -8,15 +8,18 @@
                 <div class="mb-6">
                     <Input @value={{this.query}} class="form-input form-input-lg w-full" {{on "input" (perform this.searchOrders)}} placeholder="Search orders" />
                 </div>
-                <div class="customer-orders-list-content">
-                    {{#each this.orders as |order|}}
-                        <OrderProgressCard
-                            @order={{order}}
-                            @onClick={{this.viewOrder}}
-                            @onTrackerDataLoaded={{this.onTrackerDataLoaded}}
-                            class="{{if (eq this.selectedOrder.id order.id) 'active'}}"
-                        />
-                    {{/each}}
+                <div class="customer-orders-list-content overflow-y-scroll pl-2 pr-4 pt-2" {{set-height "800px"}}>
+                    <div class="space-y-4">
+                        {{#each this.orders as |order|}}
+                            <OrderProgressCard
+                                @order={{order}}
+                                @onClick={{this.viewOrder}}
+                                @onTrackerDataLoaded={{this.onTrackerDataLoaded}}
+                                class="{{if (eq this.selectedOrder.id order.id) 'active'}}"
+                            />
+                        {{/each}}
+                        <Spacer @height="200px" />
+                    </div>
                 </div>
             </div>
         </div>
@@ -32,43 +35,40 @@
                                 @zoom={{this.zoom}}
                                 @zoomControl={{@zoomControl}}
                                 @onLoad={{this.setupMap}}
-                                {{will-destroy this.closeChannels}}
                                 ...attributes
                                 as |layers|
                             >
                                 <layers.tile @url={{this.tileSourceUrl}} />
                                 {{#let order.driver_assigned as |driver|}}
                                     {{#if driver}}
-                                        {{!-- template-lint-disable no-log --}}
-                                        {{log (or driver.vehicle_avatar (config "defaultValues.vehicleAvatar"))}}
-                                        {{!-- <layers.drift-marker
+                                        <layers.tracking-marker
                                             @id={{driver.id}}
+                                            @publicId={{driver.public_id}}
+                                            @location={{driver.coordinates}}
                                             @rotationAngle={{driver.heading}}
-                                            @duration={{300}}
                                             @icon={{icon iconUrl=(or driver.vehicle_avatar (config "defaultValues.vehicleAvatar")) iconSize=(array 24 24)}}
-                                            @location={{driver.coordinates}}
-                                            @publicId={{driver.public_id}}
                                             @onAdd={{this.startTrackingDriverPosition}}
                                             as |marker|
                                         >
+                                            <marker.popup @maxWidth="500" @minWidth="225">
+                                                <div class="flex flex-row">
+                                                    <div class="flex-1">
+                                                        <div class="text-xs font-semibold">{{driver.name}}</div>
+                                                        <div class="text-xs">Status:
+                                                            <span class="{{if driver.online 'text-green-500' 'text-red-400'}}">{{if driver.online "Online" "Offline"}}</span></div>
+                                                        <div class="text-xs truncate">Pos: {{driver.positionString}}</div>
+                                                    </div>
+                                                </div>
+                                            </marker.popup>
                                             <marker.tooltip @permanent={{false}} @sticky={{true}}>
-                                                <div class="text-sm font-semibold">{{driver.name}}</div>
-                                                <div class="text-sm">{{driver.phone}}</div>
+                                                <div class="flex items-center space-x-1">
+                                                    <div class="text-xs font-semibold">{{driver.name}}</div>
+                                                    <div>•</div>
+                                                    <div class="text-xs {{if driver.online 'text-green-500' 'text-red-400'}}">{{if driver.online "Online" "Offline"}}</div>
+                                                </div>
+                                                <div class="text-xs truncate"><FaIcon @icon="location-dot" @size="xs" class="mr-0.5" />{{driver.positionString}}</div>
                                             </marker.tooltip>
-                                        </layers.drift-marker> --}}
-
-                                        <layers.marker
-                                            @icon={{icon iconUrl=(or driver.vehicle_avatar (config "defaultValues.vehicleAvatar")) iconSize=(array 24 24)}}
-                                            @location={{driver.coordinates}}
-                                            @publicId={{driver.public_id}}
-                                            @onAdd={{this.startTrackingDriverPosition}}
-                                            as |marker|
-                                        >
-                                            <marker.tooltip @permanent={{false}} @sticky={{true}}>
-                                                <div class="text-sm font-semibold">{{driver.name}}</div>
-                                                <div class="text-sm">{{driver.phone}}</div>
-                                            </marker.tooltip>
-                                        </layers.marker>
+                                        </layers.tracking-marker>
                                     {{/if}}
                                 {{/let}}
                             </LeafletMap>
@@ -92,8 +92,23 @@
                                     </div>
                                     <div class="customer-order-details-seperator"></div>
                                     <div>
-                                        <div class="mb-2 ml-1">
-                                            <h1 class="font-bold text-sm">Activity:</h1>
+                                        <div class="flex flex-row justify-between mb-2 ml-1">
+                                            <div class="flex-1">
+                                                <h1 class="font-bold text-sm">Activity:</h1>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="rounded-md
+                                                        {{if order.has_driver_assigned 'bg-green-300 text-green-900' 'bg-yellow-300 text-yellow-900'}}
+                                                        px-2 py-0.5 text-xs flex-grow-0"
+                                                >
+                                                    {{#if order.has_driver_assigned}}
+                                                        <span>Driver Assigned</span>
+                                                    {{else}}
+                                                        <span>No Driver Assigned</span>
+                                                    {{/if}}
+                                                </div>
+                                            </div>
                                         </div>
                                         <div class="space-y-2">
                                             {{#each order.tracking_statuses as |trackingStatus|}}
@@ -111,6 +126,119 @@
                                             {{/each}}
                                         </div>
                                     </div>
+                                    <div class="customer-order-details-seperator"></div>
+                                    <div>
+                                        <div class="mb-2 ml-1">
+                                            <h1 class="font-bold text-sm">Items:</h1>
+                                        </div>
+                                        {{#if order.isMultipleDropoffOrder}}
+                                            <div class="flex flex-col space-y-2 overflow-y-scroll" {{set-height "255px"}}>
+                                                {{#each order.payload.entitiesByDestination as |group|}}
+                                                    <div class="item-detail">
+                                                        <div class="flex flex-row justify-between flex-grow-0">
+                                                            <DisplayPlace @place={{group.waypoint}} @addressClass="text-xs truncate" {{set-width "140px"}} />
+                                                            <div class="flex flex-col items-end flex-grow-0">
+                                                                <div class="rounded-md bg-yellow-300 text-yellow-900 px-2 py-0.5 text-xs flex-grow-0">{{t
+                                                                        "fleet-ops.operations.orders.index.view.tracking"
+                                                                    }}
+                                                                    {{group.waypoint.tracking}}</div>
+                                                                <Badge @status={{group.waypoint.status_code}} />
+                                                            </div>
+                                                        </div>
+                                                        <div class="customer-order-details-seperator"></div>
+                                                        <div class="flex flex-col space-y-2">
+                                                            {{#each group.entities as |entity index|}}
+                                                                <div class="flex flex-row">
+                                                                    <div class="w-20 shrink-0">
+                                                                        <Image src={{entity.photo_url}} class="w-14 h-14 rounded-md shadow-sm" alt={{entity.name}} />
+                                                                    </div>
+                                                                    <div class="flex-1">
+                                                                        <div class="text-sm font-bold">{{n-a entity.name (concat "Item " (add index 1))}}</div>
+                                                                        <div class="text-xs"><span class="font-semibold">Description:</span>
+                                                                            {{n-a entity.description "No description provided."}}</div>
+                                                                        <div class="text-xs"><span class="font-semibold">Tracking:</span> {{n-a entity.tracking}}</div>
+                                                                        {{#if entity.price}}
+                                                                            <div class="text-xs"><span class="font-semibold">Price:</span>
+                                                                                {{format-currency entity.price entity.currency}}</div>
+                                                                        {{/if}}
+                                                                    </div>
+                                                                </div>
+                                                            {{/each}}
+                                                        </div>
+                                                    </div>
+                                                {{/each}}
+                                            </div>
+                                        {{else}}
+                                            <div class="flex flex-col space-y-2">
+                                                {{#each order.payload.entities as |entity index|}}
+                                                    <div class="item-detail">
+                                                        <div class="flex flex-row">
+                                                            <div class="w-20 shrink-0">
+                                                                <Image src={{entity.photo_url}} class="w-14 h-14 rounded-md shadow-sm" alt={{entity.name}} />
+                                                            </div>
+                                                            <div class="flex-1">
+                                                                <div class="text-sm font-bold">{{n-a entity.name (concat "Item " (add index 1))}}</div>
+                                                                <div class="text-xs"><span class="font-semibold">Description:</span>
+                                                                    {{n-a entity.description "No description provided."}}</div>
+                                                                <div class="text-xs"><span class="font-semibold">Tracking:</span> {{n-a entity.tracking}}</div>
+                                                                {{#if entity.price}}
+                                                                    <div class="text-xs"><span class="font-semibold">Price:</span> {{format-currency entity.price entity.currency}}</div>
+                                                                {{/if}}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {{/each}}
+                                            </div>
+                                        {{/if}}
+                                    </div>
+                                    {{#if order.purchase_rate}}
+                                        <div class="customer-order-details-seperator"></div>
+                                        <div>
+                                            <div class="mb-2 ml-1">
+                                                <h1 class="font-bold text-sm">Service Fee's:</h1>
+                                            </div>
+                                            <div>
+                                                <div class="order-view-purchase-rate-table-wrapper next-table-wrapper no-scroll h-auto table-fluid rounded-b-md">
+                                                    <table id="order-view-purchase-rate-table" class="table table-fixed flex-1">
+                                                        <thead>
+                                                            <tr>
+                                                                <th class="text-left">{{t "fleet-ops.operations.orders.index.new.breakdown"}}</th>
+                                                                <th>
+                                                                    <div class="flex flex-row items-center justify-end">{{order.purchase_rate.service_quote.currency}}</div>
+                                                                </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {{#each order.purchase_rate.service_quote.items as |item|}}
+                                                                <tr>
+                                                                    <td>
+                                                                        <span class="font-semibold">{{smart-humanize item.details}}</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="flex flex-row items-center justify-end">{{format-currency
+                                                                                item.amount
+                                                                                order.purchase_rate.service_quote.currency
+                                                                            }}</div>
+                                                                    </td>
+                                                                </tr>
+                                                            {{/each}}
+                                                            <tr class="border-b-0">
+                                                                <td class="border-b-0">
+                                                                    <span class="font-semibold">{{t "fleet-ops.common.total"}}</span>
+                                                                </td>
+                                                                <td class="border-b-0">
+                                                                    <div class="flex flex-row items-center justify-end">{{format-currency
+                                                                            order.purchase_rate.service_quote.amount
+                                                                            order.purchase_rate.service_quote.currency
+                                                                        }}</div>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {{/if}}
                                 </div>
                             </div>
                         </div>
@@ -127,4 +255,5 @@
             {{/if}}
         </div>
     </div>
+    <div id="customer-portal-content-wormhole"></div>
 </div>

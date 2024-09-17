@@ -1039,16 +1039,16 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
         if (isMultipleDropoffOrder) {
             if (pickup) {
-                this.addWaypoint({ place: pickup });
+                this.addWaypoint({ place: pickup, customer: this.order.customer });
 
                 if (dropoff) {
-                    this.addWaypoint({ place: dropoff });
+                    this.addWaypoint({ place: dropoff, customer: this.order.customer });
                 }
 
                 // clear pickup and dropoff
                 this.payload.setProperties({ pickup: null, dropoff: null });
             } else {
-                this.addWaypoint();
+                this.addWaypoint({ customer: this.order.customer });
             }
         } else {
             const pickup = get(this.waypoints, '0.place');
@@ -1361,6 +1361,10 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     }
 
     @action addWaypoint(properties = {}) {
+        if (this.order.customer) {
+            properties.customer = this.order.customer;
+        }
+
         const waypoint = this.store.createRecord('waypoint', properties);
         this.waypoints.pushObject(waypoint);
         this.updatePayloadCoordinates();

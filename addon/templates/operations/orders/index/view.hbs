@@ -629,7 +629,12 @@
                                     <div class="col-3">
                                         <div class="w-full rounded-md bg-gray-100 dark:bg-gray-900 shadow-sm p-3 relative">
                                             <div class="flex items-center justify-center mb-3">
-                                                <img src={{entity.photo_url}} class="w-14 h-14 rounded-md shadow-sm" alt={{or entity.name entity.public_id}} />
+                                                <Image
+                                                    src={{entity.photo_url}}
+                                                    @fallbackSrc={{config "defaultValues.entityImage"}}
+                                                    class="w-14 h-14 rounded-md shadow-sm"
+                                                    alt={{or entity.name entity.public_id}}
+                                                />
                                             </div>
                                             <div>
                                                 <div class="dark:text-gray-100 font-bold truncate mb-1">
@@ -669,7 +674,12 @@
                         <div class="col-3">
                             <div class="w-full rounded-md bg-gray-100 dark:bg-gray-900 shadow-sm p-3 relative">
                                 <div class="flex items-center justify-center mb-3">
-                                    <img src={{entity.photo_url}} class="w-14 h-14 rounded-md shadow-sm" alt={{or entity.name entity.public_id}} />
+                                    <Image
+                                        src={{entity.photo_url}}
+                                        @fallbackSrc={{config "defaultValues.entityImage"}}
+                                        class="w-14 h-14 rounded-md shadow-sm"
+                                        alt={{or entity.name entity.public_id}}
+                                    />
                                 </div>
                                 <div>
                                     <div class="dark:text-gray-100 font-bold truncate mb-1">

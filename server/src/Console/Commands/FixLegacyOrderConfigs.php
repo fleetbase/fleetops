@@ -57,9 +57,15 @@ class FixLegacyOrderConfigs extends Command
         $progressBar = $this->output->createProgressBar($totalOrders);
         $progressBar->start();
         foreach ($orders as $order) {
-            $orderConfig = OrderConfig::where(['company_uuid' => $order->company_uuid, 'namespace' => 'system:order-config:transport'])->first();
-            if ($orderConfig) {
-                $order->update(['order_config_uuid' => $orderConfig->uuid]);
+            try {
+                $orderConfig = OrderConfig::where(['company_uuid' => $order->company_uuid, 'namespace' => 'system:order-config:transport'])->first();
+                if ($orderConfig) {
+                    $order->update(['order_config_uuid' => $orderConfig->uuid]);
+                }
+            } catch (\Throwable $e) {
+                $this->error($e->getMessage());
+                $this->error('Order ID: ' . $order->uuid);
+                continue;
             }
             // Advance the progress bar by one step
             $progressBar->advance();

@@ -632,9 +632,20 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-marker-wrapper
     outline: 0.25rem solid #cbd5e1;
 }
 
+body[data-theme='dark'] .order-progress-bar > .order-progress-bar-marker-wrapper.completed > .order-progress-bar-marker,
 .order-progress-bar > .order-progress-bar-marker-wrapper.completed > .order-progress-bar-marker {
-    border: 1px #166534 solid;
-    background-color: #16a34a;
+    border: 1px #22c55e solid;
+    background-color: #22c55e;
+    outline: 0.25rem solid #86efac;
+    box-shadow: unset;
+}
+
+body[data-theme='dark'] .order-progress-bar > .order-progress-bar-marker-wrapper.completed,
+.order-progress-bar > .order-progress-bar-marker-wrapper.completed {
+    border: 5px #16a34a solid;
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
 }
 
 .order-progress-bar > .order-progress-bar-wrapper {
@@ -642,6 +653,10 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-marker-wrapper
     display: flex;
     flex: 1;
     padding: 0.6rem 1rem 0;
+}
+
+.order-progress-bar.has-progress > .order-progress-bar-wrapper > .order-progress-bar-track {
+    border-top: 4px dashed rgba(209, 213, 219, 0.5);
 }
 
 .order-progress-bar > .order-progress-bar-wrapper > .order-progress-bar-track {
@@ -689,7 +704,7 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-wrapper > .ord
 
 .customer-live-map-wrapper {
     width: 100%;
-    height: 700px;
+    height: 800px;
     border-radius: 0.5rem;
     position: relative;
 }
@@ -713,7 +728,6 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-wrapper > .ord
 }
 
 .customer-live-map-wrapper .customer-order-details-container > .customer-order-details {
-    height: 100%;
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
     border: 1px #d1d5db solid;
     border-radius: 0.5rem;
@@ -740,6 +754,7 @@ body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-conta
     background-color: #374151;
 }
 
+.customer-live-map-wrapper .customer-order-details-container > .customer-order-details .item-detail,
 .customer-live-map-wrapper .customer-order-details-container > .customer-order-details .activity-detail {
     display: flex;
     flex-direction: column;
@@ -750,6 +765,7 @@ body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-conta
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
 }
 
+body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-container > .customer-order-details .item-detail,
 body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-container > .customer-order-details .activity-detail {
     border: 1px #374151 solid;
     background-color: #111827;
@@ -757,4 +773,8 @@ body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-conta
 
 body.fleetbase-console .leaflet-popup-content {
     margin: 0.25rem 0.5rem;
+}
+
+.next-table-wrapper.no-scroll {
+    overflow: auto !important;
 }
