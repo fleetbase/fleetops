@@ -124,6 +124,11 @@ class Contact extends Model
         return $this->belongsTo(\Fleetbase\Models\Company::class, 'company_uuid');
     }
 
+    public function anyUser(): BelongsTo|Builder
+    {
+        return $this->belongsTo(User::class, 'user_uuid');
+    }
+
     public function user(): BelongsTo|Builder
     {
         return $this->belongsTo(User::class, 'user_uuid')->where('type', $this->type);

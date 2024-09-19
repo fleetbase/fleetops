@@ -4,6 +4,8 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Filter\ContactFilter;
 use Fleetbase\FleetOps\Http\Filter\VendorFilter;
+use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Vendor as VendorResource;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Fleetbase\FleetOps\Models\Vendor;
@@ -23,19 +25,24 @@ class MorphController extends Controller
      */
     public function queryCustomersOrFacilitators(Request $request)
     {
-        $query        = $request->input('query');
-        $limit        = $request->input('limit', 12);
-        $page         = $request->input('page', 1);
-        $type         = Str::lower($request->segment(4));
-        $resourceType = Str::lower(Utils::singularize($type));
+        $query          = $request->input('query');
+        $limit          = $request->input('limit', 12);
+        $page           = $request->input('page', 1);
+        $single         = $request->boolean('single');
+        $type           = Str::lower($request->segment(4));
+        $resourceType   = Str::lower(Utils::singularize($type));
 
-        $contactsQuery = Contact::searchWhere('name', $query)
+        $contactsQuery = Contact::select('*')
+            ->searchWhere('name', $query)
             ->where('type', $resourceType === 'customer' ? '=' : '!=', 'customer')
             ->where('company_uuid', session('company'))
+            ->applyDirectivesForPermissions('fleet-ops list contact')
             ->filter(new ContactFilter($request));
 
-        $vendorsQuery = Vendor::searchWhere('name', $query)
+        $vendorsQuery = Vendor::select('*')
+            ->searchWhere('name', $query)
             ->where('company_uuid', session('company'))
+            ->applyDirectivesForPermissions('fleet-ops list vendor')
             ->filter(new VendorFilter($request));
 
         // Get total count for pagination
@@ -72,6 +79,11 @@ class MorphController extends Controller
             }
         }
 
+        // if requesting single resource
+        if ($single === true) {
+            return response()->json($results->first());
+        }
+
         // set resource type
         $results = $results->map(
             function ($item) use ($resourceType) {
@@ -106,5 +118,82 @@ class MorphController extends Controller
         ];
 
         return response()->json($response);
+    }
+
+    public function queryCustomers(Request $request)
+    {
+        $query           = $request->input('query');
+        $limit           = $request->input('limit', 12);
+        $single          = $request->boolean('single');
+        $columns         = $request->array('columns');
+        $type            = $request->input('type', 'contact');
+
+        if ($type === 'vendor') {
+            $builder = Vendor::select('*')
+                ->searchWhere('name', $query)
+                ->where(['type' => 'customer', 'company_uuid' => session('company')])
+                ->applyDirectivesForPermissions('fleet-ops list vendor')
+                ->filter(new VendorFilter($request));
+        } else {
+            $builder = Contact::select('*')
+                ->where(['type' => 'customer', 'company_uuid' => session('company')])
+                ->applyDirectivesForPermissions('fleet-ops list contact')
+                ->filter(new ContactFilter($request));
+
+            if ($query) {
+                $builder->searchWhere('name', $query);
+            }
+        }
+
+        // Get paginated items
+        $results = $builder->fastPaginate($limit, $columns);
+        $results->setCollection($results->getCollection()->map(function ($customer) use ($type) {
+            $customer->customer_type = $type === 'vendor' ? 'vendor' : 'contact';
+
+            return $customer;
+        }));
+
+        if ($single) {
+            return $type === 'vendor' ? new VendorResource($results->first()) : new ContactResource($results->first());
+        }
+
+        return $type === 'vendor' ? VendorResource::collection($results) : ContactResource::collection($results);
+    }
+
+    public function queryFacilitators(Request $request)
+    {
+        $query           = $request->input('query');
+        $limit           = $request->input('limit', 12);
+        $single          = $request->boolean('single');
+        $columns         = $request->array('columns');
+        $type            = $request->input('type', 'vendor');
+
+        if ($type === 'contact') {
+            $builder = Contact::select('*')
+                ->searchWhere('name', $query)
+                ->where(['type' => 'facilitator', 'company_uuid' => session('company')])
+                ->applyDirectivesForPermissions('fleet-ops list contact')
+                ->filter(new ContactFilter($request));
+        } else {
+            $builder = Vendor::select('*')
+                ->searchWhere('name', $query)
+                ->where(['type' => 'facilitator', 'company_uuid' => session('company')])
+                ->applyDirectivesForPermissions('fleet-ops list vendor')
+                ->filter(new VendorFilter($request));
+        }
+
+        // Get paginated items
+        $results = $builder->fastPaginate($limit, $columns);
+        $results->setCollection($results->getCollection()->map(function ($facilitator) use ($type) {
+            $facilitator->facilitator_type = $type === 'contact' ? 'contact' : 'vendor';
+
+            return $facilitator;
+        }));
+
+        if ($single) {
+            return $type === 'contact' ? new ContactResource($results->first()) : new VendorResource($results->first());
+        }
+
+        return $type === 'contact' ? ContactResource::collection($results) : VendorResource::collection($results);
     }
 }

@@ -39,6 +39,7 @@ class PlaceController extends FleetOpsController
 
         $query = Place::where('company_uuid', session('company'))
             ->whereNull('deleted_at')
+            ->applyDirectivesForPermissions('fleet-ops list place')
             ->search($searchQuery);
 
         if ($latitude && $longitude) {
@@ -148,8 +149,8 @@ class PlaceController extends FleetOpsController
         /**
          * @var \Fleetbase\Models\Place
          */
-        $count   = Place::whereIn('uuid', $ids)->count();
-        $deleted = Place::whereIn('uuid', $ids)->delete();
+        $count   = Place::whereIn('uuid', $ids)->applyDirectivesForPermissions('fleet-ops list place')->count();
+        $deleted = Place::whereIn('uuid', $ids)->applyDirectivesForPermissions('fleet-ops list place')->delete();
 
         if (!$deleted) {
             return response()->error('Failed to bulk delete places.');

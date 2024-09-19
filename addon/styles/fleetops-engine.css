@@ -656,7 +656,7 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-marker-wrapper
 }
 
 .order-progress-bar.has-progress > .order-progress-bar-wrapper > .order-progress-bar-track {
-    border-top: 4px dashed rgba(209, 213, 219, 0.5);
+    border-top: 4px dashed rgba(209, 213, 219, 50%);
 }
 
 .order-progress-bar > .order-progress-bar-wrapper > .order-progress-bar-track {
@@ -704,9 +704,10 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-wrapper > .ord
 
 .customer-live-map-wrapper {
     width: 100%;
-    height: 800px;
+    height: 820px;
     border-radius: 0.5rem;
     position: relative;
+    overflow: hidden;
 }
 
 .customer-live-map-wrapper > .leaflet-container {
@@ -777,4 +778,19 @@ body.fleetbase-console .leaflet-popup-content {
 
 .next-table-wrapper.no-scroll {
     overflow: auto !important;
+}
+
+.fleetbase-portal .portal-container .portal-content-wrapper .next-content-overlay {
+    z-index: 899;
+}
+
+.fleetbase-portal .portal-container .portal-content-wrapper .next-content-overlay-panel-container > .next-content-overlay-panel,
+.fleetbase-portal .portal-container .portal-content-wrapper .next-content-overlay-panel-container {
+    border-top-right-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+}
+
+.grip-cursor,
+.grip-cursor * {
+    cursor: move;
 }

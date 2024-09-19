@@ -326,7 +326,7 @@
                 <DragSortList class="multi-drop-select-container overflow-visible" @items={{this.waypoints}} @dragEndAction={{this.sortWaypoints}} as |waypoint index|>
                     <div id={{concat "waypoint_" (add index 1)}} class="border rounded-md px-3 py-2 shadow-sm border-gray-300 dark:border-gray-900 mb-3">
                         <div class="flex items-start justify-between">
-                            <div class="flex items-center justify-between cursor-move">
+                            <div class="flex items-center justify-between grip-cursor">
                                 <FaIcon @icon="grip-lines" @prefix="fas" class="mr-3 text-gray-100" />
                                 <label class="waypoint-label dark:text-gray-100 text-sm">
                                     {{waypoint-label (add index 1)}}
@@ -543,12 +543,6 @@
         <RegistryYield @registry="fleet-ops:template:operations:orders:new" as |RegistryComponent|>
             <RegistryComponent @order={{this.order}} @controller={{this}} />
         </RegistryYield>
-
-        {{!-- {{#if this.renderableComponents}}
-            {{#each this.renderableComponents as |renderableComponent|}}
-                {{component renderableComponent order=this.order controller=this}}
-            {{/each}}
-        {{/if}} --}}
 
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.payload-entities"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if this.isNotCsvImportedOrder}}

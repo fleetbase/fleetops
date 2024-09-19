@@ -4,41 +4,43 @@ import { scheduleOnce } from '@ember/runloop';
 import { classify, camelize } from '@ember/string';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
-// const L = window.L;
-// console.log(L);
 export default class LeafletDrawControl extends BaseLayer {
-    leafletEvents = [
-        L.Draw.Event.CREATED,
-        L.Draw.Event.EDITED,
-        L.Draw.Event.EDITMOVE,
-        L.Draw.Event.EDITRESIZE,
-        L.Draw.Event.EDITSTART,
-        L.Draw.Event.EDITSTOP,
-        L.Draw.Event.EDITVERTEX,
-        L.Draw.Event.DELETED,
-        L.Draw.Event.DELETESTART,
-        L.Draw.Event.DELETESTOP,
-        L.Draw.Event.DRAWSTART,
-        L.Draw.Event.DRAWSTOP,
-        L.Draw.Event.DRAWVERTEX,
-    ];
+    get leafletEvents () {
+        return [
+            L.Draw.Event.CREATED,
+            L.Draw.Event.EDITED,
+            L.Draw.Event.EDITMOVE,
+            L.Draw.Event.EDITRESIZE,
+            L.Draw.Event.EDITSTART,
+            L.Draw.Event.EDITSTOP,
+            L.Draw.Event.EDITVERTEX,
+            L.Draw.Event.DELETED,
+            L.Draw.Event.DELETESTART,
+            L.Draw.Event.DELETESTOP,
+            L.Draw.Event.DRAWSTART,
+            L.Draw.Event.DRAWSTOP,
+            L.Draw.Event.DRAWVERTEX,
+        ];
+    }
 
-    alwaysCapturedLeafletEvents = [
-        L.Draw.Event.CREATED,
-        L.Draw.Event.EDITED,
-        L.Draw.Event.EDITSTART,
-        L.Draw.Event.EDITSTOP,
-        L.Draw.Event.EDITRESIZE,
-        L.Draw.Event.EDITMOVE,
-        L.Draw.Event.DELETED,
-        L.Draw.Event.DRAWSTART,
-        L.Draw.Event.DRAWSTOP,
-    ];
+    get alwaysCapturedLeafletEvents () {
+        return [
+            L.Draw.Event.CREATED,
+            L.Draw.Event.EDITED,
+            L.Draw.Event.EDITSTART,
+            L.Draw.Event.EDITSTOP,
+            L.Draw.Event.EDITRESIZE,
+            L.Draw.Event.EDITMOVE,
+            L.Draw.Event.DELETED,
+            L.Draw.Event.DRAWSTART,
+            L.Draw.Event.DRAWSTOP,
+        ];
+    }
 
     leafletOptions = ['draw', 'edit', 'remove', 'poly', 'position'];
 
-    @computed('leafletEvents.[]', 'alwaysCapturedLeafletEvents.[]', 'args') get usedLeafletEvents() {
-        return this.leafletEvents.filter((eventName) => {
+    @computed('leafletEvents.[]', 'alwaysCapturedLeafletEvents.[]', 'args') get usedLeafletEvents () {
+        return this.leafletEvents.filter(eventName => {
             if (this.alwaysCapturedLeafletEvents.includes(eventName)) {
                 return true;
             }
@@ -51,7 +53,7 @@ export default class LeafletDrawControl extends BaseLayer {
         });
     }
 
-    @computed('args.{draw,edit,remove,poly,position}') get options() {
+    @computed('args.{draw,edit,remove,poly,position}') get options () {
         return {
             position: getWithDefault(this.args, 'position', 'topright'),
             draw: getWithDefault(this.args, 'draw', { marker: false, circlemarker: false, polyline: false }),
@@ -61,17 +63,17 @@ export default class LeafletDrawControl extends BaseLayer {
         };
     }
 
-    @computed('args.parent._layer') get map() {
+    @computed('args.parent._layer') get map () {
         return this.args.parent._layer;
     }
 
-    addToContainer() {
+    addToContainer () {
         if (this._layer) {
             this.map.addLayer(this._layer);
         }
     }
 
-    createLayer() {
+    createLayer () {
         const { onDrawFeatureGroupCreated } = this.args;
         const drawingLayerGroup = new this.L.FeatureGroup();
 
@@ -83,7 +85,7 @@ export default class LeafletDrawControl extends BaseLayer {
         return drawingLayerGroup;
     }
 
-    didCreateLayer() {
+    didCreateLayer () {
         const { onDrawControlCreated, onDrawControlAddedToMap } = this.args;
         const showDrawingLayer = getWithDefault(this.args, 'showDrawingLayer', false);
 
@@ -116,7 +118,7 @@ export default class LeafletDrawControl extends BaseLayer {
         }
     }
 
-    _addEventListeners() {
+    _addEventListeners () {
         this._eventHandlers = {};
 
         for (let eventName of this.usedLeafletEvents) {
@@ -147,7 +149,7 @@ export default class LeafletDrawControl extends BaseLayer {
         }
     }
 
-    _removeEventListeners() {
+    _removeEventListeners () {
         if (this._eventHandlers) {
             for (let eventName of this.usedLeafletEvents) {
                 this.map.removeEventListener(eventName, this._eventHandlers[eventName], this);

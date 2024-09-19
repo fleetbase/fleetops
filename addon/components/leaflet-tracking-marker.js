@@ -12,6 +12,7 @@ const arrayFromLatLng = (latlng) => {
     return [latitude, longitude];
 };
 
+const L = window.leaflet || window.L;
 const oldIE = L.DomUtil.TRANSFORM === 'msTransform';
 L.TrackingMarker = L.Marker.extend({
     // eslint-disable-next-line ember/avoid-leaking-state-in-ember-objects

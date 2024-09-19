@@ -2,7 +2,10 @@
 
 namespace Fleetbase\FleetOps\Auth\Schemas;
 
+use Fleetbase\FleetOps\Auth\Directives\CustomerContacts;
+use Fleetbase\FleetOps\Auth\Directives\CustomerListPlaces;
 use Fleetbase\FleetOps\Auth\Directives\CustomerOrders;
+use Fleetbase\FleetOps\Auth\Directives\CustomerPlaces;
 
 class FleetOps
 {
@@ -364,10 +367,29 @@ class FleetOps
                 'see extension',
                 'list order',
                 'view order',
+                'cancel order',
+                'create order',
+                'list place',
+                'create place',
+                'update place',
+                'delete place',
+                'list contact',
+                'create contact',
+                'update contact',
+                'delete contact',
             ],
             'directives' => [
-                'list order'    => [CustomerOrders::class],
-                'view order'    => [CustomerOrders::class],
+                'list order'        => [CustomerOrders::class],
+                'view order'        => [CustomerOrders::class],
+                'cancel order'      => [CustomerOrders::class],
+                'view place'        => [CustomerPlaces::class],
+                'list place'        => [CustomerListPlaces::class],
+                'update place'      => [CustomerPlaces::class],
+                'delete place'      => [CustomerPlaces::class],
+                'list contact'      => [CustomerContacts::class],
+                'view contact'      => [CustomerContacts::class],
+                'update contact'    => [CustomerContacts::class],
+                'delete contact'    => [CustomerContacts::class],
             ],
         ],
     ];

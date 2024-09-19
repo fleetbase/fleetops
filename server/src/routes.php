@@ -434,6 +434,18 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             }
                         );
                         $router->group(
+                            ['prefix' => 'customers'],
+                            function () use ($router) {
+                                $router->get('/', 'MorphController@queryCustomers');
+                            }
+                        );
+                        $router->group(
+                            ['prefix' => 'facilitators'],
+                            function () use ($router) {
+                                $router->get('/', 'MorphController@queryFacilitators');
+                            }
+                        );
+                        $router->group(
                             ['prefix' => 'geocoder', ['middleware' => [Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]]],
                             function ($router) {
                                 $router->get('reverse', 'GeocoderController@reverse');

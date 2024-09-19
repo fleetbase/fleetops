@@ -60,7 +60,6 @@ export class EventBuffer {
             // get movingObject marker
             const marker = this.model._layer || this.model._marker;
             if (marker) {
-                console.log(this.model, marker, marker.slideTo);
                 if (typeof marker.setRotationAngle === 'function' && data.heading) {
                     marker.setRotationAngle(data.heading);
                 }

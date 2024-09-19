@@ -199,7 +199,7 @@ export default class LiveMapComponent extends Component {
      * Creates an instance of LiveMapComponent.
      * @memberof LiveMapComponent
      */
-    constructor(owner, { zoom = 12, tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', darkMode }) {
+    constructor (owner, { zoom = 12, tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', darkMode }) {
         super(...arguments);
 
         this.zoom = zoom;
@@ -219,7 +219,7 @@ export default class LiveMapComponent extends Component {
      * @action
      * @function
      */
-    async setupComponent() {
+    async setupComponent () {
         // trigger that initial coordinates have been set
         this.universe.trigger('fleet-ops.live-map.loaded', this);
 
@@ -253,7 +253,7 @@ export default class LiveMapComponent extends Component {
      * @param {Promise[]} liveDataPromises - An array of promises that fetch live data.
      * @returns {Promise} A promise that resolves when all data-fetching promises have settled.
      */
-    async completeSetup(liveDataPromises) {
+    async completeSetup (liveDataPromises) {
         await allSettled(liveDataPromises);
         this.isDataLoaded = true;
         this.listen();
@@ -264,7 +264,7 @@ export default class LiveMapComponent extends Component {
      *
      * @memberof LiveMapComponent
      */
-    async reload() {
+    async reload () {
         this.isDataLoaded = false;
         await this.completeSetup([
             this.loadLiveData.perform('routes'),
@@ -282,7 +282,7 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      * @function
      */
-    ready() {
+    ready () {
         this.isReady = true;
         this.triggerAction('onReady');
         this.universe.trigger('fleet-ops.live-map.ready', this);
@@ -302,7 +302,7 @@ export default class LiveMapComponent extends Component {
      * @returns {Promise<[number, number] | null>} An array containing the latitude and longitude
      * if available, or null if the function is skipped.
      */
-    async setInitialCoordinates() {
+    async setInitialCoordinates () {
         try {
             const { latitude, longitude } = await this.location.getUserLocation();
 
@@ -332,7 +332,7 @@ export default class LiveMapComponent extends Component {
      * @function
      * @param {Event} event - The event object.
      */
-    @action setupMap(event) {
+    @action setupMap (event) {
         const { target } = event;
 
         // set liveMapComponent component to instance
@@ -375,7 +375,7 @@ export default class LiveMapComponent extends Component {
      * @param {string} actionName - The name of the action to trigger.
      * @param {...any} params - Optional parameters to pass to the action.
      */
-    @action triggerAction(actionName, ...params) {
+    @action triggerAction (actionName, ...params) {
         if (typeof this[actionName] === 'function') {
             this[actionName](...params);
         }
@@ -408,7 +408,7 @@ export default class LiveMapComponent extends Component {
      *   onFailure: (error) => { console.error('Failed to load data', error); }
      * });
      */
-    @task *loadLiveData(path, options = {}) {
+    @task *loadLiveData (path, options = {}) {
         if (this.abilities.cannot(`fleet-ops list ${path}`)) {
             return [];
         }
@@ -417,7 +417,7 @@ export default class LiveMapComponent extends Component {
         const callbackFnName = `on${internalName}Loaded`;
         const params = getWithDefault(options, 'params', {});
         const url = `fleet-ops/live/${path}`;
-        const data = yield this.fetch.get(url, params, { normalizeToEmberData: true, normalizeModelType: singularize(internalName) }).catch((error) => {
+        const data = yield this.fetch.get(url, params, { normalizeToEmberData: true, normalizeModelType: singularize(internalName) }).catch(error => {
             if (typeof options.onFailure === 'function') {
                 options.onFailure(error);
             }
@@ -444,7 +444,7 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - The name or identifier for the visibility control.
      * @param {boolean} [visible=true] - A boolean value indicating whether the element is initially visible (default is true).
      */
-    createVisibilityControl(name, visible = true) {
+    createVisibilityControl (name, visible = true) {
         this.visibilityControls = {
             ...this.visibilityControls,
             [name]: visible,
@@ -454,7 +454,7 @@ export default class LiveMapComponent extends Component {
     /**
      * Hide all visibility controls associated with the current instance.
      */
-    hideAll(callback = null) {
+    hideAll (callback = null) {
         const controls = Object.keys(this.visibilityControls);
 
         for (let i = 0; i < controls.length; i++) {
@@ -470,7 +470,7 @@ export default class LiveMapComponent extends Component {
     /**
      * Show all visibility controls associated with the current instance.
      */
-    showAll(callback = null) {
+    showAll (callback = null) {
         const controls = Object.keys(this.visibilityControls);
 
         for (let i = 0; i < controls.length; i++) {
@@ -489,7 +489,7 @@ export default class LiveMapComponent extends Component {
      * @function
      * @param {string} name - The name or identifier of the element to hide.
      */
-    hide(name, callback = null) {
+    hide (name, callback = null) {
         if (isArray(name)) {
             return name.forEach(this.hide.bind(this));
         }
@@ -506,7 +506,7 @@ export default class LiveMapComponent extends Component {
      * @function
      * @param {string} name - The name or identifier of the element to show.
      */
-    show(name, callback = null) {
+    show (name, callback = null) {
         if (isArray(name)) {
             return name.forEach(this.show.bind(this));
         }
@@ -524,7 +524,7 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - The name of the control to toggle.
      * @memberof LiveMapComponent
      */
-    toggleVisibility(name, callback = null) {
+    toggleVisibility (name, callback = null) {
         if (this.isVisible(name)) {
             this.hide(name, callback);
         } else {
@@ -539,7 +539,7 @@ export default class LiveMapComponent extends Component {
      * @returns {boolean} Returns `true` if the element or feature is currently visible, `false` otherwise.
      * @memberof LiveMapComponent
      */
-    isVisible(name) {
+    isVisible (name) {
         return this.visibilityControls[name] === true;
     }
 
@@ -548,7 +548,7 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
      * @memberof LiveMapComponent
      */
-    cacheOriginalResources(name) {
+    cacheOriginalResources (name) {
         if (!this.originalResources[name]) {
             this.originalResources[name] = [...this[name]];
         }
@@ -560,7 +560,7 @@ export default class LiveMapComponent extends Component {
      * @returns {Array} - The original array of resources; an empty array if not set.
      * @memberof LiveMapComponent
      */
-    getOriginalResources(name) {
+    getOriginalResources (name) {
         if (isArray(this.originalResources[name])) {
             return this.originalResources[name];
         }
@@ -573,7 +573,7 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
      * @memberof LiveMapComponent
      */
-    showAllOnlineOffline(name) {
+    showAllOnlineOffline (name) {
         this.show(name);
         this.showOnline(name);
         this.showOffline(name);
@@ -584,7 +584,7 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
      * @memberof LiveMapComponent
      */
-    hideAllOnlineOffline(name) {
+    hideAllOnlineOffline (name) {
         this.hide(name);
         this.hideOnline(name);
         this.hideOffline(name);
@@ -595,7 +595,7 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
      * @memberof LiveMapComponent
      */
-    toggleAllOnlineOffline(name) {
+    toggleAllOnlineOffline (name) {
         if (this.isVisible(name)) {
             this.hideAllOnlineOffline(name);
         } else {
@@ -609,7 +609,7 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - The name of the resource array (e.g., 'vehicles', 'drivers').
      * @memberof LiveMapComponent
      */
-    toggleOnline(name) {
+    toggleOnline (name) {
         const visibilityControlName = `online${classify(name)}`;
 
         if (this.isVisible(visibilityControlName)) {
@@ -625,7 +625,7 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - The name of the resource array (e.g., 'vehicles', 'drivers').
      * @memberof LiveMapComponent
      */
-    toggleOffline(name) {
+    toggleOffline (name) {
         const visibilityControlName = `offline${classify(name)}`;
 
         if (this.isVisible(visibilityControlName)) {
@@ -641,8 +641,8 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - The name of the resource array (e.g., 'vehicles', 'drivers').
      * @memberof LiveMapComponent
      */
-    hideOnline(name) {
-        this[name] = this.getOriginalResources(name).filter((resource) => !resource.online);
+    hideOnline (name) {
+        this[name] = this.getOriginalResources(name).filter(resource => !resource.online);
 
         // track with visibility controls
         this.createVisibilityControl(`online${classify(name)}`, false);
@@ -654,8 +654,8 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - The name of the resource array (e.g., 'vehicles', 'drivers').
      * @memberof LiveMapComponent
      */
-    showOnline(name) {
-        this[name] = this.getOriginalResources(name).filter((resource) => resource.online);
+    showOnline (name) {
+        this[name] = this.getOriginalResources(name).filter(resource => resource.online);
 
         // track with visibility controls
         this.createVisibilityControl(`online${classify(name)}`, true);
@@ -666,8 +666,8 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
      * @memberof LiveMapComponent
      */
-    hideOffline(name) {
-        this[name] = this.getOriginalResources(name).filter((resource) => resource.online);
+    hideOffline (name) {
+        this[name] = this.getOriginalResources(name).filter(resource => resource.online);
 
         // track with visibility controls
         this.createVisibilityControl(`offline${classify(name)}`, false);
@@ -678,8 +678,8 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - Name of the resource array (e.g., 'vehicles', 'drivers').
      * @memberof LiveMapComponent
      */
-    showOffline(name) {
-        this[name] = this.getOriginalResources(name).filter((resource) => !resource.online);
+    showOffline (name) {
+        this[name] = this.getOriginalResources(name).filter(resource => !resource.online);
 
         // track with visibility controls
         this.createVisibilityControl(`offline${classify(name)}`, true);
@@ -694,14 +694,14 @@ export default class LiveMapComponent extends Component {
      * @param {string} [options.callback=function] - Callback function to trigger after toggle.
      * @memberof LiveMapComponent
      */
-    toggleDrawControlContextMenuItem(options = {}) {
+    toggleDrawControlContextMenuItem (options = {}) {
         const toggle = !this.isVisible('drawControls');
 
         this.leafletContextmenuManager.toggleContextMenuItem('map', 'draw controls', {
             onText: this.intl.t('fleet-ops.component.live-map.onText'),
             offText: this.intl.t('fleet-ops.component.live-map.offText'),
             toggle,
-            callback: (isToggled) => {
+            callback: isToggled => {
                 if (isToggled) {
                     this.showDrawControls();
                 } else {
@@ -718,7 +718,7 @@ export default class LiveMapComponent extends Component {
      * @param {Object} serviceArea - The service area to be removed from the context menu.
      * @memberof LiveMapComponent
      */
-    removeServiceAreaFromContextMenu(serviceArea) {
+    removeServiceAreaFromContextMenu (serviceArea) {
         this.leafletContextmenuManager.removeItemFromContextMenu('map', `Focus Service Area: ${serviceArea.name}`);
     }
 
@@ -729,7 +729,7 @@ export default class LiveMapComponent extends Component {
      * @returns {Object|null} The found Leaflet layer or `null` if not found.
      * @memberof LiveMapComponent
      */
-    getLeafletLayerById(id) {
+    getLeafletLayerById (id) {
         return this.leafletMapManager.getLeafletLayerById(this.leafletMap, id);
     }
 
@@ -740,7 +740,7 @@ export default class LiveMapComponent extends Component {
      * @returns {Object|null} The found Leaflet layer or `null` if not found.
      * @memberof LiveMapComponent
      */
-    findLeafletLayer(callback) {
+    findLeafletLayer (callback) {
         return this.leafletMapManager.findLeafletLayer(this.leafletMap, callback);
     }
 
@@ -751,11 +751,11 @@ export default class LiveMapComponent extends Component {
      * @returns {Layer|null} The found editable layer, or null if not found.
      * @memberof LiveMapComponent
      */
-    getLeafletLayerByRecordId(record) {
+    getLeafletLayerByRecordId (record) {
         const id = getWithDefault(record, 'id', record);
         let targetLayer = null;
 
-        this.leafletMap.eachLayer((layer) => {
+        this.leafletMap.eachLayer(layer => {
             // Check if the layer has an ID property
             if (layer.record_id === id) {
                 targetLayer = layer;
@@ -771,7 +771,7 @@ export default class LiveMapComponent extends Component {
      * @param {Layer} layer - The layer to be added to the collection.
      * @memberof LiveMapComponent
      */
-    pushEditableLayer(layer) {
+    pushEditableLayer (layer) {
         if (!this.editableLayers.includes(layer)) {
             this.editableLayers.pushObject(layer);
         }
@@ -783,9 +783,9 @@ export default class LiveMapComponent extends Component {
      * @param {Object} record - The record with the ID used for removal.
      * @memberof LiveMapComponent
      */
-    removeEditableLayerByRecordId(record) {
+    removeEditableLayerByRecordId (record) {
         const id = getWithDefault(record, 'id', record);
-        const index = this.editableLayers.findIndex((layer) => layer.record_id === id);
+        const index = this.editableLayers.findIndex(layer => layer.record_id === id);
         const layer = this.editableLayers.objectAt(index);
 
         if (this.drawFeatureGroup) {
@@ -801,9 +801,9 @@ export default class LiveMapComponent extends Component {
      * @returns {Layer|null} The found editable layer, or null if not found.
      * @memberof LiveMapComponent
      */
-    findEditableLayerByRecordId(record) {
+    findEditableLayerByRecordId (record) {
         const id = getWithDefault(record, 'id', record);
-        return this.editableLayers.find((layer) => layer.record_id === id);
+        return this.editableLayers.find(layer => layer.record_id === id);
     }
 
     /**
@@ -813,7 +813,7 @@ export default class LiveMapComponent extends Component {
      * @returns {Object|null} The peeked record, or null if not found.
      * @memberof LiveMapComponent
      */
-    peekRecordForLayer(layer) {
+    peekRecordForLayer (layer) {
         if (layer.record_id && layer.record_type) {
             return this.store.peekRecord(dasherize(layer.record_type), layer.record_id);
         }
@@ -827,7 +827,7 @@ export default class LiveMapComponent extends Component {
      * @param {Object} drawerApi
      * @memberof LiveMapComponent
      */
-    @action setDrawerContext(drawerApi) {
+    @action setDrawerContext (drawerApi) {
         this.drawer = drawerApi;
 
         if (typeof this.args.onDrawerReady === 'function') {
@@ -842,7 +842,7 @@ export default class LiveMapComponent extends Component {
      * @param {Layer} layer - The layer associated with the event.
      * @memberof LiveMapComponent
      */
-    @action onDrawDrawstop(event, layer) {
+    @action onDrawDrawstop (event, layer) {
         this.serviceAreas.createGenericLayer(event, layer);
     }
 
@@ -852,12 +852,12 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The 'deleted' event object.
      * @memberof LiveMapComponent
      */
-    @action onDrawDeleted(event) {
+    @action onDrawDeleted (event) {
         /** @var {L.LayerGroup} layers  */
         const { layers } = event;
 
         const records = layers.getLayers().map(this.peekRecordForLayer).filter(Boolean);
-        const requests = records.map((record) => {
+        const requests = records.map(record => {
             this.blurServiceArea(record);
             this.removeServiceAreaFromContextMenu(record);
 
@@ -865,7 +865,7 @@ export default class LiveMapComponent extends Component {
         });
 
         allSettled(requests).then(() => {
-            records.forEach((record) => this.serviceAreas.removeFromCache(record));
+            records.forEach(record => this.serviceAreas.removeFromCache(record));
         });
     }
 
@@ -875,11 +875,11 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The 'edited' event object.
      * @memberof LiveMapComponent
      */
-    @action onDrawEdited(event) {
+    @action onDrawEdited (event) {
         /** @var {L.LayerGroup} layers  */
         const { layers } = event;
 
-        const requests = layers.getLayers().map((layer) => {
+        const requests = layers.getLayers().map(layer => {
             const record = this.peekRecordForLayer(layer);
 
             let border;
@@ -905,7 +905,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event object associated with the addition.
      * @memberof LiveMapComponent
      */
-    @action onServiceAreaLayerAdded(serviceArea, event) {
+    @action onServiceAreaLayerAdded (serviceArea, event) {
         const { target } = event;
 
         set(target, 'record_id', serviceArea.id);
@@ -931,7 +931,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event object associated with the addition.
      * @memberof LiveMapComponent
      */
-    @action onZoneLayerAdd(zone, event) {
+    @action onZoneLayerAdd (zone, event) {
         const { target } = event;
 
         set(target, 'record_id', zone.id);
@@ -955,7 +955,7 @@ export default class LiveMapComponent extends Component {
      * @param {DrawFeatureGroup} drawFeatureGroup - The draw feature group instance.
      * @memberof LiveMapComponent
      */
-    @action onDrawFeatureGroupCreated(drawFeatureGroup) {
+    @action onDrawFeatureGroupCreated (drawFeatureGroup) {
         this.drawFeatureGroup = drawFeatureGroup;
     }
 
@@ -966,7 +966,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event object associated with the addition.
      * @memberof LiveMapComponent
      */
-    @action onDriverAdded(driver, event) {
+    @action onDriverAdded (driver, event) {
         const { target } = event;
 
         set(target, 'record_id', driver.id);
@@ -986,7 +986,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event object associated with the addition.
      * @memberof LiveMapComponent
      */
-    @action onDriverClicked(driver) {
+    @action onDriverClicked (driver) {
         this.contextPanel.clear();
         this.contextPanel.focus(driver, 'viewing', {
             args: {
@@ -1007,7 +1007,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event object associated with the addition.
      * @memberof LiveMapComponent
      */
-    @action onVehicleAdded(vehicle, event) {
+    @action onVehicleAdded (vehicle, event) {
         const { target } = event;
 
         set(target, 'record_id', vehicle.id);
@@ -1027,7 +1027,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event object associated with the addition.
      * @memberof LiveMapComponent
      */
-    @action onPlaceAdded(place, event) {
+    @action onPlaceAdded (place, event) {
         const { target } = event;
 
         set(target, 'record_id', place.id);
@@ -1044,7 +1044,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event object associated with the addition.
      * @memberof LiveMapComponent
      */
-    @action onVehicleClicked(vehicle) {
+    @action onVehicleClicked (vehicle) {
         this.contextPanel.clear();
         this.contextPanel.focus(vehicle, 'viewing', {
             args: {
@@ -1064,7 +1064,7 @@ export default class LiveMapComponent extends Component {
      * @param {DrawControl} drawControl - The draw control instance.
      * @memberof LiveMapComponent
      */
-    @action onDrawControlCreated(drawControl) {
+    @action onDrawControlCreated (drawControl) {
         this.drawControl = drawControl;
     }
 
@@ -1076,7 +1076,7 @@ export default class LiveMapComponent extends Component {
      * @param {function} [options.callback] - A callback function to execute.
      * @memberof LiveMapComponent
      */
-    @action hideDrawControls(options = {}) {
+    @action hideDrawControls (options = {}) {
         this.hide('drawControls');
 
         const text = getWithDefault(options, 'text', true);
@@ -1107,7 +1107,7 @@ export default class LiveMapComponent extends Component {
      * @param {function} [options.callback] - A callback function to execute.
      * @memberof LiveMapComponent
      */
-    @action showDrawControls(options = {}) {
+    @action showDrawControls (options = {}) {
         this.show('drawControls');
 
         const text = getWithDefault(options, 'text');
@@ -1136,7 +1136,7 @@ export default class LiveMapComponent extends Component {
      * @param {Object} record - The record to focus on.
      * @memberof LiveMapComponent
      */
-    @action focusLayerBoundsByRecord(record) {
+    @action focusLayerBoundsByRecord (record) {
         const layer = this.getLeafletLayerByRecordId(record);
 
         if (layer) {
@@ -1150,7 +1150,7 @@ export default class LiveMapComponent extends Component {
      * @param {ServiceAreaModel} serviceArea - The service area object to fly to.
      * @memberof LiveMapComponent
      */
-    @action flyToServiceArea(serviceArea) {
+    @action flyToServiceArea (serviceArea) {
         const layer = this.findEditableLayerByRecordId(serviceArea);
 
         if (layer) {
@@ -1164,7 +1164,7 @@ export default class LiveMapComponent extends Component {
      * @param {ServiceArea} serviceArea - The service area to focus on.
      * @memberof LiveMapComponent
      */
-    @action focusServiceArea(serviceArea) {
+    @action focusServiceArea (serviceArea) {
         this.activateServiceArea(serviceArea);
 
         later(
@@ -1182,7 +1182,7 @@ export default class LiveMapComponent extends Component {
      * @param {Array} except - An array of records to exclude from blurring.
      * @memberof LiveMapComponent
      */
-    blurAllServiceAreas(except = []) {
+    blurAllServiceAreas (except = []) {
         if (!isArray(except)) {
             except = [];
         }
@@ -1190,8 +1190,8 @@ export default class LiveMapComponent extends Component {
         // map except into ids only
         except = except
             .filter(Boolean)
-            .filter((record) => typeof record !== 'string' && !record?.id)
-            .map((record) => record.id);
+            .filter(record => typeof record !== 'string' && !record?.id)
+            .map(record => record.id);
 
         for (let i = 0; i < this.activeServiceAreas.length; i++) {
             const serviceArea = this.activeServiceAreas.objectAt(i);
@@ -1220,7 +1220,7 @@ export default class LiveMapComponent extends Component {
      * @param {Array} except - An array of records to exclude from activation.
      * @memberof LiveMapComponent
      */
-    focusAllServiceAreas(except = []) {
+    focusAllServiceAreas (except = []) {
         if (!isArray(except)) {
             except = [];
         }
@@ -1228,8 +1228,8 @@ export default class LiveMapComponent extends Component {
         // map except into ids only
         except = except
             .filter(Boolean)
-            .filter((record) => typeof record !== 'string' && !record?.id)
-            .map((record) => record.id);
+            .filter(record => typeof record !== 'string' && !record?.id)
+            .map(record => record.id);
 
         for (let i = 0; i < this.serviceAreaRecords.length; i++) {
             const serviceArea = this.serviceAreaRecords.objectAt(i);
@@ -1248,7 +1248,7 @@ export default class LiveMapComponent extends Component {
      * @param {ServiceAreaModel} serviceArea - The service area to blur.
      * @memberof LiveMapComponent
      */
-    blurServiceArea(serviceArea) {
+    blurServiceArea (serviceArea) {
         if (this.activeServiceAreas.includes(serviceArea)) {
             this.activeServiceAreas.removeObject(serviceArea);
         }
@@ -1260,7 +1260,7 @@ export default class LiveMapComponent extends Component {
      * @param {ServiceAreaModel} serviceArea - The service area to activate.
      * @memberof LiveMapComponent
      */
-    activateServiceArea(serviceArea) {
+    activateServiceArea (serviceArea) {
         if (!this.activeServiceAreas.includes(serviceArea)) {
             this.activeServiceAreas.pushObject(serviceArea);
         }
@@ -1272,7 +1272,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event containing latitude and longitude information.
      * @memberof LiveMapComponent
      */
-    @action showCoordinates(event) {
+    @action showCoordinates (event) {
         this.notifications.info(event.latlng);
     }
 
@@ -1282,7 +1282,7 @@ export default class LiveMapComponent extends Component {
      * @param {Event} event - The event containing the target location (latlng).
      * @memberof LiveMapComponent
      */
-    @action centerMap(event) {
+    @action centerMap (event) {
         this.leafletMap.panTo(event.latlng);
     }
 
@@ -1291,7 +1291,7 @@ export default class LiveMapComponent extends Component {
      *
      * @memberof LiveMapComponent
      */
-    @action zoomIn() {
+    @action zoomIn () {
         this.leafletMap.zoomIn();
     }
 
@@ -1300,7 +1300,7 @@ export default class LiveMapComponent extends Component {
      *
      * @memberof LiveMapComponent
      */
-    @action zoomOut() {
+    @action zoomOut () {
         this.leafletMap.zoomOut();
     }
 
@@ -1310,7 +1310,7 @@ export default class LiveMapComponent extends Component {
      * @param {Layer} layer - The layer used to determine the map's maximum bounds.
      * @memberof LiveMapComponent
      */
-    setMaxBoundsFromLayer(layer) {
+    setMaxBoundsFromLayer (layer) {
         if (layer && typeof layer.getBounds === 'function') {
             const bounds = layer.getBounds();
 
@@ -1325,7 +1325,7 @@ export default class LiveMapComponent extends Component {
      * @param {Layer} layer - The layer to focus on.
      * @memberof LiveMapComponent
      */
-    flyToBoundsOnly(layer) {
+    flyToBoundsOnly (layer) {
         if (layer && typeof layer.getBounds === 'function') {
             const bounds = layer.getBounds();
 
@@ -1341,7 +1341,7 @@ export default class LiveMapComponent extends Component {
      * @param {Object} options - Additional options for the focus operation.
      * @memberof LiveMapComponent
      */
-    @action focusLayer(layer, zoom, options = {}) {
+    @action focusLayer (layer, zoom, options = {}) {
         this.leafletMapManager.flyToLayer(this.leafletMap, layer, zoom, options);
 
         if (typeof options.onAfterFocus === 'function') {
@@ -1360,7 +1360,7 @@ export default class LiveMapComponent extends Component {
      * @example
      * focusLayerByRecord(recordData, 12, { animate: true });
      */
-    @action focusLayerByRecord(record, zoom, options = {}) {
+    @action focusLayerByRecord (record, zoom, options = {}) {
         const layer = this.getLeafletLayerByRecordId(record);
 
         if (layer) {
@@ -1378,7 +1378,7 @@ export default class LiveMapComponent extends Component {
      * @param {L.Map} map - The map to which the context menu is attached.
      * @memberof LiveMapComponent
      */
-    @action createMapContextMenu(map) {
+    @action createMapContextMenu (map) {
         const contextmenuItems = [
             {
                 text: this.intl.t('fleet-ops.component.live-map.show-coordinates'),
@@ -1450,7 +1450,7 @@ export default class LiveMapComponent extends Component {
      * This function calls the `createMapContextMenu` method.
      * @memberof LiveMapComponent
      */
-    rebuildMapContextMenu() {
+    rebuildMapContextMenu () {
         this.createMapContextMenu(this.leafletMap);
     }
 
@@ -1461,7 +1461,7 @@ export default class LiveMapComponent extends Component {
      * @param {L.Layer} layer - The layer representing the driver marker.
      * @memberof LiveMapComponent
      */
-    @action createDriverContextMenu(driver, layer) {
+    @action createDriverContextMenu (driver, layer) {
         let contextmenuItems = [
             {
                 separator: true,
@@ -1489,7 +1489,7 @@ export default class LiveMapComponent extends Component {
         if (isArray(registeredContextMenuItems)) {
             contextmenuItems = [
                 ...contextmenuItems,
-                ...registeredContextMenuItems.map((menuItem) => {
+                ...registeredContextMenuItems.map(menuItem => {
                     return {
                         text: menuItem.title,
                         callback: () => {
@@ -1522,7 +1522,7 @@ export default class LiveMapComponent extends Component {
      * @param {Layer} layer - The layer representing the vehicle marker.
      * @memberof LiveMapComponent
      */
-    @action createVehicleContextMenu(vehicle, layer) {
+    @action createVehicleContextMenu (vehicle, layer) {
         let contextmenuItems = [
             {
                 separator: true,
@@ -1546,7 +1546,7 @@ export default class LiveMapComponent extends Component {
         if (isArray(registeredContextMenuItems)) {
             contextmenuItems = [
                 ...contextmenuItems,
-                ...registeredContextMenuItems.map((menuItem) => {
+                ...registeredContextMenuItems.map(menuItem => {
                     return {
                         text: menuItem.title,
                         callback: () => {
@@ -1579,7 +1579,7 @@ export default class LiveMapComponent extends Component {
      * @param {Layer} layer - The layer representing the zone.
      * @memberof LiveMapComponent
      */
-    @action createZoneContextMenu(zone, layer) {
+    @action createZoneContextMenu (zone, layer) {
         let contextmenuItems = [
             {
                 separator: true,
@@ -1619,7 +1619,7 @@ export default class LiveMapComponent extends Component {
      * @param {Layer} layer - The layer representing the service area.
      * @memberof LiveMapComponent
      */
-    @action createServiceAreaContextMenu(serviceArea, layer) {
+    @action createServiceAreaContextMenu (serviceArea, layer) {
         let contextmenuItems = [
             {
                 separator: true,
@@ -1670,7 +1670,7 @@ export default class LiveMapComponent extends Component {
      * @async
      * @function
      */
-    async listen() {
+    async listen () {
         // setup socket
         const socket = this.socket.instance();
 
@@ -1698,7 +1698,7 @@ export default class LiveMapComponent extends Component {
      * Close all socket channels associated subscribed to.
      * @memberof LiveMapComponent
      */
-    @action closeChannels() {
+    @action closeChannels () {
         if (isArray(this.channels)) {
             for (let i = 0; i < this.channels.length; i++) {
                 const channel = this.channels.objectAt(i);
@@ -1714,7 +1714,7 @@ export default class LiveMapComponent extends Component {
      * @returns {Promise} A promise that resolves to an array of service area records.
      * @memberof LiveMapComponent
      */
-    @task *loadServiceAreas(options = {}) {
+    @task *loadServiceAreas (options = {}) {
         if (this.abilities.cannot('fleet-ops list service-area')) {
             return [];
         }
