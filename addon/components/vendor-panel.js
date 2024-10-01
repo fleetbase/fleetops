@@ -4,7 +4,7 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
 import VendorPanelDetailComponent from './vendor-panel/details';
-import VendorPanelPersonnelComponent from './vendor-panel/personnel';
+// import VendorPanelPersonnelComponent from './vendor-panel/personnel';
 import VendorPanelDriversComponent from './vendor-panel/drivers';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
@@ -45,11 +45,6 @@ export default class VendorPanelComponent extends Component {
             this.universe._createMenuItem('Details', null, {
                 icon: 'circle-info',
                 component: VendorPanelDetailComponent,
-            }),
-            this.universe._createMenuItem('Peronnel', null, {
-                icon: 'people-group',
-                component: VendorPanelPersonnelComponent,
-                componentParams: { wrapperClass: 'px-4 pt-6', selectable: true },
             }),
             this.universe._createMenuItem('Drivers', null, {
                 icon: 'id-card',

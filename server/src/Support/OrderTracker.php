@@ -174,6 +174,26 @@ class OrderTracker
         return -1;
     }
 
+    public function getWaypointETA(Waypoint|Place $waypoint): float
+    {
+        if ($waypoint instanceof Waypoint) {
+            $waypoint->loadMissing('place');
+            $waypoint = $waypoint->place;
+        }
+
+        $start              = $this->getDriverCurrentLocation();
+        $end                = $waypoint->location;
+        $response           = OSRM::getRoute($start, $end);
+        if (isset($response['code']) && $response['code'] === 'Ok') {
+            $route = Arr::first($response['routes']);
+            if ($route) {
+                return data_get($route, 'duration', -1);
+            }
+        }
+
+        return -1;
+    }
+
     /**
      * Get the estimated time of arrival (ETA) for the completion of the order.
      *
@@ -422,6 +442,20 @@ class OrderTracker
     public function getDropoff(): ?Place
     {
         return $this->payload->dropoff;
+    }
+
+    public function eta(): array
+    {
+        // Load missing waypoints and places
+        $waypoints = $this->payload->getAllStops();
+
+        // ETA's
+        $eta = [];
+        foreach ($waypoints as $waypoint) {
+            $eta[$waypoint->uuid] = $this->getWaypointETA($waypoint);
+        }
+
+        return $eta;
     }
 
     /**

@@ -148,7 +148,7 @@ export default class LocationService extends Service {
      * @returns {Object} An object containing latitude and longitude from WHOIS data or default values.
      */
     getUserLocationFromWhois() {
-        const whois = this.currentUser.getOption('whois');
+        const whois = this.currentUser.getOption('whois', {});
         const coordinates = {
             latitude: getWithDefault(whois, 'latitude', this.DEFAULT_LATITUDE),
             longitude: getWithDefault(whois, 'longitude', this.DEFAULT_LONGITUDE),

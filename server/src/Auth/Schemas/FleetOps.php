@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Auth\Directives\CustomerContacts;
 use Fleetbase\FleetOps\Auth\Directives\CustomerListPlaces;
 use Fleetbase\FleetOps\Auth\Directives\CustomerOrders;
 use Fleetbase\FleetOps\Auth\Directives\CustomerPlaces;
+use Fleetbase\FleetOps\Auth\Directives\CustomerUser;
 
 class FleetOps
 {
@@ -107,6 +108,11 @@ class FleetOps
         [
             'name'           => 'navigator-settings', // the navigator mobile app used by drivers
             'action'         => [],
+            'remove_actions' => ['delete', 'export', 'list', 'create'],
+        ],
+        [
+            'name'           => 'payments',
+            'action'         => ['onboard'],
             'remove_actions' => ['delete', 'export', 'list', 'create'],
         ],
     ];
@@ -367,6 +373,8 @@ class FleetOps
                 'see extension',
                 'list order',
                 'view order',
+                'list order-config',
+                'view order-config',
                 'cancel order',
                 'create order',
                 'list place',
@@ -377,19 +385,21 @@ class FleetOps
                 'create contact',
                 'update contact',
                 'delete contact',
+                'iam update user',
             ],
             'directives' => [
-                'list order'        => [CustomerOrders::class],
-                'view order'        => [CustomerOrders::class],
-                'cancel order'      => [CustomerOrders::class],
-                'view place'        => [CustomerPlaces::class],
-                'list place'        => [CustomerListPlaces::class],
-                'update place'      => [CustomerPlaces::class],
-                'delete place'      => [CustomerPlaces::class],
-                'list contact'      => [CustomerContacts::class],
-                'view contact'      => [CustomerContacts::class],
-                'update contact'    => [CustomerContacts::class],
-                'delete contact'    => [CustomerContacts::class],
+                'list order'            => [CustomerOrders::class],
+                'view order'            => [CustomerOrders::class],
+                'cancel order'          => [CustomerOrders::class],
+                'view place'            => [CustomerPlaces::class],
+                'list place'            => [CustomerListPlaces::class],
+                'update place'          => [CustomerPlaces::class],
+                'delete place'          => [CustomerPlaces::class],
+                'list contact'          => [CustomerContacts::class],
+                'view contact'          => [CustomerContacts::class],
+                'update contact'        => [CustomerContacts::class],
+                'delete contact'        => [CustomerContacts::class],
+                'iam update user'       => [CustomerUser::class],
             ],
         ],
     ];

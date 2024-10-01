@@ -4,43 +4,16 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
+import { debug } from '@ember/debug';
 import { task, timeout } from 'ember-concurrency';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import engineService from '@fleetbase/ember-core/decorators/engine-service';
-import registerComponent from '../../utils/register-component';
+import isEmptyObject from '@fleetbase/ember-core/utils/is-empty-object';
+import registerComponent from '@fleetbase/ember-core/utils/register-component';
 import OrderProgressCardComponent from '../order-progress-card';
-import LeafletTrackingMarkerComponent from '../leaflet-tracking-marker';
 import DisplayPlaceComponent from '../display-place';
 import CustomerCreateOrderFormComponent from './create-order-form';
-
-function removeParamFromCurrentUrl (paramToRemove) {
-    const url = new URL(window.location.href);
-    url.searchParams.delete(paramToRemove);
-    window.history.pushState({ path: url.href }, '', url.href);
-}
-
-function addParamToCurrentUrl (paramName, paramValue) {
-    const url = new URL(window.location.href);
-    url.searchParams.set(paramName, paramValue);
-    window.history.pushState({ path: url.href }, '', url.href);
-}
-
-function registerTrackingMarker (owner, componentClass) {
-    let emberLeafletService = owner.lookup('service:ember-leaflet');
-
-    if (emberLeafletService) {
-        const alreadyRegistered = emberLeafletService.components.find(registeredComponent => registeredComponent.name === 'leaflet-tracking-marker');
-        if (alreadyRegistered) {
-            return;
-        }
-        // we then invoke the `registerComponent` method
-        emberLeafletService.registerComponent('leaflet-tracking-marker', {
-            as: 'tracking-marker',
-            component: componentClass,
-        });
-    }
-}
 
 const MAP_TARGET_FOCUS_PADDING_BOTTOM_RIGHT = [200, 0];
 const MAP_TARGET_FOCUS_REFOCUS_PANBY = [150, 0];
@@ -50,8 +23,8 @@ export default class CustomerOrdersComponent extends Component {
     @service currentUser;
     @service universe;
     @service urlSearchParams;
-    @service socket;
     @service customerSession;
+    @service hostRouter;
     @engineService('@fleetbase/fleetops-engine') movementTracker;
     @engineService('@fleetbase/fleetops-engine') location;
     @tracked orders = [];
@@ -60,37 +33,37 @@ export default class CustomerOrdersComponent extends Component {
     @tracked zoom = 12;
     @tracked map;
     @tracked mapReady = false;
+    @tracked latitude;
+    @tracked longitude;
     @tracked route;
     @tracked query;
     @tracked tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
 
-    constructor (owner) {
+    constructor(owner) {
         super(...arguments);
-        this.movementTracker.socket = this.socket;
         registerComponent(owner, OrderProgressCardComponent);
         registerComponent(owner, DisplayPlaceComponent);
         registerComponent(owner, CustomerCreateOrderFormComponent, { as: 'customer/create-order-form' });
-        registerTrackingMarker(owner, LeafletTrackingMarkerComponent);
         this.loadCustomerOrders.perform();
         later(
             this,
             () => {
                 this.restoreOrderCreation();
             },
-            300
+            100
         );
     }
 
-    @task *loadCustomerOrders () {
+    @task *loadCustomerOrders(params = {}) {
         const query = this.urlSearchParams.get('query');
         this.query = query;
 
         try {
             if (query) {
-                this.orders = yield this.store.query('order', { query });
+                this.orders = yield this.store.query('order', { ...params, query });
             } else {
-                const allOrders = yield this.store.findAll('order');
-                this.orders = allOrders.toArray().filter(_ => !_.isNew);
+                const allOrders = yield isEmptyObject(params) ? this.store.findAll('order') : this.store.query('order', { ...params, query });
+                this.orders = allOrders.toArray().filter((_) => !_.isNew);
             }
             this.restoreSelectedOrder();
         } catch (error) {
@@ -98,21 +71,21 @@ export default class CustomerOrdersComponent extends Component {
         }
     }
 
-    @task *searchOrders ({ target }) {
+    @task *searchOrders({ target }) {
         const query = target.value;
-        addParamToCurrentUrl('query', query);
+        this.urlSearchParams.addParamToCurrentUrl('query', query);
         this.unselectOrder();
 
         yield timeout(300);
 
         try {
-            this.orders = yield this.store.query('order', { query });
+            this.orders = yield this.store.query('order', { query, with_tracker_data: true });
         } catch (error) {
             this.notifications.serverError(error);
         }
     }
 
-    @action async startOrderCreation () {
+    @action async startOrderCreation() {
         this.unselectOrder();
         this.newOrder = this.store.createRecord('order', {
             type: 'transport',
@@ -121,7 +94,7 @@ export default class CustomerOrdersComponent extends Component {
             customer: this.customerSession.getCustomer(),
             meta: [],
         });
-        addParamToCurrentUrl('creating', 1);
+        this.urlSearchParams.addParamToCurrentUrl('creating', 1);
         const { latitude, longitude } = await this.location.getUserLocation();
         if (latitude && longitude) {
             this.latitude = latitude;
@@ -130,46 +103,67 @@ export default class CustomerOrdersComponent extends Component {
         }
     }
 
-    @action cancelOrderCreation () {
+    @action cancelOrderCreation() {
         if (this.newOrder && typeof this.newOrder.destroyRecord === 'function') {
             this.newOrder.destroyRecord();
         }
         this.newOrder = undefined;
-        removeParamFromCurrentUrl('creating');
+        this.urlSearchParams.removeParamFromCurrentUrl('creating');
     }
 
-    @action viewOrder (order) {
+    @action onOrderCreated(order) {
+        this.newOrder = undefined;
+        this.urlSearchParams.removeParamFromCurrentUrl('creating');
+        this.orders.unshiftObject(order);
+        later(
+            this,
+            () => {
+                this.viewOrder(order);
+                this.hostRouter.refresh();
+            },
+            100
+        );
+    }
+
+    @action viewOrder(order, options = { resetOrderRoute: false }) {
         this.selectedOrder = order;
-        this.resetOrderRoute();
-        addParamToCurrentUrl('order', order.public_id);
-        const driverCurrentLocation = order.get('trackerData.driver_current_location');
+        this.urlSearchParams.addParamToCurrentUrl('order', order.public_id);
+        const driverCurrentLocation = order.get('tracker_data.driver_current_location');
         if (driverCurrentLocation) {
             this.latitude = driverCurrentLocation.coordinates[1];
             this.longitude = driverCurrentLocation.coordinates[0];
             this.mapReady = true;
+
+            if (options && options.resetOrderRoute === true && this.map) {
+                this.map.whenReady(() => {
+                    this.resetOrderRoute();
+                });
+            }
         }
     }
 
-    @action unselectOrder () {
+    @action unselectOrder() {
         this.selectedOrder = null;
         this.removeRouteControl();
-        removeParamFromCurrentUrl('order');
+        this.urlSearchParams.removeParamFromCurrentUrl('order');
     }
 
-    @action onTrackerDataLoaded (order) {
+    @action onTrackerDataLoaded(order) {
         if (this.selectedOrder && this.selectedOrder.id === order.id) {
-            this.viewOrder(order);
+            this.viewOrder(order, { resetOrderRoute: true });
         }
     }
 
-    @action setupMap ({ target }) {
+    @action setupMap({ target }) {
         this.map = target;
-        if (!this.routeControl && !this.isCreatingOrder()) {
-            this.displayOrderRoute();
+        if (!this.isCreatingOrder()) {
+            this.map.whenReady(() => {
+                this.resetOrderRoute();
+            });
         }
     }
 
-    @action displayOrderRoute () {
+    @action displayOrderRoute() {
         const waypoints = this.getRouteCoordinatesFromOrder(this.selectedOrder);
         const routingHost = getRoutingHost();
         if (this.cannotRouteWaypoints(waypoints)) {
@@ -177,8 +171,13 @@ export default class CustomerOrdersComponent extends Component {
         }
 
         // center on first coordinate
-        this.map.stop();
-        this.map.flyTo(waypoints.firstObject);
+        try {
+            this.map.stop();
+            this.map.flyTo(waypoints.firstObject);
+        } catch (error) {
+            // unable to stop map
+            debug(`Leaflet Map Error: ${error.message}`);
+        }
 
         const router = new OSRMv1({
             serviceUrl: `${routingHost}/route/v1`,
@@ -186,8 +185,13 @@ export default class CustomerOrdersComponent extends Component {
         });
 
         this.routeControl = new RoutingControl({
+            fitSelectedRoutes: false,
+            router,
             waypoints,
+            alternativeClassName: 'hidden',
+            addWaypoints: false,
             markerOptions: {
+                draggable: false,
                 icon: L.icon({
                     iconUrl: '/assets/images/marker-icon.png',
                     iconRetinaUrl: '/assets/images/marker-icon-2x.png',
@@ -195,41 +199,41 @@ export default class CustomerOrdersComponent extends Component {
                     iconSize: [25, 41],
                     iconAnchor: [12, 41],
                 }),
-                draggable: false,
             },
-            alternativeClassName: 'hidden',
-            addWaypoints: false,
-            router,
         }).addTo(this.map);
 
-        this.routeControl.on('routesfound', event => {
+        this.routeControl.on('routingerror', (error) => {
+            debug(`Routing Control Error: ${error.error.message}`);
+        });
+
+        this.routeControl.on('routesfound', (event) => {
             const { routes } = event;
 
             this.route = routes.firstObject;
-        });
 
-        later(
-            this,
-            () => {
-                this.map.flyToBounds(waypoints, {
-                    paddingBottomRight: MAP_TARGET_FOCUS_PADDING_BOTTOM_RIGHT,
-                    maxZoom: 14,
-                    animate: true,
-                });
-                this.map.once('moveend', () => {
-                    this.map.panBy(MAP_TARGET_FOCUS_REFOCUS_PANBY);
-                });
-            },
-            300
-        );
+            later(
+                this,
+                () => {
+                    this.map.flyToBounds(waypoints, {
+                        paddingBottomRight: MAP_TARGET_FOCUS_PADDING_BOTTOM_RIGHT,
+                        maxZoom: waypoints.length === 2 ? 13 : 12,
+                        animate: true,
+                    });
+                    this.map.once('moveend', () => {
+                        this.map.panBy(MAP_TARGET_FOCUS_REFOCUS_PANBY);
+                    });
+                },
+                100
+            );
+        });
     }
 
-    @action resetOrderRoute () {
+    @action resetOrderRoute() {
         this.removeRouteControl();
         this.displayOrderRoute();
     }
 
-    @action startTrackingDriverPosition (event) {
+    @action startTrackingDriverPosition(event) {
         const { target } = event;
         const driver = this.selectedOrder.driver;
         if (driver) {
@@ -238,7 +242,7 @@ export default class CustomerOrdersComponent extends Component {
         }
     }
 
-    @action locateDriver () {
+    @action locateDriver() {
         const driver = this.selectedOrder.driver;
         if (driver) {
             this.map.flyTo(driver.coordinates, 14, {
@@ -252,12 +256,12 @@ export default class CustomerOrdersComponent extends Component {
         }
     }
 
-    @action locateOrderRoute () {
+    @action locateOrderRoute() {
         if (this.selectedOrder) {
             const waypoints = this.getRouteCoordinatesFromOrder(this.selectedOrder);
             this.map.flyToBounds(waypoints, {
                 paddingBottomRight: MAP_TARGET_FOCUS_PADDING_BOTTOM_RIGHT,
-                maxZoom: 14,
+                maxZoom: waypoints.length === 2 ? 13 : 12,
                 animate: true,
             });
             this.map.once('moveend', () => {
@@ -266,22 +270,22 @@ export default class CustomerOrdersComponent extends Component {
         }
     }
 
-    isCreatingOrder () {
+    isCreatingOrder() {
         const isCreating = this.urlSearchParams.get('creating');
         return isCreating === '1' || isCreating === 1;
     }
 
-    cannotRouteWaypoints (waypoints = []) {
+    cannotRouteWaypoints(waypoints = []) {
         return !this.map || !isArray(waypoints) || waypoints.length < 2;
     }
 
-    getRouteCoordinatesFromOrder (order) {
+    getRouteCoordinatesFromOrder(order) {
         const payload = order.payload;
         const waypoints = [];
         const coordinates = [];
 
         waypoints.pushObjects([payload.pickup, ...payload.waypoints.toArray(), payload.dropoff]);
-        waypoints.forEach(place => {
+        waypoints.forEach((place) => {
             if (place && place.get('longitude') && place.get('latitude')) {
                 if (place.hasInvalidCoordinates) {
                     return;
@@ -294,32 +298,23 @@ export default class CustomerOrdersComponent extends Component {
         return coordinates;
     }
 
-    removeRouteControl () {
-        const { routeControl } = this;
-        if (routeControl instanceof RoutingControl) {
-            try {
-                routeControl.remove();
-            } catch (e) {
-                try {
-                    this.map.removeControl(routeControl);
-                } catch (e) {
-                    // silent
-                }
-            }
+    removeRouteControl() {
+        if (this.routeControl && this.routeControl instanceof RoutingControl) {
+            this.routeControl.remove();
         }
     }
 
-    restoreSelectedOrder () {
+    restoreSelectedOrder() {
         const selectedOrderId = this.urlSearchParams.get('order');
         if (selectedOrderId) {
-            const selectedOrder = this.orders.find(order => order.public_id === selectedOrderId);
+            const selectedOrder = this.orders.find((order) => order.public_id === selectedOrderId);
             if (selectedOrder) {
                 this.viewOrder(selectedOrder);
             }
         }
     }
 
-    restoreOrderCreation () {
+    restoreOrderCreation() {
         if (this.isCreatingOrder()) {
             this.startOrderCreation();
         }

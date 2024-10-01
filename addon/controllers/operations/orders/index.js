@@ -206,6 +206,13 @@ export default class OperationsOrdersIndexController extends BaseController {
     @tracked activeOrdersCount = 0;
 
     /**
+     * The context for the order list overlay panel.
+     *
+     * @type {Object}
+     */
+    @tracked orderListOverlayContext;
+
+    /**
      * Reference to the leaflet map object
      *
      * @type {Object}
@@ -659,12 +666,23 @@ export default class OperationsOrdersIndexController extends BaseController {
     }
 
     /**
+     * Set the order list overlay context.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
+    @action setOrderListOverlayContext(orderListOverlayContext) {
+        this.orderListOverlayContext = orderListOverlayContext;
+    }
+
+    /**
      * Toggles the visibility of the orders panel.
      * @action
      * @memberof OperationsOrdersIndexController
      */
     @action toggleOrdersPanel() {
-        this.isOrdersPanelVisible = !this.isOrdersPanelVisible;
+        if (this.orderListOverlayContext) {
+            this.orderListOverlayContext.toggle();
+        }
     }
 
     /**
@@ -673,7 +691,9 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @memberof OperationsOrdersIndexController
      */
     @action hideOrdersPanel() {
-        this.isOrdersPanelVisible = false;
+        if (this.orderListOverlayContext) {
+            this.orderListOverlayContext.close();
+        }
     }
 
     /**
@@ -682,7 +702,9 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @memberof OperationsOrdersIndexController
      */
     @action showOrdersPanel() {
-        this.isOrdersPanelVisible = true;
+        if (this.orderListOverlayContext) {
+            this.orderListOverlayContext.open();
+        }
     }
 
     /**

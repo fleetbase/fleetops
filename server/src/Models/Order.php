@@ -145,6 +145,7 @@ class Order extends Model
         'created_by',
         'updated_by',
         'layout',
+        'with_tracker_data',
     ];
 
     /**
@@ -977,7 +978,7 @@ class Order extends Model
             $purchasedRate = PurchaseRate::create([
                 'customer_uuid'      => $this->customer_uuid,
                 'customer_type'      => $this->customer_type,
-                'company_uuid'       => $this->company_uuid ?? session('company'),
+                'company_uuid'       => session('company', $this->company_uuid),
                 'service_quote_uuid' => $serviceQuote->uuid,
                 'payload_uuid'       => $this->payload_uuid,
                 'status'             => 'created',

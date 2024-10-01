@@ -1,9 +1,11 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
+import { getOwner } from '@ember/application';
 import { task, timeout } from 'ember-concurrency';
 import { debug } from '@ember/debug';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
+import LeafletTrackingMarkerComponent from '../components/leaflet-tracking-marker';
 
 export class EventBuffer {
     @tracked events = [];
@@ -82,6 +84,32 @@ export class EventBuffer {
 export default class MovementTrackerService extends Service {
     @service socket;
     @tracked channels = [];
+
+    constructor() {
+        super(...arguments);
+        this.registerTrackingMarker();
+    }
+
+    _getOwner(owner = null) {
+        return owner ?? window.Fleetbase ?? getOwner(this);
+    }
+
+    registerTrackingMarker(_owner = null) {
+        const owner = this._getOwner(_owner);
+        const emberLeafletService = owner.lookup('service:ember-leaflet');
+
+        if (emberLeafletService) {
+            const alreadyRegistered = emberLeafletService.components.find((registeredComponent) => registeredComponent.name === 'leaflet-tracking-marker');
+            if (alreadyRegistered) {
+                return;
+            }
+            // we then invoke the `registerComponent` method
+            emberLeafletService.registerComponent('leaflet-tracking-marker', {
+                as: 'tracking-marker',
+                component: LeafletTrackingMarkerComponent,
+            });
+        }
+    }
 
     closeChannels() {
         this.channels.forEach((channel) => {

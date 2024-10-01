@@ -28,6 +28,7 @@ export default class ManagementDriversIndexEditRoute extends Route {
     }
 
     async setupController(controller, model) {
+        super.setupController(...arguments);
         controller.driver = model;
     }
 }

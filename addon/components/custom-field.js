@@ -45,6 +45,7 @@ export default class CustomFieldComponent extends Component {
     constructor(owner, { customField, orderConfig, order }) {
         super(...arguments);
         this.customField = customField;
+        this.value = customField.value;
         this.orderConfig = orderConfig;
         this.order = order;
         this.customFieldComponent = typeof customField.component === 'string' ? customField.component : 'input';

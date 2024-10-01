@@ -3,6 +3,10 @@ import buildRoutes from 'ember-engines/routes';
 export default buildRoutes(function () {
     this.route('settings', function () {
         this.route('navigator-app');
+        this.route('payments', function () {
+            this.route('index', { path: '/' });
+            this.route('onboard');
+        });
     });
     this.route('virtual', { path: '/:section/:slug' });
     this.route('operations', { path: '/' }, function () {

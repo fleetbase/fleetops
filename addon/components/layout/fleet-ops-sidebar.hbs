@@ -41,13 +41,13 @@
             @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
             @permission={{menuItem.permission}}
             @visible={{menuItem.visible}}
-        >{{menuItem.title}}</Layout::Sidebar::Item>
+        >{{if menuItem.intl (t menuItem.intl) menuItem.title}}</Layout::Sidebar::Item>
     {{/if}}
 {{/each}}
 {{#each this.menuPanels as |menuPanel|}}
     <Layout::Sidebar::Panel
         @open={{menuPanel.open}}
-        @title={{menuPanel.title}}
+        @title={{if menuPanel.intl (t menuPanel.intl) menuPanel.title}}
         @titleIcon={{menuPanel.icon}}
         @hideCaret={{menuPanel.hideCaret}}
         @toggleOnCaretOnly={{menuPanel.toggleOnCaretOnly}}
@@ -64,7 +64,7 @@
                 {{component
                     menuItem.component
                     menuItem=menuItem
-                    title=menuItem.title
+                    title=(if menuItem.intl (t menuItem.intl) menuItem.title)
                     onClick=menuItem.onClick
                     route=(concat this.routePrefix menuItem.route)
                     icon=menuItem.icon
@@ -114,7 +114,7 @@
                     @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
                     @permission={{menuItem.permission}}
                     @visible={{menuItem.visible}}
-                >{{menuItem.title}}</Layout::Sidebar::Item>
+                >{{if menuItem.intl (t menuItem.intl) menuItem.title}}</Layout::Sidebar::Item>
             {{/if}}
         {{/each}}
         {{#if (eq menuPanel.routePrefix "settings")}}
@@ -146,7 +146,7 @@
                         @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
                         @permission={{menuItem.permission}}
                         @visible={{menuItem.visible}}
-                    >{{menuItem.title}}</Layout::Sidebar::Item>
+                    >{{if menuItem.intl (t menuItem.intl) menuItem.title}}</Layout::Sidebar::Item>
                 {{/if}}
             {{/each}}
         {{/if}}
@@ -155,7 +155,7 @@
 {{#each this.universeMenuPanels as |menuPanel|}}
     <Layout::Sidebar::Panel
         @open={{menuPanel.open}}
-        @title={{menuPanel.title}}
+        @title={{if menuPanel.intl (t menuPanel.intl) menuPanel.title}}
         @titleIcon={{menuPanel.icon}}
         @hideCaret={{menuPanel.hideCaret}}
         @toggleOnCaretOnly={{menuPanel.toggleOnCaretOnly}}
@@ -192,7 +192,7 @@
                 @registerDropdownButtonAPI={{menuItem.registerDropdownButtonAPI}}
                 @permission={{menuItem.permission}}
                 @visible={{menuItem.visible}}
-            >{{menuItem.title}}</Layout::Sidebar::Item>
+            >{{if menuItem.intl (t menuItem.intl) menuItem.title}}</Layout::Sidebar::Item>
         {{/each}}
     </Layout::Sidebar::Panel>
 {{/each}}

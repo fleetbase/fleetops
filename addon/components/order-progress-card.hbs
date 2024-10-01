@@ -4,18 +4,21 @@
             <div class="order-progress-card-header-id-icon-wrapper">
                 <FaIcon @icon="box" />
             </div>
-            <h1>{{this.order.tracking}}</h1>
+            <div>
+                <h1 class="order-progress-tracking-number">{{this.order.tracking}}</h1>
+                <div class="order-progress-creation-date">{{this.order.createdAt}}</div>
+            </div>
         </div>
         <div class="order-progress-card-header-status">
-            <Badge @hideStatusDot={{true}} @status={{this.order.status}}>{{smart-humanize this.order.status}}</Badge>
+            <Badge @status={{this.order.status}}>{{smart-humanize this.order.status}}</Badge>
         </div>
     </div>
     <div class="order-progress-card-progress">
         <OrderProgressBar
             @order={{this.order}}
-            @progress={{this.trackerData.progress_percentage}}
-            @firstWaypointCompleted={{this.trackerData.first_waypoint_completed}}
-            @lastWaypointCompleted={{this.trackerData.last_waypoint_completed}}
+            @progress={{this.order.tracker_data.progress_percentage}}
+            @firstWaypointCompleted={{this.order.tracker_data.first_waypoint_completed}}
+            @lastWaypointCompleted={{this.order.tracker_data.last_waypoint_completed}}
         />
     </div>
     <div class="order-progress-card-details">
@@ -38,11 +41,11 @@
         <div class="grid grid-cols-2 gap-2 mt-1 px-1">
             <div class="flex flex-col text-xs">
                 <div class="font-semibold">Current ETA:</div>
-                <div class="">{{format-duration this.trackerData.current_destination_eta}}</div>
+                <div class="">{{format-duration this.order.tracker_data.current_destination_eta}}</div>
             </div>
             <div class="flex flex-col text-xs">
                 <div class="font-semibold">ECT:</div>
-                <div class="">{{n-a this.trackerData.estimated_completion_time_formatted}}</div>
+                <div class="">{{n-a this.order.tracker_data.estimated_completion_time_formatted}}</div>
             </div>
             <div class="flex flex-col text-xs">
                 <div class="font-semibold">Driver:</div>
@@ -54,7 +57,7 @@
             </div>
             <div class="flex flex-col text-xs">
                 <div class="font-semibold">Current Destination:</div>
-                <div class="truncate">{{n-a this.trackerData.current_destination.address}}</div>
+                <div class="truncate">{{n-a this.order.tracker_data.current_destination.address}}</div>
             </div>
         </div>
     </div>

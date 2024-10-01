@@ -10,6 +10,7 @@ export default class OperationsOrdersIndexConfigTypesRoute extends Route {
     @service fetch;
 
     async setupController(controller) {
+        super.setupController(...arguments);
         // load all configurable order types
         const types = await this.fetch.get('orders/types');
         controller.types = types;

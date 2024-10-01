@@ -296,6 +296,7 @@ fleet-ops:
         loading-vehicle: Loading fleet vehicles...
     layout:
       fleet-ops-sidebar:
+        payments: Payments
         navigator-app: Navigator App
         resources: Resources
         operations: Operations
@@ -1425,7 +1426,8 @@ fleet-ops:
           cancel-order: Cancel Order
           delete-order: Delete Order
           activity: Activity
-          unable-load-order-activity: Unable to load order activity
+          unable-load-order-activity: Unable to load order activity.
+          no-order-activity: No order activity yet.
           ad-hoc: Ad-Hoc
           customer: Customer
           facilitator: Facilitator
@@ -1610,3 +1612,6 @@ fleet-ops:
   settings:
     navigator-app:
       navigator-app-settings: Navigator App Settings
+    payments:
+      payments: Payments
+      payment-settings: Payment Settings

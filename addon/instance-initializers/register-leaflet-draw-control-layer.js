@@ -1,6 +1,6 @@
 import LeafletDrawControl from '../components/leaflet-draw-control';
 
-export function initialize (owner) {
+export function initialize(owner) {
     let emberLeafletService = owner.lookup('service:ember-leaflet');
 
     if (emberLeafletService) {

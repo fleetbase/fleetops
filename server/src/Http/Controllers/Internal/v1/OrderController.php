@@ -11,6 +11,7 @@ use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest;
+use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Imports\OrdersImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
@@ -614,6 +615,23 @@ class OrderController extends FleetOpsController
         return response()->json($trackerInfo);
     }
 
+    public function waypointEtas(string $id)
+    {
+        $order = Order::withoutGlobalScopes()
+            ->where('uuid', $id)
+            ->orWhere('public_id', $id)
+            ->first();
+
+        if (!$order) {
+            return response()->error('No order found.');
+        }
+
+        // Get order tracker
+        $eta = $order->tracker()->eta();
+
+        return response()->json($eta);
+    }
+
     /**
      * Get all status options for an order.
      *
@@ -716,5 +734,35 @@ class OrderController extends FleetOpsController
         $fileName     = trim(Str::slug('order-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new OrderExport($selections), $fileName);
+    }
+
+    public function getDefaultOrderConfig()
+    {
+        return response()->json(OrderConfig::default());
+    }
+
+    public function lookup(Request $request)
+    {
+        $trackingNumber = $request->input('tracking');
+        if (!$trackingNumber) {
+            return response()->error('No tracking number provided for lookup.');
+        }
+
+        $order = Order::whereHas(
+            'trackingNumber',
+            function ($query) use ($trackingNumber) {
+                $query->where('tracking_number', $trackingNumber);
+            }
+        )->first();
+
+        if (!$order) {
+            return response()->error('No order found using tracking number provided.');
+        }
+
+        // load tracker data
+        $order->tracker_data = $order->tracker()->toArray();
+        $order->eta          = $order->tracker()->eta();
+
+        return new OrderResource($order);
     }
 }

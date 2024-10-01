@@ -166,6 +166,8 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     }
 
     @task *loadOrderRelations(order) {
+        yield order.loadTrackerData({}, { fromCache: true, expirationInterval: 10, expirationIntervalUnit: 'minute' });
+        yield order.loadETA();
         yield order.loadOrderConfig();
         yield order.loadPayload();
         yield order.loadDriver();

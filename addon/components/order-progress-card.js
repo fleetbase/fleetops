@@ -2,6 +2,8 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { later } from '@ember/runloop';
+import { isBlank } from '@ember/utils';
 import { task } from 'ember-concurrency';
 import registerComponent from '../utils/register-component';
 import OrderProgressBarComponent from './order-progress-bar';
@@ -10,14 +12,19 @@ export default class OrderProgressCardComponent extends Component {
     @service fetch;
     @service notifications;
     @tracked order;
-    @tracked trackerData = {};
 
     constructor(owner, { order }) {
         super(...arguments);
         registerComponent(owner, OrderProgressBarComponent);
 
         this.order = order;
-        this.getTrackerData.perform();
+        later(
+            this,
+            () => {
+                this.loadTrackerData.perform();
+            },
+            100
+        );
     }
 
     @action handleClick() {
@@ -26,15 +33,19 @@ export default class OrderProgressCardComponent extends Component {
         }
     }
 
-    @task *getTrackerData() {
+    @task *loadTrackerData() {
+        if (!isBlank(this.order.tracker_data)) {
+            return;
+        }
+
         try {
-            this.trackerData = yield this.fetch.get(`orders/${this.order.id}/tracker`);
-            this.order.set('trackerData', this.trackerData);
+            yield this.order.loadTrackerData({}, { fromCache: true, expirationInterval: 20, expirationIntervalUnit: 'minute' });
 
             if (typeof this.args.onTrackerDataLoaded === 'function') {
                 this.args.onTrackerDataLoaded(this.order);
             }
         } catch (error) {
+            console.trace(error);
             this.notifications.serverError(error);
         }
     }

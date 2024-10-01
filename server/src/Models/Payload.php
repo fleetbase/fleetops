@@ -547,6 +547,7 @@ class Payload extends Model
 
     public function getAllStops()
     {
+        $this->loadMissing(['pickup', 'dropoff', 'waypoints']);
         $stops = collect();
 
         if ($this->pickup) {

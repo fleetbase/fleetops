@@ -267,6 +267,13 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
         $router->prefix(config('fleetops.api.routing.internal_prefix', 'int'))->namespace('Internal')->group(
             function ($router) {
                 $router->group(
+                    ['prefix' => 'v1/fleet-ops', 'namespace' => 'v1'],
+                    function ($router) {
+                        $router->get('lookup', 'OrderController@lookup');
+                    }
+                );
+
+                $router->group(
                     ['prefix' => 'v1/fleet-ops/navigator', 'namespace' => 'v1'],
                     function ($router) {
                         $router->get('get-link-app', 'NavigatorController@getLinkAppUrl');
@@ -344,12 +351,14 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                         $router->fleetbaseRoutes(
                             'orders',
                             function ($router, $controller) {
+                                $router->get('default-config', $controller('getDefaultOrderConfig'));
                                 $router->get('search', $controller('search'));
                                 $router->get('statuses', $controller('statuses'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->get('types', $controller('types'));
                                 $router->get('label/{id}', $controller('label'));
                                 $router->get('next-activity/{id}', $controller('nextActivity'))->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->get('{id}/tracker', 'OrderController@trackerInfo')->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                                $router->get('{id}/eta', 'OrderController@waypointEtas')->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
                                 $router->post('process-imports', $controller('importFromFiles'));
                                 $router->patch('route/{id}', $controller('editOrderRoute'));
                                 $router->patch('update-activity/{id}', $controller('updateActivity'));
@@ -389,6 +398,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             'service-quotes',
                             function ($router, $controller) {
                                 $router->post('preliminary', $controller('preliminaryQuery'));
+                                $router->post('stripe-checkout-session', $controller('createStripeCheckoutSession'));
+                                $router->get('stripe-checkout-session', $controller('getStripeCheckoutSessionStatus'));
                             }
                         );
                         $router->fleetbaseRoutes(
@@ -456,6 +467,16 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             ['prefix' => 'fleet-ops'],
                             function ($router) {
                                 $router->group(
+                                    ['prefix' => 'payments', ['middleware' => [Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]]],
+                                    function () use ($router) {
+                                        $router->post('stripe-account', 'PaymentController@getStripeAccount')->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                                        $router->post('stripe-account-session', 'PaymentController@getStripeAccountSession')->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                                        $router->get('has-stripe-connect-account', 'PaymentController@hasStripeConnectAccount')->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                                        $router->get('payments-received', 'PaymentController@getCompanyReceivedPayments')->middleware([Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]);
+                                    }
+                                );
+
+                                $router->group(
                                     ['prefix' => 'lookup'],
                                     function ($router) {
                                         $router->get('customers', 'FleetOpsLookupController@polymorphs');
@@ -476,8 +497,10 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->group(
                                     ['prefix' => 'settings', 'middleware' => [Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]],
                                     function ($router) {
-                                        $router->get('visibility', 'SettingController@getVisibilitySettings');
-                                        $router->post('visibility', 'SettingController@saveVisibilitySettings');
+                                        $router->get('customer-payments-config', 'SettingController@getCustomerPortalPaymentConfig');
+                                        $router->post('customer-payments-config', 'SettingController@saveCustomerPortalPaymentConfig');
+                                        $router->get('customer-enabled-order-configs', 'SettingController@getCustomerEnabledOrderConfigs');
+                                        $router->post('customer-enabled-order-configs', 'SettingController@saveCustomerEnabledOrderConfigs');
                                         $router->get('entity-editing-settings', 'SettingController@getEntityEditingSettings');
                                         $router->post('entity-editing-settings', 'SettingController@saveEntityEditingSettings');
                                         $router->post('driver-onboard-settings', 'SettingController@savedDriverOnboardSettings');

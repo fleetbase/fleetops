@@ -29,6 +29,7 @@ class ServiceQuote extends FleetbaseResource
             'request_id'        => $this->request_id,
             'amount'            => $this->amount,
             'currency'          => $this->currency,
+            'meta'              => $this->meta ?? [],
             'updated_at'        => $this->updated_at,
             'created_at'        => $this->created_at,
         ];

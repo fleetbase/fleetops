@@ -80,7 +80,6 @@ export default class VehiclePanelComponent extends Component {
      */
     get tabs() {
         const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:vehicle-panel');
-        // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: VehiclePanelTrackingComponent }),
         const defaultTabs = [this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: VehiclePanelDetailComponent })];
 
         if (isArray(registeredTabs)) {

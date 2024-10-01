@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\PlaceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Imports\PlaceImport;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\Geocoding;
@@ -79,7 +80,7 @@ class PlaceController extends FleetOpsController
             }
         }
 
-        return response()->json($results)->withHeaders(['Cache-Control' => 'no-cache']);
+        return PlaceResource::collection($results);
     }
 
     /**

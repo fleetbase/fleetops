@@ -35,6 +35,7 @@ export default class OperationsServiceRatesIndexEditRoute extends Route {
     }
 
     async setupController(controller, model) {
+        super.setupController(...arguments);
         controller.serviceRate = model;
 
         if (model.isFixedMeter) {

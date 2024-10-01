@@ -745,8 +745,8 @@
                         <InfoBlock class="my-3" @text={{t "fleet-ops.operations.orders.index.new.info-text"}} />
 
                         <div class="radio-group-condensed -space-y-px">
-                            {{#each this.serviceQuotes as |serviceQuote index|}}
-                                <div class="radio-group-item shadow-sm flex-col pl-0i pr-0i {{if (eq @options.selected index) 'is-checked'}}">
+                            {{#each this.serviceQuotes as |serviceQuote|}}
+                                <div class="radio-group-item shadow-sm flex-col pl-0i pr-0i {{if (eq this.selectedServiceQuote serviceQuote.uuid) 'is-checked'}}">
                                     <div class="flex flex-row items-center mb-2.5 px-4">
                                         <RadioButton
                                             @radioClass="focus:ring-blue-500 h-6 w-6 text-blue-500"
@@ -761,7 +761,7 @@
                                             {{serviceQuote.request_id}}
                                         </Badge>
                                     </div>
-                                    <div class="next-table-wrapper h-auto table-fluid rounded-none">
+                                    <div class="next-table-wrapper no-scroll h-auto table-fluid rounded-none">
                                         <table class="table table-fixed flex-1">
                                             <thead>
                                                 <tr>

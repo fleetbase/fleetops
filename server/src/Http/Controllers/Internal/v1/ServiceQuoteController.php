@@ -7,9 +7,11 @@ use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceQuoteItem;
 use Fleetbase\FleetOps\Models\ServiceRate;
+use Fleetbase\FleetOps\Support\Payment;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -236,6 +238,11 @@ class ServiceQuoteController extends FleetOpsController
                 }
             }
 
+            // Save the preliminary payload
+            if ($serviceQuotes instanceof ServiceQuote) {
+                $serviceQuotes->updateMeta('preliminary_query', $request->only(['payload', 'service_type', 'cod', 'currency']));
+            }
+
             // send single quote back
             if ($single) {
                 return response()->json($serviceQuotes);
@@ -272,6 +279,9 @@ class ServiceQuoteController extends FleetOpsController
                     'amount'            => $subTotal,
                     'currency'          => $serviceRate->currency,
                 ]);
+
+                // Save the preliminary payload
+                $quote->updateMeta('preliminary_query', $request->only(['payload', 'service_type', 'cod', 'currency']));
 
                 $items = $lines->map(function ($line) use ($quote) {
                     return ServiceQuoteItem::create([
@@ -318,6 +328,9 @@ class ServiceQuoteController extends FleetOpsController
                 'currency'          => $serviceRate->currency,
             ]);
 
+            // Save the preliminary payload
+            $quote->updateMeta('preliminary_query', $request->only(['payload', 'service_type', 'cod', 'currency']));
+
             $items = $lines->map(function ($line) use ($quote) {
                 return ServiceQuoteItem::create([
                     'service_quote_uuid' => $quote->uuid,
@@ -341,5 +354,96 @@ class ServiceQuoteController extends FleetOpsController
         }
 
         return response()->json($serviceQuotes);
+    }
+
+    /**
+     * Creates a Stripe Checkout session for a specified registry extension.
+     *
+     * This method initializes a checkout session for purchasing a registry extension identified by a UUID.
+     * It requires a 'uri' for redirection after the checkout and an 'extension' UUID to identify the product.
+     *
+     * @param Request $request the incoming HTTP request with 'uri' and 'extension' parameters
+     *
+     * @return \Illuminate\Http\JsonResponse returns the checkout session's client secret or an error message
+     */
+    public function createStripeCheckoutSession(Request $request)
+    {
+        $redirectUri          = $request->input('uri');
+        $serviceQuote         = ServiceQuote::where('uuid', $request->input('service_quote'))->first();
+        if (!$serviceQuote) {
+            return response()->error('The service quote to purchase does not exist.');
+        }
+
+        try {
+            $checkoutSession = $serviceQuote->createStripeCheckoutSession($redirectUri);
+        } catch (\Throwable $e) {
+            return response()->error($e->getMessage());
+        }
+
+        return response()->json(['clientSecret' => $checkoutSession->client_secret]);
+    }
+
+    /**
+     * Retrieves the status of an ongoing Stripe Checkout session.
+     *
+     * This method checks the status of a Stripe Checkout session associated with a registry extension purchase.
+     * It ensures the extension exists and checks if it has already been purchased. It then retrieves and returns
+     * the checkout session status or creates a purchase record if the session is complete.
+     *
+     * @param Request $request the incoming HTTP request containing 'extension' and 'checkout_session_id'
+     *
+     * @return \Illuminate\Http\JsonResponse returns the checkout session status or an error message
+     */
+    public function getStripeCheckoutSessionStatus(Request $request)
+    {
+        $serviceQuote         = ServiceQuote::where('uuid', $request->input('service_quote'))->first();
+        if (!$serviceQuote) {
+            return response()->error('The service quote to purchase does not exist.');
+        }
+
+        // Flush cache for extension
+        if (method_exists($serviceQuote, 'flushCache')) {
+            $serviceQuote->flushCache();
+        }
+
+        // Check if already purchased
+        $purchaseRecordExists = PurchaseRate::where(['company_uuid' => session('company'), 'service_quote_uuid' => $serviceQuote->uuid])->exists();
+        if ($purchaseRecordExists) {
+            return response()->json(['status' => 'purchase_complete', 'service_quote' => $serviceQuote]);
+        }
+
+        $stripe          = Payment::getStripeClient();
+        try {
+            $session = $stripe->checkout->sessions->retrieve($request->input('checkout_session_id'));
+            if (isset($session->status) && $session->status === 'complete') {
+                $purchaseRate = PurchaseRate::firstOrCreate(
+                    [
+                        'company_uuid'       => session('company'),
+                        'service_quote_uuid' => $serviceQuote->uuid,
+                    ],
+                    [
+                        'company_uuid'       => session('company'),
+                        'service_quote_uuid' => $serviceQuote->uuid,
+                        'status'             => 'created',
+                    ]
+                );
+
+                // Set checkout data to meta
+                $purchaseRate->updateMetaProperties([
+                    'stripe_checkout_session_id' => $session->id,
+                    'stripe_payment_intent_id'   => $session->payment_intent,
+                    'locked_price'               => $session->amount_total,
+                ]);
+            }
+
+            // Flush cache for extension
+            if (method_exists($serviceQuote, 'flushCache')) {
+                $serviceQuote->flushCache();
+            }
+
+            return response()->json(['status' => $session->status, 'serviceQuote' => $serviceQuote, 'purchaseRate' => $purchaseRate]);
+        } catch (\Error $e) {
+            return response()->error($e->getMessage());
+        }
     }
 }

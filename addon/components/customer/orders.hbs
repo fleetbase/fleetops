@@ -2,8 +2,17 @@
     <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
         <div class="lg:col-span-3 md:col-span-4">
             <div class="customer-orders-section-header">
-                <div class="flex flex-row justify-between">
-                    <h1 class="text-lg font-bold mb-4">Orders</h1>
+                <div class="flex flex-row items-center justify-between mb-4">
+                    <div class="flex flex-row items-center">
+                        <div>
+                            <h1 class="text-lg font-bold">Orders</h1>
+                        </div>
+                        {{#if this.searchOrders.isRunning}}
+                            <div class="ml-2">
+                                <Spinner />
+                            </div>
+                        {{/if}}
+                    </div>
                     <div>
                         <Button @icon="paper-plane" @type="primary" @text="Create new order" @onClick={{this.startOrderCreation}} />
                     </div>
@@ -13,10 +22,13 @@
                 </div>
                 <div class="customer-orders-list-content overflow-y-scroll pl-2 pr-4 pt-2" {{set-height "680px"}}>
                     <div class="space-y-4">
+                        {{#if this.loadCustomerOrders.isRunning}}
+                            <Spinner @loadingMessage="Loading orders..." @loadingMessageClass="dark:text-gray-100 test-sm ml-2" class="flex flex-row items-center" />
+                        {{/if}}
                         {{#each this.orders as |order|}}
                             <OrderProgressCard
                                 @order={{order}}
-                                @onClick={{this.viewOrder}}
+                                @onClick={{fn this.viewOrder order (hash resetOrderRoute=(not (is-empty this.selectedOrder)))}}
                                 @onTrackerDataLoaded={{this.onTrackerDataLoaded}}
                                 disabled={{is-object this.newOrder}}
                                 class="{{if (eq this.selectedOrder.id order.id) 'active'}}"
@@ -82,6 +94,7 @@
                             <Customer::CreateOrderForm
                                 @order={{this.newOrder}}
                                 @onCancel={{this.cancelOrderCreation}}
+                                @onOrderCreated={{this.onOrderCreated}}
                                 @map={{this.map}}
                                 @latitude={{this.latitude}}
                                 @longitude={{this.longitude}}
@@ -94,7 +107,9 @@
                                     <div class="customer-order-details">
                                         <div class="flex flex-row justify-between">
                                             <div>
-                                                <h1 class="font-bold text-sm">{{order.tracking_number.tracking_number}}</h1>
+                                                <ClickToCopy @value={{order.tracking_number.tracking_number}}>
+                                                    <h1 class="font-bold text-sm">{{order.tracking_number.tracking_number}}</h1>
+                                                </ClickToCopy>
                                                 <div class="flex flex-row">
                                                     <div class="text-xs font-semibold mr-1">Date Created:</div>
                                                     <div class="text-xs">{{order.createdAtShort}}</div>
@@ -103,7 +118,7 @@
                                             <div>
                                                 <div class="flex flew-row space-x-2">
                                                     <Button @helpText="View Route" @icon="route" @onClick={{this.locateOrderRoute}} />
-                                                    <Button @helpText="Locate Driver" @icon="truck" @onClick={{this.locateDriver}} />
+                                                    <Button @helpText="Locate Driver" @icon="truck" @onClick={{this.locateDriver}} @disabled={{not order.has_driver_assigned}} />
                                                 </div>
                                             </div>
                                         </div>
@@ -138,7 +153,7 @@
                                                     </div>
                                                 {{else}}
                                                     <div class="px-10 py-2 flex items-center justify-center">
-                                                        <p class="text-red-600 dark:text-red-100">{{t "fleet-ops.operations.orders.index.view.unable-load-order-activity"}}</p>
+                                                        <p class="text-red-600 dark:text-red-100">{{t "fleet-ops.operations.orders.index.view.no-order-activity"}}</p>
                                                     </div>
                                                 {{/each}}
                                             </div>
@@ -149,7 +164,7 @@
                                                 <h1 class="font-bold text-sm">Items:</h1>
                                             </div>
                                             {{#if order.isMultipleDropoffOrder}}
-                                                <div class="flex flex-col space-y-2 overflow-y-scroll" {{set-height "255px"}}>
+                                                <div class="flex flex-col space-y-2 overflow-y-scroll" {{set-max-height "255px"}}>
                                                     {{#each order.payload.entitiesByDestination as |group|}}
                                                         <div class="item-detail">
                                                             <div class="flex flex-row justify-between flex-grow-0">
@@ -183,6 +198,8 @@
                                                                 {{/each}}
                                                             </div>
                                                         </div>
+                                                    {{else}}
+                                                        <div class="text-xs text-gray-500 px-2">None</div>
                                                     {{/each}}
                                                 </div>
                                             {{else}}
@@ -204,6 +221,8 @@
                                                                 </div>
                                                             </div>
                                                         </div>
+                                                    {{else}}
+                                                        <div class="text-xs text-gray-500 px-2">None</div>
                                                     {{/each}}
                                                 </div>
                                             {{/if}}

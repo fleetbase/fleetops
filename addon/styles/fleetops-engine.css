@@ -539,10 +539,19 @@ body[data-theme='dark'] .order-progress-card {
     font-weight: 500;
 }
 
+.order-progress-card > .order-progress-card-header > .order-progress-card-header-id h1.order-progress-tracking-number,
 .order-progress-card > .order-progress-card-header > .order-progress-card-header-id h1 {
     font-weight: 500;
-    font-size: 1rem;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    font-size: 0.9rem;
+    line-height: 1.25rem;
     letter-spacing: 0.035rem;
+}
+
+.order-progress-card > .order-progress-card-header > .order-progress-card-header-id .order-progress-creation-date {
+    font-size: 0.7rem;
+    line-height: 0.7rem;
 }
 
 .order-progress-card > .order-progress-card-header > .order-progress-card-header-status .status-badge > span {
@@ -554,8 +563,8 @@ body[data-theme='dark'] .order-progress-card {
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    height: 1.75rem;
-    width: 1.75rem;
+    height: 2rem;
+    width: 2rem;
     font-size: 1rem;
     border: 1px #d1d5db solid;
     border-radius: 0.25rem;
@@ -675,6 +684,7 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-marker-wrapper
     top: 0.6rem;
     left: 1rem;
     right: 0;
+    transition: 0.15s all ease;
 }
 
 .order-progress-bar > .order-progress-bar-wrapper > .order-progress-bar-truck-icon {
@@ -685,6 +695,7 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-marker-wrapper
     top: -0.085rem;
     left: 1rem;
     right: 0;
+    transition: 0.15s all ease;
 }
 
 .order-progress-bar > .order-progress-bar-wrapper > .order-progress-bar-truck-icon > .truck-icon-wrapper {
@@ -702,6 +713,20 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-wrapper > .ord
     background-color: #1f2937;
 }
 
+.order-tracking-lookup-map-wrapper {
+    width: 100%;
+    height: 300px;
+    border-radius: 0.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.order-tracking-lookup-map-wrapper > .leaflet-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 0.5rem;
+}
+
 .customer-live-map-wrapper {
     width: 100%;
     height: 820px;
@@ -716,6 +741,7 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-wrapper > .ord
     border-radius: 0.5rem;
 }
 
+.customer-order-details-container,
 .customer-live-map-wrapper .customer-order-details-container {
     position: absolute;
     z-index: 9999;
@@ -728,6 +754,19 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-wrapper > .ord
     padding: 1rem;
 }
 
+.customer-order-details-container.relative,
+.customer-order-details-container.render-in-place {
+    position: relative;
+    bottom: unset;
+    top: unset;
+    right: unset;
+    width: auto;
+    max-width: unset;
+    height: auto;
+    padding: 0;
+}
+
+.customer-order-details-container > .customer-order-details,
 .customer-live-map-wrapper .customer-order-details-container > .customer-order-details {
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
     border: 1px #d1d5db solid;
@@ -736,11 +775,19 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-wrapper > .ord
     padding: 0.75rem;
 }
 
+body[data-theme='dark'] .customer-order-details-container > .customer-order-details.border-0,
+.customer-order-details-container > .customer-order-details.border-0 {
+    box-shadow: unset;
+    border: 0;
+}
+
+body[data-theme='dark'] .customer-order-details-container > .customer-order-details,
 body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-container > .customer-order-details {
     border: 1px #374151 solid;
     background-color: #1f2937;
 }
 
+.customer-order-details-container > .customer-order-details .customer-order-details-seperator,
 .customer-live-map-wrapper .customer-order-details-container > .customer-order-details .customer-order-details-seperator {
     display: flex;
     width: 100%;
@@ -751,10 +798,13 @@ body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-conta
     align-items: center;
 }
 
+body[data-theme='dark'] .customer-order-details-container > .customer-order-details .customer-order-details-seperator,
 body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-container > .customer-order-details .customer-order-details-seperator {
     background-color: #374151;
 }
 
+.customer-order-details-container > .customer-order-details .item-detail,
+.customer-order-details-container > .customer-order-details .activity-detail,
 .customer-live-map-wrapper .customer-order-details-container > .customer-order-details .item-detail,
 .customer-live-map-wrapper .customer-order-details-container > .customer-order-details .activity-detail {
     display: flex;
@@ -766,6 +816,8 @@ body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-conta
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
 }
 
+body[data-theme='dark'] .customer-order-details-container > .customer-order-details .item-detail,
+body[data-theme='dark'] .customer-order-details-container > .customer-order-details .activity-detail,
 body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-container > .customer-order-details .item-detail,
 body[data-theme='dark'] .customer-live-map-wrapper .customer-order-details-container > .customer-order-details .activity-detail {
     border: 1px #374151 solid;
@@ -781,7 +833,7 @@ body.fleetbase-console .leaflet-popup-content {
 }
 
 .fleetbase-portal .portal-container .portal-content-wrapper .next-content-overlay {
-    z-index: 899;
+    z-index: 840;
 }
 
 .fleetbase-portal .portal-container .portal-content-wrapper .next-content-overlay-panel-container > .next-content-overlay-panel,
@@ -790,7 +842,139 @@ body.fleetbase-console .leaflet-popup-content {
     border-bottom-right-radius: 0.5rem;
 }
 
+.fleetbase-leaflet-zoom .leaflet-control-container .leaflet-top.leaflet-left,
+.order-tracking-lookup-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left,
+.fleetbase-portal .customer-live-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left {
+    z-index: 800;
+}
+
+.fleetbase-leaflet-zoom .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom,
+.order-tracking-lookup-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom,
+.fleetbase-portal .customer-live-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom {
+    --tw-shadow: rgba(0 0 0 / 35%) 0px 7px 32px;
+    --tw-shadow-colored: 0px 7px 32px var(--tw-shadow-color);
+
+    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+    border-radius: 9999px;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    border: 1px #fff solid;
+}
+
+body[data-theme='dark'] .fleetbase-leaflet-zoom .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom,
+body[data-theme='dark'] .order-tracking-lookup-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom,
+body[data-theme='dark'].fleetbase-portal .customer-live-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom {
+    background-color: #111827;
+    border: 1px #111827 solid;
+}
+
+.fleetbase-leaflet-zoom .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a,
+.order-tracking-lookup-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a,
+.fleetbase-portal .customer-live-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a {
+    margin: auto;
+    margin-bottom: 0.5rem;
+    display: flex;
+    height: 2rem;
+    width: 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 100%;
+    color: #808080;
+    border: 0;
+    background-color: #fff;
+}
+
+body[data-theme='dark'] .fleetbase-leaflet-zoom .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a,
+body[data-theme='dark'] .order-tracking-lookup-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a,
+body[data-theme='dark'].fleetbase-portal .customer-live-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a {
+    background-color: #111827;
+    color: #fff;
+}
+
+.fleetbase-leaflet-zoom .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:focus,
+.fleetbase-leaflet-zoom .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:active,
+.fleetbase-leaflet-zoom .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:hover,
+.order-tracking-lookup-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:focus,
+.order-tracking-lookup-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:active,
+.order-tracking-lookup-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:hover,
+.fleetbase-portal .customer-live-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:focus,
+.fleetbase-portal .customer-live-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:active,
+.fleetbase-portal .customer-live-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:hover {
+    outline: none;
+}
+
+.fleetbase-leaflet-zoom .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:hover,
+.order-tracking-lookup-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:hover,
+.fleetbase-portal .customer-live-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:hover {
+    background-color: #e5e7eb;
+}
+
+body[data-theme='dark'] .fleetbase-leaflet-zoom .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:hover,
+body[data-theme='dark'] .order-tracking-lookup-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:hover,
+body[data-theme='dark'].fleetbase-portal .customer-live-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a:hover {
+    background-color: #4b5563;
+}
+
+.fleetbase-leaflet-zoom .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a.leaflet-control-zoom-out,
+.order-tracking-lookup-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a.leaflet-control-zoom-out,
+.fleetbase-portal .customer-live-map-wrapper .leaflet-control-container .leaflet-top.leaflet-left .leaflet-control-zoom > a.leaflet-control-zoom-out {
+    margin-bottom: 0;
+}
+
 .grip-cursor,
 .grip-cursor * {
     cursor: move;
+}
+
+body[data-theme='dark'] .ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > .btn,
+body[data-theme='dark'] .ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > button.btn,
+body[data-theme='dark'] .ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > button.btn.btn-primary,
+body[data-theme='dark'] .ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > button.btn.btn-default,
+.ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > button.btn.btn-primary,
+.ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > button.btn.btn-default,
+.ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > button.btn {
+    outline: none;
+    background-color: #2563eb;
+    border: 1px #1e3a8a solid;
+    color: #dbeafe;
+    transition: all ease-in-out 125ms;
+}
+
+body[data-theme='dark'] .ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > .btn:hover,
+body[data-theme='dark'] .ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > button.btn:hover,
+body[data-theme='dark'] .ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > button.btn.btn-primary:hover,
+body[data-theme='dark'] .ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > button.btn.btn-default:hover,
+.ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > button.btn.btn-primary:hover,
+.ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > button.btn.btn-default:hover,
+.ui-input-info-block > .ui-input-info-block-inner > .ui-input-info-block-yield-container .btn-wrapper > button.btn:hover {
+    opacity: 0.7;
+}
+
+.flb--modal.flb--default-modal.service-quote-extension-purchase > .flb--modal-dialog > .flb--modal-content,
+body[data-theme='dark'] .flb--modal.flb--default-modal.service-quote-extension-purchase > .flb--modal-dialog > .flb--modal-content,
+body[data-theme='light'] .flb--modal.flb--default-modal.service-quote-extension-purchase > .flb--modal-dialog > .flb--modal-content {
+    background-color: #fff;
+}
+
+.flb--modal.flb--default-modal.service-quote-extension-purchase > .flb--modal-dialog > .flb--modal-content > .flb--modal-header,
+body[data-theme='dark'] .flb--modal.flb--default-modal.service-quote-extension-purchase > .flb--modal-dialog > .flb--modal-content > .flb--modal-header,
+body[data-theme='light'] .flb--modal.flb--default-modal.service-quote-extension-purchase > .flb--modal-dialog > .flb--modal-content > .flb--modal-header {
+    display: none !important;
+}
+
+body[data-theme='dark'] .flb--modal.flb--default-modal.finalize-service-quote-purchase,
+body[data-theme='light'] .flb--modal.flb--default-modal.finalize-service-quote-purchase,
+.flb--modal.flb--default-modal.finalize-service-quote-purchase {
+    pointer-events: none !important;
+}
+
+.flb--modal.flb--default-modal.finalize-service-quote-purchase > .flb--modal-dialog > .flb--modal-content > .flb--modal-header button.close,
+body[data-theme='dark'] .flb--modal.flb--default-modal.finalize-service-quote-purchase > .flb--modal-dialog > .flb--modal-content > .flb--modal-header button.close,
+body[data-theme='light'] .flb--modal.flb--default-modal.finalize-service-quote-purchase > .flb--modal-dialog > .flb--modal-content > .flb--modal-header button.close {
+    display: none !important;
+    pointer-events: none;
 }

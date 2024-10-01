@@ -107,7 +107,8 @@ class DriverController extends FleetOpsController
                     }
 
                     // If user is a regular user set type and role
-                    if ($existingUser->isNotAdmin()) {
+                    // also if is not admin and is not Administrator role
+                    if ($existingUser->isNotAdmin() && !$existingUser->hasRole('Administrator')) {
                         $existingUser->assignSingleRole('Driver');
                     }
 
