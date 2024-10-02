@@ -12,6 +12,9 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -76,119 +79,100 @@ class PurchaseRate extends Model
      */
     protected $hidden = [];
 
-    /**
-     * Order rate was purchased for.
-     *
-     * @var Model
-     */
-    public function order()
+    public function order(): HasOne
     {
         return $this->hasOne(Order::class);
     }
 
-    /**
-     * Service quote for purchased rate.
-     *
-     * @var Model
-     */
-    public function serviceQuote()
+    public function serviceQuote(): BelongsTo
     {
         return $this->belongsTo(ServiceQuote::class);
     }
 
-    /**
-     * Transaction for purchased rate.
-     *
-     * @var Model
-     */
-    public function transaction()
+    public function transaction(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\Transaction::class);
     }
 
-    /**
-     * Payload for the order.
-     *
-     * @var Model
-     */
-    public function payload()
+    public function payload(): BelongsTo
     {
         return $this->belongsTo(Payload::class);
     }
 
-    /**
-     * Company who owns the order.
-     *
-     * @var Model
-     */
-    public function company()
+    public function company(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\Company::class);
     }
 
-    /**
-     * The customer if any for this place.
-     *
-     * @var Model
-     */
-    public function customer()
+    public function customer(): MorphTo
     {
         return $this->morphTo(__FUNCTION__, 'customer_type', 'customer_uuid');
     }
 
-    /**
-     * True of the customer is a vendor `customer_is_vendor`.
-     *
-     * @var bool
-     */
-    public function getCustomerIsVendorAttribute()
+    public function getCustomerIsVendorAttribute(): bool
     {
         return Str::contains(strtolower($this->customer_type), 'vendor');
     }
 
-    /**
-     * True of the customer is a contact `customer_is_contact`.
-     *
-     * @var bool
-     */
-    public function getCustomerIsContactAttribute()
+    public function getCustomerIsContactAttribute(): bool
     {
         return Str::contains(strtolower($this->customer_type), 'contact');
     }
 
-    public function getAmountAttribute()
+    public function getAmountAttribute(): float|int|null
     {
+        if (!$this->relationLoaded('serviceQuote')) {
+            return 0;
+        }
+
         return data_get($this, 'serviceQuote.amount');
     }
 
-    public function getCurrencyAttribute()
+    public function getCurrencyAttribute(): ?string
     {
+        if (!$this->relationLoaded('serviceQuote')) {
+            return null;
+        }
+
         return data_get($this, 'serviceQuote.currency');
     }
 
-    public function getServiceQuoteIdAttribute()
+    public function getServiceQuoteIdAttribute(): ?string
     {
+        if (!$this->relationLoaded('serviceQuote')) {
+            return null;
+        }
+
         return data_get($this, 'serviceQuote.public_id');
     }
 
-    public function getOrderIdAttribute()
+    public function getOrderIdAttribute(): ?string
     {
+        if (!$this->relationLoaded('order')) {
+            return null;
+        }
+
         return data_get($this, 'order.public_id');
     }
 
-    public function getCustomerIdAttribute()
+    public function getCustomerIdAttribute(): ?string
     {
+        if (!$this->relationLoaded('customer')) {
+            return null;
+        }
+
         return data_get($this, 'customer.public_id');
     }
 
-    public function getTransactionIdAttribute()
+    public function getTransactionIdAttribute(): ?string
     {
+        if (!$this->relationLoaded('transaction')) {
+            return null;
+        }
+
         return data_get($this, 'transaction.public_id');
     }
 
-    /**
-     * @return \Fleetbase\Models\PurchaseRate|null
-     */
     public static function resolveFromRequest(Request $request): ?PurchaseRate
     {
         $purchaseRate = $request->or(['order.purchase_rate_uuid', 'purchase_rate', 'purchase_rate_id', 'order.purchase_rate']);
@@ -197,7 +181,7 @@ class PurchaseRate extends Model
             return null;
         }
 
-        if (Utils::isUuid($purchaseRate)) {
+        if (Str::isUuid($purchaseRate)) {
             $purchaseRate = static::where('uuid', $purchaseRate)->first();
         }
 

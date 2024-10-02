@@ -3,28 +3,17 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
+import { task } from 'ember-concurrency';
 import apiUrl from '@fleetbase/ember-core/utils/api-url';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 
 export default class VendorFormPanelCreateFormComponent extends Component {
-    /**
-     * @service store
-     */
     @service store;
-
-    /**
-     * @service fetch
-     */
     @service fetch;
-    /**
-     * @service intl
-     */
     @service intl;
-
-    /**
-     * @service contextPanel
-     */
     @service contextPanel;
+    @service notifications;
+
     /**
      * State of whether editing credentials is enabled.
      * @type {Boolean}
@@ -67,7 +56,7 @@ export default class VendorFormPanelCreateFormComponent extends Component {
     constructor() {
         super(...arguments);
         this.vendor = this.args.vendor;
-        this.fetchSupportedIntegratedVendors();
+        this.fetchSupportedIntegratedVendors.perform();
     }
 
     @action toggleCredentialsReset() {
@@ -154,9 +143,11 @@ export default class VendorFormPanelCreateFormComponent extends Component {
      *
      * @returns {Promise}
      */
-    fetchSupportedIntegratedVendors() {
-        return this.fetch.get('integrated-vendors/supported').then((supportedIntegratedVendors) => {
-            this.supportedIntegratedVendors = supportedIntegratedVendors;
-        });
+    @task *fetchSupportedIntegratedVendors() {
+        try {
+            this.supportedIntegratedVendors = yield this.fetch.get('integrated-vendors/supported');
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 }

@@ -134,9 +134,9 @@ class FlowResource implements \JsonSerializable
     /**
      * Specify data which should be serialized to JSON.
      *
-     * @return mixed data which can be serialized by json_encode, which is a value of any type other than a resource
+     * @return array data which can be serialized by json_encode, which is a value of any type other than a resource
      */
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return $this->toArray();
     }

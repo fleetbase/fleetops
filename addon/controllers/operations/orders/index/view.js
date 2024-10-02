@@ -10,102 +10,19 @@ import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-ma
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 
 export default class OperationsOrdersIndexViewController extends BaseController {
-    /**
-     * Inject the `operations.orders.index` controller
-     *
-     * @var {Controller}
-     */
     @controller('operations.orders.index') ordersController;
-
-    /**
-     * Inject the `management.contacts.index` controller
-     *
-     * @var {Controller}
-     */
     @controller('management.contacts.index') contactsController;
-
-    /**
-     * Inject the `management.vendors.index` controller
-     *
-     * @var {Controller}
-     */
     @controller('management.vendors.index') vendorsController;
-
-    /**
-     * Inject the `management.drivers.index` controller
-     *
-     * @var {Controller}
-     */
     @controller('management.drivers.index') driversController;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `modalsManager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
     @service intl;
-
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
-     */
     @service currentUser;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `socket` service
-     *
-     * @var {Service}
-     */
     @service socket;
-
-    /**
-     * Inject the `universe` service
-     *
-     * @var {Service}
-     */
     @service universe;
-
-    /**
-     * Inject the `contextPanel` service
-     *
-     * @var {Service}
-     */
     @service contextPanel;
 
     @tracked isLoadingAdditionalData = false;
@@ -219,6 +136,16 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         return groups;
     }
 
+    @computed('model.payload.waypoints') get orderWaypoints() {
+        const { payload } = this.model;
+
+        if (payload.waypoints && typeof payload.waypoints.toArray === 'function') {
+            return payload.waypoints.toArray();
+        }
+
+        return payload.waypoints;
+    }
+
     @computed('model.payload.{dropoff,pickup,waypoints}') get routeWaypoints() {
         const { payload } = this.model;
         let waypoints = [];
@@ -239,6 +166,8 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     }
 
     @task *loadOrderRelations(order) {
+        yield order.loadTrackerData({}, { fromCache: true, expirationInterval: 10, expirationIntervalUnit: 'minute' });
+        yield order.loadETA();
         yield order.loadOrderConfig();
         yield order.loadPayload();
         yield order.loadDriver();
@@ -255,10 +184,9 @@ export default class OperationsOrdersIndexViewController extends BaseController 
      * @task
      */
     @task *loadCustomFields(order) {
-        const orderConfig = order.order_config;
-        if (orderConfig) {
-            this.customFieldGroups = yield this.store.query('category', { owner_uuid: orderConfig.id, for: 'custom_field_group' });
-            this.customFields = yield this.store.query('custom-field', { subject_uuid: orderConfig.id });
+        if (order.order_config_uuid) {
+            this.customFieldGroups = yield this.store.query('category', { owner_uuid: order.order_config_uuid, for: 'custom_field_group' });
+            this.customFields = yield this.store.query('custom-field', { subject_uuid: order.order_config_uuid });
             this.groupCustomFields(order);
         }
     }
@@ -267,25 +195,30 @@ export default class OperationsOrdersIndexViewController extends BaseController 
      * Organizes custom fields into their respective groups.
      */
     groupCustomFields(order) {
+        // get custom fields and their values from order
         const customFields = Array.from(this.customFields);
         const customFieldValues = Array.from(order.custom_field_values);
+
         // map values to the custom fields
         const customFieldsWithValues = customFields.map((customField) => {
             customField.value = customFieldValues.find((customFieldValue) => customFieldValue.custom_field_uuid === customField.id);
             return customField;
         });
+
         // update custom fields with values
         this.customFields = customFieldsWithValues;
-        // group custom fields
-        for (let i = 0; i < this.customFieldGroups.length; i++) {
-            const group = this.customFieldGroups[i];
+
+        // group and update custom fields
+        this.customFieldGroups = this.customFieldGroups.map((group) => {
             group.set(
                 'customFields',
                 customFieldsWithValues.filter((customField) => {
                     return customField.category_uuid === group.id;
                 })
             );
-        }
+
+            return group;
+        });
     }
 
     @action resetView() {
@@ -294,8 +227,10 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     }
 
     @action resetInterface() {
-        if (this.leafletMap && this.leafletMap.liveMap) {
-            this.leafletMap.liveMap.show(['drivers', 'routes']);
+        const liveMap = this.leafletMap ? this.leafletMap.liveMap : null;
+        if (liveMap) {
+            liveMap.reload();
+            liveMap.showAll();
         }
     }
 
@@ -342,12 +277,15 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             return later(
                 this,
                 () => {
-                    if (this.leafletMap && this.leafletMap.liveMap) {
-                        this.leafletMap.liveMap.hideAll();
+                    const liveMap = this.leafletMap ? this.leafletMap.liveMap : null;
+                    if (liveMap) {
+                        liveMap.drivers = [];
+                        liveMap.vehicles = [];
+                        liveMap.places = [];
                     }
 
-                    // display order route on map
                     this.displayOrderRoute();
+                    this.displayOrderDriverAssigned();
                 },
                 ms
             );
@@ -463,6 +401,14 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         );
     }
 
+    @action displayOrderDriverAssigned() {
+        const driverAssigned = this.model.driver_assigned;
+        if (driverAssigned) {
+            this.leafletMap.liveMap.drivers = [driverAssigned];
+            this.leafletMap.liveMap.show('drivers');
+        }
+    }
+
     /**
      * Edit order details.
      *
@@ -522,7 +468,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                 }
             },
             scheduleOrder: (dateInstance) => {
-                order.scheduled_at = dateInstance.toDate();
+                order.scheduled_at = dateInstance;
             },
             driversQuery: {},
             order,

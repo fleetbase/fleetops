@@ -27,6 +27,7 @@ export default class LiveMapComponent extends Component {
     @service appCache;
     @service universe;
     @service abilities;
+    @service movementTracker;
     @service crud;
     @service contextPanel;
     @service leafletMapManager;
@@ -181,6 +182,13 @@ export default class LiveMapComponent extends Component {
     @tracked skipSetCoordinates = false;
 
     /**
+     * ID of interval to check if leaflet plugins has loaded.
+     * @type {boolean}
+     * @memberof LiveMapComponent
+     */
+    @tracked leafletPluginsLoadedCheckId = false;
+
+    /**
      * Cache for storing original state of resource arrays.
      * @type {Object.<string, Array>}
      * @memberof LiveMapComponent
@@ -211,27 +219,28 @@ export default class LiveMapComponent extends Component {
      * @action
      * @function
      */
-    setupComponent() {
+    async setupComponent() {
         // trigger that initial coordinates have been set
         this.universe.trigger('fleet-ops.live-map.loaded', this);
 
         // set initial coordinates
         this.setInitialCoordinates();
 
+        // Check if leaflet plugins loaded
+        this.leafletPluginsLoadedCheckId = setInterval(() => {
+            if (window.fleetopsLeafletPluginsLoaded === true) {
+                clearInterval(this.leafletPluginsLoadedCheckId);
+                this.ready();
+            }
+        }, 100);
+
         // load data and complete setup
-        this.completeSetup([
+        await this.completeSetup([
             this.loadLiveData.perform('routes'),
-            this.loadLiveData.perform('vehicles', {
-                onLoaded: (vehicles) => {
-                    this.watchMovingObjects('vehicles', vehicles);
-                },
-            }),
-            this.loadLiveData.perform('drivers', {
-                onLoaded: (drivers) => {
-                    this.watchMovingObjects('drivers', drivers);
-                },
-            }),
+            this.loadLiveData.perform('vehicles'),
+            this.loadLiveData.perform('drivers'),
             this.loadLiveData.perform('places'),
+            this.loadServiceAreas.perform(),
         ]);
     }
 
@@ -244,14 +253,10 @@ export default class LiveMapComponent extends Component {
      * @param {Promise[]} liveDataPromises - An array of promises that fetch live data.
      * @returns {Promise} A promise that resolves when all data-fetching promises have settled.
      */
-    completeSetup(liveDataPromises) {
-        return allSettled(liveDataPromises)
-            .then(() => {
-                this.isDataLoaded = true;
-            })
-            .finally(() => {
-                this.listen();
-            });
+    async completeSetup(liveDataPromises) {
+        await allSettled(liveDataPromises);
+        this.isDataLoaded = true;
+        this.listen();
     }
 
     /**
@@ -259,20 +264,14 @@ export default class LiveMapComponent extends Component {
      *
      * @memberof LiveMapComponent
      */
-    reload() {
-        this.completeSetup([
+    async reload() {
+        this.isDataLoaded = false;
+        await this.completeSetup([
             this.loadLiveData.perform('routes'),
-            this.loadLiveData.perform('vehicles', {
-                onLoaded: (vehicles) => {
-                    this.watchMovingObjects('vehicles', vehicles);
-                },
-            }),
-            this.loadLiveData.perform('drivers', {
-                onLoaded: (drivers) => {
-                    this.watchMovingObjects('drivers', drivers);
-                },
-            }),
+            this.loadLiveData.perform('vehicles'),
+            this.loadLiveData.perform('drivers'),
             this.loadLiveData.perform('places'),
+            this.loadServiceAreas.perform(),
         ]);
     }
 
@@ -313,8 +312,6 @@ export default class LiveMapComponent extends Component {
             this.latitude = this.location.DEFAULT_LATITUDE;
             this.longitude = this.location.DEFAULT_LONGITUDE;
         }
-
-        this.ready();
 
         // Trigger that initial coordinates are set to live map component
         this.universe.trigger('fleet-ops.live-map.has_coordinates', {
@@ -457,24 +454,32 @@ export default class LiveMapComponent extends Component {
     /**
      * Hide all visibility controls associated with the current instance.
      */
-    hideAll() {
+    hideAll(callback = null) {
         const controls = Object.keys(this.visibilityControls);
 
         for (let i = 0; i < controls.length; i++) {
             const control = controls.objectAt(i);
             this.hide(control);
         }
+
+        if (typeof callback === 'function') {
+            callback();
+        }
     }
 
     /**
      * Show all visibility controls associated with the current instance.
      */
-    showAll() {
+    showAll(callback = null) {
         const controls = Object.keys(this.visibilityControls);
 
         for (let i = 0; i < controls.length; i++) {
             const control = controls.objectAt(i);
             this.show(control);
+        }
+
+        if (typeof callback === 'function') {
+            callback();
         }
     }
 
@@ -484,12 +489,15 @@ export default class LiveMapComponent extends Component {
      * @function
      * @param {string} name - The name or identifier of the element to hide.
      */
-    hide(name) {
+    hide(name, callback = null) {
         if (isArray(name)) {
             return name.forEach(this.hide.bind(this));
         }
 
         this.createVisibilityControl(name, false);
+        if (typeof callback === 'function') {
+            callback();
+        }
     }
 
     /**
@@ -498,12 +506,15 @@ export default class LiveMapComponent extends Component {
      * @function
      * @param {string} name - The name or identifier of the element to show.
      */
-    show(name) {
+    show(name, callback = null) {
         if (isArray(name)) {
             return name.forEach(this.show.bind(this));
         }
 
         this.createVisibilityControl(name, true);
+        if (typeof callback === 'function') {
+            callback();
+        }
     }
 
     /**
@@ -513,11 +524,11 @@ export default class LiveMapComponent extends Component {
      * @param {string} name - The name of the control to toggle.
      * @memberof LiveMapComponent
      */
-    toggleVisibility(name) {
+    toggleVisibility(name, callback = null) {
         if (this.isVisible(name)) {
-            this.hide(name);
+            this.hide(name, callback);
         } else {
-            this.show(name);
+            this.show(name, callback);
         }
     }
 
@@ -965,6 +976,7 @@ export default class LiveMapComponent extends Component {
         set(driver, '_marker', target);
 
         this.createDriverContextMenu(driver, target);
+        this.movementTracker.track(driver);
     }
 
     /**
@@ -1005,6 +1017,7 @@ export default class LiveMapComponent extends Component {
         set(vehicle, '_marker', target);
 
         this.createVehicleContextMenu(vehicle, target);
+        this.movementTracker.track(vehicle);
     }
 
     /**
@@ -1066,7 +1079,7 @@ export default class LiveMapComponent extends Component {
     @action hideDrawControls(options = {}) {
         this.hide('drawControls');
 
-        const text = getWithDefault(options, 'text');
+        const text = getWithDefault(options, 'text', true);
         const callback = getWithDefault(options, 'callback');
 
         if (typeof callback === 'function') {
@@ -1177,7 +1190,7 @@ export default class LiveMapComponent extends Component {
         // map except into ids only
         except = except
             .filter(Boolean)
-            .filter((record) => !record?.id)
+            .filter((record) => typeof record !== 'string' && !record?.id)
             .map((record) => record.id);
 
         for (let i = 0; i < this.activeServiceAreas.length; i++) {
@@ -1215,7 +1228,7 @@ export default class LiveMapComponent extends Component {
         // map except into ids only
         except = except
             .filter(Boolean)
-            .filter((record) => !record?.id)
+            .filter((record) => typeof record !== 'string' && !record?.id)
             .map((record) => record.id);
 
         for (let i = 0; i < this.serviceAreaRecords.length; i++) {
@@ -1682,100 +1695,6 @@ export default class LiveMapComponent extends Component {
     }
 
     /**
-     * Watches and manages moving objects (e.g., drivers or vehicles) on the LiveMapComponent.
-     *
-     * This function can be used to watch different types of moving objects by specifying
-     * the 'type' parameter.
-     *
-     * @action
-     * @function
-     * @param {string} objectType - The type of moving object to watch (e.g., 'drivers', 'vehicles').
-     * @param {Array} movingObjects - An array of moving objects to watch.
-     */
-    watchMovingObjects(objectType, objects = []) {
-        // Setup socket
-        const socket = this.socket.instance();
-
-        // Listen for moving objects
-        for (let i = 0; i < objects.length; i++) {
-            const movingObject = objects.objectAt(i);
-            this.listenForMovingObject(objectType, movingObject, socket);
-        }
-    }
-
-    /**
-     * Listens for events related to a specific type of moving object (e.g., driver or vehicle) and manages the associated marker.
-     *
-     * This function subscribes to the channel corresponding to the provided 'objectType' and the specific 'movingObject'
-     * to listen for location-related events. It processes and updates the associated marker when events are received.
-     *
-     * @async
-     * @function
-     * @param {string} objectType - The type of moving object being watched (e.g., 'drivers', 'vehicles').
-     * @param {Object} movingObject - The specific moving object to track.
-     * @param {Socket} socket - The WebSocket instance used for communication.
-     */
-    async listenForMovingObject(objectType, movingObject, socket) {
-        // Listen on the specific channel
-        const channelId = `${objectType}.${movingObject.id}`;
-        const channel = socket.subscribe(channelId);
-
-        // Track the channel
-        this.channels.pushObject(channel);
-
-        // Listen to the channel for events
-        await channel.listener('subscribe').once();
-
-        // Initialize an empty buffer to store incoming events
-        const eventBuffer = [];
-
-        // Time to wait in milliseconds before processing buffered events
-        const bufferTime = 1000 * 10;
-
-        // Function to process buffered events
-        const processBuffer = () => {
-            // Sort events by created_at
-            eventBuffer.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
-            // Process sorted events
-            for (const output of eventBuffer) {
-                const { event, data } = output;
-
-                // log incoming event
-                console.log(`${event} - #${data.additionalData.index} (${output.created_at}) [ ${data.location.coordinates.join(' ')} ]`);
-
-                // get movingObject marker
-                const objectMarker = movingObject._layer;
-
-                if (objectMarker) {
-                    // Update the object's heading degree
-                    objectMarker.setRotationAngle(data.heading);
-                    // Move the object's marker to new coordinates
-                    objectMarker.slideTo(data.location.coordinates, { duration: 2000 });
-                }
-            }
-
-            // Clear the buffer
-            eventBuffer.length = 0;
-        };
-
-        // Start a timer to process the buffer at intervals
-        setInterval(processBuffer, bufferTime);
-
-        // Get incoming data and console out
-        (async () => {
-            for await (let output of channel) {
-                const { event } = output;
-
-                if (event === `${objectType}.location_changed` || event === `${objectType}.simulated_location_changed`) {
-                    // Add the incoming event to the buffer
-                    eventBuffer.push(output);
-                }
-            }
-        })();
-    }
-
-    /**
      * Close all socket channels associated subscribed to.
      * @memberof LiveMapComponent
      */
@@ -1795,7 +1714,7 @@ export default class LiveMapComponent extends Component {
      * @returns {Promise} A promise that resolves to an array of service area records.
      * @memberof LiveMapComponent
      */
-    @task *loadServiceAreas() {
+    @task *loadServiceAreas(options = {}) {
         if (this.abilities.cannot('fleet-ops list service-area')) {
             return [];
         }
@@ -1804,15 +1723,28 @@ export default class LiveMapComponent extends Component {
             const cachedRecords = this.serviceAreas.getFromCache('serviceAreas', 'service-area');
 
             if (cachedRecords) {
+                this.serviceAreaRecords = cachedRecords;
+                if (typeof options.onLoaded === 'function') {
+                    options.onLoaded(cachedRecords);
+                }
+
                 return cachedRecords;
             }
         }
 
-        const serviceAreaRecords = yield this.store.query('service-area', { with: ['zones'] });
-        if (serviceAreaRecords) {
-            this.appCache.setEmberData('serviceAreas', serviceAreaRecords);
-        }
+        try {
+            this.serviceAreaRecords = yield this.store.query('service-area', { with: ['zones'] });
+            if (this.serviceAreaRecords) {
+                this.appCache.setEmberData('serviceAreas', this.serviceAreaRecords);
+            }
 
-        return serviceAreaRecords;
+            if (typeof options.onLoaded === 'function') {
+                options.onLoaded(this.serviceAreaRecords);
+            }
+
+            return this.serviceAreaRecords;
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 }

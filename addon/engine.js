@@ -6,6 +6,9 @@ import services from '@fleetbase/ember-core/exports/services';
 import NavigatorAppConfigComponent from './components/admin/navigator-app';
 import WidgetFleetOpsKeyMetricsComponent from './components/widget/fleet-ops-key-metrics';
 import AdminAvatarManagementComponent from './components/admin/avatar-management';
+import CustomerOrdersComponent from './components/customer/orders';
+import CustomerAdminSettingsComponent from './components/customer/admin-settings';
+import OrderTrackingLookupComponent from './components/order-tracking-lookup';
 
 const { modulePrefix } = config;
 const externalRoutes = ['console', 'extensions'];
@@ -41,6 +44,19 @@ export default class FleetOpsEngine extends Engine {
             }
         );
 
+        // register menu item for tracking order
+        universe.registerMenuItem('auth:login', 'Track Order', {
+            route: 'virtual',
+            slug: 'track-order',
+            icon: 'barcode',
+            type: 'link',
+            wrapperClass: 'btn-block py-1 border dark:border-gray-700 border-gray-200 hover:opacity-50',
+            component: OrderTrackingLookupComponent,
+            onClick: (menuItem) => {
+                universe.transitionMenuItem('virtual', menuItem);
+            },
+        });
+
         // widgets for registry
         const KeyMetricsWidgetDefinition = {
             widgetId: 'fleet-ops-key-metrics-widget',
@@ -71,6 +87,13 @@ export default class FleetOpsEngine extends Engine {
             'fleet-ops:template:operations:orders:new',
             'fleet-ops:template:operations:orders:new:entities-input',
         ]);
+
+        universe.afterBoot(function (universe) {
+            universe.registerMenuItems('customer-portal:sidebar', [
+                universe._createMenuItem('Orders', 'customer-portal.portal.virtual', { icon: 'boxes-packing', component: CustomerOrdersComponent }),
+            ]);
+            universe.registerRenderableComponent('@fleetbase/customer-portal-engine', 'customer-portal:admin-settings', CustomerAdminSettingsComponent);
+        });
     };
 }
 

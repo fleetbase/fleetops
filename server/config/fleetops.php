@@ -22,7 +22,16 @@ return [
         'db' => env('DB_CONNECTION', 'mysql')
     ],
 
-     /*
+    /*
+    |--------------------------------------------------------------------------
+    | Facilitator Fee - This is a percentage fee the system admin takes when 
+    | facilitating any payments in the system.
+    | Example: if `10` then 10% fee will be taken on all payments.
+    |--------------------------------------------------------------------------
+    */
+    'facilitator_fee' => 10,
+
+    /*
     |--------------------------------------------------------------------------
     | OSRM
     |--------------------------------------------------------------------------

@@ -22,8 +22,19 @@ class UserFilterExpansion implements Expansion
     public static function doesntHaveDriver()
     {
         return function () {
-            /* @var \Fleetbase\Http\Filter\UserFilter $this */
+            /* @var \Fleetbase\Http\Filter\UserFilter|\Fleetbase\Http\Filter\Filter $this */
             $this->builder->whereDoesntHave('driver');
+        };
+    }
+
+    /**
+     * @return void
+     */
+    public static function doesntHaveContact()
+    {
+        return function () {
+            /* @var \Fleetbase\Http\Filter\UserFilter|\Fleetbase\Http\Filter\Filter $this */
+            $this->builder->whereDoesntHave('contact');
         };
     }
 }

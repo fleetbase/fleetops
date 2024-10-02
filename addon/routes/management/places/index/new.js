@@ -10,7 +10,7 @@ export default class ManagementPlacesIndexNewRoute extends Route {
     beforeModel() {
         if (this.abilities.cannot('fleet-ops create place')) {
             this.notifications.warning(this.intl.t('common.unauthorized-access'));
-            return this.hostRouter.transitionTo('console.fleet-ops.places.index');
+            return this.hostRouter.transitionTo('console.fleet-ops.management.places.index');
         }
     }
 }

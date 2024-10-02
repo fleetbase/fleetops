@@ -84,46 +84,68 @@
                     </div>
                 </div>
             </div>
-            <div class="flex justify-end w-1/4">
-                <Badge @status={{this.contact.public_id}} @type="info" @hideStatusDot={{true}} />
-            </div>
+            {{#if this.contact.public_id}}
+                <div class="flex justify-end w-1/4">
+                    <Badge @status={{this.contact.public_id}} @type="info" @hideStatusDot={{true}} />
+                </div>
+            {{/if}}
         </div>
     </Overlay::Header>
 
-    <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 pt-4">
+    <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 pt-4 space-y-4">
         {{#let (cannot this.savePermission) as |unauthorized|}}
-            <div class="grid grid-cols-1 text-xs dark:text-gray-100">
-                <InputGroup @name={{t "fleet-ops.common.name"}}>
-                    <Input @value={{this.contact.name}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} disabled={{unauthorized}} />
-                </InputGroup>
-                <InputGroup @name={{t "fleet-ops.common.title"}}>
-                    <Input @value={{this.contact.title}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.title"}} disabled={{unauthorized}} />
-                </InputGroup>
-                <InputGroup @name={{t "fleet-ops.common.internal-id"}}>
-                    <Input @value={{this.contact.internal_id}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.internal-id"}} disabled={{unauthorized}} />
-                </InputGroup>
-                <InputGroup @name={{t "fleet-ops.common.email"}}>
-                    <Input @value={{this.contact.email}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.email"}} disabled={{unauthorized}} />
-                </InputGroup>
-                <InputGroup @name={{t "fleet-ops.common.phone"}}>
-                    <PhoneInput @value={{this.contact.phone}} @onInput={{fn (mut this.contact.phone)}} class="form-input w-full" disabled={{unauthorized}} />
-                </InputGroup>
-                <InputGroup @name={{t "fleet-ops.common.type"}}>
-                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                        <PowerSelect
-                            @options={{this.contactTypeOptions}}
-                            @selected={{this.contact.type}}
-                            @onChange={{fn (mut this.contact.type)}}
-                            @placeholder="Select contact type"
+            <ContentPanel @title={{t "fleet-ops.component.contact-form-panel.contact-details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <div class="grid grid-cols-2 gap-4 text-xs dark:text-gray-100 no-input-group-padding">
+                    <InputGroup @name={{t "fleet-ops.common.name"}}>
+                        <Input @value={{this.contact.name}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} disabled={{unauthorized}} />
+                    </InputGroup>
+                    <InputGroup @name={{t "fleet-ops.common.title"}}>
+                        <Input @value={{this.contact.title}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.title"}} disabled={{unauthorized}} />
+                    </InputGroup>
+                    <InputGroup @name={{t "fleet-ops.common.email"}}>
+                        <Input @value={{this.contact.email}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.email"}} disabled={{unauthorized}} />
+                    </InputGroup>
+                    <InputGroup @name={{t "fleet-ops.common.phone"}}>
+                        <PhoneInput @value={{this.contact.phone}} @onInput={{fn (mut this.contact.phone)}} class="form-input w-full" disabled={{unauthorized}} />
+                    </InputGroup>
+                    <InputGroup @name={{t "fleet-ops.common.internal-id"}}>
+                        <Input @value={{this.contact.internal_id}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.internal-id"}} disabled={{unauthorized}} />
+                    </InputGroup>
+                    <InputGroup @wrapperClass="col-span-2">
+                        <div class="flex items-center justify-between">
+                            <label>
+                                {{t "fleet-ops.common.address"}}
+                            </label>
+                            <div class="mb-1.5 flex flex-row">
+                                <Button
+                                    @type="default"
+                                    @size="xs"
+                                    @icon="edit"
+                                    @text={{if this.contact.has_place (t "fleet-ops.component.contact-form-panel.edit") (t "fleet-ops.component.contact-form-panel.new-address")}}
+                                    @onClick={{this.editAddress}}
+                                    @disabled={{unauthorized}}
+                                />
+                            </div>
+                        </div>
+                        <ModelSelect
+                            @modelName="place"
+                            @selectedModel={{this.contact.place}}
+                            @placeholder={{t "fleet-ops.component.contact-form-panel.select-address"}}
                             @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{this.selectContactAddress}}
                             @disabled={{unauthorized}}
-                            as |type|
+                            as |model|
                         >
-                            {{smart-humanize type}}
-                        </PowerSelect>
-                    </div>
-                </InputGroup>
-            </div>
+                            <div class="flex items-center flex-row justify-between">
+                                <div class="truncate flex-1">{{n-a model.address}}</div>
+                                <Badge @hideStatusDot={{true}} @status="info">{{model.public_id}}</Badge>
+                            </div>
+                        </ModelSelect>
+                    </InputGroup>
+                </div>
+            </ContentPanel>
         {{/let}}
         <Spacer @height="300px" />
     </Overlay::Body>

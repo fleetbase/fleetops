@@ -10,7 +10,7 @@ export default class ManagementVehiclesIndexNewRoute extends Route {
     beforeModel() {
         if (this.abilities.cannot('fleet-ops create vehicle')) {
             this.notifications.warning(this.intl.t('common.unauthorized-access'));
-            return this.hostRouter.transitionTo('console.fleet-ops.vehicles.index');
+            return this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index');
         }
     }
 }

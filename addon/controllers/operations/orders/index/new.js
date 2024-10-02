@@ -631,7 +631,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             pickup: this._seriailizeModel(payload.pickup),
             dropoff: this._seriailizeModel(payload.dropoff),
             entitities: this._serializeArray(payload.entities),
-            waypoints: this._serializeArray(payload.waypoint),
+            waypoints: this._serializeArray(payload.waypoints),
         };
 
         return serialized;
@@ -1039,16 +1039,16 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
         if (isMultipleDropoffOrder) {
             if (pickup) {
-                this.addWaypoint({ place: pickup });
+                this.addWaypoint({ place: pickup, customer: this.order.customer });
 
                 if (dropoff) {
-                    this.addWaypoint({ place: dropoff });
+                    this.addWaypoint({ place: dropoff, customer: this.order.customer });
                 }
 
                 // clear pickup and dropoff
                 this.payload.setProperties({ pickup: null, dropoff: null });
             } else {
-                this.addWaypoint();
+                this.addWaypoint({ customer: this.order.customer });
             }
         } else {
             const pickup = get(this.waypoints, '0.place');
@@ -1361,6 +1361,10 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     }
 
     @action addWaypoint(properties = {}) {
+        if (this.order.customer) {
+            properties.customer = this.order.customer;
+        }
+
         const waypoint = this.store.createRecord('waypoint', properties);
         this.waypoints.pushObject(waypoint);
         this.updatePayloadCoordinates();
@@ -1431,7 +1435,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
     @action addEntity(importId = null) {
         const entity = this.store.createRecord('entity', {
-            _import_id: importId,
+            _import_id: typeof importId === 'string' ? importId : null,
         });
 
         this.entities.pushObject(entity);

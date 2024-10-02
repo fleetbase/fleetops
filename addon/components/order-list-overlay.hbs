@@ -1,4 +1,14 @@
-<Overlay class="orders-panel" @position="right" @noBackdrop={{@noBackdrop}} @fullHeight={{@fullHeight}} @outView={{@outView}} @width={{@width}}>
+<Overlay
+    class="orders-panel"
+    @position="right"
+    @onToggle={{this.onToggle}}
+    @onLoad={{this.onLoad}}
+    @isOpen={{@isOpen}}
+    @noBackdrop={{@noBackdrop}}
+    @fullHeight={{@fullHeight}}
+    @outView={{@outView}}
+    @width={{@width}}
+>
     <Overlay::Header @hideLeftSection={{true}} @onPressCancel={{@onPressCancel}} @actionsWrapperClass="h-full" @cancelButtonHeight="1.5rem" class="pl-0i" {{set-height "2.75rem"}}>
         <div class="h-full flex-1 pl-11 relative">
             <div class="absolute h-full left-0 top-0 bottom-0 pl-4 flex items-center justify-center">
@@ -28,13 +38,13 @@
                         </div>
                         <div class="next-dd-menu-seperator"></div>
                         <div class="px-1">
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.onDropdownAction dd "onPressAssignOrders")}}>{{t
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.onAction "onPressAssignOrders")}}>{{t
                                     "fleet-ops.component.order-list-overlay.assign"
                                 }}</a>
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.onDropdownAction dd "onPressCancelOrders" this.selectedOrders)}}>{{t
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.onAction "onPressCancelOrders" this.selectedOrders)}}>{{t
                                     "fleet-ops.component.order-list-overlay.cancel"
                                 }}</a>
-                            <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (fn this.onDropdownAction dd "onPressDeleteOrders" this.selectedOrders)}}>{{t
+                            <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (dropdown-fn dd this.onAction "onPressDeleteOrders" this.selectedOrders)}}>{{t
                                     "fleet-ops.component.order-list-overlay.delete"
                                 }}</a>
                         </div>
@@ -57,10 +67,10 @@
                     </div>
                     <div class="next-dd-menu-seperator"></div>
                     <div class="px-1">
-                        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.onDropdownAction dd "onPressCreateOrder")}}>{{t
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.onAction "onPressCreateOrder")}}>{{t
                                 "fleet-ops.component.order-list-overlay.create-order"
                             }}</a>
-                        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.onDropdownAction dd "onPressCreateFleet")}}>{{t
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.onAction "onPressCreateFleet")}}>{{t
                                 "fleet-ops.component.order-list-overlay.create-fleet"
                             }}</a>
                     </div>

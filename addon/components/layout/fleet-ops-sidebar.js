@@ -5,11 +5,6 @@ import { action } from '@ember/object';
 import FleetListingComponent from './fleet-ops-sidebar/fleet-listing';
 import DriverListingComponent from './fleet-ops-sidebar/driver-listing';
 
-/**
- * LayoutFleetOpsSidebarComponent
- *
- * This component manages the sidebar layout for Fleet Ops, including visibility and actions.
- */
 export default class LayoutFleetOpsSidebarComponent extends Component {
     @service universe;
     @service contextPanel;
@@ -35,12 +30,10 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         this.universeSettingsMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'settings');
     }
 
-    /**
-     * Initialize menu panels with visibility settings.
-     */
     createMenuPanels() {
         const operationsItems = [
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.dashboard',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.dashboard'),
                 icon: 'home',
                 route: 'operations.orders',
@@ -48,6 +41,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see order'),
             },
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.service-rates',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.service-rates'),
                 icon: 'file-invoice-dollar',
                 route: 'operations.service-rates',
@@ -55,6 +49,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see service-rate'),
             },
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.scheduler',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.scheduler'),
                 icon: 'calendar-day',
                 route: 'operations.scheduler',
@@ -62,6 +57,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see order'),
             },
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.order-config',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.order-config'),
                 icon: 'diagram-project',
                 route: 'operations.order-config',
@@ -72,6 +68,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
         const resourcesItems = [
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.drivers',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.drivers'),
                 icon: 'id-card',
                 route: 'management.drivers',
@@ -81,6 +78,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see driver'),
             },
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.vehicles',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.vehicles'),
                 icon: 'truck',
                 route: 'management.vehicles',
@@ -88,6 +86,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see vehicle'),
             },
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.fleets',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.fleets'),
                 icon: 'user-group',
                 route: 'management.fleets',
@@ -97,6 +96,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see fleet'),
             },
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.vendors',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.vendors'),
                 icon: 'warehouse',
                 route: 'management.vendors',
@@ -104,6 +104,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see vendor'),
             },
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.contacts',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.contacts'),
                 icon: 'address-book',
                 route: 'management.contacts',
@@ -111,6 +112,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see contact'),
             },
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.places',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.places'),
                 icon: 'location-dot',
                 route: 'management.places',
@@ -118,6 +120,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see place'),
             },
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.fuel-reports',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.fuel-reports'),
                 icon: 'gas-pump',
                 route: 'management.fuel-reports',
@@ -125,6 +128,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see fuel-report'),
             },
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.issues',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.issues'),
                 icon: 'triangle-exclamation',
                 route: 'management.issues',
@@ -135,25 +139,35 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
         const settingsItems = [
             {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.navigator-app',
                 title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.navigator-app'),
                 icon: 'location-arrow',
                 route: 'settings.navigator-app',
                 permission: 'fleet-ops view navigator-settings',
                 visible: this.abilities.can('fleet-ops see navigator-settings'),
             },
+            {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.payments',
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.payments'),
+                icon: 'cash-register',
+                route: 'settings.payments',
+                permission: 'fleet-ops view payments',
+                visible: this.abilities.can('fleet-ops see payments'),
+            },
         ];
 
-        const createPanel = (title, routePrefix, items = []) => ({
-            title,
+        const createPanel = (intl, routePrefix, items = []) => ({
+            intl,
+            title: this.intl.t(intl),
             routePrefix,
             open: true,
             items,
         });
 
         this.menuPanels = this.removeEmptyMenuPanels([
-            createPanel(this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.operations'), 'operations', operationsItems),
-            createPanel(this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.resources'), 'management', resourcesItems),
-            createPanel(this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.settings'), 'settings', settingsItems),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.operations', 'operations', operationsItems),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.resources', 'management', resourcesItems),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.settings', 'settings', settingsItems),
         ]);
     }
 

@@ -32,7 +32,12 @@
                 <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.driver-assigned"}}</span>
                 <div class="ml-1">
                     {{#let (cannot "fleet-ops assign-driver-for order") as |unauthorized|}}
-                        <a href="javascript:;" class="text-blue-400 text-xs hover:opacity-75 {{if unauthorized 'opacity-50 disabled'}}" {{on "click" this.startAssignDriver}} disabled={{unauthorized}}>
+                        <a
+                            href="javascript:;"
+                            class="text-blue-400 text-xs hover:opacity-75 {{if unauthorized 'opacity-50 disabled'}}"
+                            {{on "click" this.startAssignDriver}}
+                            disabled={{unauthorized}}
+                        >
                             <FaIcon @icon="edit" @size="xs" />
                         </a>
                         {{#if unauthorized}}
@@ -84,14 +89,14 @@
                 <a
                     href="javascript:;"
                     disabled={{not @order.vehicle_assigned}}
-                    class={{unless @order.vehicle_assigned_uuid "dark:text-gray-600 text-gray-400"}}
+                    class={{unless @order.vehicle_assigned "dark:text-gray-600 text-gray-400"}}
                     {{on "click" (fn this.onClickVehicle @order.vehicle_assigned)}}
                 >{{n-a @order.vehicle_assigned.display_name (t "fleet-ops.component.order.schedule-card.no-vehicle")}}</a>
             {{else if @order.driver_assigned.vehicle}}
                 <a
                     href="javascript:;"
                     disabled={{not @order.driver_assigned.vehicle}}
-                    class={{unless @order.driver_assigned.vehicle_uuid "dark:text-gray-600 text-gray-400"}}
+                    class={{unless @order.driver_assigned.vehicle "dark:text-gray-600 text-gray-400"}}
                     {{on "click" (fn this.onClickVehicle @order.driver_assigned.vehicle)}}
                 >{{n-a @order.driver_assigned.vehicle_name (t "fleet-ops.component.order.schedule-card.no-vehicle")}}</a>
             {{else}}

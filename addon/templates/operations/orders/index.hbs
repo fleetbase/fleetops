@@ -8,7 +8,7 @@
             <div class="mr-1.5">{{t "fleet-ops.operations.orders.index.table"}}</div>
             <Badge
                 class="flex items-center justify-center -mr-4"
-                @spanClass="rounded-full items-center justify-center h-4 w-4"
+                @spanClass="rounded-full items-center justify-center h-5 w-7"
                 @hideStatusDot={{true}}
                 @status="info"
             >{{@model.meta.total}}</Badge>
@@ -30,10 +30,11 @@
             @onPressLiveMapDrawerToggle={{this.onPressLiveMapDrawerToggle}}
         />
         <OrderListOverlay
+            @isOpen={{false}}
             @noBackdrop={{true}}
             @fullHeight={{true}}
-            @outView={{not this.isOrdersPanelVisible}}
             @width={{if (media "isMobile") "100%" "338px"}}
+            @onLoad={{this.setOrderListOverlayContext}}
             @onPressCancel={{this.hideOrdersPanel}}
             @onPressCreateOrder={{this.createOrder}}
             @onPressViewOrder={{this.viewOrder}}
@@ -86,7 +87,15 @@
                 </div>
             </DropdownButton>
         {{/if}}
-        <Button @type="primary" @icon="plus" @iconPrefix="fas" @text={{t "fleet-ops.common.new"}} @wrapperClass="mr-2" @onClick={{fn (transition-to "operations.orders.index.new")}} @permission="fleet-ops create order" />
+        <Button
+            @type="primary"
+            @icon="plus"
+            @iconPrefix="fas"
+            @text={{t "fleet-ops.common.new"}}
+            @wrapperClass="mr-2"
+            @onClick={{fn (transition-to "operations.orders.index.new")}}
+            @permission="fleet-ops create order"
+        />
         <Button @icon="long-arrow-up" @iconClass="rotate-icon-45" @text={{t "fleet-ops.common.export"}} @onClick={{this.exportOrders}} @permission="fleet-ops export order" />
     </Layout::Section::Header>
     <Layout::Section::Body>

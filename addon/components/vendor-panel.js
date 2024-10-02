@@ -4,50 +4,18 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
 import VendorPanelDetailComponent from './vendor-panel/details';
+// import VendorPanelPersonnelComponent from './vendor-panel/personnel';
+import VendorPanelDriversComponent from './vendor-panel/drivers';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
+import findActiveTab from '../utils/find-active-tab';
 
 export default class VendorPanelComponent extends Component {
-    /**
-     * Service for fetching data.
-     *
-     * @type {Service}
-     */
     @service fetch;
-
-    /**
-     * Service for managing modals.
-     *
-     * @type {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Universe service for managing global data and settings.
-     *
-     * @type {Service}
-     */
     @service universe;
-
-    /**
-     * Ember data store service.
-     *
-     * @type {Service}
-     */
     @service store;
-
-    /**
-     * Service for managing routing within the host app.
-     *
-     * @type {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Service for managing the context panel.
-     *
-     * @type {Service}
-     */
     @service contextPanel;
 
     /**
@@ -73,8 +41,17 @@ export default class VendorPanelComponent extends Component {
      */
     get tabs() {
         const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:vendor-panel');
-        // this.universe._createMenuItem('Tracking', null, { icon: 'satellite-dish', component: VendorPanelTrackingComponent }),
-        const defaultTabs = [this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: VendorPanelDetailComponent })];
+        const defaultTabs = [
+            this.universe._createMenuItem('Details', null, {
+                icon: 'circle-info',
+                component: VendorPanelDetailComponent,
+            }),
+            this.universe._createMenuItem('Drivers', null, {
+                icon: 'id-card',
+                component: VendorPanelDriversComponent,
+                componentParams: { wrapperClass: 'px-4 pt-6', selectable: true },
+            }),
+        ];
 
         if (isArray(registeredTabs)) {
             return [...defaultTabs, ...registeredTabs];
@@ -89,7 +66,7 @@ export default class VendorPanelComponent extends Component {
     constructor() {
         super(...arguments);
         this.vendor = this.args.vendor;
-        this.tab = this.getTabUsingSlug(this.args.tab);
+        this.tab = findActiveTab(this.tabs, this.args.tab);
         applyContextComponentArguments(this);
     }
 
@@ -112,7 +89,7 @@ export default class VendorPanelComponent extends Component {
      * @action
      */
     @action onTabChanged(tab) {
-        this.tab = this.getTabUsingSlug(tab);
+        this.tab = findActiveTab(this.tabs, tab);
         contextComponentCallback(this, 'onTabChanged', tab);
     }
 
@@ -143,19 +120,5 @@ export default class VendorPanelComponent extends Component {
      */
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.vendor);
-    }
-
-    /**
-     * Finds and returns a tab based on its slug.
-     *
-     * @param {String} tabSlug - The slug of the tab.
-     * @returns {Object|null} The found tab or null.
-     */
-    getTabUsingSlug(tabSlug) {
-        if (tabSlug) {
-            return this.tabs.find(({ slug }) => slug === tabSlug);
-        }
-
-        return this.tabs[0];
     }
 }

@@ -26,6 +26,16 @@ class TrackingStatusFilter extends Filter
         });
     }
 
+    public function trackingNumberUuid(string $trackingNumber)
+    {
+        $this->builder->whereHas('trackingNumber', function ($query) use ($trackingNumber) {
+            $query->where(function ($query) use ($trackingNumber) {
+                $query->where('public_id', $trackingNumber);
+                $query->orWhere('uuid', $trackingNumber);
+            });
+        });
+    }
+
     public function order(string $order)
     {
         $this->builder->whereHas(

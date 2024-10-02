@@ -23,18 +23,20 @@ class FleetOpsServiceProvider extends CoreServiceProvider
      * @var array
      */
     public $observers = [
-        \Fleetbase\FleetOps\Models\Order::class          => \Fleetbase\FleetOps\Observers\OrderObserver::class,
-        \Fleetbase\FleetOps\Models\Payload::class        => \Fleetbase\FleetOps\Observers\PayloadObserver::class,
-        \Fleetbase\FleetOps\Models\Place::class          => \Fleetbase\FleetOps\Observers\PlaceObserver::class,
-        \Fleetbase\FleetOps\Models\ServiceRate::class    => \Fleetbase\FleetOps\Observers\ServiceRateObserver::class,
-        \Fleetbase\FleetOps\Models\PurchaseRate::class   => \Fleetbase\FleetOps\Observers\PurchaseRateObserver::class,
-        \Fleetbase\FleetOps\Models\ServiceArea::class    => \Fleetbase\FleetOps\Observers\ServiceAreaObserver::class,
-        \Fleetbase\FleetOps\Models\TrackingNumber::class => \Fleetbase\FleetOps\Observers\TrackingNumberObserver::class,
-        \Fleetbase\FleetOps\Models\Driver::class         => \Fleetbase\FleetOps\Observers\DriverObserver::class,
-        \Fleetbase\FleetOps\Models\Vehicle::class        => \Fleetbase\FleetOps\Observers\VehicleObserver::class,
-        \Fleetbase\FleetOps\Models\Fleet::class          => \Fleetbase\FleetOps\Observers\FleetObserver::class,
-        \Fleetbase\Models\User::class                    => \Fleetbase\FleetOps\Observers\UserObserver::class,
-        \Fleetbase\Models\Company::class                 => \Fleetbase\FleetOps\Observers\CompanyObserver::class,
+        \Fleetbase\FleetOps\Models\Order::class                => \Fleetbase\FleetOps\Observers\OrderObserver::class,
+        \Fleetbase\FleetOps\Models\Payload::class              => \Fleetbase\FleetOps\Observers\PayloadObserver::class,
+        \Fleetbase\FleetOps\Models\Place::class                => \Fleetbase\FleetOps\Observers\PlaceObserver::class,
+        \Fleetbase\FleetOps\Models\ServiceRate::class          => \Fleetbase\FleetOps\Observers\ServiceRateObserver::class,
+        \Fleetbase\FleetOps\Models\PurchaseRate::class         => \Fleetbase\FleetOps\Observers\PurchaseRateObserver::class,
+        \Fleetbase\FleetOps\Models\ServiceArea::class          => \Fleetbase\FleetOps\Observers\ServiceAreaObserver::class,
+        \Fleetbase\FleetOps\Models\TrackingNumber::class       => \Fleetbase\FleetOps\Observers\TrackingNumberObserver::class,
+        \Fleetbase\FleetOps\Models\Driver::class               => \Fleetbase\FleetOps\Observers\DriverObserver::class,
+        \Fleetbase\FleetOps\Models\Vehicle::class              => \Fleetbase\FleetOps\Observers\VehicleObserver::class,
+        \Fleetbase\FleetOps\Models\Fleet::class                => \Fleetbase\FleetOps\Observers\FleetObserver::class,
+        \Fleetbase\FleetOps\Models\Contact::class              => \Fleetbase\FleetOps\Observers\ContactObserver::class,
+        \Fleetbase\Models\User::class                          => \Fleetbase\FleetOps\Observers\UserObserver::class,
+        \Fleetbase\Models\Company::class                       => \Fleetbase\FleetOps\Observers\CompanyObserver::class,
+        \Fleetbase\Models\CompanyUser::class                   => \Fleetbase\FleetOps\Observers\CompanyUserObserver::class,
     ];
 
     /**
@@ -50,6 +52,9 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\FixLegacyOrderConfigs::class,
         \Fleetbase\FleetOps\Console\Commands\FixInvalidPolymorphicRelationTypeNamespaces::class,
         \Fleetbase\FleetOps\Console\Commands\AssignDriverRoles::class,
+        \Fleetbase\FleetOps\Console\Commands\AssignCustomerRoles::class,
+        \Fleetbase\FleetOps\Console\Commands\SimulateOrderRouteNavigation::class,
+        \Fleetbase\FleetOps\Console\Commands\DebugOrderTracker::class,
     ];
 
     /**
@@ -98,7 +103,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../../config/dompdf.php', 'dompdf');
 
         // Register the GeometryEngine for GEOSEngine
-        if (Utils::classExists(GeometryEngineRegistry::class)) {
+        if (extension_loaded('geos')) {
             GeometryEngineRegistry::set(new GEOSEngine());
         }
     }

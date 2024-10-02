@@ -6,7 +6,7 @@
                     <div class="index-count">1</div>
                 </div>
                 <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
-                    <DisplayPlace @place={{@order.payload.firstWaypoint}} />
+                    <DisplayPlace @place={{@order.payload.firstWaypoint}} @eta={{get @eta @order.payload.firstWaypoint.id}} />
                 </div>
             </div>
         {{/if}}
@@ -28,7 +28,7 @@
                             <div class="index-count">{{add index 2}}</div>
                         </div>
                         <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
-                            <DisplayPlace @place={{waypoint}} />
+                            <DisplayPlace @place={{waypoint}} @eta={{get @eta waypoint.id}} />
                         </div>
                     </div>
                 {{/each}}
@@ -41,7 +41,7 @@
                     <div class="index-count">{{add @order.payload.middleWaypoints.length 2}}</div>
                 </div>
                 <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
-                    <DisplayPlace @place={{@order.payload.lastWaypoint}} />
+                    <DisplayPlace @place={{@order.payload.lastWaypoint}} @eta={{get @eta @order.payload.lastWaypoint.id}} />
                 </div>
             </div>
         {{/if}}
@@ -52,7 +52,7 @@
                     <div class="index-count">1</div>
                 </div>
                 <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
-                    <DisplayPlace @place={{@order.payload.pickup}} />
+                    <DisplayPlace @place={{@order.payload.pickup}} @eta={{get @eta @order.payload.pickup.id}} />
                 </div>
             </div>
         {{/if}}
@@ -62,7 +62,7 @@
                     <div class="index-count">2</div>
                 </div>
                 <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
-                    <DisplayPlace @place={{@order.payload.dropoff}} />
+                    <DisplayPlace @place={{@order.payload.dropoff}} @eta={{get @eta @order.payload.dropoff.id}} />
                 </div>
             </div>
         {{/if}}

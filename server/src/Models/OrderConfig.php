@@ -464,4 +464,12 @@ class OrderConfig extends Model
 
         return null;
     }
+
+    /**
+     * Get the default order config.
+     */
+    public static function default(?Company $company = null): self
+    {
+        return static::where(['namespace' => 'system:order-config:transport', 'company_uuid' => $company ? $company->uuid : session('company')])->first();
+    }
 }

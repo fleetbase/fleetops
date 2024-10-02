@@ -11,15 +11,9 @@ export default class OperationsOrdersIndexViewRoute extends Route {
     @service abilities;
     @service intl;
 
-    @action willTransition(transition) {
-        const shouldReset = typeof transition.to.name === 'string' && !transition.to.name.includes('operations.orders');
-
+    @action willTransition() {
         if (this.controller) {
-            this.controller.removeRoutingControlPreview();
-
-            if (shouldReset) {
-                this.controller.resetView();
-            }
+            this.controller.resetView();
         }
     }
 

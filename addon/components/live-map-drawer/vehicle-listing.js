@@ -70,7 +70,7 @@ export default class LiveMapDrawerVehicleListingComponent extends Component {
         {
             label: this.intl.t('fleet-ops.common.vehicle'),
             valuePath: 'display_name',
-            photoPath: 'avatar_url',
+            photoPath: 'photo_url',
             width: '100px',
             cellComponent: 'table/cell/vehicle-name',
             onClick: this.focus,

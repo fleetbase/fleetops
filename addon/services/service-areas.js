@@ -10,40 +10,12 @@ import MultiPolygon from '@fleetbase/fleetops-data/utils/geojson/multi-polygon';
 import Polygon from '@fleetbase/fleetops-data/utils/geojson/polygon';
 import FeatureCollection from '@fleetbase/fleetops-data/utils/geojson/feature-collection';
 
+const L = window.L;
 export default class ServiceAreasService extends Service {
-    /**
-     * Inject the `store` service.
-     *
-     * @memberof ServiceAreasService
-     */
     @service store;
-
-    /**
-     * Inject the `modalsManager` service.
-     *
-     * @memberof ServiceAreasService
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `notifications` service.
-     *
-     * @memberof ServiceAreasService
-     */
     @service notifications;
-
-    /**
-     * Inject the `crud` service.
-     *
-     * @memberof ServiceAreasService
-     */
     @service crud;
-
-    /**
-     * Inject the `appCache` service.
-     *
-     * @memberof ServiceAreasService
-     */
     @service appCache;
 
     /**
@@ -188,6 +160,39 @@ export default class ServiceAreasService extends Service {
     }
 
     /**
+     * Converts a Leaflet circle to a polygon that approximates the circle's shape.
+     * @param {L.Circle} circle - The Leaflet circle layer to convert.
+     * @param {number} [numPoints=64] - The number of points used to approximate the circle.
+     * @param {Object} [options={}] - Optional parameters for the polygon layer.
+     * @returns {L.Polygon} - The resulting Leaflet polygon layer.
+     */
+    circleToPolygon(circle, numPoints = 64, options = {}) {
+        // Get circle details
+        const center = circle.getLatLng();
+        const radius = circle.getRadius();
+
+        // Convert radius from meters to degrees (approximation)
+        const radiusInDegrees = radius / 111320;
+
+        // Generate points around the circle's circumference
+        const latLngs = [];
+        for (let i = 0; i < numPoints; i++) {
+            const angle = (i / numPoints) * 2 * Math.PI;
+            const latOffset = radiusInDegrees * Math.sin(angle);
+            const lngOffset = radiusInDegrees * Math.cos(angle);
+            latLngs.push([center.lat + latOffset, center.lng + lngOffset]);
+        }
+
+        // Close the polygon by repeating the first point at the end
+        latLngs.push(latLngs[0]);
+
+        // Create a polygon from the generated points
+        const polygon = L.polygon(latLngs, options);
+
+        return polygon;
+    }
+
+    /**
      * Clears the layer creation context.
      *
      * @function
@@ -287,9 +292,14 @@ export default class ServiceAreasService extends Service {
             return this.saveZone(...arguments);
         }
 
-        const { _map } = layer;
-        const border = this.layerToTerraformerMultiPolygon(layer);
+        const drawFeatureGroupLayer = layer;
+        const map = this.leafletMap;
+        layer = drawFeatureGroupLayer.lastCreatedLayer;
+        if (event.layerType === 'circle') {
+            layer = this.circleToPolygon(drawFeatureGroupLayer.lastCreatedLayer);
+        }
 
+        const border = this.layerToTerraformerMultiPolygon(layer);
         if (!border) {
             return;
         }
@@ -326,7 +336,9 @@ export default class ServiceAreasService extends Service {
                     this.notifications.success(`New ${selectedLayerType} '${record.name}' saved.`);
 
                     // remove drawn layer
-                    _map?.removeLayer(layer);
+                    map.removeLayer(drawFeatureGroupLayer);
+                    // Hide draw controls on finish
+                    this.triggerLiveMapFn('hideDrawControls');
 
                     // if service area has been created, add to the active service areas
                     if (selectedLayerType === 'Service Area') {
@@ -346,7 +358,9 @@ export default class ServiceAreasService extends Service {
                 });
             },
             decline: (modal) => {
-                _map?.removeLayer(layer);
+                map.removeLayer(drawFeatureGroupLayer);
+                // Hide draw controls on finish
+                this.triggerLiveMapFn('hideDrawControls');
                 modal.done();
             },
             ...options,
@@ -361,9 +375,14 @@ export default class ServiceAreasService extends Service {
      * @param {Object} layer - The layer to be saved as a service area.
      */
     @action saveServiceArea(event, layer) {
-        const { _map } = layer;
-        const border = this.layerToTerraformerMultiPolygon(layer);
+        const drawFeatureGroupLayer = layer;
+        const map = this.leafletMap;
+        layer = drawFeatureGroupLayer.lastCreatedLayer;
+        if (event.layerType === 'circle') {
+            layer = this.circleToPolygon(drawFeatureGroupLayer.lastCreatedLayer);
+        }
 
+        const border = this.layerToTerraformerMultiPolygon(layer);
         if (!border) {
             return;
         }
@@ -377,7 +396,9 @@ export default class ServiceAreasService extends Service {
             title: 'Save Service Area',
             acceptButtonText: 'Confirm & Save',
             onFinish: () => {
-                _map?.removeLayer(layer);
+                map.removeLayer(drawFeatureGroupLayer);
+                // Hide draw controls on finish
+                this.triggerLiveMapFn('hideDrawControls');
             },
         });
     }
@@ -412,7 +433,7 @@ export default class ServiceAreasService extends Service {
             },
             decline: (modal) => {
                 this.clearLayerCreationContext();
-                this.triggerLiveMapFn('hideDrawControls', { text: true });
+                this.triggerLiveMapFn('hideDrawControls');
 
                 if (serviceArea.isNew) {
                     serviceArea.destroyRecord();
@@ -468,10 +489,15 @@ export default class ServiceAreasService extends Service {
      * @returns {Promise} A promise that resolves when the zone is saved.
      */
     @action saveZone(event, layer) {
-        const { _map } = layer;
+        const drawFeatureGroupLayer = layer;
+        const map = this.leafletMap;
+        layer = drawFeatureGroupLayer.lastCreatedLayer;
+        if (event.layerType === 'circle') {
+            layer = this.circleToPolygon(drawFeatureGroupLayer.lastCreatedLayer);
+        }
+
         const border = this.layerToTerraformerPolygon(layer);
         const serviceArea = this.getZoneServiceAreaContext();
-
         const zone = this.store.createRecord('zone', {
             service_area_uuid: serviceArea.id,
             serviceArea,
@@ -482,7 +508,9 @@ export default class ServiceAreasService extends Service {
             title: 'Save Zone',
             acceptButtonText: 'Confirm & Save',
             onFinish: () => {
-                _map?.removeLayer(layer);
+                map.removeLayer(drawFeatureGroupLayer);
+                // Hide draw controls on finish
+                this.triggerLiveMapFn('hideDrawControls');
             },
         });
     }

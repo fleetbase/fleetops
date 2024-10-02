@@ -23,34 +23,14 @@ module.exports = buildEngine({
         enabled: true,
     },
 
-    treeForPublic: function () {
-        const publicTree = this._super.treeForPublic.apply(this, arguments);
-        const leafletPath = path.dirname(require.resolve('leaflet'));
-        const leafletImagesPath = path.join(leafletPath, 'images');
+    treeForLeaflet: function () {
         const alwaysExclude = ['LICENSE', 'package.json', 'example.html'];
         const leafletAddons = [
-            { package: 'leaflet', include: ['leaflet-src.js'], exclude: [...alwaysExclude], path: ['dist'] },
             { package: 'leaflet-contextmenu', include: undefined, exclude: [...alwaysExclude], path: ['dist'] },
             { package: 'leaflet-draw', include: undefined, exclude: [...alwaysExclude], path: ['dist'] },
-            { package: 'leaflet-rotatedmarker', include: undefined, exclude: [...alwaysExclude], path: [] },
-            {
-                package: 'leaflet-drift-marker',
-                include: ['index.js', 'index.js.map'],
-                exclude: [...alwaysExclude],
-                path: ['lib'],
-                getDestinationPath: (relativePath) => {
-                    if (relativePath === 'index.js') {
-                        return 'leaflet-drift-marker.js';
-                    }
-                    if (relativePath === 'index.js.map') {
-                        return 'leaflet-drift-marker.js.map';
-                    }
-                    return relativePath;
-                },
-            },
         ];
-        const trees = [];
 
+        const trees = [];
         for (let i = 0; i < leafletAddons.length; i++) {
             const leafletAdddon = leafletAddons[i];
             const leafletAddonDist = path.join(this.pathBase(leafletAdddon.package), ...leafletAdddon.path);
@@ -65,7 +45,12 @@ module.exports = buildEngine({
             );
         }
 
-        // jointjs
+        return trees;
+    },
+
+    treeForJointJs: function () {
+        const trees = [];
+
         const jointJsPath = path.join(this.pathBase('@joint/core'), 'dist');
         trees.push(
             new Funnel(jointJsPath, {
@@ -75,7 +60,6 @@ module.exports = buildEngine({
             })
         );
 
-        // jointjs directed graph
         const jointJsDirectedGraphPath = path.join(this.pathBase('@joint/layout-directed-graph'), 'dist');
         trees.push(
             new Funnel(jointJsDirectedGraphPath, {
@@ -85,21 +69,28 @@ module.exports = buildEngine({
             })
         );
 
-        trees.push(
-            new Funnel(leafletImagesPath, {
-                srcDir: '/',
-                destDir: '/leaflet-images',
-                allowEmpty: true,
-            })
-        );
-        trees.push(
+        return trees;
+    },
+
+    mergeWithPublicTree: function (publicTree) {
+        const leafletTree = this.treeForLeaflet();
+        const jointJsTree = this.treeForJointJs();
+        const assetsTree = [
             new Funnel(path.join(__dirname, 'assets'), {
                 destDir: '/',
-            })
-        );
+            }),
+            ...leafletTree,
+            ...jointJsTree,
+        ];
 
         // Merge the addon tree with the existing tree
-        return publicTree ? new MergeTrees([publicTree, ...trees], { overwrite: true }) : new MergeTrees([...trees], { overwrite: true });
+        return publicTree ? new MergeTrees([publicTree, ...assetsTree], { overwrite: true }) : new MergeTrees([...assetsTree], { overwrite: true });
+    },
+
+    treeForPublic: function () {
+        const publicTree = this._super.treeForPublic.apply(this, arguments);
+
+        return this.mergeWithPublicTree(publicTree);
     },
 
     pathBase(packageName) {

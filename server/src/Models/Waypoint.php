@@ -10,6 +10,8 @@ use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 class Waypoint extends Model
@@ -94,7 +96,7 @@ class Waypoint extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * @return HasMany
      */
     public function entities()
     {
@@ -117,50 +119,27 @@ class Waypoint extends Model
         ])->render();
     }
 
-    /**
-     * Place assosciated to order.
-     *
-     * @var Model
-     */
-    public function place()
+    public function place(): BelongsTo
     {
         return $this->belongsTo(Place::class);
     }
 
-    /**
-     * Tracking Number assosciated to waypoint.
-     *
-     * @var Model
-     */
-    public function trackingNumber()
+    public function trackingNumber(): BelongsTo
     {
         return $this->belongsTo(TrackingNumber::class);
     }
 
-    /**
-     * The proofs for this order.
-     */
-    public function proofs()
+    public function proofs(): HasMany
     {
         return $this->hasMany(Proof::class, 'subject_uuid');
     }
 
-    /**
-     * Payload assosciated to waypoint.
-     *
-     * @var Model
-     */
-    public function payload()
+    public function payload(): BelongsTo
     {
         return $this->belongsTo(Payload::class);
     }
 
-    /**
-     * The company who manages this waypoint.
-     *
-     * @var Model
-     */
-    public function company()
+    public function company(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\Company::class);
     }

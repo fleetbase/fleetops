@@ -11,6 +11,10 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -135,50 +139,47 @@ class Vendor extends Model
      */
     protected $hidden = ['place'];
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function place()
+    public function place(): BelongsTo
     {
         return $this->belongsTo(Place::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function connectCompany()
+    public function connectCompany(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\Company::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function company()
+    public function company(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\Company::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function logo()
+    public function logo(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\File::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function facilitatorOrders()
+    public function places(): HasMany
+    {
+        return $this->hasMany(Place::class, 'owner_uuid', 'uuid');
+    }
+
+    public function vendorPersonnel(): HasMany
+    {
+        return $this->hasMany(VendorPersonnel::class, 'vendor_uuid', 'uuid');
+    }
+
+    public function personnels(): HasManyThrough
+    {
+        return $this->hasManyThrough(Contact::class, VendorPersonnel::class, 'vendor_uuid', 'uuid', 'uuid', 'contact_uuid');
+    }
+
+    public function facilitatorOrders(): HasMany
     {
         return $this->hasMany(Order::class, 'facilitator_uuid', 'uuid');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function customerOrders()
+    public function customerOrders(): HasMany|Builder
     {
         return $this->hasMany(Order::class, 'customer_uuid')->whereNull('deleted_at')->withoutGlobalScopes();
     }
@@ -243,6 +244,9 @@ class Vendor extends Model
         $this->attributes['status'] = $status ?? 'active';
     }
 
+    /**
+     * Create a vendor from an import row.
+     */
     public static function createFromImport(array $row, bool $saveInstance = false): Vendor
     {
         // Filter array for null key values

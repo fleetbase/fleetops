@@ -4,31 +4,31 @@
             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                 <div class="p-1">
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newCustomer)}} disabled={{cannot "fleet-ops create customer"}}>
-                        <div class="w-6">
+                        <div class="w-7 flex-grow-0 flex-shrink-0">
                             <FaIcon @icon="user-plus" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.create-new-customer"}}</span>
                     </a>
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.newFacilitator)}} disabled={{cannot "fleet-ops create facilitator"}}>
-                        <div class="w-6">
+                        <div class="w-7 flex-grow-0 flex-shrink-0">
                             <FaIcon @icon="truck" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.create-new-facilitator"}}</span>
                     </a>
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.createPlace)}} disabled={{cannot "fleet-ops create place"}}>
-                        <div class="w-6">
+                        <div class="w-7 flex-grow-0 flex-shrink-0">
                             <FaIcon @icon="map-pin" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.create-new-place"}}</span>
                     </a>
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.addEntity)}} disabled={{cannot "fleet-ops create entity"}}>
-                        <div class="w-6">
+                        <div class="w-7 flex-grow-0 flex-shrink-0">
                             <FaIcon @icon="box" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.add-order"}}</span>
                     </a>
                     <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.editMetaData)}}>
-                        <div class="w-6">
+                        <div class="w-7 flex-grow-0 flex-shrink-0">
                             <FaIcon @icon="table" />
                         </div>
                         <span>{{t "fleet-ops.operations.orders.index.new.edit-order"}}</span>
@@ -90,7 +90,7 @@
                         as |model|
                     >
                         <div class="flex items-center">
-                            <div class="w-7">
+                            <div class="w-7 flex-grow-0 flex-shrink-0">
                                 <FaIcon @icon={{if model.isVendor "warehouse" "user"}} />
                             </div>
                             <span class="uppercase">
@@ -114,7 +114,7 @@
                         as |model|
                     >
                         <div class="flex items-center">
-                            <div class="w-7">
+                            <div class="w-7 flex-grow-0 flex-shrink-0">
                                 {{#if model.isIntegratedVendor}}
                                     <Image src={{model.photo_url}} alt={{model.name}} class="w-4 h-4" width="16" height="16" />
                                 {{else}}
@@ -162,7 +162,7 @@
                         as |model|
                     >
                         <div class="flex items-center">
-                            <div class="w-6">
+                            <div class="w-7 flex-grow-0 flex-shrink-0">
                                 <FaIcon @icon="id-card-alt" />
                             </div>
                             <div class="flex-1 flex flex-row truncate">
@@ -196,7 +196,7 @@
                         as |model|
                     >
                         <div class="flex items-center">
-                            <div class="w-6">
+                            <div class="w-7 flex-grow-0 flex-shrink-0">
                                 <Image @src={{model.avatar_url}} @fallbackSrc={{config "defaultValues.vehicleAvatar"}} class="w-4 h-4 shadow-sm rounded-md" />
                             </div>
                             <div class="flex-1 flex flex-row truncate">
@@ -326,7 +326,7 @@
                 <DragSortList class="multi-drop-select-container overflow-visible" @items={{this.waypoints}} @dragEndAction={{this.sortWaypoints}} as |waypoint index|>
                     <div id={{concat "waypoint_" (add index 1)}} class="border rounded-md px-3 py-2 shadow-sm border-gray-300 dark:border-gray-900 mb-3">
                         <div class="flex items-start justify-between">
-                            <div class="flex items-center justify-between cursor-move">
+                            <div class="flex items-center justify-between grip-cursor">
                                 <FaIcon @icon="grip-lines" @prefix="fas" class="mr-3 text-gray-100" />
                                 <label class="waypoint-label dark:text-gray-100 text-sm">
                                     {{waypoint-label (add index 1)}}
@@ -544,12 +544,6 @@
             <RegistryComponent @order={{this.order}} @controller={{this}} />
         </RegistryYield>
 
-        {{!-- {{#if this.renderableComponents}}
-            {{#each this.renderableComponents as |renderableComponent|}}
-                {{component renderableComponent order=this.order controller=this}}
-            {{/each}}
-        {{/if}} --}}
-
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.payload-entities"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if this.isNotCsvImportedOrder}}
                 <div class="flex items-center mb-4">
@@ -577,7 +571,7 @@
                                 {{#each this.orderConfig.entities as |customEntity|}}
                                     <div class="p-1">
                                         <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.addFromCustomEntity customEntity)}}>
-                                            <div class="w-6">
+                                            <div class="w-7 flex-grow-0 flex-shrink-0">
                                                 <FaIcon @icon="cube" />
                                             </div>
                                             <div>
@@ -671,6 +665,7 @@
                                     </div>
                                     {{#if this.waypoints.length}}
                                         <Select
+                                            @value={{entity.destination_uuid}}
                                             @options={{this.waypoints}}
                                             @optionValue="place.id"
                                             @optionLabel="place.address"
@@ -751,8 +746,8 @@
                         <InfoBlock class="my-3" @text={{t "fleet-ops.operations.orders.index.new.info-text"}} />
 
                         <div class="radio-group-condensed -space-y-px">
-                            {{#each this.serviceQuotes as |serviceQuote index|}}
-                                <div class="radio-group-item shadow-sm flex-col pl-0i pr-0i {{if (eq @options.selected index) 'is-checked'}}">
+                            {{#each this.serviceQuotes as |serviceQuote|}}
+                                <div class="radio-group-item shadow-sm flex-col pl-0i pr-0i {{if (eq this.selectedServiceQuote serviceQuote.uuid) 'is-checked'}}">
                                     <div class="flex flex-row items-center mb-2.5 px-4">
                                         <RadioButton
                                             @radioClass="focus:ring-blue-500 h-6 w-6 text-blue-500"
@@ -767,7 +762,7 @@
                                             {{serviceQuote.request_id}}
                                         </Badge>
                                     </div>
-                                    <div class="next-table-wrapper h-auto table-fluid rounded-none">
+                                    <div class="next-table-wrapper no-scroll h-auto table-fluid rounded-none">
                                         <table class="table table-fixed flex-1">
                                             <thead>
                                                 <tr>

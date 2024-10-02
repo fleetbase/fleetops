@@ -71,11 +71,14 @@ class LiveController extends Controller
      *
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
-    public function orders()
+    public function orders(Request $request)
     {
+        $exclude = $request->array('exclude');
+
         $orders = Order::where('company_uuid', session('company'))
             ->whereHas('payload')
             ->whereNotIn('status', ['canceled', 'completed'])
+            ->whereNotIn('public_id', $exclude)
             ->whereNotNull('driver_assigned_uuid')
             ->whereNull('deleted_at')
             ->applyDirectivesForPermissions('fleet-ops list order')

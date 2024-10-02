@@ -5,26 +5,46 @@ import { classify, camelize } from '@ember/string';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 export default class LeafletDrawControl extends BaseLayer {
-    leafletEvents = [
-        L.Draw.Event.CREATED,
-        L.Draw.Event.EDITED,
-        L.Draw.Event.EDITMOVE,
-        L.Draw.Event.EDITRESIZE,
-        L.Draw.Event.EDITSTART,
-        L.Draw.Event.EDITSTOP,
-        L.Draw.Event.EDITVERTEX,
-        L.Draw.Event.DELETED,
-        L.Draw.Event.DELETESTART,
-        L.Draw.Event.DELETESTOP,
-        L.Draw.Event.DRAWSTART,
-        L.Draw.Event.DRAWSTOP,
-        L.Draw.Event.DRAWVERTEX,
-    ];
+    get leafletEvents() {
+        return [
+            L.Draw.Event.CREATED,
+            L.Draw.Event.EDITED,
+            L.Draw.Event.EDITMOVE,
+            L.Draw.Event.EDITRESIZE,
+            L.Draw.Event.EDITSTART,
+            L.Draw.Event.EDITSTOP,
+            L.Draw.Event.EDITVERTEX,
+            L.Draw.Event.DELETED,
+            L.Draw.Event.DELETESTART,
+            L.Draw.Event.DELETESTOP,
+            L.Draw.Event.DRAWSTART,
+            L.Draw.Event.DRAWSTOP,
+            L.Draw.Event.DRAWVERTEX,
+        ];
+    }
+
+    get alwaysCapturedLeafletEvents() {
+        return [
+            L.Draw.Event.CREATED,
+            L.Draw.Event.EDITED,
+            L.Draw.Event.EDITSTART,
+            L.Draw.Event.EDITSTOP,
+            L.Draw.Event.EDITRESIZE,
+            L.Draw.Event.EDITMOVE,
+            L.Draw.Event.DELETED,
+            L.Draw.Event.DRAWSTART,
+            L.Draw.Event.DRAWSTOP,
+        ];
+    }
 
     leafletOptions = ['draw', 'edit', 'remove', 'poly', 'position'];
 
-    @computed('leafletEvents.[]', 'args') get usedLeafletEvents() {
+    @computed('leafletEvents.[]', 'alwaysCapturedLeafletEvents.[]', 'args') get usedLeafletEvents() {
         return this.leafletEvents.filter((eventName) => {
+            if (this.alwaysCapturedLeafletEvents.includes(eventName)) {
+                return true;
+            }
+
             eventName = camelize(eventName.replace(':', ' '));
             let methodName = `_${eventName}`;
             let actionName = `on${classify(eventName)}`;
@@ -36,7 +56,7 @@ export default class LeafletDrawControl extends BaseLayer {
     @computed('args.{draw,edit,remove,poly,position}') get options() {
         return {
             position: getWithDefault(this.args, 'position', 'topright'),
-            draw: getWithDefault(this.args, 'draw', { marker: false, circlemarker: false, circle: false, polyline: false }),
+            draw: getWithDefault(this.args, 'draw', { marker: false, circlemarker: false, polyline: false }),
             edit: getWithDefault(this.args, 'edit', {}),
             remove: getWithDefault(this.args, 'remove', {}),
             poly: getWithDefault(this.args, 'poly', null),
@@ -56,14 +76,10 @@ export default class LeafletDrawControl extends BaseLayer {
     createLayer() {
         const { onDrawFeatureGroupCreated } = this.args;
         const drawingLayerGroup = new this.L.FeatureGroup();
-        const showDrawingLayer = getWithDefault(this.args, 'showDrawingLayer', false);
 
-        if (showDrawingLayer) {
-            if (typeof onDrawFeatureGroupCreated === 'function') {
-                onDrawFeatureGroupCreated(drawingLayerGroup, this.map);
-            }
-
-            drawingLayerGroup.addTo(this.map);
+        drawingLayerGroup.addTo(this.map);
+        if (typeof onDrawFeatureGroupCreated === 'function') {
+            onDrawFeatureGroupCreated(drawingLayerGroup, this.map);
         }
 
         return drawingLayerGroup;
@@ -74,7 +90,7 @@ export default class LeafletDrawControl extends BaseLayer {
         const showDrawingLayer = getWithDefault(this.args, 'showDrawingLayer', false);
 
         if (this.map && this._layer && this.L.drawLocal) {
-            this.options.edit = Object.assign({ featureGroup: this._layer }, this.options.edit);
+            this.options.edit = Object.assign({ featureGroup: this._layer }, this.L.drawLocal.edit, this.options.edit);
             this.options.draw = Object.assign({}, this.L.drawLocal.draw, this.options.draw);
 
             // create draw control
@@ -88,19 +104,17 @@ export default class LeafletDrawControl extends BaseLayer {
             // Add the draw control to the map
             if (showDrawingLayer) {
                 this.map.addControl(drawControl);
+                // trigger action/event draw control added to map
+                if (typeof onDrawControlAddedToMap === 'function') {
+                    onDrawControlAddedToMap(drawControl, this.map);
+                }
             }
 
-            // trigger action/event draw control added to map
-            if (typeof onDrawControlAddedToMap === 'function') {
-                onDrawControlAddedToMap(drawControl, this.map);
-            }
-
-            // If showDrawingLayer, add new layer to the layerGroup
-            if (showDrawingLayer) {
-                this.map.on(this.L.Draw.Event.CREATED, ({ layer }) => {
-                    this._layer.addLayer(layer);
-                });
-            }
+            // Track every layer created via draw control
+            this.map.on(this.L.Draw.Event.CREATED, ({ layer }) => {
+                this._layer.lastCreatedLayer = layer;
+                this._layer.addLayer(layer);
+            });
         }
     }
 

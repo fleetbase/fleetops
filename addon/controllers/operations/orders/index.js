@@ -206,6 +206,13 @@ export default class OperationsOrdersIndexController extends BaseController {
     @tracked activeOrdersCount = 0;
 
     /**
+     * The context for the order list overlay panel.
+     *
+     * @type {Object}
+     */
+    @tracked orderListOverlayContext;
+
+    /**
      * Reference to the leaflet map object
      *
      * @type {Object}
@@ -297,6 +304,7 @@ export default class OperationsOrdersIndexController extends BaseController {
         {
             label: this.intl.t('fleet-ops.common.internal-id'),
             valuePath: 'internal_id',
+            cellComponent: 'click-to-copy',
             width: '125px',
             hidden: true,
             resizable: true,
@@ -307,6 +315,7 @@ export default class OperationsOrdersIndexController extends BaseController {
         {
             label: this.intl.t('fleet-ops.operations.orders.index.payload'),
             valuePath: 'payload.public_id',
+            cellComponent: 'click-to-copy',
             resizable: true,
             hidden: true,
             width: '125px',
@@ -432,8 +441,8 @@ export default class OperationsOrdersIndexController extends BaseController {
         },
         {
             label: this.intl.t('fleet-ops.operations.orders.index.tracking'),
-            cellComponent: 'table/cell/base',
             valuePath: 'tracking_number.tracking_number',
+            cellComponent: 'click-to-copy',
             width: '170px',
             resizable: true,
             sortable: true,
@@ -659,12 +668,23 @@ export default class OperationsOrdersIndexController extends BaseController {
     }
 
     /**
+     * Set the order list overlay context.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
+    @action setOrderListOverlayContext(orderListOverlayContext) {
+        this.orderListOverlayContext = orderListOverlayContext;
+    }
+
+    /**
      * Toggles the visibility of the orders panel.
      * @action
      * @memberof OperationsOrdersIndexController
      */
     @action toggleOrdersPanel() {
-        this.isOrdersPanelVisible = !this.isOrdersPanelVisible;
+        if (this.orderListOverlayContext) {
+            this.orderListOverlayContext.toggle();
+        }
     }
 
     /**
@@ -673,7 +693,9 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @memberof OperationsOrdersIndexController
      */
     @action hideOrdersPanel() {
-        this.isOrdersPanelVisible = false;
+        if (this.orderListOverlayContext) {
+            this.orderListOverlayContext.close();
+        }
     }
 
     /**
@@ -682,7 +704,9 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @memberof OperationsOrdersIndexController
      */
     @action showOrdersPanel() {
-        this.isOrdersPanelVisible = true;
+        if (this.orderListOverlayContext) {
+            this.orderListOverlayContext.open();
+        }
     }
 
     /**

@@ -13,7 +13,7 @@ class ContactFilter extends Filter
             function ($query) {
                 $query->where('company_uuid', $this->session->get('company'));
                 $query->orWhereHas(
-                    'user',
+                    'anyUser',
                     function ($query) {
                         $query->where('company_uuid', $this->session->get('company'));
                     }

@@ -14,6 +14,7 @@ export default class ManagementContactsIndexController extends BaseController {
     @service hostRouter;
     @service crud;
     @service filters;
+    @service contextPanel;
     @service fetch;
 
     /**
@@ -21,7 +22,7 @@ export default class ManagementContactsIndexController extends BaseController {
      *
      * @var {Array}
      */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status', 'title', 'email', 'phone', 'type'];
+    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status', 'title', 'email', 'phone'];
 
     /**
      * The current page of data being viewed
@@ -80,13 +81,6 @@ export default class ManagementContactsIndexController extends BaseController {
     @tracked phone;
 
     /**
-     * The filterable param `email`
-     *
-     * @var {Array|String}
-     */
-    @tracked type;
-
-    /**
      * The filterable param `status`
      *
      * @var {Array}
@@ -94,14 +88,7 @@ export default class ManagementContactsIndexController extends BaseController {
     @tracked status;
 
     /**
-     * All possible contact types
-     *
-     * @var {String}
-     */
-    @tracked contactTypes = ['contact', 'customer'];
-
-    /**
-     * All columns applicable for orders
+     * All columns applicable for contacts
      *
      * @var {Array}
      */
@@ -109,7 +96,7 @@ export default class ManagementContactsIndexController extends BaseController {
         {
             label: this.intl.t('fleet-ops.common.name'),
             valuePath: 'name',
-            width: '170px',
+            width: '140px',
             cellComponent: 'table/cell/media-name',
             action: this.viewContact,
             permission: 'fleet-ops view contact',
@@ -132,7 +119,7 @@ export default class ManagementContactsIndexController extends BaseController {
             label: this.intl.t('fleet-ops.common.internal-id'),
             valuePath: 'internal_id',
             cellComponent: 'click-to-copy',
-            width: '130px',
+            width: '100px',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -142,17 +129,18 @@ export default class ManagementContactsIndexController extends BaseController {
             label: this.intl.t('fleet-ops.common.title'),
             valuePath: 'title',
             cellComponent: 'click-to-copy',
-            width: '160px',
+            width: '80px',
             resizable: true,
             sortable: true,
             filterable: true,
+            hidden: true,
             filterComponent: 'filter/string',
         },
         {
             label: this.intl.t('fleet-ops.common.email'),
             valuePath: 'email',
             cellComponent: 'click-to-copy',
-            width: '160px',
+            width: '150px',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -162,28 +150,29 @@ export default class ManagementContactsIndexController extends BaseController {
             label: this.intl.t('fleet-ops.common.phone'),
             valuePath: 'phone',
             cellComponent: 'click-to-copy',
-            width: '140px',
+            width: '130px',
             resizable: true,
             sortable: true,
             filterable: true,
             filterComponent: 'filter/string',
         },
         {
-            label: this.intl.t('fleet-ops.common.type'),
-            valuePath: 'type',
-            cellComponent: 'table/cell/status',
-            width: '100px',
+            label: this.intl.t('fleet-ops.common.address'),
+            valuePath: 'address',
+            cellComponent: 'table/cell/anchor',
+            action: this.viewContactPlace,
+            width: '170px',
             resizable: true,
             sortable: true,
             filterable: true,
-            filterComponent: 'filter/multi-option',
-            filterOptions: ['contact', 'customer'],
+            filterParam: 'address',
+            filterComponent: 'filter/string',
         },
         {
             label: this.intl.t('fleet-ops.management.contacts.index.created'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
-            width: '130px',
+            width: '160px',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -209,7 +198,7 @@ export default class ManagementContactsIndexController extends BaseController {
             ddMenuLabel: 'Contact Actions',
             cellClassNames: 'overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
-            width: '10%',
+            width: '9%',
             actions: [
                 {
                     label: this.intl.t('fleet-ops.management.contacts.index.view-contact'),
@@ -286,6 +275,20 @@ export default class ManagementContactsIndexController extends BaseController {
      */
     @action viewContact(contact) {
         return this.transitionToRoute('management.contacts.index.details', contact);
+    }
+
+    /**
+     * View information about the contacts place
+     *
+     * @param {ContactModel} contact
+     * @void
+     */
+    @action async viewContactPlace(contact) {
+        const place = await this.store.findRecord('place', contact.place_uuid);
+
+        if (place) {
+            this.contextPanel.focus(place);
+        }
     }
 
     /**

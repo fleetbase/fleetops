@@ -579,7 +579,7 @@
                     @value={{this.serviceRate.service_area_uuid}}
                     @onSelect={{this.selectServiceArea}}
                     @placeholder={{t "fleet-ops.operations.service-rates.index.new.service-area-placeholder"}}
-                    @disabled={{or (cannot this.abilityPermission) (not this.serviceAreas.length)}}
+                    @disabled={{cannot this.abilityPermission}}
                     class="w-full"
                 />
             </div>
@@ -594,7 +594,7 @@
                         @value={{this.serviceRate.zone_uuid}}
                         @onSelect={{fn (mut this.serviceRate.zone_uuid)}}
                         @placeholder={{t "fleet-ops.operations.service-rates.index.new.zone-placeholder"}}
-                        @disabled={{or (cannot this.abilityPermission) (not this.zones.length)}}
+                        @disabled={{cannot this.abilityPermission}}
                         class="w-full"
                     />
                 </div>

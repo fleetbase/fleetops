@@ -5,10 +5,12 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 use Fleetbase\FleetOps\Exports\VendorExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\VendorImport;
+use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -140,5 +142,69 @@ class VendorController extends FleetOpsController
         }
 
         return response()->json(['status' => 'ok', 'message' => 'Import completed']);
+    }
+
+    /**
+     * Assign a driver to this vendor.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function assignDriver(string $id, Request $request)
+    {
+        // Validate only param
+        if (!$request->isUuid('driver')) {
+            return response()->error('No driver selected to assign to vendor.');
+        }
+
+        // Find driver
+        $driver = Driver::where('uuid', $request->input('driver'))->first();
+        if (!$driver) {
+            return response()->error('Selected driver cannot be found.');
+        }
+
+        // Validate vendor
+        $vendor = Vendor::where('uuid', $id)->first();
+        if (!$vendor) {
+            return response()->error('Vendor attempting to assign driver to is invalid.');
+        }
+
+        // Assign driver to vendor
+        $driver->update(['vendor_uuid' => $vendor->uuid]);
+
+        return response()->json([
+            'status' => 'ok',
+        ]);
+    }
+
+    /**
+     * Remove a driver from this vendor.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function removeDriver(string $id, Request $request)
+    {
+        // Validate only param
+        if (!$request->isUuid('driver')) {
+            return response()->error('No driver selected to remove from vendor.');
+        }
+
+        // Find driver
+        $driver = Driver::where('uuid', $request->input('driver'))->first();
+        if (!$driver) {
+            return response()->error('Selected driver cannot be found.');
+        }
+
+        // Validate vendor
+        $vendor = Vendor::where('uuid', $id)->first();
+        if (!$vendor) {
+            return response()->error('Vendor attempting to remove driver from is invalid.');
+        }
+
+        // Remove driver from vendor
+        $driver->update(['vendor_uuid' => null]);
+
+        return response()->json([
+            'status' => 'ok',
+        ]);
     }
 }

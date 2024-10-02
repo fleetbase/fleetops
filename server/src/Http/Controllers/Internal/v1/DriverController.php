@@ -107,7 +107,8 @@ class DriverController extends FleetOpsController
                     }
 
                     // If user is a regular user set type and role
-                    if ($existingUser->isNotAdmin()) {
+                    // also if is not admin and is not Administrator role
+                    if ($existingUser->isNotAdmin() && !$existingUser->hasRole('Administrator')) {
                         $existingUser->assignSingleRole('Driver');
                     }
 
@@ -164,9 +165,6 @@ class DriverController extends FleetOpsController
                             ->filter()
                             ->toArray();
 
-                        // Set user type to driver
-                        $userInput['type'] = 'driver';
-
                         // handle `photo_uuid`
                         if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
                             $userInput['avatar_uuid'] = $input['photo_uuid'];
@@ -185,6 +183,9 @@ class DriverController extends FleetOpsController
 
                         // Create user account
                         $user = User::create($userInput);
+
+                        // Set the user type to driver
+                        $user->setType('driver');
                     }
 
                     // Prepare input

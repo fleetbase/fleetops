@@ -12,6 +12,7 @@ export default class FleetPanelDriverListingComponent extends Component {
     @service fetch;
     @service intl;
     @service universe;
+    @service notifications;
 
     /**
      * The selected drivers.
@@ -35,7 +36,7 @@ export default class FleetPanelDriverListingComponent extends Component {
      * @var {FleetModel}
      * @memberof FleetPanelDriverListingComponent
      */
-    @tracked fleet = [];
+    @tracked fleet;
 
     /**
      * Creates an instance of FleetPanelDriverListingComponent.

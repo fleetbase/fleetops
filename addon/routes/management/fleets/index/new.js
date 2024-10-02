@@ -10,7 +10,7 @@ export default class ManagementFleetsIndexNewRoute extends Route {
     beforeModel() {
         if (this.abilities.cannot('fleet-ops create fleet')) {
             this.notifications.warning(this.intl.t('common.unauthorized-access'));
-            return this.hostRouter.transitionTo('console.fleet-ops.fleets.index');
+            return this.hostRouter.transitionTo('console.fleet-ops.management.fleets.index');
         }
     }
 }

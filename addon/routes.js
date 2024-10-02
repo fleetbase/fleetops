@@ -3,8 +3,12 @@ import buildRoutes from 'ember-engines/routes';
 export default buildRoutes(function () {
     this.route('settings', function () {
         this.route('navigator-app');
+        this.route('payments', function () {
+            this.route('index', { path: '/' });
+            this.route('onboard');
+        });
     });
-    this.route('virtual', { path: '/:slug/:view' });
+    this.route('virtual', { path: '/:section/:slug' });
     this.route('operations', { path: '/' }, function () {
         this.route('dispatch');
         this.route('zones', function () {});
@@ -64,6 +68,11 @@ export default buildRoutes(function () {
         });
         this.route('contacts', function () {
             this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('details', { path: '/:public_id' });
+                this.route('edit', { path: '/edit/:public_id' });
+            });
+            this.route('customers', function () {
                 this.route('new');
                 this.route('details', { path: '/:public_id' });
                 this.route('edit', { path: '/edit/:public_id' });

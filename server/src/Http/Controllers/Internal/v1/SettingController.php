@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
+use Fleetbase\Support\Auth;
 use Illuminate\Http\Request;
 
 /**
@@ -11,43 +12,6 @@ use Illuminate\Http\Request;
  */
 class SettingController extends Controller
 {
-    /**
-     * Retrieves the current visibility settings.
-     *
-     * This method fetches the visibility settings for 'fleet-ops' from the database and
-     * returns them in a JSON response. The settings are retrieved based on a specific key
-     * from the 'Setting' model.
-     *
-     * @return \Illuminate\Http\Response the visibility settings in JSON format
-     */
-    public function getVisibilitySettings()
-    {
-        $visibilitySettings = Setting::where('key', 'fleet-ops.visibility')->value('value');
-
-        return response()->json(['visibilitySettings' => $visibilitySettings]);
-    }
-
-    /**
-     * Saves the visibility settings provided in the request.
-     *
-     * This method accepts visibility settings via the request and updates them in the database.
-     * The new settings are saved using a specific key in the 'Setting' model. The method
-     * returns the updated settings in a JSON response.
-     *
-     * @param Request $request the HTTP request containing the visibility settings
-     *
-     * @return \Illuminate\Http\Response the updated visibility settings in JSON format
-     */
-    public function saveVisibilitySettings(Request $request)
-    {
-        $visibilitySettings = $request->input('visibilitySettings', []);
-
-        // save settings
-        Setting::configure('fleet-ops.visibility', $visibilitySettings);
-
-        return response()->json(['visibilitySettings' => $visibilitySettings]);
-    }
-
     /**
      * Save entity editing settings.
      *
@@ -100,7 +64,7 @@ class SettingController extends Controller
      */
     public function savedDriverOnboardSettings(Request $request)
     {
-        $driverOnboardSettings = $request->input('driverOnboardSettings', []);
+        $driverOnboardSettings = $request->array('driverOnboardSettings', []);
 
         if ($driverOnboardSettings['enableDriverOnboardFromApp'] == false) {
             $driverOnboardSettings['driverMustProvideOnboardDoucments'] = false;
@@ -112,5 +76,41 @@ class SettingController extends Controller
         Setting::configure('fleet-ops.driver-onboard-settings.' . $driverOnboardSettings['companyId'], $driverOnboardSettings);
 
         return response()->json(['driverOnboardSettings' => $driverOnboardSettings]);
+    }
+
+    public function saveCustomerEnabledOrderConfigs(Request $request)
+    {
+        $enabledOrderConfigs = array_values($request->array('enabledOrderConfigs'));
+        Setting::configureCompany('fleet-ops.customer-enabled-order-configs', $enabledOrderConfigs);
+
+        return response()->json($enabledOrderConfigs);
+    }
+
+    public function getCustomerEnabledOrderConfigs()
+    {
+        $enabledOrderConfigs = Setting::lookupFromCompany('fleet-ops.customer-enabled-order-configs', []);
+
+        return response()->json(array_values($enabledOrderConfigs));
+    }
+
+    public function saveCustomerPortalPaymentConfig(Request $request)
+    {
+        $paymentsConfig = $request->array('paymentsConfig');
+        Setting::configureCompany('fleet-ops.customer-payments-configs', $paymentsConfig);
+
+        return response()->json($paymentsConfig);
+    }
+
+    public function getCustomerPortalPaymentConfig()
+    {
+        $paymentsConfig = Setting::lookupFromCompany('fleet-ops.customer-payments-configs', ['paymentsEnabled' => false]);
+
+        if (is_array($paymentsConfig)) {
+            // check if payments have been onboard
+            $company                                    = Auth::getCompany();
+            $paymentsConfig['paymentsOnboardCompleted'] = $company && isset($company->stripe_connect_id);
+        }
+
+        return response()->json($paymentsConfig);
     }
 }

@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\PlaceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Imports\PlaceImport;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\Geocoding;
@@ -39,6 +40,7 @@ class PlaceController extends FleetOpsController
 
         $query = Place::where('company_uuid', session('company'))
             ->whereNull('deleted_at')
+            ->applyDirectivesForPermissions('fleet-ops list place')
             ->search($searchQuery);
 
         if ($latitude && $longitude) {
@@ -78,7 +80,7 @@ class PlaceController extends FleetOpsController
             }
         }
 
-        return response()->json($results)->withHeaders(['Cache-Control' => 'no-cache']);
+        return PlaceResource::collection($results);
     }
 
     /**
@@ -148,8 +150,8 @@ class PlaceController extends FleetOpsController
         /**
          * @var \Fleetbase\Models\Place
          */
-        $count   = Place::whereIn('uuid', $ids)->count();
-        $deleted = Place::whereIn('uuid', $ids)->delete();
+        $count   = Place::whereIn('uuid', $ids)->applyDirectivesForPermissions('fleet-ops list place')->count();
+        $deleted = Place::whereIn('uuid', $ids)->applyDirectivesForPermissions('fleet-ops list place')->delete();
 
         if (!$deleted) {
             return response()->error('Failed to bulk delete places.');

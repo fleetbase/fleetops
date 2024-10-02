@@ -24,7 +24,7 @@ class ServiceArea extends FleetbaseResource
             'type'       => $this->type,
             'center'     => $this->location,
             'border'     => $this->border,
-            'zones'      => $this->whenLoaded('zones', Zone::collection($this->zones)),
+            'zones'      => $this->whenLoaded('zones', fn () => Zone::collection($this->zones)),
             'status'     => $this->status,
             'updated_at' => $this->updated_at,
             'created_at' => $this->created_at,

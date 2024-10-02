@@ -11,6 +11,9 @@
                 </span>
             </div>
         {{else}}
+            {{#if @eta}}
+                <Badge @status="warning" @hideStatusDot={{true}} class="my-1"><span class="font-bold">ETA:</span> {{format-duration @eta}}</Badge>
+            {{/if}}
             <address class={{@addressClass}}>
                 {{#if place.name}}
                     {{place.name}}<br />

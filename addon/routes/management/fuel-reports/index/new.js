@@ -10,7 +10,7 @@ export default class ManagementFuelReportsIndexNewRoute extends Route {
     beforeModel() {
         if (this.abilities.cannot('fleet-ops create fuel-report')) {
             this.notifications.warning(this.intl.t('common.unauthorized-access'));
-            return this.hostRouter.transitionTo('console.fleet-ops.fuel-reports.index');
+            return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index');
         }
     }
 }

@@ -59,6 +59,7 @@ class Waypoint extends FleetbaseResource
             'customer'               => $this->setCustomerType(Resolve::resourceForMorph($waypoint->customer_type, $waypoint->customer_uuid)),
             'type'                   => $this->type,
             'meta'                   => data_get($this, 'meta', []),
+            'eta'                    => $this->eta,
             'updated_at'             => $this->updated_at,
             'created_at'             => $this->created_at,
         ];

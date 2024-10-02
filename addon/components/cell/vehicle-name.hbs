@@ -4,7 +4,7 @@
         @fallbackSrc={{config "defaultValues.vehicleAvatar"}}
         data-vehicle={{@row.id}}
         alt={{this.altText}}
-        class="w-4 h-4 rounded-md {{if @column.hasOnline 'mx-2' 'mr-2'}}"
+        class="w-5 h-5 rounded-md {{if @column.hasOnline 'mx-2' 'mr-2'}}"
     />
     <span class="relative block">
         <a href="javascript:;" class="relative block" disabled={{and @column.permission (cannot @column.permission)}} {{on "click" this.onClick}}>
@@ -18,6 +18,6 @@
         </a>
     </span>
     {{#if @column.showOnlineIndicator}}
-        <FaIcon @icon="circle" class="absolute left-0 top-0 -mt-1 -ml-2 h-2 w-2 {{if @row.online 'text-green-500' 'text-yellow-200'}}" />
+        <FaIcon @icon="circle" @size="2xs" class="absolute left-0 top-0 -mt-1 -ml-2 h-2 w-2 -ml-1 -mt-1 {{if @row.online 'text-green-500' 'text-yellow-200'}}" />
     {{/if}}
 </div>
