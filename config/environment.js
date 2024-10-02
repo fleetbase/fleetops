@@ -19,12 +19,18 @@ module.exports = function (environment) {
             driverAvatar: getenv('DEFAUL_DRIVER_AVATAR', 'https://flb-assets.s3-ap-southeast-1.amazonaws.com/static/driver-icons/moto-driver.png'),
             placeAvatar: getenv('DEFAUL_PLACE_AVATAR', 'https://flb-assets.s3-ap-southeast-1.amazonaws.com/static/place-icons/basic-building.png'),
         },
+
+        'ember-leaflet': {
+            excludeCSS: true,
+            excludeJS: true,
+            excludeImages: true,
+        },
     };
 
     return ENV;
 };
 
-function getMountedEngineRoutePrefix() {
+function getMountedEngineRoutePrefix () {
     let mountedEngineRoutePrefix = 'fleet-ops';
     if (fleetbase && typeof fleetbase.route === 'string') {
         mountedEngineRoutePrefix = fleetbase.route;
@@ -33,6 +39,6 @@ function getMountedEngineRoutePrefix() {
     return `console.${mountedEngineRoutePrefix}.`;
 }
 
-function getenv(variable, defaultValue = null) {
+function getenv (variable, defaultValue = null) {
     return process.env[variable] !== undefined ? process.env[variable] : defaultValue;
 }
