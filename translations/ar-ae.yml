@@ -275,8 +275,8 @@ fleet-ops:
       select-onboard-method: اختر طريقة تسجيل السائق
       select-onboard-method-help-text: يحدد هذا الإعداد كيفية السماح للسائقين بإنشاء حساباتهم من خلال تطبيق Navigator. اختر 'دعوة' إذا كان يجب على السائقين تلقي دعوة عبر البريد الإلكتروني لإنشاء حساباتهم. اختر 'زر' إذا كنت ترغب في تمكين زر داخل التطبيق يسمح لأي شخص بإنشاء حساب سائق.
       require-driver-to-upload-onboard-documents: طلب من السائق تحميل مستندات التسجيل
-      require-driver-to-upload-onboard-documents-help-text: يفرض هذا الإعداد المستندات التي يجب على السائق تقديمها قبل إنشاء حسابه.
-          required-onboard-documents: المستندات المطلوبة للتسجيل
+      require-driver-to-upload-onboard-documents-help-text: "يفرض هذا الإعداد المستندات التي يجب على السائق تقديمها قبل إنشاء حسابه."
+      required-onboard-documents: المستندات المطلوبة للتسجيل
       required-onboard-documents-help-text: أدخل جميع المستندات المطلوبة للتسجيل التي يجب على السائق تقديمها أدناه باستخدام زر "إضافة مستند للتسجيل".
       enter-document-name: أدخل اسم المستند
       add-onboard-document: إضافة مستند للتسجيل
@@ -524,9 +524,9 @@ fleet-ops:
         drag-drop: اسحب وأفلت ملفات جداول البيانات على هذه المنطقة
         button-text: أو اختر جداول البيانات للتحميل
         spreadsheets: جداول البيانات
-        upload-queue: قائمة انتظار التحميل
-          order-label:
-        loading: جارٍ تحميل التسمية...
+        upload-queue: "قائمة انتظار التحميل"
+        order-label:
+          loading: جارٍ تحميل التسمية...
       order-new-activity:
         select-message: اختر حالة نشاط لتحديث نشاط تتبع الطلب، أو أدخل نشاطًا مخصصًا.
         order-currently-message: هذا الطلب حاليًا {options}، سيتم استبدال النشاط الإضافي بهذه الحالة.
@@ -983,7 +983,7 @@ fleet-ops:
         boolean-text: يسمح للمستخدم بتبديل خاصية صحيحة أو خاطئة عن طريق خانة اختيار
         dropdown: تحديد من القائمة المنسدلة
         dropdown-text: يسمح للمستخدم بتحديد خيار من قائمة منسدلة من الخيارات
-          datetime: محدد التاريخ والوقت
+        datetime: محدد التاريخ والوقت
         datetime-text: يسمح للمستخدم بتحديد تاريخ ووقت
         port: محدد الميناء
         port-text: يسمح للمستخدم بتحديد ميناء
@@ -1365,7 +1365,8 @@ fleet-ops:
           value-warning: يجب أن يحتوي الحقل المخصص على قيمة
           edit-field-title: تعديل الحقل المخصص
           edit-metadata: تعديل البيانات الوصفية
-          input-field-required: {inputFieldName} مطلوب.
+          input-field-required: >-
+            {inputFieldName} مطلوب.
         view:
           purchase-rate-panel-title: معدل الشراء
           documents-panel-title: المستندات والملفات
@@ -1505,23 +1506,25 @@ fleet-ops:
             على سبيل المثال: '{fee}' * '{distance}' + '{baseFee}'
           per-meter-rate-fee: رسوم ثابتة لكل متر
           per-meter-rate-fee-help-text: الرسوم الثابتة الواحدة التي سيتم ضربها في المسافة.
-              distance-unit: وحدة المسافة
+          distance-unit: وحدة المسافة
           distance-unit-help-text: يمكن أن تكون وحدة المسافة إما بالكيلومتر أو بالمتر.
           distance-unit-placeholder: اختر وحدة المسافة.
           custom-algorithm-title: خوارزمية مخصصة
           custom-algorithm-info-message: هذا الخيار لتعريف حساب مخصص لرسوم هذه الخدمة باستخدام المتغيرات.
           custom-algorithm-info-second-message: لاحظ أن المتغيرات يجب أن تكون محاطة بقوس واحد.
           distance-message: المسافة
-          distance-continue-message: - المسافة بالأمتار من مسار الطلب.
+          distance-continue-message: >-
+            المسافة بالأمتار من مسار الطلب.
           time-message: الوقت
-          time-continue-message: - الوقت المقدر للوصول بالثواني.
+          time-continue-message: >-
+             الوقت المقدر للوصول بالثواني.
           example: مثال
           example-message: إذا كان طلب الطلبية مسافة 2,200 متر مع وقت وصول مقدر بـ 30 دقيقة.
           example-second-message: فإن الصيغة التالية ستحسب رسوم خدمة قدرها $2.50، والتي ستضاف إلى الرسوم الأساسية.
           algorithm-label: الخوارزمية
           algorithm-help-text: تعريف صيغة ليتم تقييمها لحساب معدل هذه الخدمة.
-          algorithm-placeholder: -
-        (( '{distance}' / 50 ) * .05 ) + (( '{time}' / 60 ) * .01)
+          algorithm-placeholder: >-
+            (( '{distance}' / 50 ) * .05 ) + (( '{time}' / 60 ) * .01)
           percel-fee-title: رسوم الطرد
           length-label: الطول
           length-placeholder: الطول في {parcelFeeDimension}
