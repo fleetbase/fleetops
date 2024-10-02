@@ -30,7 +30,7 @@ module.exports = function (environment) {
     return ENV;
 };
 
-function getMountedEngineRoutePrefix () {
+function getMountedEngineRoutePrefix() {
     let mountedEngineRoutePrefix = 'fleet-ops';
     if (fleetbase && typeof fleetbase.route === 'string') {
         mountedEngineRoutePrefix = fleetbase.route;
@@ -39,6 +39,6 @@ function getMountedEngineRoutePrefix () {
     return `console.${mountedEngineRoutePrefix}.`;
 }
 
-function getenv (variable, defaultValue = null) {
+function getenv(variable, defaultValue = null) {
     return process.env[variable] !== undefined ? process.env[variable] : defaultValue;
 }
