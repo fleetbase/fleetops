@@ -978,3 +978,17 @@ body[data-theme='light'] .flb--modal.flb--default-modal.finalize-service-quote-p
     display: none !important;
     pointer-events: none;
 }
+
+#fleetops-customer-orders-container #fleetops-customer-orders-sidebar {
+    margin-right: 1rem;
+}
+
+#fleetops-customer-orders-container.collapse-sidebar #fleetops-customer-orders-sidebar {
+    width: 0 !important;
+    opacity: 0;
+    margin-right: 0;
+}
+
+#fleetops-customer-orders-container.collapse-sidebar #fleetops-customer-orders-main-content {
+    width: 100% !important;
+}

@@ -385,7 +385,7 @@
             </div>
         </ContentPanel>
 
-        {{#if @model.order_config}}
+        {{#if this.customFieldGroups}}
             {{#each this.customFieldGroups as |group|}}
                 <ContentPanel @title={{group.name}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                     <div class="grid grid-cols-{{or group.meta.grid_size 1}} gap-2">

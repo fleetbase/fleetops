@@ -309,8 +309,8 @@ class Utils extends FleetbaseUtils
                 $coords = explode(' ', $coordinates);
             }
 
-            $latitude  = $coords[0];
-            $longitude = $coords[1];
+            $latitude  = isset($coords[0]) ? $coords[0] : null;
+            $longitude = isset($coords[1]) ? $coords[1] : null;
         }
 
         if ($coordinates instanceof Point) {

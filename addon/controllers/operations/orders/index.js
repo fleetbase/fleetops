@@ -304,6 +304,7 @@ export default class OperationsOrdersIndexController extends BaseController {
         {
             label: this.intl.t('fleet-ops.common.internal-id'),
             valuePath: 'internal_id',
+            cellComponent: 'click-to-copy',
             width: '125px',
             hidden: true,
             resizable: true,
@@ -314,6 +315,7 @@ export default class OperationsOrdersIndexController extends BaseController {
         {
             label: this.intl.t('fleet-ops.operations.orders.index.payload'),
             valuePath: 'payload.public_id',
+            cellComponent: 'click-to-copy',
             resizable: true,
             hidden: true,
             width: '125px',
@@ -439,8 +441,8 @@ export default class OperationsOrdersIndexController extends BaseController {
         },
         {
             label: this.intl.t('fleet-ops.operations.orders.index.tracking'),
-            cellComponent: 'table/cell/base',
             valuePath: 'tracking_number.tracking_number',
+            cellComponent: 'click-to-copy',
             width: '170px',
             resizable: true,
             sortable: true,

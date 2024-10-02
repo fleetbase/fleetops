@@ -82,7 +82,7 @@ class OrderTracker
         $shouldCalculateProgressByActivity = empty($completedDistance) && $this->order->status !== 'created';
         if ($shouldCalculateProgressByActivity) {
             /** @var Collection $activities */
-            $activities    = $this->order->orderConfig->activities();
+            $activities    = $this->order->orderConfig ? $this->order->orderConfig->activities() : collect();
             $totalActivity = $activities->count();
             if ($totalActivity === 0) {
                 return 100; // No activities, so treat it as 100% complete

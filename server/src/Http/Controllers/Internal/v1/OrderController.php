@@ -759,6 +759,9 @@ class OrderController extends FleetOpsController
             return response()->error('No order found using tracking number provided.');
         }
 
+        // load required relations
+        $order->loadMissing(['trackingNumber', 'payload', 'trackingStatuses']);
+
         // load tracker data
         $order->tracker_data = $order->tracker()->toArray();
         $order->eta          = $order->tracker()->eta();

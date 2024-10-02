@@ -1,5 +1,10 @@
 <div class="flex items-center justify-center min-h-screen px-4 py-12 bg-gray-50 dark:bg-gray-900 sm:px-6 lg:px-8">
     <div class="w-full max-w-lg">
+        {{#if this.order}}
+            <div class="flex flex-row justify-end mb-2">
+                <Button @icon="rotate" @text="Lookup another order" @onClick={{this.lookupAnother}} />
+            </div>
+        {{/if}}
         <div class="border border-gray-200 text-black dark:text-white bg-gray-100 dark:border-gray-700 dark:bg-gray-900 rounded-lg shadow-sm {{unless this.order 'p-4'}}">
             {{#if this.order}}
                 {{#let this.order as |order|}}
@@ -14,6 +19,9 @@
                                         <div class="text-sm font-semibold mr-1">Date Created:</div>
                                         <div class="text-sm">{{order.createdAtShort}}</div>
                                     </div>
+                                </div>
+                                <div>
+                                    <Badge @status={{order.status}} />
                                 </div>
                             </div>
                             <div class="customer-order-details-seperator"></div>
@@ -72,6 +80,42 @@
                                 </div>
                                 <div class="customer-order-details-seperator"></div>
                             {{/if}}
+                            <div>
+                                <div class="flex flex-row mb-2 ml-1">
+                                    <div class="flex-1">
+                                        <h1 class="font-bold text-sm">Tracking:</h1>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="order-progress-card-progress">
+                                        <OrderProgressBar
+                                            @order={{this.order}}
+                                            @progress={{this.order.tracker_data.progress_percentage}}
+                                            @firstWaypointCompleted={{this.order.tracker_data.first_waypoint_completed}}
+                                            @lastWaypointCompleted={{this.order.tracker_data.last_waypoint_completed}}
+                                        />
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 mt-1 px-1">
+                                        <div class="flex flex-col text-xs">
+                                            <div class="font-semibold">Current ETA:</div>
+                                            <div class="">{{format-duration this.order.tracker_data.current_destination_eta}}</div>
+                                        </div>
+                                        <div class="flex flex-col text-xs">
+                                            <div class="font-semibold">ECT:</div>
+                                            <div class="">{{n-a this.order.tracker_data.estimated_completion_time_formatted}}</div>
+                                        </div>
+                                        <div class="col-span-2 flex flex-col text-xs">
+                                            <div class="font-semibold">Current Destination:</div>
+                                            <div class="truncate">{{n-a this.order.tracker_data.current_destination.address}}</div>
+                                        </div>
+                                        <div class="col-span-2 flex flex-col text-xs">
+                                            <div class="font-semibold">Next Destination:</div>
+                                            <div class="truncate">{{n-a this.order.tracker_data.next_destination.address}}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="customer-order-details-seperator"></div>
                             <div>
                                 <div class="flex flex-row justify-between mb-2 ml-1">
                                     <div class="flex-1">

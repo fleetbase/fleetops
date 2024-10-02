@@ -194,7 +194,7 @@ class ServiceQuoteController extends FleetOpsController
         $pickup           = $request->or(['payload.pickup', 'payload.pickup_uuid', 'pickup']);
         $dropoff          = $request->or(['payload.dropoff', 'payload.dropoff_uuid', 'dropoff']);
         $waypoints        = $request->or(['payload.waypoints', 'waypoints'], []);
-        $entities         = $request->or(['payload.entities', 'entities']);
+        $entities         = $request->or(['payload.entities', 'entities'], []);
         $single           = $request->boolean('single');
         $isRouteOptimized = $request->boolean('is_route_optimized', true);
 
@@ -216,6 +216,10 @@ class ServiceQuoteController extends FleetOpsController
         if (Str::isUuid($dropoff)) {
             $dropoff = Place::where('uuid', $dropoff)->first();
         }
+
+        // remove empty nullable entrites from waypoints and entities array
+        $waypoints = array_filter($waypoints);
+        $entities  = array_filter($entities);
 
         // convert waypoints to place instances
         $waypoints = collect($waypoints)->mapInto(Place::class);

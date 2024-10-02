@@ -124,7 +124,7 @@ class PaymentController extends Controller
                 'transaction_uuid',
                 'status',
                 'meta',
-                'created_at'
+                'created_at',
             ]
         )
         ->where('company_uuid', session('company'))

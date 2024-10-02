@@ -10,30 +10,11 @@ import { inject as service } from '@ember/service';
  * @memberof OrderScheduleCardComponent
  */
 export default class OrderScheduleCardComponent extends Component {
-    /**
-     * Service for managing the context panel.
-     * @service
-     * @memberof OrderScheduleCardComponent
-     */
     @service contextPanel;
-    /**
-     * Service for intl.
-     * @service
-     */
     @service intl;
-    /**
-     * Service for managing modals.
-     * @service
-     * @memberof OrderScheduleCardComponent
-     */
     @service modalsManager;
-
-    /**
-     * Service for managing notifications.
-     * @service
-     * @memberof OrderScheduleCardComponent
-     */
     @service notifications;
+    @service abilities;
 
     /**
      * Indicates if a driver is currently being assigned.

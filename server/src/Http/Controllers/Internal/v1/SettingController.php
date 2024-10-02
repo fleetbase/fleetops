@@ -107,7 +107,7 @@ class SettingController extends Controller
 
         if (is_array($paymentsConfig)) {
             // check if payments have been onboard
-            $company = Auth::getCompany();
+            $company                                    = Auth::getCompany();
             $paymentsConfig['paymentsOnboardCompleted'] = $company && isset($company->stripe_connect_id);
         }
 

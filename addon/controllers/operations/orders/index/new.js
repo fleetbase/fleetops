@@ -631,7 +631,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             pickup: this._seriailizeModel(payload.pickup),
             dropoff: this._seriailizeModel(payload.dropoff),
             entitities: this._serializeArray(payload.entities),
-            waypoints: this._serializeArray(payload.waypoint),
+            waypoints: this._serializeArray(payload.waypoints),
         };
 
         return serialized;

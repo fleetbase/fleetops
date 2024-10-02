@@ -769,7 +769,7 @@ export default class CustomerCreateOrderFormComponent extends Component {
             pickup: this._seriailizeModel(payload.pickup),
             dropoff: this._seriailizeModel(payload.dropoff),
             entities: this._serializeArray(payload.entities),
-            waypoints: this._serializeArray(payload.waypoint),
+            waypoints: this._serializeArray(payload.waypoints),
         };
 
         return serialized;
@@ -975,6 +975,10 @@ export default class CustomerCreateOrderFormComponent extends Component {
         const dropoff = serviceQuote.get('meta.preliminary_query.payload.dropoff');
         const returnPlace = serviceQuote.get('meta.preliminary_query.payload.return');
         const waypoints = serviceQuote.get('meta.preliminary_query.payload.waypoints') ?? [];
+        const isMultipleDropoffOrder = !pickup && !dropoff && !isBlank(waypoints);
+
+        // set multidrop flag
+        this.isMultipleDropoffOrder = isMultipleDropoffOrder;
 
         if (pickup) {
             const pickupModel = this.fetch.jsonToModel(pickup, 'place');

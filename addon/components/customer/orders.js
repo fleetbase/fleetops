@@ -127,6 +127,8 @@ export default class CustomerOrdersComponent extends Component {
 
     @action viewOrder(order, options = { resetOrderRoute: false }) {
         this.selectedOrder = order;
+        // start loading order tracking activity
+        order.loadTrackingActivity();
         this.urlSearchParams.addParamToCurrentUrl('order', order.public_id);
         const driverCurrentLocation = order.get('tracker_data.driver_current_location');
         if (driverCurrentLocation) {

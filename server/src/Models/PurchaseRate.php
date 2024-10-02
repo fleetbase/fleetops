@@ -119,7 +119,7 @@ class PurchaseRate extends Model
         return Str::contains(strtolower($this->customer_type), 'contact');
     }
 
-    public function getAmountAttribute(): null|float|int
+    public function getAmountAttribute(): float|int|null
     {
         if (!$this->relationLoaded('serviceQuote')) {
             return 0;

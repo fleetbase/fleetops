@@ -38,11 +38,13 @@
                         </div>
                         <div class="next-dd-menu-seperator"></div>
                         <div class="px-1">
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropfown-fn dd this.onPressAssignOrders)}}>{{t "fleet-ops.component.order-list-overlay.assign"}}</a>
-                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropfown-fn dd this.onPressCancelOrders this.selectedOrders)}}>{{t
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.onAction "onPressAssignOrders")}}>{{t
+                                    "fleet-ops.component.order-list-overlay.assign"
+                                }}</a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.onAction "onPressCancelOrders" this.selectedOrders)}}>{{t
                                     "fleet-ops.component.order-list-overlay.cancel"
                                 }}</a>
-                            <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (dropfown-fn dd this.onPressDeleteOrders this.selectedOrders)}}>{{t
+                            <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (dropdown-fn dd this.onAction "onPressDeleteOrders" this.selectedOrders)}}>{{t
                                     "fleet-ops.component.order-list-overlay.delete"
                                 }}</a>
                         </div>
@@ -65,10 +67,10 @@
                     </div>
                     <div class="next-dd-menu-seperator"></div>
                     <div class="px-1">
-                        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.onDropdownAction dd "onPressCreateOrder")}}>{{t
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.onAction "onPressCreateOrder")}}>{{t
                                 "fleet-ops.component.order-list-overlay.create-order"
                             }}</a>
-                        <a href="javascript:;" class="next-dd-item" {{on "click" (fn this.onDropdownAction dd "onPressCreateFleet")}}>{{t
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.onAction "onPressCreateFleet")}}>{{t
                                 "fleet-ops.component.order-list-overlay.create-fleet"
                             }}</a>
                     </div>

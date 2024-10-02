@@ -2,6 +2,8 @@ import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { isBlank } from '@ember/utils';
 import { isArray } from '@ember/array';
+import { later } from '@ember/runloop';
+import { debug } from '@ember/debug';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 /**
@@ -10,6 +12,7 @@ import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
  *
  * @extends Service
  */
+const GeolocationPositionError = window.GeolocationPositionError;
 export default class LocationService extends Service {
     /**
      * Default latitude used when location data is unavailable.
@@ -116,27 +119,59 @@ export default class LocationService extends Service {
 
     /**
      * Retrieves the user's location using the browser's navigator geolocation API.
-     * It creates a promise that resolves with the geolocation if successful,
-     * or with WHOIS data as a fallback in case of failure or absence of navigator geolocation.
+     * If the geolocation is not available, times out, or the user denies permission,
+     * it falls back to WHOIS data.
      *
      * @returns {Promise<Object>} A promise that resolves to geolocation coordinates or WHOIS data.
      */
     async getUserLocationFromNavigator() {
         if (window.navigator && window.navigator.geolocation) {
             try {
-                const position = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        enableHighAccuracy: true,
-                        timeout: 600,
-                    });
-                });
+                const position = await Promise.race([
+                    new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                resolve(position);
+                            },
+                            (error) => {
+                                reject(error);
+                            },
+                            {
+                                enableHighAccuracy: true,
+                                timeout: 5000,
+                            }
+                        );
+                    }),
+                    new Promise((_, reject) => later(this, () => reject(new Error('Geolocation request timed out')), 7000)),
+                ]);
+
                 const { latitude, longitude } = position.coords;
                 this.updateLocation({ latitude, longitude });
                 return { latitude, longitude };
             } catch (error) {
+                // Handle specific geolocation errors
+                if (error instanceof GeolocationPositionError) {
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            debug('LocationService Error: Geolocation permission denied.');
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            debug('LocationService Error: Position unavailable.');
+                            break;
+                        case error.TIMEOUT:
+                            debug('LocationService Error: Geolocation request timed out.');
+                            break;
+                        default:
+                            debug('LocationService Error: An unknown geolocation error occurred.');
+                            break;
+                    }
+                } else {
+                    debug('LocationService Error: Geolocation request failed:', error.message);
+                }
                 return await this.getUserLocationFromWhois();
             }
         } else {
+            // Navigator geolocation is not available
             return await this.getUserLocationFromWhois();
         }
     }

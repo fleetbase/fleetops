@@ -665,6 +665,7 @@
                                     </div>
                                     {{#if this.waypoints.length}}
                                         <Select
+                                            @value={{entity.destination_uuid}}
                                             @options={{this.waypoints}}
                                             @optionValue="place.id"
                                             @optionLabel="place.address"

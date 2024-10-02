@@ -54,7 +54,7 @@
                 </div>
             </div>
             <div class="flex justify-end w-1/4">
-                <Badge @status={{this.vehicle.status}} />
+                <Badge @status={{or this.vehicle.status "pending"}} />
             </div>
         </div>
     </Overlay::Header>

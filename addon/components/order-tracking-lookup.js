@@ -32,6 +32,7 @@ export default class OrderTrackingLookupComponent extends Component {
 
     constructor() {
         super(...arguments);
+        this.movementTracker.registerTrackingMarker();
         const trackingNumber = this.urlSearchParams.get('order');
         if (trackingNumber) {
             this.trackingNumber = trackingNumber;
@@ -60,6 +61,12 @@ export default class OrderTrackingLookupComponent extends Component {
         }
     }
 
+    @action lookupAnother() {
+        this.urlSearchParams.removeParamFromCurrentUrl('order');
+        this.trackingNumber = null;
+        this.order = null;
+    }
+
     /* eslint-disable ember/no-private-routing-service */
     @action transitionToConsole() {
         const owner = getOwner(this);
@@ -77,7 +84,7 @@ export default class OrderTrackingLookupComponent extends Component {
 
     @action startTrackingDriverPosition(event) {
         const { target } = event;
-        const driver = this.order.driver;
+        const driver = this.order.driver_assigned;
         if (driver) {
             driver.set('_layer', target);
             this.movementTracker.track(driver);

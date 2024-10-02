@@ -184,10 +184,9 @@ export default class OperationsOrdersIndexViewController extends BaseController 
      * @task
      */
     @task *loadCustomFields(order) {
-        const orderConfig = order.order_config;
-        if (orderConfig) {
-            this.customFieldGroups = yield this.store.query('category', { owner_uuid: orderConfig.id, for: 'custom_field_group' });
-            this.customFields = yield this.store.query('custom-field', { subject_uuid: orderConfig.id });
+        if (order.order_config_uuid) {
+            this.customFieldGroups = yield this.store.query('category', { owner_uuid: order.order_config_uuid, for: 'custom_field_group' });
+            this.customFields = yield this.store.query('custom-field', { subject_uuid: order.order_config_uuid });
             this.groupCustomFields(order);
         }
     }
@@ -196,25 +195,30 @@ export default class OperationsOrdersIndexViewController extends BaseController 
      * Organizes custom fields into their respective groups.
      */
     groupCustomFields(order) {
+        // get custom fields and their values from order
         const customFields = Array.from(this.customFields);
         const customFieldValues = Array.from(order.custom_field_values);
+
         // map values to the custom fields
         const customFieldsWithValues = customFields.map((customField) => {
             customField.value = customFieldValues.find((customFieldValue) => customFieldValue.custom_field_uuid === customField.id);
             return customField;
         });
+
         // update custom fields with values
         this.customFields = customFieldsWithValues;
-        // group custom fields
-        for (let i = 0; i < this.customFieldGroups.length; i++) {
-            const group = this.customFieldGroups[i];
+
+        // group and update custom fields
+        this.customFieldGroups = this.customFieldGroups.map((group) => {
             group.set(
                 'customFields',
                 customFieldsWithValues.filter((customField) => {
                     return customField.category_uuid === group.id;
                 })
             );
-        }
+
+            return group;
+        });
     }
 
     @action resetView() {
@@ -464,7 +468,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
                 }
             },
             scheduleOrder: (dateInstance) => {
-                order.scheduled_at = dateInstance.toDate();
+                order.scheduled_at = dateInstance;
             },
             driversQuery: {},
             order,
