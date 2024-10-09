@@ -34,7 +34,7 @@ export default class CustomerFormPanelComponent extends Component {
     constructor(owner, { customer = null }) {
         super(...arguments);
         this.customer = customer;
-        this.savePermission = customer && customer.isNew ? 'fleet-ops create contact' : 'fleet-ops update contact';
+        this.savePermission = customer && customer.isNew ? 'fleet-ops create customer' : 'fleet-ops update customer';
         applyContextComponentArguments(this);
     }
 

@@ -18,7 +18,7 @@ module.exports = function (environment) {
             vehicleAvatar: getenv('DEFAUL_VEHICLE_AVATAR', 'https://flb-assets.s3-ap-southeast-1.amazonaws.com/static/vehicle-icons/mini_bus.svg'),
             driverAvatar: getenv('DEFAUL_DRIVER_AVATAR', 'https://flb-assets.s3-ap-southeast-1.amazonaws.com/static/driver-icons/moto-driver.png'),
             placeAvatar: getenv('DEFAUL_PLACE_AVATAR', 'https://flb-assets.s3-ap-southeast-1.amazonaws.com/static/place-icons/basic-building.png'),
-        }
+        },
     };
 
     return ENV;

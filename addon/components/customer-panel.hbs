@@ -14,7 +14,19 @@
             <div class="flex flex-1 space-x-2">
                 <Button @type="default" @icon="pen" @helpText={{t "fleet-ops.component.contact-panel.edit-button"}} @onClick={{this.onEdit}} @permission="fleet-ops update contact" />
             </div>
-            <div class="flex flex-1 justify-end">
+            <div class="flex flex-1 justify-end space-x-2">
+                <div>
+                    <DropdownButton @icon="ellipsis-h" @size="sm" @iconSize="md" as |dd|>
+                        <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
+                            <div class="px-1 py-0.5">
+                                <a href="javascript:;" class="next-dd-item truncate" disabled={{cannot "fleet-ops reset-credentials-for customer"}} {{on "click" (dropdown-fn dd this.resetCredentials)}}>
+                                    <div class="w-6"><FaIcon @icon="unlock" @size="sm" /></div>
+                                    <div>Reset customer credentials</div>
+                                </a>
+                            </div>
+                        </div>
+                    </DropdownButton>
+                </div>
                 <Button
                     @type="default"
                     @icon="times"

@@ -448,6 +448,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             ['prefix' => 'customers'],
                             function () use ($router) {
                                 $router->get('/', 'MorphController@queryCustomers');
+                                $router->post('reset-credentials', 'CustomerController@resetCredentials');
                             }
                         );
                         $router->group(

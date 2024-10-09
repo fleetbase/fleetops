@@ -298,7 +298,7 @@ class Contact extends Model
         $user->setType($contact->type);
 
         // Assing to company
-        $user->assignCompany($contact->company);
+        $user->assignCompany($contact->company, $user->type === 'customer' ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact');
 
         // Assign customer role
         if ($user->type === 'customer') {
