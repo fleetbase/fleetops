@@ -75,7 +75,7 @@ class FleetOps
         ],
         [
             'name'    => 'customer',
-            'actions' => [],
+            'actions' => ['reset-credentials-for'],
         ],
         [
             'name'    => 'facilitator',
@@ -401,6 +401,12 @@ class FleetOps
                 'delete contact'        => [CustomerContacts::class],
                 'iam update user'       => [CustomerUser::class],
             ],
+        ],
+        [
+            'name'           => 'Fleet-Ops Contact',
+            'description'    => 'Role for contacts.',
+            'permissions'    => [],
+            'directives'     => [],
         ],
     ];
 }

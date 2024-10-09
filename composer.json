@@ -1,6 +1,6 @@
 {
     "name": "fleetbase/fleetops-api",
-    "version": "0.5.8",
+    "version": "0.5.9",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "keywords": [
         "fleetbase-extension",
@@ -22,7 +22,7 @@
     ],
     "require": {
         "php": "^8.0",
-        "fleetbase/core-api": "^1.5.9",
+        "fleetbase/core-api": "*",
         "barryvdh/laravel-dompdf": "^2.0",
         "brick/geo": "0.7.2",
         "cknow/laravel-money": "^7.1",

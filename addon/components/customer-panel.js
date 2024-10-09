@@ -109,4 +109,16 @@ export default class CustomerPanelComponent extends Component {
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.customer);
     }
+
+    /**
+     * Allows user to reset the customer credentials
+     *
+     * @memberof CustomerPanelComponent
+     */
+    @action resetCredentials() {
+        this.modalsManager.show('modals/reset-customer-credentials', {
+            keepOpen: true,
+            customer: this.customer,
+        });
+    }
 }

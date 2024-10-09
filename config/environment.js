@@ -19,12 +19,6 @@ module.exports = function (environment) {
             driverAvatar: getenv('DEFAUL_DRIVER_AVATAR', 'https://flb-assets.s3-ap-southeast-1.amazonaws.com/static/driver-icons/moto-driver.png'),
             placeAvatar: getenv('DEFAUL_PLACE_AVATAR', 'https://flb-assets.s3-ap-southeast-1.amazonaws.com/static/place-icons/basic-building.png'),
         },
-
-        'ember-leaflet': {
-            excludeCSS: true,
-            excludeJS: true,
-            excludeImages: true,
-        },
     };
 
     return ENV;
