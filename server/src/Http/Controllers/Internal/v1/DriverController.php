@@ -19,7 +19,6 @@ use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Invite;
 use Fleetbase\Models\User;
 use Fleetbase\Models\VerificationCode;
-use Fleetbase\Notifications\UserInvited;
 use Fleetbase\Support\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -81,7 +80,7 @@ class DriverController extends FleetOpsController
 
                 if ($existingUser) {
                     // if exists in organization create driver profile for user
-                    $isOrganizationMember = $existingUser->companies()->where('company_uuid', session('company'))->exists();
+                    $isOrganizationMember = $existingUser->companies()->where('companies.uuid', session('company'))->exists();
 
                     // Check if driver profile also already exists
                     $existingDriverProfile = Driver::where(['company_uuid' => session('company'), 'user_uuid' => $existingUser->uuid])->first();
@@ -106,34 +105,12 @@ class DriverController extends FleetOpsController
                         $input['location'] = new Point(0, 0);
                     }
 
-                    // If user is a regular user set type and role
-                    // also if is not admin and is not Administrator role
-                    if ($existingUser->isNotAdmin() && !$existingUser->hasRole('Administrator')) {
-                        $existingUser->assignSingleRole('Driver');
-                    }
-
                     // create the profile
                     $driverProfile = Driver::create($input);
 
-                    // Assign user to company
-                    if ($company) {
+                    // If not already a member of the company assign them to the company and send the user an invite
+                    if (!$isOrganizationMember && $company) {
                         $existingUser->assignCompany($company);
-                    }
-
-                    if (!$isOrganizationMember) {
-                        // send invitation to user
-                        $invitation = Invite::create([
-                            'company_uuid'    => session('company'),
-                            'created_by_uuid' => session('user'),
-                            'subject_uuid'    => session('company'),
-                            'subject_type'    => Utils::getMutationType('company'),
-                            'protocol'        => 'email',
-                            'recipients'      => [$existingUser->email],
-                            'reason'          => 'join_company',
-                        ]);
-
-                        // notify user
-                        $existingUser->notify(new UserInvited($invitation));
                     }
 
                     return ['driver' => new $this->resource($driverProfile)];
@@ -152,10 +129,12 @@ class DriverController extends FleetOpsController
 
                     // Get current session company
                     $company                   = Auth::getCompany();
+                    if (!$company) {
+                        throw new \Exception('Unable to create driver.');
+                    }
 
                     if ($input->has('user_uuid')) {
                         $user = User::where('uuid', $input->get('user_uuid'))->first();
-                        // handle `photo_uuid`
                         if ($user && $input->has('photo_uuid')) {
                             $user->update(['avatar_uuid' => $input->get('photo_uuid')]);
                         }
@@ -188,38 +167,24 @@ class DriverController extends FleetOpsController
                         $user->setType('driver');
                     }
 
+                    // if exists in organization create driver profile for user
+                    $isOrganizationMember = $user->companies()->where('companies.uuid', session('company'))->exists();
+
                     // Prepare input
                     $input = $input
                             ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid', 'status'])
                             ->filter()
                             ->toArray();
 
-                    // Assign user to company
-                    if ($company) {
+                    // Assign user to company and send invite
+                    if (!$isOrganizationMember && $company) {
                         $user->assignCompany($company);
-                    } else {
-                        $user->deleteQuietly();
-                        throw new \Exception('Unable to assign driver to company.');
                     }
 
                     // Set user type as driver and set role to driver
-                    if ($user->isNotAdmin()) {
+                    if ($user->type === 'driver') {
                         $user->assignSingleRole('Driver');
                     }
-
-                    // send invitation to user
-                    $invitation = Invite::create([
-                        'company_uuid'    => session('company'),
-                        'created_by_uuid' => session('user'),
-                        'subject_uuid'    => session('company'),
-                        'subject_type'    => Utils::getMutationType('company'),
-                        'protocol'        => 'email',
-                        'recipients'      => [$user->email],
-                        'reason'          => 'join_company',
-                    ]);
-
-                    // notify user
-                    $user->notify(new UserInvited($invitation));
 
                     $input['user_uuid'] = $user->uuid;
                     $input['slug']      = $user->slug;

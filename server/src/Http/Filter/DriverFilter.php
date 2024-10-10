@@ -13,12 +13,7 @@ class DriverFilter extends Filter
         $this->builder->where(
             function ($query) {
                 $query->where('company_uuid', $this->session->get('company'));
-                $query->orWhereHas(
-                    'user',
-                    function ($query) {
-                        $query->where('company_uuid', $this->session->get('company'));
-                    }
-                );
+                $query->whereHas('user');
             }
         );
     }
