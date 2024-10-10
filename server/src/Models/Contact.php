@@ -271,12 +271,12 @@ class Contact extends Model
     public static function createUserFromContact(Contact $contact, bool $sendInvite = true): User
     {
         // Check if user already exist with email or phone number
-        $userAlreadyExists = User::where('type', $contact->type)->where(function ($query) use ($contact) {
+        $userAlreadyExists = User::where(function ($query) use ($contact) {
             $query->where('email', $contact->email);
             $query->orWhere('phone', $contact->phone);
         })->first();
         if ($userAlreadyExists) {
-            throw new UserAlreadyExistsException('User already exists, try to assign the user to this contact.');
+            throw new UserAlreadyExistsException('User already exists, try to assigning the user to this contact.');
         }
 
         // Load company
@@ -325,7 +325,37 @@ class Contact extends Model
             $user->notify(new UserInvited($invitation));
         }
 
+        $contact->setRelation('user', $user);
+
         return $user;
+    }
+
+    public function syncWithUser(): bool
+    {
+        $updates = [];
+
+        if ($this->isDirty('name')) {
+            $updates['name'] = $this->name;
+        }
+
+        if ($this->isDirty('email')) {
+            $updates['email'] = $this->email;
+        }
+
+        if ($this->isDirty('phone')) {
+            $updates['phone'] = $this->phone;
+        }
+
+        if ($this->isDirty('timezone')) {
+            $updates['timezone'] = $this->timezone;
+        }
+
+        $user = $this->getUser();
+        if ($user) {
+            return $user->update($updates);
+        }
+
+        return false;
     }
 
     /**
@@ -354,5 +384,31 @@ class Contact extends Model
         }
 
         return false;
+    }
+
+    public function getUser(): ?User
+    {
+        $this->loadMissing('user');
+        if ($this->user) {
+            return $this->user;
+        }
+
+        if (Str::isUuid($this->user_uuid)) {
+            return User::where('uuid', $this->user_uuid)->first();
+        }
+
+        return null;
+    }
+
+    public function hasUser(): bool
+    {
+        $user = $this->getUser();
+
+        return Str::isUuid($this->user_uuid) && $user instanceof User;
+    }
+
+    public function doesntHaveUser(): bool
+    {
+        return !$this->hasUser();
     }
 }

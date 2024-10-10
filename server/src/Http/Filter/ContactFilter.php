@@ -12,12 +12,6 @@ class ContactFilter extends Filter
         $this->builder->where(
             function ($query) {
                 $query->where('company_uuid', $this->session->get('company'));
-                $query->orWhereHas(
-                    'anyUser',
-                    function ($query) {
-                        $query->where('company_uuid', $this->session->get('company'));
-                    }
-                );
             }
         );
     }
