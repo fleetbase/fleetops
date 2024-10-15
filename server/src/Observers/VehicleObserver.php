@@ -45,7 +45,7 @@ class VehicleObserver
 
             if ($driver) {
                 // assign this vehicle to driver
-                $driver->setVehicle($vehicle);
+                $driver->assignVehicle($vehicle, false);
 
                 // set driver to vehicle
                 $vehicle->setRelation('driver', $driver);

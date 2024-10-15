@@ -528,9 +528,6 @@ class Driver extends Model
         // Unassign vehicle from other drivers
         static::where('vehicle_uuid', $vehicle->uuid)->update(['vehicle_uuid' => null]);
 
-        // Assign driver to vehicle
-        $vehicle->update(['driver_uuid' => $this->uuid]);
-
         // Set this vehicle to the driver instance
         $this->setVehicle($vehicle);
         $this->save();
