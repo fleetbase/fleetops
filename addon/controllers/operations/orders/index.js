@@ -49,6 +49,7 @@ export default class OperationsOrdersIndexController extends BaseController {
         'layout',
         'drawerOpen',
         'drawerTab',
+        'orderPanelOpen',
     ];
 
     /**
@@ -753,6 +754,18 @@ export default class OperationsOrdersIndexController extends BaseController {
     @action setMapReference({ target, target: { liveMap } }) {
         this.leafletMap = target;
         this.liveMap = liveMap;
+    }
+
+    @action previewOrderRoute(order) {
+        if (this.liveMap) {
+            this.liveMap.previewOrderRoute(order);
+        }
+    }
+
+    @action restoreDefaultLiveMap() {
+        if (this.liveMap) {
+            this.liveMap.restoreDefaultLiveMap();
+        }
     }
 
     /**

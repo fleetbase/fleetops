@@ -99,7 +99,6 @@ export default class OrderConfigEntitiesEditorComponent extends Component {
         const { orderConfig } = this;
         const { value } = target;
 
-        // console.log(value, get(orderConfig, `meta.entities.${index}.meta.${key}`));
         set(orderConfig, `meta.entities.${index}.meta.${key}`, value);
 
         if (typeof this.args.onEntitiesChanged === 'function') {

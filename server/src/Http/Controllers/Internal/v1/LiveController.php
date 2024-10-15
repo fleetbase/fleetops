@@ -73,16 +73,54 @@ class LiveController extends Controller
      */
     public function orders(Request $request)
     {
-        $exclude = $request->array('exclude');
+        $exclude    = $request->array('exclude');
+        $active     = $request->boolean('active');
+        $unassigned = $request->boolean('unassigned');
 
-        $orders = Order::where('company_uuid', session('company'))
-            ->whereHas('payload')
-            ->whereNotIn('status', ['canceled', 'completed'])
+        $query = Order::where('company_uuid', session('company'))
+            ->whereHas('payload', function ($query) {
+                $query->where(
+                    function ($q) {
+                        $q->whereHas('waypoints');
+                        $q->orWhereHas('pickup');
+                        $q->orWhereHas('dropoff');
+                    }
+                );
+                $query->with(['entities', 'waypoints', 'dropoff', 'pickup', 'return']);
+            })
+            ->whereNotIn('status', ['canceled', 'completed', 'expired'])
+            ->whereHas('trackingNumber')
+            ->whereHas('trackingStatuses')
             ->whereNotIn('public_id', $exclude)
-            ->whereNotNull('driver_assigned_uuid')
             ->whereNull('deleted_at')
             ->applyDirectivesForPermissions('fleet-ops list order')
-            ->get();
+            ->with(['payload', 'trackingNumber', 'trackingStatuses']);
+
+        if ($active) {
+            $query->whereHas('driverAssigned');
+        }
+
+        if ($unassigned) {
+            $query->whereNull('driver_assigned_uuid');
+        }
+
+        $orders = $query->get();
+
+        // Get additional data or load missing if necessary
+        $orders->map(
+            function ($order) use ($request) {
+                // load required relations
+                $order->loadMissing(['trackingNumber', 'payload', 'trackingStatuses']);
+
+                // load tracker data
+                if ($request->has('with_tracker_data')) {
+                    $order->tracker_data = $order->tracker()->toArray();
+                    $order->eta          = $order->tracker()->eta();
+                }
+
+                return $order;
+            }
+        );
 
         return OrderResource::collection($orders);
     }

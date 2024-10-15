@@ -199,11 +199,9 @@ export default class OrderConfigFieldsEditorComponent extends Component {
 
     /* eslint no-unused-vars: "off" */
     @action sortMetaFieldOptions(metaField, el, target) {
-        // console.log(`[sortMetaFieldOptions()]`, ...arguments);
         // const { fields } = this;
         // const { index } = el.dataset;
         // const parentEl = el.parentElement();
-        // console.log(parentEl);
         // const { metaGroupKey } = target.dataset;
         // // get the index of the moved metafield
         // const metaFieldIndex = fields.findIndex((field) => field.key === metaFieldKey);

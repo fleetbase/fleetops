@@ -6,8 +6,11 @@ import { isArray } from '@ember/array';
 import { dasherize, camelize, classify } from '@ember/string';
 import { singularize } from 'ember-inflector';
 import { later } from '@ember/runloop';
+import { debug } from '@ember/debug';
 import { allSettled } from 'rsvp';
 import { task } from 'ember-concurrency-decorators';
+import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
+import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 /**
@@ -15,6 +18,8 @@ import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
  *
  * @class
  */
+const MAP_TARGET_FOCUS_PADDING_BOTTOM_RIGHT = [200, 0];
+const MAP_TARGET_FOCUS_REFOCUS_PANBY = [150, 0];
 export default class LiveMapComponent extends Component {
     @service store;
     @service intl;
@@ -208,6 +213,7 @@ export default class LiveMapComponent extends Component {
             this.tileSourceUrl = 'https://{s}.tile.jawg.io/jawg-matrix/{z}/{x}/{y}{r}.png?access-token=';
         }
 
+        this.movementTracker.registerTrackingMarker(owner);
         this.setupComponent();
     }
 
@@ -404,7 +410,7 @@ export default class LiveMapComponent extends Component {
      * // To load data and execute specific actions on load and failure
      * this.loadLiveData.perform('some/path', {
      *   params: { key: 'value' },
-     *   onLoaded: (data) => { console.log('Data loaded', data); },
+     *   onLoaded: (data) => { debug('Data loaded', data); },
      *   onFailure: (error) => { console.error('Failed to load data', error); }
      * });
      */
@@ -417,13 +423,13 @@ export default class LiveMapComponent extends Component {
         const callbackFnName = `on${internalName}Loaded`;
         const params = getWithDefault(options, 'params', {});
         const url = `fleet-ops/live/${path}`;
-        const data = yield this.fetch.get(url, params, { normalizeToEmberData: true, normalizeModelType: singularize(internalName) }).catch((error) => {
-            if (typeof options.onFailure === 'function') {
-                options.onFailure(error);
-            }
-        });
 
-        if (data) {
+        try {
+            let data = yield this.fetch.get(url, params, { normalizeToEmberData: true, normalizeModelType: singularize(internalName) });
+            if (isArray(data)) {
+                data = [...data];
+            }
+
             this.triggerAction(callbackFnName);
             this.createVisibilityControl(internalName);
             this[internalName] = data;
@@ -432,9 +438,13 @@ export default class LiveMapComponent extends Component {
             if (typeof options.onLoaded === 'function') {
                 options.onLoaded(data);
             }
-        }
 
-        return data;
+            return data;
+        } catch (error) {
+            if (typeof options.onFailure === 'function') {
+                options.onFailure(error);
+            }
+        }
     }
 
     /**
@@ -1056,6 +1066,107 @@ export default class LiveMapComponent extends Component {
                 },
             },
         });
+    }
+
+    @action previewOrderRoute(order) {
+        // Hide all elements on map
+        this.hideAll();
+
+        // Show drivers
+        this.show('drivers');
+
+        // create order route preview
+        const waypoints = this.getRouteCoordinatesFromOrder(order);
+        const routingHost = getRoutingHost();
+        if (this.cannotRouteWaypoints(waypoints)) {
+            return;
+        }
+
+        // center on first coordinate
+        try {
+            this.leafletMap.stop();
+            this.leafletMap.flyTo(waypoints.firstObject);
+        } catch (error) {
+            // unable to stop map
+            debug(`Leaflet Map Error: ${error.message}`);
+        }
+
+        const router = new OSRMv1({
+            serviceUrl: `${routingHost}/route/v1`,
+            profile: 'driving',
+        });
+
+        this.routeControl = new RoutingControl({
+            fitSelectedRoutes: false,
+            router,
+            waypoints,
+            alternativeClassName: 'hidden',
+            addWaypoints: false,
+            markerOptions: {
+                draggable: false,
+                icon: L.icon({
+                    iconUrl: '/assets/images/marker-icon.png',
+                    iconRetinaUrl: '/assets/images/marker-icon-2x.png',
+                    shadowUrl: '/assets/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                }),
+            },
+        }).addTo(this.leafletMap);
+
+        this.routeControl.on('routingerror', (error) => {
+            debug(`Routing Control Error: ${error.error.message}`);
+        });
+
+        this.routeControl.on('routesfound', () => {
+            this.leafletMap.flyToBounds(waypoints, {
+                paddingBottomRight: MAP_TARGET_FOCUS_PADDING_BOTTOM_RIGHT,
+                maxZoom: waypoints.length === 2 ? 13 : 12,
+                animate: true,
+            });
+            this.leafletMap.once('moveend', () => {
+                this.leafletMap.panBy(MAP_TARGET_FOCUS_REFOCUS_PANBY);
+            });
+        });
+    }
+
+    getRouteCoordinatesFromOrder(order) {
+        const payload = order.payload;
+        const waypoints = [];
+        const coordinates = [];
+
+        waypoints.pushObjects([payload.pickup, ...payload.waypoints.toArray(), payload.dropoff]);
+        waypoints.forEach((place) => {
+            if (place && place.get('longitude') && place.get('latitude')) {
+                if (place.hasInvalidCoordinates) {
+                    return;
+                }
+
+                coordinates.pushObject([place.get('latitude'), place.get('longitude')]);
+            }
+        });
+
+        return coordinates;
+    }
+
+    cannotRouteWaypoints(waypoints = []) {
+        return !this.leafletMap || !isArray(waypoints) || waypoints.length < 2;
+    }
+
+    @action restoreDefaultLiveMap() {
+        this.removeRouteControl();
+        this.showAll();
+        this.leafletMap.flyTo([this.latitude, this.longitude], 13);
+    }
+
+    removeRouteControl() {
+        if (this.routeControl && this.routeControl instanceof RoutingControl) {
+            try {
+                this.routeControl.remove();
+            } catch (error) {
+                debug(`LiveMapComponent Error: ${error.message}`);
+            }
+        }
     }
 
     /**
@@ -1689,7 +1800,7 @@ export default class LiveMapComponent extends Component {
             for await (let output of channel) {
                 const { event, data } = output;
 
-                console.log(`[channel ${channelId}]`, output, event, data);
+                debug(`[channel ${channelId}]`, output, event, data);
             }
         })();
     }

@@ -13,6 +13,7 @@ use Fleetbase\FleetOps\Models\FleetVehicle;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -24,6 +25,57 @@ class FleetController extends FleetOpsController
      * @var string
      */
     public $resource = 'fleet';
+
+    /**
+     * Query callback when querying record.
+     *
+     * @param \Illuminate\Database\Query\Builder $query
+     * @param \Illuminate\Http\Request           $request
+     */
+    public static function onQueryRecord($query, $request): void
+    {
+        if ($request->has('excludeDriverJobs')) {
+            $excludeJobs = $request->array('excludeDriverJobs');
+            $query->with('drivers', function ($query) use ($excludeJobs) {
+                $query->with('jobs', function ($query) use ($excludeJobs) {
+                    if (is_array($excludeJobs)) {
+                        $isUuids = Arr::every($excludeJobs, function ($id) {
+                            return Str::isUuid($id);
+                        });
+
+                        if ($isUuids) {
+                            $query->whereNotIn('uuid', $excludeJobs);
+                        } else {
+                            $query->whereNotIn('public_id', $excludeJobs);
+                        }
+                    }
+
+                    $query->whereHas(
+                        'payload',
+                        function ($q) {
+                            $q->where(
+                                function ($q) {
+                                    $q->whereHas('waypoints');
+                                    $q->orWhereHas('pickup');
+                                    $q->orWhereHas('dropoff');
+                                }
+                            );
+                            $q->with(['entities', 'waypoints', 'dropoff', 'pickup', 'return']);
+                        }
+                    );
+                    $query->whereHas('trackingNumber');
+                    $query->whereHas('trackingStatuses');
+                    $query->with(
+                        [
+                            'payload',
+                            'trackingNumber',
+                            'trackingStatuses',
+                        ]
+                    );
+                });
+            });
+        }
+    }
 
     /**
      * Export the fleets to excel or csv.

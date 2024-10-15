@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
+use Fleetbase\FleetOps\Rules\CustomerIdOrDetails;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\FleetbaseRequest;
 use Fleetbase\Rules\ExistsInAny;
@@ -36,7 +37,7 @@ class CreateOrderRequest extends FleetbaseRequest
             'service_quote'     => ['nullable', 'exists:service_quotes,public_id'],
             'purchase_rate'     => ['nullable', 'exists:purchase_rates,public_id'],
             'facilitator'       => ['nullable', new ExistsInAny(['vendors', 'contacts', 'integrated_vendors'], ['public_id', 'provider'])],
-            'customer'          => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
+            'customer'          => ['nullable', new CustomerIdOrDetails(['vendors', 'contacts'], 'public_id')],
             'status'            => ['nullable', 'string'],
             'type'              => ['string'],
         ];

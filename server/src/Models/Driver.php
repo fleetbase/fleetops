@@ -218,6 +218,9 @@ class Driver extends Model
     {
         return $this->belongsTo(Vehicle::class)->select([
             'uuid',
+            'vendor_uuid',
+            'photo_uuid',
+            'avatar_url',
             'public_id',
             'year',
             'make',

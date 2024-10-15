@@ -42,6 +42,8 @@
             @onPressManageFleet={{this.fleetController.viewFleet}}
             @onPressCancelOrders={{this.bulkCancelOrders}}
             @onPressDeleteOrders={{this.bulkDeleteOrders}}
+            @onMouseEnterOrder={{this.previewOrderRoute}}
+            @onMouseLeaveOrder={{this.restoreDefaultLiveMap}}
         />
         <LiveMap
             id="leafletMap"

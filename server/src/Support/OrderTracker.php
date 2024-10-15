@@ -78,6 +78,10 @@ class OrderTracker
         $totalDistance     = $this->getTotalDistance();
         $completedDistance = $this->getCompletedDistance();
 
+        if ($totalDistance === -1 || $completedDistance === -1) {
+            return 0;
+        }
+
         // Get order percentage by activity if distance-based progress is not available
         $shouldCalculateProgressByActivity = empty($completedDistance) && $this->order->status !== 'created';
         if ($shouldCalculateProgressByActivity) {
@@ -112,6 +116,10 @@ class OrderTracker
     public function getTotalDistance(): int|float
     {
         $points   = $this->getAllDestinationPoints()->toArray();
+        if (count($points) < 2) {
+            return -1;
+        }
+
         $response = OSRM::getRouteFromPoints($points);
         if (isset($response['code']) && $response['code'] === 'Ok') {
             $route = Arr::first($response['routes']);
@@ -120,7 +128,7 @@ class OrderTracker
             }
         }
 
-        return 0;
+        return -1;
     }
 
     /**
@@ -132,7 +140,7 @@ class OrderTracker
     {
         $points = $this->getCompletedDestinationPoints()->toArray();
         if (count($points) < 2) {
-            return 0;
+            return -1;
         }
 
         $response = OSRM::getRouteFromPoints($points);
@@ -143,7 +151,7 @@ class OrderTracker
             }
         }
 
-        return 0;
+        return -1;
     }
 
     /**
@@ -155,12 +163,16 @@ class OrderTracker
     {
         $start              = $this->getDriverCurrentLocation();
         $currentDestination = $this->getCurrentDestination();
-        $end                = $currentDestination->location;
+        $end                = $currentDestination ? $currentDestination->location : null;
         if ($start == $end) {
             $nextDestination = $this->getNextDestination();
             if ($nextDestination) {
                 $end = $nextDestination->location;
             }
+        }
+
+        if (!$start || !$end) {
+            return -1;
         }
 
         $response = OSRM::getRoute($start, $end);

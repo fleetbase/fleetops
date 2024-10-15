@@ -31,12 +31,13 @@
             {{#if this.isDataLoaded}}
                 {{#if this.visibilityControls.drivers}}
                     {{#each this.drivers as |driver|}}
+                        {{!-- {{log driver}} --}}
                         <layers.tracking-marker
                             @id={{driver.id}}
                             @publicId={{driver.public_id}}
                             @location={{point-to-coordinates driver.location}}
                             @rotationAngle={{driver.heading}}
-                            @icon={{icon iconUrl=(or driver.vehicle_avatar (config "defaultValues.vehicleAvatar")) iconSize=(array 24 24)}}
+                            @icon={{icon iconUrl=driver.vehicle_avatar iconSize=(array 24 24)}}
                             @onAdd={{fn this.triggerAction "onDriverAdded" driver}}
                             @onClick={{fn this.triggerAction "onDriverClicked" driver}}
                             as |marker|
@@ -73,7 +74,7 @@
                             @id={{vehicle.id}}
                             @publicId={{vehicle.public_id}}
                             @location={{point-to-coordinates vehicle.location}}
-                            @icon={{icon iconUrl=(or vehicle.avatar_url (config "defaultValues.vehicleAvatar")) iconSize=(array 24 24)}}
+                            @icon={{icon iconUrl=vehicle.avatar_url iconSize=(array 24 24)}}
                             @onAdd={{fn this.triggerAction "onVehicleAdded" vehicle}}
                             @onClick={{fn this.triggerAction "onVehicleClicked" vehicle}}
                             as |marker|

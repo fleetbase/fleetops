@@ -2,8 +2,10 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
 use Fleetbase\Support\Http;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
 class OrderFilter extends Filter
@@ -32,6 +34,7 @@ class OrderFilter extends Filter
                     'payload',
                     'trackingNumber',
                     'trackingStatuses',
+                    'driverAssigned',
                 ]
             );
     }
@@ -68,7 +71,7 @@ class OrderFilter extends Filter
         if ($unassigned) {
             $this->builder->where(
                 function ($q) {
-                    $q->whereNull('driver_assigned_uuid');
+                    $q->whereDoesntHave('driverAssigned');
                     $q->whereNotIn('status', ['completed', 'canceled', 'expired']);
                 }
             );
@@ -90,8 +93,8 @@ class OrderFilter extends Filter
         if ($active) {
             $this->builder->where(
                 function ($q) {
+                    $q->whereHas('driverAssigned');
                     $q->whereNotIn('status', ['created', 'dispatched', 'pending', 'canceled', 'completed']);
-                    $q->whereNotNull('driver_assigned_uuid');
                 }
             );
         }
@@ -234,6 +237,8 @@ class OrderFilter extends Filter
 
     public function driver(string $driver)
     {
+        $this->builder->with('driverAssigned');
+
         if (Str::isUuid($driver)) {
             $this->builder->where('driver_assigned_uuid', $driver);
         } else {
@@ -293,5 +298,21 @@ class OrderFilter extends Filter
         }
 
         return $this->builder;
+    }
+
+    public function exclude($exclude)
+    {
+        $exclude = Utils::arrayFrom($exclude);
+        if (is_array($exclude)) {
+            $isUuids = Arr::every($exclude, function ($id) {
+                return Str::isUuid($id);
+            });
+
+            if ($isUuids) {
+                $this->builder->whereNotIn('uuid', $exclude);
+            } else {
+                $this->builder->whereNotIn('public_id', $exclude);
+            }
+        }
     }
 }
