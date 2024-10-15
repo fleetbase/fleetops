@@ -31,7 +31,6 @@
             {{#if this.isDataLoaded}}
                 {{#if this.visibilityControls.drivers}}
                     {{#each this.drivers as |driver|}}
-                        {{!-- {{log driver}} --}}
                         <layers.tracking-marker
                             @id={{driver.id}}
                             @publicId={{driver.public_id}}
