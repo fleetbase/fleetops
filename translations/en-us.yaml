@@ -1042,8 +1042,8 @@ fleet-ops:
       actions: Actions
       create-order: Create new order...
       create-fleet: Create new fleet...
-      active-order: Active orders
-      unassigned-order: Unassigned orders  
+      active-orders: Active Orders
+      unassigned-orders: Unassigned Orders  
     place-form-panel:
       success-message: place ({placeAddress}) saved successfully.
       place: New Place

@@ -24,14 +24,18 @@ class ContactController extends Controller
         // get request input
         $input = $request->only(['name', 'type', 'title', 'email', 'phone', 'meta']);
 
-        // create the contact
-        $contact = Contact::updateOrCreate(
-            [
-                'company_uuid' => session('company'),
-                'name'         => strtoupper($input['name']),
-            ],
-            $input
-        );
+        try {
+            // create the contact
+            $contact = Contact::updateOrCreate(
+                [
+                    'company_uuid' => session('company'),
+                    'name'         => strtoupper($input['name']),
+                ],
+                $input
+            );
+        } catch (\Exception $e) {
+            return response()->apiError($e->getMessage());
+        }
 
         // response the driver resource
         return new ContactResource($contact);
@@ -93,12 +97,7 @@ class ContactController extends Controller
         try {
             $contact = Contact::findRecordOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
-                [
-                    'error' => 'Contact resource not found.',
-                ],
-                404
-            );
+            return response()->apiError('Contact resource not found.', 404);
         }
 
         // response the contact resource

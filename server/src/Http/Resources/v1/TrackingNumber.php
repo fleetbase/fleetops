@@ -31,6 +31,7 @@ class TrackingNumber extends FleetbaseResource
             'status_code'     => $this->last_status_code,
             'qr_code'         => $this->qr_code,
             'barcode'         => $this->barcode,
+            'url'             => Utils::consoleUrl('track-order', ['order' => $this->tracking_number]),
             'type'            => Utils::getTypeFromClassName($this->owner_type),
             'updated_at'      => $this->updated_at,
             'created_at'      => $this->created_at,

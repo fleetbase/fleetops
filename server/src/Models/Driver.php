@@ -218,6 +218,9 @@ class Driver extends Model
     {
         return $this->belongsTo(Vehicle::class)->select([
             'uuid',
+            'vendor_uuid',
+            'photo_uuid',
+            'avatar_url',
             'public_id',
             'year',
             'make',
@@ -506,22 +509,49 @@ class Driver extends Model
     }
 
     /**
-     * Assign a vehicle to driver.
+     * Assigns the specified vehicle to the current driver.
      *
-     * @return void
+     * This method performs the following actions:
+     * 1. Unassigns the vehicle from any other drivers by setting their `vehicle_uuid` to `null`.
+     * 2. Assigns the vehicle to the current driver by updating the vehicle's `driver_uuid`.
+     * 3. Associates the vehicle with the current driver instance.
+     * 4. Saves the changes to persist the assignment.
+     *
+     * @param Vehicle $vehicle the vehicle instance to assign to the driver
+     *
+     * @return $this returns the current driver instance after assignment
+     *
+     * @throws \Exception if the vehicle assignment fails
      */
-    public function assignVehicle(Vehicle $vehicle)
+    public function assignVehicle(Vehicle $vehicle): self
     {
-        // auto: unassign vehicle from other drivers
+        // Unassign vehicle from other drivers
         static::where('vehicle_uuid', $vehicle->uuid)->update(['vehicle_uuid' => null]);
 
-        // assign driver to vehicle
-        $vehicle->update(['driver_uuid' => $this->uuid]);
-
-        // set this vehicle
-        $this->vehicle_uuid = $vehicle->uuid;
-        $this->setRelation('vehicle', $vehicle);
+        // Set this vehicle to the driver instance
+        $this->setVehicle($vehicle);
         $this->save();
+
+        return $this;
+    }
+
+    /**
+     * Sets the vehicle for the current driver instance.
+     *
+     * This method updates the `vehicle_uuid` attribute of the driver and establishes
+     * the relationship between the driver and the vehicle model instance.
+     *
+     * @param Vehicle $vehicle the vehicle instance to associate with the driver
+     *
+     * @return $this returns the current driver instance after setting the vehicle
+     */
+    public function setVehicle(Vehicle $vehicle)
+    {
+        // Update the driver's vehicle UUID
+        $this->vehicle_uuid = $vehicle->uuid;
+
+        // Establish the relationship with the vehicle
+        $this->setRelation('vehicle', $vehicle);
 
         return $this;
     }

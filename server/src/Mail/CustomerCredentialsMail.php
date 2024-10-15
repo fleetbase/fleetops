@@ -54,6 +54,9 @@ class CustomerCredentialsMail extends Mailable
      */
     public function content(): Content
     {
+        $user = $this->customer->getUser();
+        $this->customer->setRelation('user', $user);
+
         return new Content(
             markdown: 'fleetops::mail.customer-credentials',
             with: [

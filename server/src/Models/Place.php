@@ -551,7 +551,7 @@ class Place extends Model
     {
         if (Utils::isCoordinatesStrict($place)) {
             // create a place from coordinates using reverse loopup
-            return Place::insertFromCoordinates($place, true);
+            return Place::insertFromCoordinates($place);
         } elseif (is_string($place)) {
             if (Utils::isPublicId($place)) {
                 $resolvedPlace = Place::where('public_id', $place)->first();

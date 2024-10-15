@@ -6,6 +6,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
+import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency-decorators';
 import generateUUID from '@fleetbase/ember-core/utils/generate-uuid';
 import createFlowActivity from '../../utils/create-flow-activity';
@@ -462,8 +463,8 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
                     let lastChildActivity = null;
                     return activityObject.forEach((childActivityObject, childIndex) => {
                         if (childIndex > 0 && lastChildActivity) {
-                            console.log('[lastChildActivity]', lastChildActivity);
-                            console.log('[childActivityObject]', childActivityObject);
+                            debug('[lastChildActivity]', lastChildActivity);
+                            debug('[childActivityObject]', childActivityObject);
                             this.addNewLinkedActivity(lastChildActivity, childActivityObject);
                             return;
                         }

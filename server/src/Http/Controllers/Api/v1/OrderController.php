@@ -12,6 +12,7 @@ use Fleetbase\FleetOps\Http\Requests\UpdateOrderRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
+use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
@@ -28,6 +29,7 @@ use Fleetbase\Models\File;
 use Fleetbase\Models\Setting;
 use Fleetbase\Support\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -202,23 +204,50 @@ class OrderController extends Controller
 
         // customer assignment
         if ($request->has('customer')) {
-            $customer = Utils::getUuid(
-                ['contacts', 'vendors'],
-                [
-                    'public_id'    => $request->input('customer'),
-                    'company_uuid' => session('company'),
-                ]
-            );
+            $customer = $request->input('customer');
 
-            if (is_array($customer)) {
-                $input['customer_uuid'] = Utils::get($customer, 'uuid');
-                $input['customer_type'] = Utils::getModelClassName(Utils::get($customer, 'table'));
+            if (is_string($customer)) {
+                $customer = Utils::getUuid(
+                    ['contacts', 'vendors'],
+                    [
+                        'public_id'    => $customer,
+                        'company_uuid' => session('company'),
+                    ]
+                );
+
+                if (is_array($customer)) {
+                    $input['customer_uuid'] = Utils::get($customer, 'uuid');
+                    $input['customer_type'] = Utils::getModelClassName(Utils::get($customer, 'table'));
+                }
+            } elseif (is_array($customer)) {
+                // create customer from input
+                $customer = Arr::only($customer, ['internal_id', 'name', 'title', 'email', 'phone', 'meta']);
+
+                try {
+                    $customer = Contact::firstOrCreate(
+                        [
+                            'email' => $customer['email'],
+                            'type'  => 'customer',
+                        ],
+                        [
+                            ...$customer,
+                            'type' => 'customer',
+                        ]
+                    );
+                } catch (\Exception $e) {
+                    return response()->apiError('Failed to find or create customer for order.');
+                }
+
+                if ($customer instanceof Contact) {
+                    $input['customer_uuid'] = $customer->uuid;
+                    $input['customer_type'] = Utils::getModelClassName($customer);
+                }
             }
         }
 
-        // if no type is set its default to default
+        // if no type is set its default to transport
         if (!isset($input['type'])) {
-            $input['type'] = 'default';
+            $input['type'] = 'transport';
         }
 
         // if no status is set its default to `created`

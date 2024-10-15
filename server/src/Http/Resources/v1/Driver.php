@@ -4,9 +4,11 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
+use Fleetbase\Http\Resources\FleetbaseResourceCollection;
 use Fleetbase\Http\Resources\User;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class Driver extends FleetbaseResource
 {
@@ -41,9 +43,9 @@ class Driver extends FleetbaseResource
             'vehicle_avatar'                => $this->when(Http::isInternalRequest(), $this->vehicle_avatar),
             'vendor_name'                   => $this->when(Http::isInternalRequest(), $this->vendor_name),
             'vehicle'                       => $this->whenLoaded('vehicle', fn () => new VehicleWithoutDriver($this->vehicle)),
-            'current_job'                   => $this->whenLoaded('currentJob', fn () => new CurrentJob($this->currentJob)),
+            'current_job'                   => $this->whenLoaded('currentJob', fn () => new Order($this->currentJob)),
             'current_job_id'                => $this->when(Http::isInternalRequest(), data_get($this, 'currentJob.public_id')),
-            'jobs'                          => $this->whenLoaded('jobs', fn () => CurrentJob::collection($this->jobs()->without(['driverAssigned'])->get())),
+            'jobs'                          => $this->whenLoaded('jobs', fn () => $this->getJobs()),
             'vendor'                        => $this->whenLoaded('vendor', fn () => new Vendor($this->vendor)),
             'fleets'                        => $this->whenLoaded('fleets', fn () => Fleet::collection($this->fleets()->without('drivers')->get())),
             'location'                      => $this->wasRecentlyCreated ? new Point(0, 0) : data_get($this, 'location', new Point(0, 0)),
@@ -60,6 +62,19 @@ class Driver extends FleetbaseResource
             'updated_at'                    => $this->updated_at,
             'created_at'                    => $this->created_at,
         ];
+    }
+
+    public function getJobs(): AnonymousResourceCollection|FleetbaseResourceCollection
+    {
+        return Order::collection(
+            $this->jobs()->with(
+                [
+                    'driverAssigned' => function ($query) {
+                        $query->without('jobs');
+                    },
+                ]
+            )->get()
+        );
     }
 
     /**
