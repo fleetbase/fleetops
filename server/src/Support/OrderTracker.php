@@ -77,14 +77,10 @@ class OrderTracker
     {
         $totalDistance     = $this->getTotalDistance();
         $completedDistance = $this->getCompletedDistance();
-
-        if ($totalDistance === -1 || $completedDistance === -1) {
-            return 0;
-        }
+        $cannotUseDistance = $totalDistance == -1 || $completedDistance == -1 || $completedDistance === 0;
 
         // Get order percentage by activity if distance-based progress is not available
-        $shouldCalculateProgressByActivity = empty($completedDistance) && $this->order->status !== 'created';
-        if ($shouldCalculateProgressByActivity) {
+        if ($cannotUseDistance) {
             /** @var Collection $activities */
             $activities    = $this->order->orderConfig ? $this->order->orderConfig->activities() : collect();
             $totalActivity = $activities->count();
