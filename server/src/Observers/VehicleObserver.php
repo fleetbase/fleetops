@@ -35,7 +35,7 @@ class VehicleObserver
      *
      * @return void
      */
-    public function updated(Vehicle $vehicle)
+    public function updating(Vehicle $vehicle)
     {
         // assign this vehicle to a driver if the driver has been set
         $identifier = request()->or(['driver_uuid', 'vehicle.driver_uuid', 'vehicle.driver.uuid']);
@@ -45,7 +45,7 @@ class VehicleObserver
 
             if ($driver) {
                 // assign this vehicle to driver
-                $driver->assignVehicle($vehicle);
+                $driver->setVehicle($vehicle);
 
                 // set driver to vehicle
                 $vehicle->setRelation('driver', $driver);
