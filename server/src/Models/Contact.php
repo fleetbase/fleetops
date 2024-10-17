@@ -262,21 +262,23 @@ class Contact extends Model
      * user to the contact. Optionally, it sends an invitation to the newly created user via email.
      *
      * @param Contact $contact    the contact instance from which the user should be created
-     * @param bool    $sendInvite (optional) Whether to send an invitation to the newly created user. Default is true.
+     * @param bool    $sendInvite (optional) Whether to send an invitation to the newly created user. Default is false.
      *
      * @return User the newly created user instance
      *
      * @throws UserAlreadyExistsException if a user with the same email or phone number already exists
      */
-    public static function createUserFromContact(Contact $contact, bool $sendInvite = true): User
+    public static function createUserFromContact(Contact $contact, bool $sendInvite = false): User
     {
         // Check if user already exist with email or phone number
-        $userAlreadyExists = User::where(function ($query) use ($contact) {
+        $existingUser = User::where(function ($query) use ($contact) {
             $query->where('email', $contact->email);
-            $query->orWhere('phone', $contact->phone);
+            if ($contact->phone) {
+                $query->orWhere('phone', $contact->phone);
+            }
         })->first();
-        if ($userAlreadyExists) {
-            throw new UserAlreadyExistsException('User already exists, try to assigning the user to this contact.');
+        if ($existingUser) {
+            throw new UserAlreadyExistsException('User already exists, try to assigning the user to this contact.', $existingUser);
         }
 
         // Load company
@@ -330,6 +332,62 @@ class Contact extends Model
         return $user;
     }
 
+    /**
+     * Assigns a user to the company and optionally sends an invitation email.
+     *
+     * This method performs the following actions:
+     * 1. Associates the provided user with the current company, assigning them a role based on the
+     *    company's type (e.g., 'Fleet-Ops Customer' or 'Fleet-Ops Contact').
+     * 2. If the user is of type 'customer', assigns the 'Fleet-Ops Customer' role specifically.
+     * 3. Updates the current entity's `user_uuid` to reference the assigned user.
+     * 4. Optionally sends an invitation email to the user, inviting them to join the company.
+     *
+     * @param User $user       the user to be assigned to the company
+     * @param bool $sendInvite Determines whether to send an invitation email to the user. Defaults to false.
+     *
+     * @return self returns the current instance to allow method chaining
+     *
+     * @throws \Exception if an error occurs during user assignment or while sending the invitation
+     */
+    public function assignUser(User $user, bool $sendInvite = false): self
+    {
+        // Load company
+        $this->loadMissing('copmany');
+
+        // Assing to company
+        $user->assignCompany($this->company, $this->type === 'customer' ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact');
+
+        // Get the company user instance
+        $companyUser = $user->getCompanyUser($this->company);
+
+        // Assign customer role
+        $companyUser->assignSingleRole('Fleet-Ops Customer');
+
+        // Set user to contact
+        $this->update(['user_uuid' => $user->uuid]);
+
+        // Optionally, send invite
+        if ($sendInvite) {
+            // send invitation to user
+            $invitation = Invite::create([
+                'company_uuid'    => $user->company_uuid,
+                'created_by_uuid' => session('user'),
+                'subject_uuid'    => $user->company_uuid,
+                'subject_type'    => Utils::getMutationType('company'),
+                'protocol'        => 'email',
+                'recipients'      => [$user->email],
+                'reason'          => 'join_company',
+            ]);
+
+            // notify user
+            $user->notify(new UserInvited($invitation));
+        }
+
+        $this->setRelation('user', $user);
+
+        return $this;
+    }
+
     public function syncWithUser(): bool
     {
         $updates = [];
@@ -364,11 +422,11 @@ class Contact extends Model
      * This method is a wrapper around the createUserFromContact method. It allows creating a user directly
      * from a contact instance and, optionally, sending an invitation to the newly created user.
      *
-     * @param bool $sendInvite (optional) Whether to send an invitation to the newly created user. Default is true.
+     * @param bool $sendInvite (optional) Whether to send an invitation to the newly created user. Default is false.
      *
      * @return User the newly created user instance
      */
-    public function createUser(bool $sendInvite = true): User
+    public function createUser(bool $sendInvite = false): User
     {
         return static::createUserFromContact($this, $sendInvite);
     }
