@@ -61,8 +61,18 @@ class PurchaseRate extends FleetbaseResource
      */
     public function serviceQuote()
     {
-        $this->loadMissing('serviceQuote');
+        if ($this->resource && method_exists($this->resource, 'loadMissing')) {
+            $this->resource->loadMissing('serviceQuote');
 
-        return $this->serviceQuote ? new ServiceQuote($this->serviceQuote) : null;
+            return $this->resource->serviceQuote ? new ServiceQuote($this->resource->serviceQuote) : null;
+        }
+
+        if (method_exists($this, 'loadMissing')) {
+            $this->loadMissing('serviceQuote');
+
+            return $this->serviceQuote ? new ServiceQuote($this->serviceQuote) : null;
+        }
+
+        return null;
     }
 }

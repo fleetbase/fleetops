@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Events\OrderReady;
 use Fleetbase\FleetOps\Events\OrderStarted;
+use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\ScheduleOrderRequest;
@@ -226,16 +227,29 @@ class OrderController extends Controller
                 try {
                     $customer = Contact::firstOrCreate(
                         [
-                            'email' => $customer['email'],
-                            'type'  => 'customer',
+                            'company_uuid' => session('company'),
+                            'email'        => $customer['email'],
+                            'type'         => 'customer',
                         ],
                         [
                             ...$customer,
-                            'type' => 'customer',
+                            'company_uuid' => session('company'),
+                            'type'         => 'customer',
                         ]
                     );
                 } catch (\Exception $e) {
                     return response()->apiError('Failed to find or create customer for order.');
+                } catch (UserAlreadyExistsException $e) {
+                    try {
+                        // If user already exist then assign user to this customer and the company
+                        $existingUser = $e->getUser();
+                        // Assign user to customer
+                        if ($existingUser && $customer) {
+                            $customer->assignUser($existingUser);
+                        }
+                    } catch (\Exception $e) {
+                        return response()->apiError('Failed to find or create customer for order.');
+                    }
                 }
 
                 if ($customer instanceof Contact) {

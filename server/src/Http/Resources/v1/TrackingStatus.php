@@ -67,8 +67,18 @@ class TrackingStatus extends FleetbaseResource
      */
     public function trackingNumber()
     {
-        $this->loadMissing('trackingNumber');
+        if ($this->resource && method_exists($this->resource, 'loadMissing')) {
+            $this->resource->loadMissing('trackingNumber');
 
-        return $this->trackingNumber ? new TrackingNumber($this->trackingNumber) : null;
+            return $this->resource->trackingNumber ? new TrackingNumber($this->resource->trackingNumber) : null;
+        }
+
+        if (method_exists($this, 'loadMissing')) {
+            $this->loadMissing('trackingNumber');
+
+            return $this->trackingNumber ? new TrackingNumber($this->trackingNumber) : null;
+        }
+
+        return null;
     }
 }
