@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
 use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
 
@@ -11,6 +12,7 @@ class Route extends Model
 {
     use HasUuid;
     use TracksApiCredential;
+    use HasApiModelBehavior;
 
     /**
      * The database table used by the model.

@@ -9,6 +9,7 @@ use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\FleetOps\Exports\OrderExport;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Http\Requests\BulkDispatchRequest;
 use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
@@ -24,6 +25,7 @@ use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
+use Fleetbase\Http\Requests\Internal\BulkActionRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\Models\CustomFieldValue;
 use Fleetbase\Models\File;
@@ -323,9 +325,8 @@ class OrderController extends FleetOpsController
             [
                 'status'  => 'OK',
                 'message' => 'Deleted ' . $count . ' orders',
-            ],
-            200
-        );
+                'count'   => $count,
+            ]);
     }
 
     /**
@@ -333,31 +334,79 @@ class OrderController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
-    public function bulkCancel(BulkDeleteRequest $request)
+    public function bulkCancel(BulkActionRequest $request)
     {
         /** @var \Fleetbase\Models\Order */
         $orders = Order::whereIn('uuid', $request->input('ids'))->get();
 
-        $count = $orders->count();
+        $count      = $orders->count();
+        $failed     = [];
+        $successful = [];
 
         foreach ($orders as $order) {
             if ($order->status === 'canceled') {
+                $failed[] = $order->uuid;
                 continue;
             }
 
             $trackingStatusExists = TrackingStatus::where(['tracking_number_uuid' => $order->tracking_number_uuid, 'code' => 'CANCELED'])->exists();
-
             if ($trackingStatusExists) {
+                $failed[] = $order->uuid;
                 continue;
             }
 
             $order->cancel();
+            $successful[] = $order->uuid;
         }
 
         return response()->json(
             [
-                'status'  => 'OK',
-                'message' => 'Canceled ' . $count . ' orders',
+                'status'     => 'OK',
+                'message'    => 'Canceled ' . $count . ' orders',
+                'count'      => $count,
+                'failed'     => $failed,
+                'successful' => $successful,
+            ]
+        );
+    }
+
+    /**
+     * Dispatches orders in bulk.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function bulkDispatch(BulkDispatchRequest $request)
+    {
+        /** @var \Fleetbase\Models\Order */
+        $orders = Order::whereIn('uuid', $request->input('ids'))->get();
+
+        $count      = $orders->count();
+        $failed     = [];
+        $successful = [];
+
+        foreach ($orders as $order) {
+            if ($order->status !== 'created') {
+                $failed[] = $order->uuid;
+                continue;
+            }
+
+            $trackingStatusExists = TrackingStatus::where(['tracking_number_uuid' => $order->tracking_number_uuid, 'code' => 'CANCELED'])->exists();
+            if ($trackingStatusExists) {
+                $failed[] = $order->uuid;
+                continue;
+            }
+
+            $order->dispatch();
+            $successful[] = $order->uuid;
+        }
+
+        return response()->json(
+            [
+                'status'     => 'OK',
+                'message'    => 'Dispatched ' . $count . ' orders',
+                'count'      => $count,
+                'failed'     => $failed,
+                'successful' => $successful,
             ]
         );
     }

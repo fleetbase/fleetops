@@ -23,28 +23,11 @@ export default class LeafletDrawControl extends BaseLayer {
         ];
     }
 
-    get alwaysCapturedLeafletEvents() {
-        return [
-            L.Draw.Event.CREATED,
-            L.Draw.Event.EDITED,
-            L.Draw.Event.EDITSTART,
-            L.Draw.Event.EDITSTOP,
-            L.Draw.Event.EDITRESIZE,
-            L.Draw.Event.EDITMOVE,
-            L.Draw.Event.DELETED,
-            L.Draw.Event.DRAWSTART,
-            L.Draw.Event.DRAWSTOP,
-        ];
-    }
-
     leafletOptions = ['draw', 'edit', 'remove', 'poly', 'position'];
 
-    @computed('leafletEvents.[]', 'alwaysCapturedLeafletEvents.[]', 'args') get usedLeafletEvents() {
-        return this.leafletEvents.filter((eventName) => {
-            if (this.alwaysCapturedLeafletEvents.includes(eventName)) {
-                return true;
-            }
-
+    @computed('leafletEvents.[]', 'args') get usedLeafletEvents() {
+        const leafletEvents = [...this.leafletEvents, ...Object.values(L.Draw.Event)];
+        return leafletEvents.filter((eventName) => {
             eventName = camelize(eventName.replace(':', ' '));
             let methodName = `_${eventName}`;
             let actionName = `on${classify(eventName)}`;
