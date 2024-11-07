@@ -1588,3 +1588,7 @@ body[data-theme='dark']
     padding: 0.5rem;
     vertical-align: top;
 }
+
+.justify-end-i {
+    justify-content: end !important;
+}

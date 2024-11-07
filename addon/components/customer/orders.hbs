@@ -118,6 +118,7 @@
                                                 </div>
                                                 <div>
                                                     <div class="flex flew-row space-x-2">
+                                                        <Button @helpText="View Label" @icon="print" @onClick={{this.viewOrderLabel}} />
                                                         <Button @helpText="View Route" @icon="route" @onClick={{this.locateOrderRoute}} />
                                                         <Button @helpText="Locate Driver" @icon="truck" @onClick={{this.locateDriver}} @disabled={{not order.has_driver_assigned}} />
                                                     </div>
@@ -169,12 +170,18 @@
                                                         {{#each order.payload.entitiesByDestination as |group|}}
                                                             <div class="item-detail">
                                                                 <div class="flex flex-row justify-between flex-grow-0">
-                                                                    <DisplayPlace @place={{group.waypoint}} @addressClass="text-xs truncate" {{set-width "140px"}} />
+                                                                    <div class="flex flex-col" {{set-width "140px"}}>
+                                                                        <DisplayPlace @place={{group.waypoint}} @addressClass="text-xs truncate" />
+
+                                                                    </div>
                                                                     <div class="flex flex-col items-end flex-grow-0 space-y-1">
-                                                                        <div class="rounded-md bg-yellow-300 text-yellow-900 px-2 py-0.5 text-xs flex-grow-0">{{t
-                                                                                "fleet-ops.operations.orders.index.view.tracking"
-                                                                            }}
-                                                                            {{group.waypoint.tracking}}</div>
+                                                                        <ClickToCopy
+                                                                            @value={{group.waypoint.tracking}}
+                                                                            class="rounded-md bg-yellow-300 text-yellow-900 px-2 py-0.5 text-xs flex-grow-0 truncate"
+                                                                        >
+                                                                            <span>{{t "fleet-ops.operations.orders.index.view.tracking"}}</span>
+                                                                            <span>{{group.waypoint.tracking}}</span>
+                                                                        </ClickToCopy>
                                                                         <Badge @status={{group.waypoint.status_code}} />
                                                                     </div>
                                                                 </div>
@@ -187,16 +194,26 @@
                                                                             </div>
                                                                             <div class="flex-1">
                                                                                 <div class="text-sm font-bold">{{n-a entity.name (concat "Item " (add index 1))}}</div>
-                                                                                <div class="text-xs"><span class="font-semibold">Description:</span>
-                                                                                    {{n-a entity.description "No description provided."}}</div>
-                                                                                <div class="text-xs"><span class="font-semibold">Tracking:</span> {{n-a entity.tracking}}</div>
+                                                                                <div class="text-xs">
+                                                                                    <span class="font-semibold">Description:</span>
+                                                                                    <span>{{n-a entity.description "No description provided."}}</span>
+                                                                                </div>
+                                                                                <ClickToCopy @value={{entity.tracking}} class="text-xs"><span class="font-semibold">Tracking:</span>
+                                                                                    {{n-a entity.tracking}}
+                                                                                </ClickToCopy>
                                                                                 {{#if entity.price}}
-                                                                                    <div class="text-xs"><span class="font-semibold">Price:</span>
-                                                                                        {{format-currency entity.price entity.currency}}</div>
+                                                                                    <div class="text-xs">
+                                                                                        <span class="font-semibold">Price:</span>
+                                                                                        <span>{{format-currency entity.price entity.currency}}</span>
+                                                                                    </div>
                                                                                 {{/if}}
                                                                             </div>
                                                                         </div>
                                                                     {{/each}}
+                                                                </div>
+                                                                <div class="customer-order-details-seperator"></div>
+                                                                <div class="flex">
+                                                                    <Button @helpText="View Label" @icon="print" @size="sm" @onClick={{fn this.viewWaypointLabel group.waypoint}} />
                                                                 </div>
                                                             </div>
                                                         {{else}}
@@ -213,12 +230,19 @@
                                                                     </div>
                                                                     <div class="flex-1">
                                                                         <div class="text-sm font-bold">{{n-a entity.name (concat "Item " (add index 1))}}</div>
-                                                                        <div class="text-xs"><span class="font-semibold">Description:</span>
-                                                                            {{n-a entity.description "No description provided."}}</div>
-                                                                        <div class="text-xs"><span class="font-semibold">Tracking:</span> {{n-a entity.tracking}}</div>
+                                                                        <div class="text-xs">
+                                                                            <span class="font-semibold">Description:</span>
+                                                                            <span>{{n-a entity.description "No description provided."}}</span>
+                                                                        </div>
+                                                                        <ClickToCopy @value={{entity.tracking}} class="text-xs">
+                                                                            <span class="font-semibold">Tracking:</span>
+                                                                            <span>{{n-a entity.tracking}}</span>
+                                                                        </ClickToCopy>
                                                                         {{#if entity.price}}
-                                                                            <div class="text-xs"><span class="font-semibold">Price:</span>
-                                                                                {{format-currency entity.price entity.currency}}</div>
+                                                                            <div class="text-xs">
+                                                                                <span class="font-semibold">Price:</span>
+                                                                                <span>{{format-currency entity.price entity.currency}}</span>
+                                                                            </div>
                                                                         {{/if}}
                                                                     </div>
                                                                 </div>

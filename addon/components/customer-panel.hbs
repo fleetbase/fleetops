@@ -27,12 +27,16 @@
                         </div>
                     </DropdownButton>
                 </div>
-                <Button
-                    @type="default"
-                    @icon="times"
-                    @helpText={{if this.customer.id (t "fleet-ops.component.contact-panel.cancel-edit-button") (t "fleet-ops.component.contact-panel.cancel-new-button")}}
-                    @onClick={{this.onPressCancel}}
-                />
+                <div>
+                    <div class="flex">
+                        <Button
+                            @type="default"
+                            @icon="times"
+                            @helpText={{if this.customer.id (t "fleet-ops.component.contact-panel.cancel-edit-button") (t "fleet-ops.component.contact-panel.cancel-new-button")}}
+                            @onClick={{this.onPressCancel}}
+                        />
+                    </div>
+                </div>
             </div>
         </div>
         <div class="flex flex-row justify-between w-full">

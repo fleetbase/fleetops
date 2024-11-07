@@ -19,10 +19,12 @@ const MAP_TARGET_FOCUS_PADDING_BOTTOM_RIGHT = [200, 0];
 const MAP_TARGET_FOCUS_REFOCUS_PANBY = [150, 0];
 export default class CustomerOrdersComponent extends Component {
     @service store;
+    @service fetch;
     @service notifications;
     @service currentUser;
     @service universe;
     @service urlSearchParams;
+    @service modalsManager;
     @service customerSession;
     @service hostRouter;
     @engineService('@fleetbase/fleetops-engine') movementTracker;
@@ -141,6 +143,68 @@ export default class CustomerOrdersComponent extends Component {
                     this.resetOrderRoute();
                 });
             }
+        }
+    }
+
+    @action async viewOrderLabel() {
+        const order = this.selectedOrder;
+        if (!order) {
+            return;
+        }
+
+        // render dialog to display label within
+        this.modalsManager.show(`modals/order-label`, {
+            title: 'Order Label',
+            modalClass: 'modal-xl',
+            acceptButtonText: 'Done',
+            hideDeclineButton: true,
+            order,
+        });
+
+        try {
+            // load the pdf label from base64
+            // eslint-disable-next-line no-undef
+            const fileReader = new FileReader();
+            const { data } = await this.fetch.get(`orders/label/${order.public_id}?format=base64`);
+            // eslint-disable-next-line no-undef
+            const base64 = await fetch(`data:application/pdf;base64,${data}`);
+            const blob = await base64.blob();
+            // load into file reader
+            fileReader.onload = (event) => {
+                const data = event.target.result;
+                this.modalsManager.setOption('data', data);
+            };
+            fileReader.readAsDataURL(blob);
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    @action async viewWaypointLabel(waypoint) {
+        // render dialog to display label within
+        this.modalsManager.show(`modals/order-label`, {
+            title: 'Waypoint Label',
+            modalClass: 'modal-xl',
+            acceptButtonText: 'Done',
+            hideDeclineButton: true,
+        });
+
+        try {
+            // load the pdf label from base64
+            // eslint-disable-next-line no-undef
+            const fileReader = new FileReader();
+            const { data } = await this.fetch.get(`orders/label/${waypoint.waypoint_public_id}?format=base64`);
+            // eslint-disable-next-line no-undef
+            const base64 = await fetch(`data:application/pdf;base64,${data}`);
+            const blob = await base64.blob();
+            // load into file reader
+            fileReader.onload = (event) => {
+                const data = event.target.result;
+                this.modalsManager.setOption('data', data);
+            };
+            fileReader.readAsDataURL(blob);
+        } catch (error) {
+            this.notifications.serverError(error);
         }
     }
 

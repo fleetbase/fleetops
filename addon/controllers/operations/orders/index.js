@@ -249,6 +249,13 @@ export default class OperationsOrdersIndexController extends BaseController {
     @tracked drawerTab;
 
     /**
+     * Filterable status options for orders.
+     *
+     * @type {Array}
+     */
+    @tracked statusOptions = [];
+
+    /**
      * Flag to determine if the layout is 'map'
      *
      * @type {Boolean}
@@ -576,6 +583,15 @@ export default class OperationsOrdersIndexController extends BaseController {
     constructor() {
         super(...arguments);
         this.listenForOrderEvents();
+        this.getOrderStatusOptions.perform();
+    }
+
+    @task *getOrderStatusOptions() {
+        try {
+            this.statusOptions = yield this.fetch.get('orders/statuses');
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**
@@ -941,6 +957,7 @@ export default class OperationsOrdersIndexController extends BaseController {
 
     /**
      * Cancels multiple selected orders.
+     *
      * @param {Array} [selected=[]] - Orders selected for cancellation.
      * @action
      * @memberof OperationsOrdersIndexController
@@ -962,6 +979,39 @@ export default class OperationsOrdersIndexController extends BaseController {
             onConfirm: (canceledOrders) => {
                 canceledOrders.forEach((order) => {
                     order.set('status', 'canceled');
+                });
+            },
+            onSuccess: async () => {
+                await this.hostRouter.refresh();
+                this.table.untoggleSelectAll();
+            },
+        });
+    }
+
+    /**
+     * Dispatches multiple selected orders.
+     *
+     * @param {Array} [selected=[]] - Orders selected for dispatch.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
+    @action bulkDispatchOrders(selected = []) {
+        selected = selected.length > 0 ? selected : this.table.selectedRows;
+
+        if (!isArray(selected) || selected.length === 0) {
+            return;
+        }
+
+        this.crud.bulkAction('dispatch', selected, {
+            acceptButtonText: 'Dispatch Orders',
+            acceptButtonScheme: 'magic',
+            acceptButtonIcon: 'rocket',
+            modelNamePath: 'public_id',
+            actionPath: 'orders/bulk-dispatch',
+            actionMethod: 'POST',
+            onConfirm: (dispatchedOrders) => {
+                dispatchedOrders.forEach((order) => {
+                    order.set('status', 'dispatched');
                 });
             },
             onSuccess: async () => {

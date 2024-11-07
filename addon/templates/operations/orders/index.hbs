@@ -80,10 +80,21 @@
                 <div class="next-dd-menu mt-2 mx-0">
                     <div class="px-1">
                         <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.bulkCancelOrders)}} disabled={{cannot "fleet-ops cancel order"}}>
-                            {{t "fleet-ops.operations.orders.index.cancel-orders"}}
+                            <div class="w-6"><FaIcon @icon="ban" @size="sm" /></div>
+                            <div>{{t "fleet-ops.operations.orders.index.cancel-orders"}}</div>
                         </a>
+                    </div>
+                    <div class="px-1">
                         <a href="javascript:;" class="text-red-500 next-dd-item" {{on "click" (dropdown-fn dd this.bulkDeleteOrders)}} disabled={{cannot "fleet-ops delete order"}}>
-                            {{t "fleet-ops.operations.orders.index.delete-orders"}}
+                            <div class="w-6"><FaIcon @icon="trash" @size="sm" /></div>
+                            <div>{{t "fleet-ops.operations.orders.index.delete-orders"}}</div>
+                        </a>
+                    </div>
+                    <div class="next-dd-menu-seperator"></div>
+                    <div class="px-1">
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.bulkDispatchOrders)}} disabled={{cannot "fleet-ops dispatch order"}}>
+                            <div class="w-6"><FaIcon @icon="rocket" @size="sm" /></div>
+                            <div>{{t "fleet-ops.operations.orders.index.dispatch-orders"}}</div>
                         </a>
                     </div>
                 </div>

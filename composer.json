@@ -1,6 +1,6 @@
 {
     "name": "fleetbase/fleetops-api",
-    "version": "0.5.12",
+    "version": "0.5.13",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "keywords": [
         "fleetbase-extension",
@@ -42,12 +42,6 @@
         "phpstan/phpstan": "^1.10.38",
         "symfony/var-dumper": "^5.4.29"
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/fleetbase/laravel-model-caching"
-        }
-    ],
     "autoload": {
         "psr-4": {
             "Fleetbase\\FleetOps\\": "server/src/",
