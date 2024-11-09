@@ -26,40 +26,36 @@ class FixDriverCompanies extends Command
     /**
      * Execute the console command.
      *
-     * This method is responsible for the main logic of the command.
-     * It fetches dispatchable orders, notifies about the current time and number of orders,
-     * and then dispatches each order if there are nearby drivers.
-     *
      * @return int
      */
     public function handle()
     {
-        $drivers = Driver::whereHas('user', function ($query) {
-            $query->whereNull('company_uuid');
-            $query->withTrashed();
-        })->with(['user'])->get();
+        $drivers = Driver::whereHas('user')->whereNotNull('company_uuid')->with(['user'])->get();
 
         // Fix these drivers
         foreach ($drivers as $driver) {
+            /** @var \Fleetbase\Models\User $user */
             $user = $driver->user;
             if ($user) {
-                $this->line('Found user ' . $user->name . ' (' . $user->email . ') which has no company assigned');
-                // Get company from driver profile
-                $company = Company::where('uuid', $driver->company_uuid)->first();
-                if ($company) {
-                    $user->assignCompany($company);
+                // Sync email if applicable
+                $user->syncProperty('email', $driver);
 
-                    // create company user
-                    CompanyUser::create([
-                        'user_uuid'    => $user->uuid,
-                        'company_uuid' => $company->uuid,
-                        'status'       => 'active',
-                    ]);
+                // Sync phone if applicable
+                $user->syncProperty('phone', $driver);
 
-                    // Inform
-                    $this->line('User ' . $user->email . ' was assigned to company: ' . $company->name);
+                // Check if customers user has a customer user record with the company
+                $doesntHaveCompanyUser = CompanyUser::where(['user_uuid' => $user->uuid, 'company_uuid' => $driver->company_uuid])->doesntExist();
+                if ($doesntHaveCompanyUser) {
+                    $this->line('Found driver ' . $user->name . ' (' . $user->email . ') which doesnt have correct company assignment.');
+                    $company = Company::where('uuid', $driver->company_uuid)->first();
+                    if ($company) {
+                        $user->assignCompany($company);
+                        $this->line('Driver ' . $user->email . ' was assigned to company: ' . $company->name);
+                    }
                 }
             }
         }
+
+        return Command::SUCCESS;
     }
 }

@@ -140,6 +140,13 @@ class MorphController extends Controller
                 ->applyDirectivesForPermissions('fleet-ops list contact')
                 ->filter(new ContactFilter($request));
 
+            if ($request->has('user_uuid') || $request->has('user')) {
+                $userId = $request->or(['user_uuid', 'user']);
+                if ($userId) {
+                    $builder->where('user_uuid', $userId);
+                }
+            }
+
             if ($query) {
                 $builder->searchWhere('name', $query);
             }
