@@ -9,7 +9,6 @@ import { task, timeout } from 'ember-concurrency';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import engineService from '@fleetbase/ember-core/decorators/engine-service';
-import isEmptyObject from '@fleetbase/ember-core/utils/is-empty-object';
 import registerComponent from '@fleetbase/ember-core/utils/register-component';
 import OrderProgressCardComponent from '../order-progress-card';
 import DisplayPlaceComponent from '../display-place';
@@ -43,8 +42,8 @@ export default class CustomerOrdersComponent extends Component {
 
     constructor(owner) {
         super(...arguments);
-        registerComponent(owner, OrderProgressCardComponent);
-        registerComponent(owner, DisplayPlaceComponent);
+        registerComponent(owner, OrderProgressCardComponent, { as: 'order-progress-card' });
+        registerComponent(owner, DisplayPlaceComponent, { as: 'display-place' });
         registerComponent(owner, CustomerCreateOrderFormComponent, { as: 'customer/create-order-form' });
         this.loadCustomerOrders.perform();
         later(
@@ -61,12 +60,8 @@ export default class CustomerOrdersComponent extends Component {
         this.query = query;
 
         try {
-            if (query) {
-                this.orders = yield this.store.query('order', { ...params, query });
-            } else {
-                const allOrders = yield isEmptyObject(params) ? this.store.findAll('order') : this.store.query('order', { ...params, query });
-                this.orders = allOrders.toArray().filter((_) => !_.isNew);
-            }
+            this.orders = yield this.store.query('order', { customer: this.customerSession.get('id'), ...params, query });
+            this.orders = this.orders.toArray().filter((_) => !_.isNew);
             this.restoreSelectedOrder();
         } catch (error) {
             this.notifications.serverError(error);

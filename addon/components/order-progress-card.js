@@ -15,7 +15,7 @@ export default class OrderProgressCardComponent extends Component {
 
     constructor(owner, { order }) {
         super(...arguments);
-        registerComponent(owner, OrderProgressBarComponent);
+        registerComponent(owner, OrderProgressBarComponent, { as: 'order-progress-bar' });
 
         this.order = order;
         later(
