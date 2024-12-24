@@ -133,11 +133,7 @@ class Place extends Model
      */
     public function owner()
     {
-        return $this->morphTo(__FILE__, 'owner_type', 'owner_uuid')->withDefault(
-            [
-                'name' => 'N/A',
-            ]
-        );
+        return $this->morphTo(__FILE__, 'owner_type', 'owner_uuid');
     }
 
     /**

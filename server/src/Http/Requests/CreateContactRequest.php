@@ -25,7 +25,7 @@ class CreateContactRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'name'  => ['required'],
+            'name'  => [new RequiredIf($this->isMethod('POST'))],
             'type'  => [new RequiredIf($this->isMethod('POST'))],
             'email' => ['nullable', 'email'],
             'phone' => ['nullable'],

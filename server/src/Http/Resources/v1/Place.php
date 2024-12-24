@@ -2,8 +2,8 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
-use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
 use Fleetbase\Support\Resolve;
 
@@ -18,6 +18,8 @@ class Place extends FleetbaseResource
      */
     public function toArray($request)
     {
+        $this->loadMissing('owner');
+
         return [
             'id'                    => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'uuid'                  => $this->when(Http::isInternalRequest(), $this->uuid),
@@ -26,7 +28,7 @@ class Place extends FleetbaseResource
             'owner_uuid'            => $this->when(Http::isInternalRequest(), $this->owner_uuid),
             'owner_type'            => $this->when(Http::isInternalRequest(), $this->owner_type),
             'name'                  => $this->name,
-            'location'              => data_get($this, 'location', new Point(0, 0)),
+            'location'              => Utils::getPointFromMixed($this->location),
             'address'               => $this->address,
             'address_html'          => $this->when(Http::isInternalRequest(), $this->address_html),
             'avatar_url'            => $this->avatar_url,
@@ -43,7 +45,7 @@ class Place extends FleetbaseResource
             'country'               => $this->country ?? null,
             'country_name'          => $this->when(Http::isInternalRequest(), $this->country_name),
             'phone'                 => $this->phone ?? null,
-            'owner'                 => $this->whenLoaded('owner', Resolve::resourceForMorph($this->owner_type, $this->owner_uuid)),
+            'owner'                 => Resolve::resourceForMorph($this->owner_type, $this->owner_uuid),
             'tracking_number'       => $this->whenLoaded('trackingNumber', fn () => $this->trackingNumber),
             'type'                  => $this->type,
             'meta'                  => data_get($this, 'meta', []),
