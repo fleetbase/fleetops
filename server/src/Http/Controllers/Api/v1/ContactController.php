@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\Http\Controllers\Controller;
+use Fleetbase\Support\Utils;
 use Illuminate\Http\Request;
 
 class ContactController extends Controller
@@ -65,6 +66,14 @@ class ContactController extends Controller
 
         // get request input
         $input = $request->only(['name', 'type', 'title', 'email', 'phone', 'meta']);
+
+        // If setting a default location for the contact
+        if ($request->has('place')) {
+            $input['place_uuid'] = Utils::getUuid('places', [
+                'public_id'    => $request->input('place'),
+                'company_uuid' => session('company'),
+            ]);
+        }
 
         // update the contact
         $contact->update($input);

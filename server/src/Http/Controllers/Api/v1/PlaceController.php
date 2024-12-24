@@ -113,7 +113,8 @@ class PlaceController extends Controller
                 [
                     'public_id'    => $id,
                     'company_uuid' => session('company'),
-                ]
+                ],
+                ['full' => true]
             );
 
             if (is_array($owner)) {
@@ -125,6 +126,7 @@ class PlaceController extends Controller
         /** @var \Fleetbase\Models\Place */
         $place = Place::firstOrNew([
             'company_uuid' => session('company'),
+            'owner_uuid'   => data_get($input, 'owner_uuid'),
             'name'         => strtoupper(Utils::or($input, ['name', 'street1'])),
             'street1'      => strtoupper($input['street1']),
         ]);
@@ -200,24 +202,33 @@ class PlaceController extends Controller
 
         // owner assignment
         if ($request->has('owner')) {
-            $id = $request->input('owner');
+            $owner = $request->input('owner');
 
-            // check if customer_ based contact
-            if (Str::startsWith($id, 'customer')) {
-                $id = Str::replaceFirst('customer', 'contact', $id);
+            // Handle if owner is an object
+            if (is_array($owner) || is_object($owner)) {
+                $id = data_get($owner, 'id', data_get($owner, 'customer_id'));
+            } elseif (is_string($owner)) {
+                $id = $owner;
             }
 
-            $owner = Utils::getUuid(
-                ['contacts', 'vendors'],
-                [
-                    'public_id'    => $id,
-                    'company_uuid' => session('company'),
-                ]
-            );
+            if ($id) {
+                // check if customer_ based contact
+                if (Str::startsWith($id, 'customer')) {
+                    $id = Str::replaceFirst('customer', 'contact', $id);
+                }
 
-            if (is_array($owner)) {
-                $input['owner_uuid'] = Utils::get($owner, 'uuid');
-                $input['owner_type'] = Utils::getModelClassName(Utils::get($owner, 'table'));
+                $owner = Utils::getUuid(
+                    ['contacts', 'vendors'],
+                    [
+                        'public_id'    => $id,
+                        'company_uuid' => session('company'),
+                    ]
+                );
+
+                if (is_array($owner)) {
+                    $input['owner_uuid'] = Utils::get($owner, 'uuid');
+                    $input['owner_type'] = Utils::getModelClassName(Utils::get($owner, 'table'));
+                }
             }
         }
 

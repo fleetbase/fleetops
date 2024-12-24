@@ -996,6 +996,7 @@ class OrderController extends Controller
         // also update for each order entities if not multiple drop order
         // all entities will share the same activity status as is one drop order
         if (!$order->payload->isMultipleDropOrder) {
+            // Only update entities belonging to the waypoint
             foreach ($order->payload->entities as $entity) {
                 $entity->insertActivity($activity, $location, $proof);
             }

@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Http\Resources\User;
 use Fleetbase\Support\Http;
+use Illuminate\Support\Str;
 
 class Contact extends FleetbaseResource
 {
@@ -19,6 +20,7 @@ class Contact extends FleetbaseResource
     {
         return [
             'id'                            => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'customer_id'                   => $this->when($this->type === 'customer' && Http::isPublicRequest(), Str::replace('contact', 'customer', $this->public_id)),
             'uuid'                          => $this->when(Http::isInternalRequest(), $this->uuid),
             'company_uuid'                  => $this->when(Http::isInternalRequest(), $this->company_uuid),
             'user_uuid'                     => $this->when(Http::isInternalRequest(), $this->user_uuid),

@@ -37,6 +37,7 @@ class SimulateOrderRouteNavigation extends Command
 
         $orderId = $this->argument('order');
         $order   = Order::where('public_id', $orderId)->orWhere('uuid', $orderId)->first();
+        $driver  = null;
         if (!$order) {
             return $this->error('Order not found to simulate driving for.');
         }
@@ -51,10 +52,12 @@ class SimulateOrderRouteNavigation extends Command
         }
 
         // Get the order driver
-        $order->loadAssignedDriver();
-        $driver = $order->driverAssigned;
         if (!$driver) {
-            return $this->error('No driver found to simulate the order.');
+            $order->loadAssignedDriver();
+            $driver = $order->driverAssigned;
+            if (!$driver) {
+                return $this->error('No driver found to simulate the order.');
+            }
         }
 
         // Inform
