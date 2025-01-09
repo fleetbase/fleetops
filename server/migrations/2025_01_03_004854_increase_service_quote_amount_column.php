@@ -10,9 +10,8 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::table('waypoints', function (Blueprint $table) {
-            $table->string('customer_type')->nullable()->after('tracking_number_uuid');
-            $table->uuid('customer_uuid')->nullable()->after('tracking_number_uuid');
+        Schema::table('service_quotes', function (Blueprint $table) {
+            $table->bigInteger('amount')->change();
         });
     }
 
@@ -21,8 +20,8 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::table('waypoints', function (Blueprint $table) {
-            $table->dropColumn(['customer_uuid', 'customer_type']);
+        Schema::table('service_quotes', function (Blueprint $table) {
+            $table->integer('amount')->change();
         });
     }
 };
