@@ -26,7 +26,7 @@ class SetupDriverSession
     /**
      * Determine if the authenticated user is a driver.
      *
-     * @param \Fleetbase\Models\User|null $user
+     * @param User|null $user
      */
     protected function isDriver($user): bool
     {

@@ -80,12 +80,12 @@ class IssueController extends Controller
         }
 
         $input = $request->only([
-                'category',
-                'type',
-                'report',
-                'priority',
-                'status',
-            ]);
+            'category',
+            'type',
+            'report',
+            'priority',
+            'status',
+        ]);
 
         // update the issue
         $issue->update($input);

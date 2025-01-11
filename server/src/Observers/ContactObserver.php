@@ -15,7 +15,9 @@ class ContactObserver
     public function created(Contact $contact)
     {
         // Create a user account for the contact
-        $contact->createUser();
+        if ($contact->doesntHaveUser()) {
+            $contact->createUser();
+        }
     }
 
     /**

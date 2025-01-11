@@ -247,7 +247,7 @@ class OrderTracker
     /**
      * Get the completion time of the order, if completed.
      *
-     * @return \Illuminate\Support\Carbon|null the time the order was completed, or null if not completed
+     * @return Carbon|null the time the order was completed, or null if not completed
      */
     public function getOrderCompletionTime(): ?Carbon
     {

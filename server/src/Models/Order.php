@@ -1344,8 +1344,10 @@ class Order extends Model
             });
         }
 
-        $flow     = $this->config()->nextActivity();
-        $activity = null;
+        $orderConfig = $this->config();
+        // @todo if no order config set the order config based on order type
+        $flow         = $orderConfig->activities();
+        $activity     = $orderConfig->nextActivity();
 
         if (count($flow) === 1 && $code === null) {
             $activity = $flow[0];
@@ -1354,6 +1356,8 @@ class Order extends Model
         if ($code) {
             $activity = $flow->firstWhere('code', $code);
         }
+
+        // dd($activity);
 
         if (!Utils::isActivity($activity)) {
             return false;
@@ -1648,7 +1652,7 @@ class Order extends Model
      *
      * @throws \Exception type of exceptions this function might throw, if any
      */
-    public function config(): OrderConfig
+    public function config(): ?OrderConfig
     {
         $this->load(['orderConfig']);
 

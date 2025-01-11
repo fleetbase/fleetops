@@ -15,8 +15,6 @@ class Event
 
     /**
      * The order associated with the event, if any.
-     *
-     * @var ?Order
      */
     public ?Order $order = null;
 
