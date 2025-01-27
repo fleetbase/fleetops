@@ -102,6 +102,13 @@ class Contact extends Model
     protected $filterParams = ['place_uuid', 'customer_type', 'facilitator_type', 'place'];
 
     /**
+     * The session-agnostic columns for the model.
+     *
+     * @var array
+     */
+    protected $sessionAgnosticColumns = ['user_uuid'];
+
+    /**
      * Get the activity log options for the model.
      */
     public function getActivitylogOptions(): LogOptions
