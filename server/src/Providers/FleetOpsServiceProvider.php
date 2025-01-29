@@ -56,6 +56,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\AssignCustomerRoles::class,
         \Fleetbase\FleetOps\Console\Commands\SimulateOrderRouteNavigation::class,
         \Fleetbase\FleetOps\Console\Commands\DebugOrderTracker::class,
+        \Fleetbase\FleetOps\Console\Commands\PurgeUnpurchasedServiceQuotes::class,
     ];
 
     /**
@@ -91,6 +92,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             $schedule->command('fleetops:dispatch-orders')->everyMinute()->withoutOverlapping()->storeOutputInDb();
             $schedule->command('fleetops:dispatch-adhoc')->everyMinute()->withoutOverlapping()->storeOutputInDb();
             $schedule->command('fleetops:update-estimations')->everyFiveMinutes()->withoutOverlapping();
+            $schedule->command('fleetops:purge-service-quotes')->daily()->withoutOverlapping();
         });
         $this->registerNotifications();
         $this->registerExpansionsFrom(__DIR__ . '/../Expansions');
