@@ -83,6 +83,14 @@ class Zone extends Model
      */
     protected $hidden = [];
 
+    public static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            $model->status = 'active';
+        });
+    }
+
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */

@@ -94,7 +94,7 @@ class OrderFilter extends Filter
             $this->builder->where(
                 function ($q) {
                     $q->whereHas('driverAssigned');
-                    $q->whereNotIn('status', ['created', 'dispatched', 'pending', 'canceled', 'completed']);
+                    $q->whereNotIn('status', ['created', 'dispatched', 'pending', 'canceled', 'order_canceled', 'completed']);
                 }
             );
         }
@@ -105,7 +105,7 @@ class OrderFilter extends Filter
         // handle `active` alias status
         if ($status === 'active') {
             // active status is anything that is not these values
-            $this->builder->whereNotIn('status', ['completed', 'expired', 'canceled']);
+            $this->builder->whereNotIn('status', ['completed', 'expired', 'order_canceled', 'canceled']);
             // remove the searchBuilder where clause
             $this->builder->removeWhereFromQuery('status', 'active');
         } elseif (is_string($status)) {

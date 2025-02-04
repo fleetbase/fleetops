@@ -15,4 +15,14 @@ class ZoneFilter extends Filter
     {
         $this->builder->where('company_uuid', $this->session->get('company'));
     }
+
+    public function serviceArea(string $serviceAreaId)
+    {
+        $this->builder->where(function ($query) use ($serviceAreaId) {
+            $query->where('service_area_uuid', $serviceAreaId);
+            $query->orWhereHas('serviceArea', function ($query) use ($serviceAreaId) {
+                $query->where('public_id', $serviceAreaId);
+            });
+        });
+    }
 }
