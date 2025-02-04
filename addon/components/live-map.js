@@ -950,6 +950,19 @@ export default class LiveMapComponent extends Component {
         // set the layer instance to the zone model
         set(zone, '_layer', target);
 
+        // // if zone has a service area and service area is active then add zone to active service area
+        // const serviceAreaId = zone.get('service_area_uuid');
+        // if (serviceAreaId) {
+        //     const serviceArea = this.activeServiceAreas.find((serviceArea) => serviceArea.get('id') === serviceAreaId);
+        //     if (serviceArea) {
+        //         const zones = serviceArea.get('zones') ? [...serviceArea.get('zones')] : [];
+        //         const hasZoneAlready = zones.find((z) => z.get('id') === zone.get('id'));
+        //         if (!hasZoneAlready) {
+        //             serviceArea.set('zones', zones);
+        //         }
+        //     }
+        // }
+
         if (this.drawFeatureGroup) {
             // add to draw feature group
             this.drawFeatureGroup.addLayer(target);
@@ -1384,7 +1397,8 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @action showCoordinates(event) {
-        this.notifications.info(event.latlng);
+        const wrappedLatLng = event.latlng.wrap();
+        this.notifications.info(wrappedLatLng);
     }
 
     /**

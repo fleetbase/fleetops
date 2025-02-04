@@ -130,7 +130,7 @@
                     <layers.polygon
                         @id={{serviceArea.id}}
                         @record={{serviceArea}}
-                        @locations={{serviceArea.bounds}}
+                        @locations={{unwrap-coordinates serviceArea.bounds}}
                         @fillColor={{serviceArea.color}}
                         @color={{serviceArea.stroke_color}}
                         @onAdd={{fn this.triggerAction "onServiceAreaLayerAdded" serviceArea}}
@@ -143,7 +143,7 @@
                         <layers.polygon
                             @id={{zone.id}}
                             @record={{zone}}
-                            @locations={{zone.locations}}
+                            @locations={{unwrap-coordinates zone.locations}}
                             @fillColor={{zone.color}}
                             @color={{zone.stroke_color}}
                             @onAdd={{fn this.triggerAction "onZoneLayerAdd" zone}}

@@ -201,6 +201,18 @@ export default class ManagementVehiclesIndexController extends BaseController {
             filterParam: 'plate_number',
         },
         {
+            label: this.intl.t('fleet-ops.common.internal-id'),
+            valuePath: 'internal_id',
+            cellComponent: 'table/cell/base',
+            width: '100px',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            hidden: true,
+            filterComponent: 'filter/string',
+            filterParam: 'internal_id',
+        },
+        {
             label: 'Driver Assigned',
             cellComponent: 'table/cell/anchor',
             permission: 'fleet-ops view driver',

@@ -9,6 +9,7 @@ import GeoJson from '@fleetbase/fleetops-data/utils/geojson/geo-json';
 import MultiPolygon from '@fleetbase/fleetops-data/utils/geojson/multi-polygon';
 import Polygon from '@fleetbase/fleetops-data/utils/geojson/polygon';
 import FeatureCollection from '@fleetbase/fleetops-data/utils/geojson/feature-collection';
+import wrapCoordinates from '../utils/leaflet-wrap-coordinates';
 
 const L = window.L;
 export default class ServiceAreasService extends Service {
@@ -91,7 +92,6 @@ export default class ServiceAreasService extends Service {
     /**
      * Converts a Leaflet layer to a Terraformer primitive.
      *
-     * @function
      * @param {Object} layer - The Leaflet layer to convert.
      * @returns {Object} The Terraformer primitive.
      */
@@ -106,15 +106,18 @@ export default class ServiceAreasService extends Service {
             feature = leafletLayerGeoJson;
         }
 
-        const primitive = new GeoJson(feature.geometry);
+        // Ensure that all coordinates are wrapped correctly.
+        if (feature && feature.geometry && feature.geometry.coordinates) {
+            feature.geometry.coordinates = wrapCoordinates(feature.geometry.coordinates);
+        }
 
+        const primitive = new GeoJson(feature.geometry);
         return primitive;
     }
 
     /**
      * Converts a Leaflet layer to a Terraformer MultiPolygon.
      *
-     * @function
      * @param {Object} layer - The Leaflet layer to convert.
      * @returns {Object} The Terraformer MultiPolygon.
      */
@@ -130,15 +133,17 @@ export default class ServiceAreasService extends Service {
         }
 
         coordinates = feature?.geometry?.coordinates ?? [];
-        const multipolygon = new MultiPolygon([coordinates]);
+        // Wrap the coordinates.
+        coordinates = wrapCoordinates(coordinates);
 
+        // If your feature is a Polygon and you need a MultiPolygon, wrap it as an array.
+        const multipolygon = new MultiPolygon([coordinates]);
         return multipolygon;
     }
 
     /**
      * Converts a Leaflet layer to a Terraformer Polygon.
      *
-     * @function
      * @param {Object} layer - The Leaflet layer to convert.
      * @returns {Object} The Terraformer Polygon.
      */
@@ -154,8 +159,10 @@ export default class ServiceAreasService extends Service {
         }
 
         coordinates = feature?.geometry?.coordinates ?? [];
-        const polygon = new Polygon(coordinates);
+        // Wrap the coordinates.
+        coordinates = wrapCoordinates(coordinates);
 
+        const polygon = new Polygon(coordinates);
         return polygon;
     }
 
@@ -167,28 +174,27 @@ export default class ServiceAreasService extends Service {
      * @returns {L.Polygon} - The resulting Leaflet polygon layer.
      */
     circleToPolygon(circle, numPoints = 64, options = {}) {
-        // Get circle details
         const center = circle.getLatLng();
         const radius = circle.getRadius();
-
-        // Convert radius from meters to degrees (approximation)
         const radiusInDegrees = radius / 111320;
 
-        // Generate points around the circle's circumference
         const latLngs = [];
         for (let i = 0; i < numPoints; i++) {
             const angle = (i / numPoints) * 2 * Math.PI;
             const latOffset = radiusInDegrees * Math.sin(angle);
             const lngOffset = radiusInDegrees * Math.cos(angle);
-            latLngs.push([center.lat + latOffset, center.lng + lngOffset]);
+            // Convert generated point to [lng, lat] order
+            let point = [center.lng + lngOffset, center.lat + latOffset];
+            // Wrap the longitude of this point
+            point = wrapCoordinates(point);
+            latLngs.push(point);
         }
-
-        // Close the polygon by repeating the first point at the end
+        // Close the polygon by repeating the first point
         latLngs.push(latLngs[0]);
 
-        // Create a polygon from the generated points
+        // If you need a Leaflet polygon, you might need to convert back to LatLng arrays.
+        // Here we assume Leaflet can work with [lng, lat] arrays, or you convert them as needed.
         const polygon = L.polygon(latLngs, options);
-
         return polygon;
     }
 

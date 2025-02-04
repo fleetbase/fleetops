@@ -17,18 +17,19 @@ class Zone extends FleetbaseResource
     public function toArray($request)
     {
         return [
-            'id'           => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-            'uuid'         => $this->when(Http::isInternalRequest(), $this->uuid),
-            'public_id'    => $this->when(Http::isInternalRequest(), $this->public_id),
-            'name'         => $this->name,
-            'description'  => $this->description,
-            'center'       => $this->location,
-            'border'       => $this->border,
-            'color'        => $this->color,
-            'stroke_color' => $this->stroke_color,
-            'status'       => $this->status,
-            'updated_at'   => $this->updated_at,
-            'created_at'   => $this->created_at,
+            'id'                => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'public_id'         => $this->when(Http::isInternalRequest(), $this->public_id),
+            'uuid'              => $this->when(Http::isInternalRequest(), $this->uuid),
+            'service_area_uuid' => $this->when(Http::isInternalRequest(), $this->service_area_uuid),
+            'name'              => $this->name,
+            'description'       => $this->description,
+            'center'            => $this->location,
+            'border'            => $this->border,
+            'color'             => $this->color,
+            'stroke_color'      => $this->stroke_color,
+            'status'            => $this->status,
+            'updated_at'        => $this->updated_at,
+            'created_at'        => $this->created_at,
         ];
     }
 
