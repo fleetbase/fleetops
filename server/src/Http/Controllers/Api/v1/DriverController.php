@@ -313,6 +313,18 @@ class DriverController extends Controller
             'speed'    => $speed,
         ]);
 
+        // If vehicle is assigned to driver load it and sync position data
+        $driver->loadMissing('vehicle');
+        if ($driver->vehicle) {
+            $driver->vehicle->update([
+                'location' => new Point($latitude, $longitude),
+                'altitude' => $altitude,
+                'heading'  => $heading,
+                'speed'    => $speed,
+            ]);
+            $driver->vehicle->createPositionWithOrderContext();
+        }
+
         if ($isGeocodable) {
             // attempt to geocode and fill country and city
             $geocoded = Geocoder::reverse($latitude, $longitude)->get()->first();
@@ -326,9 +338,7 @@ class DriverController extends Controller
         }
 
         broadcast(new DriverLocationChanged($driver));
-
-        $driver->updatePosition();
-        $driver->refresh();
+        $driver->createPositionWithOrderContext();
 
         return new DriverResource($driver);
     }
@@ -437,7 +447,7 @@ class DriverController extends Controller
         $phone = static::phone();
 
         // check if user exists
-        $user = User::where('phone', $phone)->whereHas('driver')->whereNull('deleted_at')->withoutGlobalScopes()->first();
+        $user = User::where('phone', $phone)->whereHas('driver')->whereNull('deleted_at')->first();
         if (!$user) {
             return response()->apiError('No driver with this phone # found.');
         }
@@ -765,8 +775,13 @@ class DriverController extends Controller
         $company = null;
 
         // Load the driver profile to get the company
-        $driverProfile = Driver::where('user_uuid', $user->uuid)->first();
-        if ($driverProfile) {
+        $driverProfiles = Driver::where('user_uuid', $user->uuid)->get();
+        if ($driverProfiles->count() > 0) {
+            // Get the driver profile matching user current company session
+            $currentDriverProfile = $driverProfiles->first(function ($driverProfile) use ($user) {
+                return $user->company_uuid === $driverProfile->company_uuid;
+            });
+            $driverProfile = $currentDriverProfile ? $currentDriverProfile : $driverProfiles->first();
             // get company from driver profile
             $company = Company::where('uuid', $driverProfile->company_uuid)->first();
         }

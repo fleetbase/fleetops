@@ -15,6 +15,10 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -162,44 +166,34 @@ class Vehicle extends Model
         'online'     => 'boolean',
     ];
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function photo()
+    public function photo(): BelongsTo
     {
         return $this->belongsTo(File::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne
-     */
-    public function driver()
+    public function driver(): HasOne
     {
         return $this->hasOne(Driver::class)->without(['vehicle']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function vendor()
+    public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasManyThrough
-     */
-    public function fleets()
+    public function fleets(): HasManyThrough
     {
         return $this->hasManyThrough(Fleet::class, FleetVehicle::class, 'vehicle_uuid', 'uuid', 'uuid', 'fleet_uuid');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function devices()
+    public function devices(): HasMany
     {
         return $this->hasMany(VehicleDevice::class);
+    }
+
+    public function positions(): HasMany
+    {
+        return $this->hasMany(Position::class, 'subject_uuid');
     }
 
     /**
@@ -414,6 +408,19 @@ class Vehicle extends Model
     }
 
     /**
+     * Retrieves the last known position of the driver within the current company context.
+     *
+     * @return ?Position the last recorded position or null if none exists
+     */
+    public function getLastKnownPosition(): ?Position
+    {
+        return $this->positions()
+            ->where('company_uuid', session('company', $this->company_uuid))
+            ->latest()
+            ->first();
+    }
+
+    /**
      * Updates the position of the vehicle, creating a new Position record if
      * the driver has moved more than 100 meters or if it's their first recorded position.
      *
@@ -421,48 +428,33 @@ class Vehicle extends Model
      *
      * @return Position|null The created Position object, or null if no new position was created
      */
-    public function updatePositionWithOrderContext(?Order $order = null): ?Position
+    public function createPositionWithOrderContext(?Order $order = null): ?Position
     {
-        $position     = null;
-        $lastPosition = $this->positions()->whereCompanyUuid(session('company'))->latest()->first();
-
-        // get driver if applicable
-        $driver = $this->load('driver')->driver;
-
-        // get the vehicle's driver's current order
-        $currentOrder = $order;
-
-        if (!$currentOrder && $driver) {
-            $currentOrder = $driver->currentOrder()->with(['payload'])->first();
-        }
-
-        $destination = $currentOrder ? $currentOrder->payload->getPickupOrCurrentWaypoint() : null;
-
+        $lastPosition = $this->getLastKnownPosition();
         $positionData = [
             'company_uuid' => session('company', $this->company_uuid),
             'subject_uuid' => $this->uuid,
-            'subject_type' => Utils::getMutationType($this),
+            'subject_type' => get_class($this),
             'coordinates'  => $this->location,
         ];
 
+        $this->loadMissing('driver');
+
+        $currentOrder = $order instanceof Order ? $order : $this->driver->getCurrentOrder();
         if ($currentOrder) {
             $positionData['order_uuid'] = $currentOrder->uuid;
         }
 
+        $destination = $currentOrder ? $currentOrder->payload->getPickupOrCurrentWaypoint() : null;
         if ($destination) {
             $positionData['destination_uuid'] = $destination->uuid;
         }
 
-        $isFirstPosition = !$lastPosition;
+        $isFirstPosition = is_null($lastPosition);
         $isPast50Meters  = $lastPosition && Utils::vincentyGreatCircleDistance($this->location, $lastPosition->coordinates) > 50;
-        $position        = null;
 
-        // create the first position
-        if ($isFirstPosition || $isPast50Meters) {
-            $position = Position::create($positionData);
-        }
-
-        return $position;
+        // Create a position if it's the first one or the vehicle has moved significantly
+        return ($isFirstPosition || $isPast50Meters) ? Position::create($positionData) : null;
     }
 
     public static function createFromImport(array $row, bool $saveInstance = false): Vehicle

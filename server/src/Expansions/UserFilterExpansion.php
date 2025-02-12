@@ -17,13 +17,17 @@ class UserFilterExpansion implements Expansion
     }
 
     /**
+     * Filter where doesnt have driver within the CURRENT organizations.
+     *
      * @return void
      */
     public static function doesntHaveDriver()
     {
         return function () {
-            /* @var \Fleetbase\Http\Filter\UserFilter|\Fleetbase\Http\Filter\Filter $this */
-            $this->builder->whereDoesntHave('driver');
+            /** @var \Fleetbase\Http\Filter\UserFilter|\Fleetbase\Http\Filter\Filter $this */
+            $this->builder->whereDoesntHave('driverProfiles', function ($query) {
+                $query->where('company_uuid', session('company'));
+            });
         };
     }
 
@@ -33,8 +37,10 @@ class UserFilterExpansion implements Expansion
     public static function doesntHaveContact()
     {
         return function () {
-            /* @var \Fleetbase\Http\Filter\UserFilter|\Fleetbase\Http\Filter\Filter $this */
-            $this->builder->whereDoesntHave('contact');
+            /** @var \Fleetbase\Http\Filter\UserFilter|\Fleetbase\Http\Filter\Filter $this */
+            $this->builder->whereDoesntHave('contact', function ($query) {
+                $query->where('company_uuid', session('company'));
+            });
         };
     }
 }

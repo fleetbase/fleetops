@@ -1,7 +1,20 @@
 import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
 export default class MapContainerToolbarComponent extends Component {
+    @tracked liveMap;
+    @tracked map;
+
+    constructor(owner, { map }) {
+        super(...arguments);
+
+        if (map) {
+            this.map = map;
+            this.liveMap = map.liveMap;
+        }
+    }
+
     @action calculatePosition(trigger) {
         let { width } = trigger.getBoundingClientRect();
 
@@ -24,11 +37,27 @@ export default class MapContainerToolbarComponent extends Component {
         }
     }
 
+    @action handleArgsChanged(owner, [map]) {
+        this.map = map;
+        this.liveMap = map.liveMap;
+    }
+
+    @action toggleMapTheme() {
+        if (this.liveMap && typeof this.liveMap.changeTileSource === 'function') {
+            const nextTheme = this.liveMap.mapTheme === 'dark' ? 'light' : 'dark';
+            this.liveMap.changeTileSource(nextTheme);
+        }
+    }
+
     @action onZoomOut() {
-        this.args.map?.zoomOut();
+        if (this.map && typeof this.map.zoomOut === 'function') {
+            this.map.zoomOut();
+        }
     }
 
     @action onZoomIn() {
-        this.args.map?.zoomIn();
+        if (this.map && typeof this.map.zoomIn === 'function') {
+            this.map.zoomIn();
+        }
     }
 }

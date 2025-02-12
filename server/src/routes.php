@@ -32,7 +32,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->post('verify-code', 'DriverController@verifyCode');
                     $router->post('login', 'DriverController@login');
                     $router->post('{id}/simulate', 'DriverController@simulate');
-                    $router->post('{id}/track', 'DriverController@track');
+                    $router->match(['put', 'patch', 'post'], '{id}/track', 'DriverController@track');
                     $router->post('{id}/register-device', 'DriverController@registerDevice');
                     $router->post('{id}/switch-organization', 'DriverController@switchOrganization');
                     $router->post('/', 'DriverController@create');
@@ -80,6 +80,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->match(['post', 'patch'], '{id}/update-activity', 'OrderController@updateActivity');
                     $router->post('{id}/complete', 'OrderController@completeOrder');
                     $router->get('{id}/next-activity', 'OrderController@getNextActivity');
+                    $router->get('{id}/tracker', 'OrderController@trackerData');
+                    $router->get('{id}/eta', 'OrderController@etaData');
                     $router->match(['post', 'patch'], '{id}/set-destination/{placeId}', 'OrderController@setDestination');
                     $router->post('{id}/capture-signature/{subjectId?}', 'OrderController@captureSignature');
                     $router->post('{id}/capture-qr/{subjectId?}', 'OrderController@captureQrScan');

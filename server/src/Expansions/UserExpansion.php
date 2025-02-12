@@ -47,7 +47,7 @@ class UserExpansion implements Expansion
     {
         return function () {
             /** @var \Illuminate\Database\Eloquent\Model $this */
-            return $this->hasMany(Driver::class)->without('user');
+            return $this->hasMany(Driver::class);
         };
     }
 

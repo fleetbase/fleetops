@@ -21,6 +21,7 @@ export default class OperationsOrdersIndexController extends BaseController {
     @service universe;
     @service socket;
     @service abilities;
+    @service theme;
 
     /**
      * Queryable parameters for this controller's model
@@ -767,9 +768,9 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @action
      * @memberof OperationsOrdersIndexController
      */
-    @action setMapReference({ target, target: { liveMap } }) {
+    @action setMapReference({ target }) {
         this.leafletMap = target;
-        this.liveMap = liveMap;
+        this.liveMap = target.liveMap;
     }
 
     @action previewOrderRoute(order) {

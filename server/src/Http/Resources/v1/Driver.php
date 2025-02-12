@@ -57,7 +57,7 @@ class Driver extends FleetbaseResource
             'city'                          => data_get($this, 'city', Utils::getCapitalCityFromCountryCode($this->country)),
             'online'                        => data_get($this, 'online', false),
             'status'                        => $this->status,
-            'token'                         => $this->auth_token,
+            'token'                         => $this->token,
             'meta'                          => $this->meta,
             'updated_at'                    => $this->updated_at,
             'created_at'                    => $this->created_at,
