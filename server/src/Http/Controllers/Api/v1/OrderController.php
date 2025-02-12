@@ -29,6 +29,7 @@ use Fleetbase\Models\Company;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Setting;
 use Fleetbase\Support\Auth;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -326,7 +327,7 @@ class OrderController extends Controller
         // find for the order
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
                     'error' => 'Order resource not found.',
@@ -651,7 +652,7 @@ class OrderController extends Controller
         // find for the order
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
                     'error' => 'Order resource not found.',
@@ -674,7 +675,7 @@ class OrderController extends Controller
         // find for the driver
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
                     'error' => 'Order resource not found.',
@@ -700,7 +701,7 @@ class OrderController extends Controller
         // find the order
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
                     'error' => 'Order resource not found.',
@@ -731,7 +732,7 @@ class OrderController extends Controller
     {
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
                     'error' => 'Order resource not found.',
@@ -773,7 +774,7 @@ class OrderController extends Controller
 
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
                     'error' => 'Order resource not found.',
@@ -813,7 +814,7 @@ class OrderController extends Controller
 
         try {
             $order = Order::findRecordOrFail($id, ['payload.waypoints'], []);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
                     'error' => 'Order resource not found.',
@@ -907,7 +908,7 @@ class OrderController extends Controller
         if (!$order) {
             try {
                 $order = Order::findRecordOrFail($id, ['driverAssigned', 'payload.entities', 'payload.currentWaypoint', 'payload.waypoints']);
-            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            } catch (ModelNotFoundException $exception) {
                 return response()->json(
                     [
                         'error' => 'Order resource not found.',
@@ -1023,7 +1024,7 @@ class OrderController extends Controller
     {
         try {
             $order = Order::findRecordOrFail($id, ['payload']);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
                     'error' => 'Order resource not found.',
@@ -1057,7 +1058,7 @@ class OrderController extends Controller
     {
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
                     'error' => 'Order resource not found.',
@@ -1100,7 +1101,7 @@ class OrderController extends Controller
     {
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
                     'error' => 'Order resource not found.',
@@ -1123,7 +1124,7 @@ class OrderController extends Controller
     {
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
                     'error' => 'Order resource not found.',
@@ -1152,18 +1153,55 @@ class OrderController extends Controller
     {
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
-                [
-                    'error' => 'Order resource not found.',
-                ],
-                404
-            );
+        } catch (ModelNotFoundException $e) {
+            return response()->apiError('Order resource not found.', 404);
         }
 
         // do this code
 
         return new OrderResource($order);
+    }
+
+    /**
+     * Get important tracking data about the order.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function trackerData(string $id)
+    {
+        try {
+            $order = Order::findRecordOrFail($id);
+            $data  = $order->tracker()->toArray();
+
+            return response()->json($data);
+        } catch (ModelNotFoundException $e) {
+            return response()->apiError('Order resource not found.', 404);
+        } catch (\Throwable $e) {
+            return response()->apiError('An error occured trying to track order.', 404);
+        }
+
+        return response()->apiError('An error occured trying to track order.', 404);
+    }
+
+    /**
+     * Get important ETA data about the order.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function etaData(string $id)
+    {
+        try {
+            $order = Order::findRecordOrFail($id);
+            $data  = $order->tracker()->eta();
+
+            return response()->json($data);
+        } catch (ModelNotFoundException $e) {
+            return response()->apiError('Order resource not found.', 404);
+        } catch (\Throwable $e) {
+            return response()->apiError('An error occured trying to track order.', 404);
+        }
+
+        return response()->apiError('An error occured trying to track order.', 404);
     }
 
     /**
@@ -1180,13 +1218,8 @@ class OrderController extends Controller
 
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
-                [
-                    'error' => 'Order resource not found.',
-                ],
-                404
-            );
+        } catch (ModelNotFoundException $e) {
+            return response()->apiError('Order resource not found.', 404);
         }
 
         if (!$code) {
@@ -1253,13 +1286,8 @@ class OrderController extends Controller
 
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
-                [
-                    'error' => 'Order resource not found.',
-                ],
-                404
-            );
+        } catch (ModelNotFoundException $e) {
+            return response()->apiError('Order resource not found.', 404);
         }
 
         if (!$signature) {
@@ -1345,13 +1373,8 @@ class OrderController extends Controller
 
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
-                [
-                    'error' => 'Order resource not found.',
-                ],
-                404
-            );
+        } catch (ModelNotFoundException $e) {
+            return response()->apiError('Order resource not found.', 404);
         }
 
         if (!$photo) {
@@ -1435,19 +1458,14 @@ class OrderController extends Controller
      * @return \Illuminate\Http\JsonResponse returns a JSON response containing either an error message
      *                                       or the editable fields for the order entity
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException thrown if the order with the given ID cannot be found
+     * @throws ModelNotFoundException thrown if the order with the given ID cannot be found
      */
     public function getEditableEntityFields(string $id, Request $request)
     {
         try {
             $order = Order::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
-                [
-                    'error' => 'Order resource not found.',
-                ],
-                404
-            );
+        } catch (ModelNotFoundException $e) {
+            return response()->apiError('Order resource not found.', 404);
         }
 
         // Define settings as array

@@ -22,7 +22,6 @@
         <GlobalSearch @visible={{this.isSearchVisible}} @onPressOrder={{this.viewOrder}} />
         <MapContainer::Toolbar
             @activeOrdersCount={{this.activeOrdersCount}}
-            @liveMap={{this.liveMap}}
             @map={{this.leafletMap}}
             @onPressViewOrders={{this.toggleOrdersPanel}}
             @onPressSearch={{this.toggleSearch}}
@@ -58,6 +57,7 @@
             @onDrawerResizeEnd={{this.onDrawerResizeEnd}}
             @onDrawerTabChanged={{this.onDrawerTabChanged}}
             @drawerTab={{this.drawerTab}}
+            @darkMode={{eq this.theme.activeTheme "dark"}}
             {{set-container-dimensions}}
         />
     </MapContainer>

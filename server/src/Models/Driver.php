@@ -229,6 +229,10 @@ class Driver extends Model
             'photo_uuid',
             'avatar_url',
             'public_id',
+            'location',
+            'speed',
+            'heading',
+            'altitude',
             'year',
             'make',
             'model',
@@ -500,6 +504,14 @@ class Driver extends Model
     }
 
     /**
+     * Set the driver status attribute.
+     */
+    public function setStatusAttribute(?string $status = 'active'): void
+    {
+        $this->attributes['status'] = $status;
+    }
+
+    /**
      * Unassigns the current order from the driver if a driver is assigned.
      *
      * @return bool True if the driver was unassigned and the changes were saved, false otherwise
@@ -584,50 +596,67 @@ class Driver extends Model
     }
 
     /**
-     * Updates the position of the driver, creating a new Position record if
-     * the driver has moved more than 100 meters or if it's their first recorded position.
+     * Retrieves the driver's current order if available.
      *
-     * @param Order|null $order The order to consider when updating the position (default: null)
-     *
-     * @return Position|null The created Position object, or null if no new position was created
+     * @return ?Order the current order or null if none exists
      */
-    public function updatePosition(?Order $order = null): ?Position
+    public function getCurrentOrder(): ?Order
     {
-        $position     = null;
-        $lastPosition = $this->positions()->whereCompanyUuid(session('company'))->latest()->first();
+        $this->loadMissing('currentOrder');
 
-        // get the drivers current order
-        $currentOrder = $order ?? $this->currentOrder()->with(['payload'])->first();
-        $destination  = $currentOrder ? $currentOrder->payload->getPickupOrCurrentWaypoint() : null;
+        if ($this->currentOrder) {
+            $this->currentOrder->loadMissing('payload');
+        }
+
+        return $this->currentOrder ?? null;
+    }
+
+    /**
+     * Retrieves the last known position of the driver within the current company context.
+     *
+     * @return ?Position the last recorded position or null if none exists
+     */
+    public function getLastKnownPosition(): ?Position
+    {
+        return $this->positions()
+        ->where('company_uuid', session('company', $this->company_uuid))
+        ->latest()
+        ->first();
+    }
+
+    /**
+     * Creates a new position record for the driver, considering the context of an order.
+     *
+     * A new position is recorded if it is the first position for the driver or if the driver
+     * has moved more than 50 meters from their last recorded position.
+     *
+     * @param ?Order $order the order context to associate with the position (optional)
+     *
+     * @return ?Position the created position or null if no new position was recorded
+     */
+    public function createPositionWithOrderContext(?Order $order = null): ?Position
+    {
+        $lastPosition = $this->getLastKnownPosition();
+        $currentOrder = $order instanceof Order ? $order : $this->getCurrentOrder();
+        $destination  = $currentOrder?->payload?->getPickupOrCurrentWaypoint();
 
         $positionData = [
-            'company_uuid' => session('company', $this->company_uuid),
-            'subject_uuid' => $this->uuid,
-            'subject_type' => Utils::getMutationType($this),
-            'coordinates'  => $this->location,
-            'altitude'     => $this->altitude,
-            'heading'      => $this->heading,
-            'speed'        => $this->speed,
+            'company_uuid'     => session('company', $this->company_uuid),
+            'subject_uuid'     => $this->uuid,
+            'subject_type'     => get_class($this),
+            'coordinates'      => $this->location,
+            'altitude'         => $this->altitude,
+            'heading'          => $this->heading,
+            'speed'            => $this->speed,
+            'order_uuid'       => $currentOrder?->uuid,
+            'destination_uuid' => $destination?->uuid,
         ];
 
-        if ($currentOrder) {
-            $positionData['order_uuid'] = $currentOrder->uuid;
-        }
-
-        if ($destination) {
-            $positionData['destination_uuid'] = $destination->uuid;
-        }
-
-        $isFirstPosition = !$lastPosition;
+        $isFirstPosition = is_null($lastPosition);
         $isPast50Meters  = $lastPosition && FleetOpsUtils::vincentyGreatCircleDistance($this->location, $lastPosition->coordinates) > 50;
-        $position        = null;
 
-        // create the first position
-        if ($isFirstPosition || $isPast50Meters) {
-            $position = Position::create($positionData);
-        }
-
-        return $position;
+        // Create a position if it's the first one or the driver has moved significantly
+        return ($isFirstPosition || $isPast50Meters) ? Position::create($positionData) : null;
     }
 
     /**

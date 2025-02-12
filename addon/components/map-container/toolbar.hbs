@@ -1,4 +1,4 @@
-<MapContainer::ToolbarContainer ...attributes>
+<MapContainer::ToolbarContainer {{did-update this.handleArgsChanged @map}} ...attributes>
     <div class="next-map-container-toolbar next-map-container-toolbar-zoom-control">
         <div id="map-toolbar-zoom-in-button-wrapper">
             <button type="button" id="map-toolbar-zoom-in-button" class="toolbar-button" {{on "click" (fn this.onAction "onZoomIn")}}>
@@ -10,6 +10,14 @@
                 <FaIcon @icon="minus" id="map-toolbar-zoom-out-button" @prefix="fas" class="text-gray-100" />
             </button>
         </div>
+    </div>
+    <div class="next-map-container-toolbar-panel next-map-container-toolbar-actions">
+        <button type="button" id="map-toolbar-toggle-light-mode-button" class="toolbar-button is-action mb-0i" {{on "click" this.toggleMapTheme}}>
+            <FaIcon @icon="lightbulb" />
+            <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                <InputInfo @text="Toggle {{if (eq this.liveMap.mapTheme 'dark') 'light' 'dark'}} mode" @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+            </Attach::Tooltip>
+        </button>
     </div>
     <div class="next-map-container-toolbar-panel next-map-container-toolbar-actions">
         {{#let (cannot "fleet-ops create order") as |unauthorized|}}

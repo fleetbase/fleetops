@@ -25,7 +25,7 @@ class ContactObserver
      *
      * @return void
      */
-    public function updating(Contact $contact)
+    public function saving(Contact $contact)
     {
         // Get the contacts assosciated user
         if ($contact->doesntHaveUser()) {

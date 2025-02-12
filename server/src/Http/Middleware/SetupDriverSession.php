@@ -17,7 +17,7 @@ class SetupDriverSession
         $user = $request->user();
 
         if ($this->isDriver($user)) {
-            $this->storeDriverInSession($user->driver->uuid);
+            $this->storeDriverInSession($user->currentDriverSession->uuid);
         }
 
         return $next($request);
@@ -31,9 +31,9 @@ class SetupDriverSession
     protected function isDriver($user): bool
     {
         if ($user instanceof User) {
-            $user->load('driver');
+            $user->load('currentDriverSession');
 
-            return $user->driver instanceof Driver;
+            return $user->currentDriverSession instanceof Driver;
         }
 
         return false;

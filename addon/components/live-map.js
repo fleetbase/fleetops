@@ -37,6 +37,7 @@ export default class LiveMapComponent extends Component {
     @service contextPanel;
     @service leafletMapManager;
     @service leafletContextmenuManager;
+    @service theme;
 
     /**
      * An array of routes.
@@ -164,6 +165,7 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @tracked tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+    @tracked mapTheme = 'light';
 
     /**
      * The latitude for the map view.
@@ -204,17 +206,32 @@ export default class LiveMapComponent extends Component {
      * Creates an instance of LiveMapComponent.
      * @memberof LiveMapComponent
      */
-    constructor(owner, { zoom = 12, tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', darkMode }) {
+    constructor(owner, { zoom = 12, darkMode = false }) {
         super(...arguments);
 
         this.zoom = zoom;
-        this.tileSourceUrl = tileSourceUrl;
-        if (darkMode === true) {
-            this.tileSourceUrl = 'https://{s}.tile.jawg.io/jawg-matrix/{z}/{x}/{y}{r}.png?access-token=';
-        }
-
+        this.changeTileSource(darkMode ? 'dark' : 'light');
         this.movementTracker.registerTrackingMarker(owner);
         this.setupComponent();
+    }
+
+    changeTileSource(sourceUrl = null) {
+        if (sourceUrl === 'dark') {
+            this.mapTheme = 'dark';
+            this.tileSourceUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png';
+        } else if (sourceUrl === 'dark_all') {
+            this.mapTheme = 'dark_all';
+            this.tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        } else if (sourceUrl === 'light') {
+            this.mapTheme = 'light';
+            this.tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+        } else if (typeof sourceUrl === 'string' && sourceUrl.startsWith('https://')) {
+            this.mapTheme = 'custom';
+            this.tileSourceUrl = sourceUrl;
+        } else {
+            this.mapTheme = 'light';
+            this.tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+        }
     }
 
     /**
@@ -230,7 +247,7 @@ export default class LiveMapComponent extends Component {
         this.universe.trigger('fleet-ops.live-map.loaded', this);
 
         // set initial coordinates
-        this.setInitialCoordinates();
+        await this.setInitialCoordinates();
 
         // Check if leaflet plugins loaded
         this.leafletPluginsLoadedCheckId = setInterval(() => {
@@ -365,8 +382,29 @@ export default class LiveMapComponent extends Component {
         // set instance to service areas service
         this.serviceAreas.setMapInstance(target);
 
+        // Update event
+        event.target = target;
+
         // trigger map loaded event
-        this.triggerAction('onLoad', ...arguments);
+        this.triggerAction('onLoad', event);
+
+        // handle theme change
+        this._checkThemeChanged();
+    }
+
+    _checkThemeChanged() {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                    const theme = document.body.getAttribute(mutation.attributeName);
+                    if (theme === 'light' || theme === 'dark') {
+                        this.changeTileSource(theme);
+                    }
+                }
+            });
+        });
+
+        observer.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
     }
 
     /**
