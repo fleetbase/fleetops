@@ -218,9 +218,6 @@ export default class LiveMapComponent extends Component {
     changeTileSource(sourceUrl = null) {
         if (sourceUrl === 'dark') {
             this.mapTheme = 'dark';
-            this.tileSourceUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png';
-        } else if (sourceUrl === 'dark_all') {
-            this.mapTheme = 'dark_all';
             this.tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
         } else if (sourceUrl === 'light') {
             this.mapTheme = 'light';
