@@ -86,7 +86,7 @@ class Vehicle extends Model
     public function getSlugOptions(): SlugOptions
     {
         return SlugOptions::create()
-            ->generateSlugsFrom(['year', 'make', 'model', 'trim', 'plate_number', 'internal_id'])
+            ->generateSlugsFrom(['year', 'make', 'model', 'trim', 'plate_number'])
             ->saveSlugsTo('slug');
     }
 

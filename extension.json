@@ -1,6 +1,6 @@
 {
     "name": "Fleet-Ops",
-    "version": "0.5.21",
+    "version": "0.5.22",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "repository": "https://github.com/fleetbase/fleetops",
     "license": "AGPL-3.0-or-later",

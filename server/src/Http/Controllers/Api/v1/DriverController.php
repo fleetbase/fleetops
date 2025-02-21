@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Events\DriverLocationChanged;
+use Fleetbase\FleetOps\Events\VehicleLocationChanged;
 use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest;
 use Fleetbase\FleetOps\Http\Requests\DriverSimulationRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateDriverRequest;
@@ -323,6 +324,7 @@ class DriverController extends Controller
                 'speed'    => $speed,
             ]);
             $driver->vehicle->createPositionWithOrderContext();
+            broadcast(new VehicleLocationChanged($driver->vehicle, ['driver' => $driver->public_id]));
         }
 
         if ($isGeocodable) {
@@ -405,7 +407,7 @@ class DriverController extends Controller
         $user = User::where(
             function ($query) use ($identity) {
                 $query->where('phone', static::phone($identity));
-                $query->owWhere('email', $identity);
+                $query->orWhere('email', $identity);
             }
         )->whereHas('driver')->first();
 

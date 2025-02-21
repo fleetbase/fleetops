@@ -12,7 +12,7 @@ class ContactObserver
      *
      * @return void
      */
-    public function created(Contact $contact)
+    public function creating(Contact $contact)
     {
         // Create a user account for the contact
         if ($contact->doesntHaveUser()) {
@@ -33,12 +33,12 @@ class ContactObserver
         }
 
         // Validate email is available to user
-        if ($contact->isDirty('email') && $this->isEmailUnavailable($contact)) {
+        if (!empty($contact->email) && $contact->wasChanged('email') && $this->isEmailUnavailable($contact)) {
             throw new \Exception('Email attempting to update for ' . $contact->type . ' is not available.');
         }
 
         // Validate phone is available to user
-        if ($contact->isDirty('phone') && $this->isPhoneUnavailable($contact)) {
+        if (!empty($contact->phone) && $contact->wasChanged('phone') && $this->isPhoneUnavailable($contact)) {
             throw new \Exception('Phone attempting to update for ' . $contact->type . ' is not available.');
         }
 
@@ -59,11 +59,11 @@ class ContactObserver
 
     private function isEmailUnavailable(Contact $contact)
     {
-        return User::where('email', $contact->email)->whereNot('uuid', $contact->user_uuid)->exists() || Contact::where('email', $contact->email)->whereNot('uuid', $contact->uuid)->exists();
+        return User::where('email', $contact->email)->whereNot('uuid', $contact->user_uuid)->exists() || Contact::where(['email' => $contact->email, 'company_uuid' => $contact->company_uuid])->whereNot('uuid', $contact->uuid)->exists();
     }
 
     private function isPhoneUnavailable(Contact $contact)
     {
-        return User::where('phone', $contact->phone)->whereNot('uuid', $contact->user_uuid)->exists() || Contact::where('phone', $contact->phone)->whereNot('uuid', $contact->uuid)->exists();
+        return User::where('phone', $contact->phone)->whereNot('uuid', $contact->user_uuid)->exists() || Contact::where(['phone' => $contact->phone, 'company_uuid' => $contact->company_uuid])->whereNot('uuid', $contact->uuid)->exists();
     }
 }

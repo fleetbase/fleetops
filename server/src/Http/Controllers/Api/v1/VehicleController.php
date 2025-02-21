@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
+use Fleetbase\FleetOps\Events\VehicleLocationChanged;
 use Fleetbase\FleetOps\Http\Requests\CreateVehicleRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateVehicleRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
@@ -10,6 +11,7 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 
 class VehicleController extends Controller
@@ -207,5 +209,42 @@ class VehicleController extends Controller
 
         // response the vehicle resource
         return new DeletedResource($vehicle);
+    }
+
+    /**
+     * Update vehicles geolocation data.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function track(string $id, Request $request)
+    {
+        $latitude  = $request->input('latitude');
+        $longitude = $request->input('longitude');
+        $altitude  = $request->input('altitude');
+        $heading   = $request->input('heading');
+        $speed     = $request->input('speed');
+
+        try {
+            $vehicle = Vehicle::findRecordOrFail($id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return response()->json(
+                [
+                    'error' => 'Vehicle resource not found.',
+                ],
+                404
+            );
+        }
+
+        $vehicle->update([
+            'location' => new Point($latitude, $longitude),
+            'altitude' => $altitude,
+            'heading'  => $heading,
+            'speed'    => $speed,
+        ]);
+
+        broadcast(new VehicleLocationChanged($vehicle));
+        $vehicle->createPositionWithOrderContext();
+
+        return new VehicleResource($vehicle);
     }
 }
