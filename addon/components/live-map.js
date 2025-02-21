@@ -206,7 +206,7 @@ export default class LiveMapComponent extends Component {
      * Creates an instance of LiveMapComponent.
      * @memberof LiveMapComponent
      */
-    constructor(owner, { zoom = 12, darkMode = false }) {
+    constructor(owner, { zoom = 12 }) {
         super(...arguments);
 
         this.zoom = zoom;
