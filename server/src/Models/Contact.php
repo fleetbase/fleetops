@@ -283,7 +283,7 @@ class Contact extends Model
             if ($contact->phone) {
                 $query->orWhere('phone', $contact->phone);
             }
-        })->first();
+        })->whereNull('deleted_at')->first();
         if ($existingUser) {
             throw new UserAlreadyExistsException('User already exists, try to assigning the user to this contact.', $existingUser);
         }
@@ -469,7 +469,7 @@ class Contact extends Model
     {
         $user = $this->getUser();
 
-        return Str::isUuid($this->user_uuid) && $user instanceof User;
+        return Str::isUuid($this->user_uuid) || $user instanceof User;
     }
 
     public function doesntHaveUser(): bool

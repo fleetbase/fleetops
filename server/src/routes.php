@@ -173,6 +173,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->get('{id}', 'VehicleController@find');
                     $router->put('{id}', 'VehicleController@update');
                     $router->delete('{id}', 'VehicleController@delete');
+                    $router->match(['put', 'patch', 'post'], '{id}/track', 'VehicleController@track');
                 });
                 // fleets routes
                 $router->group(['prefix' => 'fleets'], function () use ($router) {

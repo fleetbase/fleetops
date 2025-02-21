@@ -210,7 +210,7 @@ export default class LiveMapComponent extends Component {
         super(...arguments);
 
         this.zoom = zoom;
-        this.changeTileSource(darkMode ? 'dark' : 'light');
+        this.changeTileSource('light');
         this.movementTracker.registerTrackingMarker(owner);
         this.setupComponent();
     }
@@ -386,7 +386,7 @@ export default class LiveMapComponent extends Component {
         this.triggerAction('onLoad', event);
 
         // handle theme change
-        this._checkThemeChanged();
+        // this._checkThemeChanged();
     }
 
     _checkThemeChanged() {
