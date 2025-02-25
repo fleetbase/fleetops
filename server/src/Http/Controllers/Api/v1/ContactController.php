@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\Http\Controllers\Controller;
+use Fleetbase\Models\User;
 use Fleetbase\Support\Utils;
 use Illuminate\Http\Request;
 
@@ -30,7 +31,9 @@ class ContactController extends Controller
             $contact = Contact::updateOrCreate(
                 [
                     'company_uuid' => session('company'),
-                    'name'         => strtoupper($input['name']),
+                    'name'         => $input['name'],
+                    'phone'        => $input['phone'],
+                    'email'        => $input['email'],
                 ],
                 $input
             );
@@ -132,8 +135,18 @@ class ContactController extends Controller
             );
         }
 
-        // delete the contact
-        $contact->delete();
+        try {
+            // delete the contact
+            $contact->delete();
+
+            // Delete related user if any
+            $user = User::where(['uuid' => $contact->user_uuid, 'type' => $contact->type])->first();
+            if ($user) {
+                $user->delete();
+            }
+        } catch (\Exception $e) {
+            return response()->apiError($e->getMessage());
+        }
 
         // response the contact resource
         return new DeletedResource($contact);

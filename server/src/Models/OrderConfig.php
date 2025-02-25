@@ -462,7 +462,7 @@ class OrderConfig extends Model
             }
         }
 
-        return null;
+        return static::default($company);
     }
 
     /**

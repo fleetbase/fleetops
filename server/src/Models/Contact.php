@@ -275,7 +275,7 @@ class Contact extends Model
      *
      * @throws UserAlreadyExistsException if a user with the same email or phone number already exists
      */
-    public static function createUserFromContact(Contact $contact, bool $sendInvite = false): User
+    public static function createUserFromContact(Contact $contact, bool $sendInvite = false, bool $update = false): User
     {
         // Check if user already exist with email or phone number
         $existingUser = User::where(function ($query) use ($contact) {
@@ -315,7 +315,10 @@ class Contact extends Model
         }
 
         // Set user to contact
-        $contact->update(['user_uuid' => $user->uuid]);
+        $contact->setAttribute('user_uuid', $user->uuid);
+        if ($update) {
+            $contact->update(['user_uuid' => $user->uuid]);
+        }
 
         // Optionally, send invite
         if ($sendInvite) {
