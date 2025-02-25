@@ -24,7 +24,9 @@ class ContactController extends Controller
     public function create(CreateContactRequest $request)
     {
         // get request input
-        $input = $request->only(['name', 'type', 'title', 'email', 'phone', 'meta']);
+        $input          = $request->only(['name', 'type', 'title', 'email', 'phone', 'meta', 'type']);
+        $input['phone'] = is_string($input['phone']) ? Utils::formatPhoneNumber($input['phone']) : $input['phone'];
+        $input['type']  = empty($input['type']) ? 'contact' : $input['type'];
 
         try {
             // create the contact
@@ -123,7 +125,6 @@ class ContactController extends Controller
      */
     public function delete($id)
     {
-        // find for the driver
         try {
             $contact = Contact::findRecordOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
