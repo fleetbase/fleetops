@@ -55,9 +55,20 @@ class LiveController extends Controller
             ->whereHas(
                 'order',
                 function ($q) {
-                    $q->whereNotIn('status', ['canceled', 'completed']);
+                    $q->whereNotIn('status', ['canceled', 'completed', 'expired']);
                     $q->whereNotNull('driver_assigned_uuid');
                     $q->whereNull('deleted_at');
+                    $q->whereHas('trackingNumber');
+                    $q->whereHas('trackingStatuses');
+                    $q->whereHas('payload', function ($query) {
+                        $query->where(
+                            function ($q) {
+                                $q->whereHas('waypoints');
+                                $q->orWhereHas('pickup');
+                                $q->orWhereHas('dropoff');
+                            }
+                        );
+                    });
                 }
             )
             ->applyDirectivesForPermissions('fleet-ops list route')
