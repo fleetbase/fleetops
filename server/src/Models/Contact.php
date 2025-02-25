@@ -207,6 +207,11 @@ class Contact extends Model
         return $this->phone;
     }
 
+    public function setPhoneAttribute(?string $value)
+    {
+        $this->attributes['phone'] = is_string($value) ? Utils::formatPhoneNumber($value) : $value;
+    }
+
     /**
      * Get avatar URL attribute.
      */
@@ -279,13 +284,27 @@ class Contact extends Model
     {
         // Check if user already exist with email or phone number
         $existingUser = User::where(function ($query) use ($contact) {
+            $query->where('company_uuid', $contact->company_uuid);
             $query->where('email', $contact->email);
             if ($contact->phone) {
-                $query->orWhere('phone', $contact->phone);
+                $query->orWhere('phone', Utils::formatPhoneNumber($contact->phone));
             }
         })->whereNull('deleted_at')->first();
         if ($existingUser) {
-            throw new UserAlreadyExistsException('User already exists, try to assigning the user to this contact.', $existingUser);
+            // Check if existing user belongs to another contact
+            $existingUserContact = Contact::where(['user_uuid' => $existingUser->uuid, 'company_uuid' => $contact->company_uuid])->first();
+            if ($existingUserContact) {
+                throw new UserAlreadyExistsException('User already exists, try to assigning the user to this contact.', $existingUser);
+            } else {
+                // Assign the user to this contact instead
+                $contact->setAttribute('user_uuid', $existingUser->uuid);
+                if ($update) {
+                    $contact->update(['user_uuid' => $existingUser->uuid]);
+                }
+                $contact->setRelation('user', $existingUser);
+            }
+
+            return $existingUser;
         }
 
         // Load company
@@ -296,7 +315,7 @@ class Contact extends Model
             'company_uuid' => $contact->company_uuid,
             'name'         => $contact->name,
             'email'        => $contact->email,
-            'phone'        => $contact->phone,
+            'phone'        => Utils::formatPhoneNumber($contact->phone),
             'username'     => Str::slug($contact->name . '_' . Str::random(4), '_'),
             'password'     => Str::random(),
             'timezone'     => $contact->company->timezone ?? date_default_timezone_get(),
