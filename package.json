@@ -1,6 +1,6 @@
 {
     "name": "@fleetbase/fleetops-engine",
-    "version": "0.5.24",
+    "version": "0.5.25",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "fleetbase": {
         "route": "fleet-ops"
@@ -50,9 +50,9 @@
         "@fortawesome/fontawesome-svg-core": "6.4.0",
         "@fortawesome/free-brands-svg-icons": "6.4.0",
         "@fortawesome/free-solid-svg-icons": "6.4.0",
-        "@stripe/connect-js": "^3.3.10",
         "@joint/core": "^4.0.1",
         "@joint/layout-directed-graph": "^4.0.1",
+        "@stripe/connect-js": "^3.3.10",
         "@terraformer/spatial": "^2.1.2",
         "@zestia/ember-dragula": "^12.0.0",
         "broccoli-funnel": "^3.0.8",

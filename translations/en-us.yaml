@@ -773,6 +773,9 @@ fleet-ops:
       new-address: New Address
       contact-details: Contact Details
     customer-form-panel:
+      user-account: User Account
+      user-account-help-text: Each customer profile needs to be connected to a specific user account. This association is essential for handling the authentication process, ensuring that each customer can securely access and manage their profile and other services.
+      select-user: Select User
       success-message: Customer {customerName} saved successfully.
       view-customer-button: View customer details
       save-customer: Save Customer
@@ -796,6 +799,7 @@ fleet-ops:
       edit-button: Edit customer
       cancel-edit-button: Cancel edit customer
       cancel-new-button: Cancel new customer
+      user-account: User Account
     display-panel:
       no-address: No {type} address!
       no-address-message: No address!

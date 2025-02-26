@@ -14,6 +14,8 @@ export default class CustomerFormPanelComponent extends Component {
     @service notifications;
     @service hostRouter;
     @service contextPanel;
+    @service modalsManager;
+    @service universe;
 
     /**
      * Overlay context.
@@ -27,6 +29,62 @@ export default class CustomerFormPanelComponent extends Component {
      * @memberof ContactFormPanelComponent
      */
     @tracked savePermission;
+
+    /**
+     * Action to create a new user quickly
+     *
+     * @memberof DriverFormPanelComponent
+     */
+    userAccountActionButtons = [
+        {
+            text: 'Create new user',
+            icon: 'user-plus',
+            size: 'xs',
+            permission: 'iam create user',
+            onClick: () => {
+                const user = this.store.createRecord('user', {
+                    status: 'pending',
+                    type: 'user',
+                });
+
+                this.modalsManager.show('modals/user-form', {
+                    title: 'Create a new user',
+                    user,
+                    formPermission: 'iam create user',
+                    uploadNewPhoto: (file) => {
+                        this.fetch.uploadFile.perform(
+                            file,
+                            {
+                                path: `uploads/${this.currentUser.companyId}/users/${user.slug}`,
+                                key_uuid: user.id,
+                                key_type: 'user',
+                                type: 'user_photo',
+                            },
+                            (uploadedFile) => {
+                                user.setProperties({
+                                    avatar_uuid: uploadedFile.id,
+                                    avatar_url: uploadedFile.url,
+                                    avatar: uploadedFile,
+                                });
+                            }
+                        );
+                    },
+                    confirm: async (modal) => {
+                        modal.startLoading();
+
+                        try {
+                            await user.save();
+                            this.notifications.success('New user created successfully!');
+                            modal.done();
+                        } catch (error) {
+                            this.notifications.serverError(error);
+                            modal.stopLoading();
+                        }
+                    },
+                });
+            },
+        },
+    ];
 
     /**
      * Constructs the component and applies initial state.

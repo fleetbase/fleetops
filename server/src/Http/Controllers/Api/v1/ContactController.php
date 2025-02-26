@@ -34,7 +34,6 @@ class ContactController extends Controller
                 [
                     'company_uuid' => session('company'),
                     'name'         => $input['name'],
-                    'phone'        => $input['phone'],
                     'email'        => $input['email'],
                 ],
                 $input

@@ -748,8 +748,8 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-wrapper > .ord
     bottom: 0;
     top: 0;
     right: 0;
-    width: 40%;
-    max-width: 40%;
+    width: 52%;
+    max-width: 52%;
     height: 100%;
     padding: 1rem;
 }
@@ -981,6 +981,37 @@ body[data-theme='light'] .flb--modal.flb--default-modal.finalize-service-quote-p
 
 #fleetops-customer-orders-container #fleetops-customer-orders-sidebar {
     margin-right: 1rem;
+    width: 50%;
+}
+
+@media (width >= 992px) {
+    #fleetops-customer-orders-container #fleetops-customer-orders-sidebar {
+        width: 50%;
+    }
+}
+
+@media (width >= 1200px) {
+    #fleetops-customer-orders-container #fleetops-customer-orders-sidebar {
+        width: 35%;
+    }
+}
+
+@media (width >= 1400px) {
+    #fleetops-customer-orders-container #fleetops-customer-orders-sidebar {
+        width: 30%;
+    }
+}
+
+@media (width >= 1700px) {
+    #fleetops-customer-orders-container #fleetops-customer-orders-sidebar {
+        width: 25%;
+    }
+}
+
+@media (width >= 1900px) {
+    #fleetops-customer-orders-container #fleetops-customer-orders-sidebar {
+        width: 20%;
+    }
 }
 
 #fleetops-customer-orders-container.collapse-sidebar #fleetops-customer-orders-sidebar {

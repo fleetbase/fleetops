@@ -292,7 +292,7 @@ class Contact extends Model
         })->whereNull('deleted_at')->first();
         if ($existingUser) {
             // Check if existing user belongs to another contact
-            $existingUserContact = Contact::where(['user_uuid' => $existingUser->uuid, 'company_uuid' => $contact->company_uuid])->first();
+            $existingUserContact = Contact::where(['user_uuid' => $existingUser->uuid, 'company_uuid' => $contact->company_uuid])->whereHas('user')->first();
             if ($existingUserContact) {
                 throw new UserAlreadyExistsException('User already exists, try to assigning the user to this contact.', $existingUser);
             } else {

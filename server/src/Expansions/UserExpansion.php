@@ -58,7 +58,7 @@ class UserExpansion implements Expansion
     {
         return function () {
             /** @var \Illuminate\Database\Eloquent\Model $this */
-            return $this->hasOne(Contact::class)->where(['type' => 'customer', 'user_uuid' => $this->uuid])->without('user');
+            return $this->hasOne(Contact::class, 'user_uuid', 'uuid')->where('type', 'customer')->without('user');
         };
     }
 
@@ -69,7 +69,7 @@ class UserExpansion implements Expansion
     {
         return function () {
             /** @var \Illuminate\Database\Eloquent\Model $this */
-            return $this->hasOne(Contact::class)->where('user_uuid', $this->uuid)->without('user');
+            return $this->hasOne(Contact::class, 'user_uuid', 'uuid')->without('user');
         };
     }
 }

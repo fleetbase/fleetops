@@ -43,4 +43,17 @@ class UserFilterExpansion implements Expansion
             });
         };
     }
+
+    /**
+     * @return void
+     */
+    public static function doesntHaveCustomer()
+    {
+        return function () {
+            /** @var \Fleetbase\Http\Filter\UserFilter|\Fleetbase\Http\Filter\Filter $this */
+            $this->builder->whereDoesntHave('customer', function ($query) {
+                $query->where('company_uuid', session('company'));
+            });
+        };
+    }
 }
