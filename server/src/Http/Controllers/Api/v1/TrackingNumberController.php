@@ -35,6 +35,9 @@ class TrackingNumberController extends Controller
                 [
                     'public_id'    => $request->input('owner'),
                     'company_uuid' => session('company'),
+                ],
+                [
+                    'with_table' => true,
                 ]
             );
 

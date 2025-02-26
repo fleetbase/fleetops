@@ -45,7 +45,7 @@ class ContactController extends FleetOpsController
      */
     public function getAsCustomer($id)
     {
-        $contact = Contact::where('uuid', $id)->withTrashed()->first();
+        $contact = Contact::where('uuid', $id)->first();
 
         if (!$contact) {
             return response()->error('Customer not found.');

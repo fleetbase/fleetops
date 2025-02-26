@@ -47,7 +47,7 @@ class Place extends FleetbaseResource
             'phone'                 => $this->phone ?? null,
             'owner'                 => Resolve::resourceForMorph($this->owner_type, $this->owner_uuid),
             'tracking_number'       => $this->whenLoaded('trackingNumber', fn () => $this->trackingNumber),
-            'type'                  => $this->type,
+            'type'                  => $this->type ?? 'place',
             'meta'                  => data_get($this, 'meta', []),
             'eta'                   => $this->when($this->eta, $this->eta),
             'updated_at'            => $this->updated_at,
