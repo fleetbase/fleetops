@@ -33,6 +33,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @tracked commentInput = '';
     @tracked customFieldGroups = [];
     @tracked customFields = [];
+    @tracked proofs;
     @tracked uploadQueue = [];
     acceptedFileTypes = [
         'application/vnd.ms-excel',
@@ -177,6 +178,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         yield order.loadPurchaseRate();
         yield order.loadFiles();
         this.loadCustomFields.perform(order);
+        this.viewProofLabel.perform(order.id);
     }
 
     /**
@@ -801,6 +803,24 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             this.modalsManager.setOption('data', data);
         };
         fileReader.readAsDataURL(blob);
+    }
+
+    /**
+     * View proof label
+     */
+    @task *viewProofLabel(orderId) {
+        const response = yield this.fetch.get('proofs', { subject_uuid: orderId });
+        this.proofs = response.proofs;
+    }
+
+    @action downloadImage(proof) {
+        const base64Data = proof.raw;
+        const link = document.createElement('a');
+        link.href = base64Data;
+        link.download = 'downloaded_image.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     /**
