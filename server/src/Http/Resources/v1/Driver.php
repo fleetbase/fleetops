@@ -32,6 +32,8 @@ class Driver extends FleetbaseResource
             'public_id'                     => $this->when(Http::isInternalRequest(), $this->public_id),
             'user'                          => $this->when(Http::isPublicRequest(), fn () => $this->user ? $this->user->public_id : null, new User($this->user)),
             'internal_id'                   => $this->internal_id,
+            'company'                       => $this->when(Http::isPublicRequest(), fn () => $this->company ? $this->company->public_id : null),
+            'company_name'                  => $this->when(Http::isPublicRequest(), fn () => $this->company ? $this->company->name : null),
             'name'                          => $this->name,
             'email'                         => $this->email,
             'phone'                         => $this->phone,
