@@ -34,6 +34,21 @@ class OrderSplit extends Notification
     public static string $package = 'fleet-ops';
 
     /**
+     * The title of the notification.
+     */
+    public string $title;
+
+    /**
+     * The message body of the notification.
+     */
+    public string $message;
+
+    /**
+     * Additional data to be sent with the notification.
+     */
+    public array $data = [];
+
+    /**
      * Create a new notification instance.
      *
      * @return void

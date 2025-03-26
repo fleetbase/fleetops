@@ -57,7 +57,7 @@ export class EventBuffer {
             const { event, data } = output;
 
             // log incoming event
-            debug(`${event} - #${data.additionalData.index} (${output.created_at}) [ ${data.location.coordinates.join(' ')} ]`);
+            debug(`${event} - ${data.id} ${data.additionalData?.index ? '#' + data.additionalData?.index : ''} (${output.created_at}) [ ${data.location.coordinates.join(' ')} ]`);
 
             // get movingObject marker
             const marker = this.model._layer || this.model._marker;

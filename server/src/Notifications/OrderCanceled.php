@@ -5,16 +5,14 @@ namespace Fleetbase\FleetOps\Notifications;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Support\PushNotification;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\Apn\ApnChannel;
-use NotificationChannels\Apn\ApnMessage;
 use NotificationChannels\Fcm\FcmChannel;
-use NotificationChannels\Fcm\FcmMessage;
-use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
 class OrderCanceled extends Notification implements ShouldQueue
 {
@@ -43,13 +41,31 @@ class OrderCanceled extends Notification implements ShouldQueue
     public static string $package = 'fleet-ops';
 
     /**
+     * The title of the notification.
+     */
+    public string $title;
+
+    /**
+     * The message body of the notification.
+     */
+    public string $message;
+
+    /**
+     * Additional data to be sent with the notification.
+     */
+    public array $data = [];
+
+    /**
      * Create a new notification instance.
      *
      * @return void
      */
     public function __construct(Order $order)
     {
-        $this->order = $order->setRelations([]);
+        $this->order   = $order;
+        $this->title   = 'Order ' . $this->order->public_id . ' was canceled';
+        $this->message = 'Order ' . $this->order->public_id . ' has been canceled.';
+        $this->data    = ['id' => $this->order->public_id, 'type' => 'order_canceled'];
     }
 
     /**
@@ -88,11 +104,10 @@ class OrderCanceled extends Notification implements ShouldQueue
         $order = new OrderResource($this->order);
 
         return [
-            'title' => 'Order ' . $this->order->public_id . ' was canceled',
-            'body'  => 'Order ' . $this->order->public_id . ' has been canceled.',
+            'title' => $this->title,
+            'body'  => $this->message,
             'data'  => [
-                'id'    => $this->order->public_id,
-                'type'  => 'order_canceled',
+                ...$this->data,
                 'order' => $order->toWebhookPayload(),
             ],
         ];
@@ -105,14 +120,11 @@ class OrderCanceled extends Notification implements ShouldQueue
      */
     public function toMail($notifiable)
     {
-        $message = (new MailMessage())
-            ->subject('Order ' . $this->order->public_id . ' was canceled')
-            ->line('Order ' . $this->order->public_id . ' has been canceled.')
-            ->line('No further action is necessary.');
-
-        $message->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
-
-        return $message;
+        return (new MailMessage())
+            ->subject($this->title)
+            ->line($this->message)
+            ->line('No further action is necessary.')
+            ->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
     }
 
     /**
@@ -122,26 +134,7 @@ class OrderCanceled extends Notification implements ShouldQueue
      */
     public function toFcm($notifiable)
     {
-        return (new FcmMessage(notification: new FcmNotification(
-            title: 'Order ' . $this->order->public_id . ' was canceled',
-            body: 'No further action is necessary.',
-        )))
-        ->data(['id' => $this->order->public_id, 'type' => 'order_canceled'])
-        ->custom([
-            'android' => [
-                'notification' => [
-                    'color' => '#4391EA',
-                ],
-                'fcm_options' => [
-                    'analytics_label' => 'analytics',
-                ],
-            ],
-            'apns' => [
-                'fcm_options' => [
-                    'analytics_label' => 'analytics',
-                ],
-            ],
-        ]);
+        return PushNotification::createFcmMessage($this->title, $this->message, $this->data);
     }
 
     /**
@@ -151,14 +144,6 @@ class OrderCanceled extends Notification implements ShouldQueue
      */
     public function toApn($notifiable)
     {
-        $message = ApnMessage::create()
-            ->badge(1)
-            ->title('Order ' . $this->order->public_id . ' was canceled')
-            ->body('No further action is necessary.')
-            ->custom('type', 'order_canceled')
-            ->custom('id', $this->order->public_id)
-            ->action('view_order', ['id' => $this->order->public_id]);
-
-        return $message;
+        return PushNotification::createApnMessage($this->title, $this->message, $this->data, 'view_order');
     }
 }

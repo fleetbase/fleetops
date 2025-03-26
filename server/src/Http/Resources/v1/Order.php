@@ -58,6 +58,7 @@ class Order extends FleetbaseResource
             'purchase_rate'            => new PurchaseRate($this->purchaseRate),
             'notes'                    => $this->notes,
             ...$this->getCustomFieldValues(),
+            'custom_fields'         => $this->when(Http::isPublicRequest(), fn () => $this->getCustomFieldKeys()),
             'type'                  => $this->type,
             'status'                => $this->status,
             'pod_method'            => $this->pod_method,

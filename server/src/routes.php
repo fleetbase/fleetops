@@ -67,6 +67,14 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->put('{id}', 'IssueController@update');
                     $router->delete('{id}', 'IssueController@delete');
                 });
+                // fuel-reports routes
+                $router->group(['prefix' => 'fuel-reports'], function () use ($router) {
+                    $router->post('/', 'FuelReportController@create');
+                    $router->get('/', 'FuelReportController@query');
+                    $router->get('{id}', 'FuelReportController@find');
+                    $router->put('{id}', 'FuelReportController@update');
+                    $router->delete('{id}', 'FuelReportController@delete');
+                });
                 // orders routes
                 $router->group(['prefix' => 'orders', 'middleware' => [Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class]], function () use ($router) {
                     $router->post('/', 'OrderController@create');
@@ -82,6 +90,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->get('{id}/next-activity', 'OrderController@getNextActivity');
                     $router->get('{id}/tracker', 'OrderController@trackerData');
                     $router->get('{id}/eta', 'OrderController@etaData');
+                    $router->get('{id}/comments', 'OrderController@orderComments');
                     $router->match(['post', 'patch'], '{id}/set-destination/{placeId}', 'OrderController@setDestination');
                     $router->post('{id}/capture-signature/{subjectId?}', 'OrderController@captureSignature');
                     $router->post('{id}/capture-qr/{subjectId?}', 'OrderController@captureQrScan');

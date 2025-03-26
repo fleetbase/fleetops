@@ -95,4 +95,9 @@ export default class FuelReportFormPanelComponent extends Component {
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.fuelReport);
     }
+
+    @action setReporter(user) {
+        this.issue.set('reporter', user);
+        this.issue.set('reported_by_uuid', user.id);
+    }
 }

@@ -56,8 +56,7 @@
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}
-                        @onChange={{fn (mut this.issue.reporter)}}
-                        @onChangeId={{fn (mut this.issue.reported_by_uuid)}}
+                        @onChange={{this.setReporter}}
                         @disabled={{unauthorized}}
                         as |model|
                     >

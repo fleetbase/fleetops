@@ -6,6 +6,7 @@ use Fleetbase\Events\ResourceLifecycleEvent;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Support\PushNotification;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -13,10 +14,7 @@ use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\Apn\ApnChannel;
-use NotificationChannels\Apn\ApnMessage;
 use NotificationChannels\Fcm\FcmChannel;
-use NotificationChannels\Fcm\FcmMessage;
-use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
 class OrderDispatched extends Notification implements ShouldQueue
 {
@@ -45,13 +43,31 @@ class OrderDispatched extends Notification implements ShouldQueue
     public static string $package = 'fleet-ops';
 
     /**
+     * The title of the notification.
+     */
+    public string $title;
+
+    /**
+     * The message body of the notification.
+     */
+    public string $message;
+
+    /**
+     * Additional data to be sent with the notification.
+     */
+    public array $data = [];
+
+    /**
      * Create a new notification instance.
      *
      * @return void
      */
     public function __construct(Order $order)
     {
-        $this->order = $order->setRelations([]);
+        $this->order   = $order;
+        $this->title   = 'Order ' . $this->order->public_id . ' has been dispatched!';
+        $this->message = 'An order has just been dispatched to you and is ready to be started.';
+        $this->data    = ['id' => $this->order->public_id, 'type' => 'order_dispatched'];
     }
 
     /**
@@ -102,11 +118,10 @@ class OrderDispatched extends Notification implements ShouldQueue
         $order = new OrderResource($this->order);
 
         return [
-            'title' => 'Order ' . $this->order->public_id . ' has been dispatched!',
-            'body'  => 'An order has just been dispatched to you and is ready to be started.',
+            'title' => $this->title,
+            'body'  => $this->message,
             'data'  => [
-                'id'    => $this->order->public_id,
-                'type'  => 'order_dispatched',
+                ...$this->data,
                 'order' => $order->toWebhookPayload(),
             ],
         ];
@@ -151,13 +166,10 @@ class OrderDispatched extends Notification implements ShouldQueue
      */
     public function toMail($notifiable)
     {
-        $message = (new MailMessage())
-            ->subject('Order ' . $this->order->public_id . ' has been dispatched!')
-            ->line('An order has just been dispatched to you and is ready to be started.');
-
-        $message->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
-
-        return $message;
+        return (new MailMessage())
+            ->subject($this->title)
+            ->line($this->message)
+            ->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
     }
 
     /**
@@ -167,26 +179,7 @@ class OrderDispatched extends Notification implements ShouldQueue
      */
     public function toFcm($notifiable)
     {
-        return (new FcmMessage(notification: new FcmNotification(
-            title: 'Order ' . $this->order->public_id . ' has been dispatched!',
-            body: 'An order has just been dispatched to you and is ready to be started.',
-        )))
-        ->data(['id' => $this->order->public_id, 'type' => 'order_dispatched'])
-        ->custom([
-            'android' => [
-                'notification' => [
-                    'color' => '#4391EA',
-                ],
-                'fcm_options' => [
-                    'analytics_label' => 'analytics',
-                ],
-            ],
-            'apns' => [
-                'fcm_options' => [
-                    'analytics_label' => 'analytics',
-                ],
-            ],
-        ]);
+        return PushNotification::createFcmMessage($this->title, $this->message, $this->data);
     }
 
     /**
@@ -196,14 +189,6 @@ class OrderDispatched extends Notification implements ShouldQueue
      */
     public function toApn($notifiable)
     {
-        $message = ApnMessage::create()
-            ->badge(1)
-            ->title('Order ' . $this->order->public_id . ' has been dispatched!')
-            ->body('An order has just been dispatched to you and is ready to be started..')
-            ->custom('type', 'order_dispatched')
-            ->custom('id', $this->order->public_id)
-            ->action('view_order', ['id' => $this->order->public_id]);
-
-        return $message;
+        return PushNotification::createApnMessage($this->title, $this->message, $this->data, 'view_order');
     }
 }

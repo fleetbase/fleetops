@@ -46,14 +46,32 @@ class OrderDispatchFailed extends Notification implements ShouldQueue
     public static string $package = 'fleet-ops';
 
     /**
+     * The title of the notification.
+     */
+    public string $title;
+
+    /**
+     * The message body of the notification.
+     */
+    public string $message;
+
+    /**
+     * Additional data to be sent with the notification.
+     */
+    public array $data = [];
+
+    /**
      * Create a new notification instance.
      *
      * @return void
      */
     public function __construct(Order $order, OrderDispatchFailedEvent $event)
     {
-        $this->order  = $order->setRelations([]);
-        $this->reason = $event->getReason();
+        $this->order   = $order;
+        $this->reason  = $event->getReason();
+        $this->title   = 'Order ' . $this->order->public_id . ' has dispatch has failed!';
+        $this->message = $this->reason;
+        $this->data    = ['id' => $this->order->public_id, 'type' => 'order_dispatch_failed'];
     }
 
     /**
@@ -92,11 +110,10 @@ class OrderDispatchFailed extends Notification implements ShouldQueue
         $order = new OrderResource($this->order);
 
         return [
-            'title' => 'Order ' . $this->order->public_id . ' has dispatch has failed!',
-            'body'  => $this->reason,
+            'title' => $this->title,
+            'body'  => $this->message,
             'data'  => [
-                'id'    => $this->order->public_id,
-                'type'  => 'order_dispatch_failed',
+                ...$this->data,
                 'order' => $order->toWebhookPayload(),
             ],
         ];
@@ -110,8 +127,8 @@ class OrderDispatchFailed extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         return (new MailMessage())
-            ->subject('Order ' . $this->order->public_id . ' has dispatch has failed!')
-            ->line($this->reason)
+            ->subject($this->title)
+            ->line($this->message)
             ->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
     }
 }

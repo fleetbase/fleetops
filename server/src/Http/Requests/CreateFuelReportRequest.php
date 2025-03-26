@@ -4,7 +4,7 @@ namespace Fleetbase\FleetOps\Http\Requests;
 
 use Fleetbase\Http\Requests\FleetbaseRequest;
 
-class CreateIssueRequest extends FleetbaseRequest
+class CreateFuelReportRequest extends FleetbaseRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,12 +24,12 @@ class CreateIssueRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'driver'       => ['required'],
-            'location'     => ['required'],
-            'report'       => ['required'],
-            'category'     => ['nullable'],
-            'type'         => ['nullable'],
-            'priority'     => ['nullable'],
+            'driver'          => ['required'],
+            'odometer'        => ['required'],
+            'volume'          => ['required'],
+            'metric_unit'     => ['nullable'],
+            'location'        => ['nullable'],
+            'amount'          => ['nullable'],
         ];
     }
 }

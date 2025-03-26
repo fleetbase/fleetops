@@ -53,6 +53,7 @@ class Entity extends FleetbaseResource
             'sku'               => data_get($this, 'sku'),
             'currency'          => data_get($this, 'currency'),
             'meta'              => data_get($this, 'meta', []),
+            'type'              => data_get($this, 'type', 'entity'),
             'updated_at'        => $this->updated_at,
             'created_at'        => $this->created_at,
         ];

@@ -46,15 +46,16 @@ class IssueController extends Controller
         }
 
         // get the user uuid
-        $input['driver_uuid']      = $driver->uuid;
-        $input['reported_by_uuid'] = $driver->user_uuid;
-        $input['vehicle_uuid']     = $driver->vehicle_uuid;
+        $input['company_uuid']      = $driver->company_uuid;
+        $input['driver_uuid']       = $driver->uuid;
+        $input['reported_by_uuid']  = $driver->user_uuid;
+        $input['vehicle_uuid']      = $driver->vehicle_uuid;
 
-        // create the entity
-        $entity = Issue::create($input);
+        // create the issue
+        $issue = Issue::create($input);
 
         // response the driver resource
-        return new IssueResource($entity);
+        return new IssueResource($issue);
     }
 
     /**

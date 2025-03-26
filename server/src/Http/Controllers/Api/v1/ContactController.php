@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\Http\Controllers\Controller;
+use Fleetbase\Models\File;
 use Fleetbase\Models\User;
 use Fleetbase\Support\Utils;
 use Illuminate\Http\Request;
@@ -27,6 +28,27 @@ class ContactController extends Controller
         $input          = $request->only(['name', 'type', 'title', 'email', 'phone', 'meta', 'type']);
         $input['phone'] = is_string($input['phone']) ? Utils::formatPhoneNumber($input['phone']) : $input['phone'];
         $input['type']  = empty($input['type']) ? 'contact' : $input['type'];
+
+        // Handle photo as either file id/ or base64 data string
+        $photo = $request->input('photo');
+        if ($photo) {
+            // Handle photo being a file id
+            if (Utils::isPublicId($photo)) {
+                $file = File::where('public_id', $photo)->first();
+                if ($file) {
+                    $input['photo_uuid'] = $file->uuid;
+                }
+            }
+
+            // Handle the photo being base64 data string
+            if (Utils::isBase64String($photo)) {
+                $path = implode('/', ['uploads', session('company'), 'contacts']);
+                $file = File::createFromBase64($photo, null, $path);
+                if ($file) {
+                    $input['photo_uuid'] = $file->uuid;
+                }
+            }
+        }
 
         try {
             // create the contact
@@ -77,6 +99,32 @@ class ContactController extends Controller
                 'public_id'    => $request->input('place'),
                 'company_uuid' => session('company'),
             ]);
+        }
+
+        // Handle photo as either file id/ or base64 data string
+        $photo = $request->input('photo');
+        if ($photo) {
+            // Handle photo being a file id
+            if (Utils::isPublicId($photo)) {
+                $file = File::where('public_id', $photo)->first();
+                if ($file) {
+                    $input['photo_uuid'] = $file->uuid;
+                }
+            }
+
+            // Handle the photo being base64 data string
+            if (Utils::isBase64String($photo)) {
+                $path = implode('/', ['uploads', session('company'), 'customers']);
+                $file = File::createFromBase64($photo, null, $path);
+                if ($file) {
+                    $input['photo_uuid'] = $file->uuid;
+                }
+            }
+
+            // Handle removal key
+            if ($photo === 'REMOVE') {
+                $input['photo_uuid'] = null;
+            }
         }
 
         // update the contact

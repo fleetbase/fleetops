@@ -166,4 +166,9 @@ export default class IssueFormPanelComponent extends Component {
     @action onPressCancel() {
         return contextComponentCallback(this, 'onPressCancel', this.issue);
     }
+
+    @action setReporter(user) {
+        this.issue.set('reporter', user);
+        this.issue.set('reported_by_uuid', user.id);
+    }
 }
