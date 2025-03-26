@@ -760,14 +760,12 @@ class Payload extends Model
         if ($this->isMultipleDropOrder && Utils::isActivity($activity) && $location) {
             // update activity for the current waypoint
             $currentWaypoint = $this->waypointMarkers->firstWhere('place_uuid', $this->current_waypoint_uuid);
-
             if ($currentWaypoint) {
                 $currentWaypoint->insertActivity($activity, $location, $proof);
             }
 
             // update activity for all entities for this destination/waypoint
             $entities = $this->entities->where('destination_uuid', $this->current_waypoint_uuid);
-
             foreach ($entities as $entity) {
                 $entity->insertActivity($activity, $location, $proof);
             }
@@ -784,7 +782,6 @@ class Payload extends Model
     public function setNextWaypointDestination()
     {
         $nextWaypoint = $this->waypointMarkers->filter(function ($waypoint) {
-            // dump($waypoint->place->public_id, strtolower($waypoint->status_code));
             return !in_array(strtolower($waypoint->status_code), ['completed', 'canceled']) && $waypoint->place_uuid !== $this->current_waypoint_uuid;
         })->first();
 
@@ -792,13 +789,10 @@ class Payload extends Model
             return $this;
         }
 
-        $this->current_waypoint_uuid = $nextWaypoint->place_uuid;
+        $this->setRelation('currentWaypoint', $nextWaypoint);
+        $this->update(['current_waypoint_uuid' => $nextWaypoint->place_uuid]);
 
-        if ($this->currentWaypoint) {
-            $this->currentWaypoint->refresh();
-        }
-
-        return $this->load('currentWaypoint');
+        return $this;
     }
 
     public function updateOrderDistanceAndTime(): ?Order

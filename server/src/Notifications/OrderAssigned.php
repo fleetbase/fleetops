@@ -5,16 +5,14 @@ namespace Fleetbase\FleetOps\Notifications;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Support\PushNotification;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\Apn\ApnChannel;
-use NotificationChannels\Apn\ApnMessage;
 use NotificationChannels\Fcm\FcmChannel;
-use NotificationChannels\Fcm\FcmMessage;
-use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
 class OrderAssigned extends Notification implements ShouldQueue
 {
@@ -43,13 +41,31 @@ class OrderAssigned extends Notification implements ShouldQueue
     public static string $package = 'fleet-ops';
 
     /**
+     * The title of the notification.
+     */
+    public string $title;
+
+    /**
+     * The message body of the notification.
+     */
+    public string $message;
+
+    /**
+     * Additional data to be sent with the notification.
+     */
+    public array $data = [];
+
+    /**
      * Create a new notification instance.
      *
      * @return void
      */
     public function __construct(Order $order)
     {
-        $this->order = $order->setRelations([]);
+        $this->order   = $order;
+        $this->title   = 'New order ' . $this->order->public_id . ' assigned!';
+        $this->message = $this->order->isScheduled ? 'You have a new order scheduled for ' . $this->order->scheduled_at : 'You have a new order assigned, tap for details.';
+        $this->data    = ['id' => $this->order->public_id, 'type' => 'order_assigned'];
     }
 
     /**
@@ -90,11 +106,10 @@ class OrderAssigned extends Notification implements ShouldQueue
         $order = new OrderResource($this->order);
 
         return [
-            'title' => 'New order ' . $this->order->public_id . ' assigned!',
-            'body'  => $this->order->isScheduled ? 'You have a new order scheduled for ' . $this->order->scheduled_at : 'You have a new order assigned, tap for details.',
+            'title' => $this->title,
+            'body'  => $this->message,
             'data'  => [
-                'id'    => $this->order->public_id,
-                'type'  => 'order_assigned',
+                ...$this->data,
                 'order' => $order->toWebhookPayload(),
             ],
         ];
@@ -108,8 +123,8 @@ class OrderAssigned extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         $message = (new MailMessage())
-            ->subject('New order ' . $this->order->public_id . ' assigned!')
-            ->line('New order ' . $this->order->public_id . ' has been assigned to you.');
+            ->subject($this->title)
+            ->line($this->message);
 
         if ($this->order->isScheduled) {
             $message->line('Dispatch is scheduled for ' . $this->order->scheduled_at);
@@ -127,26 +142,7 @@ class OrderAssigned extends Notification implements ShouldQueue
      */
     public function toFcm($notifiable)
     {
-        return (new FcmMessage(notification: new FcmNotification(
-            title: 'New order ' . $this->order->public_id . ' assigned!',
-            body: $this->order->isScheduled ? 'You have a new order scheduled for ' . $this->order->scheduled_at : 'You have a new order assigned, tap for details.',
-        )))
-        ->data(['id' => $this->order->public_id, 'type' => 'order_assigned'])
-        ->custom([
-            'android' => [
-                'notification' => [
-                    'color' => '#4391EA',
-                ],
-                'fcm_options' => [
-                    'analytics_label' => 'analytics',
-                ],
-            ],
-            'apns' => [
-                'fcm_options' => [
-                    'analytics_label' => 'analytics',
-                ],
-            ],
-        ]);
+        return PushNotification::createFcmMessage($this->title, $this->message, $this->data);
     }
 
     /**
@@ -156,18 +152,6 @@ class OrderAssigned extends Notification implements ShouldQueue
      */
     public function toApn($notifiable)
     {
-        $message = ApnMessage::create()
-            ->badge(1)
-            ->title('New order ' . $this->order->public_id . ' assigned!')
-            ->body('You have a new order assigned, tap for details.')
-            ->custom('type', 'order_assigned')
-            ->custom('id', $this->order->public_id)
-            ->action('view_order', ['id' => $this->order->public_id]);
-
-        if ($this->order->isScheduled) {
-            $message->body('You have a new order scheduled for ' . $this->order->scheduled_at);
-        }
-
-        return $message;
+        return PushNotification::createApnMessage($this->title, $this->message, $this->data, 'view_order');
     }
 }

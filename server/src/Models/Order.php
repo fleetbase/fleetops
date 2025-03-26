@@ -1638,6 +1638,19 @@ class Order extends Model
         return $customFields;
     }
 
+    public function getCustomFieldKeys(): array
+    {
+        $keys = [];
+        foreach ($this->customFieldValues as $customFieldValue) {
+            $key = Str::snake(strtolower($customFieldValue->custom_field_label));
+            if ($key) {
+                $keys[] = $key;
+            }
+        }
+
+        return $keys;
+    }
+
     /**
      * Retrieves the OrderConfig associated with this order.
      *

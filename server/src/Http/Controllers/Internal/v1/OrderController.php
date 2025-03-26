@@ -46,6 +46,18 @@ class OrderController extends FleetOpsController
     public $resource = 'order';
 
     /**
+     * Handle order waypoint changes if any.
+     */
+    public function onAfterUpdate($request, $order)
+    {
+        $waypoints = $request->array('order.payload.waypoints');
+        if ($waypoints) {
+            $order->loadMissing('payload');
+            $order->payload->updateWaypoints($waypoints);
+        }
+    }
+
+    /**
      * Creates a record with request payload.
      *
      * @return \Illuminate\Http\Response

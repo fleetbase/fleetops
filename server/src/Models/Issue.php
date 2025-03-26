@@ -191,6 +191,16 @@ class Issue extends Model
     }
 
     /**
+     * Get the vehicless ID.
+     *
+     * @return string
+     */
+    public function getVehicleIdAttribute()
+    {
+        return data_get($this, 'vehicle.public_id');
+    }
+
+    /**
      * Get the reporter name.
      *
      * @return string
@@ -201,6 +211,16 @@ class Issue extends Model
     }
 
     /**
+     * Get the reporter ID.
+     *
+     * @return string
+     */
+    public function getReporterIdAttribute()
+    {
+        return data_get($this, 'reporter.public_id');
+    }
+
+    /**
      * Get the assignee name.
      *
      * @return string
@@ -208,6 +228,16 @@ class Issue extends Model
     public function getAssigneeNameAttribute()
     {
         return data_get($this, 'assignee.name');
+    }
+
+    /**
+     * Get the assignee ID.
+     *
+     * @return string
+     */
+    public function getAssigneeIdAttribute()
+    {
+        return data_get($this, 'assignee.public_id');
     }
 
     public static function createFromImport(array $row, bool $saveInstance = false): Issue

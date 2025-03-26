@@ -92,8 +92,10 @@ class PlaceController extends Controller
         }
 
         // latitude / longitude
-        if ($request->has(['latitude', 'longitude'])) {
+        if ($requestHasCoordinates) {
             $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
+        } elseif ($requestHasLocation) {
+            $input['location'] = Utils::getPointFromMixed($request->input('location'));
         }
 
         // make sure company is set
@@ -142,7 +144,7 @@ class PlaceController extends Controller
         $place->fill($input);
 
         // attempt to find and set latitude and longitude
-        if ($isMissingLocation || $request->missing(['latitude', 'longitude', 'location']) || empty($place->country)) {
+        if ($isMissingLocation && $request->missing(['latitude', 'longitude', 'location'])) {
             $geocoded = Geocoder::geocode($place->toAddressString(['name']))
                 ->get()
                 ->first();

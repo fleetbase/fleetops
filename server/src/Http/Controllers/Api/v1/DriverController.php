@@ -20,6 +20,7 @@ use Fleetbase\Http\Resources\Organization;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\CompanyUser;
+use Fleetbase\Models\File;
 use Fleetbase\Models\User;
 use Fleetbase\Models\UserDevice;
 use Fleetbase\Models\VerificationCode;
@@ -120,6 +121,26 @@ class DriverController extends Controller
         // create the driver
         $driver = Driver::create($input);
 
+        // Handle photo as either file id/ or base64 data string
+        $photo = $request->input('photo');
+        if ($photo) {
+            $file = null;
+            // Handle photo being a file id
+            if (Utils::isPublicId($photo)) {
+                $file = File::where('public_id', $photo)->first();
+            }
+
+            // Handle the photo being base64 data string
+            if (Utils::isBase64String($photo)) {
+                $path = implode('/', ['uploads', session('company'), 'drivers']);
+                $file = File::createFromBase64($photo, null, $path);
+            }
+
+            if ($file) {
+                $user->update(['photo_uuid' => $file->uuid]);
+            }
+        }
+
         // load user
         $driver = $driver->load(['user', 'vehicle', 'vendor', 'currentJob']);
 
@@ -201,6 +222,26 @@ class DriverController extends Controller
 
         // load user
         $driver = $driver->load(['user', 'vehicle', 'vendor', 'currentJob']);
+
+        // Handle photo as either file id/ or base64 data string
+        $photo = $request->input('photo');
+        if ($photo) {
+            $file = null;
+            // Handle photo being a file id
+            if (Utils::isPublicId($photo)) {
+                $file = File::where('public_id', $photo)->first();
+            }
+
+            // Handle the photo being base64 data string
+            if (Utils::isBase64String($photo)) {
+                $path = implode('/', ['uploads', session('company'), 'drivers']);
+                $file = File::createFromBase64($photo, null, $path);
+            }
+
+            if ($file) {
+                $driver->user->update(['photo_uuid' => $file->uuid]);
+            }
+        }
 
         // response the driver resource
         return new DriverResource($driver);
@@ -585,8 +626,8 @@ class DriverController extends Controller
             );
         }
 
-        $companies = Company::whereHas('users', function ($q) use ($driver) {
-            $q->where('users.uuid', $driver->user_uuid);
+        $companies = Company::whereHas('drivers', function ($driverQuery) use ($driver) {
+            $driverQuery->where('user_uuid', $driver->user_uuid);
         })->get();
 
         return Organization::collection($companies);
@@ -620,21 +661,35 @@ class DriverController extends Controller
         }
 
         if (!CompanyUser::where(['user_uuid' => $driver->user_uuid, 'company_uuid' => $company->uuid])->exists()) {
-            return response()->apiError('You do not belong to this organization');
+            return response()->apiError('Driver does not belong to this organization.');
         }
 
         // Get the driver user account
         $user = $driver->getUser();
         if (!$user) {
-            return response()->apiError('Driver has not user account.');
+            return response()->apiError('Critial error, driver has not user account.');
+        }
+
+        // Get the users driver profile for this company
+        $driverProfile = Driver::where(['user_uuid' => $user->uuid, 'company_uuid' => $company->uuid])->first();
+        if (!$driverProfile) {
+            return response()->apiError('User does not have a driver profile with this organization.');
         }
 
         // Assign user to company and update their session
         $user->update(['company_uuid' => $company->uuid]);
-
         Auth::setSession($user);
 
-        return new Organization($company);
+        // Authenticate new driver
+        try {
+            $token = $user->createToken($driverProfile->uuid);
+        } catch (\Exception $e) {
+            return response()->apiError($e->getMessage());
+        }
+
+        $driverProfile->token = $token->plainTextToken;
+
+        return ['organization' => new Organization($company), 'driver' => new DriverResource($driverProfile)];
     }
 
     /**

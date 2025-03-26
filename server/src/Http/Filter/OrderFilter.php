@@ -237,28 +237,28 @@ class OrderFilter extends Filter
 
     public function driver(string $driver)
     {
-        $this->builder->with('driverAssigned');
-
         if (Str::isUuid($driver)) {
             $this->builder->where('driver_assigned_uuid', $driver);
         } else {
-            $this->builder->whereHas(
-                'driverAssigned',
-                function ($query) use ($driver) {
-                    $query->where('public_id', $driver);
-                    $query->orWhere('internal_id', $driver);
-                }
-            );
-            // include entities which can be assigned drivers
-            $this->builder->orWhereHas('payload.entities', function ($query) use ($driver) {
-                $query->whereNotNull('driver_assigned_uuid');
-                $query->whereHas(
-                    'driver',
+            $this->builder->where(function () use ($driver) {
+                $this->builder->whereHas(
+                    'driverAssigned',
                     function ($query) use ($driver) {
                         $query->where('public_id', $driver);
                         $query->orWhere('internal_id', $driver);
                     }
                 );
+                // REMOVED: include entities which can be assigned drivers
+                // $this->builder->orWhereHas('payload.entities', function ($query) use ($driver) {
+                //     $query->whereNotNull('driver_assigned_uuid');
+                //     $query->whereHas(
+                //         'driver',
+                //         function ($query) use ($driver) {
+                //             $query->where('public_id', $driver);
+                //             $query->orWhere('internal_id', $driver);
+                //         }
+                //     );
+                // });
             });
         }
     }
