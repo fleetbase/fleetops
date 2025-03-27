@@ -35,6 +35,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->match(['put', 'patch', 'post'], '{id}/track', 'DriverController@track');
                     $router->post('{id}/register-device', 'DriverController@registerDevice');
                     $router->post('{id}/switch-organization', 'DriverController@switchOrganization');
+                    $router->post('{id}/toggle-online', 'DriverController@toggleOnline');
                     $router->post('/', 'DriverController@create');
                     $router->get('/', 'DriverController@query');
                     $router->get('{id}', 'DriverController@find');
