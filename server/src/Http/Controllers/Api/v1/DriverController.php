@@ -206,11 +206,6 @@ class DriverController extends Controller
             ]);
         }
 
-        // set default online
-        if (!isset($input['online'])) {
-            $input['online'] = 0;
-        }
-
         // latitude / longitude
         if ($request->has(['latitude', 'longitude'])) {
             $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
@@ -219,9 +214,6 @@ class DriverController extends Controller
         // create the driver
         $driver->update($input);
         $driver->flushAttributesCache();
-
-        // load user
-        $driver = $driver->load(['user', 'vehicle', 'vendor', 'currentJob']);
 
         // Handle photo as either file id/ or base64 data string
         $photo = $request->input('photo');
@@ -242,6 +234,9 @@ class DriverController extends Controller
                 $driver->user->update(['photo_uuid' => $file->uuid]);
             }
         }
+
+        // load user
+        $driver = $driver->load(['user', 'vehicle', 'vendor', 'currentJob']);
 
         // response the driver resource
         return new DriverResource($driver);
@@ -383,6 +378,41 @@ class DriverController extends Controller
         broadcast(new DriverLocationChanged($driver));
         $driver->createPositionWithOrderContext();
 
+        return new DriverResource($driver);
+    }
+
+    /**
+     * Update a driver's "online" status based on the incoming request.
+     *
+     * If the request includes an "online" parameter, its value is cast to a boolean and applied.
+     * If not, the existing "online" status is toggled (true -> false, false -> true).
+     * A JSON 404 response is returned if the specified driver does not exist.
+     *
+     * @param string  $id      the unique identifier of the driver resource
+     * @param Request $request the incoming HTTP request
+     *
+     * @return \Illuminate\Http\JsonResponse|\App\Http\Resources\DriverResource
+     */
+    public function toggleOnline(string $id, Request $request)
+    {
+        try {
+            $driver = Driver::findRecordOrFail($id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return response()->json([
+                'error' => 'Driver resource not found.',
+            ], 404);
+        }
+
+        // Retrieve the "online" parameter from the request if provided
+        $onlineParam = $request->input('online');
+
+        // Determine the final boolean value for "online"
+        $onlineValue = is_null($onlineParam) ? !$driver->online : Utils::castBoolean($onlineParam);
+
+        // Perform a single update call
+        $driver->update(['online' => $onlineValue]);
+
+        // Return the updated resource
         return new DriverResource($driver);
     }
 

@@ -11,6 +11,7 @@ use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -116,12 +117,18 @@ class OrderTracker
             return -1;
         }
 
-        $response = OSRM::getRouteFromPoints($points);
-        if (isset($response['code']) && $response['code'] === 'Ok') {
-            $route = Arr::first($response['routes']);
-            if ($route) {
-                return data_get($route, 'distance', 0);
+        try {
+            $response = OSRM::getRouteFromPoints($points);
+            if (isset($response['code']) && $response['code'] === 'Ok') {
+                $route = Arr::first($response['routes']);
+                if ($route) {
+                    return data_get($route, 'distance', 0);
+                }
             }
+        } catch (\Exception $e) {
+            Log::warning('Error loading OSRM routes from order points.', [$e]);
+
+            return -1;
         }
 
         return -1;
@@ -139,12 +146,18 @@ class OrderTracker
             return -1;
         }
 
-        $response = OSRM::getRouteFromPoints($points);
-        if (isset($response['code']) && $response['code'] === 'Ok') {
-            $route = Arr::first($response['routes']);
-            if ($route) {
-                return data_get($route, 'distance', 0);
+        try {
+            $response = OSRM::getRouteFromPoints($points);
+            if (isset($response['code']) && $response['code'] === 'Ok') {
+                $route = Arr::first($response['routes']);
+                if ($route) {
+                    return data_get($route, 'distance', 0);
+                }
             }
+        } catch (\Exception $e) {
+            Log::warning('Error loading OSRM routes from order points.', [$e]);
+
+            return -1;
         }
 
         return -1;
@@ -171,12 +184,18 @@ class OrderTracker
             return -1;
         }
 
-        $response = OSRM::getRoute($start, $end);
-        if (isset($response['code']) && $response['code'] === 'Ok') {
-            $route = Arr::first($response['routes']);
-            if ($route) {
-                return data_get($route, 'duration', -1);
+        try {
+            $response = OSRM::getRoute($start, $end);
+            if (isset($response['code']) && $response['code'] === 'Ok') {
+                $route = Arr::first($response['routes']);
+                if ($route) {
+                    return data_get($route, 'duration', -1);
+                }
             }
+        } catch (\Exception $e) {
+            Log::warning('Error loading OSRM route from start and end points.', [$e]);
+
+            return -1;
         }
 
         return -1;
@@ -191,12 +210,19 @@ class OrderTracker
 
         $start              = $this->getDriverCurrentLocation();
         $end                = $waypoint->location;
-        $response           = OSRM::getRoute($start, $end);
-        if (isset($response['code']) && $response['code'] === 'Ok') {
-            $route = Arr::first($response['routes']);
-            if ($route) {
-                return data_get($route, 'duration', -1);
+
+        try {
+            $response           = OSRM::getRoute($start, $end);
+            if (isset($response['code']) && $response['code'] === 'Ok') {
+                $route = Arr::first($response['routes']);
+                if ($route) {
+                    return data_get($route, 'duration', -1);
+                }
             }
+        } catch (\Exception $e) {
+            Log::warning('Error loading OSRM routes from start and end points.', [$e]);
+
+            return -1;
         }
 
         return -1;
@@ -211,12 +237,19 @@ class OrderTracker
     {
         $start    = $this->getDriverCurrentLocation();
         $end      = $this->payload->getDropoffOrLastWaypoint()->location;
-        $response = OSRM::getRoute($start, $end);
-        if (isset($response['code']) && $response['code'] === 'Ok') {
-            $route = Arr::first($response['routes']);
-            if ($route) {
-                return data_get($route, 'duration', -1);
+
+        try {
+            $response = OSRM::getRoute($start, $end);
+            if (isset($response['code']) && $response['code'] === 'Ok') {
+                $route = Arr::first($response['routes']);
+                if ($route) {
+                    return data_get($route, 'duration', -1);
+                }
             }
+        } catch (\Exception $e) {
+            Log::warning('Error loading OSRM routes from start and end points.', [$e]);
+
+            return -1;
         }
 
         return -1;

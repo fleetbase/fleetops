@@ -1178,6 +1178,8 @@ class OrderController extends Controller
      */
     public function trackerData(string $id)
     {
+        set_time_limit(280);
+
         try {
             $order = Order::findRecordOrFail($id);
             $data  = $order->tracker()->toArray();
