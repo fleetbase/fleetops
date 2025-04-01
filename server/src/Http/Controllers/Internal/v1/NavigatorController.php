@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Resources\Organization;
 use Fleetbase\Models\ApiCredential;
@@ -31,7 +32,7 @@ class NavigatorController extends Controller
                 ]
             );
 
-            return redirect()->away('flbnavigator://configure?key=' . $apiCredential->key . '&host=' . url()->secure('/') . '&socketcluster_host=' . env('SOCKETCLUSTER_HOST', 'socket') . '&socketcluster_port=' . env('SOCKETCLUSTER_PORT', 8000));
+            return redirect()->away('flbnavigator://configure?key=' . $apiCredential->key . '&host=' . url()->secure('/') . '&socketcluster_host=' . env('SOCKETCLUSTER_HOST', 'socket') . '&socketcluster_port=' . env('SOCKETCLUSTER_PORT', 8000)) . '&socketcluster_secure=' . Utils::castBoolean(env('SOCKETCLUSTER_SECURE', false));
         }
 
         return response()->error('Organization for linking not found.');

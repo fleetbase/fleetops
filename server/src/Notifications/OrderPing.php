@@ -6,16 +6,15 @@ use Fleetbase\Events\ResourceLifecycleEvent;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\Model;
+use Fleetbase\Support\PushNotification;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\Apn\ApnChannel;
-use NotificationChannels\Apn\ApnMessage;
 use NotificationChannels\Fcm\FcmChannel;
-use NotificationChannels\Fcm\FcmMessage;
-use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
 class OrderPing extends Notification implements ShouldQueue
 {
@@ -64,6 +63,11 @@ class OrderPing extends Notification implements ShouldQueue
     public array $data = [];
 
     /**
+     * The driver or user being notified about the order ping.
+     */
+    public Model $notifiable;
+
+    /**
      * Create a new notification instance.
      *
      * @return void
@@ -72,6 +76,9 @@ class OrderPing extends Notification implements ShouldQueue
     {
         $this->order    = $order->setRelations([]);
         $this->distance = $distance;
+        $this->title    = 'New incoming order!';
+        $this->message  = $this->distance ? 'New order available for pickup about ' . Utils::formatMeters($this->distance, false) . ' away' : 'New order is available for pickup.';
+        $this->data     = ['id' => $this->order->public_id, 'type' => 'order_ping'];
     }
 
     /**
@@ -81,6 +88,8 @@ class OrderPing extends Notification implements ShouldQueue
      */
     public function via($notifiable)
     {
+        $this->notifiable = $notifiable;
+
         return ['broadcast', FcmChannel::class, ApnChannel::class];
     }
 
@@ -101,13 +110,20 @@ class OrderPing extends Notification implements ShouldQueue
      */
     public function broadcastOn()
     {
-        return [
+        $channels = [
             new Channel('company.' . session('company', data_get($this->order, 'company.uuid'))),
             new Channel('company.' . data_get($this->order, 'company.public_id')),
             new Channel('api.' . session('api_credential')),
             new Channel('order.' . $this->order->uuid),
             new Channel('order.' . $this->order->public_id),
         ];
+
+        if ($this->notifiable) {
+            $channels[] = new Channel('driver.' . $this->notifiable->uuid);
+            $channels[] = new Channel('driver.' . $this->notifiable->public_id);
+        }
+
+        return $channels;
     }
 
     /**
@@ -120,11 +136,10 @@ class OrderPing extends Notification implements ShouldQueue
         $order = new OrderResource($this->order);
 
         return [
-            'title' => 'New incoming order!',
-            'body'  => $this->distance ? 'New order available for pickup about ' . Utils::formatMeters($this->distance, false) . ' away' : 'New order is available for pickup.',
+            'title' => $this->title,
+            'body'  => $this->message,
             'data'  => [
-                'id'    => $this->order->public_id,
-                'type'  => 'order_ping',
+                ...$this->data,
                 'order' => $order->toWebhookPayload(),
             ],
         ];
@@ -169,26 +184,7 @@ class OrderPing extends Notification implements ShouldQueue
      */
     public function toFcm($notifiable)
     {
-        return (new FcmMessage(notification: new FcmNotification(
-            title: 'New incoming order!',
-            body: $this->distance ? 'New order available for pickup about ' . Utils::formatMeters($this->distance, false) . ' away' : 'New order is available for pickup.',
-        )))
-        ->data(['id' => $this->order->public_id, 'type' => 'order_ping'])
-        ->custom([
-            'android' => [
-                'notification' => [
-                    'color' => '#4391EA',
-                ],
-                'fcm_options' => [
-                    'analytics_label' => 'analytics',
-                ],
-            ],
-            'apns' => [
-                'fcm_options' => [
-                    'analytics_label' => 'analytics',
-                ],
-            ],
-        ]);
+        return PushNotification::createFcmMessage($this->title, $this->message, $this->data);
     }
 
     /**
@@ -198,14 +194,6 @@ class OrderPing extends Notification implements ShouldQueue
      */
     public function toApn($notifiable)
     {
-        $message = ApnMessage::create()
-            ->badge(1)
-            ->title('New incoming order!')
-            ->body($this->distance ? 'New order available for pickup about ' . Utils::formatMeters($this->distance, false) . ' away' : 'New order is available for pickup.')
-            ->custom('type', 'order_ping')
-            ->custom('id', $this->order->public_id)
-            ->action('view_order', ['id' => $this->order->public_id]);
-
-        return $message;
+        return PushNotification::createApnMessage($this->title, $this->message, $this->data, 'order_ping');
     }
 }

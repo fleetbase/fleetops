@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Console\Commands;
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Notifications\OrderPing;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Console\Command;
@@ -43,6 +44,11 @@ class DispatchAdhocOrders extends Command
         $orders = $this->getDispatchableOrders();
 
         $this->alert($orders->count() . ' orders found for ad-hoc dispatch. Current Time: ' . Carbon::now()->toDateTimeString());
+        $this->table(['Order', 'Dispatched At'], $orders->map(
+            function ($order) {
+                return [$order->public_id, $order->dispatched_at];
+            }
+        ));
 
         foreach ($orders as $order) {
             $pickup   = $order->getPickupLocation();
@@ -62,6 +68,8 @@ class DispatchAdhocOrders extends Command
                 $this->info('Order ' . $order->public_id . ' dispatched successfully to ' . $drivers->count() . ' nearby drivers.');
                 foreach ($drivers as $driver) {
                     $this->info('Pinging driver ' . $driver->name . ' (' . $driver->public_id . ') ...');
+                    // Do the ping
+                    $driver->notify(new OrderPing($order, $distance));
                 }
             } else {
                 $this->warn('No available drivers found for order ' . $order->public_id);
@@ -93,7 +101,7 @@ class DispatchAdhocOrders extends Command
             ->whereHas('company', function ($q) {
                 $q->whereHas('users', function ($q) {
                     $q->whereHas('driver', function ($q) {
-                        $q->where(['status' => 'active', 'online' => 1]);
+                        $q->where('online', 1);
                         $q->whereNull('deleted_at');
                     });
                 });
@@ -121,7 +129,7 @@ class DispatchAdhocOrders extends Command
 
         if ($testing) {
             // one for testing when cannoty be geospatially accurate
-            $drivers = Driver::where(['status' => 'active', 'online' => 1])
+            $drivers = Driver::where(['online' => 1])
                 ->where(function ($q) use ($order) {
                     $q->where('company_uuid', $order->company_uuid);
                     $q->orWhereHas('user', function ($q) use ($order) {
@@ -132,7 +140,7 @@ class DispatchAdhocOrders extends Command
                 ->withoutGlobalScopes()
                 ->get();
         } else {
-            $drivers = Driver::where(['status' => 'active', 'online' => 1])
+            $drivers = Driver::where(['online' => 1])
                 ->where(function ($q) use ($order) {
                     $q->where('company_uuid', $order->company_uuid);
                     $q->orWhereHas('user', function ($q) use ($order) {
