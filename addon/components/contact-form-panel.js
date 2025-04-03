@@ -38,9 +38,10 @@ export default class ContactFormPanelComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor(owner, { contact = null }) {
+    constructor(owner, { contact = null, controller }) {
         super(...arguments);
         this.contact = contact;
+        this.controller = controller;
         this.savePermission = contact && contact.isNew ? 'fleet-ops create contact' : 'fleet-ops update contact';
         applyContextComponentArguments(this);
     }

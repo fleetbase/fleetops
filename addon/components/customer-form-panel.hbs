@@ -203,6 +203,9 @@
                     </InputGroup>
                 </div>
             </ContentPanel>
+            <RegistryYield @registry="fleet-ops:template:operations:customers:new" as |RegistryComponent|>
+                <RegistryComponent @order={{this.customer}} @controller={{this.controller}} />
+            </RegistryYield>
         {{/let}}
         <Spacer @height="300px" />
     </Overlay::Body>
