@@ -89,9 +89,10 @@ export default class CustomerFormPanelComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor(owner, { customer = null }) {
+    constructor(owner, { customer = null, controller }) {
         super(...arguments);
         this.customer = customer;
+        this.controller = controller;
         this.savePermission = customer && customer.isNew ? 'fleet-ops create customer' : 'fleet-ops update customer';
         applyContextComponentArguments(this);
     }
