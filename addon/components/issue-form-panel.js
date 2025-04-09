@@ -62,16 +62,24 @@ export default class IssueFormPanelComponent extends Component {
     /**
      * Permission needed to update or create record.
      *
-     * @memberof DriverFormPanelComponent
+     * @memberof IssueFormPanelComponent
      */
     @tracked savePermission;
 
     /**
+     * The current controller if any.
+     *
+     * @memberof IssueFormPanelComponent
+     */
+    @tracked controller;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor(owner, { issue = null }) {
+    constructor(owner, { issue = null, controller }) {
         super(...arguments);
         this.issue = issue;
+        this.controller = controller;
         this.issueCategories = getWithDefault(this.issueCategoriesByType, getWithDefault(issue, 'type', 'operational'), []);
         this.savePermission = issue && issue.isNew ? 'fleet-ops create issue' : 'fleet-ops update issue';
         applyContextComponentArguments(this);

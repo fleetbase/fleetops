@@ -32,16 +32,24 @@ export default class FleetFormPanelComponent extends Component {
     /**
      * Permission needed to update or create record.
      *
-     * @memberof DriverFormPanelComponent
+     * @memberof FleetFormPanelComponent
      */
     @tracked savePermission;
 
     /**
+     * The current controller if any.
+     *
+     * @memberof FleetFormPanelComponent
+     */
+    @tracked controller;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor(owner, { fleet = null }) {
+    constructor(owner, { fleet = null, controller }) {
         super(...arguments);
         this.fleet = fleet;
+        this.controller = controller;
         this.savePermission = fleet && fleet.isNew ? 'fleet-ops create fleet' : 'fleet-ops update fleet';
         applyContextComponentArguments(this);
     }

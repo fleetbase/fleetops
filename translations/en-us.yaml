@@ -854,13 +854,16 @@ fleet-ops:
       select-status: Select status
       task-mission-title: Task/ Mission
       task-text: Give a description of this fleet's primary task or mission if applicable.
+      fleet-details: Fleet Details
     fleet-vehicle-listing:
       search-vehicle: Search vehicle in fleet
       add-vehicle: Add vehicle to fleet
       loading-message: Loading fleet vehicle...
     fuel-report-form-panel:
       success-message: Fuel report saved successfully.
-      fuel-report: New Fuel Report
+      new-fuel-report: New Fuel Report
+      fuel-report: Fuel Report
+      fuel-reported: Fuel Reported
       save-fuel-report: Save Fuel Report
       create-fuel-report: Create Fuel Report
       view-details: View fuel report details
@@ -892,7 +895,7 @@ fleet-ops:
       metadata: Metadata
     issue-form-panel:
       success-message: Issue ({publicId}) saved successfully.
-      issue: New Issue
+      new-issue: New Issue
       save-issue: Save Issue
       create-issue: Create Issue
       view-details: View issue details
@@ -914,6 +917,8 @@ fleet-ops:
       priority: Issue Priority
       select-priority: Select issue priority
       select-status: Select issue status
+      issue-report: Issue Report
+      issue: Issue
     issue-panel:
       details:
         assigned: Assigned To
@@ -1064,6 +1069,7 @@ fleet-ops:
       security-code: Security Access Code
       postal-code: Postal Code
       state: State
+      place-details: Place Details
     place-panel:
       edit-place: Edit place
       cancel-edit-place: Cancel edit place

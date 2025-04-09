@@ -144,10 +144,13 @@
                             </div>
                         </ModelSelect>
                     </InputGroup>
+                    <RegistryYield @registry="fleet-ops:component:contact-form-panel:details" as |RegistryComponent|>
+                        <RegistryComponent @contact={{this.contact}} @controller={{this.controller}} @permission={{this.savePermission}} />
+                    </RegistryYield>
                 </div>
             </ContentPanel>
-            <RegistryYield @registry="fleet-ops:template:operations:contacts:new" as |RegistryComponent|>
-                <RegistryComponent @order={{this.contact}} @controller={{this.controller}} />
+            <RegistryYield @registry="fleet-ops:component:contact-form-panel" as |RegistryComponent|>
+                <RegistryComponent @contact={{this.contact}} @controller={{this.controller}} @permission={{this.savePermission}} />
             </RegistryYield>
         {{/let}}
         <Spacer @height="300px" />

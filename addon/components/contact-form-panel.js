@@ -36,6 +36,13 @@ export default class ContactFormPanelComponent extends Component {
     @tracked savePermission;
 
     /**
+     * The current controller if any.
+     *
+     * @memberof ContactFormPanelComponent
+     */
+    @tracked controller;
+
+    /**
      * Constructs the component and applies initial state.
      */
     constructor(owner, { contact = null, controller }) {

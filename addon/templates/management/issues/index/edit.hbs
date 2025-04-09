@@ -1,1 +1,8 @@
-<IssueFormPanel @issue={{@model}} @onPressCancel={{this.transitionBack}} @onAfterSave={{this.onAfterSave}} @onViewDetails={{this.onViewDetails}} @onLoad={{this.setOverlayContext}} />
+<IssueFormPanel
+    @issue={{@model}}
+    @controller={{this}}
+    @onPressCancel={{this.transitionBack}}
+    @onAfterSave={{this.onAfterSave}}
+    @onViewDetails={{this.onViewDetails}}
+    @onLoad={{this.setOverlayContext}}
+/>

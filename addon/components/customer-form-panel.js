@@ -26,14 +26,21 @@ export default class CustomerFormPanelComponent extends Component {
     /**
      * Permission needed to update or create record.
      *
-     * @memberof ContactFormPanelComponent
+     * @memberof CustomerFormPanelComponent
      */
     @tracked savePermission;
 
     /**
+     * The current controller if any.
+     *
+     * @memberof CustomerFormPanelComponent
+     */
+    @tracked controller;
+
+    /**
      * Action to create a new user quickly
      *
-     * @memberof DriverFormPanelComponent
+     * @memberof CustomerFormPanelComponent
      */
     userAccountActionButtons = [
         {

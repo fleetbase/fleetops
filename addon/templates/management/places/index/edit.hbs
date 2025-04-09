@@ -1,1 +1,8 @@
-<PlaceFormPanel @place={{@model}} @onPressCancel={{this.transitionBack}} @onAfterSave={{this.onAfterSave}} @onViewDetails={{this.onViewDetails}} @onLoad={{this.setOverlayContext}} />
+<PlaceFormPanel
+    @place={{@model}}
+    @controller={{this}}
+    @onPressCancel={{this.transitionBack}}
+    @onAfterSave={{this.onAfterSave}}
+    @onViewDetails={{this.onViewDetails}}
+    @onLoad={{this.setOverlayContext}}
+/>

@@ -46,16 +46,24 @@ export default class VendorFormPanelComponent extends Component {
     /**
      * Permission needed to update or create record.
      *
-     * @memberof DriverFormPanelComponent
+     * @memberof VendorFormPanelComponent
      */
     @tracked savePermission;
 
     /**
+     * The current controller if any.
+     *
+     * @memberof VendorFormPanelComponent
+     */
+    @tracked controller;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor(owner, { vendor = null }) {
+    constructor(owner, { vendor = null, controller }) {
         super(...arguments);
         this.vendor = vendor;
+        this.controller = controller;
         this.savePermission = vendor && vendor.isNew ? 'fleet-ops create vendor' : 'fleet-ops update vendor';
         this.isEditing = vendor && !vendor.isNew;
         applyContextComponentArguments(this);

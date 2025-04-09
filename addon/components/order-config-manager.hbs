@@ -1,5 +1,14 @@
 {{yield
-    (hash NewOrderConfigButton=(component "button" type="primary" icon="plus" text=(t "fleet-ops.component.order-config-manager.new-order-config") onClick=this.createNewOrderConfig permission="fleet-ops create order-config"))
+    (hash
+        NewOrderConfigButton=(component
+            "button"
+            type="primary"
+            icon="plus"
+            text=(t "fleet-ops.component.order-config-manager.new-order-config")
+            onClick=this.createNewOrderConfig
+            permission="fleet-ops create order-config"
+        )
+    )
     (hash
         ready=this.ready
         configs=this.configs

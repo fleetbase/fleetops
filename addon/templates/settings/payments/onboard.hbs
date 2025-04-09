@@ -5,7 +5,12 @@
         <div class="max-w-3xl mx-auto mt-4">
             <div class="content">
                 <div class="flex flex-col items-center justify-center">
-                    <InfoBlock @type={{if this.onboardCompleted "success" "info"}} @icon={{if this.onboardCompleted "check" "triangle-exclamation"}} @iconWrapperClass="leading-6" class="w-full">
+                    <InfoBlock
+                        @type={{if this.onboardCompleted "success" "info"}}
+                        @icon={{if this.onboardCompleted "check" "triangle-exclamation"}}
+                        @iconWrapperClass="leading-6"
+                        class="w-full"
+                    >
                         <h2 id="title" class="text-base">
                             {{#if this.onboardCompleted}}
                                 Onboarding was completed successfully!
