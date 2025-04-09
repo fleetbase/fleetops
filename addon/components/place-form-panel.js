@@ -38,16 +38,24 @@ export default class PlaceFormPanelComponent extends Component {
     /**
      * Permission needed to update or create record.
      *
-     * @memberof DriverFormPanelComponent
+     * @memberof PlaceFormPanelComponent
      */
     @tracked savePermission;
 
     /**
+     * The current controller if any.
+     *
+     * @memberof PlaceFormPanelComponent
+     */
+    @tracked controller;
+
+    /**
      * Constructs the component and applies initial state.
      */
-    constructor(owner, { place = null }) {
+    constructor(owner, { place = null, controller }) {
         super(...arguments);
         this.place = place;
+        this.controller = controller;
         this.savePermission = place && place.isNew ? 'fleet-ops create place' : 'fleet-ops update place';
         applyContextComponentArguments(this);
     }

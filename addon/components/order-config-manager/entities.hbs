@@ -1,6 +1,12 @@
 <div class="px-6 space-y-4">
     <div class="flex flex-row items-center py-2 space-x-4">
-        <Button @type="primary" @icon="plus" @text={{t "fleet-ops.component.order-config-manager.entities.new-custom-entity"}} @onClick={{this.createNewCustomEntity}} @permission="fleet-ops update order-config" />
+        <Button
+            @type="primary"
+            @icon="plus"
+            @text={{t "fleet-ops.component.order-config-manager.entities.new-custom-entity"}}
+            @onClick={{this.createNewCustomEntity}}
+            @permission="fleet-ops update order-config"
+        />
     </div>
     {{#each this.customEntities as |customEntity index|}}
         <ContentPanel

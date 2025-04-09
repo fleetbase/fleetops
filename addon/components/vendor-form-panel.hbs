@@ -13,7 +13,13 @@
         <div class="flex flex-row items-center justify-between w-full mb-4">
             <div class="flex flex-1 space-x-2">
                 {{#if this.vendor.id}}
-                    <Button @type="default" @icon="warehouse" @helpText={{t "fleet-ops.component.vendor-form-panel.view-details"}} @onClick={{this.onViewDetails}} @permission="fleet-ops view vendor" />
+                    <Button
+                        @type="default"
+                        @icon="warehouse"
+                        @helpText={{t "fleet-ops.component.vendor-form-panel.view-details"}}
+                        @onClick={{this.onViewDetails}}
+                        @permission="fleet-ops view vendor"
+                    />
                 {{/if}}
             </div>
             <div class="flex flex-1 justify-end">
@@ -91,6 +97,8 @@
                 @vendorTypes={{this.vendorTypeOptions}}
                 @vendorStatusOptions={{this.vendorStatusOptions}}
                 @onVendorChanged={{this.onVendorChanged}}
+                @permission={{this.savePermission}}
+                @controller={{this.controller}}
             />
         {{else}}
             <VendorFormPanel::CreateForm
@@ -98,6 +106,8 @@
                 @vendorTypes={{this.vendorTypeOptions}}
                 @vendorStatusOptions={{this.vendorStatusOptions}}
                 @onVendorChanged={{this.onVendorChanged}}
+                @permission={{this.savePermission}}
+                @controller={{this.controller}}
             />
         {{/if}}
         <Spacer @height="300px" />

@@ -36,8 +36,24 @@
                 </div>
             </div>
         </DropdownButton>
-        <Button @icon="upload" @type="magic" @text={{if (media "isMobile") "" "Import"}} @onClick={{this.importOrder}} @disabled={{this.isCreatingOrder}} @permission="fleet-ops import order" class="mr-2" />
-        <Button @icon="check" @type="primary" @text={{if (media "isMobile") "" "Submit"}} @onClick={{this.createOrder}} @isLoading={{this.isCreatingOrder}} @permission="fleet-ops create order" @disabled={{not this.isValid}} />
+        <Button
+            @icon="upload"
+            @type="magic"
+            @text={{if (media "isMobile") "" "Import"}}
+            @onClick={{this.importOrder}}
+            @disabled={{this.isCreatingOrder}}
+            @permission="fleet-ops import order"
+            class="mr-2"
+        />
+        <Button
+            @icon="check"
+            @type="primary"
+            @text={{if (media "isMobile") "" "Submit"}}
+            @onClick={{this.createOrder}}
+            @isLoading={{this.isCreatingOrder}}
+            @permission="fleet-ops create order"
+            @disabled={{not this.isValid}}
+        />
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="new-order-overlay-body">
@@ -811,7 +827,13 @@
         </ContentPanel>
 
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.notes-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
-            <Textarea @value={{this.order.notes}} class="form-input w-full" placeholder={{t "fleet-ops.operations.orders.index.new.notes-placeholder"}} disabled={{cannot "fleet-ops create order"}} rows={{4}} />
+            <Textarea
+                @value={{this.order.notes}}
+                class="form-input w-full"
+                placeholder={{t "fleet-ops.operations.orders.index.new.notes-placeholder"}}
+                disabled={{cannot "fleet-ops create order"}}
+                rows={{4}}
+            />
         </ContentPanel>
 
         <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.documents-panel-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
@@ -848,7 +870,14 @@
                                     {{#if dropzone.supported}}
                                         <p class="text-sm my-5">{{t "component.dropzone.dropzone-supported-files"}}</p>
                                     {{/if}}
-                                    <FileUpload @name="files" @for="files" @accept={{join "," this.acceptedFileTypes}} @multiple={{true}} @onFileAdded={{this.queueFile}} @disabled={{cannot "fleet-ops create order"}}>
+                                    <FileUpload
+                                        @name="files"
+                                        @for="files"
+                                        @accept={{join "," this.acceptedFileTypes}}
+                                        @multiple={{true}}
+                                        @onFileAdded={{this.queueFile}}
+                                        @disabled={{cannot "fleet-ops create order"}}
+                                    >
                                         <a tabindex={{0}} class="btn btn-magic cursor-pointer ml-1">{{t "component.dropzone.or-select-button-text"}}</a>
                                     </FileUpload>
                                 </div>

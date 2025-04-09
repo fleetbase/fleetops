@@ -19,7 +19,12 @@
                     <DropdownButton @icon="ellipsis-h" @size="sm" @iconSize="md" as |dd|>
                         <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                             <div class="px-1 py-0.5">
-                                <a href="javascript:;" class="next-dd-item truncate" disabled={{cannot "fleet-ops reset-credentials-for customer"}} {{on "click" (dropdown-fn dd this.resetCredentials)}}>
+                                <a
+                                    href="javascript:;"
+                                    class="next-dd-item truncate"
+                                    disabled={{cannot "fleet-ops reset-credentials-for customer"}}
+                                    {{on "click" (dropdown-fn dd this.resetCredentials)}}
+                                >
                                     <div class="w-6"><FaIcon @icon="unlock" @size="sm" /></div>
                                     <div>Reset customer credentials</div>
                                 </a>

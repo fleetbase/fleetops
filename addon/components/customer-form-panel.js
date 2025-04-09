@@ -26,14 +26,21 @@ export default class CustomerFormPanelComponent extends Component {
     /**
      * Permission needed to update or create record.
      *
-     * @memberof ContactFormPanelComponent
+     * @memberof CustomerFormPanelComponent
      */
     @tracked savePermission;
 
     /**
+     * The current controller if any.
+     *
+     * @memberof CustomerFormPanelComponent
+     */
+    @tracked controller;
+
+    /**
      * Action to create a new user quickly
      *
-     * @memberof DriverFormPanelComponent
+     * @memberof CustomerFormPanelComponent
      */
     userAccountActionButtons = [
         {
@@ -89,9 +96,10 @@ export default class CustomerFormPanelComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor(owner, { customer = null }) {
+    constructor(owner, { customer = null, controller }) {
         super(...arguments);
         this.customer = customer;
+        this.controller = controller;
         this.savePermission = customer && customer.isNew ? 'fleet-ops create customer' : 'fleet-ops update customer';
         applyContextComponentArguments(this);
     }

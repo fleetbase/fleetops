@@ -46,10 +46,10 @@
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4">
-        <div class="modal-body-container">
+        <ContentPanel @title={{t "fleet-ops.component.fleet-form-panel.fleet-details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#let (cannot this.savePermission) as |unauthorized|}}
-                <div class="flex flex-col text-xs dark:text-gray-100">
-                    <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.fleet-name"}} @value={{this.fleet.name}} @disabled={{unauthorized}} />
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+                    <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.fleet-name"}} @value={{this.fleet.name}} @disabled={{unauthorized}} @wrapperClass="col-span-2" />
                     <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.parent-fleet"}} @value={{this.fleet.parent_fleet}}>
                         <ModelSelect
                             @modelName="fleet"
@@ -124,6 +124,7 @@
                             @onSelect={{fn (mut this.fleet.status)}}
                             @placeholder={{t "fleet-ops.component.fleet-form-panel.select-status"}}
                             @disabled={{unauthorized}}
+                            @humanize={{true}}
                             class="w-full"
                         />
                     </InputGroup>
@@ -132,10 +133,18 @@
                         @helpText={{t "fleet-ops.component.fleet-form-panel.task-text"}}
                         @value={{this.fleet.task}}
                         @disabled={{unauthorized}}
+                        @wrapperClass="col-span-2"
                     />
+                    <RegistryYield @registry="fleet-ops:component:fleet-form-panel:details" as |RegistryComponent|>
+                        <RegistryComponent @fleet={{this.fleet}} @controller={{this.controller}} @permission={{this.savePermission}} />
+                    </RegistryYield>
                 </div>
             {{/let}}
-        </div>
+        </ContentPanel>
+
+        <RegistryYield @registry="fleet-ops:component:fleet-form-panel" as |RegistryComponent|>
+            <RegistryComponent @fleet={{this.fleet}} @controller={{this.controller}} @permission={{this.savePermission}} />
+        </RegistryYield>
         {{yield}}
         <Spacer @height="300px" />
     </Overlay::Body>

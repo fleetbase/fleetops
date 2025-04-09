@@ -1,6 +1,12 @@
 <div class="px-6 space-y-4">
     <div class="flex flex-row items-center py-2 space-x-4">
-        <Button @type="primary" @icon="square-plus" @text={{t "fleet-ops.component.order-config-manager.custom-fields.new-field-group"}} @onClick={{this.createNewFieldGroup}} @permission="fleet-ops update order-config" />
+        <Button
+            @type="primary"
+            @icon="square-plus"
+            @text={{t "fleet-ops.component.order-config-manager.custom-fields.new-field-group"}}
+            @onClick={{this.createNewFieldGroup}}
+            @permission="fleet-ops update order-config"
+        />
     </div>
     {{#each this.groups as |group|}}
         <ContentPanel @title={{group.name}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-900">
@@ -27,7 +33,12 @@
                     <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                         <div class="p-1">
                             {{#each this.gridSizeOptions as |size|}}
-                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.selectGridSize group size)}} disabled={{cannot "fleet-ops update order-config"}}>
+                                <a
+                                    href="javascript:;"
+                                    class="next-dd-item"
+                                    {{on "click" (dropdown-fn dd this.selectGridSize group size)}}
+                                    disabled={{cannot "fleet-ops update order-config"}}
+                                >
                                     <div class="flex-1 flex flex-row items-center">
                                         <div class="w-6">
                                             <FaIcon @icon="grip" />

@@ -1,1 +1,8 @@
-<ContactFormPanel @contact={{@model}} @onPressCancel={{this.transitionBack}} @onAfterSave={{this.onAfterSave}} @onViewDetails={{this.onViewDetails}} @onLoad={{this.setOverlayContext}} />
+<ContactFormPanel
+    @contact={{@model}}
+    @controller={{this}}
+    @onPressCancel={{this.transitionBack}}
+    @onAfterSave={{this.onAfterSave}}
+    @onViewDetails={{this.onViewDetails}}
+    @onLoad={{this.setOverlayContext}}
+/>

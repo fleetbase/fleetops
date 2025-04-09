@@ -201,8 +201,14 @@
                             </div>
                         </ModelSelect>
                     </InputGroup>
+                    <RegistryYield @registry="fleet-ops:component:customer-form-panel:details" as |RegistryComponent|>
+                        <RegistryComponent @customer={{this.customer}} @controller={{this.controller}} @permission={{this.savePermission}} />
+                    </RegistryYield>
                 </div>
             </ContentPanel>
+            <RegistryYield @registry="fleet-ops:component:customer-form-panel" as |RegistryComponent|>
+                <RegistryComponent @customer={{this.customer}} @controller={{this.controller}} @permission={{this.savePermission}} />
+            </RegistryYield>
         {{/let}}
         <Spacer @height="300px" />
     </Overlay::Body>

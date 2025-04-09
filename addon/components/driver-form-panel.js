@@ -44,6 +44,13 @@ export default class DriverFormPanelComponent extends Component {
     @tracked savePermission;
 
     /**
+     * The current controller if any.
+     *
+     * @memberof DriverFormPanelComponent
+     */
+    @tracked controller;
+
+    /**
      * Action to create a new user quickly
      *
      * @memberof DriverFormPanelComponent
@@ -102,9 +109,10 @@ export default class DriverFormPanelComponent extends Component {
     /**
      * Constructs the component and applies initial state.
      */
-    constructor(owner, { driver = null }) {
+    constructor(owner, { driver = null, controller }) {
         super(...arguments);
         this.driver = driver;
+        this.controller = controller;
         this.savePermission = driver && driver.isNew ? 'fleet-ops create driver' : 'fleet-ops update driver';
         applyContextComponentArguments(this);
     }
