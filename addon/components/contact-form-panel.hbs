@@ -146,6 +146,9 @@
                     </InputGroup>
                 </div>
             </ContentPanel>
+            <RegistryYield @registry="fleet-ops:template:operations:contacts:new" as |RegistryComponent|>
+                <RegistryComponent @order={{this.contact}} @controller={{this.controller}} />
+            </RegistryYield>
         {{/let}}
         <Spacer @height="300px" />
     </Overlay::Body>
