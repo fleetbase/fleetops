@@ -42,11 +42,12 @@ class NavigatorController extends Controller
             ]
         );
 
-        $key          = $apiCredential->key;
-        $host         = url()->secure('/');
-        $socketHost   = env('SOCKETCLUSTER_HOST', 'socket');
-        $socketPort   = env('SOCKETCLUSTER_PORT', 8000);
-        $socketSecure = Utils::castBoolean(env('SOCKETCLUSTER_SECURE', false));
+        $key           = $apiCredential->key;
+        $host          = url()->secure('/');
+        $socketHost    = env('SOCKETCLUSTER_HOST', 'socket');
+        $socketPort    = env('SOCKETCLUSTER_PORT', 8000);
+        $socketSecure  = Utils::castBoolean(env('SOCKETCLUSTER_SECURE', false));
+        $appIdentifier = config('fleetops.navigator.app_identifier', 'io.fleetbase.navigator');
 
         $deepLinkParams = http_build_query([
             'key'                  => $key,
@@ -59,7 +60,7 @@ class NavigatorController extends Controller
         $userAgent = $request->header('User-Agent');
         if (stripos($userAgent, 'android') !== false) {
             // Android: Use intent:// scheme
-            $intentUrl = "intent://configure?$deepLinkParams#Intent;scheme=flbnavigator;package=com.fleetbase.navigator;end";
+            $intentUrl = "intent://configure?$deepLinkParams#Intent;scheme=flbnavigator;package=" . $appIdentifier . ';end';
 
             return Redirect::away($intentUrl);
         }

@@ -56,7 +56,8 @@ return [
     |--------------------------------------------------------------------------
     */
     'navigator' => [
-        'bypass_verification_code' => env('NAVIGATOR_BYPASS_VERIFICATION_CODE', '999000')
+        'bypass_verification_code' => env('NAVIGATOR_BYPASS_VERIFICATION_CODE', '999000'),
+        'app_identifier' => env('NAVIGATOR_APP_IDENTIFIER', 'io.fleetbase.navigator')
     ],
 
     /*
