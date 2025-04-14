@@ -1349,7 +1349,7 @@ class OrderController extends Controller
         $path = 'uploads/' . session('company') . '/signatures/' . $proof->public_id . '.png';
 
         // upload signature
-        Storage::disk($disk)->put($path, base64_decode($signature));
+        Storage::disk($disk)->put($path, base64_decode(str_replace('data:image/png;base64,', '', $signature)));
 
         // create file record for upload
         $file = File::create([
@@ -1459,6 +1459,61 @@ class OrderController extends Controller
         }
 
         return new ProofResource($proof);
+    }
+
+    /**
+     * Retrieve proof of delivery resources associated with a given order and optional subject.
+     *
+     * This method supports retrieving proofs related to the order itself or a subject within the order,
+     * such as a waypoint, place, or entity. If a subject ID is provided, it will determine the subject type
+     * based on its prefix and resolve the appropriate model. If no subject ID is provided, the order itself is used
+     * as the subject.
+     *
+     * @param Request     $request   the incoming HTTP request instance
+     * @param string      $id        the public ID of the order
+     * @param string|null $subjectId Optional subject ID (e.g., waypoint, place, or entity).
+     *
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\Resources\Json\AnonymousResourceCollection
+     */
+    public function proofs(Request $request, string $id, ?string $subjectId = null)
+    {
+        try {
+            $order = Order::findRecordOrFail($id);
+        } catch (ModelNotFoundException $e) {
+            return response()->apiError('Order resource not found.', 404);
+        }
+
+        $subject = $order;
+
+        if ($subjectId) {
+            $type = strtok($subjectId, '_');
+
+            $subject = match ($type) {
+                'place', 'waypoint' => Waypoint::where('payload_uuid', $order->payload_uuid)
+                    ->where(function ($query) use ($subjectId) {
+                        $query->whereHas('place', fn ($q) => $q->where('public_id', $subjectId))
+                              ->orWhere('public_id', $subjectId);
+                    })
+                    ->withoutGlobalScopes()
+                    ->first(),
+
+                'entity' => Entity::where('public_id', $subjectId)->withoutGlobalScopes()->first(),
+
+                default => $order,
+            };
+        }
+
+        if (!$subject) {
+            return response()->apiError('Unable to retrieve proof of delivery for subject.');
+        }
+
+        $proofs = Proof::where([
+            'company_uuid' => session('company'),
+            'order_uuid'   => $order->uuid,
+            'subject_uuid' => $subject->uuid,
+        ])->get();
+
+        return ProofResource::collection($proofs);
     }
 
     /**

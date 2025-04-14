@@ -96,6 +96,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                     $router->post('{id}/capture-signature/{subjectId?}', 'OrderController@captureSignature');
                     $router->post('{id}/capture-qr/{subjectId?}', 'OrderController@captureQrScan');
                     $router->post('{id}/capture-photo/{subjectId?}', 'OrderController@capturePhoto');
+                    $router->get('{id}/proofs/{subjectId?}', 'OrderController@proofs');
                     $router->put('{id}', 'OrderController@update');
                     $router->delete('{id}', 'OrderController@delete');
                     $router->get('{id}/editable-entity-fields', 'OrderController@getEditableEntityFields');
@@ -375,6 +376,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->post('process-imports', $controller('importFromFiles'));
                                 $router->patch('route/{id}', $controller('editOrderRoute'));
                                 $router->patch('update-activity/{id}', $controller('updateActivity'));
+                                $router->get('{id}/proofs/{subjectId?}', $controller('proofs'));
                                 $router->patch('bulk-cancel', $controller('bulkCancel'));
                                 $router->post('bulk-dispatch', $controller('bulkDispatch'));
                                 $router->patch('cancel', $controller('cancel'));

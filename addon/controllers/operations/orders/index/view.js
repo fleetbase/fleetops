@@ -31,6 +31,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @tracked leafletRoute;
     @tracked routeControl;
     @tracked commentInput = '';
+    @tracked proofs = [];
     @tracked customFieldGroups = [];
     @tracked customFields = [];
     @tracked uploadQueue = [];
@@ -177,6 +178,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         yield order.loadPurchaseRate();
         yield order.loadFiles();
         this.loadCustomFields.perform(order);
+        this.loadOrderProofs.perform(order);
     }
 
     /**
@@ -189,6 +191,22 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             this.customFields = yield this.store.query('custom-field', { subject_uuid: order.order_config_uuid });
             this.groupCustomFields(order);
         }
+    }
+
+    @task *loadOrderProofs(order) {
+        const proofs = yield this.fetch.get(`orders/${order.id}/proofs`);
+
+        const getTypeFromRemarks = (remarks = '') => {
+            if (remarks.endsWith('Photo')) return 'photo';
+            if (remarks.endsWith('Scan')) return 'scan';
+            if (remarks.endsWith('Signature')) return 'signature';
+            return undefined;
+        };
+
+        this.proofs = proofs.map((proof) => ({
+            ...proof,
+            type: getTypeFromRemarks(proof.remarks),
+        }));
     }
 
     /**
