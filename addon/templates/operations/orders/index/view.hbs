@@ -495,6 +495,37 @@
             </ContentPanel>
         {{/if}}
 
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            {{#if this.proofs}}
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                    {{#each this.proofs as |proof|}}
+                        <div>
+                            {{#if (eq proof.type "photo")}}
+                                <a href={{proof.url}} target={{proof.id}}>
+                                    <Image src={{proof.url}} class="w-48 h-48 rounded-md shadow-sm mb-2" />
+                                </a>
+                            {{/if}}
+                            {{#if (eq proof.type "signature")}}
+                                <a href={{proof.raw}} target={{proof.id}} download>
+                                    <Image src={{proof.raw}} class="w-48 h-48 rounded-md shadow-sm mb-2" />
+                                </a>
+                            {{/if}}
+                            {{#if (eq proof.type "scan")}}
+                                <div class="flex items-center mb-2">
+                                    <FaIcon @icon="qrcode" @size="2xl" class="text-blue-400" />
+                                </div>
+                            {{/if}}
+                            <div class="font-semibold text-sm mb-0.5">{{proof.remarks}}</div>
+                            <div class="text-xs">{{proof.public_id}}</div>
+                            <div class="text-xs">{{format-date proof.created_at}}</div>
+                        </div>
+                    {{/each}}
+                </div>
+            {{else}}
+                <p class="text-gray-700 dark:text-gray-300 leading-5 text-sm">{{t "fleet-ops.operations.orders.index.view.no-proof-of-delivery"}}</p>
+            {{/if}}
+        </ContentPanel>
+
         <ContentPanel
             @title={{t "fleet-ops.operations.orders.index.view.notes-title"}}
             @open={{true}}

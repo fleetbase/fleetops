@@ -1419,6 +1419,8 @@ fleet-ops:
           edit-field-title: Edit custom field
           edit-metadata: Edit Metadata
           input-field-required: The {inputFieldName} is required.
+          proof-of-delivery: Proof of Delivery
+          no-proof-of-delivery: No Proof of Delivery Captured.
         view:
           purchase-rate-panel-title: Purchase Rate
           documents-panel-title: Documents & Files

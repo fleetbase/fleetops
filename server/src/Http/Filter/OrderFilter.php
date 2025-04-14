@@ -94,7 +94,7 @@ class OrderFilter extends Filter
             $this->builder->where(
                 function ($q) {
                     $q->whereHas('driverAssigned');
-                    $q->whereNotIn('status', ['created', 'dispatched', 'pending', 'canceled', 'order_canceled', 'completed']);
+                    $q->whereNotIn('status', ['created', 'canceled', 'order_canceled', 'completed']);
                 }
             );
         }

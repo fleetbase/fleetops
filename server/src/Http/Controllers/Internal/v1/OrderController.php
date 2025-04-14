@@ -13,6 +13,7 @@ use Fleetbase\FleetOps\Http\Requests\BulkDispatchRequest;
 use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
 use Fleetbase\FleetOps\Imports\OrdersImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
@@ -20,6 +21,7 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
@@ -30,6 +32,7 @@ use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\Models\CustomFieldValue;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -781,6 +784,61 @@ class OrderController extends FleetOpsController
         }
 
         return response()->error('Unable to render label.');
+    }
+
+    /**
+     * Retrieve proof of delivery resources associated with a given order and optional subject.
+     *
+     * This method supports retrieving proofs related to the order itself or a subject within the order,
+     * such as a waypoint, place, or entity. If a subject ID is provided, it will determine the subject type
+     * based on its prefix and resolve the appropriate model. If no subject ID is provided, the order itself is used
+     * as the subject.
+     *
+     * @param Request     $request   the incoming HTTP request instance
+     * @param string      $id        the public ID of the order
+     * @param string|null $subjectId Optional subject ID (e.g., waypoint, place, or entity).
+     *
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\Resources\Json\AnonymousResourceCollection
+     */
+    public function proofs(Request $request, string $id, ?string $subjectId = null)
+    {
+        try {
+            $order = Order::where('uuid', $id)->first();
+        } catch (ModelNotFoundException $e) {
+            return response()->error('Order resource not found.', 404);
+        }
+
+        $subject = $order;
+
+        if ($subjectId) {
+            $type = strtok($subjectId, '_');
+
+            $subject = match ($type) {
+                'place', 'waypoint' => Waypoint::where('payload_uuid', $order->payload_uuid)
+                    ->where(function ($query) use ($subjectId) {
+                        $query->whereHas('place', fn ($q) => $q->where('uuid', $subjectId))
+                              ->orWhere('uuid', $subjectId);
+                    })
+                    ->withoutGlobalScopes()
+                    ->first(),
+
+                'entity' => Entity::where('uuid', $subjectId)->withoutGlobalScopes()->first(),
+
+                default => $order,
+            };
+        }
+
+        if (!$subject) {
+            return response()->error('Unable to retrieve proof of delivery for subject.');
+        }
+
+        $proofs = Proof::where([
+            'company_uuid' => session('company'),
+            'order_uuid'   => $order->uuid,
+            'subject_uuid' => $subject->uuid,
+        ])->get();
+
+        return ProofResource::collection($proofs);
     }
 
     /**
