@@ -28,6 +28,44 @@
                 @onDrawFeatureGroupCreated={{fn this.triggerAction "onDrawFeatureGroupCreated"}}
             />
 
+            {{#if this.focusedDriver}}
+                {{#let this.focusedDriver as |driver|}}
+                    <layers.tracking-marker
+                        @id={{driver.id}}
+                        @publicId={{driver.public_id}}
+                        @location={{point-to-coordinates driver.location}}
+                        @rotationAngle={{driver.heading}}
+                        @icon={{icon iconUrl=driver.vehicle_avatar iconSize=(array 24 24)}}
+                        @onAdd={{fn this.triggerAction "onDriverAdded" driver}}
+                        @onClick={{fn this.triggerAction "onDriverClicked" driver}}
+                        as |marker|
+                    >
+                        <marker.popup @maxWidth="500" @minWidth="225">
+                            <div class="flex flex-row">
+                                <div class="w-14">
+                                    <img src={{driver.photoUrl}} alt={{driver.name}} class="rounded-md w-12 h-12 shadow-sm" />
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-xs font-semibold">{{driver.name}}</div>
+                                    <div class="text-xs">Phone: {{n-a driver.phone}}</div>
+                                    <div class="text-xs">Vehicle: {{n-a driver.vehicle_name}}</div>
+                                    <div class="text-xs">Status: <span class="{{if driver.online 'text-green-500' 'text-red-400'}}">{{if driver.online "Online" "Offline"}}</span></div>
+                                    <div class="text-xs truncate">Pos: {{point-coordinates driver.location}}</div>
+                                </div>
+                            </div>
+                        </marker.popup>
+                        <marker.tooltip @permanent={{false}} @sticky={{true}}>
+                            <div class="flex items-center space-x-1">
+                                <div class="text-xs font-semibold">{{driver.name}}</div>
+                                <div>•</div>
+                                <div class="text-xs {{if driver.online 'text-green-500' 'text-red-400'}}">{{if driver.online "Online" "Offline"}}</div>
+                            </div>
+                            <div class="text-xs truncate"><FaIcon @icon="location-dot" @size="xs" class="mr-0.5" />{{point-coordinates driver.location}}</div>
+                        </marker.tooltip>
+                    </layers.tracking-marker>
+                {{/let}}
+            {{/if}}
+
             {{#if this.isDataLoaded}}
                 {{#if this.visibilityControls.drivers}}
                     {{#each this.drivers as |driver|}}
@@ -65,6 +103,42 @@
                             </marker.tooltip>
                         </layers.tracking-marker>
                     {{/each}}
+                {{/if}}
+
+                {{#if this.focusedVehicle}}
+                    {{#let this.focusedVehicle as |vehicle|}}
+                        <layers.marker
+                            @id={{vehicle.id}}
+                            @publicId={{vehicle.public_id}}
+                            @location={{point-to-coordinates vehicle.location}}
+                            @icon={{icon iconUrl=vehicle.avatar_url iconSize=(array 24 24)}}
+                            @onAdd={{fn this.triggerAction "onVehicleAdded" vehicle}}
+                            @onClick={{fn this.triggerAction "onVehicleClicked" vehicle}}
+                            as |marker|
+                        >
+                            <marker.popup @permanent={{false}} @sticky={{true}}>
+                                <div class="flex flex-row">
+                                    <div class="w-14 mr-2">
+                                        <img src={{vehicle.photo_url}} alt={{vehicle.display_name}} class="rounded-md w-14 h-12 shadow-sm" />
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="text-xs font-semibold">{{vehicle.displayName}}</div>
+                                        <div class="text-xs">Driver: {{n-a vehicle.driver_name}}</div>
+                                        <div class="text-xs">Status: <span class="{{if vehicle.online 'text-green-500' 'text-red-400'}}">{{if vehicle.online "Online" "Offline"}}</span></div>
+                                        <div class="text-xs truncate">Pos: {{point-coordinates vehicle.location}}</div>
+                                    </div>
+                                </div>
+                            </marker.popup>
+                            <marker.tooltip @permanent={{false}} @sticky={{true}}>
+                                <div class="flex items-center space-x-1">
+                                    <div class="text-xs font-semibold">{{vehicle.displayName}}</div>
+                                    <div>•</div>
+                                    <div class="text-xs {{if vehicle.online 'text-green-500' 'text-red-400'}}">{{if vehicle.online "Online" "Offline"}}</div>
+                                </div>
+                                <div class="text-xs truncate"><FaIcon @icon="location-dot" @size="xs" class="mr-0.5" />{{point-coordinates vehicle.location}}</div>
+                            </marker.tooltip>
+                        </layers.marker>
+                    {{/let}}
                 {{/if}}
 
                 {{#if this.visibilityControls.vehicles}}

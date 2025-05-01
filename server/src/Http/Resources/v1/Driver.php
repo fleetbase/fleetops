@@ -42,7 +42,7 @@ class Driver extends FleetbaseResource
             'avatar_url'                    => $this->avatar_url,
             'avatar_value'                  => $this->when(Http::isInternalRequest(), $this->getOriginal('avatar_url')),
             'vehicle_name'                  => $this->when(Http::isInternalRequest(), $this->vehicle_name),
-            'vehicle_avatar'                => $this->when(Http::isInternalRequest(), $this->vehicle_avatar),
+            'vehicle_avatar'                => $this->vehicle_avatar,
             'vendor_name'                   => $this->when(Http::isInternalRequest(), $this->vendor_name),
             'vehicle'                       => $this->whenLoaded('vehicle', fn () => new VehicleWithoutDriver($this->vehicle)),
             'current_job'                   => $this->whenLoaded('currentJob', fn () => new Order($this->currentJob)),
@@ -60,7 +60,7 @@ class Driver extends FleetbaseResource
             'online'                        => data_get($this, 'online', false),
             'status'                        => $this->status,
             'token'                         => $this->token,
-            'meta'                          => $this->meta,
+            'meta'                          => data_get($this, 'meta', Utils::createObject()),
             'updated_at'                    => $this->updated_at,
             'created_at'                    => $this->created_at,
         ];
@@ -105,7 +105,7 @@ class Driver extends FleetbaseResource
             'city'                   => data_get($this, 'city', Utils::getCapitalCityFromCountryCode($this->country)),
             'online'                 => data_get($this, 'online', false),
             'status'                 => $this->status,
-            'meta'                   => $this->meta,
+            'meta'                   => data_get($this, 'meta', Utils::createObject()),
             'updated_at'             => $this->updated_at,
             'created_at'             => $this->created_at,
         ];

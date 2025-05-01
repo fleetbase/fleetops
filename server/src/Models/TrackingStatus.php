@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -59,6 +60,7 @@ class TrackingStatus extends Model
         'status',
         'details',
         'code',
+        'complete',
         'city',
         'province',
         'postal_code',
@@ -83,6 +85,7 @@ class TrackingStatus extends Model
     protected $casts = [
         'meta'     => Json::class,
         'location' => Point::class,
+        'complete' => 'boolean',
     ];
 
     /**
@@ -175,5 +178,10 @@ class TrackingStatus extends Model
         $result = static::insert($values);
 
         return $result ? $uuid : false;
+    }
+
+    public function isComplete(): bool
+    {
+        return Utils::isTrue($this->complete);
     }
 }

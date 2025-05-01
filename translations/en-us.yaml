@@ -1492,6 +1492,8 @@ fleet-ops:
           notes-placeholder: Enter order notes here....
           save-order-note: Save Order Note
           order-notes-updated: Order notes updated.
+          no-proof-of-delivery: No Proof of Delivery Captured.
+          view-label: View Label
         config:
           title: Orders Configuration
           message: Order configurations allow you to define dynamic configurations which will tell Fleetbase how different types of orders should be executed.

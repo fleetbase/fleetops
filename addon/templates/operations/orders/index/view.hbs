@@ -162,7 +162,7 @@
             @title={{t "fleet-ops.operations.orders.index.view.activity"}}
             @open={{true}}
             @pad={{false}}
-            @isLoading={{not this.loadOrderRelations.isIdle}}
+            @isLoading={{this.loadOrderRelations.isRunning}}
             @panelBodyWrapperClass="px-0 py-4"
             @panelBodyClass="bg-white dark:bg-gray-800"
         >
@@ -215,7 +215,9 @@
                                     />
                                     <div class="flex flex-col space-x-1" {{set-width "130px"}}>
                                         <div class="text-xs font-semibold truncate">{{n-a waypoint.customer.name "No Customer"}}</div>
-                                        <div class="text-xs truncate">{{n-a waypoint.customer.phone "No Phone"}}</div>
+                                        {{#if waypoint.customer}}
+                                            <div class="text-xs truncate">{{n-a waypoint.customer.phone "No Phone"}}</div>
+                                        {{/if}}
                                         <div class="text-xs truncate">{{n-a waypoint.address}}</div>
                                     </div>
                                     <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
@@ -448,7 +450,7 @@
             <ContentPanel
                 @title={{t "fleet-ops.operations.orders.index.view.tracking"}}
                 @prefixTitleRight={{@model.tracking}}
-                @isLoading={{not this.loadOrderRelations.isIdle}}
+                @isLoading={{this.loadOrderRelations.isRunning}}
                 @open={{true}}
                 @pad={{true}}
                 @panelBodyClass="bg-white dark:bg-gray-800"
@@ -702,13 +704,24 @@
                                                 <div class="dark:text-gray-100 truncate mb-2">
                                                     {{entity.tracking}}
                                                 </div>
-                                                <Button
-                                                    @icon="pencil"
-                                                    @text={{t "fleet-ops.operations.orders.index.view.edit-item-button"}}
-                                                    @size="xs"
-                                                    @onClick={{fn this.editEntity entity}}
-                                                    @permission="fleet-ops update order"
-                                                />
+                                                <div class="space-y-2">
+                                                    <Button
+                                                        @icon="pencil"
+                                                        @text={{t "fleet-ops.operations.orders.index.view.edit-item-button"}}
+                                                        @size="xs"
+                                                        @onClick={{fn this.editEntity entity}}
+                                                        @permission="fleet-ops update order"
+                                                        class="w-full"
+                                                    />
+                                                    <Button
+                                                        @icon="file-invoice"
+                                                        @text={{t "fleet-ops.operations.orders.index.view.view-label"}}
+                                                        @size="xs"
+                                                        @onClick={{fn this.viewEntityLabel entity}}
+                                                        @permission="fleet-ops view entity"
+                                                        class="w-full"
+                                                    />
+                                                </div>
                                             </div>
                                             <div class="absolute top-0 right-0 p-2">
                                                 <Button

@@ -39,6 +39,9 @@ class NotificationServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Models\Driver::class,
             \Fleetbase\FleetOps\Models\Vendor::class,
             \Fleetbase\FleetOps\Models\Fleet::class,
+            'dynamic:customer',
+            'dynamic:driver',
+            'dynamic:facilitator',
         ]);
     }
 }

@@ -2,8 +2,10 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
+use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
+use Fleetbase\Models\Company;
 use Illuminate\Support\Str;
 
 class DriverFilter extends Filter
@@ -143,6 +145,45 @@ class DriverFilter extends Filter
             $this->builder->whereBetween('updated_at', $updatedAt);
         } else {
             $this->builder->whereDate('updated_at', $updatedAt);
+        }
+    }
+
+    public function nearby($nearby)
+    {
+        $distance         = $this->request->input('radius'); // default in meters
+        $company          = Company::currentSession();
+        $addedNearbyQuery = false;
+
+        if (!$distance && $company) {
+            $distance = $company->getOption('fleetops.adhoc_distance', 6000);
+        }
+
+        if (!$distance) {
+            $distance = 6000;
+        }
+
+        // if wants to find nearby place or coordinates
+        if (Utils::isCoordinates($nearby)) {
+            $location = Utils::getPointFromMixed($nearby);
+
+            $this->builder->distanceSphere('location', $location, $distance);
+            $this->builder->distanceSphereValue('location', $location);
+
+            // Update so additional nearby queries are not added
+            $addedNearbyQuery = true;
+        }
+
+        // if is a string like address string
+        if ($addedNearbyQuery === false && is_string($nearby)) {
+            $place = Place::createFromMixed($nearby, [], false);
+
+            if ($nearby instanceof Place) {
+                $this->builder->distanceSphere('location', $place->location, $distance);
+                $this->builder->distanceSphereValue('location', $place->location);
+
+                // Update so additional nearby queries are not added
+                $addedNearbyQuery = true;
+            }
         }
     }
 }

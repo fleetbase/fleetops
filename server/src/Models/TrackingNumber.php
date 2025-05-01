@@ -114,6 +114,16 @@ class TrackingNumber extends Model
     }
 
     /**
+     * Get if last status completes activity.
+     */
+    public function getLastStatusCompleteAttribute()
+    {
+        $this->load('status');
+
+        return data_get($this, 'status.complete');
+    }
+
+    /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function status()

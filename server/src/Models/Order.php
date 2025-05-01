@@ -1791,4 +1791,56 @@ class Order extends Model
 
         return false;
     }
+
+    /**
+     * Dynamically resolve a notifiable entity based on the given property name.
+     *
+     * This method is primarily used to determine the intended notifiable model
+     * for notifications. When the `$property` is `'customer'`, it attempts to resolve
+     * the customer from the current waypoint (if present). If a current waypoint with
+     * an associated customer exists, that customer is returned. Otherwise, it falls
+     * back to the order's main customer.
+     *
+     * For any other property, it dynamically loads and returns the corresponding relation.
+     *
+     * @param string $property The name of the property or relationship to resolve.
+     *                         Supported values include 'customer' or other relation names.
+     *
+     * @return mixed the resolved notifiable entity, such as a Customer model instance
+     *
+     * @throws \InvalidArgumentException if the provided property does not exist (optional)
+     */
+    public function resolveDynamicNotifiable(string $property)
+    {
+        if ($property === 'customer') {
+            // Load payload and waypoint markers if not already loaded
+            $this->loadMissing(['payload', 'payload.waypointMarkers']);
+
+            $payload = $this->payload;
+
+            // Attempt to resolve customer from the current waypoint
+            if ($payload && $payload->current_waypoint_uuid) {
+                $currentWaypoint = $payload->waypointMarkers
+                    ?->firstWhere('place_uuid', $payload->current_waypoint_uuid);
+
+                if ($currentWaypoint) {
+                    $currentWaypoint->loadMissing('customer');
+
+                    if ($currentWaypoint->customer) {
+                        return $currentWaypoint->customer;
+                    }
+                }
+            }
+
+            // Fallback to the order's customer
+            return $this->customer;
+        }
+
+        // For other relationships, load dynamically
+        if (!$this->relationLoaded($property)) {
+            $this->load($property);
+        }
+
+        return $this->{$property};
+    }
 }

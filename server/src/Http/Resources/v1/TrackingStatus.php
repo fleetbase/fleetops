@@ -26,6 +26,7 @@ class TrackingStatus extends FleetbaseResource
             'status'               => $this->status,
             'details'              => $this->details,
             'code'                 => $this->code,
+            'complete'             => $this->complete,
             'tracking_number'      => $this->trackingNumber(),
             'city'                 => $this->city,
             'province'             => $this->province,

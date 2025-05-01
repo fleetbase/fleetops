@@ -67,6 +67,7 @@ trait HasTrackingNumber
             'details'              => $details,
             'location'             => $this->getLocationAsPoint($location),
             'code'                 => TrackingStatus::prepareCode($code),
+            'complete'             => $activity->complete(),
         ]);
 
         if (isset($this->trackingNumber)) {
@@ -100,6 +101,7 @@ trait HasTrackingNumber
             'details'              => $details,
             'location'             => $this->getLocationAsPoint($location),
             'code'                 => TrackingStatus::prepareCode($code),
+            'complete'             => $activity->complete(),
         ]);
 
         if (isset($this->trackingNumber)) {

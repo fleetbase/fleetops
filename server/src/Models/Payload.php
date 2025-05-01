@@ -782,10 +782,10 @@ class Payload extends Model
     public function setNextWaypointDestination()
     {
         $nextWaypoint = $this->waypointMarkers->filter(function ($waypoint) {
-            return !in_array(strtolower($waypoint->status_code), ['completed', 'canceled']) && $waypoint->place_uuid !== $this->current_waypoint_uuid;
+            return !$waypoint->complete && $waypoint->place_uuid !== $this->current_waypoint_uuid;
         })->first();
 
-        if (!$nextWaypoint) {
+        if (!$nextWaypoint || $this->current_waypoint_uuid === $nextWaypoint->place_uuid) {
             return $this;
         }
 

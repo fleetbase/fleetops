@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 
@@ -30,7 +31,7 @@ class VehicleDevice extends FleetbaseResource
             'serial_number'         => $this->serial_number,
             'installation_date'     => $this->installation_date,
             'last_maintenance_date' => $this->last_maintenance_date,
-            'meta'                  => $this->meta ?? [],
+            'meta'                  => data_get($this, 'meta', Utils::createObject()),
             'data'                  => $this->data ?? [],
             'status'                => $this->status,
             'data_frequency'        => $this->data_frequency,

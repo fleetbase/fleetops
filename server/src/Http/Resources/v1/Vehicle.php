@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
@@ -44,7 +45,7 @@ class Vehicle extends FleetbaseResource
             'heading'                => (int) data_get($this, 'heading', 0),
             'altitude'               => (int) data_get($this, 'altitude', 0),
             'speed'                  => (int) data_get($this, 'speed', 0),
-            'meta'                   => data_get($this, 'meta', []),
+            'meta'                   => data_get($this, 'meta', Utils::createObject()),
             'updated_at'             => $this->updated_at,
             'created_at'             => $this->created_at,
         ];
@@ -78,7 +79,7 @@ class Vehicle extends FleetbaseResource
             'heading'                    => (int) data_get($this, 'heading', 0),
             'altitude'                   => (int) data_get($this, 'altitude', 0),
             'speed'                      => (int) data_get($this, 'speed', 0),
-            'meta'                       => $this->meta ?? [],
+            'meta'                       => data_get($this, 'meta', Utils::createObject()),
             'updated_at'                 => $this->updated_at,
             'created_at'                 => $this->created_at,
         ];

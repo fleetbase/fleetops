@@ -10,6 +10,7 @@ import { dasherize } from '@ember/string';
 import { later, next } from '@ember/runloop';
 import { task } from 'ember-concurrency-decorators';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
+import { debug } from '@ember/debug';
 import polyline from '@fleetbase/ember-core/utils/polyline';
 import findClosestWaypoint from '@fleetbase/ember-core/utils/find-closest-waypoint';
 import isNotEmpty from '@fleetbase/ember-core/utils/is-not-empty';
@@ -676,12 +677,12 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                     }
                 });
             });
-        } else {
-            // setup interface when livemap is ready
-            this.universe.on('fleet-ops.live-map.ready', () => {
-                this.setupInterface();
-            });
         }
+
+        // setup interface when livemap is ready
+        this.universe.on('fleet-ops.live-map.loaded', () => {
+            this.setupInterface();
+        });
 
         // switch to map mode
         this.ordersController.setLayoutMode('map');
@@ -754,6 +755,9 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         leafletMap.eachLayer((layer) => {
             if (layer instanceof L.Polyline || layer instanceof L.Marker) {
                 try {
+                    if (layer.record_id === this.order.driver_assigned?.id) {
+                        return;
+                    }
                     layer.remove();
                 } catch (error) {
                     // silent error just continue with order processing if any
@@ -784,6 +788,11 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         if (this.leafletMap) {
             try {
                 this.leafletMap.eachLayer((layer) => {
+                    // if driver assigned do not remove focused driver
+                    if (layer.record_id === this.order.driver_assigned?.id) {
+                        return;
+                    }
+
                     if (isArray(this.leafletLayers) && this.leafletLayers.includes(layer)) {
                         this.leafletMap.removeLayer(layer);
                     }
@@ -792,6 +801,11 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 // fallback method with tracked layers
                 if (isArray(this.leafletLayers)) {
                     this.leafletLayers.forEach((layer) => {
+                        // if driver assigned do not remove focused driver
+                        if (layer.record_id === this.order.driver_assigned?.id) {
+                            return;
+                        }
+
                         try {
                             this.leafletMap.removeLayer(layer);
                         } catch (error) {
@@ -934,71 +948,74 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         }
     }
 
-    @action async optimizeRoute() {
+    @task *optimizeRoute() {
         this.isOptimizingRoute = true;
 
+        const driverAssigned = this.order.driver_assigned;
+        const driverPosition = driverAssigned ? driverAssigned.location.coordinates : null;
         const leafletMap = this.leafletMap;
-        const coordinates = this.getCoordinatesFromPayload();
         const routingHost = getRoutingHost(this.payload, this.waypoints);
 
-        const response = await this.fetch.routing(coordinates, { source: 'any', destination: 'any', annotations: true }, { host: routingHost }).catch(() => {
-            this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.new.route-error'));
-            this.isOptimizingRoute = false;
-        });
+        let originalCoordinates = this.getCoordinatesFromPayload();
+        let coordinates = [...originalCoordinates]; // clone
 
-        this.isOptimizingRoute = false;
+        let source = 'any';
+        let destination = 'any';
+        let hasDriverStart = false;
 
-        if (response && response.code === 'Ok') {
-            // remove current route display
-            this.removeRoutingControlPreview();
-            this.removeOptimizedRoute(leafletMap);
+        // Inject driver location as starting point if available
+        if (driverPosition && Array.isArray(driverPosition) && driverPosition.length === 2) {
+            coordinates.unshift([driverPosition[0], driverPosition[1]]);
+            source = 'first';
+            hasDriverStart = true;
+        }
 
-            let trip = response.trips.firstObject;
-            let route = polyline.decode(trip.geometry);
-            let sortedWaypoints = [];
-            let optimizedRouteMarkers = [];
+        try {
+            const response = yield this.fetch.routing(coordinates, { source, destination, annotations: true }, { host: routingHost });
 
-            if (response.waypoints && isArray(response.waypoints)) {
-                const responseWaypoints = response.waypoints.sortBy('waypoint_index');
+            if (response?.code === 'Ok') {
+                this.removeRoutingControlPreview();
+                this.removeOptimizedRoute(leafletMap);
+                this.clearLayers();
 
-                this.setOptimizedRoute(route, trip, responseWaypoints);
+                const trip = response.trips?.firstObject;
+                const route = polyline.decode(trip.geometry);
+                const responseWaypoints = response.waypoints || [];
+
+                let sortedWaypoints = [];
 
                 for (let i = 0; i < responseWaypoints.length; i++) {
-                    const optimizedWaypoint = responseWaypoints.objectAt(i);
-                    const optimizedWaypointLongitude = optimizedWaypoint.location.firstObject;
-                    const optimizedWaypointLatitude = optimizedWaypoint.location.lastObject;
-                    const waypointModel = findClosestWaypoint(optimizedWaypointLatitude, optimizedWaypointLongitude, this.waypoints);
-                    // eslint-disable-next-line no-undef
-                    // const optimizedWaypointMarker = new L.Marker(optimizedWaypoint.location.reverse()).addTo(leafletMap);
-                    const [longitude, latitude] = getWithDefault(optimizedWaypoint.location, 'coordiantes', [0, 0]);
-                    const optimizedWaypointMarker = new L.Marker([latitude, longitude]).addTo(leafletMap);
+                    // Skip driver position (first coordinate) if it was included
+                    if (hasDriverStart && i === 0) {
+                        continue;
+                    }
 
-                    sortedWaypoints.pushObject(waypointModel);
-                    optimizedRouteMarkers.pushObject(optimizedWaypointMarker);
+                    const wp = responseWaypoints[i];
+                    const lat = wp.location[1];
+                    const lng = wp.location[0];
+
+                    const model = findClosestWaypoint(lat, lng, this.waypoints);
+
+                    if (model) {
+                        sortedWaypoints.pushObject(model);
+                    }
                 }
 
                 this.waypoints = sortedWaypoints;
-                this.optimizedRouteMarkers = optimizedRouteMarkers;
+                this.setOptimizedRoute(route, trip, responseWaypoints);
+                this.previewDraftOrderRoute(this.payload, this.waypoints, this.isMultipleDropoffOrder);
+                this.updatePayloadCoordinates();
+
+                this.order.set('is_route_optimized', true);
+
+                if (this.isUsingIntegratedVendor) {
+                    this.getQuotes();
+                }
             }
-
-            // set order as route optimized
-            this.order.set('is_route_optimized', true);
-
-            // refetch quotes
-            if (this.isUsingIntegratedVendor) {
-                this.getQuotes();
-            }
-
-            // eslint-disable-next-line no-undef
-            let optimizedRoute = (this.optimizedRoutePolyline = new L.Polyline(route, { color: 'red' }).addTo(leafletMap));
-            // leafletMap.addLayer(optimizedRoute);
-            leafletMap.flyToBounds(optimizedRoute.getBounds(), {
-                paddingBottomRight: [0, 600],
-                animate: true,
-                maxZoom: 13,
-            });
-        } else {
+        } catch (err) {
+            debug('Error optimizing route', err);
             this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.new.route-error'));
+        } finally {
             this.isOptimizingRoute = false;
         }
     }
@@ -1214,6 +1231,14 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             const vehicle = await driver.vehicle;
             this.order.set('vehicle_assigned', vehicle);
         }
+
+        if (this.leafletMap.liveMap) {
+            this.leafletMap.liveMap.focusDriver(driver);
+            // If route is optimized - re-optimize route
+            if (this.order.get('is_route_optimized')) {
+                this.optimizeRoute.perform();
+            }
+        }
     }
 
     @action addCustomField() {
@@ -1362,7 +1387,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             properties.customer = this.order.customer;
         }
 
-        const waypoint = this.store.createRecord('waypoint', properties);
+        const waypoint = this.store.createRecord('waypoint', { ...properties, type: 'dropoff' });
         this.waypoints.pushObject(waypoint);
         this.updatePayloadCoordinates();
     }
