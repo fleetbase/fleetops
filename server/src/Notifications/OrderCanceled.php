@@ -56,16 +56,22 @@ class OrderCanceled extends Notification implements ShouldQueue
     public array $data = [];
 
     /**
+     * The reason of the failure.
+     */
+    public string $reason;
+
+    /**
      * Create a new notification instance.
      *
      * @return void
      */
-    public function __construct(Order $order)
+    public function __construct(Order $order, string $reason = '')
     {
-        $this->order   = $order;
-        $this->title   = 'Order ' . $this->order->public_id . ' was canceled';
-        $this->message = 'Order ' . $this->order->public_id . ' has been canceled.';
-        $this->data    = ['id' => $this->order->public_id, 'type' => 'order_canceled'];
+        $this->order    = $order;
+        $this->reason   = $reason;
+        $this->title    = 'Order ' . $this->order->trackingNumber->tracking_number . ' was canceled';
+        $this->message  = 'Order ' . $this->order->trackingNumber->tracking_number . ' has been canceled.';
+        $this->data     = ['id' => $this->order->public_id, 'type' => 'order_canceled'];
     }
 
     /**
@@ -105,7 +111,7 @@ class OrderCanceled extends Notification implements ShouldQueue
 
         return [
             'title' => $this->title,
-            'body'  => $this->message,
+            'body'  => $this->message . ' ' . $this->reason,
             'data'  => [
                 ...$this->data,
                 'order' => $order->toWebhookPayload(),
@@ -123,8 +129,9 @@ class OrderCanceled extends Notification implements ShouldQueue
         return (new MailMessage())
             ->subject($this->title)
             ->line($this->message)
+            ->line($this->reason)
             ->line('No further action is necessary.')
-            ->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
+            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->order->trackingNumber->tracking_number]));
     }
 
     /**

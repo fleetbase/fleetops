@@ -63,7 +63,7 @@ class OrderAssigned extends Notification implements ShouldQueue
     public function __construct(Order $order)
     {
         $this->order   = $order;
-        $this->title   = 'New order ' . $this->order->public_id . ' assigned!';
+        $this->title   = 'New order ' . $this->order->trackingNumber->tracking_number . ' assigned!';
         $this->message = $this->order->isScheduled ? 'You have a new order scheduled for ' . $this->order->scheduled_at : 'You have a new order assigned, tap for details.';
         $this->data    = ['id' => $this->order->public_id, 'type' => 'order_assigned'];
     }
@@ -130,7 +130,7 @@ class OrderAssigned extends Notification implements ShouldQueue
             $message->line('Dispatch is scheduled for ' . $this->order->scheduled_at);
         }
 
-        $message->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
+        $message->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->order->trackingNumber->tracking_number]));
 
         return $message;
     }

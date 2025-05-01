@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Events;
 
 use Fleetbase\Events\ResourceLifecycleEvent;
+use Fleetbase\FleetOps\Flow\Activity;
 
 class OrderFailed extends ResourceLifecycleEvent
 {
@@ -14,7 +15,7 @@ class OrderFailed extends ResourceLifecycleEvent
     public $eventName = 'failed';
 
     /**
-     * The order failure reason.
+     * Assosciated activity which triggered the event.
      */
-    public string $reason = '';
+    public ?Activity $activity;
 }

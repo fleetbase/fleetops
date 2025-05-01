@@ -757,11 +757,14 @@ class Payload extends Model
      */
     public function updateWaypointActivity(?Activity $activity = null, $location = null, $proof = null)
     {
+        $this->loadMissing('order');
+
         if ($this->isMultipleDropOrder && Utils::isActivity($activity) && $location) {
             // update activity for the current waypoint
             $currentWaypoint = $this->waypointMarkers->firstWhere('place_uuid', $this->current_waypoint_uuid);
             if ($currentWaypoint) {
                 $currentWaypoint->insertActivity($activity, $location, $proof);
+                $activity->fireEvents($this->order);
             }
 
             // update activity for all entities for this destination/waypoint

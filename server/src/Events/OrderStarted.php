@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Events;
 
 use Fleetbase\Events\ResourceLifecycleEvent;
+use Fleetbase\FleetOps\Flow\Activity;
 
 class OrderStarted extends ResourceLifecycleEvent
 {
@@ -12,4 +13,9 @@ class OrderStarted extends ResourceLifecycleEvent
      * @var string
      */
     public $eventName = 'started';
+
+    /**
+     * Assosciated activity which triggered the event.
+     */
+    public ?Activity $activity;
 }

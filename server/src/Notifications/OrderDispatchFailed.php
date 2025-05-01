@@ -69,7 +69,7 @@ class OrderDispatchFailed extends Notification implements ShouldQueue
     {
         $this->order   = $order;
         $this->reason  = $event->getReason();
-        $this->title   = 'Order ' . $this->order->public_id . ' has dispatch has failed!';
+        $this->title   = 'Order ' . $this->order->trackingNumber->tracking_number . ' dispatch has failed!';
         $this->message = $this->reason;
         $this->data    = ['id' => $this->order->public_id, 'type' => 'order_dispatch_failed'];
     }
@@ -129,6 +129,6 @@ class OrderDispatchFailed extends Notification implements ShouldQueue
         return (new MailMessage())
             ->subject($this->title)
             ->line($this->message)
-            ->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
+            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->order->trackingNumber->tracking_number]));
     }
 }

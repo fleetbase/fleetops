@@ -63,8 +63,8 @@ class OrderCompleted extends Notification implements ShouldQueue
     public function __construct(Order $order)
     {
         $this->order   = $order;
-        $this->title   = 'Order ' . $this->order->public_id . ' was completed';
-        $this->message = 'Order ' . $this->order->public_id . ' has been completed.';
+        $this->title   = 'Order ' . $this->order->trackingNumber->tracking_number . ' has been completed.';
+        $this->message = 'Order ' . $this->order->trackingNumber->tracking_number . ' has been completed by agent.';
         $this->data    = ['id' => $this->order->public_id, 'type' => 'order_completed'];
     }
 
@@ -124,7 +124,7 @@ class OrderCompleted extends Notification implements ShouldQueue
             ->subject($this->title)
             ->line($this->message)
             ->line('No further action is necessary.')
-            ->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
+            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->order->trackingNumber->tracking_number]));
     }
 
     /**

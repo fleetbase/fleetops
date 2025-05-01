@@ -69,8 +69,8 @@ class OrderFailed extends Notification implements ShouldQueue
     {
         $this->order    = $order;
         $this->reason   = $reason;
-        $this->title    = 'Order ' . $this->order->public_id . ' has failed';
-        $this->message  = 'Order ' . $this->order->public_id . ' has failed.' . ($reason ? ' Reason: ' . $reason : '');
+        $this->title    = 'Order ' . $this->order->trackingNumber->tracking_number . ' delivery has has failed';
+        $this->message  = 'Order ' . $this->order->trackingNumber->tracking_number . ' delivery has failed.';
         $this->data     = ['id' => $this->order->public_id, 'type' => 'order_canceled'];
     }
 
@@ -111,7 +111,7 @@ class OrderFailed extends Notification implements ShouldQueue
 
         return [
             'title' => $this->title,
-            'body'  => $this->message,
+            'body'  => $this->message . ' ' . $this->reason,
             'data'  => [
                 ...$this->data,
                 'order' => $order->toWebhookPayload(),
@@ -129,8 +129,9 @@ class OrderFailed extends Notification implements ShouldQueue
         return (new MailMessage())
             ->subject($this->title)
             ->line($this->message)
+            ->line($this->reason)
             ->line('No further action is necessary.')
-            ->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
+            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->order->trackingNumber->tracking_number]));
     }
 
     /**

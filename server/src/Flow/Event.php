@@ -19,15 +19,21 @@ class Event
     public ?Order $order = null;
 
     /**
+     * The activity for the order event.
+     */
+    public ?Activity $activity = null;
+
+    /**
      * Constructs a new Event instance.
      *
      * @param string $name  the name of the event
      * @param ?Order $order the associated order, if any
      */
-    public function __construct(string $name, ?Order $order = null)
+    public function __construct(string $name, ?Order $order = null, ?Activity $activity = null)
     {
-        $this->name  = $name;
-        $this->order = $order;
+        $this->name     = $name;
+        $this->order    = $order;
+        $this->activity = $activity;
     }
 
     /**
@@ -38,6 +44,20 @@ class Event
     public function setOrder(Order $order)
     {
         $this->order = $order;
+
+        return $this;
+    }
+
+    /**
+     * Sets the activity for the order event.
+     *
+     * @param Activity $activity the activity which triggered this event
+     */
+    public function setActivity(Activity $activity)
+    {
+        $this->activity = $activity;
+
+        return $this;
     }
 
     /**
@@ -46,17 +66,24 @@ class Event
      * Resolves the event class based on the event name and fires it using Laravel's event system.
      * If the order is not set in the event, and an Order object is provided, it sets the order before firing.
      *
-     * @param ?Order $order optional order to associate with the event
+     * @param ?Order    $order    optional order to associate with the event
+     * @param ?Activity $activity optional activity which triggered the event
      */
-    public function fire(?Order $order = null)
+    public function fire(?Order $order = null, ?Activity $activity = null)
     {
         if (!$this->order && $order instanceof Order) {
             $this->setOrder($order);
         }
 
+        if ($activity) {
+            $this->setActivity($activity);
+        }
+
         $eventClass = $this->resolve();
         if ($eventClass) {
-            event(new $eventClass($this->order));
+            $event           = new $eventClass($this->order);
+            $event->activity = $activity;
+            event($event);
         }
     }
 

@@ -31,6 +31,7 @@ class NotifyOrderEvent implements ShouldQueue
         if ($order) {
             // Send a notification for order events
             if ($event instanceof \Fleetbase\FleetOps\Events\OrderCanceled) {
+                $reason = $event->activity ? $event->activity->get('details') : '';
                 NotificationRegistry::notify(OrderCanceled::class, $order);
             }
             if ($event instanceof \Fleetbase\FleetOps\Events\OrderCompleted) {
@@ -38,7 +39,8 @@ class NotifyOrderEvent implements ShouldQueue
             }
 
             if ($event instanceof \Fleetbase\FleetOps\Events\OrderFailed) {
-                NotificationRegistry::notify(OrderFailed::class, $order);
+                $reason = $event->activity ? $event->activity->get('details') : '';
+                NotificationRegistry::notify(OrderFailed::class, $order, $reason);
             }
 
             if ($event instanceof \Fleetbase\FleetOps\Events\OrderDispatchFailed) {
