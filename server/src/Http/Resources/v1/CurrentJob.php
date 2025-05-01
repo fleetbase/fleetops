@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 
@@ -25,7 +26,7 @@ class CurrentJob extends FleetbaseResource
             'payload'      => $this->when(Http::isInternalRequest(), new Payload($this->payload)),
             'type'         => $this->type,
             'status'       => $this->status,
-            'meta'         => $this->meta ?? [],
+            'meta'         => data_get($this, 'meta', Utils::createObject()),
             'updated_at'   => $this->updated_at,
             'created_at'   => $this->created_at,
         ];

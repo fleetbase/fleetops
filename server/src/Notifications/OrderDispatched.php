@@ -65,7 +65,7 @@ class OrderDispatched extends Notification implements ShouldQueue
     public function __construct(Order $order)
     {
         $this->order   = $order;
-        $this->title   = 'Order ' . $this->order->public_id . ' has been dispatched!';
+        $this->title   = 'Order ' . $this->order->trackingNumber->tracking_number . ' has been dispatched!';
         $this->message = 'An order has just been dispatched to you and is ready to be started.';
         $this->data    = ['id' => $this->order->public_id, 'type' => 'order_dispatched'];
     }
@@ -169,7 +169,7 @@ class OrderDispatched extends Notification implements ShouldQueue
         return (new MailMessage())
             ->subject($this->title)
             ->line($this->message)
-            ->action('View Details', Utils::consoleUrl('', ['shift' => 'fleet-ops/orders/view/' . $this->order->public_id]));
+            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->order->trackingNumber->tracking_number]));
     }
 
     /**

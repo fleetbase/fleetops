@@ -14,7 +14,7 @@ use Illuminate\Notifications\Notification;
 use NotificationChannels\Apn\ApnChannel;
 use NotificationChannels\Fcm\FcmChannel;
 
-class OrderAssigned extends Notification implements ShouldQueue
+class OrderFailed extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -28,12 +28,12 @@ class OrderAssigned extends Notification implements ShouldQueue
     /**
      * Notification name.
      */
-    public static string $name = 'Order Assigned';
+    public static string $name = 'Order Failed';
 
     /**
      * Notification description.
      */
-    public static string $description = 'Notify when an order has been assigned to a driver.';
+    public static string $description = 'Notify when an order has failed.';
 
     /**
      * Notification package.
@@ -56,16 +56,22 @@ class OrderAssigned extends Notification implements ShouldQueue
     public array $data = [];
 
     /**
+     * The reason of the failure.
+     */
+    public string $reason;
+
+    /**
      * Create a new notification instance.
      *
      * @return void
      */
-    public function __construct(Order $order)
+    public function __construct(Order $order, string $reason = '')
     {
-        $this->order   = $order;
-        $this->title   = 'New order ' . $this->order->trackingNumber->tracking_number . ' assigned!';
-        $this->message = $this->order->isScheduled ? 'You have a new order scheduled for ' . $this->order->scheduled_at : 'You have a new order assigned, tap for details.';
-        $this->data    = ['id' => $this->order->public_id, 'type' => 'order_assigned'];
+        $this->order    = $order;
+        $this->reason   = $reason;
+        $this->title    = 'Order ' . $this->order->trackingNumber->tracking_number . ' delivery has has failed';
+        $this->message  = 'Order ' . $this->order->trackingNumber->tracking_number . ' delivery has failed.';
+        $this->data     = ['id' => $this->order->public_id, 'type' => 'order_canceled'];
     }
 
     /**
@@ -91,8 +97,6 @@ class OrderAssigned extends Notification implements ShouldQueue
             new Channel('api.' . session('api_credential')),
             new Channel('order.' . $this->order->uuid),
             new Channel('order.' . $this->order->public_id),
-            new Channel('driver.' . data_get($this->order, 'driverAssigned.uuid')),
-            new Channel('driver.' . data_get($this->order, 'driverAssigned.public_id')),
         ];
     }
 
@@ -107,7 +111,7 @@ class OrderAssigned extends Notification implements ShouldQueue
 
         return [
             'title' => $this->title,
-            'body'  => $this->message,
+            'body'  => $this->message . ' ' . $this->reason,
             'data'  => [
                 ...$this->data,
                 'order' => $order->toWebhookPayload(),
@@ -122,17 +126,12 @@ class OrderAssigned extends Notification implements ShouldQueue
      */
     public function toMail($notifiable)
     {
-        $message = (new MailMessage())
+        return (new MailMessage())
             ->subject($this->title)
-            ->line($this->message);
-
-        if ($this->order->isScheduled) {
-            $message->line('Dispatch is scheduled for ' . $this->order->scheduled_at);
-        }
-
-        $message->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->order->trackingNumber->tracking_number]));
-
-        return $message;
+            ->line($this->message)
+            ->line($this->reason)
+            ->line('No further action is necessary.')
+            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->order->trackingNumber->tracking_number]));
     }
 
     /**

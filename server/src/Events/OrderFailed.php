@@ -5,14 +5,14 @@ namespace Fleetbase\FleetOps\Events;
 use Fleetbase\Events\ResourceLifecycleEvent;
 use Fleetbase\FleetOps\Flow\Activity;
 
-class OrderCanceled extends ResourceLifecycleEvent
+class OrderFailed extends ResourceLifecycleEvent
 {
     /**
      * The event name.
      *
      * @var string
      */
-    public $eventName = 'canceled';
+    public $eventName = 'failed';
 
     /**
      * Assosciated activity which triggered the event.

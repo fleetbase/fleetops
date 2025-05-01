@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Models\Model;
 use Fleetbase\Support\Http;
@@ -37,7 +38,7 @@ class Payload extends FleetbaseResource
             'cod_amount'            => $this->cod_amount ?? null,
             'cod_currency'          => $this->cod_currency ?? null,
             'cod_payment_method'    => $this->cod_payment_method ?? null,
-            'meta'                  => $this->meta ?? [],
+            'meta'                  => data_get($this, 'meta', Utils::createObject()),
             'updated_at'            => $this->updated_at,
             'created_at'            => $this->created_at,
         ];
@@ -85,7 +86,7 @@ class Payload extends FleetbaseResource
             'cod_amount'         => $this->cod_amount ?? null,
             'cod_currency'       => $this->cod_currency ?? null,
             'cod_payment_method' => $this->cod_payment_method ?? null,
-            'meta'               => $this->meta ?? [],
+            'meta'               => data_get($this, 'meta', Utils::createObject()),
             'updated_at'         => $this->updated_at,
             'created_at'         => $this->created_at,
         ];

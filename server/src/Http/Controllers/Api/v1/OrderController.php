@@ -980,7 +980,7 @@ class OrderController extends Controller
         if (Utils::isActivity($activity) && $activity->completesOrder() && $order->payload->isMultipleDropOrder) {
             // confirm every waypoint is completed
             $isCompleted = $order->payload->waypointMarkers->every(function ($waypoint) {
-                return $waypoint->status_code === 'COMPLETED';
+                return $waypoint->complete;
             });
 
             // only update activity for waypoint
@@ -991,7 +991,7 @@ class OrderController extends Controller
 
                 // recheck if order is completed
                 $isFullyCompleted = $order->payload->waypointMarkers->every(function ($waypoint) {
-                    return $waypoint->status_code === 'COMPLETED';
+                    return $waypoint->complete;
                 });
 
                 if (!$isFullyCompleted) {

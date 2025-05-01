@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Http\Resources\User;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
@@ -40,7 +41,7 @@ class Issue extends FleetbaseResource
             'issue_id'                   => $this->issue_id,
             'report'                     => $this->report,
             'priority'                   => $this->priority,
-            'meta'                       => data_get($this, 'meta', []),
+            'meta'                       => data_get($this, 'meta', Utils::createObject()),
             'type'                       => $this->type,
             'category'                   => $this->category,
             'status'                     => $this->status,
@@ -67,7 +68,7 @@ class Issue extends FleetbaseResource
             'issue_id'           => $this->issue_id,
             'report'             => $this->report,
             'priority'           => $this->priority,
-            'meta'               => data_get($this, 'meta', []),
+            'meta'               => data_get($this, 'meta', Utils::createObject()),
             'type'               => $this->type,
             'category'           => $this->category,
             'status'             => $this->status,

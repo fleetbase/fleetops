@@ -103,7 +103,7 @@ class Activity extends FlowResource
     public function fireEvents(Order $order)
     {
         foreach ($this->events as $event) {
-            $event->fire($order);
+            $event->fire($order, $this);
         }
     }
 

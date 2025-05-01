@@ -195,6 +195,9 @@ export default class LiveMapComponent extends Component {
      */
     @tracked leafletPluginsLoadedCheckId = false;
 
+    @tracked focusedVehicle;
+    @tracked focusedDriver;
+
     /**
      * Cache for storing original state of resource arrays.
      * @type {Object.<string, Array>}
@@ -240,9 +243,6 @@ export default class LiveMapComponent extends Component {
      * @function
      */
     async setupComponent() {
-        // trigger that initial coordinates have been set
-        this.universe.trigger('fleet-ops.live-map.loaded', this);
-
         // set initial coordinates
         await this.setInitialCoordinates();
 
@@ -277,6 +277,7 @@ export default class LiveMapComponent extends Component {
         await allSettled(liveDataPromises);
         this.isDataLoaded = true;
         this.listen();
+        this.universe.trigger('fleet-ops.live-map.loaded', this);
     }
 
     /**
@@ -1906,5 +1907,21 @@ export default class LiveMapComponent extends Component {
         } catch (error) {
             this.notifications.serverError(error);
         }
+    }
+
+    focusDriver(driver) {
+        this.focusedDriver = driver;
+    }
+
+    focusVehicle(vehicle) {
+        this.focusedVehicle = vehicle;
+    }
+
+    blurDriver() {
+        this.focusedDriver = null;
+    }
+
+    blurVehicle() {
+        this.focusedVehicle = null;
     }
 }

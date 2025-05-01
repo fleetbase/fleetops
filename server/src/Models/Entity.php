@@ -153,10 +153,11 @@ class Entity extends Model
     {
         $this->load(['trackingNumber', 'company', 'destination']);
 
-        return view('labels/default', [
+        return view('fleetops::labels/entity-label', [
             'dropoff'        => $this->destination,
             'trackingNumber' => $this->trackingNumber,
             'company'        => $this->company,
+            'entity'         => $this,
         ])->render();
     }
 

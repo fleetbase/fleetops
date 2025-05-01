@@ -15,11 +15,12 @@ class EventServiceProvider extends ServiceProvider
         /*
          * Order Events
          */
-        \Fleetbase\FleetOps\Events\OrderCanceled::class       => [\Fleetbase\FleetOps\Listeners\HandleOrderCanceled::class, \Fleetbase\Listeners\SendResourceLifecycleWebhook::class],
-        \Fleetbase\FleetOps\Events\OrderDispatched::class     => [\Fleetbase\FleetOps\Listeners\HandleOrderDispatched::class, \Fleetbase\Listeners\SendResourceLifecycleWebhook::class],
-        \Fleetbase\FleetOps\Events\OrderDispatchFailed::class => [\Fleetbase\FleetOps\Listeners\HandleOrderDispatchFailed::class, \Fleetbase\Listeners\SendResourceLifecycleWebhook::class],
-        \Fleetbase\FleetOps\Events\OrderDriverAssigned::class => [\Fleetbase\FleetOps\Listeners\HandleOrderDriverAssigned::class, \Fleetbase\Listeners\SendResourceLifecycleWebhook::class],
-        \Fleetbase\FleetOps\Events\OrderCompleted::class      => [\Fleetbase\Listeners\SendResourceLifecycleWebhook::class],
+        \Fleetbase\FleetOps\Events\OrderCanceled::class       => [\Fleetbase\FleetOps\Listeners\HandleOrderCanceled::class, \Fleetbase\Listeners\SendResourceLifecycleWebhook::class, \Fleetbase\FleetOps\Listeners\NotifyOrderEvent::class],
+        \Fleetbase\FleetOps\Events\OrderDispatched::class     => [\Fleetbase\FleetOps\Listeners\HandleOrderDispatched::class, \Fleetbase\Listeners\SendResourceLifecycleWebhook::class, \Fleetbase\FleetOps\Listeners\NotifyOrderEvent::class],
+        \Fleetbase\FleetOps\Events\OrderDispatchFailed::class => [\Fleetbase\FleetOps\Listeners\HandleOrderDispatchFailed::class, \Fleetbase\Listeners\SendResourceLifecycleWebhook::class, \Fleetbase\FleetOps\Listeners\NotifyOrderEvent::class],
+        \Fleetbase\FleetOps\Events\OrderDriverAssigned::class => [\Fleetbase\FleetOps\Listeners\HandleOrderDriverAssigned::class, \Fleetbase\Listeners\SendResourceLifecycleWebhook::class, \Fleetbase\FleetOps\Listeners\NotifyOrderEvent::class],
+        \Fleetbase\FleetOps\Events\OrderCompleted::class      => [\Fleetbase\Listeners\SendResourceLifecycleWebhook::class, \Fleetbase\FleetOps\Listeners\NotifyOrderEvent::class],
+        \Fleetbase\FleetOps\Events\OrderFailed::class         => [\Fleetbase\Listeners\SendResourceLifecycleWebhook::class, \Fleetbase\FleetOps\Listeners\NotifyOrderEvent::class],
         \Fleetbase\FleetOps\Events\OrderReady::class          => [\Fleetbase\FleetOps\Listeners\HandleOrderReady::class],
 
         /*

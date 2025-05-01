@@ -320,7 +320,7 @@
                             @icon="magic"
                             @text={{t "fleet-ops.operations.orders.index.new.optimize-route"}}
                             @size="sm"
-                            @onClick={{this.optimizeRoute}}
+                            @onClick={{perform this.optimizeRoute}}
                             @permission="fleet-ops optimize order"
                             @helpText={{t "fleet-ops.operations.orders.index.new.optimize-route-help-text"}}
                             @disabled={{lt this.waypoints.length 3}}
@@ -402,6 +402,36 @@
                                             </span>
                                         </div>
                                     </ModelSelect>
+                                </div>
+                                <div>
+                                    <div class="flex flex-row items-center space-x-4 text-sm mt-2">
+                                        <div class={{if (eq waypoint.type "dropoff") 'is-checked'}}>
+                                            <div class="flex flex-row items-center">
+                                                <RadioButton
+                                                    @radioClass="focus:ring-blue-500 h-4 w-4 text-blue-500"
+                                                    @radioId={{concat "waypoint_" index "_dropoff"}}
+                                                    @value="dropoff"
+                                                    @groupValue={{waypoint.type}}
+                                                    @name={{concat "waypoint_" index "_dropoff"}}
+                                                    @changed={{fn (mut waypoint.type)}}
+                                                />
+                                                <label for={{concat "waypoint_" index "_dropoff"}} class="ml-2">Dropoff</label>
+                                            </div>
+                                        </div>
+                                        <div class={{if (eq waypoint.type "pickup") 'is-checked'}}>
+                                            <div class="flex flex-row items-center">
+                                                <RadioButton
+                                                    @radioClass="focus:ring-blue-500 h-4 w-4 text-blue-500"
+                                                    @radioId={{concat "waypoint_" index "_pickup"}}
+                                                    @value="pickup"
+                                                    @groupValue={{waypoint.type}}
+                                                    @name={{concat "waypoint_" index "_pickup"}}
+                                                    @changed={{fn (mut waypoint.type)}}
+                                                />
+                                                <label for={{concat "waypoint_" index "_pickup"}} class="ml-2">Pickup</label>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

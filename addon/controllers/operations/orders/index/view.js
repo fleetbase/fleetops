@@ -167,8 +167,8 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     }
 
     @task *loadOrderRelations(order) {
-        yield order.loadTrackerData({}, { fromCache: true, expirationInterval: 10, expirationIntervalUnit: 'minute' });
-        yield order.loadETA();
+        order.loadTrackerData({}, { fromCache: true, expirationInterval: 10, expirationIntervalUnit: 'minute' });
+        order.loadETA();
         yield order.loadOrderConfig();
         yield order.loadPayload();
         yield order.loadDriver();
@@ -788,7 +788,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     }
 
     /**
-     * View order label
+     * View waypoint label
      *
      * @param {WaypointModel} waypoint
      * @void
@@ -810,6 +810,36 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         // eslint-disable-next-line no-undef
         const fileReader = new FileReader();
         const pdfStream = await this.fetch.get(`orders/label/${waypoint.waypoint_public_id}?format=base64`).then((resp) => resp.data);
+        // eslint-disable-next-line no-undef
+        const base64 = await fetch(`data:application/pdf;base64,${pdfStream}`);
+        const blob = await base64.blob();
+        // load into file reader
+        fileReader.onload = (event) => {
+            const data = event.target.result;
+            this.modalsManager.setOption('data', data);
+        };
+        fileReader.readAsDataURL(blob);
+    }
+
+    /**
+     * View entity label
+     *
+     * @param {EntityModel} entity
+     * @void
+     */
+    @action async viewEntityLabel(entity) {
+        // render dialog to display label within
+        this.modalsManager.show(`modals/order-label`, {
+            title: 'Entity Label',
+            modalClass: 'modal-xl',
+            acceptButtonText: 'Done',
+            hideDeclineButton: true,
+        });
+
+        // load the pdf label from base64
+        // eslint-disable-next-line no-undef
+        const fileReader = new FileReader();
+        const pdfStream = await this.fetch.get(`orders/label/${entity.public_id}?format=base64`).then((resp) => resp.data);
         // eslint-disable-next-line no-undef
         const base64 = await fetch(`data:application/pdf;base64,${pdfStream}`);
         const blob = await base64.blob();

@@ -81,7 +81,7 @@ class Proof extends Model
      */
     public function getFileUrlAttribute()
     {
-        return $this->fromCache('file.url', null);
+        return data_get($this, 'file.url');
     }
 
     /**

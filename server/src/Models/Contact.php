@@ -315,7 +315,7 @@ class Contact extends Model
             'company_uuid' => $contact->company_uuid,
             'name'         => $contact->name,
             'email'        => $contact->email,
-            'phone'        => Utils::formatPhoneNumber($contact->phone),
+            'phone'        => $contact->phone ? Utils::formatPhoneNumber($contact->phone) : null,
             'username'     => Str::slug($contact->name . '_' . Str::random(4), '_'),
             'password'     => Str::random(),
             'timezone'     => $contact->company->timezone ?? date_default_timezone_get(),

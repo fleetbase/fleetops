@@ -12,6 +12,7 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
 
 class Waypoint extends Model
@@ -144,6 +145,11 @@ class Waypoint extends Model
         return $this->belongsTo(\Fleetbase\Models\Company::class);
     }
 
+    public function customer(): MorphTo
+    {
+        return $this->morphTo(__FUNCTION__, 'customer_type', 'customer_uuid');
+    }
+
     /**
      * The tracking number for waypoint.
      */
@@ -166,6 +172,14 @@ class Waypoint extends Model
     public function getStatusCodeAttribute()
     {
         return data_get($this, 'trackingNumber.last_status_code');
+    }
+
+    /**
+     * The latest tracking status code for waypoint.
+     */
+    public function getCompleteAttribute()
+    {
+        return data_get($this, 'trackingNumber.last_status_complete');
     }
 
     public static function insertGetUuid($values = [], ?Payload $payload = null)

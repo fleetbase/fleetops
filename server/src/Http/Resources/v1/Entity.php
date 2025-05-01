@@ -52,7 +52,7 @@ class Entity extends FleetbaseResource
             'sale_price'        => data_get($this, 'sale_price'),
             'sku'               => data_get($this, 'sku'),
             'currency'          => data_get($this, 'currency'),
-            'meta'              => data_get($this, 'meta', []),
+            'meta'              => data_get($this, 'meta', Utils::createObject()),
             'type'              => data_get($this, 'type', 'entity'),
             'updated_at'        => $this->updated_at,
             'created_at'        => $this->created_at,
@@ -106,7 +106,7 @@ class Entity extends FleetbaseResource
             'sale_price'      => data_get($this, 'sale_price'),
             'sku'             => data_get($this, 'sku'),
             'currency'        => data_get($this, 'currency'),
-            'meta'            => $this->meta ?? [],
+            'meta'            => data_get($this, 'meta', Utils::createObject()),
             'updated_at'      => $this->updated_at,
             'created_at'      => $this->created_at,
         ];
