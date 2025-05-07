@@ -195,6 +195,9 @@ class OrderController extends Controller
                 [
                     'public_id'    => $request->input('facilitator'),
                     'company_uuid' => session('company'),
+                ],
+                [
+                    'with_table' => true
                 ]
             );
 
@@ -217,6 +220,9 @@ class OrderController extends Controller
                     [
                         'public_id'    => $customer,
                         'company_uuid' => session('company'),
+                    ],
+                    [
+                        'with_table' => true
                     ]
                 );
 
@@ -254,6 +260,10 @@ class OrderController extends Controller
                     } catch (\Exception $e) {
                         return response()->apiError('Failed to find or create customer for order.');
                     }
+                }
+
+                if (Str::isUuid($customer)) {
+                    $customer = Contact::where('uuid', $customer)->first();
                 }
 
                 if ($customer instanceof Contact) {
@@ -449,6 +459,9 @@ class OrderController extends Controller
                 [
                     'public_id'    => $request->input('facilitator'),
                     'company_uuid' => session('company'),
+                ],
+                [
+                    'with_table' => true
                 ]
             );
 
@@ -465,6 +478,9 @@ class OrderController extends Controller
                 [
                     'public_id'    => $request->input('customer'),
                     'company_uuid' => session('company'),
+                ],
+                [
+                    'with_table' => true
                 ]
             );
 

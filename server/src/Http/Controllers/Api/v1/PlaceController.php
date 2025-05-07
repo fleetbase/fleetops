@@ -116,7 +116,9 @@ class PlaceController extends Controller
                     'public_id'    => $id,
                     'company_uuid' => session('company'),
                 ],
-                ['full' => true]
+                [
+                    'with_table' => true
+                ]
             );
 
             if (is_array($owner)) {
@@ -224,6 +226,9 @@ class PlaceController extends Controller
                     [
                         'public_id'    => $id,
                         'company_uuid' => session('company'),
+                    ],
+                    [
+                        'with_table' => true
                     ]
                 );
 
