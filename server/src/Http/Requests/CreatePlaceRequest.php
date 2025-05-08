@@ -33,11 +33,12 @@ class CreatePlaceRequest extends FleetbaseRequest
                     $hasCoordiantes = $this->filled('latitude') && $this->filled('longitude');
                     $hasLocation    = $this->filled('location');
                     $hasStreet      = $this->filled('street1');
+                    $hasAddress     = $this->filled('address');
 
                     // if creating then it's required
                     if ($isCreating) {
                         // if either has coordinated or location then it's not required
-                        if ($hasCoordiantes || $hasLocation) {
+                        if ($hasCoordiantes || $hasLocation || $hasAddress) {
                             return false;
                         }
 
@@ -57,11 +58,12 @@ class CreatePlaceRequest extends FleetbaseRequest
                     $isCreating     = $this->isMethod('POST');
                     $hasCoordiantes = $this->filled('latitude') && $this->filled('longitude');
                     $hasLocation    = $this->filled('location');
+                    $hasAddress     = $this->filled('address');
 
                     // if creating then it's required
                     if ($isCreating) {
                         // if either has coordinated or location then it's not required
-                        if ($hasCoordiantes || $hasLocation) {
+                        if ($hasCoordiantes || $hasLocation || $hasAddress) {
                             return false;
                         }
 
@@ -71,6 +73,7 @@ class CreatePlaceRequest extends FleetbaseRequest
                     return false;
                 }),
             ],
+            'address'   => ['nullable'],
             'customer'  => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
             'contact'   => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'public_id')],
             'vendor'    => 'nullable|exists:vendors,public_id',

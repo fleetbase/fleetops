@@ -191,6 +191,10 @@ class Utils extends FleetbaseUtils
             $coordinates = $coordinates->location;
         }
 
+        if ($coordinates instanceof \Fleetbase\FleetOps\Models\Vehicle) {
+            $coordinates = $coordinates->location;
+        }
+
         // any model with spatial location point
         if ($coordinates instanceof \Illuminate\Database\Eloquent\Model && $coordinates->isFillable('location')) {
             $coordinates = $coordinates->location;

@@ -117,7 +117,7 @@ class PlaceController extends Controller
                     'company_uuid' => session('company'),
                 ],
                 [
-                    'with_table' => true
+                    'with_table' => true,
                 ]
             );
 
@@ -228,7 +228,7 @@ class PlaceController extends Controller
                         'company_uuid' => session('company'),
                     ],
                     [
-                        'with_table' => true
+                        'with_table' => true,
                     ]
                 );
 
