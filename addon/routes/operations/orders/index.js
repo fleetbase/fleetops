@@ -22,6 +22,10 @@ export default class OperationsOrdersIndexRoute extends Route {
         customer: { refreshModel: true },
         pickup: { refreshModel: true },
         dropoff: { refreshModel: true },
+        created_at: { refreshModel: true },
+        updated_at: { refreshModel: true },
+        scheduled_at: { refreshModel: true },
+        without_driver: { refreshModel: true },
         after: { refreshModel: true },
         before: { refreshModel: true },
         type: { refreshModel: true },
@@ -39,8 +43,8 @@ export default class OperationsOrdersIndexRoute extends Route {
         }
 
         if (isNestedRouteTransition(transition)) {
-            set(this.queryParams, 'page.refreshModel', false);
-            set(this.queryParams, 'sort.refreshModel', false);
+            // set(this.queryParams, 'page.refreshModel', false);
+            // set(this.queryParams, 'sort.refreshModel', false);
         }
     }
 

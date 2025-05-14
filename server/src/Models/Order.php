@@ -1413,6 +1413,10 @@ class Order extends Model
      */
     public function assignDriver($driver, $silent = false)
     {
+        if ($driver instanceof Driver && $this->driver_assigned_uuid === $driver->uuid) {
+            return $this;
+        }
+
         if ($driver instanceof Driver) {
             $this->driver_assigned_uuid = $driver->uuid;
         }
@@ -1421,6 +1425,10 @@ class Order extends Model
             if (Str::startsWith($driver, 'driver_')) {
                 $driver = Driver::select(['uuid', 'public_id'])->where('public_id', $driver)->whereNull('deleted_at')->withoutGlobalScopes()->first();
                 if ($driver) {
+                    if ($this->driver_assigned_uuid === $driver->uuid) {
+                        return $this;
+                    }
+                    
                     return $this->assignDriver($driver);
                 }
 

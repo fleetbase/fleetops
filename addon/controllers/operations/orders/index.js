@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { equal } from '@ember/object/computed';
+import { debug } from '@ember/debug';
 import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';
 import { timeout } from 'ember-concurrency';
@@ -12,6 +13,7 @@ import fromStore from '@fleetbase/ember-core/decorators/from-store';
 export default class OperationsOrdersIndexController extends BaseController {
     @service currentUser;
     @service fetch;
+    @service store;
     @service intl;
     @service filters;
     @service hostRouter;
@@ -45,6 +47,9 @@ export default class OperationsOrdersIndexController extends BaseController {
         'dropoff',
         'created_by',
         'updated_by',
+        'created_at',
+        'updated_at',
+        'scheduled_at',
         'status',
         'type',
         'layout',
@@ -171,6 +176,34 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @var {String}
      */
     @tracked created_by;
+
+    /**
+     * The filterable param `created_at`
+     *
+     * @var {String}
+     */
+    @tracked created_at;
+
+    /**
+     * The filterable param `updated_at`
+     *
+     * @var {String}
+     */
+    @tracked updated_at;
+
+    /**
+     * The filterable param `scheduled_at`
+     *
+     * @var {String}
+     */
+    @tracked scheduled_at;
+
+    /**
+     * The filterable param `without_driver`
+     *
+     * @var {String}
+     */
+    @tracked without_driver;
 
     /**
      * The filterable param `status`
@@ -532,6 +565,14 @@ export default class OperationsOrdersIndexController extends BaseController {
         },
         {
             label: '',
+            cellComponent: 'table/cell/base',
+            filterParam: 'without_driver',
+            filterComponenr: 'checkbox',
+            filterable: true,
+            hidden: true,
+        },
+        {
+            label: '',
             cellComponent: 'table/cell/dropdown',
             ddButtonText: false,
             ddButtonIcon: 'ellipsis-h',
@@ -601,6 +642,36 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @memberof OperationsOrdersIndexController
      */
     @action async listenForOrderEvents() {
+        const findOrder = async (orderId) => {
+            const allOrders = this.store.peekAll('order');
+            const foundOrder = allOrders.find((order) => order.get('public_id') === orderId);
+            if (foundOrder) {
+                return foundOrder;
+            }
+
+            const tabledOrder = this.table.rows.find((order) => order.get('public_id') === orderId);
+            if (tabledOrder) {
+                return tabledOrder;
+            }
+
+            return this.store.queryRecord('order', { public_id: orderId, single: true });
+        };
+
+        const findDriver = async (driverId) => {
+            const allDrivers = this.store.peekAll('driver');
+            const foundDriver = allDrivers.find((driver) => driver.get('public_id') === driverId);
+            if (foundDriver) {
+                return foundDriver;
+            }
+
+            const tabledOrderWithDriver = this.table.rows.find((order) => order.get('driver_assigned')?.public_id === driverId);
+            if (tabledOrderWithDriver) {
+                return tabledOrderWithDriver.get('driver_assigned');
+            }
+
+            return this.store.queryRecord('driver', { public_id: driverId, single: true });
+        };
+
         // wait for user to be loaded into service
         this.currentUser.on('user.loaded', () => {
             // Get socket instance
@@ -618,11 +689,24 @@ export default class OperationsOrdersIndexController extends BaseController {
             // Listen for channel subscription
             (async () => {
                 for await (let output of channel) {
-                    const { event } = output;
+                    const { event, data } = output;
+                    debug(`Socket Event : ${event} : ${JSON.stringify(output)}`);
 
-                    // if an order event refresh orders
-                    if (typeof event === 'string' && listening.includes(event)) {
-                        this.hostRouter.refresh();
+                    if (event === 'order.driver_assigned') {
+                        const order = await findOrder(data.id);
+                        const driver = await findDriver(data.driver_assigned);
+
+                        if (order && driver) {
+                            order.set('driver_assigned', driver);
+                        }
+                    }
+
+                    if (event === 'order.ready') {
+                        const order = await findOrder(data.id);
+
+                        if (order) {
+                            order.reload();
+                        }
                     }
                 }
             })();
@@ -949,9 +1033,10 @@ export default class OperationsOrdersIndexController extends BaseController {
         this.crud.bulkDelete(selected, {
             modelNamePath: `public_id`,
             acceptButtonText: 'Delete Orders',
+            resolveModelName: (model) => `${model.get('tracking_number.tracking_number')} - ${model.get('public_id')}`,
             onSuccess: async () => {
+                this.table.untoggleAllRows();
                 await this.hostRouter.refresh();
-                this.table.untoggleSelectAll();
             },
         });
     }
@@ -977,14 +1062,15 @@ export default class OperationsOrdersIndexController extends BaseController {
             modelNamePath: `public_id`,
             actionPath: `orders/bulk-cancel`,
             actionMethod: `PATCH`,
-            onConfirm: (canceledOrders) => {
-                canceledOrders.forEach((order) => {
+            resolveModelName: (model) => `${model.get('tracking_number.tracking_number')} - ${model.get('public_id')}`,
+            withSelected: (orders) => {
+                orders.forEach((order) => {
                     order.set('status', 'canceled');
                 });
             },
             onSuccess: async () => {
+                this.table.untoggleAllRows();
                 await this.hostRouter.refresh();
-                this.table.untoggleSelectAll();
             },
         });
     }
@@ -1010,14 +1096,61 @@ export default class OperationsOrdersIndexController extends BaseController {
             modelNamePath: 'public_id',
             actionPath: 'orders/bulk-dispatch',
             actionMethod: 'POST',
-            onConfirm: (dispatchedOrders) => {
-                dispatchedOrders.forEach((order) => {
+            resolveModelName: (model) => `${model.get('tracking_number.tracking_number')} - ${model.get('public_id')}`,
+            withSelected: (orders) => {
+                orders.forEach((order) => {
                     order.set('status', 'dispatched');
                 });
             },
             onSuccess: async () => {
+                this.table.untoggleAllRows();
                 await this.hostRouter.refresh();
-                this.table.untoggleSelectAll();
+            },
+        });
+    }
+
+    /**
+     * Dispatches multiple selected orders.
+     *
+     * @param {Array} [selected=[]] - Orders selected for dispatch.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
+    @action bulkAssignDriver(selected = []) {
+        selected = selected.length > 0 ? selected : this.table.selectedRows;
+
+        if (!isArray(selected) || selected.length === 0) {
+            return;
+        }
+
+        this.crud.bulkAction('assign driver', selected, {
+            template: 'modals/bulk-assign-driver',
+            acceptButtonText: 'Assign Driver to Orders',
+            acceptButtonScheme: 'magic',
+            acceptButtonIcon: 'user-plus',
+            acceptButtonDisabled: true,
+            modelNamePath: 'public_id',
+            actionPath: 'orders/bulk-assign-driver',
+            actionMethod: 'PATCH',
+            driverAssigned: null,
+            fetchParams: {},
+            resolveModelName: (model) => `${model.get('tracking_number.tracking_number')} - ${model.get('public_id')}`,
+            selectDriver: (driver) => {
+                this.modalsManager.setOptions({
+                    driverAssigned: driver,
+                    acceptButtonDisabled: driver ? false : true,
+                    fetchParams: driver ? { driver: driver.id } : {},
+                });
+            },
+            withSelected: (orders) => {
+                const driverAssigned = this.modalsManager.getOption('driverAssigned');
+                orders.forEach((order) => {
+                    order.set('driver_assigned', driverAssigned);
+                });
+            },
+            onSuccess: async () => {
+                this.table.untoggleAllRows();
+                await this.hostRouter.refresh();
             },
         });
     }

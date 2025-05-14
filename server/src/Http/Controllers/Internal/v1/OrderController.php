@@ -427,6 +427,59 @@ class OrderController extends FleetOpsController
     }
 
     /**
+     * Dispatches orders in bulk.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function bulkAssignDriver(BulkActionRequest $request)
+    {
+        ini_set('max_execution_time', 0);
+        
+        // Validate driver ID
+        if ($request->missing('driver')) {
+            return response()->error('No driver selected to assign orders to.');
+        }
+
+        /** @var \Illuminate\Database\Eloquent\Collection $orders */
+        $orders = Order::whereIn('uuid', $request->input('ids'))->get();
+
+        /** @var Driver $driver */
+        $driver = Driver::where('uuid', $request->input('driver'))->first();
+        if (!$driver) {
+            return response()->error('Invalid driver selected to assign orders to.');
+        }
+
+        $count      = $orders->count();
+        $failed     = [];
+        $successful = [];
+        $failures   = [];
+
+        foreach ($orders as $order) {
+            try {
+                $order->assignDriver($driver, $request->boolean('silent'));
+                $successful[] = $order->uuid;
+            } catch (\Exception $e) {
+                $failed[]   = $order->uuid;
+                $failures[] = [
+                    'id'     => $order->uuid,
+                    'reason' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return response()->json(
+            [
+                'status'       => 'OK',
+                'message'      => 'Assigned driver (' . $driver->name . ') to ' . $count . ' orders',
+                'count'        => $count,
+                'failed'       => $failed,
+                'failures'     => $failures,
+                'successful'   => $successful,
+            ]
+        );
+    }
+
+    /**
      * Updates a order to canceled and updates order activity.
      *
      * @param \Fleetbase\Http\Requests\CancelOrderRequest $request

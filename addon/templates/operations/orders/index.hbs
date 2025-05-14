@@ -97,6 +97,12 @@
                             <div>{{t "fleet-ops.operations.orders.index.dispatch-orders"}}</div>
                         </a>
                     </div>
+                    <div class="px-1">
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.bulkAssignDriver)}} disabled={{cannot "fleet-ops assign-driver-for order"}}>
+                            <div class="w-6"><FaIcon @icon="user-plus" @size="sm" /></div>
+                            <div>{{t "fleet-ops.operations.orders.index.assign-driver"}}</div>
+                        </a>
+                    </div>
                 </div>
             </DropdownButton>
         {{/if}}
