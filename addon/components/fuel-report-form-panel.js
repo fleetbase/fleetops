@@ -5,6 +5,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
+import Point from '@fleetbase/fleetops-data/utils/geojson/point';
 
 export default class FuelReportFormPanelComponent extends Component {
     @service store;
@@ -40,6 +41,13 @@ export default class FuelReportFormPanelComponent extends Component {
     @tracked controller;
 
     /**
+     * The coordinates input component context instance.
+     *
+     * @memberof FuelReportFormPanelComponent
+     */
+    @tracked coordinatesInputComponent;
+
+    /**
      * Constructs the component and applies initial state.
      */
     constructor(owner, { fuelReport = null, controller }) {
@@ -69,6 +77,8 @@ export default class FuelReportFormPanelComponent extends Component {
      */
     @task *save() {
         contextComponentCallback(this, 'onBeforeSave', this.fuelReport);
+
+        console.log(this.fuelReport);
 
         try {
             this.fuelReport = yield this.fuelReport.save();
@@ -104,8 +114,56 @@ export default class FuelReportFormPanelComponent extends Component {
         return contextComponentCallback(this, 'onPressCancel', this.fuelReport);
     }
 
+    /**
+     * Set the ruel report reporter
+     *
+     * @param {UserModel} user
+     * @memberof FuelReportFormPanelComponent
+     */
     @action setReporter(user) {
-        this.issue.set('reporter', user);
-        this.issue.set('reported_by_uuid', user.id);
+        this.fuelReport.set('reporter', user);
+        this.fuelReport.set('reported_by_uuid', user.id);
+    }
+
+    /**
+     * Sets the coordinates input component.
+     *
+     * @action
+     * @param {Object} coordinatesInputComponent - The coordinates input component to be set.
+     * @memberof PlaceFormPanelComponent
+     */
+    @action setCoordinatesInput(coordinatesInputComponent) {
+        this.coordinatesInputComponent = coordinatesInputComponent;
+    }
+
+    /**
+     * Handle autocomplete callback
+     *
+     * @param {AutocompleteEvent} { location }
+     * @memberof VehicleFormPanelComponent
+     */
+    @action onAutocomplete({ location }) {
+        if (location) {
+            this.fuelReport.setProperties({ location });
+
+            if (this.coordinatesInputComponent) {
+                this.coordinatesInputComponent.updateCoordinates(location);
+            }
+        }
+    }
+
+    /**
+     * Updates the Vehicle coordinates with the given latitude and longitude.
+     *
+     * @action
+     * @param {Object} coordinates - The latitude and longitude coordinates.
+     * @param {number} coordinates.latitude - Latitude value.
+     * @param {number} coordinates.longitude - Longitude value.
+     * @memberof PlaceFormPanelComponent
+     */
+    @action onCoordinatesChanged({ latitude, longitude }) {
+        const location = new Point(longitude, latitude);
+
+        this.fuelReport.setProperties({ location });
     }
 }
