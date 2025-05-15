@@ -1043,24 +1043,37 @@ class Order extends Model
     }
 
     /**
-     * Dispatches the order.
-     * Sets the dispatched flag and dispatched_at timestamp. Optionally saves the order and flushes attribute cache.
+     * Mark the order as dispatched, optionally persist the change,
+     * and fire the OrderDispatched domain event.
      *
-     * @param bool $save whether to save the order after dispatching
+     * @param bool $save Whether to save the model before firing the event.
+     *                   Pass false when you are already inside a larger
+     *                   persistence transaction.
      *
-     * @return mixed the result of the OrderDispatched event
+     * @throws \LogicException if the order is already dispatched
      */
-    public function dispatch($save = true)
+    public function dispatch(bool $save = true): static
     {
+        if ($this->dispatched) {
+            throw new \LogicException('Order is already dispatched.');
+        }
+
         $this->dispatched    = true;
         $this->dispatched_at = now();
 
-        if ($save === true) {
-            $this->save();
+        if ($save) {
+            // Save quietly to avoid duplicate model events;
+            // wrap in a transaction if your code is not already in one.
+            $this->saveQuietly();
+
+            // Flush any attribute cache that depends on persisted state
             $this->flushAttributesCache();
         }
 
-        return event(new OrderDispatched($this));
+        // Queue the OrderDispatched event to run after the DB commit succeeds
+        dispatch(fn () => event(new OrderDispatched($this)))->afterCommit();
+
+        return $this;
     }
 
     /**
@@ -1428,7 +1441,7 @@ class Order extends Model
                     if ($this->driver_assigned_uuid === $driver->uuid) {
                         return $this;
                     }
-                    
+
                     return $this->assignDriver($driver);
                 }
 
