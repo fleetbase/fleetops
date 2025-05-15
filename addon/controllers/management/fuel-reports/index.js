@@ -315,6 +315,9 @@ export default class ManagementFuelReportsIndexController extends BaseController
             onImportCompleted: () => {
                 this.hostRouter.refresh();
             },
+            onImportTemplate: () => {
+                window.open('https://flb-assets.s3.ap-southeast-1.amazonaws.com/import-templates/Fleetbase_Fuel_Report_Import_Template.xlsx');
+            },
         });
     }
 

@@ -1141,32 +1141,35 @@ class OrderController extends Controller
     }
 
     /**
-     * Updates the order payload destination with a valid place.
+     * Mark a specific place (waypoint, pickup, or drop-off) as the current
+     * destination for an order payload.
      *
      * @return \Fleetbase\Http\Resources\v1\Order
      */
     public function setDestination(string $id, string $placeId)
     {
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = Order::with(['payload.waypoints', 'payload.pickup', 'payload.dropoff'])->findRecordOrFail($id);
         } catch (ModelNotFoundException $exception) {
-            return response()->json(
-                [
-                    'error' => 'Order resource not found.',
-                ],
-                404
-            );
+            return response()->apiError('Order resource not found.', 404);
         }
 
-        $place = $order->payload->waypoints->firstWhere('public_id', $placeId);
+        // Get the order payload
+        $payload = $order->payload;
+
+        // Resolve the place
+        $place = $payload->waypoints->firstWhere('public_id', $placeId)
+            ?? (($payload->pickup && $payload->pickup->public_id === $placeId) ? $payload->pickup : null)
+            ?? (($payload->dropoff && $payload->dropoff->public_id === $placeId) ? $payload->dropoff : null);
 
         if (!$place) {
-            return response()->apiError('Place resource is not a valid destination.');
+            return response()->apiError('Place resource is not a valid destination.', 422);
         }
 
-        $order->payload->setCurrentWaypoint($place);
+        // Persist destination choice
+        $payload->setCurrentWaypoint($place);
 
-        return new OrderResource($order);
+        return new OrderResource($order->refresh());
     }
 
     /**

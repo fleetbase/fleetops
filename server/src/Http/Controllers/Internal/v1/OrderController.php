@@ -429,17 +429,6 @@ class OrderController extends FleetOpsController
     /**
      * Assigns a driver to many orders and queues individual driver‑notification tasks.
      *
-     * Flow
-     * ────
-     * 1. Validate the incoming request (order UUID list + driver UUID).
-     * 2. Resolve the selected driver or return an error.
-     * 3. Atomically update the `driver_assigned_uuid` (and `updated_at`) on all
-     *    target orders in one SQL statement wrapped in a transaction.
-     * 4. Dispatch an inline queued closure that re‑hydrates the driver and streams
-     *    the affected orders, sending a `notifyDriverAssigned()` call for each.
-     *    The job is pushed only *after* the DB commit (`afterCommit()`).
-     * 5. Return an immediate JSON response to the client.
-     *
      * The queued closure keeps payloads lean (just two UUID strings) and
      * prevents the HTTP request from blocking on network‑bound notification work.
      *
@@ -447,12 +436,7 @@ class OrderController extends FleetOpsController
      *                                   - ids    : string[] list of order UUIDs
      *                                   - driver : string   driver UUID
      *
-     * @return Response JSON body:
-     *                  {
-     *                  status   : "OK",
-     *                  message  : "...",
-     *                  count    : int
-     *                  }
+     * @return \Illuminate\Http\Response
      */
     public function bulkAssignDriver(BulkActionRequest $request)
     {
@@ -482,29 +466,31 @@ class OrderController extends FleetOpsController
         });
 
         // Queue Per‑Order Notifications
-        dispatch(function () use ($orderUuids, $driver): void {
-            // Re‑hydrate Driver To Avoid Serializing The Full Model
-            $driver = Driver::whereUuid($driver->uuid)->first();
+        if (!$request->boolean('silent')) {
+            dispatch(function () use ($orderUuids, $driver): void {
+                // Re‑hydrate Driver To Avoid Serializing The Full Model
+                $driver = Driver::whereUuid($driver->uuid)->first();
 
-            // Stream Orders To Keep Memory Footprint Low
-            Order::whereIn('uuid', $orderUuids)
-                ->cursor()
-                ->each(function (Order $order) use ($driver): void {
-                    // Synchronize In‑Memory Model
-                    $order->setRelation('driverAssigned', $driver);
-                    $order->driver_assigned_uuid = $driver->uuid;
+                // Stream Orders To Keep Memory Footprint Low
+                Order::whereIn('uuid', $orderUuids)
+                    ->cursor()
+                    ->each(function (Order $order) use ($driver): void {
+                        // Synchronize In‑Memory Model
+                        $order->setRelation('driverAssigned', $driver);
+                        $order->driver_assigned_uuid = $driver->uuid;
 
-                    try {
-                        $order->notifyDriverAssigned();
-                    } catch (\Throwable $e) {
-                        logger()->warning(
-                            'Failed notifying driver on order ' . $order->uuid,
-                            ['error' => $e->getMessage()]
-                        );
-                    }
-                });
-        })
-        ->afterCommit();
+                        try {
+                            $order->notifyDriverAssigned();
+                        } catch (\Throwable $e) {
+                            logger()->warning(
+                                'Failed notifying driver on order ' . $order->uuid,
+                                ['error' => $e->getMessage()]
+                            );
+                        }
+                    });
+            })
+            ->afterCommit();
+        }
 
         return response()->json([
             'status'  => 'OK',

@@ -422,6 +422,9 @@ export default class ManagementVendorsIndexController extends BaseController {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
             },
+            onImportTemplate: () => {
+                window.open('https://flb-assets.s3.ap-southeast-1.amazonaws.com/import-templates/Fleetbase_Vendor_Import_Template.xlsx');
+            },
         });
     }
 

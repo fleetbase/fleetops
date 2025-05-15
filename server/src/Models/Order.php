@@ -32,6 +32,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
@@ -168,6 +169,7 @@ class Order extends Model
         'has_driver_assigned',
         'pickup_name',
         'dropoff_name',
+        'return_name',
         'payload_id',
         'purchase_rate_id',
         'is_scheduled',
@@ -211,6 +213,25 @@ class Order extends Model
         'id',
         '_key',
     ];
+
+    /**
+     * Enforce a morph map.
+     */
+    public static function boot(): void
+    {
+        parent::boot();
+
+        Relation::morphMap(
+            [
+                'Fleetbase\\Models\\Contact'   => Contact::class,
+                '\\Fleetbase\\Models\\Contact' => Contact::class,
+                'Fleetbase\\Models\\Driver'    => Driver::class,
+                '\\Fleetbase\\Models\\Driver'  => Driver::class,
+                'Fleetbase\\Models\\Vendor'    => Vendor::class,
+                '\\Fleetbase\\Models\\Vendor'  => Vendor::class,
+            ]
+        );
+    }
 
     /**
      * Get the activity log options for the model.
@@ -314,7 +335,7 @@ class Order extends Model
      */
     public function vehicle(): BelongsTo|Builder
     {
-        return $this->belongsTo(Vehicle::class)->without(['devices', 'vendor', 'fleets']);
+        return $this->belongsTo(Vehicle::class, 'vehicle_assigned_uuid')->without(['devices', 'vendor', 'fleets']);
     }
 
     public function comments(): HasMany
@@ -537,6 +558,14 @@ class Order extends Model
     public function getDropoffNameAttribute()
     {
         return $this->payload ? $this->payload->dropoff_name : null;
+    }
+
+    /**
+     * The return location name.
+     */
+    public function getReturnNameAttribute()
+    {
+        return $this->payload ? $this->payload->return_name : null;
     }
 
     /**

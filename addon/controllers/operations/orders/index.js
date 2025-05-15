@@ -8,7 +8,6 @@ import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';
 import { timeout } from 'ember-concurrency';
 import { task } from 'ember-concurrency-decorators';
-import fromStore from '@fleetbase/ember-core/decorators/from-store';
 
 export default class OperationsOrdersIndexController extends BaseController {
     @service currentUser;
@@ -52,6 +51,8 @@ export default class OperationsOrdersIndexController extends BaseController {
         'scheduled_at',
         'status',
         'type',
+        'without_driver',
+        'bulk_query',
         'layout',
         'drawerOpen',
         'drawerTab',
@@ -290,6 +291,27 @@ export default class OperationsOrdersIndexController extends BaseController {
     @tracked statusOptions = [];
 
     /**
+     * Filterable sorder configs.
+     *
+     * @type {Array}
+     */
+    @tracked orderConfigs = [];
+
+    /**
+     * Free text input for a bulk query.
+     *
+     * @type {String}
+     */
+    @tracked bulkSearchValue = '';
+
+    /**
+     * Actual bulk query.
+     *
+     * @type {String}
+     */
+    @tracked bulk_query = '';
+
+    /**
      * Flag to determine if the layout is 'map'
      *
      * @type {Boolean}
@@ -316,13 +338,6 @@ export default class OperationsOrdersIndexController extends BaseController {
      * @type {Boolean}
      */
     @equal('layout', 'analytics') isAnalyticsLayout;
-
-    /**
-     * All available order configs.
-     *
-     * @memberof OperationsOrdersIndexController
-     */
-    @fromStore('order-config', { limit: -1 }) orderConfigs;
 
     /**
      * All columns applicable for orders
@@ -437,6 +452,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             filterComponent: 'filter/model',
             filterComponentPlaceholder: 'Select vehicle for order',
             filterParam: 'vehicle',
+            modelNamePath: 'display_name',
             model: 'vehicle',
         },
         {
@@ -567,7 +583,9 @@ export default class OperationsOrdersIndexController extends BaseController {
             label: '',
             cellComponent: 'table/cell/base',
             filterParam: 'without_driver',
-            filterComponenr: 'checkbox',
+            filterComponent: 'filter/checkbox',
+            filterLabel: 'Without Driver Assigned',
+            noFilterLabel: true,
             filterable: true,
             hidden: true,
         },
@@ -626,11 +644,20 @@ export default class OperationsOrdersIndexController extends BaseController {
         super(...arguments);
         this.listenForOrderEvents();
         this.getOrderStatusOptions.perform();
+        this.getOrderConfigs.perform();
     }
 
     @task *getOrderStatusOptions() {
         try {
             this.statusOptions = yield this.fetch.get('orders/statuses');
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    @task *getOrderConfigs() {
+        try {
+            this.orderConfigs = yield this.store.query('order-config', { limit: -1 });
         } catch (error) {
             this.notifications.serverError(error);
         }
@@ -683,9 +710,6 @@ export default class OperationsOrdersIndexController extends BaseController {
             // Listed on company channel
             const channel = socket.subscribe(channelId);
 
-            // Events which should trigger refresh
-            const listening = ['order.ready', 'order.driver_assigned'];
-
             // Listen for channel subscription
             (async () => {
                 for await (let output of channel) {
@@ -702,11 +726,7 @@ export default class OperationsOrdersIndexController extends BaseController {
                     }
 
                     if (event === 'order.ready') {
-                        const order = await findOrder(data.id);
-
-                        if (order) {
-                            order.reload();
-                        }
+                        this.hostRouter.refresh();
                     }
                 }
             })();
@@ -1123,6 +1143,13 @@ export default class OperationsOrdersIndexController extends BaseController {
             return;
         }
 
+        const updateFetchParams = (key, value) => {
+            const current = this.modalsManager.getOption('fetchParams') ?? {};
+            const next = value === undefined ? Object.fromEntries(Object.entries(current).filter(([k]) => k !== key)) : { ...current, [key]: value };
+
+            this.modalsManager.setOption('fetchParams', next);
+        };
+
         this.crud.bulkAction('assign driver', selected, {
             template: 'modals/bulk-assign-driver',
             acceptButtonText: 'Assign Driver to Orders',
@@ -1133,14 +1160,20 @@ export default class OperationsOrdersIndexController extends BaseController {
             actionPath: 'orders/bulk-assign-driver',
             actionMethod: 'PATCH',
             driverAssigned: null,
+            notifyDriver: true,
             fetchParams: {},
             resolveModelName: (model) => `${model.get('tracking_number.tracking_number')} - ${model.get('public_id')}`,
             selectDriver: (driver) => {
                 this.modalsManager.setOptions({
                     driverAssigned: driver,
                     acceptButtonDisabled: driver ? false : true,
-                    fetchParams: driver ? { driver: driver.id } : {},
                 });
+
+                updateFetchParams('driver', driver?.id);
+            },
+            toggleNotifyDriver: (checked) => {
+                this.modalsManager.setOption('notifyDriver', checked);
+                updateFetchParams('silent', !checked);
             },
             withSelected: (orders) => {
                 const driverAssigned = this.modalsManager.getOption('driverAssigned');
@@ -1173,5 +1206,14 @@ export default class OperationsOrdersIndexController extends BaseController {
         this.fetch.get('fleet-ops/metrics', { discover: ['orders_in_progress'] }).then((response) => {
             this.activeOrdersCount = response.orders_in_progress;
         });
+    }
+
+    @action commitBulkQuery() {
+        this.bulk_query = this.bulkSearchValue;
+    }
+
+    @action removeBulkQuery() {
+        this.bulkSearchValue = '';
+        this.bulk_query = null;
     }
 }

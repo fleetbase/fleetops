@@ -667,11 +667,13 @@ class Place extends Model
     public static function createFromImportRow(array $row, ?string $importId = null, $country = null): ?Place
     {
         $addressFields = [
-            'street_number' => ['alias' => ['number', 'house_number', 'st_number']],
+            'street_number' => ['alias' => ['number', 'house_number', 'st_number', 'street_number']],
+            'street1'       => ['alias' => ['street', 'address']],
             'street2'       => ['alias' => ['unit', 'unit_number']],
             'city'          => ['alias' => ['town']],
             'neighborhood'  => ['alias' => ['district']],
             'province'      => ['alias' => ['state']],
+            'country'       => ['alias' => []],
             'postal_code'   => ['alias' => ['postal', 'zip', 'zip_code']],
             'phone'         => ['alias' => ['phone', 'mobile', 'phone_number', 'number', 'cell', 'cell_phone', 'mobile_number', 'contact_number', 'tel', 'telephone', 'telephone_number']],
             'location'      => ['alias' => ['position']],
@@ -734,7 +736,7 @@ class Place extends Model
         $place->phone = Utils::or($row, $addressFields['phone']['alias']);
 
         // set meta data
-        $meta = collect($row)->except(['name', ...$addressFields['street_number']['alias'], ...$addressFields['street2']['alias'], ...$addressFields['city']['alias'], ...$addressFields['neighborhood']['alias'], ...$addressFields['province']['alias'], ...$addressFields['postal_code']['alias'], ...$addressFields['phone']['alias']])->toArray();
+        $meta = collect($row)->except(['name', ...$addressFields['street_number']['alias'], ...$addressFields['street1']['alias'], ...$addressFields['street2']['alias'], ...$addressFields['city']['alias'], ...$addressFields['neighborhood']['alias'], ...$addressFields['province']['alias'], ...$addressFields['postal_code']['alias'], ...$addressFields['phone']['alias']])->toArray();
         $place->setMeta($meta);
 
         // Handle location
