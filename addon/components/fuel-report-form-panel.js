@@ -78,8 +78,6 @@ export default class FuelReportFormPanelComponent extends Component {
     @task *save() {
         contextComponentCallback(this, 'onBeforeSave', this.fuelReport);
 
-        console.log(this.fuelReport);
-
         try {
             this.fuelReport = yield this.fuelReport.save();
         } catch (error) {

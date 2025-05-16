@@ -1083,10 +1083,6 @@ class Order extends Model
      */
     public function dispatch(bool $save = true): static
     {
-        if ($this->dispatched) {
-            throw new \LogicException('Order is already dispatched.');
-        }
-
         $this->dispatched    = true;
         $this->dispatched_at = now();
 

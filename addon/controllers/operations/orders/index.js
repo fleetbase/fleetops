@@ -710,6 +710,11 @@ export default class OperationsOrdersIndexController extends BaseController {
             // Listed on company channel
             const channel = socket.subscribe(channelId);
 
+            // Disconnect when transitioning
+            this.hostRouter.on('routeWillChange', () => {
+                channel.close();
+            });
+
             // Listen for channel subscription
             (async () => {
                 for await (let output of channel) {
@@ -724,17 +729,8 @@ export default class OperationsOrdersIndexController extends BaseController {
                             order.set('driver_assigned', driver);
                         }
                     }
-
-                    if (event === 'order.ready') {
-                        this.hostRouter.refresh();
-                    }
                 }
             })();
-
-            // disconnect when transitioning
-            this.hostRouter.on('routeWillChange', () => {
-                channel.close();
-            });
         });
     }
 

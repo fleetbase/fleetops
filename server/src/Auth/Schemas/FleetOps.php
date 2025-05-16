@@ -115,6 +115,11 @@ class FleetOps
             'action'         => ['onboard'],
             'remove_actions' => ['delete', 'export', 'list', 'create'],
         ],
+        [
+            'name'           => 'notification-settings',
+            'action'         => [],
+            'remove_actions' => ['export', 'create'],
+        ],
     ];
 
     /**

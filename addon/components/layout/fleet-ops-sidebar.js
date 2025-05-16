@@ -154,6 +154,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 permission: 'fleet-ops view payments',
                 visible: this.abilities.can('fleet-ops see payments'),
             },
+            {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.notifications',
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.notifications'),
+                icon: 'bell',
+                route: 'settings.notifications',
+                permission: 'fleet-ops view notification-settings',
+                visible: this.abilities.can('fleet-ops see notification-settings'),
+            },
         ];
 
         const createPanel = (intl, routePrefix, items = []) => ({

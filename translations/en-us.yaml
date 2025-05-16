@@ -298,6 +298,7 @@ fleet-ops:
         loading-vehicle: Loading fleet vehicles...
     layout:
       fleet-ops-sidebar:
+        notifications: Notifications
         payments: Payments
         navigator-app: Navigator App
         resources: Resources
@@ -1630,6 +1631,10 @@ fleet-ops:
           zone-help-text: Restrict this service to order request originating from a specific zone.
           zone-placeholder: Restrict to zone
   settings:
+    notifications:
+      fleet-ops-notification-settings: Fleet-Ops Notification Settings
+      fleet-ops-notifications: Fleet-Ops Notifications
+      configure-notifications: Configure Notifications
     navigator-app:
       navigator-app-settings: Navigator App Settings
     payments:

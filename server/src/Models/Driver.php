@@ -207,7 +207,7 @@ class Driver extends Model
      */
     public function user()
     {
-        return $this->belongsTo(User::class)->select(['uuid', 'company_uuid', 'public_id', 'avatar_uuid', 'name', 'phone', 'email'])->without(['driver'])->withTrashed();
+        return $this->belongsTo(User::class)->select(['uuid', 'company_uuid', 'public_id', 'avatar_uuid', 'name', 'phone', 'email', 'type', 'status', 'last_login'])->without(['driver'])->withTrashed();
     }
 
     /**
