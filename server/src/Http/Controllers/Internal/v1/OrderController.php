@@ -427,6 +427,83 @@ class OrderController extends FleetOpsController
     }
 
     /**
+     * Assigns a driver to many orders and queues individual driver‑notification tasks.
+     *
+     * The queued closure keeps payloads lean (just two UUID strings) and
+     * prevents the HTTP request from blocking on network‑bound notification work.
+     *
+     * @param BulkActionRequest $request Validated request with:
+     *                                   - ids    : string[] list of order UUIDs
+     *                                   - driver : string   driver UUID
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function bulkAssignDriver(BulkActionRequest $request)
+    {
+        // Validate Inputs
+        $data = $request->validate([
+            'ids'    => 'required|array',
+            'ids.*'  => 'uuid',
+            'driver' => 'required|uuid',
+        ]);
+
+        // Resolve Driver
+        /** @var Driver|null $driver */
+        $driver = Driver::whereUuid($data['driver'])->first();
+        if (!$driver) {
+            return response()->error('Invalid driver selected to assign orders to.');
+        }
+
+        // Prepare Order UUID Collection
+        $orderUuids = collect($data['ids'])->unique()->values();
+
+        // Bulk Update Inside A Transaction
+        DB::transaction(function () use ($orderUuids, $driver): void {
+            Order::whereIn('uuid', $orderUuids)->update([
+                'driver_assigned_uuid' => $driver->uuid,
+                'updated_at'           => now(),
+            ]);
+        });
+
+        // Queue Per‑Order Notifications
+        if (!$request->boolean('silent')) {
+            dispatch(function () use ($orderUuids, $driver): void {
+                // Re‑hydrate Driver To Avoid Serializing The Full Model
+                $driver = Driver::whereUuid($driver->uuid)->first();
+
+                // Stream Orders To Keep Memory Footprint Low
+                Order::whereIn('uuid', $orderUuids)
+                    ->cursor()
+                    ->each(function (Order $order) use ($driver): void {
+                        // Synchronize In‑Memory Model
+                        $order->setRelation('driverAssigned', $driver);
+                        $order->driver_assigned_uuid = $driver->uuid;
+
+                        try {
+                            $order->notifyDriverAssigned();
+                        } catch (\Throwable $e) {
+                            logger()->warning(
+                                'Failed notifying driver on order ' . $order->uuid,
+                                ['error' => $e->getMessage()]
+                            );
+                        }
+                    });
+            })
+            ->afterCommit();
+        }
+
+        return response()->json([
+            'status'  => 'OK',
+            'message' => sprintf(
+                'Queued assignment of driver (%s) to %d orders',
+                $driver->name,
+                $orderUuids->count()
+            ),
+            'count'   => $orderUuids->count(),
+        ]);
+    }
+
+    /**
      * Updates a order to canceled and updates order activity.
      *
      * @param \Fleetbase\Http\Requests\CancelOrderRequest $request

@@ -261,6 +261,16 @@ class Issue extends Model
         $reporterUser = is_string($reporter) ? User::where('name', 'like', '%' . $reporter . '%')->where('company_uuid', session('user'))->first() : null;
         $vehicle      = is_string($vehicle) ? Vehicle::findByName($vehicle) : null;
 
+        // Get location
+        $latitude       = Utils::or($row, ['latitude', 'lat']);
+        $longitude      = Utils::or($row, ['longitude', 'lng', 'long']);
+
+        if ($latitude && $longitude) {
+            $location = new Point($latitude, $longitude);
+        } else {
+            $location = Utils::getPointFromMixed(Utils::arrayFrom(data_get($row, 'location')));
+        }
+
         // Create issue
         $issue = new static([
             'company_uuid' => session('company'),
@@ -268,7 +278,7 @@ class Issue extends Model
             'report'       => $report,
             'category'     => $category,
             'type'         => $type,
-            'location'     => Utils::parsePointToWkt(new Point(0, 0)),
+            'location'     => Utils::parsePointToWkt($location ?? new Point(0, 0)),
             'status'       => 'pending',
         ]);
 

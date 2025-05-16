@@ -319,6 +319,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->patch('route/{id}', $controller('editOrderRoute'));
                                 $router->patch('update-activity/{id}', $controller('updateActivity'));
                                 $router->get('{id}/proofs/{subjectId?}', $controller('proofs'));
+                                $router->patch('bulk-assign-driver', $controller('bulkAssignDriver'));
                                 $router->patch('bulk-cancel', $controller('bulkCancel'));
                                 $router->post('bulk-dispatch', $controller('bulkDispatch'));
                                 $router->patch('cancel', $controller('cancel'));
@@ -464,6 +465,10 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('entity-editing-settings', 'SettingController@saveEntityEditingSettings');
                                         $router->post('driver-onboard-settings', 'SettingController@savedDriverOnboardSettings');
                                         $router->get('driver-onboard-settings/{companyId}', 'SettingController@getDriverOnboardSettings');
+                                        $router->get('notification-notifiables', 'SettingController@getNotifiables');
+                                        $router->get('notification-registry', 'SettingController@getNotificationRegistry');
+                                        $router->get('notification-settings', 'SettingController@getNotificationSettings');
+                                        $router->post('notification-settings', 'SettingController@saveNotificationSettings');
                                     }
                                 );
                                 $router->group(

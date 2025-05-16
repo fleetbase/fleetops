@@ -145,7 +145,14 @@
                         />
                     </InputGroup>
                     <InputGroup @name={{t "fleet-ops.common.coordinates"}} @wrapperClass="col-span-2">
-                        <CoordinatesInput @value={{this.fuelReport.location}} @onChange={{fn (mut this.fuelReport.location)}} @disabled={{unauthorized}} />
+                        <CoordinatesInput
+                            @value={{this.fuelReport.location}}
+                            @onChange={{this.onCoordinatesChanged}}
+                            @onGeocode={{this.onAutocomplete}}
+                            @onUpdatedFromMap={{this.onCoordinatesChanged}}
+                            @onInit={{this.setCoordinatesInput}}
+                            @disabled={{unauthorized}}
+                        />
                     </InputGroup>
 
                     <RegistryYield @registry="fleet-ops:component:fuel-report-form-panel:details" as |RegistryComponent|>

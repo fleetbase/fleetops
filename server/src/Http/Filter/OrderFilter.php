@@ -100,7 +100,7 @@ class OrderFilter extends Filter
         }
     }
 
-    public function status(string $status)
+    public function status(string|array $status)
     {
         // handle `active` alias status
         if ($status === 'active') {
@@ -108,12 +108,10 @@ class OrderFilter extends Filter
             $this->builder->whereNotIn('status', ['created', 'completed', 'expired', 'order_canceled', 'canceled', 'pending']);
             // remove the searchBuilder where clause
             $this->builder->removeWhereFromQuery('status', 'active');
-        } elseif (is_string($status)) {
-            $this->builder->where('status', $status);
         }
 
-        // if status is array
-        if ($this->request->isArray('status')) {
+        $status = Utils::arrayFrom($status);
+        if ($status) {
             $this->builder->whereIn('status', $status);
         }
     }
@@ -235,6 +233,23 @@ class OrderFilter extends Filter
         );
     }
 
+    public function vehicle(string $vehicle)
+    {
+        if (Str::isUuid($vehicle)) {
+            $this->builder->where('vehicle_assigned_uuid', $vehicle);
+        } else {
+            $this->builder->where(function () use ($vehicle) {
+                $this->builder->whereHas(
+                    'vehicleAssigned',
+                    function ($query) use ($vehicle) {
+                        $query->where('public_id', $vehicle);
+                        $query->orWhere('internal_id', $vehicle);
+                    }
+                );
+            });
+        }
+    }
+
     public function driver(string $driver)
     {
         if (Str::isUuid($driver)) {
@@ -318,6 +333,69 @@ class OrderFilter extends Filter
             } else {
                 $this->builder->whereNotIn('public_id', $exclude);
             }
+        }
+    }
+
+    public function bulkQuery($ids)
+    {
+        $ids     = Utils::arrayFrom($ids);
+        $firstId = Arr::first($ids);
+        $this->builder->where(function ($query) use ($ids, $firstId) {
+            if ($firstId) {
+                if (Utils::isPublicId($firstId)) {
+                    return $query->whereIn('public_id', $ids);
+                }
+
+                if (Str::isUuid($firstId)) {
+                    return $query->whereIn('uuid', $ids);
+                }
+
+                $query->whereIn('internal_id', $ids);
+                $query->orWhereHas('trackingNumber', function ($query) use ($ids) {
+                    $query->whereIn('tracking_number', $ids);
+                });
+            }
+        });
+    }
+
+    public function createdAt($createdAt)
+    {
+        $createdAt = Utils::dateRange($createdAt);
+
+        if (is_array($createdAt)) {
+            $this->builder->whereBetween('created_at', $createdAt);
+        } else {
+            $this->builder->whereDate('created_at', $createdAt);
+        }
+    }
+
+    public function updatedAt($updatedAt)
+    {
+        $updatedAt = Utils::dateRange($updatedAt);
+
+        if (is_array($updatedAt)) {
+            $this->builder->whereBetween('updated_at', $updatedAt);
+        } else {
+            $this->builder->whereDate('updated_at', $updatedAt);
+        }
+    }
+
+    public function scheduledAt($scheduledAt)
+    {
+        $scheduledAt = Utils::dateRange($scheduledAt);
+
+        if (is_array($scheduledAt)) {
+            $this->builder->whereBetween('scheduled_at', $scheduledAt);
+        } else {
+            $this->builder->whereDate('scheduled_at', $scheduledAt);
+        }
+    }
+
+    public function withoutDriver($without)
+    {
+        $without = Utils::castBoolean($without);
+        if ($without) {
+            $this->builder->whereNull('driver_assigned_uuid');
         }
     }
 }

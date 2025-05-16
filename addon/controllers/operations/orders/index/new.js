@@ -7,7 +7,7 @@ import { not, equal, alias } from '@ember/object/computed';
 import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';
 import { dasherize } from '@ember/string';
-import { later, next } from '@ember/runloop';
+import { next } from '@ember/runloop';
 import { task } from 'ember-concurrency-decorators';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import { debug } from '@ember/debug';
@@ -295,7 +295,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         });
     }
 
-    @action createOrder() {
+    @action async createOrder() {
         if (!this.isValid) {
             return;
         }
@@ -347,34 +347,24 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         this.isCreatingOrder = true;
 
         try {
-            return order
-                .save()
-                .then((order) => {
-                    // trigger event that fleet-ops created an order
-                    this.universe.trigger('fleet-ops.order.created', order);
+            const createdOrder = await order.save();
 
-                    // transition to order view
-                    return this.hostRouter.transitionTo(`console.fleet-ops.operations.orders.index.view`, order).then(() => {
-                        this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.new.success-message', { orderId: order.public_id }));
-                        this.loader.removeLoader();
-                        this.resetForm();
-                        later(
-                            this,
-                            () => {
-                                this.hostRouter.refresh();
-                            },
-                            100
-                        );
-                    });
-                })
-                .catch((error) => {
-                    this.isCreatingOrder = false;
-                    this.notifications.serverError(error);
-                    this.loader.removeLoader();
-                });
-        } catch (error) {
-            this.notifications.error(error.message);
+            // trigger event that fleet-ops created an order
+            this.universe.trigger('fleet-ops.order.created', createdOrder);
+
+            // transition to order view
+            await this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index.view', createdOrder);
+
+            // order created successfully
+            this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.new.success-message', { orderId: createdOrder.public_id }));
             this.loader.removeLoader();
+            this.resetForm();
+        } catch (error) {
+            debug(`Error Creating Order : ${error.message}`);
+            this.notifications.serverError(error);
+            this.loader.removeLoader();
+        } finally {
+            this.isCreatingOrder = false;
         }
     }
 
@@ -601,8 +591,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             setProperties(payload, { type: this.order.type });
         }
 
-        this.fetch
-            .post('service-quotes/preliminary', {
+        try {
+            const serviceQuotes = await this.fetch.post('service-quotes/preliminary', {
                 payload: this._getSerializedPayload(payload),
                 distance,
                 time,
@@ -611,20 +601,18 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                 facilitator,
                 scheduled_at,
                 is_route_optimized,
-            })
-            .then((serviceQuotes) => {
-                set(this, 'serviceQuotes', isArray(serviceQuotes) ? serviceQuotes : []);
-
-                if (this.serviceQuotes.length && this.isUsingIntegratedVendor) {
-                    set(this, 'selectedServiceQuote', this.serviceQuotes.firstObject?.uuid);
-                }
-            })
-            .catch(() => {
-                this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.service-warning'));
-            })
-            .finally(() => {
-                this.isFetchingQuotes = false;
             });
+
+            set(this, 'serviceQuotes', isArray(serviceQuotes) ? serviceQuotes : []);
+
+            if (this.serviceQuotes.length && this.isUsingIntegratedVendor) {
+                set(this, 'selectedServiceQuote', this.serviceQuotes.firstObject?.uuid);
+            }
+        } catch {
+            this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.service-warning'));
+        } finally {
+            this.isFetchingQuotes = false;
+        }
     }
 
     _getSerializedPayload(payload) {
@@ -1096,6 +1084,9 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         const selectedServiceRate = undefined;
         const selectedServiceQuote = undefined;
         const servicable = false;
+        const customFieldGroups = [];
+        const customFields = [];
+        const customFieldValues = {};
 
         this.removeRoutingControlPreview();
         this.removeOptimizedRoute();
@@ -1115,6 +1106,9 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             selectedServiceQuote,
             selectedServiceRate,
             servicable,
+            customFieldGroups,
+            customFields,
+            customFieldValues,
         });
         this.resetInterface();
     }
@@ -1139,6 +1133,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
      * @task
      */
     @task *loadCustomFields(orderConfig) {
+        this.store.unloadAll('custom-field');
+
         this.customFieldGroups = yield this.store.query('category', { owner_uuid: orderConfig.id, for: 'custom_field_group' });
         this.customFields = yield this.store.query('custom-field', { subject_uuid: orderConfig.id });
         this.groupCustomFields();
@@ -1149,15 +1145,20 @@ export default class OperationsOrdersIndexNewController extends BaseController {
      * Organizes custom fields into their respective groups.
      */
     groupCustomFields() {
+        const customFieldGroups = [];
         for (let i = 0; i < this.customFieldGroups.length; i++) {
             const group = this.customFieldGroups[i];
             group.set(
                 'customFields',
                 this.customFields.filter((customField) => {
+                    customField.set('value', null);
                     return customField.category_uuid === group.id;
                 })
             );
+            customFieldGroups.push(group);
         }
+
+        this.customFieldGroups = customFieldGroups;
     }
 
     @action setCustomFieldValue(value, customField) {
@@ -1192,19 +1193,21 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         // this.order.set('facilitator_type', `fleet-ops:${model.facilitator_type}`);
         this.order.set('driver', null);
 
-        this.isUsingIntegratedVendor = model.isIntegratedVendor;
-        this.servicable = model.isIntegratedVendor;
+        this.isUsingIntegratedVendor = model?.isIntegratedVendor;
+        this.servicable = model?.isIntegratedVendor;
 
-        if (model.service_types?.length) {
+        if (model?.service_types?.length) {
             this.integratedVendorServiceType = model.service_types.firstObject.key;
         }
 
-        if (model.isIntegratedVendor) {
+        if (model?.isIntegratedVendor) {
             this.getQuotes();
         }
 
         if (model) {
             this.driversQuery = { facilitator: model.id };
+        } else {
+            this.driversQuery = {};
         }
     }
 
@@ -1525,12 +1528,17 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             confirm: async (modal) => {
                 modal.startLoading();
 
-                const pendingFileUpload = modal.getOption('pendingFileUpload');
-                return entity.save().then(() => {
+                try {
+                    const pendingFileUpload = modal.getOption('pendingFileUpload');
+                    const savedEntity = await entity.save();
                     if (pendingFileUpload) {
                         return modal.invoke('uploadNewPhoto', pendingFileUpload);
                     }
-                });
+
+                    return savedEntity;
+                } catch (error) {
+                    this.notifications.serverError(error);
+                }
             },
         });
     }

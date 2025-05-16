@@ -124,7 +124,8 @@ export default class CustomFieldFormPanelComponent extends Component {
             this.customField.set('meta', {});
         }
 
-        this.customField.meta[key] = value;
+        const currentMeta = this.customField.meta ?? {};
+        this.customField.set('meta', { ...currentMeta, [key]: value });
     }
 
     /**

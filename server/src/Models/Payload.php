@@ -80,7 +80,7 @@ class Payload extends Model
      *
      * @var array
      */
-    protected $appends = ['pickup_name', 'dropoff_name'];
+    protected $appends = ['pickup_name', 'dropoff_name', 'return_name'];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -107,6 +107,14 @@ class Payload extends Model
         $pickup = $this->getPickupOrCurrentWaypoint();
 
         return $pickup->address ?? $pickup->name ?? $pickup->street1 ?? null;
+    }
+
+    /**
+     * Address/name of the return location.
+     */
+    public function getReturnNameAttribute()
+    {
+        return $this->return ? ($this->return->address ?? $this->return->name ?? $this->return->street1) : null;
     }
 
     /**

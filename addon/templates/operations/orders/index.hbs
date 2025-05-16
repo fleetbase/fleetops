@@ -66,6 +66,20 @@
 {{#if this.isTableLayout}}
     <Layout::Section::Header @title={{t "fleet-ops.common.orders"}} @onSearch={{perform this.search}}>
         <Button @icon="refresh" @onClick={{this.reload}} @helpText={{t "fleet-ops.common.reload-data"}} class="mr-2" />
+        <DropdownButton @icon="magnifying-glass" @buttonWrapperClass="mr-2" @size="xs" as |dd|>
+            <div class="bulk-search-dropdown-container filters-dropdown-container">
+                <div class="filters-dropdown-header">
+                    <h4>Bulk Search</h4>
+                </div>
+                <div class="filters-dropdown-body">
+                    <Textarea @value={{this.bulkSearchValue}} class="form-input w-full" rows="8" placeholder="Input comma delimited order ID's or tracking numbers to perform a bulk search" />
+                </div>
+                <div class="filters-dropdown-footer space-x-2">
+                    <Button @text="Clear" @icon="trash" @size="xs" @onClick={{dropdown-fn dd this.removeBulkQuery}} />
+                    <Button @text="Search" @icon="check" @type="primary" @size="xs" @onClick={{dropdown-fn dd this.commitBulkQuery}} />
+                </div>
+            </div>
+        </DropdownButton>
         <FiltersPicker
             @columns={{this.columns}}
             @onApply={{fn this.filters.apply this}}
@@ -95,6 +109,12 @@
                         <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.bulkDispatchOrders)}} disabled={{cannot "fleet-ops dispatch order"}}>
                             <div class="w-6"><FaIcon @icon="rocket" @size="sm" /></div>
                             <div>{{t "fleet-ops.operations.orders.index.dispatch-orders"}}</div>
+                        </a>
+                    </div>
+                    <div class="px-1">
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.bulkAssignDriver)}} disabled={{cannot "fleet-ops assign-driver-for order"}}>
+                            <div class="w-6"><FaIcon @icon="user-plus" @size="sm" /></div>
+                            <div>{{t "fleet-ops.operations.orders.index.assign-driver"}}</div>
                         </a>
                     </div>
                 </div>

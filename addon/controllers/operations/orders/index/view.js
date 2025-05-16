@@ -187,6 +187,8 @@ export default class OperationsOrdersIndexViewController extends BaseController 
      */
     @task *loadCustomFields(order) {
         if (order.order_config_uuid) {
+            this.store.unloadAll('custom-field');
+
             this.customFieldGroups = yield this.store.query('category', { owner_uuid: order.order_config_uuid, for: 'custom_field_group' });
             this.customFields = yield this.store.query('custom-field', { subject_uuid: order.order_config_uuid });
             this.groupCustomFields(order);
@@ -227,16 +229,18 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         this.customFields = customFieldsWithValues;
 
         // group and update custom fields
-        this.customFieldGroups = this.customFieldGroups.map((group) => {
+        const customFieldGroups = [];
+        for (let i = 0; i < this.customFieldGroups.length; i++) {
+            const group = this.customFieldGroups[i];
             group.set(
                 'customFields',
                 customFieldsWithValues.filter((customField) => {
                     return customField.category_uuid === group.id;
                 })
             );
-
-            return group;
-        });
+            customFieldGroups.push(group);
+        }
+        this.customFieldGroups = customFieldGroups;
     }
 
     @action resetView() {

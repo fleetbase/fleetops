@@ -181,16 +181,24 @@ class FuelReport extends Model
         $row = array_filter($row);
 
         // Get fuelReport columns
-        $reporterName  = Utils::or($row, ['reporter', 'reporter_name', 'reported_by', 'reported_by_name']);
-        $report        = Utils::or($row, ['report', 'fuel_report', 'content', 'info']);
-        $odometer      = Utils::or($row, ['odometer', 'usage']);
-        $amount        = Utils::or($row, ['amount', 'cost', 'price']);
-        $currency      = Utils::or($row, ['currency', 'amount_currency']);
-        $volume        = Utils::or($row, ['volume', 'fuel_amount', 'fuel_volume', 'gas_amount', 'gas_volume']);
-        $metricUnit    = Utils::or($row, ['volume_unit', 'fuel_unit', 'metric', 'metric_unit', 'gas_unit'], 'l');
-        $driverName    = Utils::or($row, ['driver', 'driver_name']);
-        $vehicleName   = Utils::or($row, ['vehicle', 'vehicle_name']);
-        $status        = Utils::or($row, ['status', 'fuel_status'], 'pending');
+        $reporterName   = Utils::or($row, ['reporter', 'reporter_name', 'reported_by', 'reported_by_name']);
+        $report         = Utils::or($row, ['report', 'fuel_report', 'content', 'info']);
+        $odometer       = Utils::or($row, ['odometer', 'usage']);
+        $amount         = Utils::or($row, ['amount', 'cost', 'price']);
+        $currency       = Utils::or($row, ['currency', 'amount_currency']);
+        $volume         = Utils::or($row, ['volume', 'fuel_amount', 'fuel_volume', 'gas_amount', 'gas_volume']);
+        $metricUnit     = Utils::or($row, ['volume_unit', 'fuel_unit', 'metric', 'metric_unit', 'gas_unit'], 'l');
+        $driverName     = Utils::or($row, ['driver', 'driver_name']);
+        $vehicleName    = Utils::or($row, ['vehicle', 'vehicle_name']);
+        $status         = Utils::or($row, ['status', 'fuel_status'], 'pending');
+        $latitude       = Utils::or($row, ['latitude', 'lat']);
+        $longitude      = Utils::or($row, ['longitude', 'lng', 'long']);
+
+        if ($latitude && $longitude) {
+            $location = new Point($latitude, $longitude);
+        } else {
+            $location = Utils::getPointFromMixed(Utils::arrayFrom(data_get($row, 'location')));
+        }
 
         // Resolve relations
         $reporter = is_string($reporterName) ? User::whereRaw('lower(name) like ?', ['%' . strtolower($reporterName) . '%'])->first() : null;
@@ -207,7 +215,7 @@ class FuelReport extends Model
             'volume'          => $volume,
             'metric_unit'     => $metricUnit,
             'status'          => $status,
-            'location'        => Utils::parsePointToWkt(new Point(0, 0)),
+            'location'        => Utils::parsePointToWkt($location ?? new Point(0, 0)),
         ]);
 
         if ($reporter) {

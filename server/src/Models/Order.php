@@ -32,6 +32,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
@@ -168,6 +169,7 @@ class Order extends Model
         'has_driver_assigned',
         'pickup_name',
         'dropoff_name',
+        'return_name',
         'payload_id',
         'purchase_rate_id',
         'is_scheduled',
@@ -211,6 +213,25 @@ class Order extends Model
         'id',
         '_key',
     ];
+
+    /**
+     * Enforce a morph map.
+     */
+    public static function boot(): void
+    {
+        parent::boot();
+
+        Relation::morphMap(
+            [
+                'Fleetbase\\Models\\Contact'   => Contact::class,
+                '\\Fleetbase\\Models\\Contact' => Contact::class,
+                'Fleetbase\\Models\\Driver'    => Driver::class,
+                '\\Fleetbase\\Models\\Driver'  => Driver::class,
+                'Fleetbase\\Models\\Vendor'    => Vendor::class,
+                '\\Fleetbase\\Models\\Vendor'  => Vendor::class,
+            ]
+        );
+    }
 
     /**
      * Get the activity log options for the model.
@@ -314,7 +335,7 @@ class Order extends Model
      */
     public function vehicle(): BelongsTo|Builder
     {
-        return $this->belongsTo(Vehicle::class)->without(['devices', 'vendor', 'fleets']);
+        return $this->belongsTo(Vehicle::class, 'vehicle_assigned_uuid')->without(['devices', 'vendor', 'fleets']);
     }
 
     public function comments(): HasMany
@@ -537,6 +558,14 @@ class Order extends Model
     public function getDropoffNameAttribute()
     {
         return $this->payload ? $this->payload->dropoff_name : null;
+    }
+
+    /**
+     * The return location name.
+     */
+    public function getReturnNameAttribute()
+    {
+        return $this->payload ? $this->payload->return_name : null;
     }
 
     /**
@@ -1043,24 +1072,33 @@ class Order extends Model
     }
 
     /**
-     * Dispatches the order.
-     * Sets the dispatched flag and dispatched_at timestamp. Optionally saves the order and flushes attribute cache.
+     * Mark the order as dispatched, optionally persist the change,
+     * and fire the OrderDispatched domain event.
      *
-     * @param bool $save whether to save the order after dispatching
+     * @param bool $save Whether to save the model before firing the event.
+     *                   Pass false when you are already inside a larger
+     *                   persistence transaction.
      *
-     * @return mixed the result of the OrderDispatched event
+     * @throws \LogicException if the order is already dispatched
      */
-    public function dispatch($save = true)
+    public function dispatch(bool $save = true): static
     {
         $this->dispatched    = true;
         $this->dispatched_at = now();
 
-        if ($save === true) {
-            $this->save();
+        if ($save) {
+            // Save quietly to avoid duplicate model events;
+            // wrap in a transaction if your code is not already in one.
+            $this->saveQuietly();
+
+            // Flush any attribute cache that depends on persisted state
             $this->flushAttributesCache();
         }
 
-        return event(new OrderDispatched($this));
+        // Queue the OrderDispatched event to run after the DB commit succeeds
+        dispatch(fn () => event(new OrderDispatched($this)))->afterCommit();
+
+        return $this;
     }
 
     /**
@@ -1413,6 +1451,10 @@ class Order extends Model
      */
     public function assignDriver($driver, $silent = false)
     {
+        if ($driver instanceof Driver && $this->driver_assigned_uuid === $driver->uuid) {
+            return $this;
+        }
+
         if ($driver instanceof Driver) {
             $this->driver_assigned_uuid = $driver->uuid;
         }
@@ -1421,6 +1463,10 @@ class Order extends Model
             if (Str::startsWith($driver, 'driver_')) {
                 $driver = Driver::select(['uuid', 'public_id'])->where('public_id', $driver)->whereNull('deleted_at')->withoutGlobalScopes()->first();
                 if ($driver) {
+                    if ($this->driver_assigned_uuid === $driver->uuid) {
+                        return $this;
+                    }
+
                     return $this->assignDriver($driver);
                 }
 

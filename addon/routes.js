@@ -3,6 +3,7 @@ import buildRoutes from 'ember-engines/routes';
 export default buildRoutes(function () {
     this.route('settings', function () {
         this.route('navigator-app');
+        this.route('notifications');
         this.route('payments', function () {
             this.route('index', { path: '/' });
             this.route('onboard');
@@ -92,7 +93,6 @@ export default buildRoutes(function () {
                 this.route('edit', { path: '/edit/:public_id' });
             });
         });
-        this.route('settings', function () {});
     });
     this.route('comms', function () {
         this.route('chat');

@@ -372,6 +372,9 @@ export default class ManagementIssuesIndexController extends BaseController {
             onImportCompleted: () => {
                 this.hostRouter.refresh();
             },
+            onImportTemplate: () => {
+                window.open('https://flb-assets.s3.ap-southeast-1.amazonaws.com/import-templates/Fleetbase_Issue_Import_Template.xlsx');
+            },
         });
     }
 

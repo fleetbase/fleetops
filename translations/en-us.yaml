@@ -103,6 +103,8 @@ fleet-ops:
     order: Order
     create-order: Create Order
     dispatch-order: Dispatch Order
+    assign-driver: Assign Driver
+    select-driver: Select Driver
   component:
     activity-logic-builder:
       activity-logic: Activity Logic
@@ -296,6 +298,7 @@ fleet-ops:
         loading-vehicle: Loading fleet vehicles...
     layout:
       fleet-ops-sidebar:
+        notifications: Notifications
         payments: Payments
         navigator-app: Navigator App
         resources: Resources
@@ -1327,6 +1330,8 @@ fleet-ops:
         cancel-orders: Cancel Orders
         delete-orders: Delete Orders
         dispatch-orders: Dispatch Orders
+        assign-driver: Assign Driver
+        bulk-assign-driver-helptext: Select a driver to assign to multiple orders.
         new:
           create-new-customer: Create new customer
           create-new-facilitator: Create new facilitator
@@ -1626,6 +1631,10 @@ fleet-ops:
           zone-help-text: Restrict this service to order request originating from a specific zone.
           zone-placeholder: Restrict to zone
   settings:
+    notifications:
+      fleet-ops-notification-settings: Fleet-Ops Notification Settings
+      fleet-ops-notifications: Fleet-Ops Notifications
+      configure-notifications: Configure Notifications
     navigator-app:
       navigator-app-settings: Navigator App Settings
     payments:

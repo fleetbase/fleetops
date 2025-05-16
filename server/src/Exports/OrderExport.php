@@ -21,16 +21,25 @@ class OrderExport implements FromCollection, WithHeadings, WithMapping, WithColu
 
     public function map($order): array
     {
+        $order->loadMissing(['trackingNumber', 'payload', 'customer', 'driverAssigned', 'vehicleAssigned']);
+
         return [
             $order->public_id,
+            data_get($order, 'trackingNumber.tracking_number'),
             $order->internal_id,
             $order->driver_name,
             $order->vehicle_name,
             $order->customer_name,
+            collect(data_get($order, 'payload.entities'))->map(function ($entity) {
+                return $entity->sku ?? $entity->public_id;
+            })->join('|'),
             $order->pickup_name,
             $order->dropoff_name,
+            $order->return_name,
+            collect(data_get($order, 'payload.waypoints'))->map(function ($waypoint) {
+                return $waypoint->address;
+            })->join('|'),
             $order->scheduled_at,
-            $order->trackingNumber ? $order->trackingNumber->tracking_number : null,
             $order->status,
             $order->created_at,
         ];
@@ -40,14 +49,17 @@ class OrderExport implements FromCollection, WithHeadings, WithMapping, WithColu
     {
         return [
             'ID',
+            'Tracking Number',
             'Internal ID',
             'Driver',
             'Vehicle',
             'Customer',
+            'SKU',
             'Pick Up',
             'Drop Off',
+            'Return',
+            'Waypoints',
             'Date Scheduled',
-            'Tracking Number',
             'Status',
             'Date Created',
         ];
