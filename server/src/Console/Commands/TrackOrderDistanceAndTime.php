@@ -69,7 +69,7 @@ class TrackOrderDistanceAndTime extends Command
      * - Not in 'completed' or 'canceled' status.
      * - Not marked as deleted (`deleted_at` is null).
      * - Associated with a company (`company_uuid` is not null).
-     * - The order process has started (`started` is not null).
+     * - The order process has started (`started_at` is not null).
      * - Contains a payload (`payload` relationship exists).
      * - Created within the past month.
      *
@@ -85,7 +85,7 @@ class TrackOrderDistanceAndTime extends Command
         return Order::whereNotIn('status', ['completed', 'canceled'])
                     ->whereNull('deleted_at')
                     ->whereNotNull('company_uuid')
-                    ->whereNotNull('started')
+                    ->whereNotNull('started_at')
                     ->where('created_at', '>=', $oneMonthAgo)
                     ->whereHas('payload')
                     ->with(['payload', 'payload.waypoints', 'payload.pickup', 'payload.dropoff'])
