@@ -1047,7 +1047,6 @@ export default class OperationsOrdersIndexController extends BaseController {
         selected = selected.length > 0 ? selected : this.table.selectedRows;
 
         this.crud.bulkDelete(selected, {
-            modelNamePath: `public_id`,
             acceptButtonText: 'Delete Orders',
             resolveModelName: (model) => `${model.get('tracking_number.tracking_number')} - ${model.get('public_id')}`,
             onSuccess: async () => {
@@ -1075,7 +1074,6 @@ export default class OperationsOrdersIndexController extends BaseController {
             acceptButtonText: 'Cancel Orders',
             acceptButtonScheme: 'danger',
             acceptButtonIcon: 'ban',
-            modelNamePath: `public_id`,
             actionPath: `orders/bulk-cancel`,
             actionMethod: `PATCH`,
             resolveModelName: (model) => `${model.get('tracking_number.tracking_number')} - ${model.get('public_id')}`,
@@ -1109,7 +1107,6 @@ export default class OperationsOrdersIndexController extends BaseController {
             acceptButtonText: 'Dispatch Orders',
             acceptButtonScheme: 'magic',
             acceptButtonIcon: 'rocket',
-            modelNamePath: 'public_id',
             actionPath: 'orders/bulk-dispatch',
             actionMethod: 'POST',
             resolveModelName: (model) => `${model.get('tracking_number.tracking_number')} - ${model.get('public_id')}`,
@@ -1152,7 +1149,6 @@ export default class OperationsOrdersIndexController extends BaseController {
             acceptButtonScheme: 'magic',
             acceptButtonIcon: 'user-plus',
             acceptButtonDisabled: true,
-            modelNamePath: 'public_id',
             actionPath: 'orders/bulk-assign-driver',
             actionMethod: 'PATCH',
             driverAssigned: null,

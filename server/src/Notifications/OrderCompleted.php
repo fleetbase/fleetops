@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Notifications;
 
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Support\PushNotification;
 use Illuminate\Broadcasting\Channel;
@@ -21,9 +22,16 @@ class OrderCompleted extends Notification implements ShouldQueue
     /**
      * The order instance this notification is for.
      *
-     * @var \Fleetbase\Models\Order
+     * @var Order
      */
     public $order;
+
+    /**
+     * The waypoint instance this notification is for.
+     *
+     * @var Waypoint
+     */
+    public $waypoint;
 
     /**
      * Notification name.
@@ -60,12 +68,13 @@ class OrderCompleted extends Notification implements ShouldQueue
      *
      * @return void
      */
-    public function __construct(Order $order)
+    public function __construct(Order $order, ?Waypoint $waypoint = null)
     {
-        $this->order   = $order;
-        $this->title   = 'Order ' . $this->order->trackingNumber->tracking_number . ' has been completed.';
-        $this->message = 'Order ' . $this->order->trackingNumber->tracking_number . ' has been completed by agent.';
-        $this->data    = ['id' => $this->order->public_id, 'type' => 'order_completed'];
+        $this->order      = $order;
+        $this->waypoint   = $waypoint;
+        $this->title      = 'Order ' . $this->getTrackingNumber() . ' has been completed.';
+        $this->message    = 'Order ' . $this->getTrackingNumber() . ' has been completed by agent.';
+        $this->data       = ['id' => $this->order->public_id, 'type' => 'order_completed'];
     }
 
     /**
@@ -104,12 +113,10 @@ class OrderCompleted extends Notification implements ShouldQueue
         $order = new OrderResource($this->order);
 
         return [
+            'event' => 'order.completed_notification',
             'title' => $this->title,
             'body'  => $this->message,
-            'data'  => [
-                ...$this->data,
-                'order' => $order->toWebhookPayload(),
-            ],
+            'data'  => $this->data,
         ];
     }
 
@@ -124,7 +131,7 @@ class OrderCompleted extends Notification implements ShouldQueue
             ->subject($this->title)
             ->line($this->message)
             ->line('No further action is necessary.')
-            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->order->trackingNumber->tracking_number]));
+            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->getTrackingNumber()]));
     }
 
     /**
@@ -145,5 +152,18 @@ class OrderCompleted extends Notification implements ShouldQueue
     public function toApn($notifiable)
     {
         return PushNotification::createApnMessage($this->title, $this->message, $this->data, 'view_order');
+    }
+
+    /**
+     * Get the tracking number which should be used for this event.
+     * In the case that the order has a currentWaypoint attached use its tracking number otherwise use the orders.
+     */
+    private function getTrackingNumber(): ?string
+    {
+        if ($this->waypoint instanceof Waypoint) {
+            return $this->waypoint->tracking;
+        }
+
+        return $this->order->tracking;
     }
 }

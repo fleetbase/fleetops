@@ -14,7 +14,7 @@ class OrderSplit extends Notification
     /**
      * The order instance this notification is for.
      *
-     * @var \Fleetbase\Models\Order
+     * @var \Fleetbase\FleetOps\Models\Order
      */
     public $order;
 

@@ -405,7 +405,7 @@
                                 </div>
                                 <div>
                                     <div class="flex flex-row items-center space-x-4 text-sm mt-2">
-                                        <div class={{if (eq waypoint.type "dropoff") 'is-checked'}}>
+                                        <div class={{if (eq waypoint.type "dropoff") "is-checked"}}>
                                             <div class="flex flex-row items-center">
                                                 <RadioButton
                                                     @radioClass="focus:ring-blue-500 h-4 w-4 text-blue-500"
@@ -418,7 +418,7 @@
                                                 <label for={{concat "waypoint_" index "_dropoff"}} class="ml-2">Dropoff</label>
                                             </div>
                                         </div>
-                                        <div class={{if (eq waypoint.type "pickup") 'is-checked'}}>
+                                        <div class={{if (eq waypoint.type "pickup") "is-checked"}}>
                                             <div class="flex flex-row items-center">
                                                 <RadioButton
                                                     @radioClass="focus:ring-blue-500 h-4 w-4 text-blue-500"

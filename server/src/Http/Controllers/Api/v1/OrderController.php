@@ -32,10 +32,12 @@ use Fleetbase\Models\Setting;
 use Fleetbase\Support\Auth;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -295,15 +297,6 @@ class OrderController extends Controller
         // create the order
         $order = Order::create($input);
 
-        // notify driver if assigned
-        $order->notifyDriverAssigned();
-
-        // set driving distance and time
-        $order->setPreliminaryDistanceAndTime();
-
-        // if service quote attached purchase
-        $order->purchaseServiceQuote($serviceQuote);
-
         // if it's integrated vendor order apply to meta
         if ($integratedVendorOrder) {
             $order->updateMeta([
@@ -312,16 +305,32 @@ class OrderController extends Controller
             ]);
         }
 
-        // dispatch if flagged true
-        if ($request->boolean('dispatch') && $integratedVendorOrder === null) {
-            $order->dispatchWithActivity();
-        }
-
         // load required relations
         $order->load(['trackingNumber', 'driverAssigned', 'purchaseRate', 'customer', 'facilitator']);
 
-        // Trigger order created event
-        event(new OrderReady($order));
+        // Determine if order should be dispatched on creation
+        $shouldDispatch = $request->boolean('dispatch') && $integratedVendorOrder === null;
+
+        // Run background processes on queue
+        dispatch(function () use ($order, $serviceQuote, $shouldDispatch): void {
+            // notify driver if assigned
+            $order->notifyDriverAssigned();
+
+            // set driving distance and time
+            $order->setPreliminaryDistanceAndTime();
+
+            // if service quote attached purchase
+            $order->purchaseServiceQuote($serviceQuote);
+
+            // dispatch if flagged true
+            if ($shouldDispatch) {
+                $order->dispatchWithActivity();
+            }
+
+            // Trigger order created event
+            event(new OrderReady($order));
+        })
+        ->afterCommit();
 
         // response the driver resource
         return new OrderResource($order);
@@ -934,18 +943,13 @@ class OrderController extends Controller
             try {
                 $order = Order::findRecordOrFail($id, ['driverAssigned', 'payload.entities', 'payload.currentWaypoint', 'payload.waypoints']);
             } catch (ModelNotFoundException $exception) {
-                return response()->json(
-                    [
-                        'error' => 'Order resource not found.',
-                    ],
-                    404
-                );
+                return response()->apiError('Order resource not found.', 404);
             }
         }
 
         // if no order found
         if (!$order) {
-            return response()->apiError('No resource not found.');
+            return response()->apiError('Order resource not found.', 404);
         }
 
         // if order is still status of `created` trigger started flag
@@ -988,13 +992,17 @@ class OrderController extends Controller
         /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point */
         $location = $order->getLastLocation();
 
+        // Check if multiple waypoint order to update activity for
+        $isMultipleWaypointOrder = (bool) $order->payload->isMultipleDropOrder;
+
         // if is multi drop order and no current destination set it
-        if ($order->payload->isMultipleDropOrder && !$order->payload->current_waypoint_uuid) {
+        if ($isMultipleWaypointOrder && !$order->payload->current_waypoint_uuid) {
             $order->payload->setFirstWaypoint($activity, $location);
         }
 
-        if (Utils::isActivity($activity) && $activity->completesOrder() && $order->payload->isMultipleDropOrder) {
-            // confirm every waypoint is completed
+        // Handle multiple dropoff waypoint activity
+        if (Utils::isActivity($activity) && $activity->completesOrder() && $isMultipleWaypointOrder) {
+            // Check if every waypoint is completed
             $isCompleted = $order->payload->waypointMarkers->every(function ($waypoint) {
                 return $waypoint->complete;
             });
@@ -1016,17 +1024,22 @@ class OrderController extends Controller
             }
         }
 
-        // Update activity
-        $order->updateActivity($activity, $proof);
-
         // also update for each order entities if not multiple drop order
         // all entities will share the same activity status as is one drop order
-        if (!$order->payload->isMultipleDropOrder) {
+        if (!$isMultipleWaypointOrder) {
+            // Update order activity
+            $order->updateActivity($activity, $proof);
+
             // Only update entities belonging to the waypoint
             foreach ($order->payload->entities as $entity) {
                 $entity->insertActivity($activity, $location, $proof);
             }
         } else {
+            // Update parent order when status is `dispatched` or `started`
+            if (in_array($activity->code, ['started', 'dispatched'])) {
+                $order->updateActivity($activity, $proof);
+            }
+
             $order->payload->updateWaypointActivity($activity, $location);
         }
 
@@ -1045,8 +1058,10 @@ class OrderController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function getNextActivity(string $id)
+    public function getNextActivity(string $id, Request $request)
     {
+        $waypointId = $request->input('waypoint');
+
         try {
             $order = Order::findRecordOrFail($id, ['payload']);
         } catch (ModelNotFoundException $exception) {
@@ -1058,7 +1073,15 @@ class OrderController extends Controller
             );
         }
 
-        $activities = $order->config()->nextActivity();
+        // Get waypoint record if available
+        $waypoint = null;
+        if ($waypointId) {
+            $waypoint = Waypoint::where('payload_uuid', $order->payload_uuid)->whereHas('place', function ($query) use ($waypointId) {
+                $query->where('public_id', $waypointId);
+            })->first();
+        }
+
+        $activities = $order->config()->nextActivity($waypoint);
 
         // If activity is to complete order add proof of delivery properties if required
         // This is a temporary fix until activity is updated to handle POD on it's own
@@ -1149,10 +1172,13 @@ class OrderController extends Controller
     public function setDestination(string $id, string $placeId)
     {
         try {
-            $order = Order::with(['payload.waypoints', 'payload.pickup', 'payload.dropoff'])->findRecordOrFail($id);
+            $order = Order::findRecordOrFail($id);
         } catch (ModelNotFoundException $exception) {
             return response()->apiError('Order resource not found.', 404);
         }
+
+        // Load required relations
+        $order->loadMissing(['payload.waypoints', 'payload.pickup', 'payload.dropoff']);
 
         // Get the order payload
         $payload = $order->payload;
@@ -1246,39 +1272,19 @@ class OrderController extends Controller
         $rawData = $request->input('raw_data');
         $type    = $subjectId ? strtok($subjectId, '_') : null;
 
+        if (!$code) {
+            return response()->apiError('No QR code data to capture.');
+        }
+
+        // Load Order
         try {
             $order = Order::findRecordOrFail($id);
         } catch (ModelNotFoundException $e) {
             return response()->apiError('Order resource not found.', 404);
         }
 
-        if (!$code) {
-            return response()->apiError('No QR code data to capture.');
-        }
-
-        $subject = $type === null ? $order : null;
-
-        switch ($type) {
-            case 'place':
-            case 'waypoint':
-                $subject = Waypoint::where('payload_uuid', $order->payload_uuid)->where(function ($q) use ($code) {
-                    $q->whereHas('place', function ($q) use ($code) {
-                        $q->where('uuid', $code);
-                    });
-                    $q->orWhere('uuid', $code);
-                })->withoutGlobalScopes()->first();
-                break;
-
-            case 'entity':
-                $subject = Entity::where('uuid', $code)->withoutGlobalScopes()->first();
-                break;
-
-            case 'order':
-            default:
-                $subject = $order;
-                break;
-        }
-
+        // Resolve subject
+        $subject = $this->resolveSubject($order, $type, $subjectId);
         if (!$subject) {
             return response()->apiError('Unable to capture QR code data.');
         }
@@ -1316,39 +1322,19 @@ class OrderController extends Controller
         $remarks      = $request->input('remarks', 'Verified by Signature');
         $type         = $subjectId ? strtok($subjectId, '_') : null;
 
+        if (!$signature) {
+            return response()->apiError('No signature data to capture.');
+        }
+
+        // Load Order
         try {
             $order = Order::findRecordOrFail($id);
         } catch (ModelNotFoundException $e) {
             return response()->apiError('Order resource not found.', 404);
         }
 
-        if (!$signature) {
-            return response()->apiError('No signature data to capture.');
-        }
-
-        $subject = $type === null ? $order : null;
-
-        switch ($type) {
-            case 'place':
-            case 'waypoint':
-                $subject = Waypoint::where('payload_uuid', $order->payload_uuid)->where(function ($q) use ($subjectId) {
-                    $q->whereHas('place', function ($q) use ($subjectId) {
-                        $q->where('public_id', $subjectId);
-                    });
-                    $q->orWhere('public_id', $subjectId);
-                })->withoutGlobalScopes()->first();
-                break;
-
-            case 'entity':
-                $subject = Entity::where('public_id', $subjectId)->withoutGlobalScopes()->first();
-                break;
-
-            case 'order':
-            default:
-                $subject = $order;
-                break;
-        }
-
+        // Resolve subject
+        $subject = $this->resolveSubject($order, $type, $subjectId);
         if (!$subject) {
             return response()->apiError('Unable to capture signature data.');
         }
@@ -1392,92 +1378,218 @@ class OrderController extends Controller
     }
 
     /**
-     * Validate a photo.
+     * Capture one or more photos for an order (as proof) and persist them.
      *
-     * @return void
+     * This endpoint supports **both**:
+     *  - `multipart/form-data` uploads (key: `photos[]`)
+     *  - JSON payload with Base64-encoded images (key: `photos`: [string…])
+     *
+     * It will:
+     *  1. Validate that `photos` is a non-empty array of files or strings.
+     *  2. Resolve the target Order and optional subject (waypoint/place/entity).
+     *  3. Loop through each upload or blob, create a Proof record, decode/store the image,
+     *     then create a File record and link it to the Proof.
+     *
+     * @param string      $id        UUID or primary key of the Order
+     * @param string|null $subjectId Optional “subject” identifier (e.g. waypoint_publicId)
+     *
+     * @return \Fleetbase\FleetOps\Http\Resources\ProofResource
+     *
+     * @throws ValidationException
+     * @throws ModelNotFoundException
      */
     public function capturePhoto(Request $request, string $id, ?string $subjectId = null)
     {
-        $disk          = $request->input('disk', config('filesystems.default'));
-        $bucket        = $request->input('bucket', config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket')));
-        $photo         = $request->input('photo');
-        $photos        = $request->array('photos');
-        $data          = $request->input('data', []);
-        $remarks       = $request->input('remarks', 'Verified by Photo');
-        $type          = $subjectId ? strtok($subjectId, '_') : null;
-        $photos        = array_filter([$photo, ...$photos]);
+        // Validate incoming payload
+        try {
+            $request->validate([
+                'photos'   => 'required|array|min:1',
+                'photos.*' => [
+                    function ($attribute, $value, $fail) {
+                        // 1) If it’s a file, ensure it’s an image ≤ 10 MB
+                        if ($value instanceof UploadedFile) {
+                            if (!$value->isValid()
+                                || !in_array($value->extension(), ['jpg', 'jpeg', 'png', 'gif'])
+                                || $value->getSize() > 10 * 1024 * 1024
+                            ) {
+                                $fail("{$attribute} must be a valid image file ≤ 10 MB.");
+                            }
 
+                            return;
+                        }
+
+                        // 2) Otherwise it must be a valid Base64 string
+                        if (is_string($value)) {
+                            // strict decode check
+                            if (base64_decode($value, true) === false) {
+                                $fail("{$attribute} is not a valid Base64 string.");
+                            }
+
+                            return;
+                        }
+
+                        // 3) Anything else is invalid
+                        $fail("{$attribute} must be an image file or a Base64 string.");
+                    },
+                ],
+                'remarks'  => 'sometimes|string|max:255',
+                'data'     => 'sometimes|array',
+            ]);
+        } catch (ValidationException $e) {
+            $errorMessage = collect($e->errors())->flatten()->first();
+
+            return response()->apiError($errorMessage, 422);
+        }
+
+        // Determine storage disk & bucket
+        $disk        = $request->input('disk', config('filesystems.default'));
+        $bucket      = $request->input(
+            "filesystems.disks.{$disk}.bucket",
+            config('filesystems.disks.s3.bucket')
+        );
+
+        // Collect uploads & Base64 strings
+        /** @var UploadedFile[] $rawInputs */
+        $rawInputs   = $request->file('photos', []);
+        /** @var string[] $base64Inputs */
+        $base64Inputs = array_filter(
+            $request->input('photos', []),
+            function ($value) {
+                // must be a string AND strictly decodable as Base64
+                return is_string($value) && base64_decode($value, true) !== false;
+            }
+        );
+
+        $remarks     = $request->input('remarks', 'Verified by Photo');
+        $data        = $request->input('data', []);
+        $type        = $subjectId ? strtok($subjectId, '_') : null;
+
+        // Normalize into one array
+        $incoming = array_merge($rawInputs, $base64Inputs);
+
+        if (empty($incoming)) {
+            return response()->apiError('No photo data to capture.');
+        }
+
+        // Load Order
         try {
             $order = Order::findRecordOrFail($id);
         } catch (ModelNotFoundException $e) {
             return response()->apiError('Order resource not found.', 404);
         }
 
-        if (!$photos) {
-            return response()->apiError('No photo data to capture.');
-        }
-
-        $subject = $type === null ? $order : null;
-
-        switch ($type) {
-            case 'place':
-            case 'waypoint':
-                $subject = Waypoint::where('payload_uuid', $order->payload_uuid)->where(function ($q) use ($subjectId) {
-                    $q->whereHas('place', function ($q) use ($subjectId) {
-                        $q->where('public_id', $subjectId);
-                    });
-                    $q->orWhere('public_id', $subjectId);
-                })->withoutGlobalScopes()->first();
-                break;
-
-            case 'entity':
-                $subject = Entity::where('public_id', $subjectId)->withoutGlobalScopes()->first();
-                break;
-
-            case 'order':
-            default:
-                $subject = $order;
-                break;
-        }
-
+        // Resolve subject
+        $subject = $this->resolveSubject($order, $type, $subjectId);
         if (!$subject) {
             return response()->apiError('Unable to capture photo as proof.');
         }
 
-        foreach ($photos as $photo) {
-            // create proof instance
+        // 5) Loop through each item, create Proof + File
+        foreach ($incoming as $item) {
             $proof = Proof::create([
                 'company_uuid' => session('company'),
                 'order_uuid'   => $order->uuid,
                 'subject_uuid' => $subject->uuid,
                 'subject_type' => Utils::getModelClassName($subject),
                 'remarks'      => $remarks,
-                'raw_data'     => $photo,
+                'raw_data'     => $item instanceof UploadedFile ? null : $item,
                 'data'         => $data,
             ]);
 
-            $path = implode('/', ['uploads', session('company'), 'photos', $proof->public_id . '.png']);
-            // $path = 'uploads/' . session('company') . '/photos/' . $proof->public_id . '.png';
-            Storage::disk($disk)->put($path, base64_decode($photo));
-            $file = File::create([
-                'company_uuid'      => session('company'),
-                'uploader_uuid'     => session('user'),
-                'name'              => basename($path),
-                'original_filename' => basename($path),
-                'extension'         => 'png',
-                'content_type'      => 'image/png',
-                'path'              => $path,
-                'bucket'            => $bucket,
-                'type'              => 'photo',
-                'size'              => Utils::getBase64ImageSize($photo),
-            ])->setKey($proof);
+            $file = $this->storeProofPhoto(
+                proof: $proof,
+                photo: $item,
+                disk: $disk,
+                bucket: $bucket
+            );
 
-            // set file to proof
-            $proof->file_uuid = $file->uuid;
-            $proof->save();
+            $proof->update(['file_uuid' => $file->uuid]);
         }
 
+        // Return the last Proof resource created
         return new ProofResource($proof);
+    }
+
+    /**
+     * Decode and store a single proof image, then create its File record.
+     *
+     * @param UploadedFile|string $photo  UploadedFile instance or Base64 string
+     * @param string              $disk   Filesystem disk name
+     * @param string              $bucket Storage bucket/key prefix
+     *
+     * @return \Feetbase\Models\File
+     */
+    protected function storeProofPhoto(
+        Proof $proof,
+        UploadedFile|string $photo,
+        string $disk,
+        string $bucket,
+    ): File {
+        $isFile      = $photo instanceof UploadedFile;
+        $contents    = $isFile
+            ? file_get_contents($photo->getRealPath())
+            : base64_decode($photo);
+        $extension   = $isFile
+            ? $photo->getClientOriginalExtension()
+            : 'png';
+        $contentType = $isFile
+            ? $photo->getClientMimeType()
+            : 'image/png';
+
+        $company = session('company');
+        $path    = "uploads/{$company}/photos/{$proof->public_id}.{$extension}";
+
+        Storage::disk($disk)->put($path, $contents);
+
+        return File::create([
+            'company_uuid'      => $company,
+            'uploader_uuid'     => session('user'),
+            'name'              => basename($path),
+            'original_filename' => basename($path),
+            'extension'         => $extension,
+            'content_type'      => $contentType,
+            'path'              => $path,
+            'bucket'            => $bucket,
+            'type'              => 'photo',
+            'size'              => strlen($contents),
+        ])->setKey($proof);
+    }
+
+    /**
+     * Resolve the “subject” model based on type and public ID.
+     *
+     * Supported types:
+     *  - null        → the Order itself
+     *  - 'place', 'waypoint' → a Waypoint matching payload_uuid & public_id
+     *  - 'entity'    → an Entity by public_id
+     *  - 'order' or any other → the Order
+     *
+     * @param string|null $type      Type prefix extracted from subjectId
+     * @param string|null $subjectId Full public_id of the subject
+     *
+     * @return Order|Waypoint|Entity|null
+     */
+    protected function resolveSubject(Order $order, ?string $type, ?string $subjectId)
+    {
+        if (!$type) {
+            return $order;
+        }
+
+        return match ($type) {
+            'place', 'waypoint' => Waypoint::withoutGlobalScopes()
+                ->where('payload_uuid', $order->payload_uuid)
+                ->where(fn ($q) => $q
+                    ->whereHas('place', fn ($q) => $q->where('public_id', $subjectId))
+                    ->orWhere('public_id', $subjectId)
+                )
+                ->first(),
+
+            'entity' => Entity::withoutGlobalScopes()
+                ->where('public_id', $subjectId)
+                ->first(),
+
+            default => $order,
+        };
     }
 
     /**
@@ -1503,34 +1615,27 @@ class OrderController extends Controller
         }
 
         $subject = $order;
-
         if ($subjectId) {
-            $type = strtok($subjectId, '_');
-
-            $subject = match ($type) {
-                'place', 'waypoint' => Waypoint::where('payload_uuid', $order->payload_uuid)
-                    ->where(function ($query) use ($subjectId) {
-                        $query->whereHas('place', fn ($q) => $q->where('public_id', $subjectId))
-                              ->orWhere('public_id', $subjectId);
-                    })
-                    ->withoutGlobalScopes()
-                    ->first(),
-
-                'entity' => Entity::where('public_id', $subjectId)->withoutGlobalScopes()->first(),
-
-                default => $order,
-            };
+            $type    = strtok($subjectId, '_');
+            $subject = $this->resolveSubject($order, $type, $subjectId);
         }
 
         if (!$subject) {
             return response()->apiError('Unable to retrieve proof of delivery for subject.');
         }
 
-        $proofs = Proof::where([
+        $proofsQuery = Proof::where([
             'company_uuid' => session('company'),
             'order_uuid'   => $order->uuid,
-            'subject_uuid' => $subject->uuid,
-        ])->get();
+        ]);
+
+        // if subject is not the order then filter by subject
+        if ($order->uuid !== $subject->uuid) {
+            $proofsQuery->where('subject_uuid', $subject->uuid);
+        }
+
+        // get proofs
+        $proofs = $proofsQuery->get();
 
         return ProofResource::collection($proofs);
     }
@@ -1574,6 +1679,11 @@ class OrderController extends Controller
         return response()->json($entityEditingSettings);
     }
 
+    /**
+     * Get all order comments.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function orderComments(string $id)
     {
         try {

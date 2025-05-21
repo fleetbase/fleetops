@@ -1,5 +1,13 @@
 <Layout::Section::Header @title={{t "fleet-ops.settings.notifications.fleet-ops-notification-settings"}}>
-     <Button @type="primary" @size="sm" @icon="save" @text={{t "common.save-button-text"}} @onClick={{perform this.saveSettings}} @disabled={{this.saveSettings.isRunning}} @isLoading={{or this.saveSettings.isRunning this.getSettings.isRunning}} />
+    <Button
+        @type="primary"
+        @size="sm"
+        @icon="save"
+        @text={{t "common.save-button-text"}}
+        @onClick={{perform this.saveSettings}}
+        @disabled={{this.saveSettings.isRunning}}
+        @isLoading={{or this.saveSettings.isRunning this.getSettings.isRunning}}
+    />
 </Layout::Section::Header>
 
 <Layout::Section::Body class="overflow-y-scroll h-full">

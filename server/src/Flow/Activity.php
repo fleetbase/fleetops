@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Flow;
 
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Utils;
 
 class Activity extends FlowResource
@@ -100,10 +101,10 @@ class Activity extends FlowResource
      *
      * @param Order $order the order object to be passed to each event
      */
-    public function fireEvents(Order $order)
+    public function fireEvents(Order $order, ?Waypoint $waypoint = null)
     {
         foreach ($this->events as $event) {
-            $event->fire($order, $this);
+            $event->fire($order, $this, $waypoint);
         }
     }
 
@@ -112,12 +113,22 @@ class Activity extends FlowResource
      *
      * @return \Illuminate\Support\Collection a collection of child activities
      */
-    public function getChildActivities()
+    public function getChildActivities(Order|Waypoint|null $context = null)
     {
-        $children = collect();
-        if (is_array($this->activities)) {
-            foreach ($this->activities as $childActivityCode) {
+        $children   = collect();
+        $activities = $this->activities;
+
+        // if waypoint provided
+        $waypointContext = $context instanceof Waypoint;
+
+        if (is_array($activities)) {
+            foreach ($activities as $childActivityCode) {
                 $childActivity = $this->flow->getActivity($childActivityCode);
+                // if waypoint context skip `created` - `started` - `dispatched`
+                if ($waypointContext && in_array($childActivity->code, ['created', 'started', 'dispatched'])) {
+                    return $childActivity->getChildActivities($context);
+                }
+
                 if ($childActivity) {
                     $children->push($childActivity);
                 }
@@ -158,14 +169,18 @@ class Activity extends FlowResource
     /**
      * Determines the next set of activities based on the provided Order.
      *
-     * @param Order $order the order to determine the next activities for
-     *
      * @return \Illuminate\Support\Collection a collection of the next activities
      */
-    public function getNext(Order $order)
+    public function getNext(Order|Waypoint $context)
     {
-        $children       = $this->getChildActivities();
+        $children       = $this->getChildActivities($context);
         $nextActivities = collect();
+
+        // if context is a waypoint get the waypoint order
+        $order = $context;
+        if ($context instanceof Waypoint) {
+            $order = Order::where('payload_uuid', $context->payload_uuid)->first();
+        }
 
         foreach ($children as $childActivity) {
             if ($childActivity->passes($order)) {
@@ -237,6 +252,9 @@ class Activity extends FlowResource
         return $this->complete();
     }
 
+    /**
+     *  Checks if this activiy has been completed within the order already.
+     */
     public function isCompleted(Order $order): bool
     {
         return $order->hasCompletedActivity($this);

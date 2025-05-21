@@ -1,6 +1,7 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { debug } from '@ember/debug';
 
 export default class OperationsOrdersIndexViewRoute extends Route {
     @service currentUser;
@@ -66,7 +67,23 @@ export default class OperationsOrdersIndexViewRoute extends Route {
         // Listen for channel subscription
         (async () => {
             for await (let output of channel) {
-                this.refresh();
+                const { event, data } = output;
+
+                // debug output
+                debug(`Socket Event : ${event} : ${JSON.stringify(output)}`);
+
+                // Only reload if the order has a status change stemming from an updated event OR
+                // if a waypoint has been completed which will trigger `order.completed`
+                const statusChanged = event === 'order.updated' && data.status !== model.status;
+                const shouldReload = ['order.completed', 'waypoint.activity', 'order.created'].includes(event);
+                if (statusChanged || shouldReload) {
+                    this.refresh();
+
+                    // reload the controller stuff as well
+                    if (this.controller) {
+                        this.controller.loadOrderRelations.perform(model);
+                    }
+                }
 
                 if (typeof this.onOrderEvent === 'function') {
                     this.onOrderEvent(output);

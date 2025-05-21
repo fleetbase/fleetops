@@ -3,6 +3,8 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Events\WaypointActivityChanged;
+use Fleetbase\FleetOps\Events\WaypointCompleted;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Resources\v1\Payload as PayloadResource;
 use Fleetbase\FleetOps\Support\Utils;
@@ -282,10 +284,13 @@ class Payload extends Model
         return $this;
     }
 
-    public function setCurrentWaypoint(Place $destination, bool $save = true): Payload
+    public function setCurrentWaypoint(Place|Waypoint $destination, bool $save = true): Payload
     {
-        $this->current_waypoint_uuid = $destination->uuid;
+        if ($destination instanceof Waypoint) {
+            $destination = $destination->getPlace();
+        }
 
+        $this->current_waypoint_uuid = $destination->uuid;
         if ($save) {
             DB::table($this->getTable())->where('uuid', $this->uuid)->update(['current_waypoint_uuid' => $destination->uuid]);
         }
@@ -772,13 +777,20 @@ class Payload extends Model
             $currentWaypoint = $this->waypointMarkers->firstWhere('place_uuid', $this->current_waypoint_uuid);
             if ($currentWaypoint) {
                 $currentWaypoint->insertActivity($activity, $location, $proof);
-                $activity->fireEvents($this->order);
+                $activity->fireEvents($this->order, $currentWaypoint);
             }
 
             // update activity for all entities for this destination/waypoint
             $entities = $this->entities->where('destination_uuid', $this->current_waypoint_uuid);
             foreach ($entities as $entity) {
                 $entity->insertActivity($activity, $location, $proof);
+            }
+
+            // if this activity completes the waypoint notify waypoint customer
+            if ($activity && $activity->complete()) {
+                event(new WaypointCompleted($currentWaypoint, $activity));
+            } else {
+                event(new WaypointActivityChanged($currentWaypoint, $activity));
             }
         }
 
@@ -792,16 +804,23 @@ class Payload extends Model
      */
     public function setNextWaypointDestination()
     {
-        $nextWaypoint = $this->waypointMarkers->filter(function ($waypoint) {
+        $nextWaypoint = $this->waypointMarkers->first(function ($waypoint) {
             return !$waypoint->complete && $waypoint->place_uuid !== $this->current_waypoint_uuid;
-        })->first();
+        });
 
         if (!$nextWaypoint || $this->current_waypoint_uuid === $nextWaypoint->place_uuid) {
             return $this;
         }
 
-        $this->setRelation('currentWaypoint', $nextWaypoint);
-        $this->update(['current_waypoint_uuid' => $nextWaypoint->place_uuid]);
+        // if next waypoint is waypoint get the place record
+        $destination = $nextWaypoint;
+        if ($nextWaypoint instanceof Waypoint) {
+            $destination = $nextWaypoint->getPlace();
+        }
+
+        // Always set the destination using a place model
+        $this->setCurrentWaypoint($destination);
+        $this->setRelation('currentWaypoint', $destination);
 
         return $this;
     }

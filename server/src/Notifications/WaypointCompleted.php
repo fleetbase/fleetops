@@ -2,7 +2,7 @@
 
 namespace Fleetbase\FleetOps\Notifications;
 
-use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Utils;
@@ -15,33 +15,33 @@ use Illuminate\Notifications\Notification;
 use NotificationChannels\Apn\ApnChannel;
 use NotificationChannels\Fcm\FcmChannel;
 
-class OrderCanceled extends Notification implements ShouldQueue
+class WaypointCompleted extends Notification implements ShouldQueue
 {
     use Queueable;
 
     /**
      * The order instance this notification is for.
      *
-     * @var Order
-     */
-    public $order;
-
-    /**
-     * The waypoint instance this notification is for.
-     *
      * @var Waypoint
      */
     public $waypoint;
 
     /**
+     * The activity which triggered this waypoint completed..
+     *
+     * @var Activity
+     */
+    public $activity;
+
+    /**
      * Notification name.
      */
-    public static string $name = 'Order Canceled';
+    public static string $name = 'Waypoint Completed';
 
     /**
      * Notification description.
      */
-    public static string $description = 'Notify when an order has been canceled.';
+    public static string $description = 'When an order waypoint/destination has been completed.';
 
     /**
      * Notification package.
@@ -64,23 +64,17 @@ class OrderCanceled extends Notification implements ShouldQueue
     public array $data = [];
 
     /**
-     * The reason of the failure.
-     */
-    public string $reason;
-
-    /**
      * Create a new notification instance.
      *
      * @return void
      */
-    public function __construct(Order $order, string $reason = '', ?Waypoint $waypoint = null)
+    public function __construct(Waypoint $waypoint, Activity $activity)
     {
-        $this->order       = $order;
         $this->waypoint    = $waypoint;
-        $this->reason      = $reason;
-        $this->title       = 'Order ' . $this->getTrackingNumber() . ' was canceled';
-        $this->message     = 'Order ' . $this->getTrackingNumber() . ' has been canceled.';
-        $this->data        = ['id' => $this->order->public_id, 'type' => 'order_canceled'];
+        $this->activity    = $activity;
+        $this->title       = 'Order ' . $this->waypoint->trackingNumber->tracking_number . ' ' . strtolower($activity->details);
+        $this->message     = $activity->details;
+        $this->data        = ['id' => $this->waypoint->public_id, 'type' => 'waypoint_completed'];
     }
 
     /**
@@ -100,13 +94,16 @@ class OrderCanceled extends Notification implements ShouldQueue
      */
     public function broadcastOn()
     {
-        return [
-            new Channel('company.' . session('company', data_get($this->order, 'company.uuid'))),
-            new Channel('company.' . data_get($this->order, 'company.public_id')),
-            new Channel('api.' . session('api_credential')),
-            new Channel('order.' . $this->order->uuid),
-            new Channel('order.' . $this->order->public_id),
-        ];
+        $channels = [new Channel('api.' . session('api_credential'))];
+        $order    = Order::where('payload_uuid', $this->waypoint->payload_uuid)->first();
+        if ($order) {
+            $channels[] = new Channel('company.' . session('company', data_get($order, 'company.uuid')));
+            $channels[] = new Channel('company.' . data_get($order, 'company.public_id'));
+            $channels[] = new Channel('order.' . $order->uuid);
+            $channels[] = new Channel('order.' . $order->public_id);
+        }
+
+        return $channels;
     }
 
     /**
@@ -116,12 +113,10 @@ class OrderCanceled extends Notification implements ShouldQueue
      */
     public function toArray()
     {
-        $order = new OrderResource($this->order);
-
         return [
-            'event' => 'order.canceled_notification',
+            'event.waypoint_completed_notification',
             'title' => $this->title,
-            'body'  => $this->message . ' ' . $this->reason,
+            'body'  => $this->message,
             'data'  => $this->data,
         ];
     }
@@ -136,9 +131,8 @@ class OrderCanceled extends Notification implements ShouldQueue
         return (new MailMessage())
             ->subject($this->title)
             ->line($this->message)
-            ->line($this->reason)
             ->line('No further action is necessary.')
-            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->getTrackingNumber()]));
+            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->waypoint->trackingNumber->tracking_number]));
     }
 
     /**
@@ -159,18 +153,5 @@ class OrderCanceled extends Notification implements ShouldQueue
     public function toApn($notifiable)
     {
         return PushNotification::createApnMessage($this->title, $this->message, $this->data, 'view_order');
-    }
-
-    /**
-     * Get the tracking number which should be used for this event.
-     * In the case that the order has a currentWaypoint attached use its tracking number otherwise use the orders.
-     */
-    private function getTrackingNumber(): ?string
-    {
-        if ($this->waypoint instanceof Waypoint) {
-            return $this->waypoint->tracking;
-        }
-
-        return $this->order->tracking;
     }
 }
