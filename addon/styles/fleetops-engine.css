@@ -497,7 +497,9 @@ body[data-theme='dark']
     flex-direction: column;
     border: 1px #d1d5db solid;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 10%), 0 1px 2px -1px rgb(0 0 0 / 10%);
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
     padding: 0.5rem;
     background-color: #fff;
     color: #000;
@@ -566,7 +568,9 @@ body[data-theme='dark'] .order-progress-card {
     font-size: 1rem;
     border: 1px #d1d5db solid;
     border-radius: 0.25rem;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 10%), 0 1px 2px -1px rgb(0 0 0 / 10%);
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
     background-color: #fff;
     margin-right: 0.5rem;
     color: #000;
@@ -614,7 +618,9 @@ body[data-theme='dark'] .order-progress-card > .order-progress-card-header > .or
 
 .order-progress-bar > .order-progress-bar-marker-wrapper {
     border: 5px #e5e7eb solid;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 10%), 0 1px 2px -1px rgb(0 0 0 / 10%);
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
     border-radius: 100%;
 }
 
@@ -623,7 +629,9 @@ body[data-theme='dark'] .order-progress-card > .order-progress-card-header > .or
     width: 0.75rem;
     border: 1px #e5e7eb solid;
     background-color: #6b7280;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 10%), 0 1px 2px -1px rgb(0 0 0 / 10%);
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
     border-radius: 100%;
     outline: 0.25rem solid #fff;
 }
@@ -644,7 +652,9 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-marker-wrapper
 body[data-theme='dark'] .order-progress-bar > .order-progress-bar-marker-wrapper.completed,
 .order-progress-bar > .order-progress-bar-marker-wrapper.completed {
     border: 5px #16a34a solid;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 10%), 0 1px 2px -1px rgb(0 0 0 / 10%);
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
 }
 
 .order-progress-bar > .order-progress-bar-wrapper {
@@ -693,7 +703,9 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-marker-wrapper
     border-radius: 0.25rem;
     border: 1px #d1d5db solid;
     background-color: #fff;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 10%), 0 1px 2px -1px rgb(0 0 0 / 10%);
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
 }
 
 body[data-theme='dark'] .order-progress-bar > .order-progress-bar-wrapper > .order-progress-bar-truck-icon > .truck-icon-wrapper {
