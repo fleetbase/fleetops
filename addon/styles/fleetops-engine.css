@@ -1623,3 +1623,10 @@ body[data-theme='dark']
 .justify-end-i {
     justify-content: end !important;
 }
+
+button.fleetops-btn-xxs.btn,
+button.fleetops-btn-xxs,
+.fleetops-btn-xxs {
+    padding-top: 0.2rem !important;
+    padding-bottom: 0.2rem !important;
+}

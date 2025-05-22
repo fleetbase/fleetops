@@ -155,7 +155,7 @@ export default class MovementTrackerService extends Service {
 
                 if (event === `${type}.location_changed` || event === `${type}.simulated_location_changed`) {
                     eventBuffer.add(output);
-                    debug(`Incoming socket event added to buffer: ${event}`);
+                    debug(`Socket Event : ${event} : Added to EventBuffer : ${JSON.stringify(output)}`);
                 }
             }
         })();

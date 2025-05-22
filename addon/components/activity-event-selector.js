@@ -45,6 +45,10 @@ export default class ActivityEventSelectorComponent extends Component {
             name: 'order.canceled',
             description: 'Triggers when an order is canceled by a user, driver, or system process.',
         },
+        'order.completed': {
+            name: 'order.completed',
+            description: 'Triggers when an order is completed by a driver, or system process.',
+        },
     };
 
     /**

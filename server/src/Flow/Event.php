@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Flow;
 
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Support\Str;
 
@@ -19,6 +20,11 @@ class Event
     public ?Order $order = null;
 
     /**
+     * The waypoint associated with the event, if any.
+     */
+    public ?Waypoint $waypoint = null;
+
+    /**
      * The activity for the order event.
      */
     public ?Activity $activity = null;
@@ -29,11 +35,12 @@ class Event
      * @param string $name  the name of the event
      * @param ?Order $order the associated order, if any
      */
-    public function __construct(string $name, ?Order $order = null, ?Activity $activity = null)
+    public function __construct(string $name, ?Order $order = null, ?Activity $activity = null, ?Waypoint $waypoint = null)
     {
         $this->name     = $name;
         $this->order    = $order;
         $this->activity = $activity;
+        $this->waypoint = $waypoint;
     }
 
     /**
@@ -61,6 +68,18 @@ class Event
     }
 
     /**
+     * Sets the waypoint for the order event.
+     *
+     * @param Waypoint $waypoint the waypoint assosciated to this event
+     */
+    public function setWaypoint(Waypoint $waypoint)
+    {
+        $this->waypoint = $waypoint;
+
+        return $this;
+    }
+
+    /**
      * Triggers the event, optionally setting the order if not already set.
      *
      * Resolves the event class based on the event name and fires it using Laravel's event system.
@@ -69,7 +88,7 @@ class Event
      * @param ?Order    $order    optional order to associate with the event
      * @param ?Activity $activity optional activity which triggered the event
      */
-    public function fire(?Order $order = null, ?Activity $activity = null)
+    public function fire(?Order $order = null, ?Activity $activity = null, ?Waypoint $waypoint = null)
     {
         if (!$this->order && $order instanceof Order) {
             $this->setOrder($order);
@@ -79,10 +98,15 @@ class Event
             $this->setActivity($activity);
         }
 
+        if ($waypoint) {
+            $this->setWaypoint($waypoint);
+        }
+
         $eventClass = $this->resolve();
         if ($eventClass) {
             $event           = new $eventClass($this->order);
             $event->activity = $activity;
+            $event->waypoint = $waypoint;
             event($event);
         }
     }

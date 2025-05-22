@@ -579,7 +579,11 @@
         >
             {{#if @model.payload.isMultiDrop}}
                 <div>
-                    <RouteList @order={{@model}} @eta={{@model.eta}} />
+                    <RouteList
+                        @order={{@model}}
+                        @eta={{@model.eta}}
+                        @waypointActions={{hash viewWaypointLabel=(hash label=(t "fleet-ops.operations.orders.index.view.get-label") fn=this.viewWaypointLabel)}}
+                    />
                 </div>
             {{else}}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">

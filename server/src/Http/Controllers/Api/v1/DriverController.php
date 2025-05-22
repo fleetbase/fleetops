@@ -535,15 +535,32 @@ class DriverController extends Controller
                     return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
                 },
             ]);
+
+            return response()->json(['status' => 'OK', 'method' => 'sms']);
         } catch (\Throwable $e) {
             if (app()->bound('sentry')) {
                 app('sentry')->captureException($e);
             }
 
-            return response()->apiError('Unable to send SMS Verification code.');
+            // SEND VERIFICATION CODE BY EMAIL IF DRIVER HAS EMAIL ADDRESS
+            if ($user->email) {
+                try {
+                    VerificationCode::generateEmailVerificationFor($user, 'driver_login', [
+                        'messageCallback' => function ($verification) use ($company) {
+                            return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
+                        },
+                    ]);
+
+                    return response()->json(['status' => 'OK', 'method' => 'email']);
+                } catch (\Throwable $e) {
+                    if (app()->bound('sentry')) {
+                        app('sentry')->captureException($e);
+                    }
+                }
+            }
         }
 
-        return response()->json(['status' => 'OK']);
+        return response()->apiError('Unable to send SMS Verification code.');
     }
 
     /**

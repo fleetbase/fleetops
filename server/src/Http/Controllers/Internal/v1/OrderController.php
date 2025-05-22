@@ -328,7 +328,7 @@ class OrderController extends FleetOpsController
             return response()->error('Nothing to delete.');
         }
 
-        /** @var \Fleetbase\Models\Order */
+        /** @var Order */
         $count   = Order::whereIn('uuid', $ids)->count();
         $deleted = Order::whereIn('uuid', $ids)->delete();
 
@@ -351,7 +351,7 @@ class OrderController extends FleetOpsController
      */
     public function bulkCancel(BulkActionRequest $request)
     {
-        /** @var \Fleetbase\Models\Order */
+        /** @var Order */
         $orders = Order::whereIn('uuid', $request->input('ids'))->get();
 
         $count      = $orders->count();
@@ -392,7 +392,7 @@ class OrderController extends FleetOpsController
      */
     public function bulkDispatch(BulkDispatchRequest $request)
     {
-        /** @var \Fleetbase\Models\Order */
+        /** @var Order */
         $orders = Order::whereIn('uuid', $request->input('ids'))->get();
 
         $count      = $orders->count();
@@ -512,7 +512,7 @@ class OrderController extends FleetOpsController
      */
     public function cancel(CancelOrderRequest $request)
     {
-        /** @var \Fleetbase\Models\Order */
+        /** @var Order */
         $order = Order::where('uuid', $request->input('order'))->first();
 
         $order->cancel();
@@ -534,7 +534,7 @@ class OrderController extends FleetOpsController
     public function dispatchOrder(Request $request)
     {
         /**
-         * @var \Fleetbase\Models\Order
+         * @var Order
          */
         $order = Order::select(['uuid', 'driver_assigned_uuid', 'order_config_uuid', 'adhoc', 'dispatched', 'dispatched_at'])->where('uuid', $request->input('order'))->withoutGlobalScopes()->first();
         if (!$order) {
@@ -909,11 +909,18 @@ class OrderController extends FleetOpsController
             return response()->error('Unable to retrieve proof of delivery for subject.');
         }
 
-        $proofs = Proof::where([
+        $proofsQuery = Proof::where([
             'company_uuid' => session('company'),
             'order_uuid'   => $order->uuid,
-            'subject_uuid' => $subject->uuid,
-        ])->get();
+        ]);
+
+        // if subject is not the order then filter by subject
+        if ($order->uuid !== $subject->uuid) {
+            $proofsQuery->where('subject_uuid', $subject->uuid);
+        }
+
+        // get proofs
+        $proofs = $proofsQuery->get();
 
         return ProofResource::collection($proofs);
     }

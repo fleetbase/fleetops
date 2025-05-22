@@ -3,7 +3,6 @@
 namespace Fleetbase\FleetOps\Listeners;
 
 use Fleetbase\FleetOps\Events\OrderCanceled;
-use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Notifications\OrderCanceled as OrderCanceledNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -24,15 +23,6 @@ class HandleOrderCanceled implements ShouldQueue
     {
         /** @var \Fleetbase\FleetOps\Models\Order $order */
         $order    = $event->getModelRecord();
-        $location = $order->getLastLocation();
-
-        // Create order cancel activity
-        $activity = $order->config()->getCanceledActivity();
-
-        // Update order activity
-        $order->setStatus($activity->status);
-        $order->createActivity($activity, $location);
-
         if ($order->isIntegratedVendorOrder()) {
             $order->facilitator->provider()->callback('onCanceled', $order);
         }

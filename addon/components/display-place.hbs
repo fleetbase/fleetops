@@ -11,9 +11,33 @@
                 </span>
             </div>
         {{else}}
-            {{#if @eta}}
-                <Badge @status="warning" @hideStatusDot={{true}} class="my-1"><span class="font-bold">ETA:</span> {{format-duration @eta}}</Badge>
-            {{/if}}
+            <div class="flex flex-row item-center space-x-2 {{if (or place.status_code @eta) 'mb-2'}}">
+                {{#if place.status_code}}
+                    <Badge @status={{place.status_code}} />
+                {{/if}}
+                {{#if @eta}}
+                    <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration @eta}}</Badge>
+                {{/if}}
+                {{#if @waypointActions}}
+                    <DropdownButton @iconClass="icon-text-height" @size="xs" @buttonClass="fleetops-btn-xxs" @icon="ellipsis-h" @iconPrefix="fas" @contentClass="dropdown-menu" as |dd|>
+                        <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
+                            <div class="px-1">
+                                <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-300">
+                                    {{t "fleet-ops.operations.orders.index.view.waypoint-actions"}}
+                                </div>
+                            </div>
+                            <div class="next-dd-menu-seperator"></div>
+                            {{#each-in @waypointActions as |actionId action|}}
+                                <div class="px-1">
+                                    <a href="javascript:;" class="next-dd-item" disabled={{cannot "fleet-ops view order"}} {{on "click" (fn action.fn place dd)}}>
+                                        {{action.label}}
+                                    </a>
+                                </div>
+                            {{/each-in}}
+                        </div>
+                    </DropdownButton>
+                {{/if}}
+            </div>
             <address class={{@addressClass}}>
                 {{#if place.name}}
                     {{place.name}}<br />

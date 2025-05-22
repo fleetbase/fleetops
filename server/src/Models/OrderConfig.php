@@ -209,18 +209,25 @@ class OrderConfig extends Model
     /**
      * Retrieves the current order context, setting it if not already set.
      *
-     * @param Order|null $order the order to use as context if no current context is set
-     *
      * @return Order|null the current order context
      *
      * @throws \Exception if no order context is found and none is provided
      */
-    public function getOrderContext(?Order $order = null): ?Order
+    public function getOrderContext(Order|Waypoint|null $context = null): ?Order
     {
-        if (!$this->orderContext && $order instanceof Order) {
-            $this->setOrderContext($order);
+        if (!$this->orderContext && $context instanceof Order) {
+            $this->setOrderContext($context);
 
-            return $order;
+            return $context;
+        }
+
+        if (!$this->orderContext && $context instanceof Waypoint) {
+            $order = Order::where('payload_uuid', $context->payload_uuid)->first();
+            if ($order) {
+                $this->setOrderContext($order);
+
+                return $order;
+            }
         }
 
         if (!$this->orderContext) {
@@ -268,30 +275,35 @@ class OrderConfig extends Model
     /**
      * Determines the current activity based on the order's status.
      *
-     * @param Order|null $order the order to evaluate
-     *
      * @return Activity|null the current Activity object or null if not found
      */
-    public function currentActivity(?Order $order = null): ?Activity
+    public function currentActivity(Order|Waypoint|null $context = null): ?Activity
     {
-        $order = $this->getOrderContext($order);
+        if ($context === null) {
+            $context = $this->getOrderContext($context);
+        }
 
-        return $this->activities()->firstWhere('code', $order->status);
+        if ($context instanceof Waypoint) {
+            return $this->activities()->firstWhere('code', strtolower($context->status_code));
+        }
+
+        return $this->activities()->firstWhere('code', $context->status);
     }
 
     /**
      * Determines the next set of activities based on the current activity.
      *
-     * @param Order|null $order the order to evaluate
-     *
      * @return Collection a collection of the next activities
      */
-    public function nextActivity(?Order $order = null): Collection
+    public function nextActivity(Order|Waypoint|null $context = null): Collection
     {
-        $order           = $this->getOrderContext($order);
-        $currentActivity = $this->currentActivity($order);
+        if ($context === null) {
+            $context = $this->getOrderContext($context);
+        }
+
+        $currentActivity = $this->currentActivity($context);
         if ($currentActivity) {
-            return $currentActivity->getNext($order);
+            return $currentActivity->getNext($context);
         }
 
         return collect();
@@ -300,17 +312,18 @@ class OrderConfig extends Model
     /**
      * Retrieves the first activity in the next set of activities.
      *
-     * @param Order|null $order the order to evaluate
-     *
      * @return Activity|null the first Activity object in the next set or null if not found
      */
-    public function nextFirstActivity(?Order $order = null): ?Activity
+    public function nextFirstActivity(Order|Waypoint|null $context = null): ?Activity
     {
+        if ($context === null) {
+            $context = $this->getOrderContext($context);
+        }
+
         $next            = collect();
-        $order           = $this->getOrderContext($order);
-        $currentActivity = $this->currentActivity($order);
+        $currentActivity = $this->currentActivity($context);
         if ($currentActivity) {
-            $next = $currentActivity->getNext($order);
+            $next = $currentActivity->getNext($context);
         }
 
         return $next->first();
@@ -319,17 +332,18 @@ class OrderConfig extends Model
     /**
      * Retrieves the activity that follows after the next activity.
      *
-     * @param Order|null $order the order to evaluate
-     *
      * @return Activity|null the Activity object that follows after the next or null if not found
      */
-    public function afterNextActivity(?Order $order = null): ?Activity
+    public function afterNextActivity(Order|Waypoint|null $context = null): ?Activity
     {
+        if ($context === null) {
+            $context = $this->getOrderContext($context);
+        }
+
         $afterNext       = collect();
-        $order           = $this->getOrderContext($order);
-        $nextActivity    = $this->nextFirstActivity($order);
+        $nextActivity    = $this->nextFirstActivity($context);
         if ($nextActivity) {
-            $afterNext = $nextActivity->getNext($order);
+            $afterNext = $nextActivity->getNext($context);
         }
 
         return $afterNext->first();
@@ -338,16 +352,17 @@ class OrderConfig extends Model
     /**
      * Retrieves the previous activities based on the current activity.
      *
-     * @param Order|null $order the order to evaluate
-     *
      * @return Collection a collection of previous activities
      */
-    public function previousActivity(?Order $order = null): Collection
+    public function previousActivity(Order|Waypoint|null $context = null): Collection
     {
-        $order           = $this->getOrderContext($order);
-        $currentActivity = $this->currentActivity($order);
+        if ($context === null) {
+            $context = $this->getOrderContext($context);
+        }
+
+        $currentActivity = $this->currentActivity($context);
         if ($currentActivity) {
-            return $currentActivity->getPrevious($order);
+            return $currentActivity->getPrevious($context);
         }
 
         return collect();

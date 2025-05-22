@@ -133,15 +133,11 @@ class OrderPing extends Notification implements ShouldQueue
      */
     public function toArray()
     {
-        $order = new OrderResource($this->order);
-
         return [
+            'event' => 'order.ping_notification',
             'title' => $this->title,
             'body'  => $this->message,
-            'data'  => [
-                ...$this->data,
-                'order' => $order->toWebhookPayload(),
-            ],
+            'data'  => $this->data,
         ];
     }
 

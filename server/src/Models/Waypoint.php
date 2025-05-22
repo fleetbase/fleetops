@@ -224,4 +224,14 @@ class Waypoint extends Model
 
         return $result ? $uuid : false;
     }
+
+    /**
+     * Get this waypoint place record.
+     */
+    public function getPlace(): ?Place
+    {
+        $this->loadMissing('place');
+
+        return $this->place ?? Place::where('uuid', $this->place_uuid)->first();
+    }
 }

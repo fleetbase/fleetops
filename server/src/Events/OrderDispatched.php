@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Events;
 
 use Fleetbase\Events\ResourceLifecycleEvent;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Models\Waypoint;
 
 class OrderDispatched extends ResourceLifecycleEvent
 {
@@ -18,4 +19,9 @@ class OrderDispatched extends ResourceLifecycleEvent
      * Assosciated activity which triggered the event.
      */
     public ?Activity $activity;
+
+    /**
+     * Assosciated order waypoint which event is for.
+     */
+    public ?Waypoint $waypoint;
 }

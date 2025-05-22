@@ -6,7 +6,7 @@
                     <div class="index-count">1</div>
                 </div>
                 <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
-                    <DisplayPlace @place={{@order.payload.firstWaypoint}} @eta={{get @eta @order.payload.firstWaypoint.id}} />
+                    <DisplayPlace @place={{@order.payload.firstWaypoint}} @eta={{get @eta @order.payload.firstWaypoint.id}} @waypointActions={{@waypointActions}} />
                 </div>
             </div>
         {{/if}}
@@ -28,7 +28,7 @@
                             <div class="index-count">{{add index 2}}</div>
                         </div>
                         <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
-                            <DisplayPlace @place={{waypoint}} @eta={{get @eta waypoint.id}} />
+                            <DisplayPlace @place={{waypoint}} @eta={{get @eta waypoint.id}} @waypointActions={{@waypointActions}} />
                         </div>
                     </div>
                 {{/each}}
@@ -41,7 +41,7 @@
                     <div class="index-count">{{add @order.payload.middleWaypoints.length 2}}</div>
                 </div>
                 <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
-                    <DisplayPlace @place={{@order.payload.lastWaypoint}} @eta={{get @eta @order.payload.lastWaypoint.id}} />
+                    <DisplayPlace @place={{@order.payload.lastWaypoint}} @eta={{get @eta @order.payload.lastWaypoint.id}} @waypointActions={{@waypointActions}} />
                 </div>
             </div>
         {{/if}}

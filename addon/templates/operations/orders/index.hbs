@@ -72,7 +72,12 @@
                     <h4>Bulk Search</h4>
                 </div>
                 <div class="filters-dropdown-body">
-                    <Textarea @value={{this.bulkSearchValue}} class="form-input w-full" rows="8" placeholder="Input comma delimited order ID's or tracking numbers to perform a bulk search" />
+                    <Textarea
+                        @value={{this.bulkSearchValue}}
+                        class="form-input w-full"
+                        rows="8"
+                        placeholder="Input comma delimited order ID's or tracking numbers to perform a bulk search"
+                    />
                 </div>
                 <div class="filters-dropdown-footer space-x-2">
                     <Button @text="Clear" @icon="trash" @size="xs" @onClick={{dropdown-fn dd this.removeBulkQuery}} />

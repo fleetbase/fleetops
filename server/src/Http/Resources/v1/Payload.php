@@ -29,7 +29,7 @@ class Payload extends FleetbaseResource
             'pickup_uuid'           => $this->when(Http::isInternalRequest(), $this->pickup_uuid),
             'dropoff_uuid'          => $this->when(Http::isInternalRequest(), $this->dropoff_uuid),
             'return_uuid'           => $this->when(Http::isInternalRequest(), $this->return_uuid),
-            'current_waypoint'      => $this->when(!Http::isInternalRequest() && $this->currentWaypoint, data_get($this, 'currentWaypoint.public_id')),
+            'current_waypoint'      => $this->when(Http::isPublicRequest() && $this->currentWaypoint, data_get($this, 'currentWaypoint.public_id')),
             'pickup'                => $this->getPlace($this->pickup),
             'dropoff'               => $this->getPlace($this->dropoff),
             'return'                => new Place($this->return),

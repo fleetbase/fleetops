@@ -340,8 +340,8 @@ class OrderFilter extends Filter
     {
         $ids     = Utils::arrayFrom($ids);
         $firstId = Arr::first($ids);
-        $this->builder->where(function ($query) use ($ids, $firstId) {
-            if ($firstId) {
+        if ($firstId) {
+            $this->builder->where(function ($query) use ($ids, $firstId) {
                 if (Utils::isPublicId($firstId)) {
                     return $query->whereIn('public_id', $ids);
                 }
@@ -354,8 +354,8 @@ class OrderFilter extends Filter
                 $query->orWhereHas('trackingNumber', function ($query) use ($ids) {
                     $query->whereIn('tracking_number', $ids);
                 });
-            }
-        });
+            });
+        }
     }
 
     public function createdAt($createdAt)
