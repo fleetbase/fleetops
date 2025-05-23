@@ -6,7 +6,7 @@ import { tracked } from '@glimmer/tracking';
 // import { isBlank } from '@ember/utils';
 // import { dasherize } from '@ember/string';
 // import { later, next } from '@ember/runloop';
-// import { task } from 'ember-concurrency-decorators';
+// import { task } from 'ember-concurrency';
 // import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 // import polyline from '@fleetbase/ember-core/utils/polyline';
 // import findClosestWaypoint from '@fleetbase/ember-core/utils/find-closest-waypoint';

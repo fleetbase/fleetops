@@ -8,7 +8,7 @@ import { singularize } from 'ember-inflector';
 import { later } from '@ember/runloop';
 import { debug } from '@ember/debug';
 import { allSettled } from 'rsvp';
-import { task } from 'ember-concurrency-decorators';
+import { task } from 'ember-concurrency';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';

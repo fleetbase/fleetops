@@ -5,7 +5,7 @@ import { action } from '@ember/object';
 import { later } from '@ember/runloop';
 import { classify } from '@ember/string';
 import { calculateInPlacePosition } from 'ember-basic-dropdown/utils/calculate-position';
-import { task } from 'ember-concurrency-decorators';
+import { task } from 'ember-concurrency';
 
 /**
  * @class MapContainerToolbarZonesPanelComponent

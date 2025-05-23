@@ -4,8 +4,7 @@ import { inject as service } from '@ember/service';
 import { action, computed } from '@ember/object';
 import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';
-import { timeout } from 'ember-concurrency';
-import { task } from 'ember-concurrency-decorators';
+import { timeout, task } from 'ember-concurrency';
 
 export default class FleetVehicleListingComponent extends Component {
     @service store;

@@ -8,11 +8,10 @@ import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';
 import { dasherize } from '@ember/string';
 import { next } from '@ember/runloop';
-import { task } from 'ember-concurrency-decorators';
+import { task } from 'ember-concurrency';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import { debug } from '@ember/debug';
 import polyline from '@fleetbase/ember-core/utils/polyline';
-import findClosestWaypoint from '@fleetbase/ember-core/utils/find-closest-waypoint';
 import isNotEmpty from '@fleetbase/ember-core/utils/is-not-empty';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
@@ -939,66 +938,59 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @task *optimizeRoute() {
         this.isOptimizingRoute = true;
 
+        // Build the coordinate list we’ll send to OSRM
         const driverAssigned = this.order.driver_assigned;
-        const driverPosition = driverAssigned ? driverAssigned.location.coordinates : null;
-        const leafletMap = this.leafletMap;
+        const driverPosition = driverAssigned?.location?.coordinates; // [lon,lat] | undefined
+        const originalCoords = this.getCoordinatesFromPayload(); // [[lon,lat], …]
+        const coordinates = driverPosition ? [driverPosition, ...originalCoords] : [...originalCoords];
+        const hasDriverStart = Boolean(driverPosition);
+        const source = hasDriverStart ? 'first' : 'any';
+        const destination = 'any';
+        const roundtrip = false; // don’t loop back
         const routingHost = getRoutingHost(this.payload, this.waypoints);
 
-        let originalCoordinates = this.getCoordinatesFromPayload();
-        let coordinates = [...originalCoordinates]; // clone
-
-        let source = 'any';
-        let destination = 'any';
-        let hasDriverStart = false;
-
-        // Inject driver location as starting point if available
-        if (driverPosition && Array.isArray(driverPosition) && driverPosition.length === 2) {
-            coordinates.unshift([driverPosition[0], driverPosition[1]]);
-            source = 'first';
-            hasDriverStart = true;
-        }
-
+        // Call the OSRM /trip service
         try {
-            const response = yield this.fetch.routing(coordinates, { source, destination, annotations: true }, { host: routingHost });
+            const response = yield this.fetch.routing(coordinates, { source, destination, roundtrip, annotations: true }, { host: routingHost });
 
-            if (response?.code === 'Ok') {
-                this.removeRoutingControlPreview();
-                this.removeOptimizedRoute(leafletMap);
-                this.clearLayers();
+            if (response?.code !== 'Ok') {
+                throw new Error(`OSRM error: ${response?.code}`);
+            }
 
-                const trip = response.trips?.firstObject;
-                const route = polyline.decode(trip.geometry);
-                const responseWaypoints = response.waypoints || [];
+            // Pair each OSRM waypoint with its Waypoint model
+            const modelsByInputIndex = hasDriverStart ? [null, ...this.waypoints] : this.waypoints;
 
-                let sortedWaypoints = [];
+            const pairs = response.waypoints.map((wp, idx) => ({
+                model: modelsByInputIndex[idx], // Ember model or null (driver)
+                wp,
+            }));
 
-                for (let i = 0; i < responseWaypoints.length; i++) {
-                    // Skip driver position (first coordinate) if it was included
-                    if (hasDriverStart && i === 0) {
-                        continue;
-                    }
+            // Drop the driver start if present
+            const payloadPairs = hasDriverStart ? pairs.slice(1) : pairs;
 
-                    const wp = responseWaypoints[i];
-                    const lat = wp.location[1];
-                    const lng = wp.location[0];
+            // Sort by the optimised order
+            payloadPairs.sort((a, b) => a.wp.waypoint_index - b.wp.waypoint_index);
 
-                    const model = findClosestWaypoint(lat, lng, this.waypoints);
+            // Extract the Ember models (null-safe)
+            const sortedWaypoints = payloadPairs.map((p) => p.model).filter(Boolean);
 
-                    if (model) {
-                        sortedWaypoints.pushObject(model);
-                    }
-                }
+            // Update map layers & UI
+            this.removeRoutingControlPreview();
+            this.removeOptimizedRoute(this.leafletMap);
+            this.clearLayers();
 
-                this.waypoints = sortedWaypoints;
-                this.setOptimizedRoute(route, trip, responseWaypoints);
-                this.previewDraftOrderRoute(this.payload, this.waypoints, this.isMultipleDropoffOrder);
-                this.updatePayloadCoordinates();
+            const trip = response.trips?.[0];
+            const route = polyline.decode(trip.geometry); // [[lat,lon], …]
 
-                this.order.set('is_route_optimized', true);
+            this.waypoints = sortedWaypoints;
+            this.setOptimizedRoute(route, trip, response.waypoints);
+            this.previewDraftOrderRoute(this.payload, this.waypoints, this.isMultipleDropoffOrder);
+            this.updatePayloadCoordinates();
 
-                if (this.isUsingIntegratedVendor) {
-                    this.getQuotes();
-                }
+            this.order.set('is_route_optimized', true);
+
+            if (this.isUsingIntegratedVendor) {
+                this.getQuotes();
             }
         } catch (err) {
             debug('Error optimizing route', err);

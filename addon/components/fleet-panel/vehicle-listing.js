@@ -3,8 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { isBlank } from '@ember/utils';
 import { action, set } from '@ember/object';
-import { timeout } from 'ember-concurrency';
-import { task } from 'ember-concurrency-decorators';
+import { timeout, task } from 'ember-concurrency';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 
 export default class FleetPanelVehicleListingComponent extends Component {

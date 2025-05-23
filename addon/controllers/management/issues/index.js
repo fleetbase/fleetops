@@ -3,8 +3,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { isBlank } from '@ember/object';
-import { timeout } from 'ember-concurrency';
-import { task } from 'ember-concurrency-decorators';
+import { timeout, task } from 'ember-concurrency';
 import getIssueTypes from '../../../utils/get-issue-types';
 import getIssueCategories from '../../../utils/get-issue-categories';
 
