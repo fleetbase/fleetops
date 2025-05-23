@@ -4,7 +4,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
-import { task } from 'ember-concurrency-decorators';
+import { task } from 'ember-concurrency';
 import isObject from '@fleetbase/ember-core/utils/is-object';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 

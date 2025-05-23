@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { later } from '@ember/runloop';
-import { task } from 'ember-concurrency-decorators';
+import { task } from 'ember-concurrency';
 
 export default class LayoutFleetOpsSidebarFleetListingComponent extends Component {
     @service store;

@@ -6,7 +6,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { dasherize } from '@ember/string';
-import { task } from 'ember-concurrency-decorators';
+import { task } from 'ember-concurrency';
 import isModel from '@fleetbase/ember-core/utils/is-model';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';

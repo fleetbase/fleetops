@@ -7,7 +7,7 @@ import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { debug } from '@ember/debug';
-import { task } from 'ember-concurrency-decorators';
+import { task } from 'ember-concurrency';
 import generateUUID from '@fleetbase/ember-core/utils/generate-uuid';
 import createFlowActivity from '../../utils/create-flow-activity';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';

@@ -4,7 +4,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
-import { task } from 'ember-concurrency-decorators';
+import { task } from 'ember-concurrency';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 import ObjectProxy from '@ember/object/proxy';
 import createCustomEntity from '../../utils/create-custom-entity';

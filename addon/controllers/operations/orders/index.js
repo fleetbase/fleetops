@@ -6,8 +6,7 @@ import { equal } from '@ember/object/computed';
 import { debug } from '@ember/debug';
 import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';
-import { timeout } from 'ember-concurrency';
-import { task } from 'ember-concurrency-decorators';
+import { timeout, task } from 'ember-concurrency';
 
 export default class OperationsOrdersIndexController extends BaseController {
     @service currentUser;

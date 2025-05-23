@@ -3,8 +3,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { isBlank } from '@ember/utils';
-import { timeout } from 'ember-concurrency';
-import { task } from 'ember-concurrency-decorators';
+import { timeout, task } from 'ember-concurrency';
 import getVendorStatusOptions from '../../../utils/get-vendor-status-options';
 
 export default class ManagementVendorsIndexController extends BaseController {

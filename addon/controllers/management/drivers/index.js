@@ -4,8 +4,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { equal } from '@ember/object/computed';
-import { timeout } from 'ember-concurrency';
-import { task } from 'ember-concurrency-decorators';
+import { timeout, task } from 'ember-concurrency';
 
 export default class ManagementDriversIndexController extends BaseController {
     @service notifications;
