@@ -186,6 +186,14 @@ class Payload extends Model
     }
 
     /**
+     * The current waypoint of the payload in progress.
+     */
+    public function currentWaypointMarker()
+    {
+        return $this->belongsTo(Waypoint::class, 'current_waypoint_uuid', 'place_uuid')->withoutGlobalScopes();
+    }
+
+    /**
      * Waypoints between start and end.
      *
      * @return \Illuminate\Database\Eloquent\Concerns\HasManyThrough
