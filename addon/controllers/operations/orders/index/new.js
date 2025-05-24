@@ -944,7 +944,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         const originalCoords = this.getCoordinatesFromPayload(); // [[lon,lat], …]
         const coordinates = driverPosition ? [driverPosition, ...originalCoords] : [...originalCoords];
         const hasDriverStart = Boolean(driverPosition);
-        const source = hasDriverStart ? 'first' : 'any';
+        const source = 'first';
         const destination = 'any';
         const roundtrip = false; // don’t loop back
         const routingHost = getRoutingHost(this.payload, this.waypoints);
