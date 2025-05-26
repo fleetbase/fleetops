@@ -186,6 +186,14 @@ class Payload extends Model
     }
 
     /**
+     * The current waypoint of the payload in progress.
+     */
+    public function currentWaypointMarker()
+    {
+        return $this->belongsTo(Waypoint::class, 'current_waypoint_uuid', 'place_uuid')->withoutGlobalScopes();
+    }
+
+    /**
      * Waypoints between start and end.
      *
      * @return \Illuminate\Database\Eloquent\Concerns\HasManyThrough
@@ -305,7 +313,7 @@ class Payload extends Model
         }
 
         foreach ($waypoints as $index => $attributes) {
-            $waypoint = ['payload_uuid' => $this->payload_uuid];
+            $waypoint = ['payload_uuid' => $this->payload_uuid, 'type' => data_get($attributes, 'type', 'dropoff')];
 
             if (Utils::isset($attributes, 'place') && is_array(Utils::get($attributes, 'place'))) {
                 $attributes = Utils::get($attributes, 'place');
@@ -355,7 +363,7 @@ class Payload extends Model
         }
 
         foreach ($waypoints as $index => $attributes) {
-            $waypoint = ['payload_uuid' => $this->uuid, 'order' => $index];
+            $waypoint = ['payload_uuid' => $this->uuid, 'order' => $index, 'type' => data_get($attributes, 'type', 'dropoff')];
 
             if (Utils::isset($attributes, 'place') && is_array(Utils::get($attributes, 'place'))) {
                 $placeAttributes = Utils::get($attributes, 'place');

@@ -38,6 +38,7 @@
                         @icon={{icon iconUrl=driver.vehicle_avatar iconSize=(array 24 24)}}
                         @onAdd={{fn this.triggerAction "onDriverAdded" driver}}
                         @onClick={{fn this.triggerAction "onDriverClicked" driver}}
+                        @draggable={{false}}
                         as |marker|
                     >
                         <marker.popup @maxWidth="500" @minWidth="225">
@@ -77,6 +78,7 @@
                             @icon={{icon iconUrl=driver.vehicle_avatar iconSize=(array 24 24)}}
                             @onAdd={{fn this.triggerAction "onDriverAdded" driver}}
                             @onClick={{fn this.triggerAction "onDriverClicked" driver}}
+                            @draggable={{false}}
                             as |marker|
                         >
                             <marker.popup @maxWidth="500" @minWidth="225">
@@ -114,6 +116,7 @@
                             @icon={{icon iconUrl=vehicle.avatar_url iconSize=(array 24 24)}}
                             @onAdd={{fn this.triggerAction "onVehicleAdded" vehicle}}
                             @onClick={{fn this.triggerAction "onVehicleClicked" vehicle}}
+                            @draggable={{false}}
                             as |marker|
                         >
                             <marker.popup @permanent={{false}} @sticky={{true}}>
@@ -150,6 +153,7 @@
                             @icon={{icon iconUrl=vehicle.avatar_url iconSize=(array 24 24)}}
                             @onAdd={{fn this.triggerAction "onVehicleAdded" vehicle}}
                             @onClick={{fn this.triggerAction "onVehicleClicked" vehicle}}
+                            @draggable={{false}}
                             as |marker|
                         >
                             <marker.popup @permanent={{false}} @sticky={{true}}>
@@ -189,6 +193,7 @@
                             @alt={{place.address}}
                             @onAdd={{fn this.triggerAction "onPlaceAdded" place}}
                             @onClick={{fn this.triggerAction "onPlaceClicked" place}}
+                            @draggable={{false}}
                             as |marker|
                         >
                             <marker.popup>

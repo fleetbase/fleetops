@@ -1395,8 +1395,6 @@ class Order extends Model
             $activity = $flow->firstWhere('code', $code);
         }
 
-        // dd($activity);
-
         if (!Utils::isActivity($activity)) {
             return false;
         }
@@ -1760,23 +1758,55 @@ class Order extends Model
      */
     public function resolveDynamicProperty(string $property)
     {
-        $snakedProperty = Str::snake($property);
+        // Special payload shortcuts
+        $root       = Str::before($property, '.');   // e.g. "pickup" in "pickup.address"
+        $payloadMap = [
+            'pickup'                => 'payload.pickup',
+            'dropoff'               => 'payload.dropoff',
+            'waypoint'              => 'payload.currentWaypointMarker',
+            'currentWaypoint'       => 'payload.currentWaypointMarker',
+            'currentWaypointMarker' => 'payload.currentWaypointMarker',
+        ];
 
-        // check if existing property
-        if ($this->{$snakedProperty}) {
-            return $this->{$snakedProperty};
+        if (isset($payloadMap[$root])) {
+            $this->loadMissing($payloadMap[$root]);
+            $target = data_get($this, $payloadMap[$root]);
+
+            // “pickup”, “dropoff”, or “currentWaypoint” on their own
+            if ($property === $root) {
+                return $target;
+            }
+
+            // e.g. "address.city" part of "pickup.address.city"
+            $subKey = Str::after($property, $root . '.');
+
+            // if waypoint we can do "waypoint.place.address" or "waypoint.address" for resolution
+            $isWaypointMarker = Str::startsWith($root, 'currentWaypoint') || $root === 'waypoint';
+            if ($isWaypointMarker && $target instanceof Waypoint) {
+                $target->loadMissing('place');
+
+                return data_get($target, $subKey) ?? data_get($target->place, $subKey);
+            }
+
+            return data_get($target, $subKey);
         }
 
-        // Check if custom field property
+        // Direct attribute on the model
+        $snake = Str::snake($property);
+        if (array_key_exists($snake, $this->getAttributes())) {
+            return $this->getAttribute($snake);
+        }
+
+        // Custom-field / meta look-ups
         if ($this->isCustomField($property)) {
             return $this->getCustomFieldValueByKey($property);
         }
 
-        // Check if meta attribute
         if ($this->hasMeta($property)) {
             return $this->getMeta($property);
         }
 
+        // Fallback deep-path access
         return data_get($this, $property);
     }
 

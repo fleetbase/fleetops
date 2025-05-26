@@ -29,11 +29,11 @@ class DebugOrderTracker extends Command
      */
     public function handle()
     {
-        $order = Order::where('public_id', 'order_n227274')->first();
-        if ($order) {
-            $tracker = new OrderTracker($order);
-            dd($tracker->getOrderProgressPercentage());
-        }
+        // $order = Order::where('public_id', 'order_n227274')->first();
+        // if ($order) {
+        //     $tracker = new OrderTracker($order);
+        //     dd($tracker->getOrderProgressPercentage());
+        // }
 
         return Command::SUCCESS;
     }

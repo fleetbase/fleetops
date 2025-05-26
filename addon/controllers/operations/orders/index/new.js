@@ -677,7 +677,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
     @action resetInterface() {
         if (this.leafletMap && this.leafletMap.liveMap) {
-            this.leafletMap.liveMap.show(['drivers', 'vehicles', 'routes']);
+            this.leafletMap.liveMap.showAll();
         }
     }
 
@@ -709,31 +709,35 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     }
 
     @action removeRoutingControlPreview() {
-        const leafletMap = this.leafletMap;
-        const previewRouteControl = this.previewRouteControl;
+        return new Promise((resolve) => {
+            const leafletMap = this.leafletMap;
+            const previewRouteControl = this.previewRouteControl;
 
-        let removed = false;
+            let removed = false;
 
-        if (leafletMap && previewRouteControl instanceof RoutingControl) {
-            try {
-                previewRouteControl.remove();
-                removed = true;
-            } catch (e) {
-                // silent
-            }
-
-            if (!removed) {
+            if (leafletMap && previewRouteControl instanceof RoutingControl) {
                 try {
-                    leafletMap.removeControl(previewRouteControl);
+                    previewRouteControl.remove();
+                    removed = true;
                 } catch (e) {
                     // silent
                 }
-            }
-        }
 
-        if (!removed) {
-            this.forceRemoveRoutePreview();
-        }
+                if (!removed) {
+                    try {
+                        leafletMap.removeControl(previewRouteControl);
+                    } catch (e) {
+                        // silent
+                    }
+                }
+            }
+
+            if (!removed) {
+                this.forceRemoveRoutePreview();
+            }
+
+            resolve(true);
+        });
     }
 
     @action forceRemoveRoutePreview() {
@@ -1060,7 +1064,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         }
     }
 
-    @action resetForm() {
+    @action async resetForm() {
         const order = this.store.createRecord('order', { meta: [] });
         const payload = this.store.createRecord('payload');
         const driversQuery = {};
@@ -1080,8 +1084,6 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         const customFields = [];
         const customFieldValues = {};
 
-        this.removeRoutingControlPreview();
-        this.removeOptimizedRoute();
         this.setProperties({
             order,
             payload,
@@ -1102,6 +1104,9 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             customFields,
             customFieldValues,
         });
+
+        await this.removeRoutingControlPreview();
+        this.removeOptimizedRoute();
         this.resetInterface();
     }
 

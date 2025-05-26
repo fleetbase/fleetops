@@ -1,6 +1,16 @@
 import MarkerLayer from 'ember-leaflet/components/marker-layer';
 import { isArray } from '@ember/array';
 
+const __draggingHotfix = (layer) => {
+    if (!layer.dragging) {
+        layer.dragging = {
+            enabled: () => false,
+            enable: () => (layer.options.draggable = true),
+            disable: () => (layer.options.draggable = false),
+        };
+    }
+};
+
 const arrayFromLatLng = (latlng) => {
     if (isArray(latlng)) {
         return latlng;
@@ -52,6 +62,7 @@ L.TrackingMarker = L.Marker.extend({
         this._slideKeepAtCenter = false;
         this._slideDraggingWasAllowed = false;
         this._slideFrame = 0;
+        __draggingHotfix(this);
     },
 
     slideTo: function (latlng, options = {}) {
@@ -69,6 +80,7 @@ L.TrackingMarker = L.Marker.extend({
         this._nextPosition = arrayFromLatLng(latlng);
         this._slideKeepAtCenter = !!options.keepAtCenter;
         this._slideDraggingWasAllowed = this._slideDraggingWasAllowed !== undefined ? this._slideDraggingWasAllowed : this._map.dragging.enabled();
+        __draggingHotfix(this);
 
         if (this._slideKeepAtCenter) {
             this._map.dragging.disable();
@@ -244,6 +256,13 @@ export default class LeafletTrackingMarkerComponent extends MarkerLayer {
      * @memberof LeafletTrackingMarkerComponent
      */
     rotationAngle = 0;
+
+    /**
+     * Default value for the draggable prop.
+     *
+     * @memberof LeafletTrackingMarkerComponent
+     */
+    draggable = false;
 
     getOption(key, defaultValue = null) {
         const value = this.options[key] ?? this[key];

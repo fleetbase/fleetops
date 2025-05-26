@@ -243,39 +243,41 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         this.customFieldGroups = customFieldGroups;
     }
 
-    @action resetView() {
-        this.removeRoutingControlPreview();
+    @action async resetView() {
+        await this.removeRoutingControlPreview();
         this.resetInterface();
     }
 
     @action resetInterface() {
-        const liveMap = this.leafletMap ? this.leafletMap.liveMap : null;
-        if (liveMap) {
-            liveMap.reload();
-            liveMap.showAll();
+        if (this.leafletMap && this.leafletMap.liveMap) {
+            this.leafletMap.liveMap.showAll();
+            this.leafletMap.liveMap.reload();
         }
     }
 
     @action removeRoutingControlPreview() {
-        const { leafletMap, routeControl } = this;
+        return new Promise((resolve) => {
+            const { leafletMap, routeControl } = this;
 
-        if (routeControl instanceof RoutingControl) {
-            try {
-                routeControl.remove();
-            } catch (e) {
-                // silent
+            if (routeControl instanceof RoutingControl) {
+                try {
+                    routeControl.remove();
+                } catch (e) {
+                    // silent
+                }
             }
-        }
 
-        if (leafletMap instanceof L.Map) {
-            try {
-                leafletMap.removeControl(routeControl);
-            } catch (e) {
-                // silent
+            if (leafletMap instanceof L.Map) {
+                try {
+                    leafletMap.removeControl(routeControl);
+                } catch (e) {
+                    // silent
+                }
             }
-        }
 
-        this.forceRemoveRoutePreview();
+            this.forceRemoveRoutePreview();
+            resolve(true);
+        });
     }
 
     @action forceRemoveRoutePreview() {

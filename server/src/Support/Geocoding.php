@@ -209,8 +209,6 @@ class Geocoding
             throw $e;
         }
 
-        // dd($reverseQueryResults, $geodingQueryResults);
-
         return $reverseQueryResults->merge($geodingQueryResults)->unique('street1');
     }
 

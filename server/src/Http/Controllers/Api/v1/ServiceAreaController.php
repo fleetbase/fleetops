@@ -66,7 +66,9 @@ class ServiceAreaController extends Controller
         try {
             $serviceArea = ServiceArea::create($input);
         } catch (\Throwable $e) {
-            dd($e->getMessage());
+            logger()->error('Unable to create service area.', ['error' => $e->getMessage()]);
+
+            return response()->apiError('Failed to create service area.');
         }
 
         // response the driver resource

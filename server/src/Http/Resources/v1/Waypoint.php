@@ -58,7 +58,7 @@ class Waypoint extends FleetbaseResource
             'owner'                  => $this->when(!Http::isInternalRequest(), Resolve::resourceForMorph($this->owner_type, $this->owner_uuid)),
             'tracking_number'        => $this->whenLoaded('trackingNumber', $waypoint->trackingNumber),
             'customer'               => $this->setCustomerType(Resolve::resourceForMorph($waypoint->customer_type, $waypoint->customer_uuid)),
-            'type'                   => $this->type,
+            'type'                   => $waypoint->type ?? $this->type,
             'meta'                   => data_get($this, 'meta', Utils::createObject()),
             'eta'                    => $this->eta,
             'updated_at'             => $this->updated_at,

@@ -167,25 +167,28 @@ class OrderController extends FleetOpsController
                         );
                     }
 
-                    // notify driver if assigned
-                    $order->notifyDriverAssigned();
+                    // Run background processes on queue
+                    dispatch(function () use ($order, $serviceQuote): void {
+                        // notify driver if assigned
+                        $order->notifyDriverAssigned();
 
-                    // set driving distance and time
-                    $order->setPreliminaryDistanceAndTime();
+                        // set driving distance and time
+                        $order->setPreliminaryDistanceAndTime();
 
-                    // if service quote attached purchase
-                    $order->purchaseServiceQuote($serviceQuote);
+                        // if service quote attached purchase
+                        $order->purchaseServiceQuote($serviceQuote);
 
-                    // dispatch if flagged true
-                    $order->firstDispatchWithActivity();
+                        // dispatch if flagged true
+                        $order->firstDispatchWithActivity();
 
-                    // load tracking number
-                    $order->load(['trackingNumber']);
+                        // Trigger order created event
+                        event(new OrderReady($order));
+                    })->afterCommit();
                 }
             );
 
-            // Trigger order created event
-            event(new OrderReady($record));
+            // Reload payload and tracking number
+            $record->load(['payload', 'trackingNumber']);
 
             return ['order' => new $this->resource($record)];
         } catch (\Exception $e) {
