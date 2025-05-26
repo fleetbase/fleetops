@@ -1395,8 +1395,6 @@ class Order extends Model
             $activity = $flow->firstWhere('code', $code);
         }
 
-        // dd($activity);
-
         if (!Utils::isActivity($activity)) {
             return false;
         }
@@ -1765,7 +1763,8 @@ class Order extends Model
         $payloadMap = [
             'pickup'                => 'payload.pickup',
             'dropoff'               => 'payload.dropoff',
-            'currentWaypoint'       => 'payload.currentWaypoint',
+            'waypoint'              => 'payload.currentWaypointMarker',
+            'currentWaypoint'       => 'payload.currentWaypointMarker',
             'currentWaypointMarker' => 'payload.currentWaypointMarker',
         ];
 
@@ -1780,6 +1779,14 @@ class Order extends Model
 
             // e.g. "address.city" part of "pickup.address.city"
             $subKey = Str::after($property, $root . '.');
+
+            // if waypoint we can do "waypoint.place.address" or "waypoint.address" for resolution
+            $isWaypointMarker = Str::startsWith($root, 'currentWaypoint') || $root === 'waypoint';
+            if ($isWaypointMarker && $target instanceof Waypoint) {
+                $target->loadMissing('place');
+
+                return data_get($target, $subKey) ?? data_get($target->place, $subKey);
+            }
 
             return data_get($target, $subKey);
         }

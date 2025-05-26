@@ -313,7 +313,7 @@ class Payload extends Model
         }
 
         foreach ($waypoints as $index => $attributes) {
-            $waypoint = ['payload_uuid' => $this->payload_uuid];
+            $waypoint = ['payload_uuid' => $this->payload_uuid, 'type' => data_get($attributes, 'type', 'dropoff')];
 
             if (Utils::isset($attributes, 'place') && is_array(Utils::get($attributes, 'place'))) {
                 $attributes = Utils::get($attributes, 'place');
@@ -363,7 +363,7 @@ class Payload extends Model
         }
 
         foreach ($waypoints as $index => $attributes) {
-            $waypoint = ['payload_uuid' => $this->uuid, 'order' => $index];
+            $waypoint = ['payload_uuid' => $this->uuid, 'order' => $index, 'type' => data_get($attributes, 'type', 'dropoff')];
 
             if (Utils::isset($attributes, 'place') && is_array(Utils::get($attributes, 'place'))) {
                 $placeAttributes = Utils::get($attributes, 'place');
