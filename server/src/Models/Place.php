@@ -369,6 +369,22 @@ class Place extends Model
     /**
      * Create a new Place instance from a geocoding lookup.
      *
+     * @return \Fleetbase\Models\Place|null
+     */
+    public static function getValuesFromGeocodingLookup(string $address): array
+    {
+        $results = \Geocoder\Laravel\Facades\Geocoder::geocode($address)->get();
+
+        if ($results->isEmpty() || !$results->first()) {
+            return ['street1' => $address];
+        }
+
+        return static::getGoogleAddressArray($results->first());
+    }
+
+    /**
+     * Create a new Place instance from a geocoding lookup.
+     *
      * @param bool $saveInstance
      *
      * @return \Fleetbase\Models\Place|null
@@ -482,12 +498,12 @@ class Place extends Model
         if (is_string($place)) {
             // Check if $place is a valid public_id, return matching Place object if found
             if (Utils::isPublicId($place)) {
-                return Place::where('public_id', $place)->first();
+                return static::where('public_id', $place)->first();
             }
 
             // Check if $place is a valid uuid, return matching Place object if found
             if (Str::isUuid($place)) {
-                return Place::where('uuid', $place)->first();
+                return static::where('uuid', $place)->first();
             }
 
             // Attempt to find by address or name
@@ -521,12 +537,27 @@ class Place extends Model
             $uuid = data_get($place, 'uuid');
 
             // If $place has a valid uuid and a matching Place object exists, return the uuid
-            if (Str::isUuid($uuid) && $existingPlace = Place::where('uuid', $uuid)->first()) {
+            if (Str::isUuid($uuid) && $existingPlace = static::where('uuid', $uuid)->first()) {
                 return $existingPlace;
             }
 
-            // Otherwise, create a new Place object with the given attributes
-            return Place::create($place);
+            // If has $attributes['address']
+            if (!empty($place['address'])) {
+                return static::createFromGeocodingLookup($place['address'], $saveInstance);
+            }
+
+            // Perform google lookup to fill address
+            $street1 = $place['street1'];
+            if ($street1) {
+                return static::create(array_merge($place, static::getValuesFromGeocodingLookup($street1)));
+            }
+
+            // Otherwise, create a new Place owith the given attributes
+            if (empty($place['location'])) {
+                $place['location'] = new SpatialPoint(0, 0);
+            }
+
+            return static::create($place);
         }
         // If $place is a GoogleAddress object
         elseif ($place instanceof \Geocoder\Provider\GoogleMaps\Model\GoogleAddress) {
@@ -547,10 +578,10 @@ class Place extends Model
     {
         if (Utils::isCoordinatesStrict($place)) {
             // create a place from coordinates using reverse loopup
-            return Place::insertFromCoordinates($place);
+            return static::insertFromCoordinates($place);
         } elseif (is_string($place)) {
             if (Utils::isPublicId($place)) {
-                $resolvedPlace = Place::where('public_id', $place)->first();
+                $resolvedPlace = static::where('public_id', $place)->first();
 
                 if ($resolvedPlace) {
                     return $resolvedPlace->uuid;
@@ -558,14 +589,19 @@ class Place extends Model
             }
 
             if (Str::isUuid($place)) {
-                $resolvedPlace = Place::where('uuid', $place)->first();
+                $resolvedPlace = static::where('uuid', $place)->first();
 
                 if ($resolvedPlace) {
                     return $resolvedPlace->uuid;
                 }
             }
 
-            return Place::insertFromGeocodingLookup($place);
+            // handle address if set
+            if (!empty($place['address'])) {
+                return static::insertFromGeocodingLookup($place['address']);
+            }
+
+            return static::insertFromGeocodingLookup($place);
         } elseif (is_array($place) || is_object($place)) {
             // if place already exists just return uuid
             if (static::isValidPlaceUuid(data_get($place, 'uuid'))) {
@@ -592,12 +628,12 @@ class Place extends Model
 
     public static function isValidPlaceUuid($uuid): bool
     {
-        return is_string($uuid) && Str::isUuid($uuid) && Place::where('uuid', $uuid)->exists();
+        return is_string($uuid) && Str::isUuid($uuid) && static::where('uuid', $uuid)->exists();
     }
 
     public static function isValidPlacePublicId($publicId): bool
     {
-        return is_string($publicId) && Utils::isPublicId($publicId) && Place::where('public_id', $publicId)->exists();
+        return is_string($publicId) && Utils::isPublicId($publicId) && static::where('public_id', $publicId)->exists();
     }
 
     /**
@@ -717,7 +753,7 @@ class Place extends Model
             return null;
         }
 
-        $place = Place::createFromGeocodingLookup($address, false);
+        $place = static::createFromGeocodingLookup($address, false);
         foreach ($addressFields as $field => $options) {
             if ($place->isFillable($field) && empty($place->{$field})) {
                 $value = Utils::or($row, array_merge([$field], $options['alias']));
@@ -783,7 +819,7 @@ class Place extends Model
      * $data = ['address' => '123 Main St, Anytown, USA'];
      * $place = Place::createFromImport($data, true);
      */
-    public static function createFromImport(array $row, bool $saveInstance = false): Place
+    public static function createFromImport(array $row, bool $saveInstance = false): ?Place
     {
         // Filter array for null key values
         $row = array_filter($row);

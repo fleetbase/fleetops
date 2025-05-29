@@ -337,11 +337,13 @@ class Payload extends Model
             }
 
             // Handle customer assosciation for waypoint
-            if (is_array($attributes) && Utils::notEmpty($attributes['customer_uuid']) && Utils::notEmpty($attributes['customer_type'])) {
-                $customerTypeNamespace = Utils::getMutationType($attributes['customer_type']);
-                $customerExists        = app($customerTypeNamespace)->where('uuid', $attributes['customer_uuid'])->exists();
+            $customerId   = data_get($attributes, 'customer_uuid');
+            $customerType = data_get($attributes, 'customer_type', 'fleetops:contact');
+            if ($customerId && $customerType) {
+                $customerTypeNamespace = Utils::getMutationType($customerType);
+                $customerExists        = app($customerTypeNamespace)->where('uuid', $customerId)->exists();
                 if ($customerExists) {
-                    $waypoint['customer_uuid'] = $attributes['customer_uuid'];
+                    $waypoint['customer_uuid'] = $customerId;
                     $waypoint['customer_type'] = $customerTypeNamespace;
                 }
             }
@@ -392,11 +394,13 @@ class Payload extends Model
             }
 
             // Handle customer assosciation for waypoint
-            if (is_array($attributes) && Utils::notEmpty($attributes['customer_uuid']) && Utils::notEmpty($attributes['customer_type'])) {
-                $customerTypeNamespace = Utils::getMutationType($attributes['customer_type']);
-                $customerExists        = app($customerTypeNamespace)->where('uuid', $attributes['customer_uuid'])->exists();
+            $customerId   = data_get($attributes, 'customer_uuid');
+            $customerType = data_get($attributes, 'customer_type', 'fleetops:contact');
+            if ($customerId && $customerType) {
+                $customerTypeNamespace = Utils::getMutationType($customerType);
+                $customerExists        = app($customerTypeNamespace)->where('uuid', $customerId)->exists();
                 if ($customerExists) {
-                    $waypoint['customer_uuid'] = $attributes['customer_uuid'];
+                    $waypoint['customer_uuid'] = $customerId;
                     $waypoint['customer_type'] = $customerTypeNamespace;
                 }
             }

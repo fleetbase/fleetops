@@ -57,6 +57,15 @@ export default class FleetOpsEngine extends Engine {
             },
         });
 
+        // Register OSRM as route optimization service
+        const routeOptimization = app.lookup('service:route-optimization');
+        const osrm = app.lookup('service:osrm');
+        console.log('[routeOptimization]', routeOptimization);
+        console.log('[osrm]', osrm);
+        if (routeOptimization && osrm) {
+            routeOptimization.register('osrm', osrm);
+        }
+
         // widgets for registry
         const KeyMetricsWidgetDefinition = {
             widgetId: 'fleet-ops-key-metrics-widget',
@@ -106,6 +115,7 @@ export default class FleetOpsEngine extends Engine {
             'fleet-ops:template:operations:orders:view',
             'fleet-ops:template:operations:orders:new',
             'fleet-ops:template:operations:orders:new:entities-input',
+            'fleet-ops:template:operations:orders:new:entities-input:entity',
         ]);
 
         universe.afterBoot(function (universe) {

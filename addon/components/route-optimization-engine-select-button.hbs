@@ -1,0 +1,25 @@
+<DropdownButton
+    @text="Optimize Route"
+    @icon="caret-down"
+    @type="magic"
+    @size="sm"
+    @iconPrefix="fas"
+    @triggerClass="hidden md:flex"
+    @helpText="Optimize route using an integrated optimization engine"
+    @disabled={{@disabled}}
+    @isLoading={{@isLoading}}
+    @renderInPlace={{true}}
+    as |dd|
+>
+    <div class="next-dd-menu" aria-labelledby="user-menu">
+        <div class="px-1">
+            {{#each this.routeOptimization.availableServices as |service|}}
+                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.handleClick service)}}>
+                    <div >
+                        <div class="text-sm">{{service.name}}</div>
+                    </div>
+                </a>
+            {{/each}}
+        </div>
+    </div>
+</DropdownButton>

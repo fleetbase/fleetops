@@ -354,7 +354,7 @@ class OrderController extends FleetOpsController
      */
     public function bulkCancel(BulkActionRequest $request)
     {
-        /** @var Order */
+        /** @var \Illuminate\Database\Eloquent\Collection $orders */
         $orders = Order::whereIn('uuid', $request->input('ids'))->get();
 
         $count      = $orders->count();
