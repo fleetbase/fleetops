@@ -197,7 +197,7 @@ export default class OrderConfigFieldsEditorComponent extends Component {
         }
     }
 
-    /* eslint no-unused-vars: "off" */
+    /* eslint-disable no-unused-vars */
     @action sortMetaFieldOptions(metaField, el, target) {
         // const { fields } = this;
         // const { index } = el.dataset;

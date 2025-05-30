@@ -9,11 +9,9 @@ import { isBlank } from '@ember/utils';
 import { dasherize } from '@ember/string';
 import { next } from '@ember/runloop';
 import { task } from 'ember-concurrency';
-import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
+import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import { debug } from '@ember/debug';
-import polyline from '@fleetbase/ember-core/utils/polyline';
 import isNotEmpty from '@fleetbase/ember-core/utils/is-not-empty';
-import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 import isModel from '@fleetbase/ember-core/utils/is-model';
 
@@ -31,95 +29,22 @@ L.Bounds.prototype.intersects = function (bounds) {
 export default class OperationsOrdersIndexNewController extends BaseController {
     @controller('operations.orders.index') ordersController;
 
-    /**
-     * Inject the `modalsManager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `loader` service
-     *
-     * @var {Service}
-     */
     @service loader;
-
-    /**
-     * Inject the `currentUser` service
-     *
-     * @var {Service}
-     */
     @service currentUser;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @var {Service}
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `fileQueue` service
-     *
-     * @var {Service}
-     */
     @service fileQueue;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @var {Service}
-     */
     @service intl;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `contextPanel` service
-     *
-     * @var {Service}
-     */
     @service contextPanel;
-
-    /**
-     * Inject the `universe` service
-     *
-     * @var {Service}
-     */
     @service universe;
+    @service routeOptimization;
+    @service leafletRouterControl;
+    @service osrm;
 
-    /**
-     * Create an OrderModel instance.
-     *
-     * @var {OrderModel}
-     */
     @tracked order = this.store.createRecord('order', { meta: [] });
-
-    /**
-     * Create an PayloadModel instance.
-     *
-     * @var {OrderModel}
-     */
     @tracked payload = this.store.createRecord('payload');
     @tracked driversQuery = {};
     @tracked vehiclesQuery = {};
@@ -139,7 +64,6 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @tracked isCreatingOrder = false;
     @tracked isMultipleDropoffOrder = false;
     @tracked isViewingRoutePreview = false;
-    @tracked isOptimizingRoute = false;
     @tracked optimizedRouteMarkers = [];
     @tracked optimizedRoutePolyline;
     @tracked isFetchingQuotes = false;
@@ -191,14 +115,8 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         'application/x-tar',
     ];
 
-    get renderableComponents() {
-        const renderableComponents = this.universe.getRenderableComponentsFromRegistry('fleet-ops:template:operations:orders:new');
-        return renderableComponents;
-    }
-
-    get renderableEntityInputComponents() {
-        const renderableComponents = this.universe.getRenderableComponentsFromRegistry('fleet-ops:template:operations:orders:new:entities-input');
-        return renderableComponents;
+    get hasRouteOptimizationEngines() {
+        return this.routeOptimization.availableEngines.length > 1;
     }
 
     @not('isServicable') isNotServicable;
@@ -873,13 +791,12 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         const canPreviewRoute = this.routePreviewArray.length > 0;
 
         if (canPreviewRoute) {
-            const routingHost = getRoutingHost(payload, waypoints);
-            const router = new OSRMv1({
-                serviceUrl: `${routingHost}/route/v1`,
-                profile: 'driving',
-            });
+            const routingService = this.currentUser.getOption('routing', { router: 'osrm' }).router;
+            const { router, formatter } = this.leafletRouterControl.get(routingService);
 
             this.previewRouteControl = new RoutingControl({
+                router,
+                formatter,
                 waypoints: this.routePreviewCoordinates,
                 alternativeClassName: 'hidden',
                 addWaypoints: false,
@@ -892,7 +809,6 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                         iconAnchor: [12, 41],
                     }),
                 },
-                router,
             }).addTo(leafletMap);
 
             this.previewRouteControl.on('routesfound', (event) => {
@@ -939,68 +855,54 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         }
     }
 
-    @task *optimizeRoute() {
-        this.isOptimizingRoute = true;
-
-        // Build the coordinate list we’ll send to OSRM
-        const driverAssigned = this.order.driver_assigned;
-        const driverPosition = driverAssigned?.location?.coordinates; // [lon,lat] | undefined
-        const originalCoords = this.getCoordinatesFromPayload(); // [[lon,lat], …]
-        const coordinates = driverPosition ? [driverPosition, ...originalCoords] : [...originalCoords];
-        const hasDriverStart = Boolean(driverPosition);
-        const source = 'first';
-        const destination = 'any';
-        const roundtrip = false; // don’t loop back
-        const routingHost = getRoutingHost(this.payload, this.waypoints);
-
-        // Call the OSRM /trip service
+    @task *optimizeRouteWithService(service) {
         try {
-            const response = yield this.fetch.routing(coordinates, { source, destination, roundtrip, annotations: true }, { host: routingHost });
-
-            if (response?.code !== 'Ok') {
-                throw new Error(`OSRM error: ${response?.code}`);
-            }
-
-            // Pair each OSRM waypoint with its Waypoint model
-            const modelsByInputIndex = hasDriverStart ? [null, ...this.waypoints] : this.waypoints;
-
-            const pairs = response.waypoints.map((wp, idx) => ({
-                model: modelsByInputIndex[idx], // Ember model or null (driver)
-                wp,
-            }));
-
-            // Drop the driver start if present
-            const payloadPairs = hasDriverStart ? pairs.slice(1) : pairs;
-
-            // Sort by the optimised order
-            payloadPairs.sort((a, b) => a.wp.waypoint_index - b.wp.waypoint_index);
-
-            // Extract the Ember models (null-safe)
-            const sortedWaypoints = payloadPairs.map((p) => p.model).filter(Boolean);
-
-            // Update map layers & UI
-            this.removeRoutingControlPreview();
-            this.removeOptimizedRoute(this.leafletMap);
-            this.clearLayers();
-
-            const trip = response.trips?.[0];
-            const route = polyline.decode(trip.geometry); // [[lat,lon], …]
-
-            this.waypoints = sortedWaypoints;
-            this.setOptimizedRoute(route, trip, response.waypoints);
-            this.previewDraftOrderRoute(this.payload, this.waypoints, this.isMultipleDropoffOrder);
-            this.updatePayloadCoordinates();
-
-            this.order.set('is_route_optimized', true);
-
-            if (this.isUsingIntegratedVendor) {
-                this.getQuotes();
-            }
+            const result = yield this.routeOptimization.optimize(service, {
+                context: 'create_order',
+                order: this.order,
+                payload: this.payload,
+                waypoints: this.waypoints,
+                coordinates: this.getCoordinatesFromPayload(),
+            });
+            this.handleRouteOptimization(result);
         } catch (err) {
-            debug('Error optimizing route', err);
+            this.notifications.error(err.message ?? this.intl.t('fleet-ops.operations.orders.index.new.route-error'));
+        }
+    }
+
+    @task *optimizeRoute() {
+        try {
+            const result = yield this.osrm.optimize({
+                context: 'create_order',
+                order: this.order,
+                payload: this.payload,
+                waypoints: this.waypoints,
+                coordinates: this.getCoordinatesFromPayload(),
+            });
+
+            this.handleRouteOptimization(result);
+        } catch (err) {
             this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.new.route-error'));
-        } finally {
-            this.isOptimizingRoute = false;
+        }
+    }
+
+    handleRouteOptimization({ sortedWaypoints, route, trip, result }) {
+        // Update map layers & UI
+        this.removeRoutingControlPreview();
+        this.removeOptimizedRoute(this.leafletMap);
+        this.clearLayers();
+
+        // Update controller state
+        this.waypoints = sortedWaypoints;
+        if (route) {
+            this.setOptimizedRoute(route, trip, result.waypoints);
+        }
+        this.previewDraftOrderRoute(this.payload, this.waypoints, this.isMultipleDropoffOrder);
+        this.updatePayloadCoordinates();
+
+        this.order.set('is_route_optimized', true);
+        if (this.isUsingIntegratedVendor) {
+            this.getQuotes();
         }
     }
 

@@ -6,8 +6,7 @@ import { action, computed } from '@ember/object';
 import { later } from '@ember/runloop';
 import { not, notEmpty, alias } from '@ember/object/computed';
 import { task } from 'ember-concurrency';
-import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
-import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
+import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 
 export default class OperationsOrdersIndexViewController extends BaseController {
     @controller('operations.orders.index') ordersController;
@@ -24,6 +23,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @service socket;
     @service universe;
     @service contextPanel;
+    @service leafletRouterControl;
 
     @tracked isLoadingAdditionalData = false;
     @tracked isWaypointsCollapsed;
@@ -276,6 +276,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             }
 
             this.forceRemoveRoutePreview();
+            this.routeControl = null;
             resolve(true);
         });
     }
@@ -372,9 +373,8 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         const leafletMap = this.leafletMap;
         const payload = this.model.payload;
         const waypoints = this.getPayloadCoordinates(payload);
-        const routingHost = getRoutingHost(payload, this.getPayloadWaypointsAsArray());
 
-        if (!waypoints || waypoints.length < 2 || !leafletMap) {
+        if (!waypoints || waypoints.length < 2 || !leafletMap || this.routeControl) {
             return;
         }
 
@@ -382,12 +382,12 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         leafletMap.stop();
         leafletMap.flyTo(waypoints.firstObject);
 
-        const router = new OSRMv1({
-            serviceUrl: `${routingHost}/route/v1`,
-            profile: 'driving',
-        });
+        const routingService = this.currentUser.getOption('routing', { router: 'osrm' }).router;
+        const { router, formatter } = this.leafletRouterControl.get(routingService);
 
         this.routeControl = new RoutingControl({
+            router,
+            formatter,
             waypoints,
             markerOptions: {
                 icon: L.icon({
@@ -400,7 +400,6 @@ export default class OperationsOrdersIndexViewController extends BaseController 
             },
             alternativeClassName: 'hidden',
             addWaypoints: false,
-            router,
         }).addTo(leafletMap);
 
         this.routeControl.on('routesfound', (event) => {

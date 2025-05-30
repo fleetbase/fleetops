@@ -315,17 +315,21 @@
                 </div>
                 <div class="flex flex-1 justify-end space-x-2">
                     {{#if this.isMultipleDropoffOrder}}
-                        <Button
-                            @type="magic"
-                            @icon="magic"
-                            @text={{t "fleet-ops.operations.orders.index.new.optimize-route"}}
-                            @size="sm"
-                            @onClick={{perform this.optimizeRoute}}
-                            @permission="fleet-ops optimize order"
-                            @helpText={{t "fleet-ops.operations.orders.index.new.optimize-route-help-text"}}
-                            @disabled={{lt this.waypoints.length 3}}
-                            @isLoading={{this.isOptimizingRoute}}
-                        />
+                        {{#if this.hasRouteOptimizationEngines}}
+                            <RouteOptimizationEngineSelectButton @onClick={{perform this.optimizeRouteWithService}} @isLoading={{this.optimizeRouteWithService.isRunning}} />
+                        {{else}}
+                            <Button
+                                @type="magic"
+                                @icon="magic"
+                                @text={{t "fleet-ops.operations.orders.index.new.optimize-route"}}
+                                @size="sm"
+                                @onClick={{perform this.optimizeRoute}}
+                                @permission="fleet-ops optimize order"
+                                @helpText={{t "fleet-ops.operations.orders.index.new.optimize-route-help-text"}}
+                                @disabled={{lt this.waypoints.length 3}}
+                                @isLoading={{this.optimizeRoute.isRunning}}
+                            />
+                        {{/if}}
                         <Button
                             @icon="map-marked-alt"
                             @text={{t "fleet-ops.operations.orders.index.new.add-waypoint"}}
@@ -630,11 +634,9 @@
                             </div>
                         </DropdownButton>
                     {{/if}}
-                    {{#if this.renderableEntityInputComponents}}
-                        {{#each this.renderableEntityInputComponents as |renderableEntityInputComponent|}}
-                            {{component renderableEntityInputComponent order=this.order controller=this}}
-                        {{/each}}
-                    {{/if}}
+                    <RegistryYield @registry="fleet-ops:template:operations:orders:new:entities-input" as |RegistryComponent|>
+                        <RegistryComponent @order={{this.order}} @controller={{this}} />
+                    </RegistryYield>
                 </div>
             {{/if}}
             {{#if this.isCsvImportedOrder}}
@@ -709,6 +711,9 @@
                                     <div>
                                         <Input @value={{entity.sku}} @type="text" class="w-full form-input form-input-sm" placeholder={{t "fleet-ops.operations.orders.index.new.sku"}} />
                                     </div>
+                                    <RegistryYield @registry="fleet-ops:template:operations:orders:new:entities-input:entity" as |RegistryComponent|>
+                                        <RegistryComponent @entity={{entity}} @order={{this.order}} @controller={{this}} />
+                                    </RegistryYield>
                                     {{#if this.waypoints.length}}
                                         <Select
                                             @value={{entity.destination_uuid}}

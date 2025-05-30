@@ -120,6 +120,11 @@ class FleetOps
             'action'         => [],
             'remove_actions' => ['export', 'create'],
         ],
+        [
+            'name'           => 'routing-settings',
+            'action'         => [],
+            'remove_actions' => ['export', 'create'],
+        ],
     ];
 
     /**

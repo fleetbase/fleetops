@@ -1173,6 +1173,12 @@ class Order extends Model
     {
         $this->status = 'canceled';
 
+        // if saving update the status and add the cancel activity
+        $this->loadMissing('orderConfig');
+        $canceledActivity = $this->orderConfig->getCanceledActivity();
+        $this->updateActivity($canceledActivity);
+
+        // trigger integrated vendor cancelation
         if ($this->isIntegratedVendorOrder()) {
             $api = $this->facilitator->api();
 

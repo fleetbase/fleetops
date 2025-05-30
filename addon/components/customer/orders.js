@@ -6,8 +6,7 @@ import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { debug } from '@ember/debug';
 import { task, timeout } from 'ember-concurrency';
-import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
-import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
+import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import engineService from '@fleetbase/ember-core/decorators/engine-service';
 import registerComponent from '@fleetbase/ember-core/utils/register-component';
 import OrderProgressCardComponent from '../order-progress-card';
@@ -26,6 +25,7 @@ export default class CustomerOrdersComponent extends Component {
     @service modalsManager;
     @service customerSession;
     @service hostRouter;
+    @service leafletRouterControl;
     @engineService('@fleetbase/fleetops-engine') movementTracker;
     @engineService('@fleetbase/fleetops-engine') location;
     @tracked orders = [];
@@ -226,7 +226,6 @@ export default class CustomerOrdersComponent extends Component {
 
     @action displayOrderRoute() {
         const waypoints = this.getRouteCoordinatesFromOrder(this.selectedOrder);
-        const routingHost = getRoutingHost();
         if (this.cannotRouteWaypoints(waypoints)) {
             return;
         }
@@ -240,15 +239,14 @@ export default class CustomerOrdersComponent extends Component {
             debug(`Leaflet Map Error: ${error.message}`);
         }
 
-        const router = new OSRMv1({
-            serviceUrl: `${routingHost}/route/v1`,
-            profile: 'driving',
-        });
+        const routingService = this.currentUser.getOption('routing', { router: 'osrm' }).router;
+        const { router, formatter } = this.leafletRouterControl.get(routingService);
 
         this.routeControl = new RoutingControl({
-            fitSelectedRoutes: false,
             router,
+            formatter,
             waypoints,
+            fitSelectedRoutes: false,
             alternativeClassName: 'hidden',
             addWaypoints: false,
             markerOptions: {

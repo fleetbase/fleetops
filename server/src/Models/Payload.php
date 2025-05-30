@@ -3,6 +3,8 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Events\EntityActivityChanged;
+use Fleetbase\FleetOps\Events\EntityCompleted;
 use Fleetbase\FleetOps\Events\WaypointActivityChanged;
 use Fleetbase\FleetOps\Events\WaypointCompleted;
 use Fleetbase\FleetOps\Flow\Activity;
@@ -337,11 +339,13 @@ class Payload extends Model
             }
 
             // Handle customer assosciation for waypoint
-            if (is_array($attributes) && Utils::notEmpty($attributes['customer_uuid']) && Utils::notEmpty($attributes['customer_type'])) {
-                $customerTypeNamespace = Utils::getMutationType($attributes['customer_type']);
-                $customerExists        = app($customerTypeNamespace)->where('uuid', $attributes['customer_uuid'])->exists();
+            $customerId   = data_get($attributes, 'customer_uuid');
+            $customerType = data_get($attributes, 'customer_type', 'fleetops:contact');
+            if ($customerId && $customerType) {
+                $customerTypeNamespace = Utils::getMutationType($customerType);
+                $customerExists        = app($customerTypeNamespace)->where('uuid', $customerId)->exists();
                 if ($customerExists) {
-                    $waypoint['customer_uuid'] = $attributes['customer_uuid'];
+                    $waypoint['customer_uuid'] = $customerId;
                     $waypoint['customer_type'] = $customerTypeNamespace;
                 }
             }
@@ -392,11 +396,13 @@ class Payload extends Model
             }
 
             // Handle customer assosciation for waypoint
-            if (is_array($attributes) && Utils::notEmpty($attributes['customer_uuid']) && Utils::notEmpty($attributes['customer_type'])) {
-                $customerTypeNamespace = Utils::getMutationType($attributes['customer_type']);
-                $customerExists        = app($customerTypeNamespace)->where('uuid', $attributes['customer_uuid'])->exists();
+            $customerId   = data_get($attributes, 'customer_uuid');
+            $customerType = data_get($attributes, 'customer_type', 'fleetops:contact');
+            if ($customerId && $customerType) {
+                $customerTypeNamespace = Utils::getMutationType($customerType);
+                $customerExists        = app($customerTypeNamespace)->where('uuid', $customerId)->exists();
                 if ($customerExists) {
-                    $waypoint['customer_uuid'] = $attributes['customer_uuid'];
+                    $waypoint['customer_uuid'] = $customerId;
                     $waypoint['customer_type'] = $customerTypeNamespace;
                 }
             }
@@ -792,6 +798,11 @@ class Payload extends Model
             $entities = $this->entities->where('destination_uuid', $this->current_waypoint_uuid);
             foreach ($entities as $entity) {
                 $entity->insertActivity($activity, $location, $proof);
+                if ($activity && $activity->complete()) {
+                    event(new EntityCompleted($entity, $activity));
+                } else {
+                    event(new EntityActivityChanged($entity, $activity));
+                }
             }
 
             // if this activity completes the waypoint notify waypoint customer

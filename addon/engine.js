@@ -9,6 +9,9 @@ import AdminAvatarManagementComponent from './components/admin/avatar-management
 import CustomerOrdersComponent from './components/customer/orders';
 import CustomerAdminSettingsComponent from './components/customer/admin-settings';
 import OrderTrackingLookupComponent from './components/order-tracking-lookup';
+import { RouterControl } from './services/leaflet-router-control';
+import { OSRMv1 } from '@fleetbase/leaflet-routing-machine';
+import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 
 const { modulePrefix } = config;
 const externalRoutes = ['console', 'extensions'];
@@ -56,6 +59,29 @@ export default class FleetOpsEngine extends Engine {
                 universe.transitionMenuItem('virtual', menuItem);
             },
         });
+
+        // Register OSRM as route optimization service
+        const routeOptimization = app.lookup('service:route-optimization');
+        const osrm = app.lookup('service:osrm');
+        if (routeOptimization && osrm) {
+            routeOptimization.register('osrm', osrm);
+        }
+
+        // Register OSRM as Routing Controler
+        const leafletRouterControl = app.lookup('service:leaflet-router-control');
+        if (leafletRouterControl) {
+            const routingHost = getRoutingHost();
+            leafletRouterControl.register(
+                'osrm',
+                new RouterControl({
+                    name: 'OSRM',
+                    router: new OSRMv1({
+                        serviceUrl: `${routingHost}/route/v1`,
+                        profile: 'driving',
+                    }),
+                })
+            );
+        }
 
         // widgets for registry
         const KeyMetricsWidgetDefinition = {
@@ -106,6 +132,7 @@ export default class FleetOpsEngine extends Engine {
             'fleet-ops:template:operations:orders:view',
             'fleet-ops:template:operations:orders:new',
             'fleet-ops:template:operations:orders:new:entities-input',
+            'fleet-ops:template:operations:orders:new:entities-input:entity',
         ]);
 
         universe.afterBoot(function (universe) {
