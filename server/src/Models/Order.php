@@ -1187,7 +1187,7 @@ class Order extends Model
             }
         }
 
-        return event(new OrderCanceled($this));
+        return dispatch(fn () => event(new OrderCanceled($this)))->afterCommit();
     }
 
     /**

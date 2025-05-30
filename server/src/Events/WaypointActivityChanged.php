@@ -21,12 +21,12 @@ class WaypointActivityChanged implements ShouldBroadcast
     /**
      * The waypoint which is completed.
      */
-    public Waypoint $waypoint;
+    public ?Waypoint $waypoint = null;
 
     /**
      * The activity which triggered the waypoint completed.
      */
-    public Activity $activity;
+    public ?Activity $activity = null;
 
     /**
      * The event id.

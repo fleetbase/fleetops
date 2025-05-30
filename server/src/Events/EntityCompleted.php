@@ -21,12 +21,12 @@ class EntityCompleted implements ShouldBroadcast
     /**
      * The entity which is completed.
      */
-    public Entity $entity;
+    public ?Entity $entity = null;
 
     /**
      * The activity which triggered the waypoint completed.
      */
-    public Activity $activity;
+    public ?Activity $activity = null;
 
     /**
      * The event id.
