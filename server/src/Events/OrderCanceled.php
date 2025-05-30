@@ -18,10 +18,10 @@ class OrderCanceled extends ResourceLifecycleEvent
     /**
      * Assosciated activity which triggered the event.
      */
-    public ?Activity $activity;
+    public ?Activity $activity = null;
 
     /**
      * Assosciated order waypoint which event is for.
      */
-    public ?Waypoint $waypoint;
+    public ?Waypoint $waypoint = null;
 }

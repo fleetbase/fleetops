@@ -21,12 +21,12 @@ class EntityActivityChanged implements ShouldBroadcast
     /**
      * The entity which has new activity.
      */
-    public Entity $entity;
+    public ?Entity $entity = null;
 
     /**
      * The activity which triggered the waypoint completed.
      */
-    public Activity $activity;
+    public ?Activity $activity = null;
 
     /**
      * The event id.

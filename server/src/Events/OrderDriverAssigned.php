@@ -17,5 +17,5 @@ class OrderDriverAssigned extends ResourceLifecycleEvent
     /**
      * Assosciated activity which triggered the event.
      */
-    public ?Activity $activity;
+    public ?Activity $activity = null;
 }

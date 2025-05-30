@@ -1095,8 +1095,13 @@ class Order extends Model
             $this->flushAttributesCache();
         }
 
+        // Prepare dispatch event
+        $dispatchActivity        = $this->config()->getDispatchActivity();
+        $dispatchEvent           = new OrderDispatched($this);
+        $dispatchEvent->activity = $dispatchActivity;
+
         // Queue the OrderDispatched event to run after the DB commit succeeds
-        dispatch(fn () => event(new OrderDispatched($this)))->afterCommit();
+        dispatch(fn () => event($dispatchEvent))->afterCommit();
 
         return $this;
     }
@@ -1187,7 +1192,11 @@ class Order extends Model
             }
         }
 
-        return event(new OrderCanceled($this));
+        // Prepare cancel event
+        $cancelEvent           = new OrderCanceled($this);
+        $cancelEvent->activity = $canceledActivity;
+
+        return dispatch(fn () => event($cancelEvent))->afterCommit();
     }
 
     /**
