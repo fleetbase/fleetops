@@ -34,6 +34,7 @@ class NotifyOrderEvent implements ShouldQueue
                 $reason = $event->activity ? $event->activity->get('details') : '';
                 NotificationRegistry::notify(OrderCanceled::class, $order, $reason, $event->waypoint);
             }
+            
             if ($event instanceof \Fleetbase\FleetOps\Events\OrderCompleted) {
                 NotificationRegistry::notify(OrderCompleted::class, $order, $event->waypoint);
             }
