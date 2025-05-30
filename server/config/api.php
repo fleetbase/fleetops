@@ -10,14 +10,15 @@ return [
     'events' => [
         // order events
         'order.created',
+        'order.ready',
         'order.updated',
         'order.deleted',
         'order.dispatched',
         'order.dispatch_failed',
-        'order.completed',
         'order.failed',
         'order.driver_assigned',
         'order.completed',
+        'order.canceled',
 
         // payload events
         'payload.created',
@@ -29,12 +30,19 @@ return [
         'entity.updated',
         'entity.deleted',
         'entity.driver_assigned',
+        'entity.activity',
+        'entity.completed',
+
+        // waypoint events
+        'waypoint.activity',
+        'waypoint.completed',
 
         // driver events
         'driver.created',
         'driver.updated',
         'driver.deleted',
         'driver.assigned',
+        'driver.location_changed',
         // 'driver.entered_zone',
         // 'driver.exited_zone',
 
@@ -87,6 +95,7 @@ return [
         'vehicle.created',
         'vehicle.updated',
         'vehicle.deleted',
+        'vehicle.location_changed',
 
         // vendor events
         'vendor.created',
