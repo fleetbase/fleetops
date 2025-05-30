@@ -3,6 +3,8 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Events\EntityActivityChanged;
+use Fleetbase\FleetOps\Events\EntityCompleted;
 use Fleetbase\FleetOps\Events\WaypointActivityChanged;
 use Fleetbase\FleetOps\Events\WaypointCompleted;
 use Fleetbase\FleetOps\Flow\Activity;
@@ -796,6 +798,11 @@ class Payload extends Model
             $entities = $this->entities->where('destination_uuid', $this->current_waypoint_uuid);
             foreach ($entities as $entity) {
                 $entity->insertActivity($activity, $location, $proof);
+                if ($activity && $activity->complete()) {
+                    event(new EntityCompleted($entity, $activity));
+                } else {
+                    event(new EntityActivityChanged($entity, $activity));
+                }
             }
 
             // if this activity completes the waypoint notify waypoint customer
