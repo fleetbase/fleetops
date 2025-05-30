@@ -32,6 +32,7 @@ export default class RouteOptimizationService extends Service {
         };
     }
 
+    /* eslint-disable no-unused-vars */
     unregister(name) {
         let key = underscore(name);
         let { [key]: _, ...rest } = this.registry.engines;

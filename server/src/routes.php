@@ -469,6 +469,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->get('notification-registry', 'SettingController@getNotificationRegistry');
                                         $router->get('notification-settings', 'SettingController@getNotificationSettings');
                                         $router->post('notification-settings', 'SettingController@saveNotificationSettings');
+                                        $router->get('routing-settings', 'SettingController@getRoutingSettings');
+                                        $router->post('routing-settings', 'SettingController@saveRoutingSettings');
                                     }
                                 );
                                 $router->group(

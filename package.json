@@ -45,7 +45,7 @@
         "@fleetbase/ember-core": "latest",
         "@fleetbase/ember-ui": "latest",
         "@fleetbase/fleetops-data": "latest",
-        "@fleetbase/leaflet-routing-machine": "^3.2.16",
+        "@fleetbase/leaflet-routing-machine": "^3.2.17",
         "@fortawesome/ember-fontawesome": "^2.0.0",
         "@fortawesome/fontawesome-svg-core": "6.4.0",
         "@fortawesome/free-brands-svg-icons": "6.4.0",

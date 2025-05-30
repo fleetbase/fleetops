@@ -9,8 +9,7 @@ import { later } from '@ember/runloop';
 import { debug } from '@ember/debug';
 import { allSettled } from 'rsvp';
 import { task } from 'ember-concurrency';
-import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
-import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
+import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 /**
@@ -37,6 +36,7 @@ export default class LiveMapComponent extends Component {
     @service contextPanel;
     @service leafletMapManager;
     @service leafletContextmenuManager;
+    @service leafletRouterControl;
     @service theme;
 
     /**
@@ -1126,7 +1126,6 @@ export default class LiveMapComponent extends Component {
 
         // create order route preview
         const waypoints = this.getRouteCoordinatesFromOrder(order);
-        const routingHost = getRoutingHost();
         if (this.cannotRouteWaypoints(waypoints)) {
             return;
         }
@@ -1140,15 +1139,14 @@ export default class LiveMapComponent extends Component {
             debug(`Leaflet Map Error: ${error.message}`);
         }
 
-        const router = new OSRMv1({
-            serviceUrl: `${routingHost}/route/v1`,
-            profile: 'driving',
-        });
+        const routingService = this.currentUser.getOption('routing', { router: 'osrm' }).router;
+        const { router, formatter } = this.leafletRouterControl.get(routingService);
 
         this.routeControl = new RoutingControl({
-            fitSelectedRoutes: false,
             router,
+            formatter,
             waypoints,
+            fitSelectedRoutes: false,
             alternativeClassName: 'hidden',
             addWaypoints: false,
             markerOptions: {

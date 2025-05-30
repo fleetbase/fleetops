@@ -12,10 +12,18 @@ export default class OperationsOrdersIndexViewRoute extends Route {
     @service abilities;
     @service intl;
 
-    @action willTransition() {
-        if (this.controller) {
+    @action willTransition(transition) {
+        // if we're coming _from_ this route and going _to_ a different one, then reset
+        let fromName = transition.from?.name;
+        let toName = transition.to.name;
+
+        // transition.from is null on initial page load, so guard that
+        if (fromName && fromName !== toName) {
             this.controller.resetView();
         }
+
+        // bubble the event on up so Ember can finish the transition
+        return true;
     }
 
     @action error(error) {
@@ -75,13 +83,14 @@ export default class OperationsOrdersIndexViewRoute extends Route {
                 // Only reload if the order has a status change stemming from an updated event OR
                 // if a waypoint has been completed which will trigger `order.completed`
                 const statusChanged = event === 'order.updated' && data.status !== model.status;
-                const shouldReload = ['order.completed', 'waypoint.activity', 'order.created'].includes(event);
+                const shouldReload = ['order.completed', 'waypoint.activity', 'entity.activity', 'order.created'].includes(event);
                 if (statusChanged || shouldReload) {
                     this.refresh();
 
                     // reload the controller stuff as well
                     if (this.controller) {
                         this.controller.loadOrderRelations.perform(model);
+                        this.controller.displayOrderRoute();
                     }
                 }
 

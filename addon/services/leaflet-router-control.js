@@ -1,0 +1,64 @@
+import Service, { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+import { underscore } from '@ember/string';
+
+export class RouterControlRegistry {
+    @tracked routers = {};
+}
+
+export class RouterControl {
+    @tracked name;
+    @tracked router;
+    @tracked formatter;
+
+    constructor(init) {
+        const { name, router, formatter } = typeof init === 'function' ? init() : init;
+        this.name = name;
+        this.router = router;
+        this.formatter = formatter;
+    }
+}
+
+export default class LeafletRouterControlService extends Service {
+    @service universe;
+    registry = this.#initializeRegistry();
+
+    get availableEngines() {
+        return Object.keys(this.registry.routers).map(underscore);
+    }
+
+    get availableServices() {
+        return Object.entries(this.registry.routers).map(([key, control]) => ({
+            key,
+            name: control.name ?? key,
+        }));
+    }
+
+    register(name, getter) {
+        this.registry.routers = {
+            ...this.registry.routers,
+            [underscore(name)]: getter,
+        };
+    }
+
+    /* eslint-disable no-unused-vars */
+    unregister(name) {
+        let key = underscore(name);
+        let { [key]: _, ...rest } = this.registry.routers;
+        this.registry.routers = rest;
+    }
+
+    get(name) {
+        return this.registry.routers[underscore(name)];
+    }
+
+    #initializeRegistry() {
+        const registry = 'registry:router-controls';
+        const application = this.universe.getApplicationInstance();
+        if (!application.hasRegistration(registry)) {
+            application.register(registry, new RouterControlRegistry(), { instantiate: false });
+        }
+
+        return application.resolveRegistration(registry);
+    }
+}

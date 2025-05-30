@@ -298,6 +298,7 @@ fleet-ops:
         loading-vehicle: Loading fleet vehicles...
     layout:
       fleet-ops-sidebar:
+        routing: Routing
         notifications: Notifications
         payments: Payments
         navigator-app: Navigator App
@@ -1635,6 +1636,10 @@ fleet-ops:
       fleet-ops-notification-settings: Fleet-Ops Notification Settings
       fleet-ops-notifications: Fleet-Ops Notifications
       configure-notifications: Configure Notifications
+    routing:
+      fleet-ops-routing-settings: Fleet-Ops Routing Settings
+      fleet-ops-routing: Fleet-Ops Routing
+      configure-routing: Configure Routing
     navigator-app:
       navigator-app-settings: Navigator App Settings
     payments:

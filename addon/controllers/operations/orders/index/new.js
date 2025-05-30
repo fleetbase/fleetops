@@ -9,11 +9,9 @@ import { isBlank } from '@ember/utils';
 import { dasherize } from '@ember/string';
 import { next } from '@ember/runloop';
 import { task } from 'ember-concurrency';
-import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
+import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import { debug } from '@ember/debug';
-import polyline from '@fleetbase/ember-core/utils/polyline';
 import isNotEmpty from '@fleetbase/ember-core/utils/is-not-empty';
-import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 import isModel from '@fleetbase/ember-core/utils/is-model';
 
@@ -43,6 +41,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @service contextPanel;
     @service universe;
     @service routeOptimization;
+    @service leafletRouterControl;
     @service osrm;
 
     @tracked order = this.store.createRecord('order', { meta: [] });
@@ -792,13 +791,12 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         const canPreviewRoute = this.routePreviewArray.length > 0;
 
         if (canPreviewRoute) {
-            const routingHost = getRoutingHost(payload, waypoints);
-            const router = new OSRMv1({
-                serviceUrl: `${routingHost}/route/v1`,
-                profile: 'driving',
-            });
+            const routingService = this.currentUser.getOption('routing', { router: 'osrm' }).router;
+            const { router, formatter } = this.leafletRouterControl.get(routingService);
 
             this.previewRouteControl = new RoutingControl({
+                router,
+                formatter,
                 waypoints: this.routePreviewCoordinates,
                 alternativeClassName: 'hidden',
                 addWaypoints: false,
@@ -811,7 +809,6 @@ export default class OperationsOrdersIndexNewController extends BaseController {
                         iconAnchor: [12, 41],
                     }),
                 },
-                router,
             }).addTo(leafletMap);
 
             this.previewRouteControl.on('routesfound', (event) => {

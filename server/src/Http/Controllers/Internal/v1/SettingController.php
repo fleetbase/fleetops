@@ -174,4 +174,34 @@ class SettingController extends Controller
             'notificationSettings' => $notificationSettings,
         ]);
     }
+
+    /**
+     * Save routing settings.
+     *
+     * @param Request $request the HTTP request object containing the routing settings data
+     *
+     * @return \Illuminate\Http\JsonResponse a JSON response
+     */
+    public function saveRoutingSettings(Request $request)
+    {
+        $router = $request->input('router');
+        Setting::configureCompany('routing', ['router' => $router]);
+
+        return response()->json([
+            'status'  => 'ok',
+            'message' => 'Routing settings succesfully saved.',
+        ]);
+    }
+
+    /**
+     * Retrieve and return the routing settings.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getRoutingSettings()
+    {
+        $routingSettings = Setting::lookupCompany('routing', ['router' => 'osrm']);
+
+        return response()->json($routingSettings);
+    }
 }

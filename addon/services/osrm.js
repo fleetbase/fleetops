@@ -1,7 +1,6 @@
 import RouteOptimizationInterfaceService from './route-optimization-interface';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import polyline from '@fleetbase/ember-core/utils/polyline';
-import { inject as service } from '@ember/service';
 import { debug } from '@ember/debug';
 
 export default class OsrmService extends RouteOptimizationInterfaceService {
@@ -18,7 +17,7 @@ export default class OsrmService extends RouteOptimizationInterfaceService {
         const routingHost = getRoutingHost(payload, waypoints);
 
         try {
-            const result = await this.fetch.routing(coordinates, { source, destination, roundtrip, annotations: true }, { host: routingHost });
+            const result = await this.fetch.routing(coordinates, { source, destination, roundtrip, annotations: true }, { host: routingHost, ...options });
 
             // Pair each OSRM waypoint with its Waypoint model
             const modelsByInputIndex = hasDriverStart ? [null, ...waypoints] : waypoints;
