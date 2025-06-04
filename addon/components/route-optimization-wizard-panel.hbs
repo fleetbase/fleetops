@@ -1,0 +1,24 @@
+<Overlay
+    @isOpen={{true}}
+    @onLoad={{this.setOverlayContext}}
+    @position="right"
+    @noBackdrop={{true}}
+    @fullHeight={{true}}
+    @isResizeble={{true}}
+    @width="450px"
+    @overlayClass="route-optimization-wizard-panel"
+>
+    <Overlay::Header @title="New Route Optimization">
+        <div class="flex flex-1 justify-end">
+            <Button @icon="play" @type="primary" @text="Run" @wrapperClass="mr-2" />
+            <Button @type="default" @icon="times" />
+        </div>
+    </Overlay::Header>
+
+    <Overlay::Body @wrapperClass="px-4 space-y-4 pt-4">
+        {{#each @waypoints as |waypoint|}}
+            <div class="border rounded p-4 flex items-center mb-3">{{waypoint.address}}</div>
+        {{/each}}
+        <Spacer @height="300px" />
+    </Overlay::Body>
+</Overlay>

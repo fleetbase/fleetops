@@ -1,0 +1,13 @@
+<LiveMap
+    id="leafletMap"
+    class="next-leaflet-container-map"
+    @lat={{1.3521}}
+    @lng={{103.8198}}
+    @zoom={{12}}
+    @zoomControl={{false}}
+    @drawerTab={{false}}
+    @onLoad={{this.setMapReference}}
+    @darkMode={{eq this.theme.activeTheme "dark"}}
+    {{set-container-dimensions}}
+/>
+{{outlet}}

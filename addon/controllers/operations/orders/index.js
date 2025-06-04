@@ -22,6 +22,7 @@ export default class OperationsOrdersIndexController extends BaseController {
     @service socket;
     @service abilities;
     @service theme;
+    @service routeOptimization;
 
     /**
      * Queryable parameters for this controller's model
@@ -1130,7 +1131,6 @@ export default class OperationsOrdersIndexController extends BaseController {
      */
     @action bulkAssignDriver(selected = []) {
         selected = selected.length > 0 ? selected : this.table.selectedRows;
-
         if (!isArray(selected) || selected.length === 0) {
             return;
         }
@@ -1199,12 +1199,37 @@ export default class OperationsOrdersIndexController extends BaseController {
         });
     }
 
+    /**
+     * Commits the bulk query to the server for results.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action commitBulkQuery() {
         this.bulk_query = this.bulkSearchValue;
     }
 
+    /**
+     * Resets/clear the bulk query search.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
     @action removeBulkQuery() {
         this.bulkSearchValue = '';
         this.bulk_query = null;
+    }
+
+    /**
+     * Run route optimization wizard.
+     * @action
+     * @memberof OperationsOrdersIndexController
+     */
+    @action optimizeOrderRoutes(selected = []) {
+        selected = selected.length > 0 ? selected : this.table.selectedRows;
+
+        return this.hostRouter.transitionTo('console.fleet-ops.operations.routes.index.new', {
+            queryParams: {
+                selectedOrders: selected.map((_) => _.public_id).join(','),
+            },
+        });
     }
 }

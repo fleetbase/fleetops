@@ -9,7 +9,7 @@ import AdminAvatarManagementComponent from './components/admin/avatar-management
 import CustomerOrdersComponent from './components/customer/orders';
 import CustomerAdminSettingsComponent from './components/customer/admin-settings';
 import OrderTrackingLookupComponent from './components/order-tracking-lookup';
-import { RouterControl } from './services/leaflet-router-control';
+import { RoutingControl } from './services/leaflet-routing-control';
 import { OSRMv1 } from '@fleetbase/leaflet-routing-machine';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 
@@ -68,12 +68,12 @@ export default class FleetOpsEngine extends Engine {
         }
 
         // Register OSRM as Routing Controler
-        const leafletRouterControl = app.lookup('service:leaflet-router-control');
-        if (leafletRouterControl) {
+        const leafletRoutingControl = app.lookup('service:leaflet-routing-control');
+        if (leafletRoutingControl) {
             const routingHost = getRoutingHost();
-            leafletRouterControl.register(
+            leafletRoutingControl.register(
                 'osrm',
-                new RouterControl({
+                new RoutingControl({
                     name: 'OSRM',
                     router: new OSRMv1({
                         serviceUrl: `${routingHost}/route/v1`,
@@ -133,6 +133,7 @@ export default class FleetOpsEngine extends Engine {
             'fleet-ops:template:operations:orders:new',
             'fleet-ops:template:operations:orders:new:entities-input',
             'fleet-ops:template:operations:orders:new:entities-input:entity',
+            'fleet-ops:template:settings:routing',
         ]);
 
         universe.afterBoot(function (universe) {

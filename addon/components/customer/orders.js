@@ -25,7 +25,7 @@ export default class CustomerOrdersComponent extends Component {
     @service modalsManager;
     @service customerSession;
     @service hostRouter;
-    @service leafletRouterControl;
+    @service leafletRoutingControl;
     @engineService('@fleetbase/fleetops-engine') movementTracker;
     @engineService('@fleetbase/fleetops-engine') location;
     @tracked orders = [];
@@ -240,7 +240,7 @@ export default class CustomerOrdersComponent extends Component {
         }
 
         const routingService = this.currentUser.getOption('routing', { router: 'osrm' }).router;
-        const { router, formatter } = this.leafletRouterControl.get(routingService);
+        const { router, formatter } = this.leafletRoutingControl.get(routingService);
 
         this.routeControl = new RoutingControl({
             router,

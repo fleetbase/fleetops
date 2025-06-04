@@ -173,6 +173,11 @@ class OrderFilter extends Filter
         }
     }
 
+    public function only($ids)
+    {
+        $this->builder->whereIn('public_id', $ids);
+    }
+
     public function pickup(string $pickup)
     {
         $this->builder->whereHas(

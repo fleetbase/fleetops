@@ -17,7 +17,7 @@
                 <InputGroup @name="Routing Service" @helpText="Select the service which is responsible for calculating and plotting routes on the map.">
                     <Select
                         @value={{this.routerService}}
-                        @options={{this.leafletRouterControl.availableServices}}
+                        @options={{this.leafletRoutingControl.availableServices}}
                         @optionLabel="name"
                         @optionValue="key"
                         @onSelect={{fn (mut this.routerService)}}
@@ -25,7 +25,21 @@
                         class="w-full"
                     />
                 </InputGroup>
+                <InputGroup @name="Routing Distance Unit" @helpText="The unit used for calculating distance and routes.">
+                    <Select
+                        @value={{this.routingUnit}}
+                        @options={{this.routingUnitOptions}}
+                        @optionLabel="label"
+                        @optionValue="value"
+                        @onSelect={{fn (mut this.routingUnit)}}
+                        @placeholder="Select routing unit..."
+                        class="w-full"
+                    />
+                </InputGroup>
             </ContentPanel>
+            <RegistryYield @registry="fleet-ops:template:settings:routing" as |RegistryComponent|>
+                <RegistryComponent @controller={{this}} />
+            </RegistryYield>
         </div>
     </div>
     <Spacer @height="600px" />

@@ -41,7 +41,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
     @service contextPanel;
     @service universe;
     @service routeOptimization;
-    @service leafletRouterControl;
+    @service leafletRoutingControl;
     @service osrm;
 
     @tracked order = this.store.createRecord('order', { meta: [] });
@@ -613,7 +613,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         return route;
     }
 
-    @action setOptimizedRoute(route, trip, waypoints) {
+    @action setOptimizedRoute(route, trip, waypoints, engine = 'osrm') {
         let summary = { totalDistance: trip.distance, totalTime: trip.duration };
         let payload = {
             optimized: true,
@@ -621,6 +621,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
             waypoints,
             trip,
             summary,
+            engine,
         };
 
         this.leafletOptimizedRoute = payload;
@@ -792,7 +793,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
 
         if (canPreviewRoute) {
             const routingService = this.currentUser.getOption('routing', { router: 'osrm' }).router;
-            const { router, formatter } = this.leafletRouterControl.get(routingService);
+            const { router, formatter } = this.leafletRoutingControl.get(routingService);
 
             this.previewRouteControl = new RoutingControl({
                 router,
@@ -886,7 +887,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         }
     }
 
-    handleRouteOptimization({ sortedWaypoints, route, trip, result }) {
+    handleRouteOptimization({ sortedWaypoints, route, trip, result, engine = 'osrm' }) {
         // Update map layers & UI
         this.removeRoutingControlPreview();
         this.removeOptimizedRoute(this.leafletMap);
@@ -895,7 +896,7 @@ export default class OperationsOrdersIndexNewController extends BaseController {
         // Update controller state
         this.waypoints = sortedWaypoints;
         if (route) {
-            this.setOptimizedRoute(route, trip, result.waypoints);
+            this.setOptimizedRoute(route, trip, result.waypoints, engine);
         }
         this.previewDraftOrderRoute(this.payload, this.waypoints, this.isMultipleDropoffOrder);
         this.updatePayloadCoordinates();
