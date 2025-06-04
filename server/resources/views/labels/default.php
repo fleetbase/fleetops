@@ -12,6 +12,10 @@ use Fleetbase\Support\Utils; ?>
 </head>
 
 <style>
+    body {
+        font-family: DejaVu Sans, serif;
+        font-optical-sizing: auto;
+    }
 	.group:after {
 		content: "";
 		display: table;

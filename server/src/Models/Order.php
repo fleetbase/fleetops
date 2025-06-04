@@ -246,7 +246,7 @@ class Order extends Model
      */
     public function pdfLabel()
     {
-        return Pdf::loadHTML($this->label());
+        return Pdf::loadHTML(Utils::fixArabicInHTML($this->label()));
     }
 
     /**

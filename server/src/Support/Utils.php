@@ -1353,4 +1353,24 @@ class Utils extends FleetbaseUtils
 
         return $phone;
     }
+
+    /**
+     * Corrects Arabic text in the provided HTML string by transforming all identified segments
+     * into proper glyph forms, ensuring accurate Arabic rendering within the HTML content.
+     *
+     * @param string $html the HTML content that may contain Arabic text requiring glyph corrections
+     *
+     * @return string the resulting HTML with corrected Arabic glyphs
+     */
+    public static function fixArabicInHTML(string $html): string
+    {
+        $ar = new \ArPHP\I18N\Arabic();
+        $p  = $ar->arIdentify($html);
+        for ($i = count($p) - 1; $i >= 0; $i -= 2) {
+            $utf8ar = $ar->utf8Glyphs(substr($html, $p[$i - 1], $p[$i] - $p[$i - 1]));
+            $html   = substr_replace($html, $utf8ar, $p[$i - 1], $p[$i] - $p[$i - 1]);
+        }
+
+        return $html;
+    }
 }
