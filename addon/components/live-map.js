@@ -36,7 +36,7 @@ export default class LiveMapComponent extends Component {
     @service contextPanel;
     @service leafletMapManager;
     @service leafletContextmenuManager;
-    @service leafletRouterControl;
+    @service leafletRoutingControl;
     @service theme;
 
     /**
@@ -1140,7 +1140,7 @@ export default class LiveMapComponent extends Component {
         }
 
         const routingService = this.currentUser.getOption('routing', { router: 'osrm' }).router;
-        const { router, formatter } = this.leafletRouterControl.get(routingService);
+        const { router, formatter } = this.leafletRoutingControl.get(routingService);
 
         this.routeControl = new RoutingControl({
             router,

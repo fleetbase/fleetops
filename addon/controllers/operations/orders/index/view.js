@@ -23,7 +23,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
     @service socket;
     @service universe;
     @service contextPanel;
-    @service leafletRouterControl;
+    @service leafletRoutingControl;
 
     @tracked isLoadingAdditionalData = false;
     @tracked isWaypointsCollapsed;
@@ -383,7 +383,7 @@ export default class OperationsOrdersIndexViewController extends BaseController 
         leafletMap.flyTo(waypoints.firstObject);
 
         const routingService = this.currentUser.getOption('routing', { router: 'osrm' }).router;
-        const { router, formatter } = this.leafletRouterControl.get(routingService);
+        const { router, formatter } = this.leafletRoutingControl.get(routingService);
 
         this.routeControl = new RoutingControl({
             router,

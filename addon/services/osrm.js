@@ -37,7 +37,7 @@ export default class OsrmService extends RouteOptimizationInterfaceService {
             const trip = result.trips?.[0];
             const route = polyline.decode(trip.geometry);
 
-            return { sortedWaypoints, trip, route, result };
+            return { sortedWaypoints, trip, route, result, engine: 'osrm' };
         } catch (err) {
             debug(`[OSRM] Error routing trip : ${err.message}`);
             throw err;

@@ -31,6 +31,12 @@ export default buildRoutes(function () {
                 });
             });
         });
+        this.route('routes', function () {
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('view', { path: '/:public_id' });
+            });
+        });
     });
     this.route('management', { path: '/manage' }, function () {
         this.route('fleets', function () {

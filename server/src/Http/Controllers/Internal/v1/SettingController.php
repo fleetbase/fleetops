@@ -185,7 +185,8 @@ class SettingController extends Controller
     public function saveRoutingSettings(Request $request)
     {
         $router = $request->input('router');
-        Setting::configureCompany('routing', ['router' => $router]);
+        $unit   = $request->input('unit', 'km');
+        Setting::configureCompany('routing', ['router' => $router, 'unit' => $unit]);
 
         return response()->json([
             'status'  => 'ok',
@@ -200,7 +201,12 @@ class SettingController extends Controller
      */
     public function getRoutingSettings()
     {
-        $routingSettings = Setting::lookupCompany('routing', ['router' => 'osrm']);
+        $routingSettings = Setting::lookupCompany('routing', ['router' => 'osrm', 'unit' => 'km']);
+
+        // always default to km if no unit is set
+        if (!isset($routingSettings['unit'])) {
+            $routingSettings['unit'] = 'km';
+        }
 
         return response()->json($routingSettings);
     }
