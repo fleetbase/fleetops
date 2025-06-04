@@ -1,10 +1,9 @@
 import Controller from '@ember/controller';
-import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
-export default class SettingsRoutingController extends Controller.extend(Evented) {
+export default class SettingsRoutingController extends Controller {
     @service fetch;
     @service notifications;
     @service currentUser;
