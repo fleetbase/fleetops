@@ -2,8 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { isArray } from '@ember/array';
-import { task, timeout } from 'ember-concurrency';
+import { task } from 'ember-concurrency';
 
 /**
  * Component class for managing the details of an order configuration.
@@ -30,7 +29,7 @@ export default class OrderConfigManagerDetailsComponent extends Component {
      * @param {Object} owner - The owner of the component.
      * @param {Object} args - The arguments passed to the component, including the configuration.
      */
-    constructor(owner, { config, allConfigs = [], configManagerContext }) {
+    constructor(owner, { config, configManagerContext }) {
         super(...arguments);
         this.config = config;
 
