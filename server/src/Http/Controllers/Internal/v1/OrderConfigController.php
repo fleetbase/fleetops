@@ -61,7 +61,7 @@ class OrderConfigController extends FleetOpsController
         }
 
         // `core_service` order configs cannot be deleted
-        if ($orderConfig->core_service) {
+        if ($orderConfig->core_service === 1) {
             return response()->error('Core service order config\'s cannot be deleted.');
         }
 
@@ -72,5 +72,7 @@ class OrderConfigController extends FleetOpsController
 
             return new $this->resource($orderConfig);
         }
+
+        return response()->error('Unable to delete order config.');
     }
 }

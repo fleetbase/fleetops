@@ -31,6 +31,7 @@ export default class OrderConfigManagerComponent extends Component {
     @tracked context;
     @tracked contextModel;
     @tracked ready = false;
+    @tracked childTaskRunning = false;
 
     /**
      * Returns the array of tabs available for the panel.
@@ -62,9 +63,34 @@ export default class OrderConfigManagerComponent extends Component {
 
         this.context = context;
         this.contextModel = contextModel;
-        this.configManagerContext = configManagerContext.create();
+        this.configManagerContext = this.#createManagerContext();
         this.tab = findActiveTab(this.tabs, tab);
         this.loadOrderConfigs.perform();
+    }
+
+    /**
+     * Creates a contextual object for the order config manager.
+     */
+    #createManagerContext() {
+        const component = this;
+        const ctxmc = configManagerContext.create();
+        ctxmc.loadOrderConfigs = component.loadOrderConfigs;
+        ctxmc.createNewOrderConfig = component.createNewOrderConfig;
+        ctxmc.selectConfig = component.selectConfig;
+        ctxmc.unready = function () {
+            component.ready = false;
+        };
+        ctxmc.ready = function () {
+            component.ready = true;
+        };
+        ctxmc.childTaskStarted = function () {
+            component.childTaskRunning = true;
+        };
+        ctxmc.childTaskEnded = function () {
+            component.childTaskRunning = false;
+        };
+
+        return ctxmc;
     }
 
     /**
@@ -81,20 +107,8 @@ export default class OrderConfigManagerComponent extends Component {
         this.configs = yield this.store.findAll('order-config').then(Array.from);
 
         let currentConfig;
-        let initialOrderConfig = this.args.orderConfig;
         if (isArray(this.configs) && this.configs.length > 0) {
-            if (initialOrderConfig) {
-                currentConfig = this.configs.find((config) => {
-                    if (isModel(initialOrderConfig)) {
-                        return config.id === initialOrderConfig.id;
-                    }
-
-                    if (typeof initialOrderConfig === 'string') {
-                        return config.id === initialOrderConfig;
-                    }
-                });
-            }
-
+            currentConfig = this.configs.find((_) => _.key === 'transport');
             if (!currentConfig) {
                 currentConfig = this.configs[0];
             }
@@ -208,7 +222,6 @@ export default class OrderConfigManagerComponent extends Component {
      * in 'contextComponentCallback'.
      */
     @action onConfigDeleting() {
-        this.selectConfig(null);
         this.configManagerContext.trigger('onConfigDeleting');
         contextComponentCallback(this, 'onConfigDeleting', ...arguments);
     }

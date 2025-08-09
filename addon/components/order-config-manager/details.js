@@ -29,9 +29,13 @@ export default class OrderConfigManagerDetailsComponent extends Component {
      * @param {Object} owner - The owner of the component.
      * @param {Object} args - The arguments passed to the component, including the configuration.
      */
-    constructor(owner, { config }) {
+    constructor(owner, { config, configManagerContext }) {
         super(...arguments);
         this.config = config;
+
+        configManagerContext.on('onConfigChanged', (newConfig) => {
+            this.changeConfig(newConfig);
+        });
     }
 
     /**
@@ -87,11 +91,23 @@ export default class OrderConfigManagerDetailsComponent extends Component {
     @task *deleteConfig() {
         try {
             yield this.config.destroyRecord();
+            this.notifications.success(`Order config ${this.config.name} was deleted.`);
+
             if (typeof this.args.onConfigDeleted === 'function') {
-                this.args.onConfigDeleted(this.config);
+                this.args.onConfigDeleted();
             }
         } catch (error) {
             this.notifications.serverError(error);
         }
+    }
+
+    /**
+     * Handle change of config.
+     *
+     * @param {OrderConfigModel} newConfig
+     * @memberof OrderConfigManagerDetailsComponent
+     */
+    changeConfig(newConfig) {
+        this.config = newConfig;
     }
 }

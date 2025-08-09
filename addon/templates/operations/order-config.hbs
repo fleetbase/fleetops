@@ -82,10 +82,11 @@
                     <div class="flex flex-col items-center justify-center h-40">
                         <h4 class="text-lg text-gray-400 mb-4">{{t "fleet-ops.component.order-config-manager.select-order-config-to-start"}}</h4>
                         <Button
-                            @type="link"
+                            @type="primary"
                             @text={{t "fleet-ops.component.order-config-manager.new-order-config"}}
                             @onClick={{Context.onClickCreateOrderConfig}}
                             @permission="fleet-ops create order-config"
+                            @icon="plus"
                             class="text-blue-400"
                         />
                     </div>
