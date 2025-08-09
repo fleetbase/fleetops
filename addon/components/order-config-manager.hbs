@@ -20,6 +20,7 @@
             this.tab.component
             configManagerContext=this.configManagerContext
             config=this.currentConfig
+            allConfigs=this.configs
             context=this.context
             contextModel=this.contextModel
             tabOptions=this.tab
@@ -31,5 +32,7 @@
         )
         onTabChanged=this.onTabChanged
         onClickCreateOrderConfig=this.createNewOrderConfig
+        childTaskRunning=this.childTaskRunning
+        configManagerContext=this.configManagerContext
     )
 }}

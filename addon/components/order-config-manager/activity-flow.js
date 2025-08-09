@@ -435,7 +435,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * Initializes the activity flow by either loading from configuration or creating a default flow.
      */
     initializeActivityFlow() {
-        const hasFlow = Object.keys(this.config.flow).length > 0;
+        const hasFlow = this.config && Object.keys(this.config.flow).length > 0;
         if (hasFlow) {
             this.deserializeFlow(this.config.flow);
             this.initializeContext();
