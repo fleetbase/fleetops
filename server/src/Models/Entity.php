@@ -7,6 +7,7 @@ use Fleetbase\Casts\Json;
 use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
+use Fleetbase\FleetOps\Traits\PayloadAccessors;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasInternalId;
@@ -15,6 +16,9 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Milon\Barcode\Facades\DNS2DFacade as DNS2D;
@@ -31,6 +35,7 @@ class Entity extends Model
     use HasTrackingNumber;
     use HasApiModelBehavior;
     use HasMetaAttributes;
+    use PayloadAccessors;
 
     /**
      * The database table used by the model.
@@ -162,81 +167,81 @@ class Entity extends Model
     }
 
     /**
-     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @var BelongsTo
      */
-    public function photo()
+    public function photo(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\File::class);
     }
 
     /**
-     * @var \Illuminate\Database\Eloquent\Relations\HasMany
+     * @var HasMany
      */
-    public function files()
+    public function files(): HasMany
     {
         return $this->hasMany(\Fleetbase\Models\File::class);
     }
 
     /**
-     * @var \Illuminate\Database\Eloquent\Relations\HasMany
+     * @var HasMany
      */
-    public function proofs()
+    public function proofs(): HasMany
     {
         return $this->hasMany(Proof::class, 'subject_uuid');
     }
 
     /**
-     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @var BelongsTo
      */
-    public function destination()
+    public function destination(): BelongsTo
     {
         return $this->belongsTo(Place::class);
     }
 
     /**
-     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @var BelongsTo
      */
-    public function payload()
+    public function payload(): BelongsTo
     {
         return $this->belongsTo(Payload::class)->without(['entities']);
     }
 
     /**
-     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @var BelongsTo
      */
-    public function supplier()
+    public function supplier(): BelongsTo
     {
         return $this->belongsTo(Vendor::class, 'supplier_uuid', 'uuid');
     }
 
     /**
-     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @var BelongsTo
      */
-    public function driver()
+    public function driver(): BelongsTo
     {
         return $this->belongsTo(Driver::class, 'driver_assigned_uuid');
     }
 
     /**
-     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @var BelongsTo
      */
-    public function company()
+    public function company(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\Company::class);
     }
 
     /**
-     * @var \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @var BelongsTo
      */
-    public function trackingNumber()
+    public function trackingNumber(): BelongsTo
     {
         return $this->belongsTo(TrackingNumber::class);
     }
 
     /**
-     * @var \Illuminate\Database\Eloquent\Relations\MorphTo
+     * @var MorphTo
      */
-    public function customer()
+    public function customer(): MorphTo
     {
         return $this->morphTo(__FUNCTION__, 'customer_type', 'customer_uuid')->withoutGlobalScopes();
     }
@@ -474,35 +479,5 @@ class Entity extends Model
     {
         $this->customer_uuid = $model->uuid;
         $this->customer_type = Utils::getMutationType($model);
-    }
-
-    public function getPayload(): ?Payload
-    {
-        $this->load('payload');
-
-        if ($this->payload instanceof Payload) {
-            return $this->payload;
-        }
-
-        if (Str::isUuid($this->payload_uuid)) {
-            return Payload::where('uuid', $this->payload_uuid)->first();
-        }
-
-        return null;
-    }
-
-    public function getTrashedPayload(): ?Payload
-    {
-        $payload = $this->payload()->withoutGlobalScopes()->first();
-
-        if ($payload instanceof Payload) {
-            return $payload;
-        }
-
-        if (Str::isUuid($this->payload_uuid)) {
-            return Payload::where('uuid', $this->payload_uuid)->withoutGlobalScopes()->first();
-        }
-
-        return null;
     }
 }
