@@ -6,6 +6,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
+use Fleetbase\FleetOps\Traits\PayloadAccessors;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -21,6 +22,7 @@ class Waypoint extends Model
     use HasPublicId;
     use TracksApiCredential;
     use HasTrackingNumber;
+    use PayloadAccessors;
 
     /**
      * The database table used by the model.

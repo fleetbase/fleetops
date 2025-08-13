@@ -3,13 +3,16 @@
 namespace Fleetbase\FleetOps\Traits;
 
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 trait HasTrackingNumber
 {
@@ -55,11 +58,11 @@ trait HasTrackingNumber
      */
     public function createActivity(Activity $activity, $location = [], $proof = null): TrackingStatus
     {
-        $status   = $activity->get('status');
-        $details  = $activity->get('details');
-        $code     = $activity->get('code');
-        $proof    = static::resolveProof($proof);
-        $activity = TrackingStatus::create([
+        $status      = $this->resolveActivityTemplateString($activity->get('status', ''));
+        $details     = $this->resolveActivityTemplateString($activity->get('details', ''));
+        $code        = $activity->get('code');
+        $proof       = static::resolveProof($proof);
+        $activity    = TrackingStatus::create([
             'company_uuid'         => data_get($this, 'company_uuid', session('company')),
             'tracking_number_uuid' => $this->tracking_number_uuid,
             'proof_uuid'           => data_get($proof, 'uuid'),
@@ -89,11 +92,11 @@ trait HasTrackingNumber
      */
     public function insertActivity(Activity $activity, $location = [], $proof = null): string
     {
-        $status     = $activity->get('status');
-        $details    = $activity->get('details');
-        $code       = $activity->get('code');
-        $proof      = static::resolveProof($proof);
-        $activityId = TrackingStatus::insertGetUuid([
+        $status      = $this->resolveActivityTemplateString($activity->get('status', ''));
+        $details     = $this->resolveActivityTemplateString($activity->get('details', ''));
+        $code        = $activity->get('code');
+        $proof       = static::resolveProof($proof);
+        $activityId  = TrackingStatus::insertGetUuid([
             'company_uuid'         => data_get($this, 'company_uuid', session('company')),
             'tracking_number_uuid' => $this->tracking_number_uuid,
             'proof_uuid'           => data_get($proof, 'uuid'),
@@ -183,5 +186,56 @@ trait HasTrackingNumber
         }
 
         return null;
+    }
+
+    /**
+     * Resolve {placeholders} inside an activity template string.
+     *
+     * Behavior:
+     * - If called on an Order, resolves placeholders against that Order.
+     * - Otherwise, if the model exposes getOrder(), resolves against the returned Order.
+     * - If no suitable target model can be determined, returns the original template unchanged.
+     * - Uses App\Support\TemplateString::resolve() to process placeholders and modifiers
+     *   (e.g., {waypoint.type}, {capitalize waypoint.type}, {order.number | snake | uppercase}).
+     *
+     * Robustness:
+     * - Fast path: if there are no braces, returns early.
+     * - Catches unexpected resolver failures and logs a warning rather than throwing inside UI flows.
+     *
+     * @param string $template the template containing {placeholders}
+     *
+     * @return string the resolved template string, or the original on fallback
+     */
+    private function resolveActivityTemplateString(string $template): string
+    {
+        // Fast path: no placeholders to resolve.
+        if ($template === '' || strpos($template, '{') === false) {
+            return $template;
+        }
+
+        // Determine which model should resolve dynamic properties.
+        // Prefer $this when it's already an Order; otherwise try a getOrder() accessor.
+        $target = $this instanceof Order
+            ? $this
+            : (method_exists($this, 'getOrder') ? $this->getOrder() : null);
+
+        // If we couldn't locate a suitable Eloquent model, leave template unchanged.
+        if (!$target instanceof Model) {
+            return $template;
+        }
+
+        try {
+            // Uses default resolver name 'resolveDynamicProperty' on the target model.
+            return TemplateString::resolve($template, $target, 'resolveDynamicProperty');
+        } catch (\Throwable $e) {
+            // Don't break user flows on template issues; log and return original.
+            Log::warning('Activity template resolution failed.', [
+                'template'  => $template,
+                'target'    => get_class($target),
+                'message'   => $e->getMessage(),
+            ]);
+
+            return $template;
+        }
     }
 }

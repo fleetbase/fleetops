@@ -32,6 +32,7 @@ use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\Models\CustomFieldValue;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
+use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -722,20 +723,42 @@ class OrderController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
-    public function nextActivity(string $id)
+    public function nextActivity(string $id, Request $request)
     {
-        $order = Order::withoutGlobalScopes()
-            ->where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->first();
+        $waypointId = $request->input('waypoint');
 
-        if (!$order) {
+        try {
+            $order = Order::findRecordOrFail($id, ['payload']);
+        } catch (ModelNotFoundException $exception) {
             return response()->error('No order found.');
         }
 
-        $nextActivities = $order->config()->nextActivity();
+        // Get waypoint record if available
+        $waypoint = null;
+        if ($waypointId) {
+            $waypoint = Waypoint::where('payload_uuid', $order->payload_uuid)->whereHas('place', function ($query) use ($waypointId) {
+                $query->where('public_id', $waypointId);
+            })->first();
+        }
 
-        return response()->json($nextActivities);
+        $activities = $order->config()->nextActivity($waypoint);
+
+        // If activity is to complete order add proof of delivery properties if required
+        // This is a temporary fix until activity is updated to handle POD on it's own
+        $activities = $activities->map(function ($activity) use ($order) {
+            if ($activity->completesOrder() && $order->pod_required) {
+                $activity->set('require_pod', true);
+                $activity->set('pod_method', $order->pod_method);
+            }
+
+            // resolved status and details
+            $activity->set('_resolved_status', TemplateString::resolve($activity->get('status', ''), $order));
+            $activity->set('_resolved_details', TemplateString::resolve($activity->get('details', ''), $order));
+
+            return $activity;
+        });
+
+        return response()->json($activities);
     }
 
     /**

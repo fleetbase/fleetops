@@ -30,6 +30,7 @@ use Fleetbase\Models\Company;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Setting;
 use Fleetbase\Support\Auth;
+use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -457,6 +458,14 @@ class OrderController extends Controller
         if ($request->has('driver')) {
             $input['driver_assigned_uuid'] = Utils::getUuid('drivers', [
                 'public_id'    => $request->input('driver'),
+                'company_uuid' => session('company'),
+            ]);
+        }
+
+        // vehicle assignment
+        if ($request->has('vehicle')) {
+            $input['vehicle_assigned_uuid'] = Utils::getUuid('vehicles', [
+                'public_id'    => $request->input('vehicle'),
                 'company_uuid' => session('company'),
             ]);
         }
@@ -1090,6 +1099,10 @@ class OrderController extends Controller
                 $activity->set('require_pod', true);
                 $activity->set('pod_method', $order->pod_method);
             }
+
+            // resolved status and details
+            $activity->set('_resolved_status', TemplateString::resolve($activity->get('status', ''), $order));
+            $activity->set('_resolved_details', TemplateString::resolve($activity->get('details', ''), $order));
 
             return $activity;
         });
