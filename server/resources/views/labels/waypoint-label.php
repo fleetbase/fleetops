@@ -1,5 +1,5 @@
 <?php
-use Fleetbase\Support\Utils; 
+use Fleetbase\Support\Utils;
 ?>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -12,6 +12,10 @@ use Fleetbase\Support\Utils;
 </head>
 
 <style>
+    body {
+        font-family: DejaVu Sans, serif;
+        font-optical-sizing: auto;
+    }
     .group:after {
         content: "";
         display: table;
