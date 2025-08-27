@@ -308,6 +308,33 @@ class Payload extends Model
         return $this;
     }
 
+    /**
+     * Set waypoints for the current entity by resolving or creating Places and
+     * upserting Waypoint records in order.
+     *
+     * Input supports multiple shapes per item:
+     * - Top-level fields (preferred): 'type', 'place_uuid', 'id' (public_id), 'uuid' (temp search UUID),
+     *   'customer_uuid' (preferred), 'customer_id' (customer public_id), 'customer_type'
+     * - Or wrapped place payload: { type, place: {...} }
+     *
+     * Place resolution order:
+     *   1) attributes.place_uuid (must exist in DB)
+     *   2) attributes.id (public_id) -> resolve to uuid
+     *   3) Place::createFromMixed($attributes)
+     *      - If attributes.uuid is present and differs from created uuid, stores it as meta: search_uuid
+     *
+     * Customer resolution (optional):
+     *   - Uses 'customer_type' (default: 'fleetops:contact') to determine the model via Utils::getMutationType()
+     *   - Tries 'customer_uuid' first (must exist)
+     *   - If not found, tries 'customer_id' (public_id) and resolves to uuid
+     *   - Only sets customer_uuid/customer_type if a valid record is found
+     *
+     * Uniqueness for each waypoint is defined by: (payload_uuid, place_uuid, order).
+     * Updatable fields include: type, customer_uuid, customer_type.
+     *
+     * @param  array<int, array<string,mixed>>  $waypoints  List of waypoint attribute maps.
+     * @return static
+     */
     public function setWaypoints($waypoints = [])
     {
         if (!is_array($waypoints)) {
@@ -315,45 +342,98 @@ class Payload extends Model
         }
 
         foreach ($waypoints as $index => $attributes) {
-            $waypoint = ['payload_uuid' => $this->payload_uuid, 'type' => data_get($attributes, 'type', 'dropoff')];
+            // Keep a copy to safely read top-level fields regardless of { place: {...} } normalization.
+            $raw = $attributes;
 
+            // Read top-level fields BEFORE normalizing the place shape.
+            $type            = data_get($raw, 'type', 'dropoff');
+            $customerUuidIn  = data_get($raw, 'customer_uuid'); // preferred
+            $customerPubIdIn = data_get($raw, 'customer_id');   // public_id fallback
+            $customerType    = data_get($raw, 'customer_type', 'fleetops:contact');
+
+            // Normalize { place: {...} } shape if present.
             if (Utils::isset($attributes, 'place') && is_array(Utils::get($attributes, 'place'))) {
                 $attributes = Utils::get($attributes, 'place');
             }
 
-            if (is_array($attributes) && array_key_exists('place_uuid', $attributes) && Place::where('uuid', $attributes['place_uuid'])->exists()) {
-                $waypoint = [
-                    'place_uuid'   => $attributes['place_uuid'],
-                    'payload_uuid' => $attributes['payload_uuid'] ?? null,
-                    'order'        => $index,
-                ];
+            // -------- Resolve Place (uuid) --------
+            $placeUuid = null;
+
+            // Path 1: explicit place_uuid, ensure it exists
+            if (
+                is_array($attributes)
+                && isset($attributes['place_uuid'])
+                && Place::where('uuid', $attributes['place_uuid'])->exists()
+            ) {
+                $placeUuid = $attributes['place_uuid'];
+
+            // Path 2: public_id under "id" -> resolve to uuid
+            } elseif (
+                is_array($attributes)
+                && isset($attributes['id'])
+                && ($resolvedUuid = Place::where('public_id', $attributes['id'])->value('uuid'))
+            ) {
+                $placeUuid = $resolvedUuid;
+
+            // Path 3: create from mixed payload
             } else {
                 $place = Place::createFromMixed($attributes);
 
-                // if has a temporary uuid from search create meta attr for search_uuid
+                // Store temp search UUID for traceability if present and different
                 if ($place instanceof Place && isset($attributes['uuid']) && $place->uuid !== $attributes['uuid']) {
                     $place->updateMeta('search_uuid', $attributes['uuid']);
                 }
 
-                $waypoint['place_uuid'] = $place->uuid;
+                $placeUuid = $place->uuid;
             }
 
-            // Handle customer assosciation for waypoint
-            $customerId   = data_get($attributes, 'customer_uuid');
-            $customerType = data_get($attributes, 'customer_type', 'fleetops:contact');
-            if ($customerId && $customerType) {
+            // -------- Resolve Customer (uuid) --------
+            $customerUuid = null;
+            $customerTypeNamespace = null;
+
+            if ($customerType) {
                 $customerTypeNamespace = Utils::getMutationType($customerType);
-                $customerExists        = app($customerTypeNamespace)->where('uuid', $customerId)->exists();
-                if ($customerExists) {
-                    $waypoint['customer_uuid'] = $customerId;
-                    $waypoint['customer_type'] = $customerTypeNamespace;
+                $customerModel = app($customerTypeNamespace);
+
+                // Try by UUID first (preferred)
+                if ($customerUuidIn && $customerModel->where('uuid', $customerUuidIn)->exists()) {
+                    $customerUuid = $customerUuidIn;
+                }
+                // If not found by UUID, try by public_id
+                if (!$customerUuid && $customerPubIdIn) {
+                    $maybeUuid = $customerModel->where('public_id', $customerPubIdIn)->value('uuid');
+                    if ($maybeUuid) {
+                        $customerUuid = $maybeUuid;
+                    } else {
+                        // If neither lookup succeeds, drop the type namespace to avoid FK/type mismatch
+                        $customerTypeNamespace = null;
+                    }
+                }
+
+                // If no valid uuid after both attempts, clear the type
+                if (!$customerUuid) {
+                    $customerTypeNamespace = null;
                 }
             }
 
-            // set payload
-            $waypoint['payload_uuid'] = $this->uuid;
-            $waypointRecord           = Waypoint::updateOrCreate($waypoint);
+            // -------- Upsert Waypoint --------
+            // Uniqueness: payload + place + order for deterministic row per position.
+            $unique = [
+                'payload_uuid' => $this->payload_uuid,
+                'place_uuid'   => $placeUuid,
+                'order'        => $index,
+            ];
 
+            // Only mutable/updatable fields go here.
+            $values = array_filter([
+                'type'           => $type,
+                'customer_uuid'  => $customerUuid,
+                'customer_type'  => $customerTypeNamespace,
+            ], fn ($v) => !is_null($v));
+
+            $waypointRecord = Waypoint::updateOrCreate($unique, $values);
+
+            // Track it (assumes this is a Collection)
             $this->waypointMarkers->push($waypointRecord);
         }
 

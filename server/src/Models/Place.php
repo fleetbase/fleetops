@@ -541,6 +541,14 @@ class Place extends Model
                 return $existingPlace;
             }
 
+            // Get public_id if supplied if set
+            $id = data_get($place, 'id') || data_get($place, 'public_id');
+
+            // If $place has a valid uuid and a matching Place object exists, return the uuid
+            if (Utils::isPublicId($id) && $existingPlace = static::where('public_id', $id)->first()) {
+                return $existingPlace;
+            }
+
             // If has $attributes['address']
             if (!empty($place['address'])) {
                 return static::createFromGeocodingLookup($place['address'], $saveInstance);
