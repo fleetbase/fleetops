@@ -19,7 +19,7 @@ class VehicleDevice extends Model
      *
      * @var string
      */
-    protected $table = 'vehicle_devices';
+    protected $table = 'devices';
 
     /**
      * Attributes that is filterable on this model.

@@ -332,7 +332,8 @@ class Payload extends Model
      * Uniqueness for each waypoint is defined by: (payload_uuid, place_uuid, order).
      * Updatable fields include: type, customer_uuid, customer_type.
      *
-     * @param  array<int, array<string,mixed>>  $waypoints  List of waypoint attribute maps.
+     * @param array<int, array<string,mixed>> $waypoints list of waypoint attribute maps
+     *
      * @return static
      */
     public function setWaypoints($waypoints = [])
@@ -388,12 +389,12 @@ class Payload extends Model
             }
 
             // -------- Resolve Customer (uuid) --------
-            $customerUuid = null;
+            $customerUuid          = null;
             $customerTypeNamespace = null;
 
             if ($customerType) {
                 $customerTypeNamespace = Utils::getMutationType($customerType);
-                $customerModel = app($customerTypeNamespace);
+                $customerModel         = app($customerTypeNamespace);
 
                 // Try by UUID first (preferred)
                 if ($customerUuidIn && $customerModel->where('uuid', $customerUuidIn)->exists()) {
