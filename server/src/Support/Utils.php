@@ -200,6 +200,11 @@ class Utils extends FleetbaseUtils
             $coordinates = $coordinates->location;
         }
 
+        // any model with spatial location point
+        if ($coordinates instanceof \Illuminate\Database\Eloquent\Model && $coordinates->location) {
+            $coordinates = $coordinates->location;
+        }
+
         if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialExpression) {
             $coordinates = $coordinates->getSpatialValue();
         }

@@ -22,15 +22,16 @@
     ],
     "require": {
         "php": "^8.0",
-        "fleetbase/core-api": "*",
         "barryvdh/laravel-dompdf": "^2.0",
         "brick/geo": "0.7.2",
         "cknow/laravel-money": "^7.1",
+        "fleetbase/core-api": "*",
         "geocoder-php/google-maps-places-provider": "^1.4",
         "giggsey/libphonenumber-for-php": "^8.13",
         "league/geotools": "^1.1.0",
         "milon/barcode": "^10.0",
         "php-http/guzzle7-adapter": "^1.0",
+        "php-units-of-measure/php-units-of-measure": "^2.2",
         "psr/http-factory-implementation": "*",
         "toin0u/geocoder-laravel": "^4.4",
         "webit/eval-math": "^1.0"

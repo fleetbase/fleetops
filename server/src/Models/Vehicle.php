@@ -11,6 +11,7 @@ use Fleetbase\Models\Category;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -38,6 +39,7 @@ class Vehicle extends Model
     use HasSlug;
     use LogsActivity;
     use HasMetaAttributes;
+    use HasCustomFields;
 
     /**
      * The database table used by the model.

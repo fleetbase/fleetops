@@ -236,7 +236,7 @@ body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab.active {
 
 body[data-theme='light'] .flow-activity {
     stroke: #e5e7eb;
-    fill: rgba(249, 250, 251, 0.5);
+    fill: rgba(249, 250, 251, 50%);
 }
 
 body[data-theme='light'] .flow-activity:hover,

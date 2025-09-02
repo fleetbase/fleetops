@@ -14,11 +14,10 @@ use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
-use Fleetbase\Models\CustomField;
-use Fleetbase\Models\CustomFieldValue;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\Transaction;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasOptionsAttributes;
@@ -34,6 +33,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -51,6 +51,7 @@ class Order extends Model
     use Searchable;
     use LogsActivity;
     use HasTrackingNumber;
+    use HasCustomFields;
 
     /**
      * The database table used by the model.
@@ -346,16 +347,6 @@ class Order extends Model
     public function files(): HasMany
     {
         return $this->hasMany(\Fleetbase\Models\File::class, 'subject_uuid')->latest();
-    }
-
-    public function customFields(): HasMany
-    {
-        return $this->hasMany(CustomField::class, 'subject_uuid')->orderBy('order');
-    }
-
-    public function customFieldValues(): HasMany
-    {
-        return $this->hasMany(CustomFieldValue::class, 'subject_uuid');
     }
 
     public function drivers(): HasManyThrough
@@ -1141,7 +1132,7 @@ class Order extends Model
      */
     public function firstDispatch(): Order
     {
-        if ($this->dispatched) {
+        if (!$this->dispatched) {
             $this->dispatch();
         }
 
@@ -1156,7 +1147,7 @@ class Order extends Model
      */
     public function firstDispatchWithActivity(): Order
     {
-        if ($this->dispatched) {
+        if (!$this->dispatched) {
             $this->dispatchWithActivity();
         }
 
@@ -1604,104 +1595,6 @@ class Order extends Model
     }
 
     /**
-     * Retrieves a custom field by its key.
-     *
-     * This method searches for a custom field where the name or label matches the given key.
-     *
-     * @param string $key the key used to search for the custom field
-     *
-     * @return CustomField|null the found CustomField object or null if not found
-     */
-    public function getCustomField(string $key): ?CustomField
-    {
-        $name         = Str::slug($key);
-        $label        = Str::title($key);
-
-        return $this->customFields()->where('name', $name)->orWhere('label', $label)->first();
-    }
-
-    /**
-     * Retrieves the custom field value for the specified custom field.
-     *
-     * @param CustomField $customField the custom field to retrieve the value for
-     *
-     * @return CustomFieldValue|null the custom field value, or null if not found
-     */
-    public function getCustomFieldValue(CustomField $customField): ?CustomFieldValue
-    {
-        $customFieldValue = $this->customFieldValues()->where('custom_field_uuid', $customField->uuid)->first();
-        if ($customFieldValue) {
-            return $customFieldValue;
-        }
-
-        return null;
-    }
-
-    /**
-     * Retrieves the value of a custom field by its key.
-     *
-     * @param string $key the key of the custom field
-     *
-     * @return mixed|null the value of the custom field, or null if not found
-     */
-    public function getCustomFieldValueByKey(string $key)
-    {
-        $customField = $this->getCustomField($key);
-        if ($customField) {
-            $customFieldValue = $this->getCustomFieldValue($customField);
-            if ($customFieldValue) {
-                return $customFieldValue->value;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Checks if a custom field exists.
-     *
-     * @param string $key the key of the custom field
-     */
-    public function isCustomField(string $key): bool
-    {
-        $name         = Str::slug($key);
-        $label        = Str::title($key);
-
-        return $this->customFields()->where('name', $name)->orWhere('label', $label)->exists();
-    }
-
-    /**
-     * Retrieves all custom field values associated with the order.
-     *
-     * @return array an array of custom field values
-     */
-    public function getCustomFieldValues(): array
-    {
-        $customFields = [];
-        foreach ($this->customFieldValues as $customFieldValue) {
-            $key = Str::snake(strtolower($customFieldValue->custom_field_label));
-            if ($key) {
-                $customFields[$key] = $customFieldValue->value;
-            }
-        }
-
-        return $customFields;
-    }
-
-    public function getCustomFieldKeys(): array
-    {
-        $keys = [];
-        foreach ($this->customFieldValues as $customFieldValue) {
-            $key = Str::snake(strtolower($customFieldValue->custom_field_label));
-            if ($key) {
-                $keys[] = $key;
-            }
-        }
-
-        return $keys;
-    }
-
-    /**
      * Retrieves the OrderConfig associated with this order.
      *
      * This function first attempts to load the 'orderConfig' relationship.
@@ -1924,5 +1817,32 @@ class Order extends Model
         }
 
         return $this->{$property};
+    }
+
+    public function findClosestDrivers(int $distance = 6000): Collection
+    {
+        $pickup   = $this->getPickupLocation();
+        $distance = $distance;
+
+        if (!Utils::isPoint($pickup)) {
+            return collect();
+        }
+
+        $drivers = Driver::where(['status' => 'active', 'online' => 1])
+            ->whereHas('company', function ($q) {
+                $q->whereHas('users', function ($q) {
+                    $q->whereHas('driver', function ($q) {
+                        $q->where(['status' => 'active', 'online' => 1]);
+                        $q->whereNull('deleted_at');
+                    });
+                });
+            })
+            ->whereNull('deleted_at')
+            ->distanceSphere('location', $pickup, $distance)
+            ->distanceSphereValue('location', $pickup)
+            ->withoutGlobalScopes()
+            ->get();
+
+        return $drivers;
     }
 }

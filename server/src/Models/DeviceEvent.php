@@ -13,7 +13,6 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -33,7 +32,6 @@ class DeviceEvent extends Model
     use LogsActivity;
     use HasMetaAttributes;
     use Searchable;
-    use SoftDeletes;
 
     /**
      * The database table used by the model.

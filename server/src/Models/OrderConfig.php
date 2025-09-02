@@ -369,6 +369,14 @@ class OrderConfig extends Model
     }
 
     /**
+     * Gets an activity from the order config by it's code.
+     */
+    public function getActivityByCode(string $code): ?Activity
+    {
+        return $this->activities()->firstWhere('code', $code);
+    }
+
+    /**
      * Creates an Activity instance representing a canceled order.
      *
      * This method constructs an Activity object with specific attributes

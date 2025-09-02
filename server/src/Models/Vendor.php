@@ -6,6 +6,7 @@ use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -32,6 +33,7 @@ class Vendor extends Model
     use HasSlug;
     use LogsActivity;
     use Notifiable;
+    use HasCustomFields;
 
     /**
      * The database table used by the model.

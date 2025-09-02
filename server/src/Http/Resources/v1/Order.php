@@ -15,68 +15,119 @@ class Order extends FleetbaseResource
      * Transform the resource into an array.
      *
      * @param \Illuminate\Http\Request $request
-     *
-     * @return array
      */
-    public function toArray($request)
+    public function toArray($request): array
     {
-        return [
-            'id'                       => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-            'uuid'                     => $this->when(Http::isInternalRequest(), $this->uuid),
-            'public_id'                => $this->when(Http::isInternalRequest(), $this->public_id),
-            'internal_id'              => $this->internal_id,
-            'company_uuid'             => $this->when(Http::isInternalRequest(), $this->company_uuid),
-            'transaction_uuid'         => $this->when(Http::isInternalRequest(), $this->transaction_uuid),
-            'customer_uuid'            => $this->when(Http::isInternalRequest(), $this->customer_uuid),
-            'customer_type'            => $this->when(Http::isInternalRequest(), $this->customer_type),
-            'facilitator_uuid'         => $this->when(Http::isInternalRequest(), $this->facilitator_uuid),
-            'facilitator_type'         => $this->when(Http::isInternalRequest(), $this->facilitator_type),
-            'payload_uuid'             => $this->when(Http::isInternalRequest(), $this->payload_uuid),
-            'route_uuid'               => $this->when(Http::isInternalRequest(), $this->route_uuid),
-            'purchase_rate_uuid'       => $this->when(Http::isInternalRequest(), $this->purchase_rate_uuid),
-            'tracking_number_uuid'     => $this->when(Http::isInternalRequest(), $this->tracking_number_uuid),
-            'driver_assigned_uuid'     => $this->when(Http::isInternalRequest(), $this->driver_assigned_uuid),
-            'vehicle_assigned_uuid'    => $this->when(Http::isInternalRequest(), $this->vehicle_assigned_uuid),
-            'service_quote_uuid'       => $this->when(Http::isInternalRequest(), $this->service_quote_uuid),
-            'has_driver_assigned'      => $this->when(Http::isInternalRequest(), $this->has_driver_assigned),
-            'is_scheduled'             => $this->when(Http::isInternalRequest(), $this->is_scheduled),
-            'order_config_uuid'        => $this->when(Http::isInternalRequest(), $this->order_config_uuid),
-            'order_config'             => $this->when(Http::isInternalRequest(), $this->whenLoaded('orderConfig', fn () => $this->orderConfig), data_get($this->orderConfig, 'public_id')),
-            'custom_field_values'      => $this->when(Http::isInternalRequest(), $this->customFieldValues),
-            'customer'                 => $this->setCustomerType(Resolve::resourceForMorph($this->customer_type, $this->customer_uuid)),
-            'payload'                  => new Payload($this->payload),
-            'facilitator'              => $this->setFacilitatorType(Resolve::resourceForMorph($this->facilitator_type, $this->facilitator_uuid)),
-            'driver_assigned'          => new Driver($this->driverAssigned()->without(['jobs', 'currentJob'])->first()),
-            'vehicle_assigned'         => new Vehicle($this->vehicleAssigned()->without(['fleets', 'vendor'])->first()),
-            'tracking_number'          => new TrackingNumber($this->trackingNumber),
-            'tracking_statuses'        => $this->whenLoaded('trackingStatuses', fn () => TrackingStatus::collection($this->trackingStatuses)),
-            'tracking'                 => $this->when(Http::isInternalRequest(), $this->trackingNumber ? $this->trackingNumber->tracking_number : null),
-            'barcode'                  => $this->when(Http::isInternalRequest(), $this->trackingNumber ? $this->trackingNumber->barcode : null),
-            'qr_code'                  => $this->when(Http::isInternalRequest(), $this->trackingNumber ? $this->trackingNumber->qr_code : null),
-            'comments'                 => $this->when(Http::isInternalRequest(), Comment::collection($this->comments)),
-            'files'                    => $this->when(Http::isInternalRequest(), $this->files, File::collection($this->files)),
-            'purchase_rate'            => new PurchaseRate($this->purchaseRate),
-            'notes'                    => $this->notes,
-            ...$this->getCustomFieldValues(),
-            'custom_fields'         => $this->when(Http::isPublicRequest(), fn () => $this->getCustomFieldKeys()),
-            'type'                  => $this->type,
-            'status'                => $this->status,
-            'pod_method'            => $this->pod_method,
-            'pod_required'          => (bool) data_get($this, 'pod_required', false),
-            'dispatched'            => (bool) data_get($this, 'dispatched', false),
-            'adhoc'                 => (bool) data_get($this, 'adhoc', false),
-            'adhoc_distance'        => (int) $this->getAdhocDistance(),
-            'distance'              => (int) $this->distance,
-            'time'                  => (int) $this->time,
-            'tracker_data'          => $this->when($request->has('with_tracker_data') || !empty($this->resource->tracker_data), fn () => $this->resource->tracker_data ?? $this->resource->tracker()->toArray()),
-            'eta'                   => $this->when($request->has('with_eta') || !empty($this->resource->eta), fn () => $this->resource->eta ?? $this->resource->tracker()->eta()),
-            'meta'                  => data_get($this, 'meta', Utils::createObject()),
-            'dispatched_at'         => $this->dispatched_at,
-            'started_at'            => $this->started_at,
-            'scheduled_at'          => $this->scheduled_at,
-            'updated_at'            => $this->updated_at,
-            'created_at'            => $this->created_at,
-        ];
+        $isInternal = Http::isInternalRequest();
+        $isPublic   = Http::isPublicRequest();
+
+        // Precompute expensive bits safely
+        $orderConfigPublicId = data_get($this->orderConfig, 'public_id');
+
+        // Driver / vehicle relations (prevent eager noise)
+        $driverAssignedModel  = $this->driverAssigned()->without(['jobs', 'currentJob'])->first();
+        $vehicleAssignedModel = $this->vehicleAssigned()->without(['fleets', 'vendor'])->first();
+
+        // Tracker helpers (avoid calling ->tracker() twice)
+        $withTrackerData = $request->has('with_tracker_data') || !empty($this->resource->tracker_data);
+        $withEta         = $request->has('with_eta') || !empty($this->resource->eta);
+        $tracker         = ($withTrackerData || $withEta) ? $this->resource->tracker() : null;
+
+        return $this->withCustomFields([
+            // IDs
+            'id'                   => $this->when($isInternal, $this->id, $this->public_id),
+            'uuid'                 => $this->when($isInternal, $this->uuid),
+            'public_id'            => $this->when($isInternal, $this->public_id),
+            'internal_id'          => $this->internal_id,
+
+            // FKs (internal only)
+            'company_uuid'         => $this->when($isInternal, $this->company_uuid),
+            'transaction_uuid'     => $this->when($isInternal, $this->transaction_uuid),
+            'customer_uuid'        => $this->when($isInternal, $this->customer_uuid),
+            'customer_type'        => $this->when($isInternal, $this->customer_type),
+            'facilitator_uuid'     => $this->when($isInternal, $this->facilitator_uuid),
+            'facilitator_type'     => $this->when($isInternal, $this->facilitator_type),
+            'payload_uuid'         => $this->when($isInternal, $this->payload_uuid),
+            'route_uuid'           => $this->when($isInternal, $this->route_uuid),
+            'purchase_rate_uuid'   => $this->when($isInternal, $this->purchase_rate_uuid),
+            'tracking_number_uuid' => $this->when($isInternal, $this->tracking_number_uuid),
+            'driver_assigned_uuid' => $this->when($isInternal, $this->driver_assigned_uuid),
+            'vehicle_assigned_uuid'=> $this->when($isInternal, $this->vehicle_assigned_uuid),
+            'service_quote_uuid'   => $this->when($isInternal, $this->service_quote_uuid),
+            'has_driver_assigned'  => $this->when($isInternal, $this->has_driver_assigned),
+            'is_scheduled'         => $this->when($isInternal, $this->is_scheduled),
+
+            // Order config: internal gets the relation; public gets the public_id (or null)
+            'order_config_uuid'    => $this->when($isInternal, $this->order_config_uuid),
+            'order_config'         => $this->when(
+                $isInternal,
+                $this->whenLoaded('orderConfig', function () {
+                    return $this->orderConfig;
+                }),
+                $orderConfigPublicId
+            ),
+
+            // Custom field values (internal only) — the relation collection is fine for internal,
+            // public callers will not see this key at all
+            'custom_field_values'  => $this->when($isInternal, $this->customFieldValues),
+
+            // Morph resources
+            'customer'             => $this->setCustomerType(Resolve::resourceForMorph($this->customer_type, $this->customer_uuid)),
+            'payload'              => new Payload($this->payload),
+            'facilitator'          => $this->setFacilitatorType(Resolve::resourceForMorph($this->facilitator_type, $this->facilitator_uuid)),
+
+            // Assigned entities
+            'driver_assigned'      => new Driver($driverAssignedModel),
+            'vehicle_assigned'     => new Vehicle($vehicleAssignedModel),
+
+            // Tracking
+            'tracking_number'      => new TrackingNumber($this->trackingNumber),
+            'tracking_statuses'    => $this->whenLoaded('trackingStatuses', function () {
+                return TrackingStatus::collection($this->trackingStatuses);
+            }),
+            'tracking'             => $this->when($isInternal, $this->trackingNumber ? $this->trackingNumber->tracking_number : null),
+            'barcode'              => $this->when($isInternal, $this->trackingNumber ? $this->trackingNumber->barcode : null),
+            'qr_code'              => $this->when($isInternal, $this->trackingNumber ? $this->trackingNumber->qr_code : null),
+
+            // Comments & files (internal gets raw; public gets resource collections)
+            'comments'             => $this->when($isInternal, Comment::collection($this->comments)),
+            'files'                => $this->when($isInternal, $this->files, File::collection($this->files)),
+
+            // Pricing / notes
+            'purchase_rate'        => new PurchaseRate($this->purchaseRate),
+            'notes'                => $this->notes,
+
+            // Expose only keys list publicly
+            'custom_fields'        => $this->when($isPublic, function () {
+                return $this->getCustomFieldKeys();
+            }),
+
+            // Basic attrs
+            'type'                 => $this->type,
+            'status'               => $this->status,
+            'pod_method'           => $this->pod_method,
+            'pod_required'         => (bool) data_get($this, 'pod_required', false),
+            'dispatched'           => (bool) data_get($this, 'dispatched', false),
+            'adhoc'                => (bool) data_get($this, 'adhoc', false),
+            'adhoc_distance'       => (int) $this->getAdhocDistance(),
+            'distance'             => (int) $this->distance,
+            'time'                 => (int) $this->time,
+
+            // Tracker derived data (computed only when requested/present)
+            'tracker_data'         => $this->when($withTrackerData, function () use ($tracker) {
+                return $this->resource->tracker_data ?? ($tracker ? $tracker->toArray() : null);
+            }),
+            'eta'                  => $this->when($withEta, function () use ($tracker) {
+                return $this->resource->eta ?? ($tracker ? $tracker->eta() : null);
+            }),
+
+            'meta'                 => data_get($this, 'meta', Utils::createObject()),
+            'dispatched_at'        => $this->dispatched_at,
+            'started_at'           => $this->started_at,
+            'scheduled_at'         => $this->scheduled_at,
+            'updated_at'           => $this->updated_at,
+            'created_at'           => $this->created_at,
+        ]);
     }
 
     /**

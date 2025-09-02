@@ -431,11 +431,9 @@ class Place extends Model
 
         $results = \Geocoder\Laravel\Facades\Geocoder::reverse($latitude, $longitude)->get();
 
-        if ($results->isEmpty()) {
-            return null;
+        if (!$results->isEmpty()) {
+            $instance->fillWithGoogleAddress($results->first());
         }
-
-        $instance->fillWithGoogleAddress($results->first());
 
         if ($saveInstance) {
             $instance->save();

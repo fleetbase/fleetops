@@ -56,7 +56,7 @@ class ServiceArea extends Model
      *
      * @var array
      */
-    protected $fillable = ['_key', 'company_uuid', 'name', 'type', 'parent_uuid', 'border', 'color', 'stroke_color', 'status'];
+    protected $fillable = ['_key', 'company_uuid', 'name', 'type', 'parent_uuid', 'border', 'color', 'stroke_color', 'status', 'country'];
 
     /**
      * The attributes that are spatial columns.

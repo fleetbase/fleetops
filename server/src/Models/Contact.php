@@ -10,6 +10,7 @@ use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Notifications\UserInvited;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
@@ -42,6 +43,7 @@ class Contact extends Model
     use LogsActivity;
     use CausesActivity;
     use Notifiable;
+    use HasCustomFields;
 
     /**
      * The database table used by the model.

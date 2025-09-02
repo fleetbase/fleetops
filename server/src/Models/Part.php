@@ -16,7 +16,6 @@ use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
@@ -39,7 +38,6 @@ class Part extends Model
     use LogsActivity;
     use HasMetaAttributes;
     use Searchable;
-    use SoftDeletes;
 
     /**
      * The database table used by the model.
