@@ -36,6 +36,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -910,7 +911,11 @@ class OrderController extends Controller
         $order->save();
 
         // trigger start event
-        event(new OrderStarted($order));
+        try {
+            event(new OrderStarted($order));
+        } catch (\Exception $e) {
+            Log::debug('Unable to complete order started event', ['error' => $e->getMessage(), 'order' => $order]);
+        }
 
         // set order as drivers current order
         $driver->current_job_uuid = $order->uuid;

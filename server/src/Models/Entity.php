@@ -10,6 +10,7 @@ use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\FleetOps\Traits\PayloadAccessors;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
@@ -36,6 +37,7 @@ class Entity extends Model
     use HasApiModelBehavior;
     use HasMetaAttributes;
     use PayloadAccessors;
+    use HasCustomFields;
 
     /**
      * The database table used by the model.

@@ -431,11 +431,9 @@ class Place extends Model
 
         $results = \Geocoder\Laravel\Facades\Geocoder::reverse($latitude, $longitude)->get();
 
-        if ($results->isEmpty()) {
-            return null;
+        if (!$results->isEmpty()) {
+            $instance->fillWithGoogleAddress($results->first());
         }
-
-        $instance->fillWithGoogleAddress($results->first());
 
         if ($saveInstance) {
             $instance->save();
@@ -538,6 +536,14 @@ class Place extends Model
 
             // If $place has a valid uuid and a matching Place object exists, return the uuid
             if (Str::isUuid($uuid) && $existingPlace = static::where('uuid', $uuid)->first()) {
+                return $existingPlace;
+            }
+
+            // Get public_id if supplied if set
+            $id = data_get($place, 'id') || data_get($place, 'public_id');
+
+            // If $place has a valid uuid and a matching Place object exists, return the uuid
+            if (Utils::isPublicId($id) && $existingPlace = static::where('public_id', $id)->first()) {
                 return $existingPlace;
             }
 

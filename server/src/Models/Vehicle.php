@@ -7,9 +7,11 @@ use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Support\VehicleData;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\Models\Category;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -19,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -36,6 +39,7 @@ class Vehicle extends Model
     use HasSlug;
     use LogsActivity;
     use HasMetaAttributes;
+    use HasCustomFields;
 
     /**
      * The database table used by the model.
@@ -98,6 +102,8 @@ class Vehicle extends Model
     protected $fillable = [
         'company_uuid',
         'vendor_uuid',
+        'category_uuid',
+        'warranty_uuid',
         'photo_uuid',
         'avatar_url',
         'make',
@@ -176,6 +182,21 @@ class Vehicle extends Model
         return $this->hasOne(Driver::class)->without(['vehicle']);
     }
 
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'category_uuid', 'uuid');
+    }
+
+    public function telematic(): BelongsTo
+    {
+        return $this->belongsTo(Telematic::class, 'telematic_uuid', 'uuid');
+    }
+
+    public function warranty(): BelongsTo
+    {
+        return $this->belongsTo(Warranty::class, 'warranty_uuid', 'uuid');
+    }
+
     public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
@@ -188,12 +209,35 @@ class Vehicle extends Model
 
     public function devices(): HasMany
     {
-        return $this->hasMany(VehicleDevice::class);
+        return $this->hasMany(Device::class, 'attachable_uuid');
     }
 
     public function positions(): HasMany
     {
         return $this->hasMany(Position::class, 'subject_uuid');
+    }
+
+    public function equipments(): HasMany
+    {
+        return $this->hasMany(Equipment::class, 'equipable_uuid', 'uuid')
+            ->where('equipable_type', static::class);
+    }
+
+    public function maintenances(): HasMany
+    {
+        return $this->hasMany(Maintenance::class, 'maintainable_uuid', 'uuid')
+            ->where('maintainable_type', static::class);
+    }
+
+    public function sensors(): HasMany
+    {
+        return $this->hasMany(Sensor::class, 'sensorable_uuid', 'uuid')
+            ->where('sensorable_type', static::class);
+    }
+
+    public function parts(): MorphMany
+    {
+        return $this->morphMany(Part::class, 'asset');
     }
 
     /**

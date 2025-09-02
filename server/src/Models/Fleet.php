@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
@@ -27,6 +28,7 @@ class Fleet extends Model
     use HasSlug;
     use LogsActivity;
     use Notifiable;
+    use HasCustomFields;
 
     /**
      * The database table used by the model.

@@ -12,6 +12,7 @@ use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -46,6 +47,7 @@ class Driver extends Model
     use HasSlug;
     use LogsActivity;
     use CausesActivity;
+    use HasCustomFields;
 
     /**
      * The database table used by the model.
