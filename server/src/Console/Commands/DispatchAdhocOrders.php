@@ -78,23 +78,35 @@ class DispatchAdhocOrders extends Command
     }
 
     /**
-     * Fetches ad-hoc dispatchable orders based on certain criteria.
+     * Retrieve a collection of dispatchable orders that meet specific conditions.
      *
-     * Retrieves orders that are marked as ad-hoc and have not been dispatched yet. The orders
-     * are filtered by their scheduled dispatch time, order status, and whether a driver has been
-     * assigned to them. The method also applies filters based on sandbox mode.
+     * This method queries orders that are eligible for dispatching based on multiple constraints:
+     * - Orders must be adhoc, dispatched, but not yet started.
+     * - Orders must have a `dispatched_at` timestamp within a configurable time window:
+     *     - Not older than the given expiry limit (default 72 hours).
+     *     - At least the given interval old (default 4 minutes).
+     * - Orders must not have a driver already assigned and must not be deleted or canceled.
+     * - Orders must belong to companies that have at least one associated user with an online driver.
+     * - Orders must have an associated payload.
      *
-     * @return Collection returns a collection of orders that meet the criteria
+     * The query is executed against the appropriate database connection, depending on
+     * whether the `sandbox` option is enabled.
+     *
+     * @param  int  $interval     Minimum age of the order in minutes to be considered dispatchable (default: 4).
+     * @param  int  $expiryHours  Maximum age of the order in hours before it expires and is no longer dispatchable (default: 72).
+     * @return \Illuminate\Support\Collection  A collection of eligible `Order` models with their related `company` and `payload`.
      */
-    public function getDispatchableOrders(): Collection
+    public function getDispatchableOrders(int $interval = 4, int $expiryHours = 72): Collection
     {
         $sandbox  = Utils::castBoolean($this->option('sandbox'));
-        $interval = 4;
 
         return Order::on($sandbox ? 'sandbox' : 'mysql')
             ->withoutGlobalScopes()
             ->where(['adhoc' => 1, 'dispatched' => 1, 'started' => 0])
-            ->whereDate('dispatched_at', '<=', Carbon::now()->subMinutes($interval)->toDateTimeString())
+            ->whereBetween('dispatched_at', [
+                Carbon::now()->subHours($expiryHours),           // not older than 72 hours
+                Carbon::now()->subMinutes($interval),  // older than interval minutes
+            ])
             ->whereNull('driver_assigned_uuid')
             ->whereNull('deleted_at')
             ->where('status', '!=', 'canceled')

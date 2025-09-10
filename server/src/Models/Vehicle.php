@@ -106,18 +106,31 @@ class Vehicle extends Model
         'warranty_uuid',
         'photo_uuid',
         'avatar_url',
+        'name',
+        'description',
         'make',
+        'model',
+        'year',
+        'color',
         'location',
         'speed',
         'heading',
         'altitude',
-        'model',
-        'year',
+        'odometer',
+        'odometer_unit',
+        'fuel_type',
+        'fuel_volume_unit',
         'trim',
+        'transmission',
+        'measurement_system',
+        'usage_type',
+        'ownership_type',
         'type',
         'plate_number',
         'vin',
         'vin_data',
+        'specs',
+        'notes',
         'meta',
         'telematics',
         'status',
@@ -168,6 +181,7 @@ class Vehicle extends Model
         'meta'       => Json::class,
         'telematics' => Json::class,
         'model_data' => Json::class,
+        'specs' => Json::class,
         'vin_data'   => Json::class,
         'online'     => 'boolean',
     ];
@@ -179,7 +193,7 @@ class Vehicle extends Model
 
     public function driver(): HasOne
     {
-        return $this->hasOne(Driver::class)->without(['vehicle']);
+        return $this->hasOne(Driver::class, 'vehicle_uuid', 'uuid')->without(['vehicle']);
     }
 
     public function category(): BelongsTo
@@ -219,20 +233,17 @@ class Vehicle extends Model
 
     public function equipments(): HasMany
     {
-        return $this->hasMany(Equipment::class, 'equipable_uuid', 'uuid')
-            ->where('equipable_type', static::class);
+        return $this->hasMany(Equipment::class, 'equipable_uuid', 'uuid')->where('equipable_type', static::class);
     }
 
     public function maintenances(): HasMany
     {
-        return $this->hasMany(Maintenance::class, 'maintainable_uuid', 'uuid')
-            ->where('maintainable_type', static::class);
+        return $this->hasMany(Maintenance::class, 'maintainable_uuid', 'uuid')->where('maintainable_type', static::class);
     }
 
     public function sensors(): HasMany
     {
-        return $this->hasMany(Sensor::class, 'sensorable_uuid', 'uuid')
-            ->where('sensorable_type', static::class);
+        return $this->hasMany(Sensor::class, 'sensorable_uuid', 'uuid')->where('sensorable_type', static::class);
     }
 
     public function parts(): MorphMany
