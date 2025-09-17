@@ -59,6 +59,7 @@ class IntegratedVendor extends Model
         'namespace',
         'webhook_url',
         'provider',
+        'provider_options',
         'sandbox',
         'options',
         'credentials',
@@ -84,8 +85,9 @@ class IntegratedVendor extends Model
      * @var array
      */
     protected $casts = [
-        'credentials' => Json::class,
-        'options'     => Json::class,
+        'provider_options' => Json::class,
+        'credentials'      => Json::class,
+        'options'          => Json::class,
     ];
 
     /**

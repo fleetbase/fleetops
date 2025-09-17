@@ -24,7 +24,7 @@ class VehicleDeviceEvent extends Model
      *
      * @var string
      */
-    protected $table = 'vehicle_device_events';
+    protected $table = 'device_events';
 
     /**
      * Attributes that is filterable on this model.
