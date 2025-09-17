@@ -238,7 +238,7 @@ class Driver extends Model
             'year',
             'make',
             'model',
-            'model_data',
+            'specs',
             'vin_data',
             'telematics',
             'meta',

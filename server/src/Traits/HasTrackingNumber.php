@@ -139,10 +139,12 @@ trait HasTrackingNumber
 
     public function getPickupRegion()
     {
-        $this->load(['payload']);
+        if (method_exists($this, 'payload')) {
+            $this->load(['payload']);
 
-        if ($this->payload) {
-            return $this->payload->getPickupRegion();
+            if ($this->payload) {
+                return $this->payload->getPickupRegion();
+            }
         }
 
         return 'SG';
@@ -150,10 +152,12 @@ trait HasTrackingNumber
 
     public function getPickupLocation()
     {
-        $this->load(['payload']);
+        if (method_exists($this, 'payload')) {
+            $this->load(['payload']);
 
-        if ($this->payload) {
-            return $this->payload->getPickupLocation();
+            if ($this->payload) {
+                return $this->payload->getPickupLocation();
+            }
         }
 
         return new Point(0, 0);

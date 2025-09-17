@@ -70,6 +70,10 @@ class FleetOps
             'actions' => ['subcontract', 'create-order-for', 'export', 'import'],
         ],
         [
+            'name'    => 'integrated-vendor',
+            'actions' => ['export', 'import'],
+        ],
+        [
             'name'    => 'contact',
             'actions' => ['subcontract', 'create-order-for', 'export', 'import'],
         ],

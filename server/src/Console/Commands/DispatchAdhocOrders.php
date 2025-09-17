@@ -92,9 +92,10 @@ class DispatchAdhocOrders extends Command
      * The query is executed against the appropriate database connection, depending on
      * whether the `sandbox` option is enabled.
      *
-     * @param  int  $interval     Minimum age of the order in minutes to be considered dispatchable (default: 4).
-     * @param  int  $expiryHours  Maximum age of the order in hours before it expires and is no longer dispatchable (default: 72).
-     * @return \Illuminate\Support\Collection  A collection of eligible `Order` models with their related `company` and `payload`.
+     * @param int $interval    minimum age of the order in minutes to be considered dispatchable (default: 4)
+     * @param int $expiryHours maximum age of the order in hours before it expires and is no longer dispatchable (default: 72)
+     *
+     * @return \Illuminate\Support\Collection a collection of eligible `Order` models with their related `company` and `payload`
      */
     public function getDispatchableOrders(int $interval = 4, int $expiryHours = 72): Collection
     {

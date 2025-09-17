@@ -180,8 +180,7 @@ class Vehicle extends Model
         'location'   => Point::class,
         'meta'       => Json::class,
         'telematics' => Json::class,
-        'model_data' => Json::class,
-        'specs' => Json::class,
+        'specs'      => Json::class,
         'vin_data'   => Json::class,
         'online'     => 'boolean',
     ];
