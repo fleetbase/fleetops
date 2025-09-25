@@ -1,28 +1,12 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
-import { isBlank } from '@ember/utils';
-import { timeout, task } from 'ember-concurrency';
 
-export default class ManagementVehiclesIndexController extends BaseController {
+export default class ManagementVehiclesIndexController extends Controller {
     @service contextPanel;
-    @service notifications;
     @service vehicleActions;
     @service intl;
-    @service store;
-    @service fetch;
-    @service crud;
-    @service filters;
-    @service currentUser;
-    @service hostRouter;
-
-    /**
-     * Default query parameters for management controllers.
-     *
-     * @var {Array}
-     */
-    queryParams = [
+    @tracked queryParams = [
         'page',
         'limit',
         'sort',
@@ -40,138 +24,57 @@ export default class ManagementVehiclesIndexController extends BaseController {
         'vehicle_model',
         'display_name',
     ];
-
-    /**
-     * The search query.
-     *
-     * @var {String}
-     */
     @tracked query = null;
-
-    /**
-     * The current page.
-     *
-     * @var {Integer}
-     */
     @tracked page = 1;
-
-    /**
-     * The number of results to query.
-     *
-     * @var {Integer}
-     */
     @tracked limit;
-
-    /**
-     * The param to sort the data on, the param with prepended `-` is descending.
-     *
-     * @var {String}
-     */
     @tracked sort = '-created_at';
-
-    /**
-     * The filterable param `public_id`.
-     *
-     * @var {String}
-     */
     @tracked public_id;
-
-    /**
-     * The filterable param `status`.
-     *
-     * @var {String|Array}
-     */
     @tracked status;
-
-    /**
-     * The filterable param `make`.
-     *
-     * @var {String}
-     */
     @tracked name;
-
-    /**
-     * The filterable param `plate_number`.
-     *
-     * @var {String}
-     */
     @tracked plate_number;
-
-    /**
-     * The filterable param `vehicle_make`.
-     *
-     * @var {String}
-     */
     @tracked vehicle_make;
-
-    /**
-     * The filterable param `vehicle_model`.
-     *
-     * @var {String}
-     */
     @tracked vehicle_model;
-
-    /**
-     * The filterable param `year`.
-     *
-     * @var {String}
-     */
     @tracked year;
-
-    /**
-     * The filterable param `country`.
-     *
-     * @var {String}
-     */
     @tracked country;
-
-    /**
-     * The filterable param `fleet`.
-     *
-     * @var {String}
-     */
     @tracked fleet;
-
-    /**
-     * The filterable param `vendor`.
-     *
-     * @var {String}
-     */
     @tracked vendor;
-
-    /**
-     * The filterable param `driver`.
-     *
-     * @var {String}
-     */
     @tracked driver;
-
-    /**
-     * The filterable param `display_name`.
-     *
-     * @var {String}
-     */
     @tracked display_name;
-
-    /**
-     * TableComponent instance.
-     *
-     * @var {TableComponent}
-     */
     @tracked table;
-
-    /**
-     * All possible order status options.
-     *
-     * @var {String}
-     */
     @tracked statusOptions = [];
-
-    /**
-     * All columns applicable for orders
-     *
-     * @var {Array}
-     */
+    @tracked actionButtons = [
+        {
+            icon: 'refresh',
+            onClick: this.vehicleActions.refresh,
+            helpText: this.intl.t('fleet-ops.common.reload-data'),
+        },
+        {
+            text: 'New',
+            type: 'primary',
+            icon: 'plus',
+            onClick: this.vehicleActions.transition.create,
+        },
+        {
+            text: 'Import',
+            type: 'magic',
+            icon: 'upload',
+            onClick: this.vehicleActions.import,
+        },
+        {
+            text: 'Export',
+            icon: 'long-arrow-up',
+            iconClass: 'rotate-icon-45',
+            wrapperClass: 'hidden md:flex',
+            onClick: this.vehicleActions.export,
+        },
+    ];
+    @tracked bulkActions = [
+        {
+            label: 'Delete selected...',
+            class: 'text-red-500',
+            fn: this.vehicleActions.bulkDelete,
+        },
+    ];
     @tracked columns = [
         {
             label: this.intl.t('fleet-ops.common.name'),
@@ -180,7 +83,7 @@ export default class ManagementVehiclesIndexController extends BaseController {
             width: '200px',
             cellComponent: 'table/cell/vehicle-name',
             permission: 'fleet-ops view vehicle',
-            action: this.viewVehicle,
+            action: this.vehicleActions.transition.view,
             resizable: true,
             sortable: true,
             filterable: true,
@@ -192,6 +95,7 @@ export default class ManagementVehiclesIndexController extends BaseController {
             label: this.intl.t('fleet-ops.common.plate-number'),
             valuePath: 'plate_number',
             cellComponent: 'table/cell/base',
+            action: this.vehicleActions.transition.view,
             width: '100px',
             resizable: true,
             sortable: true,
@@ -342,17 +246,17 @@ export default class ManagementVehiclesIndexController extends BaseController {
             actions: [
                 {
                     label: this.intl.t('fleet-ops.management.vehicles.index.view-vehicle'),
-                    fn: this.viewVehicle,
+                    fn: this.vehicleActions.transition.view,
                     permission: 'fleet-ops view vehicle',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.vehicles.index.edit-vehicle'),
-                    fn: this.editVehicle,
+                    fn: this.vehicleActions.transition.edit,
                     permission: 'fleet-ops update vehicle',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.vehicles.index.locate-action-title'),
-                    fn: this.locateVehicle,
+                    fn: this.vehicleActions.locate,
                     permission: 'fleet-ops view vehicle',
                 },
                 {
@@ -360,7 +264,7 @@ export default class ManagementVehiclesIndexController extends BaseController {
                 },
                 {
                     label: this.intl.t('fleet-ops.management.vehicles.index.delete-vehicle'),
-                    fn: this.deleteVehicle,
+                    fn: this.vehicleActions.delete,
                     permission: 'fleet-ops delete vehicle',
                 },
             ],
@@ -370,149 +274,4 @@ export default class ManagementVehiclesIndexController extends BaseController {
             searchable: false,
         },
     ];
-
-    /**
-     * Reload layout view.
-     */
-    @action reload() {
-        return this.hostRouter.refresh();
-    }
-
-    /**
-     * Bulk deletes selected `vehicle` via confirm prompt
-     *
-     * @param {Array} selected an array of selected models
-     * @void
-     */
-    @action bulkDeleteVehicles() {
-        const selectedRows = this.table.selectedRows;
-
-        this.crud.bulkDelete(selectedRows, {
-            modelNamePath: `display_name`,
-            acceptButtonText: this.intl.t('fleet-ops.management.vehicles.index.delete-button'),
-            onSuccess: async () => {
-                await this.hostRouter.refresh();
-                this.table.untoggleSelectAll();
-            },
-        });
-    }
-
-    /**
-     * The search task.
-     *
-     * @void
-     */
-    @task({ restartable: true }) *search({ target: { value } }) {
-        // if no query don't search
-        if (isBlank(value)) {
-            this.query = null;
-            return;
-        }
-
-        // timeout for typing
-        yield timeout(250);
-
-        // reset page for results
-        if (this.page > 1) {
-            this.page = 1;
-        }
-
-        // update the query param
-        this.query = value;
-    }
-
-    /**
-     * Toggles dialog to export `vehicles`
-     *
-     * @void
-     */
-    @action exportVehicles() {
-        const selections = this.table.selectedRows.map((_) => _.id);
-        this.crud.export('vehicle', { params: { selections } });
-    }
-
-    /**
-     * View a `vehicle` details in modal
-     *
-     * @param {VehicleModel} vehicle
-     * @param {Object} options
-     * @void
-     */
-    @action viewVehicle(vehicle) {
-        return this.transitionToRoute('management.vehicles.index.details', vehicle, { queryParams: { view: 'details' } });
-    }
-
-    /**
-     * Create a new `vehicle` in modal
-     *
-     * @param {Object} options
-     * @void
-     */
-    @action createVehicle() {
-        return this.transitionToRoute('management.vehicles.index.new');
-    }
-
-    /**
-     * Edit a `vehicle` details
-     *
-     * @param {VehicleModel} vehicle
-     * @param {Object} options
-     * @void
-     */
-    @action editVehicle(vehicle) {
-        return this.transitionToRoute('management.vehicles.index.edit', vehicle);
-    }
-
-    /**
-     * Delete a `vehicle` via confirm prompt
-     *
-     * @param {VehicleModel} vehicle
-     * @param {Object} options
-     * @void
-     */
-    @action deleteVehicle(vehicle, options = {}) {
-        this.vehicleActions.delete(vehicle, {
-            onSuccess: () => {
-                return this.hostRouter.refresh();
-            },
-            ...options,
-        });
-    }
-
-    /**
-     * Handles and prompts for spreadsheet imports of vehicles.
-     *
-     * @void
-     */
-    @action importVehicles() {
-        this.crud.import('vehicle', {
-            onImportCompleted: () => {
-                this.hostRouter.refresh();
-            },
-            onImportTemplate: () => {
-                window.open('https://flb-assets.s3.ap-southeast-1.amazonaws.com/import-templates/Fleetbase_Vehicle_Import_Template.xlsx');
-            },
-        });
-    }
-
-    /**
-     * Allow user to assign driver to a `vehicle` via prompt
-     *
-     * @param {VehicleModel} vehicle
-     * @param {Object} options
-     * @todo implement
-     * @void
-     */
-    @action assignDriver() {}
-
-    /**
-     * View a vehicle location on map
-     *
-     * @param {VehicleModel} vehicle
-     * @param {Object} options
-     * @void
-     */
-    @action locateVehicle(vehicle, options = {}) {
-        this.vehicleActions.locate(vehicle, options);
-    }
 }

@@ -1,0 +1,48 @@
+<div class="details-wrapper" ...attributes>
+    <ContentPanel @title="Details" @open={{true}} @panelHeaderClass="bordered">
+        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100 px-1.5">
+            <div class="field-info-container">
+                <div class="field-name">{{t "fleet-ops.common.name"}}</div>
+                <div class="field-value">{{n-a @resource.display_name}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "fleet-ops.common.plate-number"}}</div>
+                <div class="field-value">{{n-a @resource.plate_number}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "fleet-ops.common.vin-number"}}</div>
+                <div class="field-value">{{n-a @resource.vin}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "fleet-ops.common.make"}}</div>
+                <div class="field-value">{{n-a @resource.make}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "fleet-ops.common.model"}}</div>
+                <div class="field-value">{{n-a @resource.model}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "fleet-ops.common.year"}}</div>
+                <div class="field-value">{{n-a @resource.year}}</div>
+            </div>
+            <div class="field-info-container col-span-3">
+                <div class="field-name">
+                    {{t "fleet-ops.common.coordinates"}}
+                </div>
+                <div class="field-value">
+                    {{point-coordinates @resource.location}}
+                </div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Avatar" @open={{true}} @panelHeaderClass="bordered">
+        <div class="flex px-1">
+            <div class="border border-dashed border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-600 rounded-lg flex items-center justify-center">
+                <div class="flex items-center justify-center h-20 w-24">
+                    <Image alt={{@resource.displayName}} src={{or @resource.avatar_custom_url @resource.avatar_url}} @fallbackSrc={{config "defaultValues.vehicleAvatar"}} class="w-12 h-12" />
+                </div>
+            </div>
+        </div>
+    </ContentPanel>
+</div>

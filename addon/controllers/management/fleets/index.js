@@ -1,123 +1,59 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
-import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { isBlank } from '@ember/utils';
-import { timeout, task } from 'ember-concurrency';
+import { tracked } from '@glimmer/tracking';
+import fleetOpsOptions from '../../../utils/fleet-ops-options';
 
-export default class ManagementFleetsIndexController extends BaseController {
-    @service notifications;
-    @service modalsManager;
+export default class ManagementFleetsIndexController extends Controller {
+    @service fleetActions;
     @service intl;
-    @service store;
-    @service crud;
-    @service fetch;
-    @service hostRouter;
-    @service universe;
-    @service filters;
     @service serviceAreas;
-
-    /**
-     * Queryable parameters for this controller's model
-     *
-     * @var {Array}
-     */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'zone', 'service_area', 'parent_fleet', 'vendor', 'created_by', 'updated_by', 'status', 'task', 'name'];
-
-    /**
-     * The current page of data being viewed
-     *
-     * @var {Integer}
-     */
+    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'zone', 'service_area', 'parent_fleet', 'vendor', 'created_by', 'updated_by', 'status', 'task', 'name'];
     @tracked page = 1;
-
-    /**
-     * The maximum number of items to show per page
-     *
-     * @var {Integer}
-     */
     @tracked limit;
-
-    /**
-     * The param to sort the data on, the param with prepended `-` is descending
-     *
-     * @var {String}
-     */
     @tracked sort = '-created_at';
-
-    /**
-     * The filterable param `public_id`
-     *
-     * @var {String}
-     */
     @tracked public_id;
-
-    /**
-     * The filterable param `service_area`
-     *
-     * @var {String}
-     */
     @tracked service_area;
-    /**
-     * The filterable param `parent_fleet`
-     *
-     * @var {String}
-     */
     @tracked parent_fleet;
-    /**
-     * The filterable param `vendor`
-     *
-     * @var {String}
-     */
     @tracked vendor;
-
-    /**
-     * The filterable param `zone`
-     *
-     * @var {String}
-     */
     @tracked zone;
-
-    /**
-     * The filterable param `task`
-     *
-     * @var {Array}
-     */
     @tracked task;
-
-    /**
-     * The filterable param `task`
-     *
-     * @var {String}
-     */
     @tracked name;
-
-    /**
-     * The filterable param `status`
-     *
-     * @var {Array}
-     */
     @tracked status;
-
-    /**
-     * All possible order status options
-     *
-     * @var {String}
-     */
-    @tracked statusOptions = ['active', 'disabled', 'decommissioned'];
-
-    /**
-     * If all rows is toggled
-     *
-     * @var {Boolean}
-     */
-    @tracked allToggled = false;
-
-    /**
-     * All columns applicable for orders
-     *
-     * @var {Array}
-     */
+    @tracked table;
+    @tracked actionButtons = [
+        {
+            icon: 'refresh',
+            onClick: this.fleetActions.refresh,
+            helpText: this.intl.t('fleet-ops.common.reload-data'),
+        },
+        {
+            text: 'New',
+            type: 'primary',
+            icon: 'plus',
+            onClick: this.fleetActions.transition.create,
+        },
+        {
+            text: 'Import',
+            type: 'magic',
+            icon: 'upload',
+            onClick: this.fleetActions.import,
+        },
+        {
+            text: 'Export',
+            icon: 'long-arrow-up',
+            iconClass: 'rotate-icon-45',
+            wrapperClass: 'hidden md:flex',
+            onClick: this.fleetActions.export,
+        },
+    ];
+    @tracked bulkActions = [
+        {
+            label: 'Delete selected...',
+            class: 'text-red-500',
+            fn: this.fleetActions.bulkDelete,
+        },
+    ];
     @tracked columns = [
         {
             label: this.intl.t('fleet-ops.common.name'),
@@ -125,7 +61,7 @@ export default class ManagementFleetsIndexController extends BaseController {
             width: '150px',
             cellComponent: 'table/cell/anchor',
             permission: 'fleet-ops view fleet',
-            action: this.viewFleet.bind(this),
+            action: this.fleetActions.transition.view,
             resizable: true,
             sortable: true,
             filterable: true,
@@ -193,7 +129,7 @@ export default class ManagementFleetsIndexController extends BaseController {
             valuePath: 'public_id',
             width: '120px',
             cellComponent: 'click-to-copy',
-            action: this.viewFleet,
+            action: this.fleetActions.transition.view,
             resizable: true,
             sortable: true,
             filterable: true,
@@ -234,7 +170,9 @@ export default class ManagementFleetsIndexController extends BaseController {
             sortable: true,
             filterable: true,
             filterComponent: 'filter/multi-option',
-            filterOptions: this.statusOptions,
+            filterOptionLabel: 'label',
+            filterOptionValue: 'value',
+            filterOptions: fleetOpsOptions('fleetStatuses'),
         },
         {
             label: this.intl.t('fleet-ops.common.created-at'),
@@ -270,12 +208,12 @@ export default class ManagementFleetsIndexController extends BaseController {
             actions: [
                 {
                     label: this.intl.t('fleet-ops.management.fleets.index.view-fleet'),
-                    fn: this.viewFleet,
+                    fn: this.fleetActions.transition.view,
                     permission: 'fleet-ops view fleet',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.fleets.index.edit-fleet'),
-                    fn: this.editFleet,
+                    fn: this.fleetActions.transition.edit,
                     permission: 'fleet-ops update fleet',
                 },
                 {
@@ -288,7 +226,7 @@ export default class ManagementFleetsIndexController extends BaseController {
                 },
                 {
                     label: this.intl.t('fleet-ops.management.fleets.index.delete-fleet'),
-                    fn: this.deleteFleet,
+                    fn: this.fleetActions.delete,
                     permission: 'fleet-ops delete fleet',
                 },
             ],
@@ -299,145 +237,10 @@ export default class ManagementFleetsIndexController extends BaseController {
         },
     ];
 
-    /**
-     * The search task.
-     *
-     * @void
-     */
-    @task({ restartable: true }) *search({ target: { value } }) {
-        // if no query don't search
-        if (isBlank(value)) {
-            this.query = null;
-            return;
-        }
-
-        // timeout for typing
-        yield timeout(250);
-
-        // reset page for results
-        if (this.page > 1) {
-            this.page = 1;
-        }
-
-        // update the query param
-        this.query = value;
-    }
-
-    /**
-     * Bulk deletes selected `driver` via confirm prompt
-     *
-     * @param {Array} selected an array of selected models
-     * @void
-     */
-    @action bulkDeleteFleets() {
-        const selected = this.table.selectedRows;
-
-        this.crud.bulkDelete(selected, {
-            modelNamePath: `name`,
-            acceptButtonText: this.intl.t('fleet-ops.management.fleets.index.delete-button'),
-            onSuccess: async () => {
-                await this.hostRouter.refresh();
-                this.table.untoggleSelectAll();
-            },
-        });
-    }
-
-    /**
-     * Reload layout view.
-     */
-    @action reload() {
-        return this.hostRouter.refresh();
-    }
-
-    /**
-     * Toggles dialog to export `fleet`
-     *
-     * @void
-     */
-    @action exportFleets() {
-        const selections = this.table.selectedRows.map((_) => _.id);
-        this.crud.export('fleet', { params: { selections } });
-    }
-
-    /**
-     * View a `fleet` details in modal
-     *
-     * @param {FleetModel} fleet
-     * @param {Object} options
-     * @void
-     */
-    @action viewFleet(fleet) {
-        return this.transitionToRoute('management.fleets.index.details', fleet);
-    }
-
-    /**
-     * Handles and prompts for spreadsheet imports of fleets.
-     *
-     * @void
-     */
-    @action importFleets() {
-        this.crud.import('fleet', {
-            onImportCompleted: () => {
-                this.hostRouter.refresh();
-            },
-        });
-    }
-
-    /**
-     * Create a new `fleet` in modal
-     *
-     * @param {Object} options
-     * @void
-     */
-    @action createFleet() {
-        return this.transitionToRoute('management.fleets.index.new');
-    }
-
-    /**
-     * Edit a `fleet` details
-     *
-     * @param {FleetModel} fleet
-     * @param {Object} options
-     * @void
-     */
-    @action editFleet(fleet) {
-        return this.transitionToRoute('management.fleets.index.edit', fleet);
-    }
-
-    /**
-     * Delete a `fleet` via confirm prompt
-     *
-     * @param {FleetModel} fleet
-     * @param {Object} options
-     * @void
-     */
-    @action deleteFleet(fleet, options = {}) {
-        this.crud.delete(fleet, {
-            onSuccess: () => {
-                return this.hostRouter.refresh();
-            },
-            ...options,
-        });
-    }
-
-    /**
-     * View a service area.
-     *
-     * @param {FleetModel} fleet
-     * @param {Object} options
-     * @void
-     */
     @action viewServiceArea(fleet, options = {}) {
         this.serviceAreas.viewServiceAreaInDialog(fleet.get('service_area'), options);
     }
 
-    /**
-     * View a zone.
-     *
-     * @param {FleetModel} fleet
-     * @param {Object} options
-     * @void
-     */
     @action viewZone(fleet, options = {}) {
         this.serviceAreas.viewZoneInDialog(fleet.zone, options);
     }

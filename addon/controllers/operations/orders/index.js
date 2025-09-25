@@ -4,32 +4,23 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { equal } from '@ember/object/computed';
 import { debug } from '@ember/debug';
-import { isArray } from '@ember/array';
-import { isBlank } from '@ember/utils';
-import { timeout, task } from 'ember-concurrency';
+import { task } from 'ember-concurrency';
 
 export default class OperationsOrdersIndexController extends BaseController {
+    @service orderActions;
     @service currentUser;
     @service fetch;
     @service store;
     @service intl;
-    @service filters;
     @service hostRouter;
     @service notifications;
-    @service modalsManager;
-    @service crud;
     @service universe;
     @service socket;
-    @service abilities;
-    @service theme;
-    @service routeOptimization;
-
-    /**
-     * Queryable parameters for this controller's model
-     *
-     * @var {Array}
-     */
-    queryParams = [
+    @equal('layout', 'map') isMapLayout;
+    @equal('layout', 'table') isTableLayout;
+    @equal('layout', 'kanban') isKanbanView;
+    @equal('layout', 'analytics') isAnalyticsLayout;
+    @tracked queryParams = [
         'page',
         'limit',
         'sort',
@@ -58,292 +49,86 @@ export default class OperationsOrdersIndexController extends BaseController {
         'drawerTab',
         'orderPanelOpen',
     ];
-
-    /**
-     * The current driver being focused.
-     *
-     * @var {DriverModel|null}
-     */
     @tracked focusedDriver;
-
-    /**
-     * The current vehicle being focused.
-     *
-     * @var {VehicleModel|null}
-     */
     @tracked focusedVehicle;
-
-    /**
-     * The current page of data being viewed
-     *
-     * @var {Integer}
-     */
     @tracked page = 1;
-
-    /**
-     * The maximum number of items to show per page
-     *
-     * @var {Integer}
-     */
     @tracked limit;
-
-    /**
-     * The param to sort the data on, the param with prepended `-` is descending
-     *
-     * @var {String}
-     */
     @tracked sort = '-created_at';
-
-    /**
-     * The filterable param `public_id`
-     *
-     * @var {String}
-     */
     @tracked public_id;
-
-    /**
-     * The filterable param `internal_id`
-     *
-     * @var {String}
-     */
     @tracked internal_id;
-
-    /**
-     * The filterable param `tracking`
-     *
-     * @var {String}
-     */
     @tracked tracking;
-
-    /**
-     * The filterable param `facilitator`
-     *
-     * @var {String}
-     */
     @tracked facilitator;
-
-    /**
-     * The filterable param `customer`
-     *
-     * @var {String}
-     */
     @tracked customer;
-
-    /**
-     * The filterable param `driver`
-     *
-     * @var {String}
-     */
     @tracked driver;
-
-    /**
-     * The filterable param `vehicle`
-     *
-     * @var {String}
-     */
     @tracked vehicle;
-
-    /**
-     * The filterable param `payload`
-     *
-     * @var {String}
-     */
     @tracked payload;
-
-    /**
-     * The filterable param `pickup`
-     *
-     * @var {String}
-     */
     @tracked pickup;
-
-    /**
-     * The filterable param `dropoff`
-     *
-     * @var {String}
-     */
     @tracked dropoff;
-
-    /**
-     * The filterable param `updated_by`
-     *
-     * @var {String}
-     */
     @tracked updated_by;
-
-    /**
-     * The filterable param `created_by`
-     *
-     * @var {String}
-     */
     @tracked created_by;
-
-    /**
-     * The filterable param `created_at`
-     *
-     * @var {String}
-     */
     @tracked created_at;
-
-    /**
-     * The filterable param `updated_at`
-     *
-     * @var {String}
-     */
     @tracked updated_at;
-
-    /**
-     * The filterable param `scheduled_at`
-     *
-     * @var {String}
-     */
     @tracked scheduled_at;
-
-    /**
-     * The filterable param `without_driver`
-     *
-     * @var {String}
-     */
     @tracked without_driver;
-
-    /**
-     * The filterable param `status`
-     *
-     * @var {String}
-     */
     @tracked status;
-
-    /**
-     * The filterable param `type` - Filter by order type
-     *
-     * @var {String}
-     */
     @tracked type;
-
-    /**
-     * Flag to determine if the search is visible
-     *
-     * @type {Boolean}
-     */
     @tracked isSearchVisible = false;
-
-    /**
-     * Flag to determine if the orders panel is visible
-     *
-     * @type {Boolean}
-     */
     @tracked isOrdersPanelVisible = false;
-
-    /**
-     * Count of active orders
-     *
-     * @type {Number}
-     */
     @tracked activeOrdersCount = 0;
-
-    /**
-     * The context for the order list overlay panel.
-     *
-     * @type {Object}
-     */
     @tracked orderListOverlayContext;
-
-    /**
-     * Reference to the leaflet map object
-     *
-     * @type {Object}
-     */
     @tracked leafletMap;
-
-    /**
-     * Reference to the drawer context API.
-     *
-     * @type {Object}
-     */
     @tracked drawer;
-
-    /**
-     * Current layout type (e.g., 'map', 'table', 'kanban', 'analytics')
-     *
-     * @type {String}
-     */
     @tracked layout = 'map';
-
-    /**
-     * Decides if scope drawer is open.
-     *
-     * @type {Boolean}
-     */
     @tracked drawerOpen = 0;
-
-    /**
-     * The drawer tab that is active.
-     *
-     * @type {Boolean}
-     */
     @tracked drawerTab;
-
-    /**
-     * Filterable status options for orders.
-     *
-     * @type {Array}
-     */
     @tracked statusOptions = [];
-
-    /**
-     * Filterable sorder configs.
-     *
-     * @type {Array}
-     */
     @tracked orderConfigs = [];
-
-    /**
-     * Free text input for a bulk query.
-     *
-     * @type {String}
-     */
     @tracked bulkSearchValue = '';
-
-    /**
-     * Actual bulk query.
-     *
-     * @type {String}
-     */
     @tracked bulk_query = '';
-
-    /**
-     * Flag to determine if the layout is 'map'
-     *
-     * @type {Boolean}
-     */
-    @equal('layout', 'map') isMapLayout;
-
-    /**
-     * Flag to determine if the layout is 'table'
-     *
-     * @type {Boolean}
-     */
-    @equal('layout', 'table') isTableLayout;
-
-    /**
-     * Flag to determine if the view is 'kanban'
-     *
-     * @type {Boolean}
-     */
-    @equal('layout', 'kanban') isKanbanView;
-
-    /**
-     * Flag to determine if the layout is 'analytics'
-     *
-     * @type {Boolean}
-     */
-    @equal('layout', 'analytics') isAnalyticsLayout;
-
-    /**
-     * All columns applicable for orders
-     *
-     * @var {Array}
-     */
+    @tracked actionButtons = [
+        {
+            icon: 'refresh',
+            onClick: this.orderActions.refresh,
+            helpText: this.intl.t('fleet-ops.common.reload-data'),
+        },
+        {
+            text: 'New',
+            type: 'primary',
+            icon: 'plus',
+            onClick: this.orderActions.transition.create,
+        },
+        {
+            text: 'Export',
+            icon: 'long-arrow-up',
+            iconClass: 'rotate-icon-45',
+            wrapperClass: 'hidden md:flex',
+            onClick: this.orderActions.export,
+        },
+    ];
+    @tracked bulkActions = [
+        {
+            label: 'Cancel Orders',
+            icon: 'ban',
+            fn: this.orderActions.bulkCancel,
+        },
+        {
+            label: 'Delete Orders',
+            icon: 'trash',
+            class: 'text-red-500',
+            fn: this.orderActions.bulkDelete,
+        },
+        { separator: true },
+        {
+            label: 'Dispatch Orders',
+            icon: 'rocket',
+            fn: this.orderActions.bulkDispatch,
+        },
+        {
+            label: 'Assign Driver',
+            icon: 'user-plus',
+            fn: this.orderActions.bulkAssignDriver,
+        },
+    ];
     @tracked columns = [
         {
             label: this.intl.t('fleet-ops.common.id'),
@@ -351,7 +136,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             width: '140px',
             cellComponent: 'table/cell/link-to',
             route: 'operations.orders.index.view',
-            onLinkClick: this.viewOrder,
+            onLinkClick: this.orderActions.transition.view,
             permission: 'fleet-ops view order',
             resizable: true,
             sortable: true,
@@ -603,20 +388,20 @@ export default class OperationsOrdersIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.operations.orders.index.view-order'),
                     icon: 'eye',
-                    fn: this.viewOrder,
+                    fn: this.orderActions.transition.view,
                     permission: 'fleet-ops view order',
                 },
                 {
                     label: this.intl.t('fleet-ops.operations.orders.index.dispatch-order'),
                     icon: 'paper-plane',
-                    fn: this.dispatchOrder,
+                    fn: this.orderActions.dispatch,
                     permission: 'fleet-ops dispatch order',
                     isVisible: (order) => order.canBeDispatched,
                 },
                 {
                     label: this.intl.t('fleet-ops.operations.orders.index.cancel-order'),
                     icon: 'ban',
-                    fn: this.cancelOrder,
+                    fn: this.orderActions.cancel,
                     permission: 'fleet-ops cancel order',
                 },
                 {
@@ -625,7 +410,7 @@ export default class OperationsOrdersIndexController extends BaseController {
                 {
                     label: this.intl.t('fleet-ops.operations.orders.index.delete-order'),
                     icon: 'trash',
-                    fn: this.deleteOrder,
+                    fn: this.orderActions.delete,
                     permission: 'fleet-ops delete order',
                 },
             ],
@@ -636,10 +421,6 @@ export default class OperationsOrdersIndexController extends BaseController {
         },
     ];
 
-    /**
-     * Creates an instance of OperationsOrdersIndexController.
-     * @memberof OperationsOrdersIndexController
-     */
     constructor() {
         super(...arguments);
         this.listenForOrderEvents();
@@ -734,105 +515,38 @@ export default class OperationsOrdersIndexController extends BaseController {
         });
     }
 
-    /**
-     * The search task.
-     *
-     * @void
-     */
-    @task({ restartable: true }) *search({ target: { value } }) {
-        // if no query don't search
-        if (isBlank(value)) {
-            this.query = null;
-            return;
-        }
-
-        // timeout for typing
-        yield timeout(250);
-
-        // reset page for results
-        if (this.page > 1) {
-            this.page = 1;
-        }
-
-        // update the query param
-        this.query = value;
-    }
-
-    /**
-     * Reload layout view.
-     */
-    @action reload() {
-        return this.hostRouter.refresh();
-    }
-
-    /**
-     * Hides all elements on the live map.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
     @action resetView() {
         if (this.leafletMap && this.leafletMap.liveMap) {
             this.leafletMap.liveMap.hideAll();
         }
     }
 
-    /**
-     * Toggles the visibility of the search interface.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
     @action toggleSearch() {
         this.isSearchVisible = !this.isSearchVisible;
     }
 
-    /**
-     * Set the order list overlay context.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
     @action setOrderListOverlayContext(orderListOverlayContext) {
         this.orderListOverlayContext = orderListOverlayContext;
     }
 
-    /**
-     * Toggles the visibility of the orders panel.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
     @action toggleOrdersPanel() {
         if (this.orderListOverlayContext) {
             this.orderListOverlayContext.toggle();
         }
     }
 
-    /**
-     * Hides the orders panel.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
     @action hideOrdersPanel() {
         if (this.orderListOverlayContext) {
             this.orderListOverlayContext.close();
         }
     }
 
-    /**
-     * Shows the orders panel.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
     @action showOrdersPanel() {
         if (this.orderListOverlayContext) {
             this.orderListOverlayContext.open();
         }
     }
 
-    /**
-     * Zooms the map in or out.
-     * @param {string} [direction='in'] - The direction to zoom. Either 'in' or 'out'.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
     @action zoomMap(direction = 'in') {
         if (direction === 'in') {
             this.leafletMap?.zoomIn();
@@ -841,12 +555,6 @@ export default class OperationsOrdersIndexController extends BaseController {
         }
     }
 
-    /**
-     * Sets the layout mode and triggers a layout change event.
-     * @param {string} mode - The layout mode to set. E.g., 'table'.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
     @action setLayoutMode(mode) {
         this.layout = mode;
 
@@ -857,17 +565,6 @@ export default class OperationsOrdersIndexController extends BaseController {
         this.universe.trigger('fleet-ops.dashboard.layout.changed', mode);
     }
 
-    /**
-     * Sets the map references for this component.
-     * Extracts the `liveMap` from the `target` object passed in the event and sets it as `this.liveMap`.
-     * Also, sets `target` as `this.leafletMap`.
-     *
-     * @param {Object} event - The event object containing the map references.
-     * @param {Object} event.target - The target map object.
-     * @param {Object} event.target.liveMap - The live map reference.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
     @action setMapReference({ target }) {
         this.leafletMap = target;
         this.liveMap = target.liveMap;
@@ -885,21 +582,10 @@ export default class OperationsOrdersIndexController extends BaseController {
         }
     }
 
-    /**
-     * Sets the drawer component context api.
-     *
-     * @param {Object} drawerApi
-     * @memberof OperationsOrdersIndexController
-     */
     @action setDrawerContext(drawerApi) {
         this.drawer = drawerApi;
     }
 
-    /**
-     * Toggles the LiveMap drawer component.
-     *
-     * @memberof OperationsOrdersIndexController
-     */
     @action onPressLiveMapDrawerToggle() {
         if (this.drawer) {
             this.drawer.toggleMinimize({
@@ -910,13 +596,6 @@ export default class OperationsOrdersIndexController extends BaseController {
         }
     }
 
-    /**
-     * Handles the resize end event for the `<LiveMapDrawer />` component.
-     *
-     * @params {Object} event
-     * @params {Object.drawerPanelNode|HTMLElement}
-     * @memberof OperationsOrdersIndexController
-     */
     @action onDrawerResizeEnd({ drawerPanelNode }) {
         const rect = drawerPanelNode.getBoundingClientRect();
 
@@ -931,298 +610,16 @@ export default class OperationsOrdersIndexController extends BaseController {
         this.drawerTab = tabName;
     }
 
-    /**
-     * Exports all orders.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
-    @action exportOrders() {
-        const selections = this.table.selectedRows.map((_) => _.id);
-        this.crud.export('order', { params: { selections } });
-    }
-
-    /**
-     * Redirects to the new order creation page.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
-    @action createOrder() {
-        return this.transitionToRoute('operations.orders.index.new');
-    }
-
-    /**
-     * Redirects to the view page of a specific order.
-     * @param {Object} order - The order to view.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
-    @action viewOrder(order) {
-        return this.transitionToRoute('operations.orders.index.view', order);
-    }
-
-    /**
-     * Cancels a specific order after confirmation.
-     * @param {Object} order - The order to cancel.
-     * @param {Object} [options={}] - Additional options for the modal.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
-    @action cancelOrder(order, options = {}) {
-        this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.operations.orders.index.cancel-title'),
-            body: this.intl.t('fleet-ops.operations.orders.index.cancel-body'),
-            order,
-            confirm: async (modal) => {
-                modal.startLoading();
-
-                try {
-                    await this.fetch.patch('orders/cancel', { order: order.id });
-                    order.set('status', 'canceled');
-                    this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.cancel-success', { orderId: order.public_id }));
-                    modal.done();
-                } catch (error) {
-                    this.notifications.serverError(error);
-                    modal.stopLoading();
-                }
-            },
-            ...options,
-        });
-    }
-
-    /**
-     * Dispatches a specific order after confirmation.
-     * @param {Object} order - The order to dispatch.
-     * @param {Object} [options={}] - Additional options for the modal.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
-    @action dispatchOrder(order, options = {}) {
-        this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.operations.orders.index.dispatch-title'),
-            body: this.intl.t('fleet-ops.operations.orders.index.dispatch-body'),
-            acceptButtonScheme: 'primary',
-            acceptButtonText: 'Dispatch',
-            acceptButtonIcon: 'paper-plane',
-            order,
-            confirm: async (modal) => {
-                modal.startLoading();
-
-                try {
-                    await this.fetch.patch('orders/dispatch', { order: order.id });
-                    order.set('status', 'dispatched');
-                    this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.dispatch-success', { orderId: order.public_id }));
-                    modal.done();
-                } catch (error) {
-                    this.notifications.serverError(error);
-                    modal.stopLoading();
-                }
-            },
-            ...options,
-        });
-    }
-
-    /**
-     * Deletes a specific order.
-     * @param {Object} order - The order to delete.
-     * @param {Object} [options={}] - Additional options for deletion.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
-    @action deleteOrder(order, options = {}) {
-        this.crud.delete(order, {
-            onSuccess: () => {
-                return this.hostRouter.refresh();
-            },
-            ...options,
-        });
-    }
-
-    /**
-     * Deletes multiple selected orders.
-     * @param {Array} [selected=[]] - Orders selected for deletion.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
-    @action bulkDeleteOrders(selected = []) {
-        selected = selected.length > 0 ? selected : this.table.selectedRows;
-
-        this.crud.bulkDelete(selected, {
-            acceptButtonText: 'Delete Orders',
-            resolveModelName: (model) => `${model.get('tracking_number.tracking_number')} - ${model.get('public_id')}`,
-            onSuccess: async () => {
-                this.table.untoggleAllRows();
-                await this.hostRouter.refresh();
-            },
-        });
-    }
-
-    /**
-     * Cancels multiple selected orders.
-     *
-     * @param {Array} [selected=[]] - Orders selected for cancellation.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
-    @action bulkCancelOrders(selected = []) {
-        selected = selected.length > 0 ? selected : this.table.selectedRows;
-
-        if (!isArray(selected) || selected.length === 0) {
-            return;
-        }
-
-        this.crud.bulkAction('cancel', selected, {
-            acceptButtonText: 'Cancel Orders',
-            acceptButtonScheme: 'danger',
-            acceptButtonIcon: 'ban',
-            actionPath: `orders/bulk-cancel`,
-            actionMethod: `PATCH`,
-            resolveModelName: (model) => `${model.get('tracking_number.tracking_number')} - ${model.get('public_id')}`,
-            withSelected: (orders) => {
-                orders.forEach((order) => {
-                    order.set('status', 'canceled');
-                });
-            },
-            onSuccess: async () => {
-                this.table.untoggleAllRows();
-                await this.hostRouter.refresh();
-            },
-        });
-    }
-
-    /**
-     * Dispatches multiple selected orders.
-     *
-     * @param {Array} [selected=[]] - Orders selected for dispatch.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
-    @action bulkDispatchOrders(selected = []) {
-        selected = selected.length > 0 ? selected : this.table.selectedRows;
-
-        if (!isArray(selected) || selected.length === 0) {
-            return;
-        }
-
-        this.crud.bulkAction('dispatch', selected, {
-            acceptButtonText: 'Dispatch Orders',
-            acceptButtonScheme: 'magic',
-            acceptButtonIcon: 'rocket',
-            actionPath: 'orders/bulk-dispatch',
-            actionMethod: 'POST',
-            resolveModelName: (model) => `${model.get('tracking_number.tracking_number')} - ${model.get('public_id')}`,
-            withSelected: (orders) => {
-                orders.forEach((order) => {
-                    order.set('status', 'dispatched');
-                });
-            },
-            onSuccess: async () => {
-                this.table.untoggleAllRows();
-                await this.hostRouter.refresh();
-            },
-        });
-    }
-
-    /**
-     * Dispatches multiple selected orders.
-     *
-     * @param {Array} [selected=[]] - Orders selected for dispatch.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
-    @action bulkAssignDriver(selected = []) {
-        selected = selected.length > 0 ? selected : this.table.selectedRows;
-        if (!isArray(selected) || selected.length === 0) {
-            return;
-        }
-
-        const updateFetchParams = (key, value) => {
-            const current = this.modalsManager.getOption('fetchParams') ?? {};
-            const next = value === undefined ? Object.fromEntries(Object.entries(current).filter(([k]) => k !== key)) : { ...current, [key]: value };
-
-            this.modalsManager.setOption('fetchParams', next);
-        };
-
-        this.crud.bulkAction('assign driver', selected, {
-            template: 'modals/bulk-assign-driver',
-            acceptButtonText: 'Assign Driver to Orders',
-            acceptButtonScheme: 'magic',
-            acceptButtonIcon: 'user-plus',
-            acceptButtonDisabled: true,
-            actionPath: 'orders/bulk-assign-driver',
-            actionMethod: 'PATCH',
-            driverAssigned: null,
-            notifyDriver: true,
-            fetchParams: {},
-            resolveModelName: (model) => `${model.get('tracking_number.tracking_number')} - ${model.get('public_id')}`,
-            selectDriver: (driver) => {
-                this.modalsManager.setOptions({
-                    driverAssigned: driver,
-                    acceptButtonDisabled: driver ? false : true,
-                });
-
-                updateFetchParams('driver', driver?.id);
-            },
-            toggleNotifyDriver: (checked) => {
-                this.modalsManager.setOption('notifyDriver', checked);
-                updateFetchParams('silent', !checked);
-            },
-            withSelected: (orders) => {
-                const driverAssigned = this.modalsManager.getOption('driverAssigned');
-                orders.forEach((order) => {
-                    order.set('driver_assigned', driverAssigned);
-                });
-            },
-            onSuccess: async () => {
-                this.table.untoggleAllRows();
-                await this.hostRouter.refresh();
-            },
-        });
-    }
-
-    /**
-     * Triggers when the map container is ready.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
     @action onMapContainerReady() {
         this.fetchActiveOrdersCount();
     }
 
-    /**
-     * Fetches the count of active orders.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
     @action fetchActiveOrdersCount() {
         this.fetch.get('fleet-ops/metrics', { discover: ['orders_in_progress'] }).then((response) => {
             this.activeOrdersCount = response.orders_in_progress;
         });
     }
 
-    /**
-     * Commits the bulk query to the server for results.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
-    @action commitBulkQuery() {
-        this.bulk_query = this.bulkSearchValue;
-    }
-
-    /**
-     * Resets/clear the bulk query search.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
-    @action removeBulkQuery() {
-        this.bulkSearchValue = '';
-        this.bulk_query = null;
-    }
-
-    /**
-     * Run route optimization wizard.
-     * @action
-     * @memberof OperationsOrdersIndexController
-     */
     @action optimizeOrderRoutes(selected = []) {
         selected = selected.length > 0 ? selected : this.table.selectedRows;
 

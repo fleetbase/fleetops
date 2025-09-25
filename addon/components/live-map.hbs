@@ -187,7 +187,7 @@
                             @id={{place.id}}
                             @publicId={{place.public_id}}
                             @location={{point-to-coordinates place.location}}
-                            @icon={{icon iconUrl="/engines-dist/images/building-marker.png" iconSize=(array 16 16)}}
+                            @icon={{icon iconUrl=(or place.avatar_url "/engines-dist/images/building-marker.png") iconSize=(array 16 16)}}
                             @riseOnHover={{true}}
                             @title={{place.address}}
                             @alt={{place.address}}

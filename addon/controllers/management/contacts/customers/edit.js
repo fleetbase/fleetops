@@ -1,99 +1,58 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
-import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 
-export default class ManagementContactsCustomersEditController extends BaseController {
+export default class ManagementContactsCustomersEditController extends Controller {
     @service hostRouter;
-    @service modalsManager;
     @service intl;
-
-    /**
-     * The overlay component context.
-     *
-     * @memberof ManagementContactsCustomersEditController
-     */
+    @service notifications;
+    @service modalsManager;
     @tracked overlay;
+    @tracked actionButtons = [
+        {
+            icon: 'eye',
+            fn: this.view,
+        },
+    ];
 
-    /**
-     * When exiting the overlay.
-     *
-     * @return {Transition}
-     * @memberof ManagementContactsCustomersEditController
-     */
-    @action transitionBack(customer) {
-        // check if contact record has been edited and prompt for confirmation
-        if (customer.hasDirtyAttributes) {
-            return this.confirmContinueWithUnsavedChanges(customer, {
-                confirm: () => {
-                    customer.rollbackAttributes();
-                    return this.transitionToRoute('management.contacts.customers');
-                },
-            });
+    @task *save(driver) {
+        try {
+            yield driver.save();
+            this.overlay?.close();
+
+            yield this.hostRouter.transitionTo('console.fleet-ops.management.contacts.customers.details', driver);
+            this.notifications.success(this.intl.t('fleet-ops.component.driver-form-panel.success-message', { driverName: driver.name }));
+        } catch (err) {
+            this.notifications.serverError(err);
+        }
+    }
+
+    @action cancel() {
+        if (this.model.hasDirtyAttributes) {
+            return this.#confirmContinueWithUnsavedChanges(this.model);
         }
 
-        return this.transitionToRoute('management.contacts.customers');
+        return this.hostRouter.transitionTo('console.fleet-ops.management.contacts.customers');
     }
 
-    /**
-     * Set the overlay component context object.
-     *
-     * @param {OverlayContext} overlay
-     * @memberof ManagementContactsCustomersEditController
-     */
-    @action setOverlayContext(overlay) {
-        this.overlay = overlay;
-    }
-
-    /**
-     * When contact details button is clicked in overlay.
-     *
-     * @param {ContactModel} contact
-     * @return {Promise}
-     * @memberof ManagementContactsCustomersEditController
-     */
-    @action onViewDetails(customer) {
-        // check if customer record has been edited and prompt for confirmation
-        if (customer.hasDirtyAttributes) {
-            return this.confirmContinueWithUnsavedChanges(customer);
+    @action view() {
+        if (this.model.hasDirtyAttributes) {
+            return this.#confirmContinueWithUnsavedChanges(this.model);
         }
 
-        return this.transitionToRoute('management.contacts.customers.details', customer);
+        return this.hostRouter.transitionTo('console.fleet-ops.management.contacts.customers.details', this.model);
     }
 
-    /**
-     * Trigger a route refresh and focus the new contact created.
-     *
-     * @param {ContactModel} customer
-     * @return {Promise}
-     * @memberof ManagementContactsCustomersEditController
-     */
-    @action onAfterSave(customer) {
-        if (this.overlay) {
-            this.overlay.close();
-        }
-
-        this.hostRouter.refresh();
-        return this.transitionToRoute('management.contacts.customers.details', customer);
-    }
-
-    /**
-     * Prompts the user to confirm if they wish to continue with unsaved changes.
-     *
-     * @method
-     * @param {ContactModel} customer - The customer object with unsaved changes.
-     * @param {Object} [options={}] - Additional options for configuring the modal.
-     * @returns {Promise} A promise that resolves when the user confirms, and transitions to a new route.
-     * @memberof ManagementContactsCustomersEditController
-     */
-    confirmContinueWithUnsavedChanges(customer, options = {}) {
+    #confirmContinueWithUnsavedChanges(customer, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.customers.index.edit.title'),
-            body: this.intl.t('fleet-ops.management.customers.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.customers.index.edit.button'),
-            confirm: () => {
+            title: this.intl.t('fleet-ops.management.drivers.index.edit.title'),
+            body: this.intl.t('fleet-ops.management.drivers.index.edit.body'),
+            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.edit.button'),
+            confirm: async () => {
                 customer.rollbackAttributes();
-                return this.transitionToRoute('management.contacts.customers.details', customer);
+                await this.hostRouter.transitionTo('console.fleet-ops.management.contacts.customers.details', customer);
             },
             ...options,
         });

@@ -1,20 +1,16 @@
 import ManagementContactsIndexController from './index';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
 
 export default class ManagementContactsCustomersController extends ManagementContactsIndexController {
-    /**
-     * All columns applicable for customers
-     *
-     * @var {Array}
-     */
+    @service('customerActions') contactActions;
     @tracked columns = [
         {
             label: this.intl.t('fleet-ops.common.name'),
             valuePath: 'name',
             width: '140px',
             cellComponent: 'table/cell/media-name',
-            action: this.viewCustomer,
+            action: this.contactActions.transition.view,
             permission: 'fleet-ops view contact',
             resizable: true,
             sortable: true,
@@ -76,7 +72,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
             label: this.intl.t('fleet-ops.common.address'),
             valuePath: 'address',
             cellComponent: 'table/cell/anchor',
-            action: this.viewContactPlace,
+            action: this.contactActions.viewPlace,
             width: '170px',
             resizable: true,
             sortable: true,
@@ -118,12 +114,12 @@ export default class ManagementContactsCustomersController extends ManagementCon
             actions: [
                 {
                     label: this.intl.t('fleet-ops.management.contacts.customers.view-customer'),
-                    fn: this.viewCustomer,
+                    fn: this.contactActions.transition.view,
                     permission: 'fleet-ops view contact',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.contacts.customers.edit-customer'),
-                    fn: this.editCustomer,
+                    fn: this.contactActions.transition.edit,
                     permission: 'fleet-ops update contact',
                 },
                 {
@@ -131,7 +127,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 },
                 {
                     label: this.intl.t('fleet-ops.management.contacts.customers.delete-customer'),
-                    fn: this.deleteContact,
+                    fn: this.contactActions.delete,
                     permission: 'fleet-ops delete contact',
                 },
             ],
@@ -141,33 +137,4 @@ export default class ManagementContactsCustomersController extends ManagementCon
             searchable: false,
         },
     ];
-
-    /**
-     * View a `customer` details in modal
-     *
-     * @param {ContactModel} customers
-     * @void
-     */
-    @action viewCustomer(customer) {
-        return this.transitionToRoute('management.contacts.customers.details', customer);
-    }
-
-    /**
-     * Create a new `customer` in modal
-     *
-     * @void
-     */
-    @action createCustomer() {
-        return this.transitionToRoute('management.contacts.customers.new');
-    }
-
-    /**
-     * Edit a `customer` details
-     *
-     * @param {ContactModel} customer
-     * @void
-     */
-    @action editCustomer(customer) {
-        return this.transitionToRoute('management.contacts.customers.edit', customer);
-    }
 }

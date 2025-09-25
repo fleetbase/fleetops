@@ -1,116 +1,63 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
-import { isBlank } from '@ember/utils';
-import { timeout, task } from 'ember-concurrency';
 
-export default class ManagementFuelReportsIndexController extends BaseController {
-    @service notifications;
-    @service modalsManager;
+export default class ManagementFuelReportsIndexController extends Controller {
+    @service fuelReportActions;
     @service intl;
-    @service crud;
-    @service store;
-    @service hostRouter;
-    @service contextPanel;
-    @service filters;
-    @service loader;
-
-    /**
-     * Queryable parameters for this controller's model
-     *
-     * @var {Array}
-     */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'vehicle', 'driver', 'created_by', 'updated_by', 'status', 'country', 'volume', 'odometer'];
-
-    /**
-     * The current page of data being viewed
-     *
-     * @var {Integer}
-     */
+    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'vehicle', 'driver', 'created_by', 'updated_by', 'status', 'country', 'volume', 'odometer'];
     @tracked page = 1;
-
-    /**
-     * The maximum number of items to show per page
-     *
-     * @var {Integer}
-     */
     @tracked limit;
-
-    /**
-     * The param to sort the data on, the param with prepended `-` is descending
-     *
-     * @var {String}
-     */
     @tracked sort = '-created_at';
-
-    /**
-     * The filterable param `public_id`
-     *
-     * @var {String}
-     */
     @tracked public_id;
-
-    /**
-     * The filterable param `internal_id`
-     *
-     * @var {String}
-     */
     @tracked internal_id;
-
-    /**
-     * The filterable param `driver`
-     *
-     * @var {String}
-     */
     @tracked driver;
-
-    /**
-     * The filterable param `vehicle`
-     *
-     * @var {String}
-     */
     @tracked vehicle;
-
-    /**
-     * The filterable param `vehicle`
-     *
-     * @var {String}
-     */
     @tracked reporter;
-
-    /**
-     * The filterable param `vehicle`
-     *
-     * @var {String}
-     */
     @tracked volume;
-
-    /**
-     * The filterable param `vehicle`
-     *
-     * @var {String}
-     */
     @tracked odometer;
-
-    /**
-     * The filterable param `status`
-     *
-     * @var {Array}
-     */
     @tracked status;
-
-    /**
-     * All columns applicable for orders
-     *
-     * @var {Array}
-     */
+    @tracked table;
+    @tracked actionButtons = [
+        {
+            icon: 'refresh',
+            onClick: this.fuelReportActions.refresh,
+            helpText: this.intl.t('fleet-ops.common.reload-data'),
+        },
+        {
+            text: 'New',
+            type: 'primary',
+            icon: 'plus',
+            onClick: this.fuelReportActions.transition.create,
+        },
+        {
+            text: 'Import',
+            type: 'magic',
+            icon: 'upload',
+            onClick: this.fuelReportActions.import,
+        },
+        {
+            text: 'Export',
+            icon: 'long-arrow-up',
+            iconClass: 'rotate-icon-45',
+            wrapperClass: 'hidden md:flex',
+            onClick: this.fuelReportActions.export,
+        },
+    ];
+    @tracked bulkActions = [
+        {
+            label: 'Delete selected...',
+            class: 'text-red-500',
+            fn: this.fuelReportActions.bulkDelete,
+        },
+    ];
     @tracked columns = [
         {
             label: this.intl.t('fleet-ops.common.id'),
             valuePath: 'public_id',
+            cellComponent: 'table/cell/anchor',
+            action: this.fuelReportActions.transition.view,
             width: '130px',
-            cellComponent: 'click-to-copy',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -121,14 +68,6 @@ export default class ManagementFuelReportsIndexController extends BaseController
             label: this.intl.t('fleet-ops.common.reporter'),
             valuePath: 'reporter_name',
             width: '100px',
-            cellComponent: 'table/cell/anchor',
-            onClick: async (fuelReport) => {
-                let reporter = await this.store.findRecord('user', fuelReport.reported_by_uuid);
-
-                if (reporter) {
-                    this.contextPanel.focus(reporter);
-                }
-            },
             resizable: true,
             sortable: true,
             filterable: true,
@@ -143,13 +82,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
             width: '120px',
             cellComponent: 'table/cell/anchor',
             permission: 'fleet-ops view driver',
-            onClick: async (fuelReport) => {
-                let driver = await fuelReport.loadDriver();
-
-                if (driver) {
-                    this.contextPanel.focus(driver);
-                }
-            },
+            onClick: this.fuelReportActions.viewDriver,
             resizable: true,
             sortable: true,
             filterable: true,
@@ -164,13 +97,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
             width: '100px',
             cellComponent: 'table/cell/anchor',
             permission: 'fleet-ops view vehicle',
-            onClick: async (fuelReport) => {
-                let vehicle = await fuelReport.loadVehicle();
-
-                if (vehicle) {
-                    this.contextPanel.focus(vehicle);
-                }
-            },
+            onClick: this.fuelReportActions.viewVehicle,
             resizable: true,
             sortable: true,
             filterable: true,
@@ -247,12 +174,12 @@ export default class ManagementFuelReportsIndexController extends BaseController
             actions: [
                 {
                     label: this.intl.t('fleet-ops.management.fuel-reports.index.view'),
-                    fn: this.viewFuelReport,
+                    fn: this.fuelReportActions.transition.view,
                     permission: 'fleet-ops view fuel-report',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.fuel-reports.index.edit-fuel'),
-                    fn: this.editFuelReport,
+                    fn: this.fuelReportActions.transition.edit,
                     permission: 'fleet-ops update fuel-report',
                 },
                 {
@@ -260,7 +187,7 @@ export default class ManagementFuelReportsIndexController extends BaseController
                 },
                 {
                     label: this.intl.t('fleet-ops.management.fuel-reports.index.delete'),
-                    fn: this.deleteFuelReport,
+                    fn: this.fuelReportActions.delete,
                     permission: 'fleet-ops delete fuel-report',
                 },
             ],
@@ -270,125 +197,4 @@ export default class ManagementFuelReportsIndexController extends BaseController
             searchable: false,
         },
     ];
-
-    /**
-     * The search task.
-     *
-     * @void
-     */
-    @task({ restartable: true }) *search({ target: { value } }) {
-        // if no query don't search
-        if (isBlank(value)) {
-            this.query = null;
-            return;
-        }
-
-        // timeout for typing
-        yield timeout(250);
-
-        // reset page for results
-        if (this.page > 1) {
-            this.page = 1;
-        }
-
-        // update the query param
-        this.query = value;
-    }
-
-    /**
-     * Toggles dialog to export a fuel report
-     *
-     * @void
-     */
-    @action exportFuelReports() {
-        this.crud.export('fuel-report');
-    }
-
-    /**
-     * Handles and prompts for spreadsheet imports of fuel report.
-     *
-     * @void
-     */
-    @action importFuelReports() {
-        this.crud.import('fuel-report', {
-            onImportCompleted: () => {
-                this.hostRouter.refresh();
-            },
-            onImportTemplate: () => {
-                window.open('https://flb-assets.s3.ap-southeast-1.amazonaws.com/import-templates/Fleetbase_Fuel_Report_Import_Template.xlsx');
-            },
-        });
-    }
-
-    /**
-     * View the selected fuel report
-     *
-     * @param {FuelReportModel} fuelReport
-     * @param {Object} options
-     * @void
-     */
-    @action viewFuelReport(fuelReport) {
-        this.transitionToRoute('management.fuel-reports.index.details', fuelReport);
-    }
-
-    /**
-     * Reload layout view.
-     */
-    @action reload() {
-        return this.hostRouter.refresh();
-    }
-
-    /**
-     * Create a new fuel report
-     *
-     * @void
-     */
-    @action createFuelReport() {
-        this.transitionToRoute('management.fuel-reports.index.new');
-    }
-
-    /**
-     * Edit a fuel report
-     *
-     * @param {FuelReportModel} fuelReport
-     * @void
-     */
-    @action editFuelReport(fuelReport) {
-        this.transitionToRoute('management.fuel-reports.index.edit', fuelReport);
-    }
-
-    /**
-     * Prompt to delete a fuel report
-     *
-     * @param {FuelReportModel} fuelReport
-     * @param {Object} options
-     * @void
-     */
-    @action deleteFuelReport(fuelReport, options = {}) {
-        this.crud.delete(fuelReport, {
-            onConfirm: () => {
-                this.hostRouter.refresh();
-            },
-            ...options,
-        });
-    }
-
-    /**
-     * Bulk deletes selected fuel report's via confirm prompt
-     *
-     * @param {Array} selected an array of selected models
-     * @void
-     */
-    @action bulkDeleteFuelReports() {
-        const selected = this.table.selectedRows;
-
-        this.crud.bulkDelete(selected, {
-            modelNamePath: `name`,
-            acceptButtonText: this.intl.t('fleet-ops.management.fuel-reports.index.delete-button'),
-            onSuccess: async () => {
-                await this.hostRouter.refresh();
-                this.table.untoggleSelectAll();
-            },
-        });
-    }
 }

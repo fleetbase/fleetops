@@ -1,95 +1,34 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 
-export default class ManagementVehiclesIndexNewController extends BaseController {
-    /**
-     * Inject the `store` service
-     *
-     * @memberof ManagementVehiclesIndexNewController
-     */
+const DEFAULT_PROPERTIES = { status: 'active' };
+
+export default class ManagementVehiclesIndexNewController extends Controller {
     @service store;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementVehiclesIndexNewController
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementVehiclesIndexNewController
-     */
-    @service modalsManager;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @memberof intl
-     */
     @service intl;
-
-    /**
-     * The overlay component context.
-     *
-     * @memberof ManagementVehiclesIndexNewController
-     */
+    @service notifications;
     @tracked overlay;
+    @tracked vehicle = this.store.createRecord('vehicle', DEFAULT_PROPERTIES);
 
-    /**
-     * The vehicle being created.
-     *
-     * @var {VehicleModel}
-     */
-    @tracked vehicle = this.store.createRecord('vehicle', { status: 'active' });
+    @task *save(vehicle) {
+        try {
+            yield vehicle.save();
+            this.overlay?.close();
 
-    /**
-     * Set the overlay component context object.
-     *
-     * @param {OverlayContext} overlay
-     * @memberof ManagementVehiclesIndexNewController
-     */
-    @action setOverlayContext(overlay) {
-        this.overlay = overlay;
-    }
-
-    /**
-     * When exiting the overlay.
-     *
-     * @return {Transition}
-     * @memberof ManagementVehiclesIndexNewController
-     */
-    @action transitionBack() {
-        return this.transitionToRoute('management.vehicles.index');
-    }
-
-    /**
-     * Trigger a route refresh and focus the new vehicle created.
-     *
-     * @param {VehicleModel} vehicle
-     * @return {Promise}
-     * @memberof ManagementVehiclesIndexNewController
-     */
-    @action onAfterSave(vehicle) {
-        if (this.overlay) {
-            this.overlay.close();
-        }
-
-        this.hostRouter.refresh();
-        return this.transitionToRoute('management.vehicles.index.details', vehicle).then(() => {
+            yield this.hostRouter.refresh();
+            yield this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details', vehicle);
+            this.notifications.success(this.intl.t('fleet-ops.component.vehicle-form-panel.success-message', { vehicleName: vehicle.display_name }));
             this.resetForm();
-        });
+        } catch (err) {
+            this.notifications.serverError(err);
+        }
     }
 
-    /**
-     * Resets the form with a new vehicle record
-     *
-     * @memberof ManagementVehiclesIndexNewController
-     */
-    resetForm() {
-        this.vehicle = this.store.createRecord('vehicle', { status: 'active' });
+    @action resetForm() {
+        this.vehicle = this.store.createRecord('vehicle', DEFAULT_PROPERTIES);
     }
 }

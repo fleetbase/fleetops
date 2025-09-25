@@ -46,6 +46,7 @@ class Issue extends FleetbaseResource
             'meta'                        => data_get($this, 'meta', Utils::createObject()),
             'type'                        => $this->type,
             'category'                    => $this->category,
+            'tags'                        => $this->tags ?? [],
             'status'                      => $this->status,
             'location'                    => data_get($this, 'location', new Point(0, 0)),
             'resolved_at'                 => $this->resolved_at,

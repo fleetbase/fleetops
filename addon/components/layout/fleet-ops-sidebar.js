@@ -7,7 +7,6 @@ import DriverListingComponent from './fleet-ops-sidebar/driver-listing';
 
 export default class LayoutFleetOpsSidebarComponent extends Component {
     @service universe;
-    @service contextPanel;
     @service store;
     @service intl;
     @service abilities;
@@ -137,6 +136,76 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             },
         ];
 
+        const connectivityItems = [
+            {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.telematics',
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.telematics'),
+                icon: 'satellite-dish',
+                route: 'connectivity.telematics',
+                permission: 'fleet-ops list telematic',
+                visible: this.abilities.can('fleet-ops see telematic'),
+            },
+            {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.devices',
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.devices'),
+                icon: 'hard-drive',
+                route: 'connectivity.devices',
+                permission: 'fleet-ops list device',
+                visible: this.abilities.can('fleet-ops see device'),
+            },
+            {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.sensors',
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.sensors'),
+                icon: 'temperature-full',
+                route: 'connectivity.sensors',
+                permission: 'fleet-ops list sensor',
+                visible: this.abilities.can('fleet-ops see sensor'),
+            },
+            {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.events',
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.events'),
+                icon: 'stream',
+                route: 'connectivity.events',
+                permission: 'fleet-ops list device-event',
+                visible: this.abilities.can('fleet-ops see device-event'),
+            },
+            {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.tracking',
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.tracking'),
+                icon: 'map-marked-alt',
+                route: 'connectivity.tracking',
+                permission: 'fleet-ops list device',
+                visible: this.abilities.can('fleet-ops see device'),
+            },
+        ];
+
+        const maintenanceItems = [
+            {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.work-orders',
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.work-orders'),
+                icon: 'clipboard-list',
+                route: 'maintenance.work-orders',
+                permission: 'fleet-ops list work-order',
+                visible: this.abilities.can('fleet-ops see work-order'),
+            },
+            {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.equipment',
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.equipment'),
+                icon: 'trailer',
+                route: 'maintenance.equipment',
+                permission: 'fleet-ops list equipment',
+                visible: this.abilities.can('fleet-ops see equipment'),
+            },
+            {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.parts',
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.parts'),
+                icon: 'cog',
+                route: 'maintenance.parts',
+                permission: 'fleet-ops list part',
+                visible: this.abilities.can('fleet-ops see part'),
+            },
+        ];
+
         const settingsItems = [
             {
                 intl: 'fleet-ops.component.layout.fleet-ops-sidebar.navigator-app',
@@ -172,18 +241,20 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             },
         ];
 
-        const createPanel = (intl, routePrefix, items = []) => ({
+        const createPanel = (intl, routePrefix, items = [], options = {}) => ({
             intl,
             title: this.intl.t(intl),
             routePrefix,
-            open: true,
+            open: options.open ?? true,
             items,
         });
 
         this.menuPanels = this.removeEmptyMenuPanels([
             createPanel('fleet-ops.component.layout.fleet-ops-sidebar.operations', 'operations', operationsItems),
             createPanel('fleet-ops.component.layout.fleet-ops-sidebar.resources', 'management', resourcesItems),
-            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.settings', 'settings', settingsItems),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.maintenance', 'maintenance', maintenanceItems, { open: false }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.connectivity', 'connectivity', connectivityItems, { open: false }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.settings', 'settings', settingsItems, { open: false }),
         ]);
     }
 

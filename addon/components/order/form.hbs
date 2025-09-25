@@ -1,0 +1,12 @@
+<div class="form-wrapper" ...attributes>
+    <Order::Form::Details @resource={{@resource}} />
+    <Order::Form::Route @resource={{@resource}} />
+    <RegistryYield @registry="fleet-ops:component:order:form" as |RegistryComponent|>
+        <RegistryComponent @order={{@order}} @controller={{@controller}} />
+    </RegistryYield>
+    <Order::Form::Payload @resource={{@resource}} />
+    <Order::Form::ServiceRate @resource={{@resource}} />
+    <Order::Form::Notes @resource={{@resource}} />
+    <Order::Form::Documents @resource={{@resource}} />
+    <Order::Form::Metadata @resource={{@resource}} />
+</div>

@@ -1,5 +1,7 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { isArray } from '@ember/utils';
+import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import getLeafletLayerById from '../utils/get-leaflet-layer-by-id';
 import findLeafletLayer from '../utils/find-leaflet-layer';
 import flyToLeafletLayer from '../utils/fly-to-leaflet-layer';
@@ -13,6 +15,28 @@ import flyToLeafletLayer from '../utils/fly-to-leaflet-layer';
  * @class
  */
 export default class LeafletMapManagerService extends Service {
+    /**
+     * The current leaflet map instance.
+     *
+     * @memberof LeafletMapManagerService
+     */
+    @tracked map;
+
+    /**
+     * The current route control instance.
+     *
+     * @memberof LeafletMapManagerService
+     */
+    @tracked route;
+
+    /**
+     * Tracking of current leaflet layers.
+     *
+     * @memberof LeafletMapManagerService
+     * @type {Array}
+     */
+    @tracked leafletLayers = [];
+
     /**
      * An array of editable layers on the map.
      *
@@ -57,5 +81,95 @@ export default class LeafletMapManagerService extends Service {
      */
     flyToLayer(map, layer, zoom, options = {}) {
         return flyToLeafletLayer(map, layer, zoom, options);
+    }
+
+    removeAllLayers(options = {}) {
+        if (this.map) {
+            try {
+                this.map.eachLayer((layer) => {
+                    if (typeof options.filter === 'function') {
+                        const shouldNotRemove = options.filter(layer);
+                        if (shouldNotRemove) {
+                            return;
+                        }
+                    }
+                    this.map.removeLayer(layer);
+                });
+            } catch (error) {
+                // fallback method with tracked layers
+                if (isArray(this.leafletLayers)) {
+                    this.leafletLayers.forEach((layer) => {
+                        if (typeof options.filter === 'function') {
+                            const shouldNotRemove = options.filter(layer);
+                            if (shouldNotRemove) {
+                                return;
+                            }
+                        }
+
+                        try {
+                            this.map.removeLayer(layer);
+                        } catch (error) {}
+                    });
+                }
+            }
+        }
+    }
+
+    removeRoute() {
+        if (this.route) {
+            // target is the route, and waypoints is the markers
+            const { target, waypoints } = this.route;
+
+            this.map.removeLayer(target);
+            waypoints?.forEach((waypoint) => {
+                try {
+                    this.map.removeLayer(waypoint);
+                } catch (error) {}
+            });
+        }
+    }
+
+    removeRoutingControl(routingControl, options = {}) {
+        return new Promise((resolve) => {
+            let removed = false;
+
+            if (this.map && routingControl instanceof RoutingControl) {
+                try {
+                    routingControl.remove();
+                    removed = true;
+                } catch (e) {}
+
+                if (!removed) {
+                    try {
+                        this.map.removeControl(routingControl);
+                    } catch (e) {
+                        // silent
+                    }
+                }
+            }
+
+            if (!removed) {
+                this.forceRemoveRoutingControl(options);
+            }
+
+            resolve(true);
+        });
+    }
+
+    forceRemoveRoutingControl(options = {}) {
+        this.map.eachLayer((layer) => {
+            if (layer instanceof L.Polyline || layer instanceof L.Marker) {
+                try {
+                    if (typeof options.filter === 'function') {
+                        const shouldNotRemove = options.filter(layer);
+                        if (shouldNotRemove) {
+                            return;
+                        }
+                    }
+
+                    layer.remove();
+                } catch (error) {}
+            }
+        });
     }
 }

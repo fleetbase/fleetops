@@ -1,55 +1,47 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
 
-export default class ManagementPlacesIndexDetailsController extends BaseController {
-    /**
-     * The currently active view tab ('details' by default).
-     *
-     * @type {String}
-     * @tracked
-     */
-    @tracked view = 'details';
-
-    /**
-     * An array of query parameters to be serialized in the URL.
-     *
-     * @type {String[]}
-     * @tracked
-     */
-    @tracked queryParams = ['view'];
-
-    /**
-     * Transitions back to the "management.places.index" route.
-     *
-     * @method
-     * @action
-     * @returns {Transition} The transition object representing the route change.
-     */
-    @action transitionBack() {
-        return this.transitionToRoute('management.places.index');
-    }
-
-    /**
-     * Transitions to the edit view for a specific vehicle.
-     *
-     * @method
-     * @param {placeModel} place - The vehicle to be edited.
-     * @action
-     * @returns {Transition} The transition object representing the route change.
-     */
-    @action onEdit(place) {
-        return this.transitionToRoute('management.places.index.edit', place);
-    }
-
-    /**
-     * Updates the active view tab.
-     *
-     * @method
-     * @param {String} tab - The name of the tab to activate.
-     * @action
-     */
-    @action onTabChanged(tab) {
-        this.view = tab;
-    }
+export default class ManagementPlacesIndexDetailsController extends Controller {
+    @service hostRouter;
+    @tracked tabs = [
+        {
+            route: 'management.places.index.details.index',
+            label: 'Overview',
+        },
+        {
+            route: 'management.places.index.details.operations',
+            label: 'Operations',
+        },
+        {
+            route: 'management.places.index.details.performance',
+            label: 'Performance',
+        },
+        {
+            route: 'management.places.index.details.activity',
+            label: 'Activity',
+        },
+        {
+            route: 'management.places.index.details.map',
+            label: 'Map',
+        },
+        {
+            route: 'management.places.index.details.documents',
+            label: 'Documents',
+        },
+        {
+            route: 'management.places.index.details.comments',
+            label: 'Comments',
+        },
+        {
+            route: 'management.places.index.details.rules',
+            label: 'Rules',
+        },
+    ];
+    @tracked actionButtons = [
+        {
+            icon: 'pencil',
+            fn: () => this.hostRouter.transitionTo('console.fleet-ops.management.places.index.edit', this.model),
+        },
+    ];
 }

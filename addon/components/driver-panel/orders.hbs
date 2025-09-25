@@ -29,7 +29,7 @@
                 </div>
                 <div class="rounded-b-lg bg-white dark:bg-gray-800 py-2 px-4">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
-                        <div class="field-info-container space-y-2">
+                        <div class="field-info-container">
                             {{#if order.isMultipleDropoffOrder}}
                                 <div class="field-name">{{pluralize (t "fleet-ops.operations.orders.index.view.customer")}}</div>
                                 <div class="flex flex-row space-x-2">
@@ -73,7 +73,7 @@
                                 </div>
                             {{/if}}
                         </div>
-                        <div class="field-info-container space-y-2">
+                        <div class="field-info-container">
                             <div class="field-name">{{t "fleet-ops.operations.orders.index.view.facilitator"}}</div>
                             <div class="flex flex-row">
                                 <div>
@@ -92,7 +92,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="field-info-container space-y-2">
+                        <div class="field-info-container">
                             <div class="field-name flex flex-row items-center justify-between">
                                 <span>{{t "fleet-ops.operations.orders.index.view.vehicle-assigned"}}</span>
                             </div>
@@ -114,21 +114,21 @@
                                 </a>
                             </div>
                         </div>
-                        <div class="field-info-container space-y-2">
+                        <div class="field-info-container">
                             <div class="field-name">{{t "fleet-ops.operations.orders.index.view.tracking-number"}}</div>
                             <div class="field-value">{{n-a order.tracking_number.tracking_number}}</div>
                         </div>
-                        <div class="field-info-container space-y-2">
+                        <div class="field-info-container">
                             <div class="field-name">{{t "fleet-ops.common.internal-id"}}</div>
                             <div class="field-value">{{n-a order.internal_id}}</div>
                         </div>
                         {{#if order.pod_required}}
-                            <div class="field-info-container space-y-2">
+                            <div class="field-info-container">
                                 <div class="field-name">{{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}}</div>
                                 <div class="field-value">{{n-a (smart-humanize order.pod_method)}}</div>
                             </div>
                         {{/if}}
-                        <div class="field-info-container space-y-2">
+                        <div class="field-info-container">
                             <div class="field-name">{{t "fleet-ops.operations.orders.index.view.date-started"}}</div>
                             <div class="field-value">{{n-a order.startedAt}}</div>
                         </div>
@@ -140,5 +140,4 @@
             </div>
         {{/each}}
     </div>
-    <Spacer @height="300px" />
 </Layout::Section::Body>

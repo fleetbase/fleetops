@@ -10,21 +10,21 @@
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs dark:text-gray-100">
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.common.sandbox"}}</div>
                     <div class="field-value">{{if this.vendor.sandbox "Yes" "No"}}</div>
                 </div>
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.common.host"}}</div>
                     <div class="field-value">{{n-a this.vendor.host}}</div>
                 </div>
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.common.namespace"}}</div>
                     <div class="field-value">{{n-a this.vendor.namespace}}</div>
                 </div>
                 {{#if (is-object this.vendor.options)}}
                     {{#each-in this.vendor.options as |key value|}}
-                        <div class="field-info-container space-y-2">
+                        <div class="field-info-container">
                             <div class="field-name">{{smart-humanize key}}</div>
                             <div class="field-value">{{n-a value}}</div>
                         </div>
@@ -33,34 +33,34 @@
             </div>
         {{else}}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs dark:text-gray-100">
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.common.name"}}</div>
                     <div class="field-value">{{n-a this.vendor.name}}</div>
                 </div>
 
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.common.email"}}</div>
                     <div class="field-value">{{n-a this.vendor.email}}</div>
                 </div>
 
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.common.phone"}}</div>
                     <div class="field-value">{{n-a this.vendor.phone}}</div>
                 </div>
 
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.common.website-url"}}</div>
                     <div class="field-value">{{n-a this.vendor.website_url}}</div>
                 </div>
 
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.common.country"}}</div>
                     <div class="field-value">
                         <CountryName @country={{this.vendor.country}} @showFlag={{true}} />
                     </div>
                 </div>
 
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.common.status"}}</div>
                     <div class="field-value">
                         <Badge @status={{this.vendor.status}} />

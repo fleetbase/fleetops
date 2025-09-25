@@ -64,93 +64,28 @@
 {{/if}}
 
 {{#if this.isTableLayout}}
-    <Layout::Section::Header @title={{t "fleet-ops.common.orders"}} @onSearch={{perform this.search}}>
-        <Button @icon="refresh" @onClick={{this.reload}} @helpText={{t "fleet-ops.common.reload-data"}} class="mr-2" />
-        <DropdownButton @icon="magnifying-glass" @buttonWrapperClass="mr-2" @size="xs" as |dd|>
-            <div class="bulk-search-dropdown-container filters-dropdown-container">
-                <div class="filters-dropdown-header">
-                    <h4>Bulk Search</h4>
-                </div>
-                <div class="filters-dropdown-body">
-                    <Textarea
-                        @value={{this.bulkSearchValue}}
-                        class="form-input w-full"
-                        rows="8"
-                        placeholder="Input comma delimited order ID's or tracking numbers to perform a bulk search"
-                    />
-                </div>
-                <div class="filters-dropdown-footer space-x-2">
-                    <Button @text="Clear" @icon="trash" @size="xs" @onClick={{dropdown-fn dd this.removeBulkQuery}} />
-                    <Button @text="Search" @icon="check" @type="primary" @size="xs" @onClick={{dropdown-fn dd this.commitBulkQuery}} />
-                </div>
-            </div>
-        </DropdownButton>
-        <FiltersPicker
-            @columns={{this.columns}}
-            @onApply={{fn this.filters.apply this}}
-            @onClear={{fn this.filters.reset this}}
-            @onFilterClear={{this.filters.clear}}
-            @onChange={{this.filters.set}}
-            @buttonWrapperClass="mr-2"
-        />
-        <VisibleColumnPicker @columns={{this.columns}} @onChange={{fn (mut this.columns)}} class="mr-2" />
-        {{#if (safe-has this.table "selectedRows")}}
-            <DropdownButton @icon="layer-group" @type="magic" @text={{t "fleet-ops.common.bulk-action"}} @size="sm" @buttonWrapperClass="mr-2" as |dd|>
-                <div class="next-dd-menu mt-2 mx-0">
-                    <div class="px-1">
-                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.bulkCancelOrders)}} disabled={{cannot "fleet-ops cancel order"}}>
-                            <div class="w-6"><FaIcon @icon="ban" @size="sm" /></div>
-                            <div>{{t "fleet-ops.operations.orders.index.cancel-orders"}}</div>
-                        </a>
-                    </div>
-                    <div class="px-1">
-                        <a href="javascript:;" class="text-red-500 next-dd-item" {{on "click" (dropdown-fn dd this.bulkDeleteOrders)}} disabled={{cannot "fleet-ops delete order"}}>
-                            <div class="w-6"><FaIcon @icon="trash" @size="sm" /></div>
-                            <div>{{t "fleet-ops.operations.orders.index.delete-orders"}}</div>
-                        </a>
-                    </div>
-                    <div class="next-dd-menu-seperator"></div>
-                    <div class="px-1">
-                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.bulkDispatchOrders)}} disabled={{cannot "fleet-ops dispatch order"}}>
-                            <div class="w-6"><FaIcon @icon="rocket" @size="sm" /></div>
-                            <div>{{t "fleet-ops.operations.orders.index.dispatch-orders"}}</div>
-                        </a>
-                    </div>
-                    <div class="px-1">
-                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.bulkAssignDriver)}} disabled={{cannot "fleet-ops assign-driver-for order"}}>
-                            <div class="w-6"><FaIcon @icon="user-plus" @size="sm" /></div>
-                            <div>{{t "fleet-ops.operations.orders.index.assign-driver"}}</div>
-                        </a>
-                    </div>
-                </div>
-            </DropdownButton>
-        {{/if}}
-        <Button
-            @type="primary"
-            @icon="plus"
-            @iconPrefix="fas"
-            @text={{t "fleet-ops.common.new"}}
-            @wrapperClass="mr-2"
-            @onClick={{fn (transition-to "operations.orders.index.new")}}
-            @permission="fleet-ops create order"
-        />
-        <Button @icon="long-arrow-up" @iconClass="rotate-icon-45" @text={{t "fleet-ops.common.export"}} @onClick={{this.exportOrders}} @permission="fleet-ops export order" />
-    </Layout::Section::Header>
-    <Layout::Section::Body>
-        <Table
-            @rows={{@model}}
-            @columns={{this.columns}}
-            @selectable={{true}}
-            @canSelectAll={{true}}
-            @onSetup={{fn (mut this.table)}}
-            @pagination={{true}}
-            @paginationMeta={{@model.meta}}
-            @page={{this.page}}
-            @onPageChange={{fn (mut this.page)}}
-            @tfootVerticalOffset="7"
-            @tfootVerticalOffsetElements="#next-view-section-subheader,.next-table-wrapper > table > thead,.next-map-container-topbar"
-        />
-    </Layout::Section::Body>
+    <Layout::Resource::Tabular
+        @resource="order"
+        @title={{t "fleet-ops.common.orders"}}
+        @searchQuery={{this.query}}
+        @onSearch={{perform this.orderActions.controllerSearchTask this}}
+        @bulkSearchValue={{this.bulk_query}}
+        @onClearBulkSearch={{fn (mut this.bulk_query)}}
+        @onSubmitBulkSearch={{fn (mut this.bulk_query)}}
+        @bulkSearchPlaceholder="Input comma delimited order ID's or tracking numbers to perform a bulk search"
+        @data={{@model}}
+        @columns={{this.columns}}
+        @page={{this.page}}
+        @onPageChange={{fn (mut this.page)}}
+        @setupTable={{fn (mut this.table)}}
+        @actionButtons={{this.actionButtons}}
+        @bulkActions={{this.bulkActions}}
+        @filterPickerGridCols="3"
+        @filterPickerWidth="700px"
+        @controller={{this}}
+        @tfootVerticalOffset="7"
+        @tfootVerticalOffsetElements="#next-view-section-subheader,.next-table-wrapper > table > thead,.next-map-container-topbar"
+    />
 {{/if}}
 
 {{#if this.isKanbanView}}

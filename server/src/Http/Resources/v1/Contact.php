@@ -19,6 +19,8 @@ class Contact extends FleetbaseResource
      */
     public function toArray($request)
     {
+        $this->loadMissing(['place', 'places']);
+        
         return [
             'id'                            => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'customer_id'                   => $this->when($this->type === 'customer' && Http::isPublicRequest(), Str::replace('contact', 'customer', $this->public_id)),

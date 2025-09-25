@@ -13,65 +13,16 @@ import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
  * @extends Component
  */
 export default class LiveMapDrawerDriverListingComponent extends Component {
-    /**
-     * Service for managing context panels within the application.
-     * @service
-     */
     @service contextPanel;
-
-    /**
-     * Service for triggering notifications.
-     * @service
-     */
+    @service resourceContextPanel;
     @service notifications;
-
-    /**
-     * Service for triggering notifications.
-     * @service
-     */
     @service hostRouter;
-
-    /**
-     * Service for CRUD operations.
-     * @service
-     */
     @service crud;
-
-    /**
-     * Service for intl.
-     * @service
-     */
     @service intl;
-
-    /**
-     * The list of drivers to display, tracked for reactivity.
-     * @tracked
-     */
     @tracked drivers = [];
-
-    /**
-     * The internal list of drivers used for searching, tracked for reactivity.
-     * @tracked
-     */
     @tracked _drivers = [];
-
-    /**
-     * The current search query, tracked for reactivity.
-     * @tracked
-     */
     @tracked query = '';
-
-    /**
-     * The table component reference, tracked for reactivity.
-     * @tracked
-     */
     @tracked table = null;
-
-    /**
-     * The configuration for table columns including details like label, valuePath, and cellComponent,
-     * tracked for reactivity.
-     * @tracked
-     */
     @tracked columns = [
         {
             label: this.intl.t('fleet-ops.common.driver'),
@@ -192,7 +143,11 @@ export default class LiveMapDrawerDriverListingComponent extends Component {
                     later(
                         this,
                         () => {
-                            this.contextPanel.focus(driver, intent);
+                            // this.contextPanel.focus(driver, intent);
+                            this.resourceContextPanel.show({
+                                content: 'driver/details',
+                                model: driver,
+                            });
                         },
                         600 * 2
                     );

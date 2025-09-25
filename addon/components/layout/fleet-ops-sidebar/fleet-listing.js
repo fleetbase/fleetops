@@ -25,13 +25,13 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         {
             label: 'View vehicle details...',
             onClick: (vehicle) => {
-                this.contextPanel.focus(vehicle);
+                this.vehicleActions.panel.view(vehicle);
             },
         },
         {
             label: 'Edit vehicle...',
             onClick: (vehicle) => {
-                this.contextPanel.focus(vehicle, 'editing');
+                this.vehicleActions.panel.edit(vehicle);
             },
         },
         {

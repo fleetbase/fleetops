@@ -59,6 +59,7 @@ class Vendor extends Model
         'public_id',
         'internal_id',
         'company_uuid',
+        'place_uuid',
         'logo_uuid',
         'type_uuid',
         'connect_company_uuid',
@@ -72,6 +73,7 @@ class Vendor extends Model
         'place_uuid',
         'country',
         'status',
+        'notes',
         'type',
         'slug',
     ];
@@ -186,6 +188,11 @@ class Vendor extends Model
         return $this->hasMany(Order::class, 'customer_uuid')->whereNull('deleted_at')->withoutGlobalScopes();
     }
 
+    public function files(): HasMany
+    {
+        return $this->hasMany(\Fleetbase\Models\File::class, 'subject_uuid')->latest();
+    }
+
     /**
      * Get the vendor logo url.
      *
@@ -233,6 +240,7 @@ class Vendor extends Model
      */
     public function setTypeAttribute(?string $type)
     {
+        if (!$type && isset($this->type)) return;
         $this->attributes['type'] = $type ?? 'vendor';
     }
 
@@ -243,6 +251,7 @@ class Vendor extends Model
      */
     public function setStatusAttribute(?string $status = 'active')
     {
+        if (!$status && isset($this->status)) return;
         $this->attributes['status'] = $status ?? 'active';
     }
 

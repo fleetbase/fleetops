@@ -1,15 +1,132 @@
-import Service, { inject as service } from '@ember/service';
+import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import leafletIcon from '@fleetbase/ember-core/utils/leaflet-icon';
-import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
-import config from '../config/environment';
+import config from 'ember-get-config';
+import { action } from '@ember/object';
 
-export default class DriverActionsService extends Service {
-    @service modalsManager;
-    @service universe;
-    @service crud;
-    @service intl;
+export default class DriverActionsService extends ResourceActionService {
+    constructor() {
+        super(...arguments);
+        this.initialize('driver');
+    }
 
-    assignOrder(driver, options = {}) {
+    transition = {
+        view: (driver) => this.transitionTo('management.drivers.index.details', driver),
+        edit: (driver) => this.transitionTo('management.drivers.index.edit', driver),
+        create: () => this.transitionTo('management.drivers.index.new'),
+    };
+
+    panel = {
+        create: (attributes = {}, options = {}) => {
+            const driver = this.createNewInstance(attributes);
+            return this.resourceContextPanel.open({
+                content: 'driver/form',
+                title: 'Create a new driver',
+                panelContentClass: 'px-4',
+                saveOptions: {
+                    callback: this.refresh,
+                },
+                driver,
+                ...options,
+            });
+        },
+        edit: (driver, options = {}) => {
+            return this.resourceContextPanel.open({
+                content: 'driver/form',
+                title: `Edit: ${driver.name}`,
+                actionButtons: [
+                    {
+                        icon: 'eye',
+                        fn: async () => {
+                            await this.resourceContextPanel.closeAll();
+                            this.panel.view(driver);
+                        },
+                    },
+                ],
+                panelContentClass: 'px-4',
+                driver,
+                ...options,
+            });
+        },
+        view: (driver, options = {}) => {
+            return this.resourceContextPanel.open({
+                driver,
+                header: 'driver/panel-header',
+                actionButtons: [
+                    {
+                        icon: 'pencil',
+                        fn: async () => {
+                            await this.resourceContextPanel.closeAll();
+                            this.panel.edit(driver);
+                        },
+                    },
+                ],
+                tabs: [
+                    {
+                        label: 'Overview',
+                        component: 'driver/details',
+                        contentClass: 'p-4',
+                    },
+                ],
+                ...options,
+            });
+        },
+    };
+
+    modal = {
+        create: (attributes = {}, options = {}, saveOptions = {}) => {
+            const driver = this.createNewInstance(attributes);
+            return this.modalsManager.show('modals/resource', {
+                resource: driver,
+                title: 'Create a new driver',
+                acceptButtonText: 'Create Driver',
+                component: 'driver/form',
+                confirm: (modal) => this.modalTask.perform(modal, 'saveTask', driver, { refresh: true, ...saveOptions }),
+                ...options,
+            });
+        },
+        edit: (driver, options = {}, saveOptions = {}) => {
+            return this.modalsManager.show('modals/resource', {
+                resource: driver,
+                title: `Edit: ${driver.name}`,
+                acceptButtonText: 'Save Changes',
+                saveButtonIcon: 'save',
+                component: 'driver/form',
+                confirm: (modal) => this.modalTask.perform(modal, 'saveTask', driver, { refresh: true, ...saveOptions }),
+                ...options,
+            });
+        },
+        view: (driver, options = {}) => {
+            return this.modalsManager.show('modals/resource', {
+                resource: driver,
+                title: driver.name,
+                component: 'driver/details',
+                ...options,
+            });
+        },
+    };
+
+    @action locate(driver, options = {}) {
+        const { latitude, longitude, location } = driver;
+
+        this.modalsManager.show('modals/point-map', {
+            title: this.intl.t('fleet-ops.management.drivers.index.locate-driver', { driverName: driver.name }),
+            acceptButtonText: 'Done',
+            hideDeclineButton: true,
+            resource: driver,
+            popupText: `${driver.name} (${driver.public_id})`,
+            tooltip: driver.positionString,
+            icon: leafletIcon({
+                iconUrl: driver.vehicle_avatar ?? config?.defaultValues?.vehicleAvatar,
+                iconSize: [40, 40],
+            }),
+            latitude,
+            longitude,
+            location,
+            ...options,
+        });
+    }
+
+    @action assignOrder(driver, options = {}) {
         this.modalsManager.show('modals/driver-assign-order', {
             title: this.intl.t('fleet-ops.management.drivers.index.order-driver'),
             acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.assign-order'),
@@ -23,84 +140,47 @@ export default class DriverActionsService extends Service {
                 this.modalsManager.setOption('acceptButtonDisabled', false);
             },
             driver,
-            confirm: (modal) => {
+            confirm: async (modal) => {
                 const selectedOrder = modal.getOption('selectedOrder');
                 if (!selectedOrder) {
-                    this.notifications.warning(this.intl.t('fleet-ops.management.drivers.index.no-order-warning'));
-                    return;
+                    return this.notifications.warning(this.intl.t('fleet-ops.management.drivers.index.no-order-warning'));
                 }
 
                 modal.startLoading();
-                driver.set('current_job_uuid', selectedOrder.id);
 
-                return driver
-                    .save()
-                    .then(() => {
-                        this.notifications.success(this.intl.t('fleet-ops.management.drivers.index.assign-driver', { driverName: driver.name }));
-                    })
-                    .catch((error) => {
-                        driver.rollbackAttributes();
-                        modal.stopLoading();
-                        this.notifications.serverError(error);
-                    });
+                try {
+                    driver.set('current_job_uuid', selectedOrder.id);
+                    await driver.save();
+                } catch (err) {
+                    this.notifications.serverError(err);
+                    driver.rollbackAttributes();
+                } finally {
+                    modal.stopLoading();
+                }
             },
             ...options,
         });
     }
 
-    assignVehicle(driver, options = {}) {
+    @action assignVehicle(driver, options = {}) {
         this.modalsManager.show('modals/driver-assign-vehicle', {
             title: this.intl.t('fleet-ops.management.drivers.index.title-vehicle'),
             acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.confirm-button'),
             acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
             hideDeclineButton: true,
             driver,
-            confirm: (modal) => {
+            confirm: async (modal) => {
                 modal.startLoading();
 
-                return driver
-                    .save()
-                    .then((driver) => {
-                        this.notifications.success(this.intl.t('fleet-ops.management.drivers.index.assign-vehicle', { driverName: driver.name }));
-                    })
-                    .catch((error) => {
-                        driver.rollbackAttributes();
-                        modal.stopLoading();
-                        this.notifications.serverError(error);
-                    });
-            },
-            ...options,
-        });
-    }
-
-    locate(driver, options = {}) {
-        const { location } = driver;
-        const [latitude, longitude] = location.coordinates;
-
-        this.modalsManager.show('modals/point-map', {
-            title: this.intl.t('fleet-ops.management.drivers.index.locate-driver', { driverName: driver.name }),
-            acceptButtonText: 'Done',
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            modalClass: 'modal-md',
-            hideDeclineButton: true,
-            latitude,
-            longitude,
-            location,
-            popupText: `${driver.name} (${driver.public_id})`,
-            icon: leafletIcon({
-                iconUrl: getWithDefault(driver, 'vehicle_avatar', getWithDefault(config, 'defaultValues.vehicleAvatar')),
-                iconSize: [40, 40],
-            }),
-            ...options,
-        });
-    }
-
-    delete(driver, options = {}) {
-        this.crud.delete(driver, {
-            onSuccess: () => {
-                this.universe.trigger('fleet-ops.driver.deleted', driver);
+                try {
+                    await driver.save();
+                    this.notifications.success(this.intl.t('fleet-ops.management.drivers.index.assign-vehicle', { driverName: driver.name }));
+                } catch (err) {
+                    this.notifications.serverError(err);
+                    driver.rollbackAttributes();
+                } finally {
+                    modal.stopLoading();
+                }
             },
             ...options,
         });

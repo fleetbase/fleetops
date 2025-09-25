@@ -201,7 +201,7 @@
                 {{/if}}
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-3 field-info-containers-darker gap-4 lg:gap-2">
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     {{#if this.isMultiDropOrder}}
                         <div class="field-name">{{pluralize (t "fleet-ops.operations.orders.index.view.customer")}}</div>
                         <div class="flex flex-col space-y-2">
@@ -252,7 +252,7 @@
                         </div>
                     {{/if}}
                 </div>
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.operations.orders.index.view.facilitator"}}</div>
                     <div class="flex flex-row">
                         <div>
@@ -271,7 +271,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name flex flex-row items-center justify-between">
                         <span>{{t "fleet-ops.operations.orders.index.view.driver-assigned"}}</span>
                     </div>
@@ -311,7 +311,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name flex flex-row items-center justify-between">
                         <span>{{t "fleet-ops.operations.orders.index.view.vehicle-assigned"}}</span>
                     </div>
@@ -352,34 +352,34 @@
 
                     </div>
                 </div>
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.common.internal-id"}}</div>
                     <ClickToCopy @value={{@model.internal_id}} class="field-value">{{n-a @model.internal_id}}</ClickToCopy>
                 </div>
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.operations.orders.index.view.tracking-number"}}</div>
                     <ClickToCopy @value={{@model.tracking_number.tracking_number}} class="field-value">{{n-a @model.tracking_number.tracking_number}}</ClickToCopy>
                 </div>
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.operations.orders.index.view.date-scheduled"}}</div>
                     <div class="field-value">{{n-a @model.scheduledAt}}</div>
                 </div>
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.operations.orders.index.view.date-dispatched"}}</div>
                     <div class="field-value">{{n-a @model.dispatchedAt}}</div>
                 </div>
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.operations.orders.index.view.date-started"}}</div>
                     <div class="field-value">{{n-a @model.startedAt}}</div>
                 </div>
-                <div class="field-info-container space-y-2">
+                <div class="field-info-container">
                     <div class="field-name">{{t "fleet-ops.common.type"}}</div>
                     <div class="field-value">
                         <Badge @status="info">{{n-a (humanize @model.type)}}</Badge>
                     </div>
                 </div>
                 {{#if @model.pod_required}}
-                    <div class="field-info-container space-y-2">
+                    <div class="field-info-container">
                         <div class="field-name">{{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}}</div>
                         <div class="field-value">{{n-a (smart-humanize @model.pod_method)}}</div>
                     </div>
@@ -392,7 +392,7 @@
                 <ContentPanel @title={{group.name}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                     <div class="grid grid-cols-{{or group.meta.grid_size 1}} gap-2">
                         {{#each group.customFields as |customField|}}
-                            <div class="field-info-container space-y-2">
+                            <div class="field-info-container">
                                 <div class="field-name">{{customField.label}}</div>
                                 {{#if (and (eq customField.type "file-upload") customField.value.asFile)}}
                                     <File @file={{customField.value.asFile}} @onDelete={{fn this.removeCustomFieldFile customField.value}} class="custom-field-file" />

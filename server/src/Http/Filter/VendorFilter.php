@@ -57,9 +57,12 @@ class VendorFilter extends Filter
         $this->builder->searchWhere('country', $country);
     }
 
-    public function status(?string $status)
+    public function status(string|array $status)
     {
-        $this->builder->searchWhere('status', $status);
+        $status = Utils::arrayFrom($status);
+        if ($status) {
+            $this->builder->whereIn('status', $status);
+        }
     }
 
     public function address(?string $address)

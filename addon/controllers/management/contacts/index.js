@@ -1,103 +1,61 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
-import { isBlank } from '@ember/utils';
-import { timeout, task } from 'ember-concurrency';
 
-export default class ManagementContactsIndexController extends BaseController {
-    @service store;
-    @service notifications;
+export default class ManagementContactsIndexController extends Controller {
+    @service contactActions;
     @service intl;
-    @service modalsManager;
-    @service hostRouter;
-    @service crud;
-    @service filters;
-    @service contextPanel;
-    @service fetch;
-
-    /**
-     * Queryable parameters for this controller's model
-     *
-     * @var {Array}
-     */
-    queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status', 'title', 'email', 'phone'];
-
-    /**
-     * The current page of data being viewed
-     *
-     * @var {Integer}
-     */
+    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status', 'title', 'email', 'phone'];
     @tracked page = 1;
-
-    /**
-     * The maximum number of items to show per page
-     *
-     * @var {Integer}
-     */
     @tracked limit;
-
-    /**
-     * The param to sort the data on, the param with prepended `-` is descending
-     *
-     * @var {String}
-     */
     @tracked sort = '-created_at';
-
-    /**
-     * The filterable param `public_id`
-     *
-     * @var {String}
-     */
     @tracked public_id;
-
-    /**
-     * The filterable param `internal_id`
-     *
-     * @var {String}
-     */
     @tracked internal_id;
-
-    /**
-     * The filterable param `title`
-     *
-     * @var {String}
-     */
     @tracked title;
-
-    /**
-     * The filterable param `email`
-     *
-     * @var {String}
-     */
     @tracked email;
-
-    /**
-     * The filterable param `phone`
-     *
-     * @var {String}
-     */
     @tracked phone;
-
-    /**
-     * The filterable param `status`
-     *
-     * @var {Array}
-     */
     @tracked status;
-
-    /**
-     * All columns applicable for contacts
-     *
-     * @var {Array}
-     */
+    @tracked table;
+    @tracked actionButtons = [
+        {
+            icon: 'refresh',
+            onClick: this.contactActions.refresh,
+            helpText: this.intl.t('fleet-ops.common.reload-data'),
+        },
+        {
+            text: 'New',
+            type: 'primary',
+            icon: 'plus',
+            onClick: this.contactActions.transition.create,
+        },
+        {
+            text: 'Import',
+            type: 'magic',
+            icon: 'upload',
+            onClick: this.contactActions.import,
+        },
+        {
+            text: 'Export',
+            icon: 'long-arrow-up',
+            iconClass: 'rotate-icon-45',
+            wrapperClass: 'hidden md:flex',
+            onClick: this.contactActions.export,
+        },
+    ];
+    @tracked bulkActions = [
+        {
+            label: 'Delete selected...',
+            class: 'text-red-500',
+            fn: this.contactActions.bulkDelete,
+        },
+    ];
     @tracked columns = [
         {
             label: this.intl.t('fleet-ops.common.name'),
             valuePath: 'name',
             width: '140px',
             cellComponent: 'table/cell/media-name',
-            action: this.viewContact,
+            action: this.contactActions.transition.view,
             permission: 'fleet-ops view contact',
             resizable: true,
             sortable: true,
@@ -159,7 +117,7 @@ export default class ManagementContactsIndexController extends BaseController {
             label: this.intl.t('fleet-ops.common.address'),
             valuePath: 'address',
             cellComponent: 'table/cell/anchor',
-            action: this.viewContactPlace,
+            action: this.contactActions.viewPlace,
             width: '170px',
             resizable: true,
             sortable: true,
@@ -201,12 +159,12 @@ export default class ManagementContactsIndexController extends BaseController {
             actions: [
                 {
                     label: this.intl.t('fleet-ops.management.contacts.index.view-contact'),
-                    fn: this.viewContact,
+                    fn: this.contactActions.transition.view,
                     permission: 'fleet-ops view contact',
                 },
                 {
                     label: this.intl.t('fleet-ops.management.contacts.index.edit-contact'),
-                    fn: this.editContact,
+                    fn: this.contactActions.transition.edit,
                     permission: 'fleet-ops update contact',
                 },
                 {
@@ -214,7 +172,7 @@ export default class ManagementContactsIndexController extends BaseController {
                 },
                 {
                     label: this.intl.t('fleet-ops.management.contacts.index.delete-contact'),
-                    fn: this.deleteContact,
+                    fn: this.contactActions.delete,
                     permission: 'fleet-ops delete contact',
                 },
             ],
@@ -224,140 +182,4 @@ export default class ManagementContactsIndexController extends BaseController {
             searchable: false,
         },
     ];
-
-    /**
-     * The search task.
-     *
-     * @void
-     */
-    @task({ restartable: true }) *search({ target: { value } }) {
-        // if no query don't search
-        if (isBlank(value)) {
-            this.query = null;
-            return;
-        }
-
-        // timeout for typing
-        yield timeout(250);
-
-        // reset page for results
-        if (this.page > 1) {
-            this.page = 1;
-        }
-
-        // update the query param
-        this.query = value;
-    }
-
-    /**
-     * Reload layout view.
-     */
-    @action reload() {
-        return this.hostRouter.refresh();
-    }
-
-    /**
-     * Toggles dialog to export `contact`
-     *
-     * @void
-     */
-    @action exportContacts() {
-        const selections = this.table.selectedRows.map((_) => _.id);
-        this.crud.export('contact', { params: { selections } });
-    }
-
-    /**
-     * View a `contact` details in modal
-     *
-     * @param {ContactModel} contact
-     * @void
-     */
-    @action viewContact(contact) {
-        return this.transitionToRoute('management.contacts.index.details', contact);
-    }
-
-    /**
-     * View information about the contacts place
-     *
-     * @param {ContactModel} contact
-     * @void
-     */
-    @action async viewContactPlace(contact) {
-        const place = await this.store.findRecord('place', contact.place_uuid);
-
-        if (place) {
-            this.contextPanel.focus(place);
-        }
-    }
-
-    /**
-     * Create a new `contact` in modal
-     *
-     * @void
-     */
-    @action createContact() {
-        return this.transitionToRoute('management.contacts.index.new');
-    }
-
-    /**
-     * Edit a `contact` details
-     *
-     * @param {ContactModel} contact
-     * @void
-     */
-    @action editContact(contact) {
-        return this.transitionToRoute('management.contacts.index.edit', contact);
-    }
-
-    /**
-     * Delete a `contact` via confirm prompt
-     *
-     * @param {ContactModel} contact
-     * @param {Object} options
-     * @void
-     */
-    @action deleteContact(contact, options = {}) {
-        this.crud.delete(contact, {
-            acceptButtonIcon: 'trash',
-            onConfirm: () => {
-                this.hostRouter.refresh();
-            },
-            ...options,
-        });
-    }
-
-    /**
-     * Handles and prompts for spreadsheet imports of contacts.
-     *
-     * @void
-     */
-    @action importContacts() {
-        this.crud.import('contact', {
-            onImportCompleted: () => {
-                this.hostRouter.refresh();
-            },
-            onImportTemplate: () => {
-                window.open('https://flb-assets.s3.ap-southeast-1.amazonaws.com/import-templates/Fleetbase_Contact_Import_Template.xlsx');
-            },
-        });
-    }
-
-    /**
-     * Bulk deletes selected `contacts` via confirm prompt
-     *
-     * @param {Array} selected an array of selected models
-     * @void
-     */
-    @action bulkDeleteContacts() {
-        const selected = this.table.selectedRows;
-
-        this.crud.bulkDelete(selected, {
-            modelNamePath: `name`,
-            acceptButtonText: this.intl.t('fleet-ops.management.contacts.index.delete-button'),
-            onSuccess: async () => {
-                await this.hostRouter.refresh();
-                this.table.untoggleSelectAll();
-            },
-        });
-    }
 }

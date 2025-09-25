@@ -1,116 +1,58 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
-import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 
-export default class ManagementDriversIndexEditController extends BaseController {
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementDriversIndexEditController
-     */
+export default class ManagementDriversIndexEditController extends Controller {
     @service hostRouter;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementDriversIndexEditController
-     */
-    @service modalsManager;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @memberof intl
-     */
     @service intl;
-
-    /**
-     * The overlay component context.
-     *
-     * @memberof ManagementDriversIndexEditController
-     */
+    @service notifications;
+    @service modalsManager;
     @tracked overlay;
+    @tracked actionButtons = [
+        {
+            icon: 'eye',
+            fn: this.view,
+        },
+    ];
 
-    /**
-     * When exiting the overlay.
-     *
-     * @return {Transition}
-     * @memberof ManagementDriversIndexEditController
-     */
-    @action transitionBack(driver) {
-        // check if driver record has been edited and prompt for confirmation
-        if (driver.hasDirtyAttributes) {
-            return this.confirmContinueWithUnsavedChanges(driver, {
-                confirm: () => {
-                    driver.rollbackAttributes();
-                    return this.transitionToRoute('management.drivers.index');
-                },
-            });
+    @task *save(driver) {
+        try {
+            yield driver.save();
+            this.overlay?.close();
+
+            yield this.hostRouter.transitionTo('console.fleet-ops.management.drivers.index.details', driver);
+            this.notifications.success(this.intl.t('fleet-ops.component.driver-form-panel.success-message', { driverName: driver.name }));
+        } catch (err) {
+            this.notifications.serverError(err);
+        }
+    }
+
+    @action cancel() {
+        if (this.model.hasDirtyAttributes) {
+            return this.#confirmContinueWithUnsavedChanges(this.model);
         }
 
-        return this.transitionToRoute('management.drivers.index');
+        return this.hostRouter.transitionTo('console.fleet-ops.management.drivers.index');
     }
 
-    /**
-     * Set the overlay component context object.
-     *
-     * @param {OverlayContext} overlay
-     * @memberof ManagementDriversIndexEditController
-     */
-    @action setOverlayContext(overlay) {
-        this.overlay = overlay;
-    }
-
-    /**
-     * When driver details button is clicked in overlay.
-     *
-     * @param {VehicleModel} driver
-     * @return {Promise}
-     * @memberof ManagementDriversIndexEditController
-     */
-    @action onViewDetails(driver) {
-        // check if driver record has been edited and prompt for confirmation
-        if (driver.hasDirtyAttributes) {
-            return this.confirmContinueWithUnsavedChanges(driver);
+    @action view() {
+        if (this.model.hasDirtyAttributes) {
+            return this.#confirmContinueWithUnsavedChanges(this.model);
         }
 
-        return this.transitionToRoute('management.drivers.index.details', driver);
+        return this.hostRouter.transitionTo('console.fleet-ops.management.drivers.index.details', this.model);
     }
 
-    /**
-     * Trigger a route refresh and focus the new driver created.
-     *
-     * @param {VehicleModel} driver
-     * @return {Promise}
-     * @memberof ManagementDriversIndexEditController
-     */
-    @action onAfterSave(driver) {
-        if (this.overlay) {
-            this.overlay.close();
-        }
-
-        this.hostRouter.refresh();
-        return this.transitionToRoute('management.drivers.index.details', driver);
-    }
-
-    /**
-     * Prompts the user to confirm if they wish to continue with unsaved changes.
-     *
-     * @method
-     * @param {VehicleModel} driver - The driver object with unsaved changes.
-     * @param {Object} [options={}] - Additional options for configuring the modal.
-     * @returns {Promise} A promise that resolves when the user confirms, and transitions to a new route.
-     * @memberof ManagementDriversIndexEditController
-     */
-    confirmContinueWithUnsavedChanges(driver, options = {}) {
+    #confirmContinueWithUnsavedChanges(driver, options = {}) {
         return this.modalsManager.confirm({
             title: this.intl.t('fleet-ops.management.drivers.index.edit.title'),
             body: this.intl.t('fleet-ops.management.drivers.index.edit.body'),
             acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.edit.button'),
-            confirm: () => {
+            confirm: async () => {
                 driver.rollbackAttributes();
-                return this.transitionToRoute('management.drivers.index.details', driver);
+                await this.hostRouter.transitionTo('console.fleet-ops.management.drivers.index.details', driver);
             },
             ...options,
         });

@@ -1,8 +1,8 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { isBlank } from '@ember/utils';
-import { action, set } from '@ember/object';
+import { action } from '@ember/object';
+import { debug } from '@ember/debug';
 import { timeout, task } from 'ember-concurrency';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 
@@ -11,35 +11,10 @@ export default class FleetPanelVehicleListingComponent extends Component {
     @service fetch;
     @service intl;
     @service universe;
-
-    /**
-     * The selected vehicles.
-     *
-     * @var {Array}
-     * @memberof FleetPanelVehicleListingComponent
-     */
     @tracked selected = [];
-
-    /**
-     * Determines if list of vehicles should be selectable.
-     *
-     * @var {Boolean}
-     * @memberof FleetPanelVehicleListingComponent
-     */
     @tracked selectable = false;
-
-    /**
-     * The fleet managing vehicles for.
-     *
-     * @var {FleetModel}
-     * @memberof FleetPanelVehicleListingComponent
-     */
     @tracked fleet = [];
 
-    /**
-     * Creates an instance of FleetPanelVehicleListingComponent.
-     * @memberof FleetPanelVehicleListingComponent
-     */
     constructor() {
         super(...arguments);
         const { options = {} } = this.args;
@@ -49,51 +24,25 @@ export default class FleetPanelVehicleListingComponent extends Component {
         this.search.perform({ limit: -1 });
     }
 
-    /**
-     * Fetches fleet vehicles based on the given parameters.
-     * @param {Object} params - Parameters to filter the vehicles.
-     * @returns {Promise} Promise object representing the fetched vehicles.
-     * @memberof FleetPanelVehicleListringComponent
-     */
-    fetchFleetVehicles(params = {}) {
-        return this.store.query('vehicle', { fleet: this.fleet.id, ...params }).then((vehicles) => {
-            set(this, 'vehicles', vehicles.toArray());
-            contextComponentCallback(this, 'onLoaded', vehicles);
-
-            return vehicles;
-        });
-    }
-
-    /**
-     * Searches for fleet vehicles based on the given parameters.
-     * @task
-     * @param {Object} params - Search parameters.
-     * @memberof FleetPanelVehicleListringComponent
-     */
     @task({ restartable: true }) *search(params = {}) {
-        if (!isBlank(params.value)) {
+        if (!params.value) {
             yield timeout(300);
         }
 
-        yield this.fetchFleetVehicles(params);
+        try {
+            const vehicles = yield this.store.query('vehicle', { fleet: this.fleet.id, ...params });
+            this.vehicles = vehicles.toArray();
+            contextComponentCallback(this, 'onLoaded', vehicles);
+            return vehicles;
+        } catch (err) {
+            debug('Unable to load fleet vehicles: ' + err.message);
+        }
     }
 
-    /**
-     * Handles input events to initiate search.
-     * @action
-     * @param {Object} event - The input event.
-     * @memberof FleetPanelVehicleListringComponent
-     */
     @action onInput({ target: { value } }) {
         this.search.perform({ query: value });
     }
 
-    /**
-     * Assigns a vehicle to the fleet.
-     * @action
-     * @param {VehicleModel} vehicle - The vehicle to be added.
-     * @memberof FleetPanelVehicleListringComponent
-     */
     @action async onAddVehicle(vehicle) {
         try {
             await this.fetch.post('fleets/assign-vehicle', { vehicle: vehicle.id, fleet: this.fleet.id });
@@ -104,12 +53,6 @@ export default class FleetPanelVehicleListingComponent extends Component {
         }
     }
 
-    /**
-     * Removes a vehicle from the fleet.
-     * @action
-     * @param {VehicleModel} vehicle - The vehicle to be removed.
-     * @memberof FleetPanelVehicleListringComponent
-     */
     @action async onRemoveVehicle(vehicle) {
         try {
             await this.fetch.post('fleets/remove-vehicle', { vehicle: vehicle.id, fleet: this.fleet.id });
@@ -120,12 +63,6 @@ export default class FleetPanelVehicleListingComponent extends Component {
         }
     }
 
-    /**
-     * Selects or deselects a vehicle.
-     * @action
-     * @param {VehicleModel} vehicle - The vehicle to be selected or deselected.
-     * @memberof FleetPanelVehicleListringComponent
-     */
     @action onSelect(vehicle) {
         if (this.selected.includes(vehicle)) {
             this.selected.removeObject(vehicle);

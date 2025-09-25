@@ -1,116 +1,58 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
-import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 
-export default class ManagementFleetsIndexEditController extends BaseController {
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementFleetsIndexEditController
-     */
+export default class ManagementFleetsIndexEditController extends Controller {
     @service hostRouter;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementFleetsIndexEditController
-     */
-    @service modalsManager;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @memberof intl
-     */
     @service intl;
-
-    /**
-     * The overlay component context.
-     *
-     * @memberof ManagementFleetsIndexEditController
-     */
+    @service notifications;
+    @service modalsManager;
     @tracked overlay;
+    @tracked actionButtons = [
+        {
+            icon: 'eye',
+            fn: this.view,
+        },
+    ];
 
-    /**
-     * When exiting the overlay.
-     *
-     * @return {Transition}
-     * @memberof ManagementFleetsIndexEditController
-     */
-    @action transitionBack(fleet) {
-        // check if fleet record has been edited and prompt for confirmation
-        if (fleet.hasDirtyAttributes) {
-            return this.confirmContinueWithUnsavedChanges(fleet, {
-                confirm: () => {
-                    fleet.rollbackAttributes();
-                    return this.transitionToRoute('management.fleets.index');
-                },
-            });
+    @task *save(fleet) {
+        try {
+            yield fleet.save();
+            this.overlay?.close();
+
+            yield this.hostRouter.transitionTo('console.fleet-ops.management.fleets.index.details', fleet);
+            this.notifications.success(this.intl.t('fleet-ops.component.fleet-form-panel.success-message', { fleetName: fleet.name }));
+        } catch (err) {
+            this.notifications.serverError(err);
+        }
+    }
+
+    @action cancel() {
+        if (this.model.hasDirtyAttributes) {
+            return this.#confirmContinueWithUnsavedChanges(this.model);
         }
 
-        return this.transitionToRoute('management.fleets.index');
+        return this.hostRouter.transitionTo('console.fleet-ops.management.fleets.index');
     }
 
-    /**
-     * Set the overlay component context object.
-     *
-     * @param {OverlayContext} overlay
-     * @memberof ManagementFleetsIndexEditController
-     */
-    @action setOverlayContext(overlay) {
-        this.overlay = overlay;
-    }
-
-    /**
-     * When fleet details button is clicked in overlay.
-     *
-     * @param {VehicleModel} fleet
-     * @return {Promise}
-     * @memberof ManagementFleetsIndexEditController
-     */
-    @action onViewDetails(fleet) {
-        // check if fleet record has been edited and prompt for confirmation
-        if (fleet.hasDirtyAttributes) {
-            return this.confirmContinueWithUnsavedChanges(fleet);
+    @action view() {
+        if (this.model.hasDirtyAttributes) {
+            return this.#confirmContinueWithUnsavedChanges(this.model);
         }
 
-        return this.transitionToRoute('management.fleets.index.details', fleet);
+        return this.hostRouter.transitionTo('console.fleet-ops.management.fleets.index.details', this.model);
     }
 
-    /**
-     * Trigger a route refresh and focus the new fleet created.
-     *
-     * @param {VehicleModel} fleet
-     * @return {Promise}
-     * @memberof ManagementFleetsIndexEditController
-     */
-    @action onAfterSave(fleet) {
-        if (this.overlay) {
-            this.overlay.close();
-        }
-
-        this.hostRouter.refresh();
-        return this.transitionToRoute('management.fleets.index.details', fleet);
-    }
-
-    /**
-     * Prompts the user to confirm if they wish to continue with unsaved changes.
-     *
-     * @method
-     * @param {VehicleModel} fleet - The fleet object with unsaved changes.
-     * @param {Object} [options={}] - Additional options for configuring the modal.
-     * @returns {Promise} A promise that resolves when the user confirms, and transitions to a new route.
-     * @memberof ManagementFleetsIndexEditController
-     */
-    confirmContinueWithUnsavedChanges(fleet, options = {}) {
+    #confirmContinueWithUnsavedChanges(fleet, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.drivers.index.edit.title'),
+            title: this.intl.t('fleet-ops.management.fleets.index.edit.title'),
             body: this.intl.t('fleet-ops.management.fleets.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.edit.button'),
-            confirm: () => {
+            acceptButtonText: this.intl.t('fleet-ops.management.fleets.index.edit.button'),
+            confirm: async () => {
                 fleet.rollbackAttributes();
-                return this.transitionToRoute('management.fleets.index.details', fleet);
+                await this.hostRouter.transitionTo('console.fleet-ops.management.fleets.index.details', fleet);
             },
             ...options,
         });

@@ -318,6 +318,16 @@ fleet-ops:
         title: Create new order
         settings: Settings
         order-config: Order Config
+        connectivity: Connectivity
+        telematics: Telematics
+        devices: Devices
+        sensors: Sensors
+        tracking: Tracking
+        events: Events
+        maintenance: Maintenance
+        equipment: Equipment
+        parts: Parts
+        work-orders: Work Orders
     live-map-drawer:
       driver-listing:
         location: Location
@@ -898,7 +908,7 @@ fleet-ops:
       price-breakdown: Price Breakdown
       metadata: Metadata
     issue-form-panel:
-      success-message: Issue ({publicId}) saved successfully.
+      success-message: Issue ({issueName}) saved successfully.
       new-issue: New Issue
       save-issue: Save Issue
       create-issue: Create Issue

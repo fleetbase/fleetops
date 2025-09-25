@@ -64,6 +64,7 @@ class Issue extends Model
         'type',
         'report',
         'title',
+        'tags',
         'priority',
         'meta',
         'resolved_at',
@@ -85,6 +86,7 @@ class Issue extends Model
     protected $casts = [
         'location'        => Point::class,
         'meta'            => Json::class,
+        'tags'            => Json::class,
         'resolved_at'     => 'date',
     ];
 

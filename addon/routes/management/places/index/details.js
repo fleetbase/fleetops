@@ -23,10 +23,6 @@ export default class ManagementPlacesIndexDetailsRoute extends Route {
         }
     }
 
-    queryParams = {
-        view: { refreshModel: false },
-    };
-
     model({ public_id }) {
         return this.store.findRecord('place', public_id);
     }

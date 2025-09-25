@@ -1,116 +1,58 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
-import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 
-export default class ManagementPlacesIndexEditController extends BaseController {
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementplacesIndexEditController
-     */
+export default class ManagementPlacesIndexEditController extends Controller {
     @service hostRouter;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementplacesIndexEditController
-     */
-    @service modalsManager;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @memberof intl
-     */
     @service intl;
-
-    /**
-     * The overlay component context.
-     *
-     * @memberof ManagementplacesIndexEditController
-     */
+    @service notifications;
+    @service modalsManager;
     @tracked overlay;
+    @tracked actionButtons = [
+        {
+            icon: 'eye',
+            fn: this.view,
+        },
+    ];
 
-    /**
-     * When exiting the overlay.
-     *
-     * @return {Transition}
-     * @memberof ManagementplacesIndexEditController
-     */
-    @action transitionBack(place) {
-        // check if place record has been edited and prompt for confirmation
-        if (place.hasDirtyAttributes) {
-            return this.confirmContinueWithUnsavedChanges(place, {
-                confirm: () => {
-                    place.rollbackAttributes();
-                    return this.transitionToRoute('management.places.index');
-                },
-            });
+    @task *save(place) {
+        try {
+            yield place.save();
+            this.overlay?.close();
+
+            yield this.hostRouter.transitionTo('console.fleet-ops.management.places.index.details', place);
+            this.notifications.success(this.intl.t('fleet-ops.component.place-form-panel.success-message', { placeAddress: place.address }));
+        } catch (err) {
+            this.notifications.serverError(err);
+        }
+    }
+
+    @action cancel() {
+        if (this.model.hasDirtyAttributes) {
+            return this.#confirmContinueWithUnsavedChanges(this.model);
         }
 
-        return this.transitionToRoute('management.places.index');
+        return this.hostRouter.transitionTo('console.fleet-ops.management.places.index');
     }
 
-    /**
-     * Set the overlay component context object.
-     *
-     * @param {OverlayContext} overlay
-     * @memberof ManagementplacesIndexEditController
-     */
-    @action setOverlayContext(overlay) {
-        this.overlay = overlay;
-    }
-
-    /**
-     * When place details button is clicked in overlay.
-     *
-     * @param {PlaceModel} place
-     * @return {Promise}
-     * @memberof ManagementplacesIndexEditController
-     */
-    @action onViewDetails(place) {
-        // check if place record has been edited and prompt for confirmation
-        if (place.hasDirtyAttributes) {
-            return this.confirmContinueWithUnsavedChanges(place);
+    @action view() {
+        if (this.model.hasDirtyAttributes) {
+            return this.#confirmContinueWithUnsavedChanges(this.model);
         }
 
-        return this.transitionToRoute('management.places.index.details', place);
+        return this.hostRouter.transitionTo('console.fleet-ops.management.places.index.details', this.model);
     }
 
-    /**
-     * Trigger a route refresh and focus the new place created.
-     *
-     * @param {PlaceModel} place
-     * @return {Promise}
-     * @memberof ManagementplacesIndexEditController
-     */
-    @action onAfterSave(place) {
-        if (this.overlay) {
-            this.overlay.close();
-        }
-
-        this.hostRouter.refresh();
-        return this.transitionToRoute('management.places.index.details', place);
-    }
-
-    /**
-     * Prompts the user to confirm if they wish to continue with unsaved changes.
-     *
-     * @method
-     * @param {PlaceModel} place - The place object with unsaved changes.
-     * @param {Object} [options={}] - Additional options for configuring the modal.
-     * @returns {Promise} A promise that resolves when the user confirms, and transitions to a new route.
-     * @memberof ManagementplacesIndexEditController
-     */
-    confirmContinueWithUnsavedChanges(place, options = {}) {
+    #confirmContinueWithUnsavedChanges(place, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.drivers.index.edit.title'),
+            title: this.intl.t('fleet-ops.management.places.index.edit.title'),
             body: this.intl.t('fleet-ops.management.places.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.edit.button'),
-            confirm: () => {
+            acceptButtonText: this.intl.t('fleet-ops.management.places.index.edit.button'),
+            confirm: async () => {
                 place.rollbackAttributes();
-                return this.transitionToRoute('management.places.index.details', place);
+                await this.hostRouter.transitionTo('console.fleet-ops.management.places.index.details', place);
             },
             ...options,
         });

@@ -1,0 +1,11 @@
+<ContentPanel @title={{t "fleet-ops.operations.orders.index.new.notes-title"}} @open={{true}} @panelHeaderClass="bordered">
+    <div class="px-1.5">
+        <Textarea
+            @value={{@resource.notes}}
+            class="form-input w-full"
+            placeholder={{t "fleet-ops.operations.orders.index.new.notes-placeholder"}}
+            disabled={{cannot-write @resource}}
+            rows={{or @rows 4}}
+        />
+    </div>
+</ContentPanel>

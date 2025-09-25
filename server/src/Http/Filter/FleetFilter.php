@@ -93,9 +93,12 @@ class FleetFilter extends Filter
         $this->builder->searchWhere('name', $name);
     }
 
-    public function status(?string $status)
+    public function status(string|array $status)
     {
-        $this->builder->searchWhere('status', $status);
+        $status = Utils::arrayFrom($status);
+        if ($status) {
+            $this->builder->whereIn('status', $status);
+        }
     }
 
     public function createdAt($createdAt)

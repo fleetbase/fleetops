@@ -1,4 +1,20 @@
-<Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @width="570px" @fullHeight={{true}} @onLoad={{this.setupInterface}} as |overlay|>
+<Layout::Resource::Panel
+    @resource={{this.order}}
+    @controller={{this}}
+    @actionButtons={{this.actionButtons}}
+    @headerTitle="New Order"
+    @saveTask={{this.save}}
+    @saveDisabled={{this.orderValidation.isNotValid}}
+    @onPressCancel={{transition-to "operations.orders.index"}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+    @width="560px"
+>
+    <Order::Form @resource={{this.order}} @controller={{this}} class="p-3" />
+    <Spacer @height="300px" />
+</Layout::Resource::Panel>
+
+
+{{!-- <Overlay @position="right" @noBackdrop={{true}} @isResizable={{true}} @width="570px" @fullHeight={{true}} @onLoad={{this.setupInterface}} as |overlay|>
     <Overlay::Header @overlay={{overlay}} @title="New Order" @onPressCancel={{this.transitionBack}}>
         <DropdownButton @icon="ellipsis-h" @size="sm" @iconPrefix="fas" @triggerClass="mr-2 hidden md:flex" as |dd|>
             <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
@@ -973,4 +989,4 @@
 
         <Spacer @height="300px" />
     </Overlay::Body>
-</Overlay>
+</Overlay> --}}

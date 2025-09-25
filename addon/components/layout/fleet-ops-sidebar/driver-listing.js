@@ -6,10 +6,10 @@ import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 
 export default class LayoutFleetOpsSidebarDriverListingComponent extends Component {
+    @service driverActions;
     @service store;
     @service universe;
     @service contextPanel;
-    @service driverActions;
     @service hostRouter;
     @service abilities;
     @service notifications;
@@ -29,8 +29,7 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
             label: 'Create new driver...',
             disabled: this.abilities.cannot('fleet-ops create driver'),
             onClick: () => {
-                const driver = this.store.createRecord('driver');
-                this.contextPanel.focus(driver, 'editing');
+                this.driverActions.panel.create();
             },
         },
     ];
@@ -40,14 +39,14 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
             label: 'View driver details...',
             disabled: this.abilities.cannot('fleet-ops view driver'),
             onClick: (driver) => {
-                this.contextPanel.focus(driver);
+                this.driverActions.panel.view(driver);
             },
         },
         {
             label: 'Edit driver details...',
             disabled: this.abilities.cannot('fleet-ops update driver'),
             onClick: (driver) => {
-                this.contextPanel.focus(driver, 'editing');
+                this.driverActions.panel.edit(driver);
             },
         },
         {

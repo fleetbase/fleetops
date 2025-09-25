@@ -1,10 +1,9 @@
-<EmberWormhole @to="sidebar-menu-items">
+<Layout::YieldSidebar>
     <Layout::FleetOpsSidebar @controller={{this}} @onClickCreateOrder={{this.createOrder}} @onClickSettings={{this.toggleSettings}} />
-</EmberWormhole>
+</Layout::YieldSidebar>
 
 <Layout::Section::Container>
     {{outlet}}
 </Layout::Section::Container>
 
 <SettingsWindow @isOpen={{false}} @onLoad={{this.setSettingsContext}} @onPressCancel={{this.closeSettings}} />
-<ContextPanel />

@@ -1,0 +1,5 @@
+<ContentPanel @title="Metadata" @open={{true}} @panelHeaderClass="bordered">
+    <div class="px-1.5">
+        <MetadataEditor @value={{@resource.meta}} @onChange={{fn (mut @resource.meta)}} />
+    </div>
+</ContentPanel>

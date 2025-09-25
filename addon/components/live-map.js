@@ -361,6 +361,7 @@ export default class LiveMapComponent extends Component {
 
         // set map instance
         this.leafletMap = target;
+        this.leafletMapManager.map = target;
 
         // trigger liveMap ready through universe
         this.universe.trigger('fleet-ops.live-map.leaflet_ready', event, target);

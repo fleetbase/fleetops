@@ -1,0 +1,166 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title={{t "fleet-ops.component.driver-form-panel.user-account"}} @open={{true}} @actionButtons={{this.userAccountActionButtons}}>
+        <div class="space-y-2">
+            <InputGroup @name={{t "fleet-ops.component.driver-form-panel.user-account"}} @helpText={{t "fleet-ops.component.driver-form-panel.user-account-help-text"}}>
+                <ModelSelect
+                    @modelName="user"
+                    @selectedModel={{@resource.user}}
+                    @placeholder={{t "fleet-ops.component.driver-form-panel.select-user"}}
+                    @query={{hash doesnt_have_driver=true}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.user)}}
+                    @permission="fleet-ops update-user-for driver"
+                    as |model|
+                >
+                    <div class="flex flex-row">
+                        <div class="mr-2 w-6">
+                            <Image src={{model.avatar_url}} @fallbackSrc={{config "defaultValues.userImage"}} alt={{model.name}} class="w-6 h-6 rounded-md" />
+                        </div>
+                        <div class="flex flex-col">
+                            <div class="font-semibold">{{model.name}}</div>
+                            <div class="text-xs flex flex-row items-center leading-4">
+                                <FaIcon @icon="envelope" @size="sm" class="mr-1 opacity-75" />
+                                <span>{{n-a model.email}}</span>
+                            </div>
+                            <div class="text-xs flex flex-row items-center leading-4">
+                                <FaIcon @icon="phone" @size="sm" class="mr-1 opacity-75" />
+                                <span>{{n-a model.phone}}</span>
+                            </div>
+                        </div>
+                    </div>
+                </ModelSelect>
+            </InputGroup>
+            {{#if @resource.user}}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 no-input-group-padding">
+                    <InputGroup @name={{t "fleet-ops.common.name"}} @wrapperClass="col-span-2 mb-0i">
+                        <Input @value={{@resource.user.name}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} disabled={{true}} />
+                    </InputGroup>
+                    <InputGroup @name={{t "fleet-ops.common.email"}} @wrapperClass="mb-0i">
+                        <Input @value={{@resource.user.email}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.email"}} disabled={{true}} />
+                    </InputGroup>
+                    <InputGroup @name={{t "fleet-ops.common.phone"}} @wrapperClass="mb-0i">
+                        <PhoneInput @value={{@resource.user.phone}} @onInput={{fn (mut @resource.phone)}} class="form-input w-full" disabled={{true}} />
+                    </InputGroup>
+                </div>
+            {{/if}}
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title={{t "fleet-ops.component.driver-form-panel.driver-details"}} @open={{true}}>
+        <div class="flex flex-row space-x-3 mb-3">
+            <div class="flex items-center justify-start rounded-full">
+                <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                    <InputInfo @text={{t "fleet-ops.component.driver-form-panel.upload-new-photo"}} />
+                </Attach::Tooltip>
+            </div>
+            <div>
+                <UploadButton
+                    @name={{t "fleet-ops.common.photos"}}
+                    @accept="image/*"
+                    @onFileAdded={{perform this.handlePhotoUpload}}
+                    @icon="upload"
+                    @size="xs"
+                    @buttonText="Upload image"
+                    @disabled={{cannot-write @resource}}
+                />
+                <div class="px-1">
+                    <span class="text-gray-300 dark:text-gray-600 text-xs">Supports PNGs, JPEGs and GIFs</span>
+                </div>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs no-input-group-padding">
+            <InputGroup @name={{t "fleet-ops.common.internal-id"}}>
+                <Input @value={{@resource.internal_id}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.internal-id"}} disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name={{t "fleet-ops.common.driver-license"}}>
+                <Input
+                    @value={{@resource.drivers_license_number}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "fleet-ops.common.driver-license"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "fleet-ops.component.driver-form-panel.vendor"}}>
+                <ModelSelect
+                    @modelName="vendor"
+                    @selectedModel={{@resource.vendor}}
+                    @placeholder="Select Vendor"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.vendor)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name={{t "fleet-ops.common.vehicle"}}>
+                <ModelSelect
+                    @modelName="vehicle"
+                    @selectedModel={{@resource.vehicle}}
+                    @placeholder={{t "fleet-ops.component.driver-form-panel.select-vehicle"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.vehicle)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.display_name}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name={{t "fleet-ops.common.city"}}>
+                <Input @value={{@resource.city}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.city"}} disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name={{t "fleet-ops.common.country"}}>
+                <CountrySelect
+                    class="w-full form-input form-select form-datalist"
+                    @value={{@resource.country}}
+                    @onChange={{fn (mut @resource.country)}}
+                    placeholder={{t "fleet-ops.common.country"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "fleet-ops.common.status"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{@resourceStatusOptions}}
+                        @selected={{@resource.status}}
+                        @onChange={{fn (mut @resource.status)}}
+                        @placeholder={{t "fleet-ops.common.status"}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |status|
+                    >
+                        {{smart-humanize status}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+            <InputGroup @name={{t "fleet-ops.common.coordinates"}} @wrapperClass="col-span-2">
+                <ModelCoordinatesInput @model={{@resource}} @disabled={{cannot-write @resource}} @autocomplete="location" />
+            </InputGroup>
+        </div>
+        <RegistryYield @registry="fleet-ops:component:driver:form:details" as |RegistryComponent|>
+            <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+        </RegistryYield>
+    </ContentPanel>
+
+    <RegistryYield @registry="fleet-ops:component:driver:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+
+    <ContentPanel @title={{t "fleet-ops.component.avatar-picker.avatar"}} @open={{true}}>
+        <AvatarPicker @model={{@resource}} @defaultAvatar={{config "defaultValues.driverAvatar"}} />
+    </ContentPanel>
+</div>

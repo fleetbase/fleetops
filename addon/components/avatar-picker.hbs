@@ -1,5 +1,12 @@
-<div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
-    <div class="input-group mb-2">
+<div class="flex flex-row items-start space-x-2">
+    <div class="flex flex-row justify-end">
+        <div class="border border-dashed border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-600 rounded-lg flex items-center justify-center">
+            <div class="flex items-center justify-center h-20 w-24">
+                <Image alt={{this.model.displayName}} src={{or this.model.avatar_custom_url this.model.avatar_url}} @fallbackSrc={{@defaultAvatar}} class="w-12 h-12" />
+            </div>
+        </div>
+    </div>
+    <div class="input-group">
         <InputLabel @labelText={{t "fleet-ops.component.avatar-picker.select-map-avatar"}} @helpText={{t "fleet-ops.component.avatar-picker.select-avatar-rendering"}} />
         <FetchSelect
             @wrapperClass="w-60"
@@ -12,12 +19,5 @@
         >
             {{titleize (humanize option.key)}}
         </FetchSelect>
-    </div>
-    <div class="flex flex-row justify-end">
-        {{#if this.model.avatar_custom_url}}
-            <Image alt={{this.model.displayName}} src={{this.model.avatar_custom_url}} @fallbackSrc={{@defaultAvatar}} class="w-24 h-24" />
-        {{else}}
-            <Image alt={{this.model.displayName}} src={{this.model.avatar_url}} @fallbackSrc={{@defaultAvatar}} class="w-24 h-24" />
-        {{/if}}
     </div>
 </div>

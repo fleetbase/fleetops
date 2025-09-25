@@ -1,0 +1,11 @@
+{{#if @resource.order_config}}
+    {{#each @customFields.customFieldGroups as |group|}}
+        <ContentPanel @title={{group.name}} @open={{true}} @panelHeaderClass="bordered">
+            <div class="grid grid-cols-1 lg:grid-cols-{{or group.meta.grid_size 2}} gap-2 px-1.5">
+                {{#each group.customFields as |customField|}}
+                    <CustomField @customField={{customField}} @order={{@resource}} @orderConfig={{@resource.order_config}} @onChange={{@customFields.setFieldValue}} />
+                {{/each}}
+            </div>
+        </ContentPanel>
+    {{/each}}
+{{/if}}

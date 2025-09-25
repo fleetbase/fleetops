@@ -1,6 +1,6 @@
 import { isNone } from '@ember/utils';
 
-export default function getIssueCategories(type = null, options) {
+export default function getIssueCategories(type = null, options = {}) {
     const issueCategories = {
         vehicle: ['Mechanical Problems', 'Cosmetic Damages', 'Tire Issues', 'Electronics and Instruments', 'Maintenance Alerts', 'Fuel Efficiency Issues'],
         driver: ['Behavior Concerns', 'Documentation', 'Time Management', 'Communication', 'Training Needs', 'Health and Safety Violations'],
