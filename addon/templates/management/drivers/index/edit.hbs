@@ -7,6 +7,7 @@
     @onPressCancel={{this.cancel}}
     @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <Driver::Form @resource={{@model}} @controller={{this}} class="px-4" />
+    <Driver::Form @resource={{@model}} @controller={{this}} />
+    <Spacer @height="200px" />
 </Layout::Resource::Panel>
 

@@ -1,6 +1,6 @@
 <div class="form-wrapper" ...attributes>
-    <ContentPanel @title={{t "fleet-ops.common.details"}} @open={{true}} @panelHeaderClass="bordered">
-        <div class="px-1.5">
+    <ContentPanel @title={{t "fleet-ops.common.details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div>
             <div class="flex flex-row space-x-3 mb-3">
                 <div class="flex items-center justify-start rounded-full">
                     <Image src={{@resource.photo_url}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-md shadow-sm" />
@@ -36,8 +36,8 @@
         </div>
     </ContentPanel>
 
-    <ContentPanel @title={{t "fleet-ops.component.modals.entity-form.price-title"}} @open={{true}} @panelHeaderClass="bordered">
-        <div class="grid grid-cols-1 gap-2 px-1.5">
+    <ContentPanel @title={{t "fleet-ops.component.modals.entity-form.price-title"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2">
             <InputGroup @name={{t "fleet-ops.component.modals.entity-form.price"}} @helpText={{t "fleet-ops.component.modals.entity-form.price-text"}}>
                 <MoneyInput class="w-full" @value={{@resource.price}} @currency={{@resource.currency}} @canSelectCurrency={{true}} @onCurrencyChange={{fn (mut @resource.currency)}} />
             </InputGroup>
@@ -56,8 +56,8 @@
         </div>
     </ContentPanel>
 
-    <ContentPanel @title={{t "fleet-ops.component.modals.entity-form.measurement-title"}} @open={{true}} @panelHeaderClass="bordered">
-        <div class="px-1.5">
+    <ContentPanel @title={{t "fleet-ops.component.modals.entity-form.measurement-title"}} @open={{true}} @wrapperClass="bordered-top">
+        <div>
             <div class="grid grid-cols-3 gap-2">
                 <InputGroup @name={{t "fleet-ops.component.modals.entity-form.length"}} @helpText={{t "fleet-ops.component.modals.entity-form.length-text"}}>
                     <UnitInput class="w-full" @value={{@resource.length}} @unit={{@resource.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut @resource.dimensions_unit)}} />

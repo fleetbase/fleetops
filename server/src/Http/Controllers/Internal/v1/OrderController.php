@@ -29,11 +29,11 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\Internal\BulkActionRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
-use Fleetbase\Models\CustomFieldValue;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
 use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -146,16 +146,7 @@ class OrderController extends FleetOpsController
 
                     // save custom field values
                     if (is_array($customFieldValues)) {
-                        foreach ($customFieldValues as $customFieldValue) {
-                            CustomFieldValue::create([
-                                'company_uuid'      => session('company'),
-                                'custom_field_uuid' => data_get($customFieldValue, 'custom_field_uuid'),
-                                'subject_uuid'      => $order->uuid,
-                                'subject_type'      => Utils::getMutationType($order),
-                                'value'             => data_get($customFieldValue, 'value'),
-                                'value_type'        => data_get($customFieldValue, 'value_type', 'text'),
-                            ]);
-                        }
+                        $order->syncCustomFieldValues($customFieldValues);
                     }
 
                     // if it's integrated vendor order apply to meta
@@ -192,12 +183,12 @@ class OrderController extends FleetOpsController
             $record->load(['payload', 'trackingNumber']);
 
             return ['order' => new $this->resource($record)];
-        } catch (\Exception $e) {
-            return response()->error($e->getMessage());
-        } catch (\Illuminate\Database\QueryException $e) {
-            return response()->error($e->getMessage());
+        } catch (QueryException $e) {
+            return response()->error(env('DEBUG') ? $e->getMessage() : 'Error occurred while trying to create a ' . $this->resourceSingularlName);
         } catch (FleetbaseRequestValidationException $e) {
             return response()->error($e->getErrors());
+        } catch (\Exception $e) {
+            return response()->error($e->getMessage());
         }
     }
 

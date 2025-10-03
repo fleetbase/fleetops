@@ -7,6 +7,7 @@
     @onPressCancel={{transition-to "management.vendors.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <Vendor::Form @resource={{this.vendor}} @onIntegrationCreated={{this.setIntegration}} @controller={{this}} class="px-4" />
+    <Vendor::Form @resource={{this.vendor}} @onIntegrationCreated={{this.setIntegration}} @controller={{this}} />
+    <Spacer @height="200px" />
 </Layout::Resource::Panel>
 

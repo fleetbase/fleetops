@@ -1,5 +1,5 @@
 <div class="form-wrapper" ...attributes>
-    <ContentPanel @title={{t "fleet-ops.component.contact-form-panel.contact-details"}} @open={{true}}>
+    <ContentPanel @title={{t "fleet-ops.component.contact-form-panel.contact-details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="flex flex-row space-x-3 mb-3">
             <div class="flex items-center justify-start rounded-full">
                 <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.userImage"}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
@@ -15,7 +15,7 @@
                     @icon="upload"
                     @size="xs"
                     @buttonText="Upload image"
-                    @disabled={{cannot-write @driver}}
+                    @disabled={{cannot-write @resource}}
                 />
                 <div class="px-1">
                     <span class="text-gray-300 dark:text-gray-600 text-xs">Supports PNGs, JPEGs and GIFs</span>
@@ -80,8 +80,10 @@
             </RegistryYield>
         </div>
     </ContentPanel>
-</div>
 
-<RegistryYield @registry="fleet-ops:component:contact:form" as |RegistryComponent|>
-    <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
-</RegistryYield>
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <RegistryYield @registry="fleet-ops:component:contact:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+</div>

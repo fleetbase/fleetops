@@ -46,7 +46,7 @@
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 space-y-4 pt-4">
-        <ContentPanel @title={{t "fleet-ops.component.fleet-form-panel.fleet-details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.component.fleet-form-panel.fleet-details"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#let (cannot this.savePermission) as |unauthorized|}}
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
                     <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.fleet-name"}} @value={{this.fleet.name}} @disabled={{unauthorized}} @wrapperClass="col-span-2" />

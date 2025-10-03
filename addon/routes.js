@@ -1,15 +1,6 @@
 import buildRoutes from 'ember-engines/routes';
 
 export default buildRoutes(function () {
-    this.route('settings', function () {
-        this.route('navigator-app');
-        this.route('notifications');
-        this.route('routing');
-        this.route('payments', function () {
-            this.route('index', { path: '/' });
-            this.route('onboard');
-        });
-    });
     this.route('virtual', { path: '/:section/:slug' });
     this.route('operations', { path: '/' }, function () {
         this.route('dispatch');
@@ -137,30 +128,36 @@ export default buildRoutes(function () {
     });
     this.route('connectivity', function () {
         this.route('telematics', function () {
-            this.route('new');
-            this.route('edit', { path: '/edit/:public_id' });
-            this.route('details', { path: '/:public_id' }, function () {
-                this.route('index', { path: '/' });
-                this.route('devices');
-                this.route('sensors');
-                this.route('events');
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                    this.route('devices');
+                    this.route('sensors');
+                    this.route('events');
+                });
             });
         });
 
         this.route('devices', function () {
-            this.route('new');
-            this.route('edit', { path: '/edit/:public_id' });
-            this.route('details', { path: '/:public_id' }, function () {
-                this.route('index', { path: '/' });
-                this.route('events');
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                    this.route('events');
+                });
             });
         });
 
         this.route('sensors', function () {
-            this.route('new');
-            this.route('edit', { path: '/edit/:public_id' });
-            this.route('details', { path: '/:public_id' }, function () {
-                this.route('index', { path: '/' });
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                });
             });
         });
 
@@ -172,31 +169,55 @@ export default buildRoutes(function () {
     });
     this.route('maintenance', function () {
         this.route('work-orders', function () {
-            this.route('new');
-            this.route('edit', { path: '/edit/:public_id' });
-            this.route('details', { path: '/:public_id' }, function () {
-                this.route('index', { path: '/' });
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                });
             });
         });
 
         this.route('equipment', function () {
-            this.route('new');
-            this.route('edit', { path: '/edit/:public_id' });
-            this.route('details', { path: '/:public_id' }, function () {
-                this.route('index', { path: '/' });
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                });
             });
         });
 
         this.route('parts', function () {
-            this.route('new');
-            this.route('edit', { path: '/edit/:public_id' });
-            this.route('details', { path: '/:public_id' }, function () {
-                this.route('index', { path: '/' });
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                });
             });
         });
     });
-    this.route('comms', function () {
-        this.route('chat');
-        this.route('intercom');
+    this.route('analytics', function () {
+        this.route('reports', function () {
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                    this.route('result');
+                });
+            });
+        });
+    });
+    this.route('settings', function () {
+        this.route('navigator-app');
+        this.route('notifications');
+        this.route('custom-fields');
+        this.route('routing');
+        this.route('payments', function () {
+            this.route('index', { path: '/' });
+            this.route('onboard');
+        });
     });
 });

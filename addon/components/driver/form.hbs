@@ -1,5 +1,5 @@
 <div class="form-wrapper" ...attributes>
-    <ContentPanel @title={{t "fleet-ops.component.driver-form-panel.user-account"}} @open={{true}} @actionButtons={{this.userAccountActionButtons}}>
+    <ContentPanel @title={{t "fleet-ops.component.driver-form-panel.user-account"}} @open={{true}} @actionButtons={{this.userAccountActionButtons}} @wrapperClass="bordered-top">
         <div class="space-y-2">
             <InputGroup @name={{t "fleet-ops.component.driver-form-panel.user-account"}} @helpText={{t "fleet-ops.component.driver-form-panel.user-account-help-text"}}>
                 <ModelSelect
@@ -48,7 +48,7 @@
         </div>
     </ContentPanel>
 
-    <ContentPanel @title={{t "fleet-ops.component.driver-form-panel.driver-details"}} @open={{true}}>
+    <ContentPanel @title={{t "fleet-ops.component.driver-form-panel.driver-details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="flex flex-row space-x-3 mb-3">
             <div class="flex items-center justify-start rounded-full">
                 <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
@@ -156,11 +156,13 @@
         </RegistryYield>
     </ContentPanel>
 
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
     <RegistryYield @registry="fleet-ops:component:driver:form" as |RegistryComponent|>
         <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
     </RegistryYield>
 
-    <ContentPanel @title={{t "fleet-ops.component.avatar-picker.avatar"}} @open={{true}}>
+    <ContentPanel @title={{t "fleet-ops.component.avatar-picker.avatar"}} @open={{true}} @wrapperClass="bordered-top">
         <AvatarPicker @model={{@resource}} @defaultAvatar={{config "defaultValues.driverAvatar"}} />
     </ContentPanel>
 </div>

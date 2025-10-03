@@ -1,6 +1,6 @@
 <div class="details-wrapper" ...attributes>
-    <ContentPanel @title={{t "fleet-ops.component.driver-panel.user-account"}} @open={{true}} @panelHeaderClass="bordered">
-        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100 px-1.5">
+    <ContentPanel @title={{t "fleet-ops.component.driver-panel.user-account"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
             <div class="field-info-container md:col-span-3">
                 <div class="field-name">{{t "fleet-ops.common.name"}}</div>
                 <div class="field-value">{{n-a @resource.name}}</div>
@@ -16,8 +16,8 @@
         </div>
     </ContentPanel>
 
-    <ContentPanel @title={{t "fleet-ops.component.driver-panel.driver-details"}} @open={{true}} @panelHeaderClass="bordered">
-        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100 px-1.5">
+    <ContentPanel @title={{t "fleet-ops.component.driver-panel.driver-details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
             <div class="field-info-container">
                 <div class="field-name">{{t "fleet-ops.common.id"}}</div>
                 <ClickToCopy @value={{@resource.public_id}} class="field-value">{{n-a @resource.public_id}}</ClickToCopy>
@@ -51,4 +51,6 @@
             </div>
         </div>
     </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
 </div>

@@ -7,5 +7,6 @@
     @onPressCancel={{transition-to "management.places.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <Place::Form @resource={{this.place}} @controller={{this}} class="px-4" />
+    <Place::Form @resource={{this.place}} @controller={{this}} />
+    <Spacer @height="200px" />
 </Layout::Resource::Panel>

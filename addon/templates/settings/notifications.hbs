@@ -13,7 +13,7 @@
 <Layout::Section::Body class="overflow-y-scroll h-full">
     <div class="container mx-auto h-screen">
         <div class="max-w-3xl my-10 mx-auto space-y-6">
-            <ContentPanel @title={{t "fleet-ops.settings.notifications.configure-notifications"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.settings.notifications.configure-notifications"}} @open={{true}} @wrapperClass="bordered-classic">
                 {{#each this.registry as |notification|}}
                     <InputGroup @name={{titleize notification.name}} @helpText={{notification.description}}>
                         <div class="fleetbase-model-select fleetbase-power-select ember-model-select">

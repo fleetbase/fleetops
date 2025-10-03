@@ -82,6 +82,10 @@ class FleetOps
             'actions' => ['reset-credentials-for'],
         ],
         [
+            'name'    => 'report',
+            'actions' => ['export', 'execute'],
+        ],
+        [
             'name'    => 'facilitator',
             'actions' => [],
         ],
@@ -108,6 +112,10 @@ class FleetOps
         [
             'name'    => 'issue',
             'actions' => ['export', 'import'],
+        ],
+        [
+            'name'    => 'custom-field',
+            'actions' => [],
         ],
         [
             'name'           => 'navigator-settings', // the navigator mobile app used by drivers

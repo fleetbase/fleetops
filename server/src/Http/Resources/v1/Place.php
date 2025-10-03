@@ -20,7 +20,7 @@ class Place extends FleetbaseResource
     {
         $this->loadMissing('owner');
 
-        return [
+        return $this->withCustomFields([
             'id'                    => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'uuid'                  => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'             => $this->when(Http::isInternalRequest(), $this->public_id),
@@ -52,7 +52,7 @@ class Place extends FleetbaseResource
             'eta'                   => $this->when($this->eta, $this->eta),
             'updated_at'            => $this->updated_at,
             'created_at'            => $this->created_at,
-        ];
+        ]);
     }
 
     /**

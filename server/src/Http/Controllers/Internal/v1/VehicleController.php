@@ -11,6 +11,7 @@ use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Http\Request;
 
 class VehicleController extends FleetOpsController
 {
@@ -20,6 +21,17 @@ class VehicleController extends FleetOpsController
      * @var string
      */
     public $resource = 'vehicle';
+
+    /**
+     * Handle post save transactions.
+     */
+    public function afterSave(Request $request, Vehicle $vehicle)
+    {
+        $customFieldValues = $request->array('vehicle.custom_field_values');
+        if ($customFieldValues) {
+            $vehicle->syncCustomFieldValues($customFieldValues);
+        }
+    }
 
     /**
      * Get all status options for an vehicle.

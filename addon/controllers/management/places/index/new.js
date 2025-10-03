@@ -4,15 +4,14 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
-const DEFAULT_PROPERTIES = {};
-
 export default class ManagementPlacesIndexNewController extends Controller {
+    @service placeActions;
     @service store;
     @service hostRouter;
     @service intl;
     @service notifications;
     @tracked overlay;
-    @tracked place = this.store.createRecord('place', DEFAULT_PROPERTIES);
+    @tracked place = this.placeActions.createNewInstance();
 
     @task *save(place) {
         try {
@@ -29,6 +28,6 @@ export default class ManagementPlacesIndexNewController extends Controller {
     }
 
     @action resetForm() {
-        this.place = this.store.createRecord('place', DEFAULT_PROPERTIES);
+        this.place = this.placeActions.createNewInstance();
     }
 }

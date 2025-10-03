@@ -1,11 +1,11 @@
 <div class="form-wrapper" ...attributes>
-    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.provider"}} @open={{true}}>
+    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.provider"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="flex flex-row items-center">
             <img src={{@resource.provider_options.logo}} alt={{@resource.provider_options.code}} class="w-12 h-12" width="48" height="48" />
             <h3 class="text-base text-black dark:text-white ml-4">{{@resource.provider_options.name}}</h3>
         </div>
     </ContentPanel>
-    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.credentials"}} @open={{true}}>
+    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.credentials"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="space-y-2">
             {{#each @resource.provider_options.credential_params as |param|}}
                 <InputGroup
@@ -21,7 +21,7 @@
             {{/each}}
         </div>
     </ContentPanel>
-    <ContentPanel @title={{t "fleet-ops.common.options"}} @open={{true}}>
+    <ContentPanel @title={{t "fleet-ops.common.options"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="space-y-2">
             {{#each @resource.provider_options.option_params as |param|}}
                 {{#if param.options}}
@@ -63,7 +63,7 @@
             </InputGroup>
         </div>
     </ContentPanel>
-    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.advanced-options"}} @open={{false}}>
+    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.advanced-options"}} @open={{false}} @wrapperClass="bordered-top">
         <div class="space-y-2">
             <InputGroup
                 @name={{t "fleet-ops.component.vendor-form-panel.create-form.host"}}

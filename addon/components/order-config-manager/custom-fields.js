@@ -20,6 +20,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
     @service notifications;
     @service modalsManager;
     @service contextPanel;
+    @service customFieldsRegistry;
     @service intl;
     @service abilities;
 
@@ -79,6 +80,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      */
     @action createNewCustomField(group) {
         const customField = this.store.createRecord('custom-field', {
+            label: 'Untitled Field',
             category_uuid: group.id,
             subject_uuid: this.config.id,
             subject_type: 'order-config',
@@ -97,18 +99,9 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      */
     @action editCustomField(customField) {
         contextComponentCallback(this, 'onContextChanged', customField);
-        this.contextPanel.focus(customField, 'editing', {
-            args: {
-                customField,
-                onCustomFieldSaved: () => {
-                    this.loadCustomFields.perform();
-                    this.contextPanel.clear();
-                    contextComponentCallback(this, 'onContextChanged', null);
-                },
-                onPressCancel: () => {
-                    this.contextPanel.clear();
-                    contextComponentCallback(this, 'onContextChanged', null);
-                },
+        this.customFieldsRegistry.panel.edit(customField, {
+            onFinish: () => {
+                this.loadCustomFields.perform();
             },
         });
     }
@@ -148,7 +141,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
             for: 'custom_field_group',
         });
 
-        this.modalsManager.show('modals/new-custom-field-group', {
+        this.modalsManager.show('modals/custom-field-group-form', {
             title: this.intl.t('fleet-ops.component.modals.new-custom-field-group.modal-title'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
@@ -203,8 +196,8 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      * @task
      */
     @task *loadCustomFields() {
-        this.groups = yield this.store.query('category', { owner_uuid: this.config.id, for: 'custom_field_group' });
-        this.customFields = yield this.store.query('custom-field', { subject_uuid: this.config.id });
+        this.groups = yield this.store.query('category', { owner_uuid: this.config.id, for: 'custom_field_group', sort: '-created_at' });
+        this.customFields = yield this.store.query('custom-field', { subject_uuid: this.config.id, sort: '-created_at' });
         this.groupCustomFields();
         this.initializeContext();
     }

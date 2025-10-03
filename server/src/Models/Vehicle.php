@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\Money;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Support\VehicleData;
@@ -124,11 +125,21 @@ class Vehicle extends Model
         'trim',
         'transmission',
         'measurement_system',
+        'body_type',
+        'body_sub_type',
         'usage_type',
         'ownership_type',
         'type',
         'class',
         'plate_number',
+        'call_sign',
+        'serial_number',
+        'financing_status',
+        'currency',
+        'insurance_value',
+        'depreciation_rate',
+        'current_value',
+        'acquisition_cost',
         'vin',
         'vin_data',
         'specs',
@@ -138,6 +149,8 @@ class Vehicle extends Model
         'status',
         'online',
         'slug',
+        'purchased_at',
+        'lease_expires_at',
     ];
 
     /**
@@ -179,12 +192,17 @@ class Vehicle extends Model
      * @var array
      */
     protected $casts = [
+        'current_value' => Money::class,
+        'insurance_value' => Money::class,
+        'acquisition_cost' => Money::class,
         'location'   => Point::class,
         'meta'       => Json::class,
         'telematics' => Json::class,
         'specs'      => Json::class,
         'vin_data'   => Json::class,
         'online'     => 'boolean',
+        'purchased_at'     => 'datetime',
+        'lease_expires_at'     => 'datetime',
     ];
 
     public function photo(): BelongsTo
@@ -273,7 +291,7 @@ class Vehicle extends Model
         $nameSegments = [];
 
         // Populate the nameSegments array with the values of the attributes
-        $keys = ['year', 'make', 'model', 'trim', 'plate_number'];
+        $keys = ['year', 'make', 'model', 'trim'];
         foreach ($keys as $key) {
             if (!empty($this->{$key})) {
                 $nameSegments[] = $this->{$key};
@@ -596,6 +614,8 @@ class Vehicle extends Model
             $query->where('public_id', $vehicleName)
                     ->orWhere('plate_number', $vehicleName)
                     ->orWhere('vin', $vehicleName)
+                    ->orWhere('serial_number', $vehicleName)
+                    ->orWhere('call_sign', $vehicleName)
                     ->orWhereRaw("CONCAT(make, ' ', model, ' ', year) LIKE ?", ["%{$vehicleName}%"])
                     ->orWhereRaw("CONCAT(year, ' ', make, ' ', model) LIKE ?", ["%{$vehicleName}%"]);
         })->first();

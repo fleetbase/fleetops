@@ -16,6 +16,7 @@ use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Http\Request;
 
 class FleetController extends FleetOpsController
 {
@@ -25,6 +26,17 @@ class FleetController extends FleetOpsController
      * @var string
      */
     public $resource = 'fleet';
+
+    /**
+     * Handle post save transactions.
+     */
+    public function afterSave(Request $request, Fleet $fleet)
+    {
+        $customFieldValues = $request->array('fleet.custom_field_values');
+        if ($customFieldValues) {
+            $fleet->syncCustomFieldValues($customFieldValues);
+        }
+    }
 
     /**
      * Query callback when querying record.

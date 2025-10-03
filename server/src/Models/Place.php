@@ -12,6 +12,7 @@ use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -32,6 +33,7 @@ class Place extends Model
     use TracksApiCredential;
     use SpatialTrait;
     use HasMetaAttributes;
+    use HasCustomFields;
 
     /**
      * The database table used by the model.

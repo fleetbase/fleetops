@@ -44,7 +44,7 @@ export default class OperationsOrdersIndexNewController extends Controller {
                     icon: 'map-pin',
                     text: this.intl.t('fleet-ops.operations.orders.index.new.create-new-place'),
                     fn: this.placeActions.modal.create,
-                }
+                },
             ],
         },
     ];
@@ -54,7 +54,6 @@ export default class OperationsOrdersIndexNewController extends Controller {
 
         // Display loader
         this.loader.showLoader('body', { loadingMessage: 'Creating Order...' });
-        console.log('[order]', order);
 
         try {
             // Trigger creating event
@@ -62,7 +61,6 @@ export default class OperationsOrdersIndexNewController extends Controller {
 
             // Save custom field values
             const { created: customFieldValues } = yield order.cfManager.saveTo(order);
-            console.log('[customFieldValues]', customFieldValues);
             order.custom_field_values.pushObjects(customFieldValues);
 
             // Save order

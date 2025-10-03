@@ -1,5 +1,5 @@
-<ContentPanel @title={{t "fleet-ops.operations.orders.index.new.route"}} @open={{true}} @panelHeaderClass="bordered">
-    <div class="flex flex-row items-center justify-between mb-4 px-1.5">
+<ContentPanel @title={{t "fleet-ops.operations.orders.index.new.route"}} @open={{true}} @wrapperClass="bordered-top">
+    <div class="flex flex-row items-center justify-between mb-4">
         <div class="flex">
             <Toggle @isToggled={{this.multipleWaypoints}} @onToggle={{this.toggleWaypoints}} @label={{t "fleet-ops.operations.orders.index.new.route-label"}} />
         </div>
@@ -141,7 +141,7 @@
             </div>
         </DragSortList>
     {{else}}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100 px-1.5">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
             <InputGroup>
                 <div class="flex items-center justify-between">
                     <label>{{t "fleet-ops.operations.orders.index.new.pickup"}}</label>

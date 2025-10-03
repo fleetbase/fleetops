@@ -77,6 +77,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
     public function register()
     {
         $this->app->register(CoreServiceProvider::class);
+        $this->app->register(ReportSchemaServiceProvider::class);
     }
 
     /**

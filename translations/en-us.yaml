@@ -328,6 +328,9 @@ fleet-ops:
         equipment: Equipment
         parts: Parts
         work-orders: Work Orders
+        reports: Reports
+        analytics: Analytics
+        custom-fields: Custom Fields
     live-map-drawer:
       driver-listing:
         location: Location

@@ -6,7 +6,6 @@ import { equal } from '@ember/object/computed';
 
 export default class CustomFieldValueComponent extends Component {
     @service fetch;
-
     @tracked selectedPort;
     @tracked selectedVessel;
 

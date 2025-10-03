@@ -73,7 +73,7 @@
     </Overlay::Header>
 
     <Overlay::Body @wrapperClass="new-order-overlay-body">
-        <ContentPanel @title="Details" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title="Details" @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
                 <div class="input-group">
                     <InputLabel @labelText={{t "fleet-ops.operations.orders.index.new.order-type"}} @helpText={{t "fleet-ops.operations.orders.index.new.order-type-help-text"}} />
@@ -314,7 +314,7 @@
 
         {{#if this.orderConfig}}
             {{#each this.customFieldGroups as |group|}}
-                <ContentPanel @title={{group.name}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <ContentPanel @title={{group.name}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                     <div class="grid grid-cols-{{or group.meta.grid_size 1}} gap-2">
                         {{#each group.customFields as |customField|}}
                             <CustomField @customField={{customField}} @order={{this.order}} @orderConfig={{this.orderConfig}} @onChange={{this.setCustomFieldValue}} />
@@ -324,7 +324,7 @@
             {{/each}}
         {{/if}}
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.route"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.route"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <div class="flex flex-row justify-between mb-4">
                 <div class="flex">
                     <Toggle @isToggled={{this.isMultipleDropoffOrder}} @onToggle={{this.toggleMultiDropOrder}} @label={{t "fleet-ops.operations.orders.index.new.route-label"}} />
@@ -610,7 +610,7 @@
             <RegistryComponent @order={{this.order}} @controller={{this}} />
         </RegistryYield>
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.payload-entities"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.payload-entities"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if this.isNotCsvImportedOrder}}
                 <div class="flex items-center mb-4">
                     <Button
@@ -760,7 +760,7 @@
             {{/if}}
         </ContentPanel>
 
-        <ContentPanel @title={{t "fleet-ops.common.service"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.common.service"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <Toggle
                 @label={{t "fleet-ops.operations.orders.index.new.apply-service-rate"}}
                 @wrapperClass="justify-start-i mb-4"
@@ -774,7 +774,7 @@
                 <ContentPanel
                     @title={{t "fleet-ops.operations.orders.index.new.service-quotes"}}
                     @open={{true}}
-                    @pad={{true}}
+                   
                     @wrapperClass="mt-6"
                     @panelBodyClass="bg-white dark:bg-gray-800"
                 >
@@ -877,7 +877,7 @@
             {{/if}}
         </ContentPanel>
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.notes-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.notes-title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <Textarea
                 @value={{this.order.notes}}
                 class="form-input w-full"
@@ -887,7 +887,7 @@
             />
         </ContentPanel>
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.documents-panel-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.documents-panel-title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <div class="space-y-4">
                 {{#if this.isUploading}}
                     <div
@@ -967,7 +967,7 @@
         <ContentPanel
             @title={{t "fleet-ops.operations.orders.index.new.metadata"}}
             @open={{this.order.meta.length}}
-            @pad={{true}}
+           
             @panelBodyClass="bg-white dark:bg-gray-800"
             @actionButtons={{this.metadataButtons}}
         >

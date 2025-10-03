@@ -206,6 +206,17 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             },
         ];
 
+        const analyticsItems = [
+            {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.reports',
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.reports'),
+                icon: 'file-import',
+                route: 'analytics.reports',
+                permission: 'iam list report',
+                visible: this.abilities.can('fleet-ops see report'),
+            },
+        ];
+
         const settingsItems = [
             {
                 intl: 'fleet-ops.component.layout.fleet-ops-sidebar.navigator-app',
@@ -239,6 +250,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 permission: 'fleet-ops view routing-settings',
                 visible: this.abilities.can('fleet-ops see routing-settings'),
             },
+            {
+                intl: 'fleet-ops.component.layout.fleet-ops-sidebar.custom-fields',
+                title: this.intl.t('fleet-ops.component.layout.fleet-ops-sidebar.custom-fields'),
+                icon: 'rectangle-list',
+                route: 'settings.custom-fields',
+                permission: 'fleet-ops view custom-field',
+                visible: this.abilities.can('fleet-ops see custom-field'),
+            },
         ];
 
         const createPanel = (intl, routePrefix, items = [], options = {}) => ({
@@ -250,11 +269,12 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         });
 
         this.menuPanels = this.removeEmptyMenuPanels([
-            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.operations', 'operations', operationsItems),
-            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.resources', 'management', resourcesItems),
-            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.maintenance', 'maintenance', maintenanceItems, { open: false }),
-            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.connectivity', 'connectivity', connectivityItems, { open: false }),
-            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.settings', 'settings', settingsItems, { open: false }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.operations', 'operations', operationsItems, { open: true }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.resources', 'management', resourcesItems, { open: true }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.maintenance', 'maintenance', maintenanceItems, { open: true }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.connectivity', 'connectivity', connectivityItems, { open: true }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.analytics', 'analytics', analyticsItems, { open: true }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.settings', 'settings', settingsItems, { open: true }),
         ]);
     }
 

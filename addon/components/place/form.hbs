@@ -1,5 +1,5 @@
 <div class="form-wrapper" ...attributes>
-    <ContentPanel @title="Details" @open={{true}}>
+    <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-3 gap-2 text-xs dark:text-gray-100 no-input-group-padding">
             <InputGroup @name={{t "fleet-ops.common.name"}} @wrapperClass="col-span-3">
                 <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} disabled={{cannot-write @resource}} />
@@ -48,7 +48,9 @@
         </div>
     </ContentPanel>
 
-    <ContentPanel @title={{t "fleet-ops.component.avatar-picker.avatar"}} @open={{true}}>
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <ContentPanel @title={{t "fleet-ops.component.avatar-picker.avatar"}} @open={{true}} @wrapperClass="bordered-top">
         <AvatarPicker @model={{@resource}} @defaultAvatar={{config "defaultValues.placeAvatar"}} @disabled={{cannot-write @resource}} />
     </ContentPanel>
 

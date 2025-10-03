@@ -6,6 +6,7 @@ export default class ManagementVehiclesIndexController extends Controller {
     @service contextPanel;
     @service vehicleActions;
     @service intl;
+    @service appCache;
     @tracked queryParams = [
         'page',
         'limit',
@@ -42,7 +43,33 @@ export default class ManagementVehiclesIndexController extends Controller {
     @tracked display_name;
     @tracked table;
     @tracked statusOptions = [];
+    @tracked layout = this.appCache.get('fleetops:vehicles:layout', 'table');
     @tracked actionButtons = [
+        {
+            component: 'dropdown-button',
+            icon: 'display',
+            size: 'xs',
+            items: [
+                {
+                    label: 'Table View',
+                    icon: 'table-list',
+                    onClick: () => {
+                        this.layout = 'table';
+                        this.appCache.set('fleetops:vehicles:layout', 'table');
+                    },
+                },
+                {
+                    label: 'Grid View',
+                    icon: 'grip',
+                    onClick: () => {
+                        this.layout = 'grid';
+                        this.appCache.set('fleetops:vehicles:layout', 'grid');
+                    },
+                },
+            ],
+            renderInPlace: true,
+            helpText: 'Change the layout',
+        },
         {
             icon: 'refresh',
             onClick: this.vehicleActions.refresh,

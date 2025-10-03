@@ -26,6 +26,17 @@ class PlaceController extends FleetOpsController
     public $resource = 'place';
 
     /**
+     * Handle post save transactions.
+     */
+    public function afterSave(Request $request, Place $place)
+    {
+        $customFieldValues = $request->array('place.custom_field_values');
+        if ($customFieldValues) {
+            $place->syncCustomFieldValues($customFieldValues);
+        }
+    }
+
+    /**
      * Quick search places for selection.
      *
      * @return \Illuminate\Http\Response

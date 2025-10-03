@@ -4,7 +4,9 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\ServiceAreaExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Models\ServiceArea;
 use Fleetbase\Http\Requests\ExportRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -16,6 +18,17 @@ class ServiceAreaController extends FleetOpsController
      * @var string
      */
     public $resource = 'service_area';
+
+    /**
+     * Handle post save transactions.
+     */
+    public function afterSave(Request $request, ServiceArea $serviceArea)
+    {
+        $customFieldValues = $request->array('service_area.custom_field_values');
+        if ($customFieldValues) {
+            $serviceArea->syncCustomFieldValues($customFieldValues);
+        }
+    }
 
     /**
      * Export the fleets to excel or csv.

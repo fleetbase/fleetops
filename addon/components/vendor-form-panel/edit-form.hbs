@@ -1,13 +1,13 @@
 {{#let (cannot "fleet-ops update vendor") as |unauthorized|}}
     <div class="space-y-4">
         {{#if this.isIntegratedVendor}}
-            <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.provider"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.provider"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="flex flex-row items-center">
                     <img src={{this.vendor.provider_settings.logo}} alt={{this.vendor.provider_settings.code}} class="w-12 h-12" width="48" height="48" />
                     <h3 class="text-base text-black dark:text-white ml-4">{{this.vendor.provider_settings.name}}</h3>
                 </div>
             </ContentPanel>
-            <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.credentials"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.credentials"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 {{#if this.isEditingCredentials}}
                     {{#each this.vendor.provider_settings.credential_params as |param|}}
                         <InputGroup
@@ -49,7 +49,7 @@
                     </div>
                 {{/if}}
             </ContentPanel>
-            <ContentPanel @title="Options" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title="Options" @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 {{#each this.vendor.provider_settings.option_params as |param|}}
                     {{#if param.options}}
                         <InputGroup @name={{smart-humanize param.key}}>
@@ -88,7 +88,7 @@
                     />
                 </InputGroup>
             </ContentPanel>
-            <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.advanced-options"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.advanced-options"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div>
                     <a href="javascript:;" class="text-blue-600 underline text-sm" disabled={{unauthorized}} {{on "click" this.toggleAdvancedOptions}}>{{if
                             this.showAdvancedOptions
@@ -120,7 +120,7 @@
                 {{/if}}
             </ContentPanel>
         {{else}}
-            <ContentPanel @title="Details" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title="Details" @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
                     <InputGroup
                         @name={{t "fleet-ops.common.name"}}

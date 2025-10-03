@@ -8,6 +8,7 @@
     @onPressCancel={{transition-to "management.contacts.customers"}}
     @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <Customer::Form @resource={{this.customer}} @controller={{this}} class="px-4" />
+    <Customer::Form @resource={{this.customer}} @controller={{this}} />
+    <Spacer @height="200px" />
 </Layout::Resource::Panel>
 

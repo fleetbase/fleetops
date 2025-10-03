@@ -7,6 +7,7 @@
     @onPressCancel={{transition-to "management.fleets.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <Fleet::Form @resource={{this.fleet}} @controller={{this}} class="px-4" />
+    <Fleet::Form @resource={{this.fleet}} @controller={{this}} />
+    <Spacer @height="200px" />
 </Layout::Resource::Panel>
 

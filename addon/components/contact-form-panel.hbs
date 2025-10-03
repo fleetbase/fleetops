@@ -94,7 +94,7 @@
 
     <Overlay::Body @wrapperClass="new-service-rate-overlay-body px-4 pt-4 space-y-4">
         {{#let (cannot this.savePermission) as |unauthorized|}}
-            <ContentPanel @title={{t "fleet-ops.component.contact-form-panel.contact-details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.component.contact-form-panel.contact-details"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="grid grid-cols-2 gap-4 text-xs dark:text-gray-100 no-input-group-padding">
                     <InputGroup @name={{t "fleet-ops.common.name"}}>
                         <Input @value={{this.contact.name}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} disabled={{unauthorized}} />

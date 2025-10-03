@@ -22,12 +22,12 @@
 
     <Overlay::Body @wrapperClass="px-4 pt-4">
         <div class="space-y-4">
-            <ContentPanel @title={{t "fleet-ops.component.custom-entity-issue-form-panel.details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.component.custom-entity-issue-form-panel.details"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <InputGroup @name={{t "fleet-ops.component.custom-entity-issue-form-panel.name"}} @value={{this.customEntity.name}} />
                 <InputGroup @name={{t "fleet-ops.component.custom-entity-issue-form-panel.description"}} @value={{this.customEntity.description}} />
                 <InputGroup @name={{t "fleet-ops.component.custom-entity-issue-form-panel.type"}} @value={{this.customEntity.type}} {{on "input" this.setCustomEntityType}} />
             </ContentPanel>
-            <ContentPanel @title={{t "fleet-ops.component.custom-entity-issue-form-panel.entity-image"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.component.custom-entity-issue-form-panel.entity-image"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="w-32 flex flex-col items-center">
                     <Image src={{this.customEntity.photo_url}} alt={{this.customEntity.name}} height="128" width="128" class="h-32 w-32 rounded-md" />
                     {{#if (and this.customEntity.name this.customEntity.description)}}
@@ -35,7 +35,7 @@
                     {{/if}}
                 </div>
             </ContentPanel>
-            <ContentPanel @title={{t "fleet-ops.component.custom-entity-issue-form-panel.measurements"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.component.custom-entity-issue-form-panel.measurements"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="grid grid-cols-2 gap-4">
                     <InputGroup
                         @name={{t "fleet-ops.component.custom-entity-issue-form-panel.length"}}

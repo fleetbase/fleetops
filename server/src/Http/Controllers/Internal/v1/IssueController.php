@@ -5,10 +5,12 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 use Fleetbase\FleetOps\Exports\IssueExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\IssueImport;
+use Fleetbase\FleetOps\Models\Issue;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Http\Request;
 
 class IssueController extends FleetOpsController
 {
@@ -18,6 +20,17 @@ class IssueController extends FleetOpsController
      * @var string
      */
     public $resource = 'issue';
+
+    /**
+     * Handle post save transactions.
+     */
+    public function afterSave(Request $request, Issue $issue)
+    {
+        $customFieldValues = $request->array('issue.custom_field_values');
+        if ($customFieldValues) {
+            $issue->syncCustomFieldValues($customFieldValues);
+        }
+    }
 
     /**
      * Export the issue to excel or csv.

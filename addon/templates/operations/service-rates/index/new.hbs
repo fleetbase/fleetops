@@ -132,7 +132,7 @@
         </div>
 
         {{#if this.serviceRate.isFixedMeter}}
-            <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.fixed-meter"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.fixed-meter"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <InfoBlock
                     class="mb-5"
                     @text={{t "fleet-ops.operations.service-rates.index.new.fixed-meter-text"}}
@@ -180,7 +180,7 @@
                 </div>
             </ContentPanel>
         {{else if this.serviceRate.isPerDrop}}
-            <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.per-drop-off-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.per-drop-off-title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <InfoBlock
                     class="mb-5"
                     @text={{t "fleet-ops.operations.service-rates.index.new.per-drop-off-text"}}
@@ -246,7 +246,7 @@
                 </div>
             </ContentPanel>
         {{else if this.serviceRate.isPerMeter}}
-            <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.per-meter"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.per-meter"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <InfoBlock
                     class="mb-5"
                     @text={{t "fleet-ops.operations.service-rates.index.new.per-meter-text"}}
@@ -294,7 +294,7 @@
                 </div>
             </ContentPanel>
         {{else if this.serviceRate.isAlgorithm}}
-            <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.custom-algorithm-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.custom-algorithm-title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <InfoBlock class="mb-5">
                     {{t "fleet-ops.operations.service-rates.index.new.custom-algorithm-info-message"}}
                     {{t "fleet-ops.operations.service-rates.index.new.custom-algorithm-info-second-message"}}
@@ -336,7 +336,7 @@
         {{/if}}
 
         {{#if this.serviceRate.isParcelService}}
-            <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.percel-fee-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.percel-fee-title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="space-y-2">
                     {{#each this.parcelFees as |parcelFee|}}
                         <div class="dark:text-gray-100">
@@ -427,7 +427,7 @@
             </ContentPanel>
         {{/if}}
 
-        <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.cash-delivery-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.cash-delivery-title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <Toggle
                 @wrapperClass="justify-start-i mb-5"
                 @label={{t "fleet-ops.operations.service-rates.index.new.cash-delivery-label"}}
@@ -487,7 +487,7 @@
             {{/if}}
         </ContentPanel>
 
-        <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.peak-hours-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.peak-hours-title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <Toggle
                 @wrapperClass="justify-start-i mb-5"
                 @label={{t "fleet-ops.operations.service-rates.index.new.peak-hours-label"}}
@@ -566,7 +566,7 @@
             {{/if}}
         </ContentPanel>
 
-        <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.restrict-service-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.restrict-service-title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <div class="input-group">
                 <InputLabel
                     @labelText={{t "fleet-ops.operations.service-rates.index.new.service-area-label"}}

@@ -10,6 +10,7 @@ use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\LaravelMysqlSpatial\Types\Polygon;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
@@ -24,6 +25,7 @@ class Zone extends Model
     use TracksApiCredential;
     use SpatialTrait;
     use HasApiModelBehavior;
+    use HasCustomFields;
 
     /**
      * The type of public Id to generate.

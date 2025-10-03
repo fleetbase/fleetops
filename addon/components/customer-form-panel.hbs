@@ -97,7 +97,7 @@
             <ContentPanel
                 @title={{t "fleet-ops.component.customer-form-panel.user-account"}}
                 @open={{true}}
-                @pad={{true}}
+               
                 @panelBodyClass="bg-white dark:bg-gray-800"
                 @actionButtons={{this.userAccountActionButtons}}
             >
@@ -151,7 +151,7 @@
                 {{/if}}
             </ContentPanel>
 
-            <ContentPanel @title={{t "fleet-ops.component.customer-form-panel.customer-details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.component.customer-form-panel.customer-details"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="grid grid-cols-2 gap-4 text-xs dark:text-gray-100 no-input-group-padding">
                     <InputGroup @name={{t "fleet-ops.common.name"}}>
                         <Input @value={{this.customer.name}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.name"}} disabled={{unauthorized}} />

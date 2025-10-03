@@ -1,0 +1,29 @@
+<Layout::Resource::Card ...attributes as |Card|>
+    <Card.header class={{@headerClass}}>
+        <div class="font-semibold">{{or @resource.name @resource.yearMakeModel}}</div>
+        <div class="text-gray-300 dark:text-gray-500 text-sm">{{or @resource.plate_number @resource.vin @resource.serial_number @resource.call_sign}}</div>
+        {{#if (has-block "header")}}
+            {{yield to="header"}}
+        {{/if}}
+    </Card.header>
+    <Card.body class={{@bodyClass}}>
+        <Image src={{@resource.photo_url}} class="card-img-lg" />
+        {{#if (has-block "body")}}
+            {{yield to="body"}}
+        {{/if}}
+    </Card.body>
+    <Card.footer class={{@footerClass}}>
+        <div class="flex flex-row items-center space-x-1">
+            <Button @icon="eye" @size="xs" @onClick={{fn this.vehicleActions.transition.view @resource}} />
+            <Button @icon="pencil" @size="xs" @onClick={{fn this.vehicleActions.transition.edit @resource}} />
+            <Button @icon="trash" @size="xs" @type="danger" @onClick={{fn this.vehicleActions.delete @resource}} />
+        </div>
+        {{#if (has-block "footer")}}
+            {{yield to="footer"}}
+        {{/if}}
+        <div class="mt-1">
+            <div class="text-gray-300 dark:text-gray-500 text-xs">Last Modified: {{@resource.updatedAt}}</div>
+        </div>
+    </Card.footer>
+</Layout::Resource::Card>
+{{yield}}

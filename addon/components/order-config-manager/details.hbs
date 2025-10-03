@@ -1,5 +1,5 @@
 <div class="px-6 py-2 space-y-4">
-    <ContentPanel @title={{t "fleet-ops.component.order-config-manager.details.details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-900">
+    <ContentPanel @title={{t "fleet-ops.component.order-config-manager.details.details"}} @open={{true}} @wrapperClass="bordered-classic">
         <InputGroup
             @name={{t "fleet-ops.component.order-config-manager.details.name"}}
             @value={{@config.name}}
@@ -32,7 +32,7 @@
     </ContentPanel>
 
     {{#unless @config.core_service}}
-        <ContentPanel @title={{t "fleet-ops.component.order-config-manager.details.controls"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-900">
+        <ContentPanel @title={{t "fleet-ops.component.order-config-manager.details.controls"}} @open={{true}}>
             <div class="flex flex-row items-center py-2 space-x-4">
                 <Button
                     @type="primary"

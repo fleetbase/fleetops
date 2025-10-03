@@ -1,6 +1,6 @@
 <div class="form-wrapper" ...attributes>
     {{#if @resource.isNew}}
-        <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.title"}} @open={{true}}>
+        <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.title"}} @open={{true}} @wrapperClass="bordered-top">
             <div class="space-y-2">
                 <InputGroup @name={{t "fleet-ops.component.vendor-form-panel.create-form.select-vendor-type"}}>
                     <FleetOps::OptionSelect @key="vendorTypes" @onSelect={{this.handleTypeSelection}} @disabled={{cannot-write @resource}} />
@@ -29,7 +29,7 @@
     {{#if (and @resource.isIntegratedVendor this.integration)}}
         <IntegratedVendor::Form @resource={{this.integration}} />
     {{else if (not @resource.isIntegratedVendor)}}
-        <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.vendor-details"}} @open={{true}}>
+        <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.vendor-details"}} @open={{true}} @wrapperClass="bordered-top">
             <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
                 <InputGroup
                     @name={{t "fleet-ops.common.name"}}
@@ -141,6 +141,8 @@
                 </RegistryYield>
             </div>
         </ContentPanel>
+
+        <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
 
         <RegistryYield @registry="fleet-ops:component:vendor:form" as |RegistryComponent|>
             <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />

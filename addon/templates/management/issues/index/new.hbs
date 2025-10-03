@@ -7,6 +7,7 @@
     @onPressCancel={{transition-to "management.issues.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <Issue::Form @resource={{this.issue}} @controller={{this}} class="px-4" />
+    <Issue::Form @resource={{this.issue}} @controller={{this}} />
+    <Spacer @height="200px" />
 </Layout::Resource::Panel>
 

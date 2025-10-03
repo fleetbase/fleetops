@@ -20,8 +20,8 @@ class Contact extends FleetbaseResource
     public function toArray($request)
     {
         $this->loadMissing(['place', 'places']);
-        
-        return [
+
+        return $this->withCustomFields([
             'id'                            => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'customer_id'                   => $this->when($this->type === 'customer' && Http::isPublicRequest(), Str::replace('contact', 'customer', $this->public_id)),
             'uuid'                          => $this->when(Http::isInternalRequest(), $this->uuid),
@@ -48,7 +48,7 @@ class Contact extends FleetbaseResource
             'slug'                          => $this->slug ?? null,
             'updated_at'                    => $this->updated_at,
             'created_at'                    => $this->created_at,
-        ];
+        ]);
     }
 
     /**

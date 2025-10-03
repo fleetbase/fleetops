@@ -474,6 +474,7 @@ class ServiceRate extends Model
 
             if ($place instanceof Place) {
                 $point = $place->getLocationAsPoint();
+
                 // Conver to brick gis point
                 return \Brick\Geo\Point::fromText(sprintf('POINT (%F %F)', $point->getLng(), $point->getLat()), 4326);
             }

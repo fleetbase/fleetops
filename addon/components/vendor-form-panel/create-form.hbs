@@ -1,6 +1,6 @@
 {{#let (cannot "fleet-ops create vendor") as |unauthorized|}}
     <div class="space-y-4">
-        <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <InputGroup @name={{t "fleet-ops.component.vendor-form-panel.create-form.select-vendor-type"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
@@ -40,13 +40,13 @@
         {{#if this.selectedVendorType.value}}
             {{#if (eq this.selectedVendorType.value "integrated-vendor")}}
                 {{#if this.selectedIntegratedVendor}}
-                    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.provider"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.provider"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                         <div class="flex flex-row items-center">
                             <img src={{this.selectedIntegratedVendor.logo}} alt={{this.selectedIntegratedVendor.code}} class="w-12 h-12" width="48" height="48" />
                             <h3 class="text-base text-black dark:text-white ml-4">{{this.selectedIntegratedVendor.name}}</h3>
                         </div>
                     </ContentPanel>
-                    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.credentials"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.credentials"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                         {{#each this.selectedIntegratedVendor.credential_params as |param|}}
                             <InputGroup
                                 @name={{smart-humanize param.key}}
@@ -60,7 +60,7 @@
                             />
                         {{/each}}
                     </ContentPanel>
-                    <ContentPanel @title={{t "fleet-ops.common.options"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <ContentPanel @title={{t "fleet-ops.common.options"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                         {{#each this.selectedIntegratedVendor.option_params as |param|}}
                             {{#if param.options}}
                                 <InputGroup @name={{smart-humanize param.key}}>
@@ -99,7 +99,7 @@
                             />
                         </InputGroup>
                     </ContentPanel>
-                    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.advanced-options"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.advanced-options"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                         <div>
                             <a href="javascript:;" class="text-blue-600 underline text-sm" disabled={{unauthorized}} {{on "click" this.toggleAdvancedOptions}}>{{if
                                     this.showAdvancedOptions
@@ -136,7 +136,7 @@
                     </div>
                 {{/if}}
             {{else}}
-                <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.vendor-details"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.vendor-details"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
                         <InputGroup
                             @name={{t "fleet-ops.common.name"}}

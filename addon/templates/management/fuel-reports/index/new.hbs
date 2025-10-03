@@ -7,6 +7,7 @@
     @onPressCancel={{transition-to "management.fuel-reports.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <FuelReport::Form @resource={{this.fuelReport}} @controller={{this}} class="px-4" />
+    <FuelReport::Form @resource={{this.fuelReport}} @controller={{this}} />
+    <Spacer @height="200px" />
 </Layout::Resource::Panel>
 

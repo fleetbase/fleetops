@@ -191,7 +191,7 @@
             {{/if}}
         </ContentPanel>
 
-        <ContentPanel @title="Details" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.detailPanelButtons}}>
+        <ContentPanel @title="Details" @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @actionButtons={{this.detailPanelButtons}}>
             <div class="flex mb-4 space-x-2">
                 {{#if @model.dispatched}}
                     <Badge @hideStatusDot={{false}} @status="Dispatched" />
@@ -389,7 +389,7 @@
 
         {{#if this.customFieldGroups}}
             {{#each this.customFieldGroups as |group|}}
-                <ContentPanel @title={{group.name}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                <ContentPanel @title={{group.name}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                     <div class="grid grid-cols-{{or group.meta.grid_size 1}} gap-2">
                         {{#each group.customFields as |customField|}}
                             <div class="field-info-container">
@@ -452,7 +452,7 @@
                 @prefixTitleRight={{@model.tracking}}
                 @isLoading={{this.loadOrderRelations.isRunning}}
                 @open={{true}}
-                @pad={{true}}
+               
                 @panelBodyClass="bg-white dark:bg-gray-800"
             >
                 {{#if @model.tracker_data}}
@@ -497,7 +497,7 @@
             </ContentPanel>
         {{/if}}
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if this.proofs}}
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
                     {{#each this.proofs as |proof|}}
@@ -531,7 +531,7 @@
         <ContentPanel
             @title={{t "fleet-ops.operations.orders.index.view.notes-title"}}
             @open={{true}}
-            @pad={{true}}
+           
             @panelBodyClass="bg-white dark:bg-gray-800"
             @actionButtons={{this.notesPanelButtons}}
         >
@@ -563,7 +563,7 @@
             <ContentPanel
                 @title={{concat @model.facilitator.name (t "fleet-ops.operations.orders.index.view.order-details-title")}}
                 @open={{true}}
-                @pad={{true}}
+               
                 @panelBodyClass="bg-white dark:bg-gray-800"
             >
                 <IntegratedOrderDetails @integratedVendor={{@model.facilitator}} @details={{@model.meta.integrated_vendor_order}} />
@@ -573,7 +573,7 @@
         <ContentPanel
             @title={{t "fleet-ops.operations.orders.index.view.route-panel-title"}}
             @open={{true}}
-            @pad={{true}}
+           
             @panelBodyClass="bg-white dark:bg-gray-800"
             @actionButtons={{this.routePanelButtons}}
         >
@@ -609,7 +609,7 @@
             {{/each}}
         {{/if}}
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.payload"}} @open={{gt @model.payload.entities.length 0}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.payload"}} @open={{gt @model.payload.entities.length 0}} @panelBodyClass="bg-white dark:bg-gray-800">
             {{#if this.isMultiDropOrder}}
                 <div class="space-y-2">
                     {{#each this.entitiesByDestination as |group|}}
@@ -790,7 +790,7 @@
             {{/if}}
         </ContentPanel>
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.documents-panel-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.documents-panel-title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <div class="space-y-4">
                 {{#if this.isUploading}}
                     <div
@@ -867,7 +867,7 @@
             </div>
         </ContentPanel>
 
-        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.comments-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @wrapperClass="mb-20">
+        <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.comments-title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800" @wrapperClass="mb-20">
             <CommentThread @subject={{@model}} @subjectType="fleet-ops:order" />
         </ContentPanel>
 

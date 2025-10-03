@@ -18,8 +18,8 @@ class Vendor extends FleetbaseResource
     public function toArray($request)
     {
         $this->loadMissing(['place', 'places']);
-        
-        return [
+
+        return $this->withCustomFields([
             'id'                         => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'uuid'                       => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'                  => $this->when(Http::isInternalRequest(), $this->public_id),
@@ -47,7 +47,7 @@ class Vendor extends FleetbaseResource
             'updated_at'                 => $this->updated_at,
             'created_at'                 => $this->created_at,
             'website_url'                => $this->website_url,
-        ];
+        ]);
     }
 
     /**

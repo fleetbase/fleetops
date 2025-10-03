@@ -240,7 +240,9 @@ class Vendor extends Model
      */
     public function setTypeAttribute(?string $type)
     {
-        if (!$type && isset($this->type)) return;
+        if (!$type && isset($this->type)) {
+            return;
+        }
         $this->attributes['type'] = $type ?? 'vendor';
     }
 
@@ -251,7 +253,9 @@ class Vendor extends Model
      */
     public function setStatusAttribute(?string $status = 'active')
     {
-        if (!$status && isset($this->status)) return;
+        if (!$status && isset($this->status)) {
+            return;
+        }
         $this->attributes['status'] = $status ?? 'active';
     }
 

@@ -20,6 +20,7 @@ use Fleetbase\Models\Invite;
 use Fleetbase\Models\User;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Support\Auth;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -196,16 +197,20 @@ class DriverController extends FleetOpsController
                 },
                 function ($request, &$driver) {
                     $driver->load(['user']);
+                    $customFieldValues = $request->array('driver.custom_field_values');
+                    if ($customFieldValues) {
+                        $driver->syncCustomFieldValues($customFieldValues);
+                    }
                 }
             );
 
             return ['driver' => new $this->resource($record)];
-        } catch (\Exception $e) {
-            return response()->error($e->getMessage());
-        } catch (\Illuminate\Database\QueryException $e) {
-            return response()->error($e->getMessage());
+        } catch (QueryException $e) {
+            return response()->error(env('DEBUG') ? $e->getMessage() : 'Error occurred while trying to create a ' . $this->resourceSingularlName);
         } catch (FleetbaseRequestValidationException $e) {
             return response()->error($e->getErrors());
+        } catch (\Exception $e) {
+            return response()->error($e->getMessage());
         }
     }
 
@@ -261,16 +266,20 @@ class DriverController extends FleetOpsController
                     }
 
                     $driver->setHidden(['user']);
+                    $customFieldValues = $request->array('driver.custom_field_values');
+                    if ($customFieldValues) {
+                        $driver->syncCustomFieldValues($customFieldValues);
+                    }
                 }
             );
 
             return ['driver' => new $this->resource($record)];
-        } catch (\Exception $e) {
-            return response()->error($e->getMessage());
-        } catch (\Illuminate\Database\QueryException $e) {
-            return response()->error($e->getMessage());
+        } catch (QueryException $e) {
+            return response()->error(env('DEBUG') ? $e->getMessage() : 'Error occurred while trying to update a ' . $this->resourceSingularlName);
         } catch (FleetbaseRequestValidationException $e) {
             return response()->error($e->getErrors());
+        } catch (\Exception $e) {
+            return response()->error($e->getMessage());
         }
     }
 

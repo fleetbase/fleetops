@@ -1,5 +1,5 @@
 <div class="form-wrapper" ...attributes>
-    <ContentPanel @title={{t "fleet-ops.component.customer-form-panel.user-account"}} @open={{true}} @actionButtons={{this.userAccountActionButtons}}>
+    <ContentPanel @title={{t "fleet-ops.component.customer-form-panel.user-account"}} @open={{true}} @actionButtons={{this.userAccountActionButtons}} @wrapperClass="bordered-top">
         <div class="space-y-2">
             <InputGroup @name={{t "fleet-ops.component.customer-form-panel.user-account"}} @helpText={{t "fleet-ops.component.customer-form-panel.user-account-help-text"}}>
                 <ModelSelect
@@ -48,10 +48,17 @@
         </div>
     </ContentPanel>
 
-    <ContentPanel @title={{t "fleet-ops.component.customer-form-panel.customer-details"}} @open={{true}}>
+    <ContentPanel @title={{t "fleet-ops.component.customer-form-panel.customer-details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="flex flex-row space-x-3 mb-3">
             <div class="flex items-center justify-start rounded-full">
-                <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
+                <Image
+                    src={{@resource.photo_url}}
+                    @fallbackSrc={{config "defaultValues.contactImage"}}
+                    alt={{@resource.name}}
+                    height="48"
+                    width="48"
+                    class="h-14 w-14 rounded-full shadow-sm"
+                />
                 <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                     <InputInfo @text={{t "fleet-ops.component.driver-form-panel.upload-new-photo"}} />
                 </Attach::Tooltip>
@@ -128,8 +135,10 @@
             </RegistryYield>
         </div>
     </ContentPanel>
-</div>
 
-<RegistryYield @registry="fleet-ops:component:customer:form" as |RegistryComponent|>
-    <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
-</RegistryYield>
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <RegistryYield @registry="fleet-ops:component:customer:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+</div>

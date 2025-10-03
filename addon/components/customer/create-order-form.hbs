@@ -11,7 +11,7 @@
         />
     </Overlay::Header>
     <Overlay::Body @wrapperClass="new-order-overlay-body">
-        <ContentPanel @title={{t "fleet-ops.common.type"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "fleet-ops.common.type"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <div class="input-group">
                 <InputLabel @labelText={{t "fleet-ops.operations.orders.index.new.order-type"}} @helpText="Select the type of order you want to create." />
                 <Select
@@ -30,7 +30,7 @@
         {{#if this.loadCustomerOrderConfig.isIdle}}
             {{#if this.orderConfig}}
                 {{#each this.customFieldGroups as |group|}}
-                    <ContentPanel @title={{group.name}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+                    <ContentPanel @title={{group.name}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                         <div class="grid grid-cols-{{or group.meta.grid_size 1}} gap-2">
                             {{#each group.customFields as |customField|}}
                                 <CustomField @customField={{customField}} @order={{this.order}} @orderConfig={{this.orderConfig}} @onChange={{this.setCustomFieldValue}} />
@@ -40,7 +40,7 @@
                 {{/each}}
             {{/if}}
 
-            <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.route"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.route"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="lg:col-span-2">
                     <div class="flex flex-row justify-between mb-4">
                         <div class="flex">
@@ -209,7 +209,7 @@
                 </div>
             </ContentPanel>
 
-            <ContentPanel @title="Details" @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title="Details" @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
                     <div class="lg:col-span-2">
                         <InputGroup>
@@ -242,7 +242,7 @@
                 </div>
             </ContentPanel>
 
-            <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.payload-entities"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.payload-entities"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="flex items-center mb-4">
                     <Button
                         @wrapperClass="mr-2"
@@ -298,7 +298,7 @@
                 </div>
             </ContentPanel>
 
-            <ContentPanel @title={{t "fleet-ops.common.service"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.common.service"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 {{#if this.getQuotes.isRunning}}
                     <div class="flex items-center justify-center py-5">
                         <Spinner
@@ -373,7 +373,7 @@
                 {{/if}}
             </ContentPanel>
 
-            <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.notes-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.operations.orders.index.new.notes-title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <Textarea
                     @value={{this.order.notes}}
                     class="form-input w-full"
@@ -383,7 +383,7 @@
                 />
             </ContentPanel>
 
-            <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.documents-panel-title"}} @open={{true}} @pad={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "fleet-ops.operations.orders.index.view.documents-panel-title"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 <div class="space-y-4">
                     {{#if this.isUploading}}
                         <div
