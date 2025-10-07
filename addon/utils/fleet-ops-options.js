@@ -346,6 +346,63 @@ export const podOptions = [
     { label: 'SMS', value: 'sms', description: 'Proof of delivery sent and confirmed via SMS verification.' },
 ];
 
+export const serviceRateCalculationMethods = [
+    { label: 'Per Meter', value: 'per_meter', description: 'Calculate cost based on the number of meters traveled.' },
+    { label: 'Fixed Rate', value: 'fixed_meter', description: 'Charge a fixed rate per meter regardless of distance.' },
+    { label: 'Parcel Rate', value: 'parcel', description: 'Charge a dynamic rate based on parcel/payload weight and dimensions.' },
+    { label: 'Per Drop-off', value: 'per_drop', description: 'Cost applied per drop-off point.' },
+    { label: 'Algorithm', value: 'algo', description: 'Cost calculated dynamically using algorithmic logic.' },
+];
+
+export const serviceRateCodCalculationMethods = [
+    { label: 'Flat Fee', value: 'flat', description: 'A fixed fee applied to all COD transactions.' },
+    { label: 'Percentage', value: 'percentage', description: 'Fee calculated as a percentage of the COD amount.' },
+];
+
+export const serviceRatePeakHourCalculationMethods = [
+    { label: 'Flat Fee', value: 'flat', description: 'A fixed surcharge applied during peak hours.' },
+    { label: 'Percentage', value: 'percentage', description: 'A surcharge calculated as a percentage of the base fare during peak hours.' },
+];
+
+export const distanceUnits = [
+    { label: 'Meter', value: 'm', description: 'Distances measured in meters.' },
+    { label: 'Kilometer', value: 'km', description: 'Distances measured in kilometers.' },
+    { label: 'Feet', value: 'ft', description: 'Distances measured in feet.' },
+    { label: 'Yard', value: 'yd', description: 'Distances measured in yards.' },
+    { label: 'Mile', value: 'mi', description: 'Distances measured in miles.' },
+];
+
+export const longDistanceUnits = [
+    { label: 'Kilometer', value: 'km', description: 'Distances measured in kilometers.' },
+    { label: 'Mile', value: 'mi', description: 'Distances measured in miles.' },
+];
+
+export const dimensionUnits = [
+    { label: 'Centimeters', value: 'cm', description: 'Measurements in centimeters.' },
+    { label: 'Inches', value: 'in', description: 'Measurements in inches.' },
+    { label: 'Feet', value: 'ft', description: 'Measurements in feet.' },
+    { label: 'Millimeters', value: 'mm', description: 'Measurements in millimeters.' },
+    { label: 'Meters', value: 'm', description: 'Measurements in meters.' },
+    { label: 'Yards', value: 'yd', description: 'Measurements in yards.' },
+];
+
+export const weightUnits = [
+    { label: 'Grams', value: 'g', description: 'Weight in grams.' },
+    { label: 'Ounces', value: 'oz', description: 'Weight in ounces.' },
+    { label: 'Pounds', value: 'lb', description: 'Weight in pounds.' },
+    { label: 'Kilograms', value: 'kg', description: 'Weight in kilograms.' },
+];
+
+export const serviceAreaTypes = [
+    { label: 'Neighborhood', value: 'neighborhood', description: 'A small, localized area within a city, typically residential or community-focused.' },
+    { label: 'City', value: 'city', description: 'An urban area with its own municipal government and defined boundaries.' },
+    { label: 'State', value: 'state', description: 'A major administrative division within a country, often with its own governing authority.' },
+    { label: 'Province', value: 'province', description: 'A territorial division within a country, similar to a state, common in non-U.S. regions.' },
+    { label: 'Region', value: 'region', description: 'A larger geographic area that may include multiple cities, states, or provinces.' },
+    { label: 'Country', value: 'country', description: 'A sovereign nation with defined borders and central governance.' },
+    { label: 'Continent', value: 'continent', description: 'A global landmass encompassing multiple countries (e.g., Asia, Europe, Africa).' },
+];
+
 export default function fleetOpsOptions(key) {
     const allOptions = {
         driverTypes,
@@ -369,6 +426,14 @@ export default function fleetOpsOptions(key) {
         placeStatuses,
         routeProfileOptions,
         podOptions,
+        serviceRateCalculationMethods,
+        serviceRateCodCalculationMethods,
+        serviceRatePeakHourCalculationMethods,
+        distanceUnits,
+        longDistanceUnits,
+        dimensionUnits,
+        weightUnits,
+        serviceAreaTypes,
     };
 
     return allOptions[key] ?? [];

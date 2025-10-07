@@ -5,8 +5,6 @@ export default class OrderValidationService extends Service {
     @service orderCreation;
 
     get isValid() {
-        console.log('this.orderCreation', this.orderCreation);
-        // const { order, cfManager } = this.orderCreation.getContext();
         const order = this.orderCreation?.context?.order;
         const cfManager = this.orderCreation?.context?.cfManager;
         return this.validate(order, cfManager);

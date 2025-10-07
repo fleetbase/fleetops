@@ -2,13 +2,12 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { later } from '@ember/runloop';
+import { next } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 
 export default class LayoutFleetOpsSidebarFleetListingComponent extends Component {
     @service store;
     @service universe;
-    @service contextPanel;
     @service vehicleActions;
     @service hostRouter;
     @service abilities;
@@ -95,20 +94,12 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         const liveMap = this.universe.get('component:fleet-ops:live-map');
 
         if (liveMap) {
-            if (liveMap.contextPanel) {
-                liveMap.contextPanel.clear();
-            }
-
             liveMap.showAll();
             liveMap.focusLayerByRecord(vehicle, 16, {
                 onAfterFocusWithRecord: function () {
-                    later(
-                        this,
-                        () => {
-                            liveMap.onVehicleClicked(vehicle);
-                        },
-                        600 * 2
-                    );
+                    next(this, () => {
+                        liveMap.onVehicleClicked(vehicle);
+                    });
                 },
             });
         }

@@ -31,8 +31,8 @@
             <DateTimeInput
                 class="form-input"
                 @value={{@resource.scheduled_at}}
-                @minDate={{format-date (now) "yyyy-MM-dd"}}
-                @minTime={{format-date (now) "HH:mm"}}
+                @minDate={{format-date-fns (now) "yyyy-MM-dd"}}
+                @minTime={{format-date-fns (now) "HH:mm"}}
                 @onUpdate={{fn (mut @resource.scheduled_at)}}
                 @disabled={{or @resource.dispatched (cannot-write @resource)}}
             />

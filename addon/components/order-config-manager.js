@@ -104,23 +104,28 @@ export default class OrderConfigManagerComponent extends Component {
      * @generator
      */
     @task *loadOrderConfigs(options = {}) {
-        this.configs = yield this.store.findAll('order-config').then(Array.from);
+        try {
+            const configs = yield this.store.findAll('order-config').then(Array.from);
+            let currentConfig;
+            if (isArray(configs) && configs.length > 0) {
+                currentConfig = configs.find((c) => c.id === this.args.orderConfig);
+                if (!currentConfig) {
+                    currentConfig = configs.find((c) => c.key === 'transport') ?? configs[0];
+                }
 
-        let currentConfig;
-        if (isArray(this.configs) && this.configs.length > 0) {
-            currentConfig = this.configs.find((_) => _.key === 'transport');
-            if (!currentConfig) {
-                currentConfig = this.configs[0];
+                this.selectConfig(currentConfig);
             }
 
-            this.selectConfig(currentConfig);
-        }
+            if (typeof options.onAfter === 'function') {
+                options.onAfter(configs, currentConfig);
+            }
+            this.configs = configs;
+            this.ready = true;
 
-        if (typeof options.onAfter === 'function') {
-            options.onAfter(this.configs, currentConfig);
+            return configs;
+        } catch (err) {
+            this.notifications.serverError(err);
         }
-
-        this.ready = true;
     }
 
     /**
@@ -282,10 +287,6 @@ export default class OrderConfigManagerComponent extends Component {
      */
     @action onEdit() {
         const isActionOverrided = contextComponentCallback(this, 'onEdit');
-
-        if (!isActionOverrided) {
-            this.contextPanel.clear();
-        }
     }
 
     /**

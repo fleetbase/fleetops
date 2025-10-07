@@ -1,10 +1,10 @@
 <MapContainer::Topbar class="next-topbar-{{this.layout}}">
     <MapContainer::ViewSwitch>
         <FaIcon @icon="layer-group" class="mr-2 text-gray-400 dark:text-gray-600" />
-        <button type="button" id="ops-map-view-button" class="{{if this.isMapLayout 'active'}}" {{on "click" (fn this.setLayoutMode "map")}}>{{t
+        <button type="button" id="ops-map-view-button" class="{{if (eq this.layout "map") 'active'}}" {{on "click" (fn this.changeLayout "map")}}>{{t
                 "fleet-ops.operations.orders.index.map"
             }}</button>
-        <button type="button" id="ops-table-view-button" class="{{if this.isTableLayout 'active'}} flex flex-row items-center relative" {{on "click" (fn this.setLayoutMode "table")}}>
+        <button type="button" id="ops-table-view-button" class="{{if (eq this.layout "table") 'active'}} flex flex-row items-center relative" {{on "click" (fn this.changeLayout "table")}}>
             <div class="mr-1.5">{{t "fleet-ops.operations.orders.index.table"}}</div>
             <Badge
                 class="flex items-center justify-center -mr-4"
@@ -13,12 +13,19 @@
                 @status="info"
             >{{@model.meta.total}}</Badge>
         </button>
-        {{!-- <button type="button" id="ops-kanban-view-button" class="{{if this.isKanbanView 'active'}}" {{on "click" (fn this.setLayoutMode "kanban")}}>Board</button> --}}
+        <button type="button" id="ops-kanban-view-button" class="{{if (eq this.layout "kanban") 'active'}}" {{on "click" (fn this.changeLayout "kanban")}}>Board</button>
     </MapContainer::ViewSwitch>
 </MapContainer::Topbar>
 
-{{#if this.isMapLayout}}
-    <MapContainer @layout={{this.layout}} @onReady={{this.onMapContainerReady}}>
+{{#if (eq this.layout "map")}}
+    <Map as |Map|>
+        <Map.Container>
+            <Map.Toolbar />
+            <Map.Search />
+            <Map.LeafletLiveMap />
+        </Map.Container>
+    </Map>
+    {{!-- <MapContainer @layout={{this.layout}} @onReady={{this.onMapContainerReady}}>
         <GlobalSearch @visible={{this.isSearchVisible}} @onPressOrder={{this.viewOrder}} />
         <MapContainer::Toolbar
             @activeOrdersCount={{this.activeOrdersCount}}
@@ -42,7 +49,7 @@
             @onPressCancelOrders={{this.bulkCancelOrders}}
             @onPressDeleteOrders={{this.bulkDeleteOrders}}
             @onMouseEnterOrder={{this.previewOrderRoute}}
-            @onMouseLeaveOrder={{this.restoreDefaultLiveMap}}
+            @onMouseLeaveOrder={{this.leafletMapManager.liveMap.restoreDefaultLiveMap}}
         />
         <LiveMap
             id="leafletMap"
@@ -51,7 +58,6 @@
             @lng={{103.8198}}
             @zoom={{12}}
             @zoomControl={{false}}
-            @onLoad={{this.setMapReference}}
             @onDrawerReady={{this.setDrawerContext}}
             @isDrawerMinimized={{not this.drawerOpen}}
             @onDrawerResizeEnd={{this.onDrawerResizeEnd}}
@@ -60,10 +66,10 @@
             @darkMode={{eq this.theme.activeTheme "dark"}}
             {{set-container-dimensions}}
         />
-    </MapContainer>
+    </MapContainer> --}}
 {{/if}}
 
-{{#if this.isTableLayout}}
+{{#if (eq this.layout "table")}}
     <Layout::Resource::Tabular
         @resource="order"
         @title={{t "fleet-ops.common.orders"}}
@@ -88,7 +94,7 @@
     />
 {{/if}}
 
-{{#if this.isKanbanView}}
+{{#if (eq this.layout "kanban")}}
     <Layout::Section::Header @title={{t "fleet-ops.common.orders"}} @onSearch={{perform this.search}}>
         <Button @icon="cogs" @text={{t "fleet-ops.common.config"}} class="mr-2" @onClick={{fn (transition-to "operations.orders.index.config")}} />
         <FiltersPicker

@@ -5,19 +5,14 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { format } from 'date-fns';
 
-const DEFAULT_PROPERTIES = { title: `Issue reported on ${format(new Date(), 'dd MMM yy, HH:mm')}`, status: 'pending', priority: 'low', type: 'operational' };
-
 export default class ManagementIssuesIndexNewController extends Controller {
-    @service store;
+    @service issueActions;
     @service hostRouter;
     @service intl;
     @service currentUser;
     @service notifications;
     @tracked overlay;
-    @tracked issue = this.store.createRecord('issue', {
-        reporter: this.currentUser.user,
-        ...DEFAULT_PROPERTIES,
-    });
+    @tracked issue = this.issueActions.createNewInstance({ reporter: this.currentUser.user });
 
     @task *save(issue) {
         try {
@@ -34,9 +29,6 @@ export default class ManagementIssuesIndexNewController extends Controller {
     }
 
     @action resetForm() {
-        this.issue = this.store.createRecord('issue', {
-            reporter: this.currentUser.user,
-            ...DEFAULT_PROPERTIES,
-        });
+        this.issue = this.issueActions.createNewInstance({ reporter: this.currentUser.user });
     }
 }

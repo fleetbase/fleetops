@@ -3,7 +3,7 @@
         <ContentPanel @title={{group.name}} @open={{true}} @wrapperClass="bordered-top">
             <div class="grid grid-cols-1 lg:grid-cols-{{or group.meta.grid_size 2}} gap-2">
                 {{#each group.customFields as |customField|}}
-                    <CustomField @customField={{customField}} @order={{@resource}} @orderConfig={{@resource.order_config}} @onChange={{@customFields.setFieldValue}} />
+                    <CustomField::Input @customField={{customField}} @subject={{@resource.order_config}} @onChange={{@customFields.setFieldValue}} />
                 {{/each}}
             </div>
         </ContentPanel>

@@ -33,7 +33,8 @@ export default class LiveMapComponent extends Component {
     @service abilities;
     @service movementTracker;
     @service crud;
-    @service contextPanel;
+    @service driverActions;
+    @service vehicleActions;
     @service leafletMapManager;
     @service leafletContextmenuManager;
     @service leafletRoutingControl;
@@ -361,7 +362,7 @@ export default class LiveMapComponent extends Component {
 
         // set map instance
         this.leafletMap = target;
-        this.leafletMapManager.map = target;
+        this.leafletMapManager.setMap(target);
 
         // trigger liveMap ready through universe
         this.universe.trigger('fleet-ops.live-map.leaflet_ready', event, target);
@@ -1047,15 +1048,12 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @action onDriverClicked(driver) {
-        this.contextPanel.clear();
-        this.contextPanel.focus(driver, 'viewing', {
-            args: {
-                width: '450px',
-                onOpen: () => {
-                    this.leafletMap.once('moveend', () => {
-                        this.leafletMap.panBy([200, 0]);
-                    });
-                },
+        this.driverActions.panel.edit(driver, {
+            width: '450px',
+            onOpen: () => {
+                this.leafletMap.once('moveend', () => {
+                    this.leafletMap.panBy([200, 0]);
+                });
             },
         });
     }
@@ -1105,15 +1103,12 @@ export default class LiveMapComponent extends Component {
      * @memberof LiveMapComponent
      */
     @action onVehicleClicked(vehicle) {
-        this.contextPanel.clear();
-        this.contextPanel.focus(vehicle, 'viewing', {
-            args: {
-                width: '450px',
-                onOpen: () => {
-                    this.leafletMap.once('moveend', () => {
-                        this.leafletMap.panBy([200, 0]);
-                    });
-                },
+        this.vehicleActions.panel.edit(driver, {
+            width: '450px',
+            onOpen: () => {
+                this.leafletMap.once('moveend', () => {
+                    this.leafletMap.panBy([200, 0]);
+                });
             },
         });
     }
@@ -1628,19 +1623,19 @@ export default class LiveMapComponent extends Component {
             },
             {
                 text: this.intl.t('fleet-ops.component.live-map.view-driver', { driverName: driver.name }),
-                callback: () => this.contextPanel.focus(driver),
+                callback: () => this.driverActions.panel.view(driver),
             },
             {
                 text: this.intl.t('fleet-ops.component.live-map.edit-driver', { driverName: driver.name }),
-                callback: () => this.contextPanel.focus(driver, 'editing'),
+                callback: () => this.driverActions.panel.edit(driver),
             },
             {
                 text: this.intl.t('fleet-ops.component.live-map.delete-driver', { driverName: driver.name }),
-                callback: () => this.crud.delete(driver),
+                callback: () => this.driverActions.delete(driver),
             },
             {
                 text: this.intl.t('fleet-ops.component.live-map.view-vehicle-for', { driverName: driver.name }),
-                callback: () => this.contextPanel.focus(driver.vehicle),
+                callback: () => this.vehicleActions.panel.view(driver.vehicle),
             },
         ];
 
@@ -1689,15 +1684,15 @@ export default class LiveMapComponent extends Component {
             },
             {
                 text: this.intl.t('fleet-ops.component.live-map.view-vehicle', { vehicleName: vehicle.displayName }),
-                callback: () => this.contextPanel.focus(vehicle),
+                callback: () => this.vehicleActions.panel.view(vehicle),
             },
             {
                 text: this.intl.t('fleet-ops.component.live-map.edit-vehicle', { vehicleName: vehicle.displayName }),
-                callback: () => this.contextPanel.focus(vehicle, 'editing'),
+                callback: () => this.vehicleActions.panel.edit(vehicle),
             },
             {
                 text: this.intl.t('fleet-ops.component.live-map.delete-vehicle', { vehicleName: vehicle.displayName }),
-                callback: () => this.crud.delete(vehicle),
+                callback: () => this.vehicleActions.delete(vehicle),
             },
         ];
 

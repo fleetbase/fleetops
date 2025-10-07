@@ -29,7 +29,7 @@
                             <div class="next-dd-menu-seperator"></div>
                             {{#each-in @waypointActions as |actionId action|}}
                                 <div class="px-1">
-                                    <a href="javascript:;" class="next-dd-item" disabled={{cannot "fleet-ops view order"}} {{on "click" (fn action.fn place dd)}}>
+                                    <a href="javascript:;" class="next-dd-item" disabled={{cannot "fleet-ops view order"}} {{on "click" (dropdown-fn dd action.fn place)}}>
                                         {{action.label}}
                                     </a>
                                 </div>

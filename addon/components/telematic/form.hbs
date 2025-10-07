@@ -1,1 +1,84 @@
-{{yield}}
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title="Telematic Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <InputGroup @name="Name" @wrapperClass="col-span-2">
+                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder="Name" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Provider">
+                <Input @value={{@resource.provider}} @type="text" class="w-full form-input" placeholder="Provider" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Model">
+                <Input @value={{@resource.model}} @type="text" class="w-full form-input" placeholder="Model" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Serial Number">
+                <Input @value={{@resource.serial_number}} @type="text" class="w-full form-input" placeholder="Serial Number" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Firmware Version">
+                <Input @value={{@resource.firmware_version}} @type="text" class="w-full form-input" placeholder="Firmware Version" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="IMEI">
+                <Input @value={{@resource.imei}} @type="text" class="w-full form-input" placeholder="IMEI" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="ICCID">
+                <Input @value={{@resource.iccid}} @type="text" class="w-full form-input" placeholder="ICCID" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="IMSI">
+                <Input @value={{@resource.imsi}} @type="text" class="w-full form-input" placeholder="IMSI" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="MSISDN">
+                <Input @value={{@resource.msisdn}} @type="text" class="w-full form-input" placeholder="MSISDN" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Status">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.statusOptions}}
+                        @selected={{@resource.status}}
+                        @onChange={{fn (mut @resource.status)}}
+                        @placeholder="Select Status"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |status|
+                    >
+                        {{smart-humanize status}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name="Warranty">
+                <ModelSelect
+                    @modelName="warranty"
+                    @selectedModel={{@resource.warranty}}
+                    @placeholder="Select Warranty"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.warranty)}}
+                    @onChangeId={{fn (mut @resource.warranty_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.policy_number}} - {{model.provider}}
+                </ModelSelect>
+            </InputGroup>
+
+            <RegistryYield @registry="fleet-ops:component:telematic:form:details" as |RegistryComponent|>
+                <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+            </RegistryYield>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <RegistryYield @registry="fleet-ops:component:telematic:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+</div>

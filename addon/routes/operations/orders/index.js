@@ -5,6 +5,7 @@ import { action } from '@ember/object';
 
 export default class OperationsOrdersIndexRoute extends Route {
     @service store;
+    @service leafletMapManager;
 
     @tracked queryParams = {
         page: { refreshModel: true },
@@ -37,11 +38,17 @@ export default class OperationsOrdersIndexRoute extends Route {
     };
 
     @action willTransition(transition) {
-        const shouldReset = typeof transition.to.name === 'string' && !transition.to.name.includes('operations.orders');
+        const NS = 'operations.orders';
+        const toName = transition.to?.name ?? '';
+        const fromName = transition.from?.name ?? '';
+        const wasInNS = fromName === NS || fromName.startsWith(`${NS}.`);
+        const goingOut = !(toName === NS || toName.startsWith(`${NS}.`));
 
-        if (this.controller && shouldReset) {
-            this.controller.resetView(transition);
+        if (wasInNS && goingOut) {
+            this.leafletMapManager.livemap('hideAll');
         }
+
+        return true;
     }
 
     model(params) {

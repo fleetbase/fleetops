@@ -4,15 +4,13 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
-const DEFAULT_PROPERTIES = { status: 'active' };
-
 export default class ManagementDriversIndexNewController extends Controller {
-    @service store;
+    @service driverActions;
     @service hostRouter;
     @service intl;
     @service notifications;
     @tracked overlay;
-    @tracked driver = this.store.createRecord('driver', DEFAULT_PROPERTIES);
+    @tracked driver = this.driverActions.createNewInstance();
 
     @task *save(driver) {
         try {
@@ -29,6 +27,6 @@ export default class ManagementDriversIndexNewController extends Controller {
     }
 
     @action resetForm() {
-        this.driver = this.store.createRecord('driver', DEFAULT_PROPERTIES);
+        this.driver = this.driverActions.createNewInstance();
     }
 }

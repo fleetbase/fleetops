@@ -8,9 +8,9 @@ use Fleetbase\FleetOps\Imports\IssueImport;
 use Fleetbase\FleetOps\Models\Issue;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
-use Illuminate\Http\Request;
 
 class IssueController extends FleetOpsController
 {

@@ -59,6 +59,11 @@ class OrderController extends FleetOpsController
             $order->loadMissing('payload');
             $order->payload->updateWaypoints($waypoints);
         }
+
+        $customFieldValues = $request->array('order.custom_field_values');
+        if ($customFieldValues) {
+            $order->syncCustomFieldValues($customFieldValues);
+        }
     }
 
     /**
@@ -159,19 +164,19 @@ class OrderController extends FleetOpsController
                         );
                     }
 
+                    // dispatch if flagged true
+                    $order->firstDispatchWithActivity();
+
+                    // set driving distance and time
+                    $order->setPreliminaryDistanceAndTime();
+
+                    // if service quote attached purchase
+                    $order->purchaseServiceQuote($serviceQuote);
+
                     // Run background processes on queue
-                    dispatch(function () use ($order, $serviceQuote): void {
+                    dispatch(function () use ($order): void {
                         // notify driver if assigned
                         $order->notifyDriverAssigned();
-
-                        // set driving distance and time
-                        $order->setPreliminaryDistanceAndTime();
-
-                        // if service quote attached purchase
-                        $order->purchaseServiceQuote($serviceQuote);
-
-                        // dispatch if flagged true
-                        $order->firstDispatchWithActivity();
 
                         // Trigger order created event
                         event(new OrderReady($order));
@@ -531,7 +536,7 @@ class OrderController extends FleetOpsController
         /**
          * @var Order
          */
-        $order = Order::select(['uuid', 'driver_assigned_uuid', 'order_config_uuid', 'adhoc', 'dispatched', 'dispatched_at'])->where('uuid', $request->input('order'))->withoutGlobalScopes()->first();
+        $order = Order::findById($request->input('order'), ['orderConfig', 'driverAssigned']);
         if (!$order) {
             return response()->error('No order found to dispatch.');
         }
@@ -652,14 +657,7 @@ class OrderController extends FleetOpsController
      */
     public function updateActivity(string $id, Request $request)
     {
-        $order = Order::withoutGlobalScopes()
-            ->where('uuid', $id)
-            ->with(['driverAssigned'])
-            ->whereNull('deleted_at')
-            ->orWhere('public_id', $id)
-            ->with(['payload.entities'])
-            ->first();
-
+        $order = Order::findById($id, ['driverAssigned', 'payload.entities']);
         if (!$order) {
             return response()->error('No order found.');
         }
@@ -676,7 +674,7 @@ class OrderController extends FleetOpsController
                 return response()->error('No driver assigned for order to dispatch to.');
             }
 
-            $order->dispatch();
+            $order->dispatchWithActivity();
 
             return response()->json(['status' => 'dispatched']);
         }
@@ -716,22 +714,13 @@ class OrderController extends FleetOpsController
      */
     public function nextActivity(string $id, Request $request)
     {
-        $waypointId = $request->input('waypoint');
-
         try {
-            $order = Order::findRecordOrFail($id, ['payload']);
-        } catch (ModelNotFoundException $exception) {
+            $order = Order::findByIdOrFail($id);
+        } catch (ModelNotFoundException $e) {
             return response()->error('No order found.');
         }
 
-        // Get waypoint record if available
-        $waypoint = null;
-        if ($waypointId) {
-            $waypoint = Waypoint::where('payload_uuid', $order->payload_uuid)->whereHas('place', function ($query) use ($waypointId) {
-                $query->where('public_id', $waypointId);
-            })->first();
-        }
-
+        $waypoint   = $request->filled('waypoint') ? Waypoint::findByPlace($request->input('waypoint'), $order) : null;
         $activities = $order->config()->nextActivity($waypoint);
 
         // If activity is to complete order add proof of delivery properties if required
@@ -759,11 +748,7 @@ class OrderController extends FleetOpsController
      */
     public function trackerInfo(string $id)
     {
-        $order = Order::withoutGlobalScopes()
-            ->where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->first();
-
+        $order = Order::findById($id);
         if (!$order) {
             return response()->error('No order found.');
         }
@@ -775,11 +760,7 @@ class OrderController extends FleetOpsController
 
     public function waypointEtas(string $id)
     {
-        $order = Order::withoutGlobalScopes()
-            ->where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->first();
-
+        $order = Order::findById($id);
         if (!$order) {
             return response()->error('No order found.');
         }

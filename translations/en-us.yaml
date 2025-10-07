@@ -1611,13 +1611,13 @@ fleet-ops:
           height-placeholder: Height in {parcelFeeDimension}
           weight-label: Weight
           weight-placeholder: Weight in {parcelFeeWeight}
-          deminsions-unit: Dimensions Unit
+          deminsions-unit: Dimension
           select-unit-placeholder: Select unit
           weight-unit: Weight Unit
           additional-fee: Additional Fee
           cash-delivery-title: Cash on Delivery
           cash-delivery-label: Enable additional fee for `cash on delivery` orders?
-          calculation-method-label: Cash on Delivery Fee Calculation Method
+          calculation-method-label: COD Fee Calculation Method
           calculation-method-help-text: Method used to calculate the COD fee.
           calculation-method-placeholder: Select COD fee calculation method
           delivery-flat-fee: Cash on Delivery Flat Fee 

@@ -4,15 +4,13 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
-const DEFAULT_PROPERTIES = { status: 'active' };
-
 export default class ManagementVendorsIndexNewController extends Controller {
-    @service store;
+    @service vendorActions;
     @service hostRouter;
     @service intl;
     @service notifications;
     @tracked overlay;
-    @tracked vendor = this.store.createRecord('vendor', DEFAULT_PROPERTIES);
+    @tracked vendor = this.vendorActions.createNewInstance();
     @tracked integratedVendor;
 
     @task *save(vendor) {
@@ -32,7 +30,7 @@ export default class ManagementVendorsIndexNewController extends Controller {
     }
 
     @action resetForm() {
-        this.vendor = this.store.createRecord('vendor', DEFAULT_PROPERTIES);
+        this.vendor = this.vendorActions.createNewInstance();
         this.integratedVendor = null;
     }
 

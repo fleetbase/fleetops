@@ -8,7 +8,6 @@ import { task } from 'ember-concurrency';
 
 export default class OrderFormRouteComponent extends Component {
     @service leafletMapManager;
-    @service leafletRoutingControl;
     @service routeOptimization;
     @service osrm;
     @service location;
@@ -17,6 +16,7 @@ export default class OrderFormRouteComponent extends Component {
     @service notifications;
     @service placeActions;
     @tracked multipleWaypoints = false;
+    @tracked routingControl;
     @tracked route;
 
     get coordinates() {
@@ -31,6 +31,13 @@ export default class OrderFormRouteComponent extends Component {
         const waypoints = payload ? [payload.pickup, ...this.args.resource.payload.waypoints.map((waypoint) => waypoint.place), payload.dropoff] : [];
 
         return waypoints.filter((place) => place);
+    }
+
+    willDestroy() {
+        super.willDestroy(...arguments);
+        if (this.routingControl) {
+            this.leafletMapManager.removeRoutingControl(this.routingControl);
+        }
     }
 
     @action toggleWaypoints(multipleWaypoints) {
@@ -96,10 +103,6 @@ export default class OrderFormRouteComponent extends Component {
 
         this.args.resource.payload.waypoints[index].place = place;
         this.previewRoute();
-
-        // if (this.isUsingIntegratedVendor) {
-        //     this.getQuotes();
-        // }
     }
 
     @action setWaypointCustomer(waypoint, model) {
@@ -121,64 +124,23 @@ export default class OrderFormRouteComponent extends Component {
     @action setPayloadPlace(prop, place) {
         this.args.resource.payload[prop] = place;
         this.previewRoute();
-        // if (this.isUsingIntegratedVendor) {
-        //     this.getQuotes();
-        // }
     }
 
     @action editPlace(place) {
         this.placeActions.modal.edit(place);
     }
 
-    @action previewRoute() {
-        this.resetRoutingControl();
+    @action async previewRoute() {
         if (!this.coordinates.length) return;
 
-        const routingService = this.currentUser.getOption('routing', { router: 'osrm' }).router;
-        const { router, formatter } = this.leafletRoutingControl.get(routingService);
-
-        this.routingControl = new RoutingControl({
-            router,
-            formatter,
-            waypoints: this.coordinates,
-            alternativeClassName: 'hidden',
-            addWaypoints: false,
-            markerOptions: {
-                icon: L.icon({
-                    iconUrl: '/assets/images/marker-icon.png',
-                    iconRetinaUrl: '/assets/images/marker-icon-2x.png',
-                    shadowUrl: '/assets/images/marker-shadow.png',
-                    iconSize: [25, 41],
-                    iconAnchor: [12, 41],
-                }),
+        const routingControl = await this.leafletMapManager.replaceRoutingControl(this.coordinates, this.routingControl, {
+            onRouteFound: (route) => this.setRoute(route),
+            removeOptions: {
+                filter: (layer) => layer.record_id === this.args.resource.driver_assigned?.id,
             },
-        }).addTo(this.leafletMapManager.map);
-
-        this.routingControl.on('routesfound', (event) => {
-            this.leafletMapManager.route = event;
-            this.setRoute(event.routes.firstObject);
         });
 
-        if (this.coordinates.length === 1) {
-            this.leafletMapManager.map.flyTo(this.coordinates[0], 18);
-            this.leafletMapManager.map.once('moveend', () => {
-                this.leafletMapManager.map.panBy([200, 0]);
-            });
-        } else {
-            this.leafletMapManager.map.flyToBounds(this.coordinates, {
-                paddingBottomRight: [300, 0],
-                maxZoom: this.coordinates.length === 2 ? 15 : 14,
-                animate: true,
-            });
-            this.leafletMapManager.map.once('moveend', () => {
-                this.leafletMapManager.map.panBy([150, 0]);
-            });
-        }
-    }
-
-    resetRoutingControl() {
-        this.leafletMapManager.removeRoutingControl(this.routingControl);
-        this.leafletMapManager.removeRoute();
+        this.routingControl = routingControl;
     }
 
     @task *optimizeRouteWithService(service) {
@@ -223,9 +185,6 @@ export default class OrderFormRouteComponent extends Component {
     }
 
     @action handleRouteOptimization({ sortedWaypoints, route, trip, result, engine = 'osrm' }) {
-        // Update map layers & UI
-        this.resetRoutingControl();
-
         // Update controller state
         this.args.resource.payload.waypoints = sortedWaypoints;
         if (route) {

@@ -21,7 +21,6 @@ export default class DriverActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'driver/form',
                 title: 'Create a new driver',
-                panelContentClass: 'px-4',
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -42,7 +41,6 @@ export default class DriverActionsService extends ResourceActionService {
                         },
                     },
                 ],
-                panelContentClass: 'px-4',
                 driver,
                 ...options,
             });
@@ -64,7 +62,6 @@ export default class DriverActionsService extends ResourceActionService {
                     {
                         label: 'Overview',
                         component: 'driver/details',
-                        contentClass: 'p-4',
                     },
                 ],
                 ...options,

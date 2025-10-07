@@ -22,7 +22,7 @@ export default class ContactActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'contact/form',
                 title: 'Create a new contact',
-                panelContentClass: 'px-4',
+
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -34,7 +34,7 @@ export default class ContactActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'contact/form',
                 title: `Edit: ${contact.name}`,
-                panelContentClass: 'px-4',
+
                 contact,
                 ...options,
             });
@@ -46,7 +46,6 @@ export default class ContactActionsService extends ResourceActionService {
                     {
                         label: 'Overview',
                         component: 'contact/details',
-                        contentClass: 'p-4',
                     },
                 ],
                 ...options,

@@ -6,7 +6,6 @@ import { task } from 'ember-concurrency';
 
 export default class ManagementPlacesIndexNewController extends Controller {
     @service placeActions;
-    @service store;
     @service hostRouter;
     @service intl;
     @service notifications;

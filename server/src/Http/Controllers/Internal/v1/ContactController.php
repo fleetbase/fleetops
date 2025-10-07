@@ -8,9 +8,9 @@ use Fleetbase\FleetOps\Imports\ContactImport;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
-use Illuminate\Http\Request;
 
 class ContactController extends FleetOpsController
 {

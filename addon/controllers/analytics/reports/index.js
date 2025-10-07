@@ -6,7 +6,6 @@ export default class AnalyticsReportsIndexController extends Controller {
     @service reportActions;
     @service notifications;
     @service intl;
-    @service contextPanel;
     @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'name', 'created_at', ,];
     @tracked page = 1;
     @tracked limit;

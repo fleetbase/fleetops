@@ -1,4 +1,4 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -6,20 +6,15 @@ import { equal } from '@ember/object/computed';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 
-export default class OperationsOrdersIndexController extends BaseController {
+export default class OperationsOrdersIndexController extends Controller {
     @service orderActions;
-    @service currentUser;
+    @service orderSocketEvents;
+    @service leafletMapManager;
+    @service orderListOverlay;
     @service fetch;
-    @service store;
     @service intl;
-    @service hostRouter;
-    @service notifications;
-    @service universe;
-    @service socket;
-    @equal('layout', 'map') isMapLayout;
-    @equal('layout', 'table') isTableLayout;
-    @equal('layout', 'kanban') isKanbanView;
-    @equal('layout', 'analytics') isAnalyticsLayout;
+
+    /** query params */
     @tracked queryParams = [
         'page',
         'limit',
@@ -85,6 +80,8 @@ export default class OperationsOrdersIndexController extends BaseController {
     @tracked orderConfigs = [];
     @tracked bulkSearchValue = '';
     @tracked bulk_query = '';
+
+    /** action buttons */
     @tracked actionButtons = [
         {
             icon: 'refresh',
@@ -105,6 +102,8 @@ export default class OperationsOrdersIndexController extends BaseController {
             onClick: this.orderActions.export,
         },
     ];
+
+    /** bulk actions */
     @tracked bulkActions = [
         {
             label: 'Cancel Orders',
@@ -129,13 +128,15 @@ export default class OperationsOrdersIndexController extends BaseController {
             fn: this.orderActions.bulkAssignDriver,
         },
     ];
+
+    /** columns */
     @tracked columns = [
         {
             label: this.intl.t('fleet-ops.common.id'),
             valuePath: 'public_id',
             width: '140px',
             cellComponent: 'table/cell/link-to',
-            route: 'operations.orders.index.view',
+            route: 'operations.orders.index.details',
             onLinkClick: this.orderActions.transition.view,
             permission: 'fleet-ops view order',
             resizable: true,
@@ -300,10 +301,8 @@ export default class OperationsOrdersIndexController extends BaseController {
             hidden: true,
             sortable: true,
             filterable: true,
-            filterComponent: 'filter/select',
-            filterOptions: this.orderConfigs,
-            filterOptionLabel: 'name',
-            filterOptionValue: 'id',
+            filterComponent: 'filter/model',
+            model: 'order-config',
             filterComponentPlaceholder: 'Filter by order config',
         },
         {
@@ -315,7 +314,7 @@ export default class OperationsOrdersIndexController extends BaseController {
             sortable: true,
             filterable: true,
             filterComponent: 'filter/multi-option',
-            filterOptions: this.statusOptions,
+            fetchUri: 'orders/statuses',
         },
         {
             label: this.intl.t('fleet-ops.common.created-at'),
@@ -423,110 +422,19 @@ export default class OperationsOrdersIndexController extends BaseController {
 
     constructor() {
         super(...arguments);
-        this.listenForOrderEvents();
-        this.getOrderStatusOptions.perform();
-        this.getOrderConfigs.perform();
+        this.orderSocketEvents.startCompany();
     }
 
-    @task *getOrderStatusOptions() {
-        try {
-            this.statusOptions = yield this.fetch.get('orders/statuses');
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
-    }
+    @action changeLayout(mode) {
+        this.layout = mode;
 
-    @task *getOrderConfigs() {
-        try {
-            this.orderConfigs = yield this.store.query('order-config', { limit: -1 });
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
-    }
-
-    /**
-     * Listen for incoming order events to refresh listing.
-     *
-     * @memberof OperationsOrdersIndexController
-     */
-    @action async listenForOrderEvents() {
-        const findOrder = async (orderId) => {
-            const allOrders = this.store.peekAll('order');
-            const foundOrder = allOrders.find((order) => order.get('public_id') === orderId);
-            if (foundOrder) {
-                return foundOrder;
-            }
-
-            const tabledOrder = this.table.rows.find((order) => order.get('public_id') === orderId);
-            if (tabledOrder) {
-                return tabledOrder;
-            }
-
-            return this.store.queryRecord('order', { public_id: orderId, single: true });
-        };
-
-        const findDriver = async (driverId) => {
-            const allDrivers = this.store.peekAll('driver');
-            const foundDriver = allDrivers.find((driver) => driver.get('public_id') === driverId);
-            if (foundDriver) {
-                return foundDriver;
-            }
-
-            const tabledOrderWithDriver = this.table.rows.find((order) => order.get('driver_assigned')?.public_id === driverId);
-            if (tabledOrderWithDriver) {
-                return tabledOrderWithDriver.get('driver_assigned');
-            }
-
-            return this.store.queryRecord('driver', { public_id: driverId, single: true });
-        };
-
-        // wait for user to be loaded into service
-        this.currentUser.on('user.loaded', () => {
-            // Get socket instance
-            const socket = this.socket.instance();
-
-            // The channel ID to listen on
-            const channelId = `company.${this.currentUser.companyId}`;
-
-            // Listed on company channel
-            const channel = socket.subscribe(channelId);
-
-            // Disconnect when transitioning
-            this.hostRouter.on('routeWillChange', () => {
-                channel.close();
-            });
-
-            // Listen for channel subscription
-            (async () => {
-                for await (let output of channel) {
-                    const { event, data } = output;
-                    debug(`Socket Event : ${event} : ${JSON.stringify(output)}`);
-
-                    if (event === 'order.driver_assigned') {
-                        const order = await findOrder(data.id);
-                        const driver = await findDriver(data.driver_assigned);
-
-                        if (order && driver) {
-                            order.set('driver_assigned', driver);
-                        }
-                    }
-                }
-            })();
-        });
-    }
-
-    @action resetView() {
-        if (this.leafletMap && this.leafletMap.liveMap) {
-            this.leafletMap.liveMap.hideAll();
+        if (mode === 'table') {
+            this.isSearchVisible = false;
         }
     }
 
     @action toggleSearch() {
         this.isSearchVisible = !this.isSearchVisible;
-    }
-
-    @action setOrderListOverlayContext(orderListOverlayContext) {
-        this.orderListOverlayContext = orderListOverlayContext;
     }
 
     @action toggleOrdersPanel() {
@@ -547,39 +455,8 @@ export default class OperationsOrdersIndexController extends BaseController {
         }
     }
 
-    @action zoomMap(direction = 'in') {
-        if (direction === 'in') {
-            this.leafletMap?.zoomIn();
-        } else {
-            this.leafletMap?.zoomOut();
-        }
-    }
-
-    @action setLayoutMode(mode) {
-        this.layout = mode;
-
-        if (mode === 'table') {
-            this.isSearchVisible = false;
-        }
-
-        this.universe.trigger('fleet-ops.dashboard.layout.changed', mode);
-    }
-
-    @action setMapReference({ target }) {
-        this.leafletMap = target;
-        this.liveMap = target.liveMap;
-    }
-
     @action previewOrderRoute(order) {
-        if (this.liveMap) {
-            this.liveMap.previewOrderRoute(order);
-        }
-    }
-
-    @action restoreDefaultLiveMap() {
-        if (this.liveMap) {
-            this.liveMap.restoreDefaultLiveMap();
-        }
+        this.leafletMapManager.livemap('previewOrderRoute', order);
     }
 
     @action setDrawerContext(drawerApi) {
@@ -608,25 +485,5 @@ export default class OperationsOrdersIndexController extends BaseController {
 
     @action onDrawerTabChanged(tabName) {
         this.drawerTab = tabName;
-    }
-
-    @action onMapContainerReady() {
-        this.fetchActiveOrdersCount();
-    }
-
-    @action fetchActiveOrdersCount() {
-        this.fetch.get('fleet-ops/metrics', { discover: ['orders_in_progress'] }).then((response) => {
-            this.activeOrdersCount = response.orders_in_progress;
-        });
-    }
-
-    @action optimizeOrderRoutes(selected = []) {
-        selected = selected.length > 0 ? selected : this.table.selectedRows;
-
-        return this.hostRouter.transitionTo('console.fleet-ops.operations.routes.index.new', {
-            queryParams: {
-                selectedOrders: selected.map((_) => _.public_id).join(','),
-            },
-        });
     }
 }

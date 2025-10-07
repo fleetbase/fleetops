@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isBlank } from '@ember/utils';
-import { later } from '@ember/runloop';
+import { next } from '@ember/runloop';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 /**
@@ -13,8 +13,7 @@ import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
  * @extends Component
  */
 export default class LiveMapDrawerDriverListingComponent extends Component {
-    @service contextPanel;
-    @service resourceContextPanel;
+    @service driverActions;
     @service notifications;
     @service hostRouter;
     @service crud;
@@ -75,7 +74,7 @@ export default class LiveMapDrawerDriverListingComponent extends Component {
                 {
                     label: this.intl.t('fleet-ops.component.live-map-drawer.driver-listing.edit-driver'),
                     fn: (driver) => {
-                        return this.focus(driver, 'editing');
+                        return this.focus(driver, 'edit');
                     },
                 },
                 {
@@ -136,25 +135,17 @@ export default class LiveMapDrawerDriverListingComponent extends Component {
      * @param {object} driver - The driver object to focus on.
      * @param {string} intent - The intent for focusing, default is 'viewing'.
      */
-    @action focus(driver, intent = 'viewing') {
+    @action focus(driver, action = 'edit') {
         if (this.liveMap) {
             this.liveMap.focusLayerByRecord(driver, 16, {
                 onAfterFocusWithRecord: () => {
-                    later(
-                        this,
-                        () => {
-                            // this.contextPanel.focus(driver, intent);
-                            this.resourceContextPanel.show({
-                                content: 'driver/details',
-                                model: driver,
-                            });
-                        },
-                        600 * 2
-                    );
+                    next(this, () => {
+                        this.driverActions.panel.view(driver);
+                    });
                 },
             });
         } else {
-            this.contextPanel.focus(driver, intent);
+            this.driverActions.panel[action ?? 'view'](driver);
         }
     }
 

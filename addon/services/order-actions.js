@@ -1,7 +1,11 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import { action } from '@ember/object';
+import { debug } from '@ember/debug';
+import { task } from 'ember-concurrency';
 
 export default class OrderActionsService extends ResourceActionService {
+    modelNamePath = 'tracking';
+
     constructor() {
         super(...arguments);
         this.initialize('order', {
@@ -24,7 +28,7 @@ export default class OrderActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'order/form',
                 title: 'Create a new order',
-                panelContentClass: 'px-4',
+
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -36,7 +40,7 @@ export default class OrderActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'order/form',
                 title: `Edit: ${order.tracking}`,
-                panelContentClass: 'px-4',
+
                 order,
                 ...options,
             });
@@ -48,7 +52,6 @@ export default class OrderActionsService extends ResourceActionService {
                     {
                         label: 'Overview',
                         component: 'order/details',
-                        contentClass: 'p-4',
                     },
                 ],
                 ...options,
@@ -89,10 +92,41 @@ export default class OrderActionsService extends ResourceActionService {
         },
     };
 
+    @task *saveRoute(order, saveOptions = {}) {
+        const { payload } = order;
+
+        try {
+            const updatedOrder = yield this.fetch.patch(
+                `orders/route/${order.id}`,
+                {
+                    pickup: payload.pickup,
+                    dropoff: payload.dropoff,
+                    return: payload.return,
+                    waypoints: this.#serializeWaypoints(payload.waypoints),
+                },
+                {
+                    normalizeToEmberData: true,
+                    normalizeModelType: 'order',
+                }
+            );
+
+            if (saveOptions?.closePanel === true) {
+                this.resourceContextPanel.close(saveOptions.overlay.id);
+            }
+
+            return updatedOrder;
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
     @action cancel(order, options = {}) {
         this.modalsManager.confirm({
             title: this.intl.t('fleet-ops.operations.orders.index.cancel-title'),
             body: this.intl.t('fleet-ops.operations.orders.index.cancel-body'),
+            acceptButtonText: 'Cancel Order',
+            acceptButtonType: 'danger',
+            acceptButtonIcon: 'ban',
             order,
             confirm: async (modal) => {
                 modal.startLoading();
@@ -227,6 +261,236 @@ export default class OrderActionsService extends ResourceActionService {
                 this.tableContext.untoggleSelectAll();
                 await this.hostRouter.refresh();
             },
+        });
+    }
+
+    @action optimizeOrderRoutes() {
+        const selected = this.tableContext.getSelectedRows();
+        if (!selected) return;
+
+        return this.hostRouter.transitionTo('console.fleet-ops.operations.routes.index.new', {
+            queryParams: {
+                selectedOrders: selected,
+            },
+        });
+    }
+
+    @action editRoute(order) {
+        this.resourceContextPanel.open({
+            content: 'order/route-editor',
+            title: 'Edit order route',
+            panelContentClass: 'py-2 px-4',
+            resource: order,
+            saveTask: this.saveRoute,
+            saveDisabled: false,
+            saveOptions: {
+                closePanel: true,
+            },
+        });
+    }
+
+    @action updateActivity(order, options = {}) {
+        return this.modalsManager.show('modals/update-order-activity', {
+            title: 'Update order activity',
+            order: order,
+            acceptButtonText: 'Submit new activity',
+            ...options,
+        });
+    }
+
+    @action editOrderDetails(order, options = {}) {
+        options = options === null ? {} : options;
+
+        this.modalsManager.show('modals/order-form', {
+            title: this.intl.t('fleet-ops.operations.orders.index.view.edit-order-title'),
+            acceptButtonText: 'Save Changes',
+            acceptButtonIcon: 'save',
+            setOrderFacilitator: (model) => {
+                order.set('facilitator', model);
+                order.set('facilitator_type', `fleet-ops:${model.facilitator_type}`);
+                order.set('driver', null);
+
+                if (model) {
+                    this.modalsManager.setOptions('driversQuery', {
+                        facilitator: model.id,
+                    });
+                }
+            },
+            setOrderCustomer: (model) => {
+                order.set('customer', model);
+                order.set('customer_type', `fleet-ops:${model.customer_type}`);
+            },
+            setDriver: (driver) => {
+                order.set('driver_assigned', driver);
+                if (driver && driver.vehicle) {
+                    order.set('vehicle_assigned', driver.vehicle);
+                }
+
+                if (!driver) {
+                    order.set('driver_assigned_uuid', null);
+                }
+            },
+            setVehicle: (vehicle) => {
+                order.set('vehicle_assigned', vehicle);
+                if (!vehicle) {
+                    order.set('vehicle_assigned_uuid', null);
+                }
+            },
+            scheduleOrder: (dateInstance) => {
+                order.scheduled_at = dateInstance;
+            },
+            driversQuery: {},
+            order,
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await order.save();
+                    this.notifications.success(options.successNotification || this.intl.t('fleet-ops.operations.orders.index.view.update-success', { orderId: order.public_id }));
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            decline: () => {
+                order.payload.rollbackAttributes();
+                this.modalsManager.done();
+            },
+            ...options,
+        });
+    }
+
+    @action async assignDriver(order) {
+        if (order.canLoadDriver) {
+            await order.loadDriver();
+        }
+
+        this.modalsManager.show(`modals/order-assign-driver`, {
+            title: order.driver_assigned_uuid ? this.intl.t('fleet-ops.operations.orders.index.view.change-order') : this.intl.t('fleet-ops.operations.orders.index.view.assign-order'),
+            acceptButtonText: 'Save Changes',
+            order,
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await order.save();
+                    this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.assign-success', { orderId: order.public_id }));
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+        });
+    }
+
+    @action unassignDriver(order, options = {}) {
+        if (!order.driver_assigned) return this.notifications.warning('No driver assigned to order');
+
+        this.modalsManager.confirm({
+            title: `Unassign driver: ${order.driver_assigned.name}?`,
+            body: this.intl.t('fleet-ops.operations.orders.index.view.unassign-body'),
+            order,
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                order.setProperties({
+                    driver_assigned: null,
+                    driver_assigned_uuid: null,
+                });
+
+                try {
+                    await order.save();
+                    this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.unassign-success'));
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                } finally {
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
+
+    @action viewMetadata(order, options = {}) {
+        this.modalsManager.show('modals/view-metadata', {
+            title: 'Order metadata',
+            acceptButtonText: 'Done',
+            hideDeclineButton: true,
+            metadata: order.meta,
+        });
+    }
+
+    @action editMetadata(order, options = {}) {
+        this.modalsManager.show('modals/edit-metadata', {
+            title: 'Edit order metadata',
+            acceptButtonText: 'Save Changes',
+            acceptButtonIcon: 'save',
+            actionsWrapperClass: 'px-3',
+            metadata: order.meta,
+            onChange: (meta) => {
+                order.set('meta', meta);
+            },
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await order.save();
+                    this.notifications.success('Metadata saved.');
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                } finally {
+                    modal.stopLoading();
+                }
+            },
+        });
+    }
+
+    @action async viewLabel(order) {
+        // render dialog to display label within
+        this.modalsManager.show(`modals/order-label`, {
+            title: 'Order Label',
+            modalClass: 'modal-xl',
+            acceptButtonText: 'Done',
+            hideDeclineButton: true,
+            order,
+        });
+
+        try {
+            // load the pdf label from base64
+            // eslint-disable-next-line no-undef
+            const fileReader = new FileReader();
+            const { data: pdfStream } = await this.fetch.get(`orders/label/${order.public_id}?format=base64`);
+            // eslint-disable-next-line no-undef
+            const base64 = await fetch(`data:application/pdf;base64,${pdfStream}`);
+            const blob = await base64.blob();
+            // load into file reader
+            fileReader.onload = (event) => {
+                const data = event.target.result;
+                this.modalsManager.setOption('data', data);
+            };
+            fileReader.readAsDataURL(blob);
+        } catch (err) {
+            this.notifications.error('Failed to load order label.');
+            debug('Error loading order label data: ' + err.message);
+        }
+    }
+
+    #serializeWaypoints(waypoints = []) {
+        if (!waypoints) return [];
+
+        waypoints = typeof waypoints.toArray === 'function' ? waypoints.toArray() : Array.from(waypoints);
+        return waypoints.map((waypoint) => {
+            const json = waypoint.serialize();
+            // if place is serialized just send it back
+            if (json.place) return json;
+
+            // set id for place_uuid
+            json.place_uuid = waypoint.place ? waypoint.place.id : waypoint.place_uuid;
+            return json;
         });
     }
 }

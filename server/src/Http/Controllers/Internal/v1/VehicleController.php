@@ -8,10 +8,10 @@ use Fleetbase\FleetOps\Imports\VehicleImport;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
-use Illuminate\Http\Request;
 
 class VehicleController extends FleetOpsController
 {

@@ -83,7 +83,7 @@
                                                 {{else if (eq column.key "fileSize")}}
                                                     {{format-bytes (get file column.valuePath)}}
                                                 {{else if (eq column.key "uploadDate")}}
-                                                    {{format-date (get file column.valuePath) "d MMM yyyy"}}
+                                                    {{format-date-fns (get file column.valuePath) "d MMM yyyy"}}
                                                 {{else}}
                                                     <div class="min-w-225px max-w-225px truncate">{{get file column.valuePath}}</div>
                                                 {{/if}}

@@ -1,0 +1,34 @@
+<div class="order-activity-list space-y-2">
+    {{#each @resource.tracking_statuses as |trackingStatus|}}
+        <div class="order-activity-list-item flex flex-row justify-between">
+            <div class="flex flex-row">
+                <div class="w-8 pt-1">
+                    <div class="flex items-center justify-center w-5 h-5 rounded-full border border-green-500">
+                        <FaIcon @icon="check" @size="xs" class="text-green-500" />
+                    </div>
+                </div>
+                <div>
+                    <div class="text-sm font-semibold text-gray-900 dark:text-white">{{trackingStatus.status}}</div>
+                    <div class="text-xs text-gray-400 dark:text-gray-500">{{trackingStatus.details}}</div>
+                </div>
+            </div>
+            <div class="flex flex-col">
+                <div class="text-xs text-gray-400 dark:text-gray-500">{{format-date-fns trackingStatus.created_at "d MMM yyyy HH:mm"}}</div>
+            </div>
+        </div>
+    {{else}}
+        <div class="min-h-24 p-4">
+            <div class="flex items-center justify-center border border-dashed border-gray-300 dark:border-gray-600 p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
+                <div class="text-center">
+                    <FaIcon @icon="layer-group" @size="2x" class="text-gray-400 mb-2" />
+                    <div class="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                        No order activity
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                        Dispatch or update the order to create activity
+                    </div>
+                </div>
+            </div>
+        </div>
+    {{/each}}
+</div>

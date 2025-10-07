@@ -11,6 +11,7 @@ export default class OrderFormDetailsComponent extends Component {
     @service orderConfigActions;
     @service customFieldsRegistry;
     @service leafletMapManager;
+    @service leafletLayerVisibilityManager;
     @service currentUser;
     @tracked customFields;
 
@@ -58,10 +59,9 @@ export default class OrderFormDetailsComponent extends Component {
             debug('Unable to load and set driver vehicle: ' + err.message);
         }
 
-        this.leafletMapManager.map.liveMap.focusDriver(driver);
-        // if (this.args.resource.is_route_optimized) {
-        //     this.optimizeRoute.perform();
-        // }
+        // Show & track driver assigned
+        this.leafletLayerVisibilityManager.hideCategory('drivers');
+        this.leafletLayerVisibilityManager.showModelLayer(this.args.resource.driver_assigned);
     }
 
     @action toggleAdhoc(toggled) {

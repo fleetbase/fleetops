@@ -1062,14 +1062,13 @@ class Order extends Model
      *
      * @throws \LogicException if the order is already dispatched
      */
-    public function dispatch(bool $save = true): static
+    public function dispatch(bool $save = true): self
     {
         $this->dispatched    = true;
         $this->dispatched_at = now();
 
         if ($save) {
             $this->saveQuietly();
-
             $this->flushAttributesCache();
         }
 
@@ -1132,7 +1131,7 @@ class Order extends Model
      */
     public function firstDispatchWithActivity(): Order
     {
-        if (!$this->dispatched) {
+        if (!$this->hasDispatchedStatus()) {
             $this->dispatchWithActivity();
         }
 
@@ -1777,6 +1776,27 @@ class Order extends Model
         }
 
         return $this->{$property};
+    }
+
+    /**
+     * Determine whether this order already has a "dispatched" tracking status.
+     *
+     * Uses the in-memory relationship when available to avoid extra queries.
+     * Falls back to a lightweight EXISTS query when the relationship isn't loaded.
+     *
+     * @return bool true if a tracking status with code "dispatched" exists; otherwise false
+     */
+    public function hasDispatchedStatus(): bool
+    {
+        if ($this->relationLoaded('trackingStatuses')) {
+            return $this->trackingStatuses->contains(
+                fn ($ts) => strcasecmp((string) $ts->code, 'dispatched') === 0
+            );
+        }
+
+        return TrackingStatus::where('tracking_number_uuid', $this->tracking_number_uuid)
+            ->whereRaw('LOWER(code) = ?', ['dispatched'])
+            ->exists();
     }
 
     public function findClosestDrivers(int $distance = 6000): Collection

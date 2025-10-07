@@ -8,7 +8,9 @@ export default class FuelReportActionsService extends ResourceActionService {
 
     constructor() {
         super(...arguments);
-        this.initialize('fuel-report');
+        this.initialize('fuel-report', {
+            defaultAttributes: {},
+        });
     }
 
     transition = {
@@ -23,7 +25,7 @@ export default class FuelReportActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'fuel-report/form',
                 title: 'Create a new fuel-report',
-                panelContentClass: 'px-4',
+
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -34,7 +36,7 @@ export default class FuelReportActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'fuel-report/form',
                 title: `Edit: ${fuelReport.name}`,
-                panelContentClass: 'px-4',
+
                 fuelReport,
             });
         },
@@ -45,7 +47,6 @@ export default class FuelReportActionsService extends ResourceActionService {
                     {
                         label: 'Overview',
                         component: 'fuel-report/details',
-                        contentClass: 'p-4',
                     },
                 ],
             });

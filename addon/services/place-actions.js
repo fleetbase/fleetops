@@ -1,8 +1,11 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import leafletIcon from '@fleetbase/ember-core/utils/leaflet-icon';
+import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 
 export default class PlaceActionsService extends ResourceActionService {
+    @service vendorActions;
+
     constructor() {
         super(...arguments);
         this.initialize('place', { modelNamePath: 'displayName' });
@@ -20,7 +23,7 @@ export default class PlaceActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'place/form',
                 title: 'Create a new place',
-                panelContentClass: 'px-4',
+
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -31,7 +34,7 @@ export default class PlaceActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'place/form',
                 title: `Edit: ${place.displayName}`,
-                panelContentClass: 'px-4',
+
                 place,
             });
         },
@@ -42,7 +45,6 @@ export default class PlaceActionsService extends ResourceActionService {
                     {
                         label: 'Overview',
                         component: 'place/details',
-                        contentClass: 'p-4',
                     },
                 ],
             });
@@ -128,7 +130,7 @@ export default class PlaceActionsService extends ResourceActionService {
     @action async viewVendor(place) {
         try {
             const vendor = await this.store.findRecord('vendor', place.vendor_uuid);
-            this.contextPanel.focus(vendor);
+            this.vendorActions.panel.view(vendor);
         } catch (err) {
             this.notifications.serverError(err);
         }

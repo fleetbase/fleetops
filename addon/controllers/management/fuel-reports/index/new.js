@@ -5,13 +5,13 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
 export default class ManagementFuelReportsIndexNewController extends Controller {
-    @service store;
+    @service fuelReportActions;
     @service currentUser;
     @service hostRouter;
     @service intl;
     @service notifications;
     @tracked overlay;
-    @tracked fuelReport = this.store.createRecord('fuelReport', { reporter: this.currentUser.user });
+    @tracked fuelReport = this.fuelReportActions.createNewInstance({ reporter: this.currentUser.user });
 
     @task *save(fuelReport) {
         try {
@@ -28,6 +28,6 @@ export default class ManagementFuelReportsIndexNewController extends Controller 
     }
 
     @action resetForm() {
-        this.fuelReport = this.store.createRecord('fuelReport', { reporter: this.currentUser.user });
+        this.fuelReport = this.fuelReportActions.createNewInstance({ reporter: this.currentUser.user });
     }
 }

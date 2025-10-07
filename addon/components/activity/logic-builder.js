@@ -221,6 +221,12 @@ export default class ActivityLogicBuilderComponent extends Component {
 
             return item;
         });
+
+        // If logic has no conditions remove the logic
+        const logic = this.logic[index];
+        if (logic && logic.conditions?.length === 0) {
+            this.removeLogic(index);
+        }
     }
 
     @action selectConditionOperator(index, conditionIndex, key) {

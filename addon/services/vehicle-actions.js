@@ -21,7 +21,7 @@ export default class VehicleActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'vehicle/form',
                 title: 'Create a new vehicle',
-                panelContentClass: 'px-4',
+
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -42,7 +42,7 @@ export default class VehicleActionsService extends ResourceActionService {
                         },
                     },
                 ],
-                panelContentClass: 'px-4',
+
                 vehicle,
                 ...options,
             });
@@ -64,7 +64,6 @@ export default class VehicleActionsService extends ResourceActionService {
                     {
                         label: 'Overview',
                         component: 'vehicle/details',
-                        contentClass: 'p-4',
                     },
                 ],
                 ...options,

@@ -19,7 +19,6 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
     @service store;
     @service notifications;
     @service modalsManager;
-    @service contextPanel;
     @service customFieldsRegistry;
     @service intl;
     @service abilities;
@@ -121,6 +120,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
 
                 try {
                     await customField.destroyRecord();
+                    await this.loadCustomFields.perform();
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -157,7 +157,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
 
                 try {
                     await customFieldGroup.save();
-                    this.loadCustomFields.perform();
+                    await this.loadCustomFields.perform();
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -182,6 +182,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
 
                 try {
                     await group.destroyRecord();
+                    await this.loadCustomFields.perform();
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);

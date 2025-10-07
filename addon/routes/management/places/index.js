@@ -12,25 +12,17 @@ export default class ManagementPlacesIndexRoute extends Route {
         country: { refreshModel: true },
         name: { refreshModel: true },
         address: { refreshModel: true },
-        id: { refreshModel: true },
+        public_id: { refreshModel: true },
         city: { refreshModel: true },
         phone: { refreshModel: true },
         neighborhood: { refreshModel: true },
         postal_code: { refreshModel: true },
         state: { refreshModel: true },
-        createdAt: { refreshModel: true },
-        updatedAt: { refreshModel: true },
+        created_at: { refreshModel: true },
+        updated_at: { refreshModel: true },
     };
 
     model(params) {
         return this.store.query('place', { ...params });
     }
-
-    // @action queryParamsDidChange() {
-    //     try {
-    //         super.actions.queryParamsDidChange(...arguments);
-    //     } catch (err) {
-    //         console.error(err);
-    //     }
-    // }
 }

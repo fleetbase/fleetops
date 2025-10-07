@@ -15,7 +15,6 @@ export default class OrderListOverlayComponent extends Component {
     @service notifications;
     @service abilities;
     @service urlSearchParams;
-    @service contextPanel;
     @tracked fleets = [];
     @tracked selectedOrders = [];
     @tracked overlayContext;

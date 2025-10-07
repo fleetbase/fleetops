@@ -18,7 +18,7 @@ export default class CustomerActionsService extends ContactActionsService {
             return this.resourceContextPanel.open({
                 content: 'customer/form',
                 title: 'Create a new customer',
-                panelContentClass: 'px-4',
+
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -30,7 +30,7 @@ export default class CustomerActionsService extends ContactActionsService {
             return this.resourceContextPanel.open({
                 content: 'customer/form',
                 title: `Edit: ${customer.name}`,
-                panelContentClass: 'px-4',
+
                 customer,
                 ...options,
             });
@@ -42,7 +42,6 @@ export default class CustomerActionsService extends ContactActionsService {
                     {
                         label: 'Overview',
                         component: 'customer/details',
-                        contentClass: 'p-4',
                     },
                 ],
                 ...options,

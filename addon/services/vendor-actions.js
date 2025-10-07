@@ -8,7 +8,9 @@ export default class VendorActionsService extends ResourceActionService {
 
     constructor() {
         super(...arguments);
-        this.initialize('vendor', { status: 'active' });
+        this.initialize('vendor', {
+            defaultAttributes: { status: 'active' },
+        });
     }
 
     transition = {
@@ -23,7 +25,7 @@ export default class VendorActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'vendor/form',
                 title: 'Create a new vendor',
-                panelContentClass: 'px-4',
+
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -34,7 +36,7 @@ export default class VendorActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'vendor/form',
                 title: `Edit: ${vendor.name}`,
-                panelContentClass: 'px-4',
+
                 vendor,
             });
         },
@@ -45,7 +47,6 @@ export default class VendorActionsService extends ResourceActionService {
                     {
                         label: 'Overview',
                         component: 'vendor/details',
-                        contentClass: 'p-4',
                     },
                 ],
             });

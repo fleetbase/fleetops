@@ -1,0 +1,16 @@
+<Layout::Resource::Panel
+    @resource={{@model}}
+    @controller={{this}}
+    @headerComponent={{component "order/panel-header" resource=@model}}
+    @actionButtons={{this.actionButtons}}
+    @onPressCancel={{transition-to "operations.orders.index"}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+    @headerClass="no-bottom-border"
+    @bodyClass="no-scroll"
+    @width="530px"
+    @onOpen={{this.setup}}
+>
+    <TabNavigation @tabs={{this.tabs}} @contentClass="scrollable" @tablistClass="pl-2">
+        {{outlet}}
+    </TabNavigation>
+</Layout::Resource::Panel>

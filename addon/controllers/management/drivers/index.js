@@ -6,9 +6,11 @@ import { equal } from '@ember/object/computed';
 
 export default class ManagementDriversIndexController extends Controller {
     @service driverActions;
+    @service fleetActions;
+    @service vendorActions;
+    @service vehicleActions;
     @service notifications;
     @service intl;
-    @service contextPanel;
     @equal('layout', 'grid') isGridLayout;
     @equal('layout', 'table') isTableLayout;
     @tracked queryParams = [
@@ -118,10 +120,7 @@ export default class ManagementDriversIndexController extends Controller {
             onClick: async (driver) => {
                 try {
                     const vendor = await driver.loadVendor();
-
-                    if (vendor) {
-                        this.contextPanel.focus(vendor);
-                    }
+                    if (vendor) this.vendorActions.panel.view(vendor);
                 } catch (err) {
                     this.notifications.serverError(err);
                 }
@@ -143,9 +142,7 @@ export default class ManagementDriversIndexController extends Controller {
             onClick: async (driver) => {
                 try {
                     const vehicle = await driver.loadVehicle();
-                    if (vehicle) {
-                        this.contextPanel.focus(vehicle);
-                    }
+                    if (vehicle) this.vehicleActions.panel.view(vehicle);
                 } catch (err) {
                     this.notifications.serverError(err);
                 }
@@ -165,7 +162,7 @@ export default class ManagementDriversIndexController extends Controller {
             cellComponent: 'table/cell/link-list',
             cellComponentLabelPath: 'name',
             action: (fleet) => {
-                this.contextPanel.focus(fleet);
+                this.fleetActions.panel.view(fleet);
             },
             valuePath: 'fleets',
             width: '180px',

@@ -1,0 +1,21 @@
+<div class="relative flex items-center">
+    {{#each this.entries as |entry idx|}}
+        <div class="relative group {{if (gt idx 0) this.overlapClass}}" {{set-z-index (add 1 idx)}}>
+            <Image
+                src={{avatar-url entry.photoUrl}}
+                @fallbackSrc={{config "defaultValues.contactImage"}}
+                alt={{or entry.name "Unknown customer"}}
+                class="{{this.sizeClass}} rounded-full ring-2 ring-gray-800 dark:ring-gray-700 shadow transition-shadow hover:shadow-md focus:shadow-md"
+                role="img"
+                tabindex="0"
+            />
+            <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                <InputInfo>
+                    <div class="text-xs font-semibold">{{n-a entry.name "No Customer"}}</div>
+                    <div class="text-xs">{{n-a entry.phone "No Phone"}}</div>
+                    <div class="text-xs max-w-xs truncate">{{n-a entry.address}}</div>
+                </InputInfo>
+            </Attach::Tooltip>
+        </div>
+    {{/each}}
+</div>

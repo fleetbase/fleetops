@@ -8,8 +8,8 @@
                     <DateTimeInput
                         class="form-input"
                         @value={{@options.order.scheduled_at}}
-                        @minDate={{format-date (now) "yyyy-MM-d"}}
-                        @minTime={{format-date (now) "HH:mm"}}
+                        @minDate={{format-date-fns (now) "yyyy-MM-d"}}
+                        @minTime={{format-date-fns (now) "HH:mm"}}
                         @onUpdate={{@options.reschedule}}
                     />
                 </div>

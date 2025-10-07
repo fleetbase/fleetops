@@ -1,5 +1,5 @@
 <Layout::YieldSidebar>
-    <Layout::FleetOpsSidebar @controller={{this}} @onClickCreateOrder={{this.createOrder}} @onClickSettings={{this.toggleSettings}} />
+    <Layout::FleetOpsSidebar @controller={{this}} @onClickCreateOrder={{transition-to "operations.orders.index.new"}} />
 </Layout::YieldSidebar>
 
 <Layout::Section::Container>

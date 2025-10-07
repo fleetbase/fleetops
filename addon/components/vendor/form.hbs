@@ -3,7 +3,22 @@
         <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.title"}} @open={{true}} @wrapperClass="bordered-top">
             <div class="space-y-2">
                 <InputGroup @name={{t "fleet-ops.component.vendor-form-panel.create-form.select-vendor-type"}}>
-                    <FleetOps::OptionSelect @key="vendorTypes" @onSelect={{this.handleTypeSelection}} @disabled={{cannot-write @resource}} />
+                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                        <PowerSelect
+                            @options={{get-fleet-ops-options "vendorTypes"}}
+                            @selected={{find-by "value" @resource.type (get-fleet-ops-options "vendorTypes")}}
+                            @onChange={{this.handleTypeSelection}}
+                            @placeholder={{t "fleet-ops.component.vendor-form-panel.create-form.select-vendor-status"}}
+                            @triggerClass="form-select form-input"
+                            @disabled={{cannot-write @resource}}
+                            as |status|
+                        >
+                            <div class="text-sm">
+                                <div class="font-semibold normalize-in-trigger">{{status.label}}</div>
+                                <div class="hide-from-trigger">{{status.description}}</div>
+                            </div>
+                        </PowerSelect>
+                    </div>
                 </InputGroup>
                 {{#if @resource.isIntegratedVendor}}
                     <InputGroup @name={{t "fleet-ops.component.vendor-form-panel.create-form.choose-vendor"}}>

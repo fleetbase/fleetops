@@ -21,6 +21,7 @@ export class RoutingControl {
 
 export default class LeafletRoutingControlService extends Service {
     @service universe;
+    @service currentUser;
     registry = this.#initializeRegistry();
 
     get availableEngines() {
@@ -49,7 +50,13 @@ export default class LeafletRoutingControlService extends Service {
     }
 
     get(name) {
+        name = name ?? this.getRouter();
         return this.registry.routers[underscore(name)];
+    }
+
+    getRouter(fallback = 'osrm') {
+        const routingSettings = this.currentUser.getOption('routing', { router: fallback ?? 'osrm' });
+        return routingSettings.router;
     }
 
     #initializeRegistry() {

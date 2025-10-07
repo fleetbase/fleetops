@@ -1,0 +1,26 @@
+<ContentPanel @title={{t "fleet-ops.operations.orders.index.view.route-panel-title"}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
+    {{#if @resource.payload.isMultiDrop}}
+        <div>
+            <RouteList
+                @order={{@resource}}
+                @eta={{@resource.eta}}
+                @waypointActions={{hash viewWaypointLabel=(hash label=(t "fleet-ops.operations.orders.index.view.get-label") fn=this.viewWaypointLabel)}}
+            />
+        </div>
+    {{else}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
+            <div class="field-info-container">
+                <label class="field-name">{{t "fleet-ops.operations.orders.index.view.pickup"}}</label>
+                <DisplayPlace @place={{@resource.payload.pickup}} @eta={{get @resource.eta @resource.payload.pickup.id}} />
+            </div>
+            <div class="field-info-container">
+                <label class="field-name">{{t "fleet-ops.operations.orders.index.view.dropoff"}}</label>
+                <DisplayPlace @place={{@resource.payload.dropoff}} @eta={{get @resource.eta @resource.payload.dropoff.id}} />
+            </div>
+            <div class="field-info-container">
+                <label class="field-name">{{t "fleet-ops.operations.orders.index.view.return"}}</label>
+                <DisplayPlace @place={{@resource.payload.return}} />
+            </div>
+        </div>
+    {{/if}}
+</ContentPanel>

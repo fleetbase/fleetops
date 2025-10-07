@@ -18,7 +18,7 @@ export default class FleetActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'fleet/form',
                 title: 'Create a new fleet',
-                panelContentClass: 'px-4',
+
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -30,7 +30,7 @@ export default class FleetActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'fleet/form',
                 title: `Edit: ${fleet.name}`,
-                panelContentClass: 'px-4',
+
                 fleet,
                 ...options,
             });
@@ -42,7 +42,6 @@ export default class FleetActionsService extends ResourceActionService {
                     {
                         label: 'Overview',
                         component: 'fleet/details',
-                        contentClass: 'p-4',
                     },
                 ],
                 ...options,

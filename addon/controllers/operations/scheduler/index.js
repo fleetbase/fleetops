@@ -1,4 +1,4 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
@@ -7,7 +7,7 @@ import isObject from '@fleetbase/ember-core/utils/is-object';
 import isJson from '@fleetbase/ember-core/utils/is-json';
 import createFullCalendarEventFromOrder, { createOrderEventTitle } from '../../../utils/create-full-calendar-event-from-order';
 
-export default class OperationsSchedulerIndexController extends BaseController {
+export default class OperationsSchedulerIndexController extends Controller {
     @service modalsManager;
     @service notifications;
     @service store;

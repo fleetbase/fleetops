@@ -10,7 +10,8 @@ import { inject as service } from '@ember/service';
  * @memberof OrderScheduleCardComponent
  */
 export default class OrderScheduleCardComponent extends Component {
-    @service contextPanel;
+    @service driverActions;
+    @service vehicleActions;
     @service intl;
     @service modalsManager;
     @service notifications;
@@ -41,7 +42,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @memberof OrderScheduleCardComponent
      */
     @action onClickDriver(driver) {
-        this.contextPanel.focus(driver);
+        this.driverActions.panel.view(driver);
     }
 
     /**
@@ -51,7 +52,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @memberof OrderScheduleCardComponent
      */
     @action onClickVehicle(vehicle) {
-        this.contextPanel.focus(vehicle);
+        this.vehicleActions.panel.view(driver);
     }
 
     /**

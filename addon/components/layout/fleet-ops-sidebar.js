@@ -10,6 +10,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     @service store;
     @service intl;
     @service abilities;
+    @service appCache;
     @tracked routePrefix = 'console.fleet-ops.';
     @tracked menuPanels = [];
     @tracked universeMenuItems = [];
@@ -266,15 +267,34 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             routePrefix,
             open: options.open ?? true,
             items,
+            onToggle: options.onToggle,
         });
 
         this.menuPanels = this.removeEmptyMenuPanels([
-            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.operations', 'operations', operationsItems, { open: true }),
-            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.resources', 'management', resourcesItems, { open: true }),
-            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.maintenance', 'maintenance', maintenanceItems, { open: true }),
-            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.connectivity', 'connectivity', connectivityItems, { open: true }),
-            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.analytics', 'analytics', analyticsItems, { open: true }),
-            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.settings', 'settings', settingsItems, { open: true }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.operations', 'operations', operationsItems, {
+                open: this.appCache.get('fleet-ops:sidebar:operations:open', true),
+                onToggle: (open) => this.appCache.set('fleet-ops:sidebar:operations:open', open),
+            }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.resources', 'management', resourcesItems, {
+                open: this.appCache.get('fleet-ops:sidebar:management:open', true),
+                onToggle: (open) => this.appCache.set('fleet-ops:sidebar:management:open', open),
+            }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.maintenance', 'maintenance', maintenanceItems, {
+                open: this.appCache.get('fleet-ops:sidebar:maintenance:open', false),
+                onToggle: (open) => this.appCache.set('fleet-ops:sidebar:maintenance:open', open),
+            }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.connectivity', 'connectivity', connectivityItems, {
+                open: this.appCache.get('fleet-ops:sidebar:connectivity:open', false),
+                onToggle: (open) => this.appCache.set('fleet-ops:sidebar:connectivity:open', open),
+            }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.analytics', 'analytics', analyticsItems, {
+                open: this.appCache.get('fleet-ops:sidebar:analytics:open', false),
+                onToggle: (open) => this.appCache.set('fleet-ops:sidebar:analytics:open', open),
+            }),
+            createPanel('fleet-ops.component.layout.fleet-ops-sidebar.settings', 'settings', settingsItems, {
+                open: this.appCache.get('fleet-ops:sidebar:settings:open', true),
+                onToggle: (open) => this.appCache.set('fleet-ops:sidebar:settings:open', open),
+            }),
         ]);
     }
 
@@ -286,17 +306,6 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
         if (typeof onClickCreateOrder === 'function') {
             onClickCreateOrder();
-        }
-    }
-
-    /**
-     * Action handler for opening settings.
-     */
-    @action onClickSettings() {
-        const { onClickSettings } = this.args;
-
-        if (typeof onClickSettings === 'function') {
-            onClickSettings();
         }
     }
 

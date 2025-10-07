@@ -65,6 +65,7 @@
         @dropdownButtonRenderInPlace={{menuPanel.dropdownButtonRenderInPlace}}
         @dropdownHorizontalPosition={{menuPanel.dropdownHorizontalPosition}}
         @dropdownButtonMenuLabel={{menuPanel.dropdownButtonMenuLabel}}
+        @onToggle={{menuPanel.onToggle}}
     >
         {{#each menuPanel.items as |menuItem|}}
             {{#if menuItem.renderComponentInPlace}}

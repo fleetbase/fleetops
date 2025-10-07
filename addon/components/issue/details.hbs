@@ -3,7 +3,7 @@
         <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
             <div class="field-info-container">
                 <div class="field-name">Title</div>
-                <div class="field-value">{{or @resource.title (concat "Issue reported on " (format-date @model.created_at "dd MMM yy, HH:mm"))}}</div>
+                <div class="field-value">{{or @resource.title (concat "Issue reported on " (format-date-fns @model.created_at "dd MMM yy, HH:mm"))}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "fleet-ops.common.status"}}</div>

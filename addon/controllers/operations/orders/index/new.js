@@ -1,10 +1,12 @@
-import Controller from '@ember/controller';
-import { inject as service } from '@ember/service';
+import Controller, { inject as controller } from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { debug } from '@ember/debug';
 
 export default class OperationsOrdersIndexNewController extends Controller {
+    @controller('operations.orders.index') index;
     @service loader;
     @service intl;
     @service universe;
@@ -70,7 +72,7 @@ export default class OperationsOrdersIndexNewController extends Controller {
             this.universe.trigger('fleet-ops.order.created', createdOrder);
 
             // Order creation completed
-            yield this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index.view', createdOrder);
+            yield this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index.details', createdOrder);
             this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.new.success-message', { orderId: createdOrder.public_id }));
         } catch (err) {
             console.error(err);
@@ -79,6 +81,11 @@ export default class OperationsOrdersIndexNewController extends Controller {
         } finally {
             this.loader.removeLoader();
         }
+    }
+
+    @action setup() {
+        // Change to map layout
+        this.index.changeLayout('map');
     }
 
     reset() {

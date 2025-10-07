@@ -18,7 +18,7 @@ export default class IntegratedVendorActionsService extends ResourceActionServic
             return this.resourceContextPanel.open({
                 content: 'integrated-vendor/form',
                 title: 'Create a new Integrated Vendor',
-                panelContentClass: 'px-4',
+
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -30,7 +30,7 @@ export default class IntegratedVendorActionsService extends ResourceActionServic
             return this.resourceContextPanel.open({
                 content: 'integrated-vendor/form',
                 title: `Edit: ${integratedVendor.name}`,
-                panelContentClass: 'px-4',
+
                 integratedVendor,
                 ...options,
             });
@@ -42,7 +42,6 @@ export default class IntegratedVendorActionsService extends ResourceActionServic
                     {
                         label: 'Overview',
                         component: 'integrated-vendor/details',
-                        contentClass: 'p-4',
                     },
                 ],
                 ...options,

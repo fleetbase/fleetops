@@ -2,7 +2,7 @@
     @resource={{@model}}
     @controller={{this}}
     @headerComponent={{component "driver/panel-header" resource=@model}}
-    @headerTitle={{or @model.name}}
+    @headerTitle={{@model.name}}
     @actionButtons={{this.actionButtons}}
     @onPressCancel={{transition-to "management.drivers.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}

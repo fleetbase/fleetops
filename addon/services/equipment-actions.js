@@ -18,7 +18,7 @@ export default class EquipmentActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'equipment/form',
                 title: 'Create a new equipment',
-                panelContentClass: 'px-4',
+
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -29,7 +29,7 @@ export default class EquipmentActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'equipment/form',
                 title: `Edit: ${equipment.name}`,
-                panelContentClass: 'px-4',
+
                 equipment,
             });
         },
@@ -40,7 +40,6 @@ export default class EquipmentActionsService extends ResourceActionService {
                     {
                         label: 'Overview',
                         component: 'equipment/details',
-                        contentClass: 'p-4',
                     },
                 ],
             });

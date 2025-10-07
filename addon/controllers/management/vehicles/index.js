@@ -3,8 +3,8 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
 export default class ManagementVehiclesIndexController extends Controller {
-    @service contextPanel;
     @service vehicleActions;
+    @service driverActions;
     @service intl;
     @service appCache;
     @tracked queryParams = [
@@ -149,7 +149,7 @@ export default class ManagementVehiclesIndexController extends Controller {
             action: async (vehicle) => {
                 const driver = await vehicle.loadDriver();
 
-                return this.contextPanel.focus(driver);
+                return this.driverActions.panel.view(driver);
             },
             valuePath: 'driver_name',
             width: '120px',

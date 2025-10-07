@@ -1,62 +1,50 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
-import { isBlank } from '@ember/utils';
-import { timeout, task } from 'ember-concurrency';
 
-export default class OperationsServiceRatesIndexController extends BaseController {
-    @service store;
-    @service currentUser;
+export default class OperationsServiceRatesIndexController extends Controller {
+    @service serviceRateActions;
     @service intl;
-    @service fetch;
-    @service filters;
-    @service crud;
-    @service notifications;
-    @service modalsManager;
-    @service hostRouter;
-    @service loader;
 
-    /**
-     * The current page of data being viewed
-     *
-     * @var {Integer}
-     */
+    /** query params */
+    @tracked queryParams = ['page', 'query', 'limit', 'sort', 'zone', 'service_area'];
     @tracked page = 1;
-
-    /**
-     * The maximum number of items to show per page
-     *
-     * @var {Integer}
-     */
     @tracked limit;
-
-    /**
-     * The search query
-     *
-     * @var {String}
-     */
     @tracked query;
-
-    /**
-     * The param to sort the data on, the param with prepended `-` is descending
-     *
-     * @var {String}
-     */
     @tracked sort = '-created_at';
 
-    /**
-     * Queryable parameters for this controller's model
-     *
-     * @var {Array}
-     */
-    queryParams = ['page', 'query', 'limit', 'sort', 'zone', 'service_area'];
+    /** action buttons */
+    @tracked actionButtons = [
+        {
+            icon: 'refresh',
+            onClick: this.serviceRateActions.refresh,
+            helpText: this.intl.t('fleet-ops.common.reload-data'),
+        },
+        {
+            text: 'New',
+            type: 'primary',
+            icon: 'plus',
+            onClick: this.serviceRateActions.transition.create,
+        },
+        {
+            text: 'Export',
+            icon: 'long-arrow-up',
+            iconClass: 'rotate-icon-45',
+            wrapperClass: 'hidden md:flex',
+            onClick: this.serviceRateActions.export,
+        },
+    ];
 
-    /**
-     * All columns applicable for orders
-     *
-     * @var {Array}
-     */
+    /** bulk action buttons */
+    @tracked bulkActions = [
+        {
+            label: 'Delete selected...',
+            class: 'text-red-500',
+            fn: this.serviceRateActions.bulkDelete,
+        },
+    ];
+
+    /** columns **/
     @tracked columns = [
         {
             label: this.intl.t('fleet-ops.common.id'),
@@ -64,7 +52,7 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
             width: '150px',
             cellComponent: 'table/cell/anchor',
             permission: 'fleet-ops view service-rate',
-            onClick: this.editServiceRate,
+            onClick: this.serviceRateActions.transition.view,
             resizable: true,
             sortable: true,
             filterable: true,
@@ -138,12 +126,12 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
             actions: [
                 {
                     label: this.intl.t('fleet-ops.operations.service-rates.index.edit-service'),
-                    fn: this.editServiceRate,
+                    fn: this.serviceRateActions.transition.edit,
                     permission: 'fleet-ops view service-rate',
                 },
                 {
                     label: this.intl.t('fleet-ops.operations.service-rates.index.delete-service'),
-                    fn: this.deleteServiceRate,
+                    fn: this.serviceRateActions.delete,
                     permission: 'fleet-ops delete service-rate',
                 },
             ],
@@ -153,90 +141,4 @@ export default class OperationsServiceRatesIndexController extends BaseControlle
             searchable: false,
         },
     ];
-
-    /**
-     * The search task.
-     *
-     * @void
-     */
-    @task({ restartable: true }) *search({ target: { value } }) {
-        // if no query don't search
-        if (isBlank(value)) {
-            this.query = null;
-            return;
-        }
-
-        // timeout for typing
-        yield timeout(250);
-
-        // reset page for results
-        if (this.page > 1) {
-            this.page = 1;
-        }
-
-        // update the query param
-        this.query = value;
-    }
-
-    /**
-     * Reload layout view.
-     */
-    @action reload() {
-        return this.hostRouter.refresh();
-    }
-
-    /**
-     * Toggles dialog to export `service-rate`
-     *
-     * @memberof OperationsServiceRatesIndexController
-     * @void
-     */
-    @action exportServiceRates() {
-        const selections = this.table.selectedRows.map((_) => _.id);
-        this.crud.export('service-rate', { params: { selections } });
-    }
-
-    /**
-     * Transition to service rate edit route.
-     *
-     * @param {ServiceRateModel} serviceRate
-     * @memberof OperationsServiceRatesIndexController
-     */
-    @action editServiceRate(serviceRate) {
-        this.transitionToRoute('operations.service-rates.index.edit', serviceRate);
-    }
-
-    /**
-     * Delete a `service-rate` via confirm prompt
-     *
-     * @param {ServiceRateModel} serviceRate
-     * @param {Object} options
-     * @void
-     */
-    @action deleteServiceRate(serviceRate, options = {}) {
-        this.crud.delete(serviceRate, {
-            onSuccess: () => {
-                return this.hostRouter.refresh();
-            },
-            ...options,
-        });
-    }
-
-    /**
-     * Bulk deletes selected `service rates` via confirm prompt
-     *
-     * @void
-     */
-    @action bulkDeleteServiceRates() {
-        const selected = this.table.selectedRows;
-
-        this.crud.bulkDelete(selected, {
-            modelNamePath: `public_id`,
-            acceptButtonText: this.intl.t('fleet-ops.operations.service-rates.index.accept-button'),
-            onSuccess: async () => {
-                await this.hostRouter.refresh();
-                this.table.untoggleSelectAll();
-            },
-        });
-    }
 }

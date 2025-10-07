@@ -13,7 +13,7 @@ module.exports = buildEngine({
         if (type === 'css') {
             tree = new Funnel(tree, {
                 exclude: ['**/@fleetbase/ember-ui/**/*.css'],
-                allowEmpty: true
+                allowEmpty: true,
             });
         }
 

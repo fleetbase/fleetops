@@ -1,6 +1,7 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { format } from 'date-fns';
 
 export default class IssueActionsService extends ResourceActionService {
     @service driverActions;
@@ -8,7 +9,14 @@ export default class IssueActionsService extends ResourceActionService {
 
     constructor() {
         super(...arguments);
-        this.initialize('issue');
+        this.initialize('issue', {
+            defaultAttributes: {
+                title: `Issue reported on ${format(new Date(), 'dd MMM yy, HH:mm')}`,
+                status: 'pending',
+                priority: 'low',
+                type: 'operational',
+            },
+        });
     }
 
     transition = {
@@ -23,7 +31,7 @@ export default class IssueActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'issue/form',
                 title: 'Create a new issue',
-                panelContentClass: 'px-4',
+
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -34,7 +42,7 @@ export default class IssueActionsService extends ResourceActionService {
             return this.resourceContextPanel.open({
                 content: 'issue/form',
                 title: `Edit: ${issue.name}`,
-                panelContentClass: 'px-4',
+
                 issue,
             });
         },
@@ -45,7 +53,6 @@ export default class IssueActionsService extends ResourceActionService {
                     {
                         label: 'Overview',
                         component: 'issue/details',
-                        contentClass: 'p-4',
                     },
                 ],
             });

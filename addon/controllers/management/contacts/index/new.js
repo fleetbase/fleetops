@@ -4,15 +4,13 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
-const DEFAULT_PROPERTIES = { type: 'contact', status: 'active' };
-
 export default class ManagementContactsIndexNewController extends Controller {
-    @service store;
+    @service contactActions;
     @service hostRouter;
     @service intl;
     @service notifications;
     @tracked overlay;
-    @tracked contact = this.store.createRecord('contact', DEFAULT_PROPERTIES);
+    @tracked contact = this.contactActions.createNewInstance();
 
     @task *save(contact) {
         try {
@@ -29,6 +27,6 @@ export default class ManagementContactsIndexNewController extends Controller {
     }
 
     @action resetForm() {
-        this.contact = this.store.createRecord('contact', DEFAULT_PROPERTIES);
+        this.contact = this.contactActions.createNewInstance();
     }
 }

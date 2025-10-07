@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isBlank } from '@ember/utils';
-import { later } from '@ember/runloop';
+import { next } from '@ember/runloop';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 /**
@@ -13,52 +13,13 @@ import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
  * @extends Component
  */
 export default class LiveMapDrawerVehicleListingComponent extends Component {
-    /**
-     * Service for managing context panels within the application.
-     * @service
-     */
-    @service contextPanel;
-
-    /**
-     * Service for triggering notifications.
-     * @service
-     */
+    @service vehicleActions;
     @service notifications;
-
-    /**
-     * Service for intl.
-     * @service
-     */
     @service intl;
-
-    /**
-     * Service for CRUD operations.
-     * @service
-     */
     @service crud;
-
-    /**
-     * The list of vehicles to display, tracked for reactivity.
-     * @tracked
-     */
     @tracked vehicles = [];
-
-    /**
-     * The internal list of vehicles used for searching, tracked for reactivity.
-     * @tracked
-     */
     @tracked _vehicles = [];
-
-    /**
-     * The current search query, tracked for reactivity.
-     * @tracked
-     */
     @tracked query = '';
-
-    /**
-     * The table component reference, tracked for reactivity.
-     * @tracked
-     */
     @tracked table = null;
 
     /**
@@ -173,21 +134,17 @@ export default class LiveMapDrawerVehicleListingComponent extends Component {
      * @param {object} vehicle - The vehicle object to focus on.
      * @param {string} intent - The intent for focusing, default is 'viewing'.
      */
-    @action focus(vehicle, intent = 'viewing') {
+    @action focus(vehicle, action = 'view') {
         if (this.liveMap) {
             this.liveMap.focusLayerByRecord(vehicle, 16, {
                 onAfterFocusWithRecord: () => {
-                    later(
-                        this,
-                        () => {
-                            this.contextPanel.focus(vehicle, intent);
-                        },
-                        600 * 2
-                    );
+                    next(this, () => {
+                        this.vehicleActions.panel[action](vehicle);
+                    });
                 },
             });
         } else {
-            this.contextPanel.focus(vehicle, intent);
+            this.vehicleActions.panel[action](vehicle);
         }
     }
 

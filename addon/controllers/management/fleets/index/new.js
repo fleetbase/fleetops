@@ -4,15 +4,13 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
-const DEFAULT_PROPERTIES = { status: 'active' };
-
 export default class ManagementFleetsIndexNewController extends Controller {
-    @service store;
+    @service fleetActions;
     @service hostRouter;
     @service intl;
     @service notifications;
     @tracked overlay;
-    @tracked fleet = this.store.createRecord('fleet', DEFAULT_PROPERTIES);
+    @tracked fleet = this.fleetActions.createNewInstance();
 
     @task *save(fleet) {
         try {
@@ -29,6 +27,6 @@ export default class ManagementFleetsIndexNewController extends Controller {
     }
 
     @action resetForm() {
-        this.fleet = this.store.createRecord('fleet', DEFAULT_PROPERTIES);
+        this.fleet = this.fleetActions.createNewInstance();
     }
 }

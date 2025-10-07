@@ -13,7 +13,7 @@ export default class VendorFormComponent extends Component {
         this.#setIntegration(integration);
     }
 
-    @action handleTypeSelection(type) {
+    @action handleTypeSelection({ value: type }) {
         this.args.resource.type = type;
         if (type !== 'integrated_vendor') {
             this.#setIntegration(null);

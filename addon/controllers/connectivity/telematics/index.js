@@ -1,3 +1,129 @@
 import Controller from '@ember/controller';
+import { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 
-export default class ConnectivityTelematicsIndexController extends Controller {}
+export default class ConnectivityTelematicsIndexController extends Controller {
+    @service telematicActions;
+    @service intl;
+
+    /** query params */
+    @tracked queryParams = ['name', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
+    @tracked page = 1;
+    @tracked limit;
+    @tracked sort = '-created_at';
+    @tracked public_id;
+    @tracked name;
+
+    /** action buttons */
+    @tracked actionButtons = [
+        {
+            icon: 'refresh',
+            onClick: this.telematicActions.refresh,
+            helpText: this.intl.t('fleet-ops.common.reload-data'),
+        },
+        {
+            text: 'New',
+            type: 'primary',
+            icon: 'plus',
+            onClick: this.telematicActions.transition.create,
+        },
+        {
+            text: 'Import',
+            type: 'magic',
+            icon: 'upload',
+            onClick: this.telematicActions.import,
+        },
+        {
+            text: 'Export',
+            icon: 'long-arrow-up',
+            iconClass: 'rotate-icon-45',
+            wrapperClass: 'hidden md:flex',
+            onClick: this.telematicActions.export,
+        },
+    ];
+
+    /** bulk action buttons */
+    @tracked bulkActions = [
+        {
+            label: 'Delete selected...',
+            class: 'text-red-500',
+            fn: this.telematicActions.bulkDelete,
+        },
+    ];
+
+    /** columns */
+    @tracked columns = [
+        {
+            label: this.intl.t('fleet-ops.common.name'),
+            valuePath: 'name',
+            width: '180px',
+            cellComponent: 'table/cell/anchor',
+            cellClassNames: 'uppercase',
+            action: this.telematicActions.transition.view,
+            permission: 'fleet-ops view telematic',
+            hidden: true,
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterParam: 'name',
+            filterComponent: 'filter/string',
+        },
+        {
+            label: this.intl.t('fleet-ops.common.created-at'),
+            valuePath: 'createdAt',
+            sortParam: 'created_at',
+            width: '10%',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterComponent: 'filter/date',
+        },
+        {
+            label: this.intl.t('fleet-ops.common.updated-at'),
+            valuePath: 'updatedAt',
+            sortParam: 'updated_at',
+            width: '10%',
+            resizable: true,
+            sortable: true,
+            hidden: true,
+            filterable: true,
+            filterComponent: 'filter/date',
+        },
+
+        {
+            label: '',
+            cellComponent: 'table/cell/dropdown',
+            ddButtonText: false,
+            ddButtonIcon: 'ellipsis-h',
+            ddButtonIconPrefix: 'fas',
+            ddMenuLabel: 'Telematic Actions',
+            cellClassNames: 'overflow-visible',
+            wrapperClass: 'flex items-center justify-end mx-2',
+            width: '10%',
+            actions: [
+                {
+                    label: this.intl.t('fleet-ops.management.places.index.view-details'),
+                    fn: this.telematicActions.transition.view,
+                    permission: 'fleet-ops view telematic',
+                },
+                {
+                    label: this.intl.t('fleet-ops.management.places.index.edit-place'),
+                    fn: this.telematicActions.transition.edit,
+                    permission: 'fleet-ops update telematic',
+                },
+                {
+                    separator: true,
+                },
+                {
+                    label: this.intl.t('fleet-ops.management.places.index.delete'),
+                    fn: this.telematicActions.delete,
+                    permission: 'fleet-ops delete telematic',
+                },
+            ],
+            sortable: false,
+            filterable: false,
+            resizable: false,
+            searchable: false,
+        },
+    ];
+}

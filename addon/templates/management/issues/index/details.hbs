@@ -1,7 +1,7 @@
 <Layout::Resource::Panel
     @resource={{@model}}
     @controller={{this}}
-    @headerTitle={{or @model.title (concat "Issue reported on " (format-date @model.created_at "dd MMM yy, HH:mm"))}}
+    @headerTitle={{or @model.title (concat "Issue reported on " (format-date-fns @model.created_at "dd MMM yy, HH:mm"))}}
     @actionButtons={{this.actionButtons}}
     @onPressCancel={{transition-to "management.issues.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}

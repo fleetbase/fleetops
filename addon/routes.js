@@ -3,13 +3,14 @@ import buildRoutes from 'ember-engines/routes';
 export default buildRoutes(function () {
     this.route('virtual', { path: '/:section/:slug' });
     this.route('operations', { path: '/' }, function () {
-        this.route('dispatch');
-        this.route('zones', function () {});
         this.route('order-config', function () {});
         this.route('service-rates', function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');
-                this.route('edit', { path: '/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                });
+                this.route('edit', { path: '/edit/:public_id' });
             });
         });
         this.route('scheduler', function () {});
@@ -17,15 +18,15 @@ export default buildRoutes(function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');
                 this.route('view', { path: '/:public_id' });
-                this.route('config', function () {
-                    this.route('types', { path: '/' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
                 });
             });
         });
         this.route('routes', function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');
-                this.route('view', { path: '/:public_id' });
+                this.route('details', { path: '/:public_id' });
             });
         });
     });

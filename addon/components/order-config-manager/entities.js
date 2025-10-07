@@ -20,7 +20,6 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
  */
 export default class OrderConfigManagerEntitiesComponent extends Component {
     @service resourceContextPanel;
-    @service contextPanel;
     @service modalsManager;
     @service notifications;
 
@@ -93,7 +92,7 @@ export default class OrderConfigManagerEntitiesComponent extends Component {
                 } else {
                     this.customEntities = [customEntity, ...this.customEntities];
                 }
-                
+
                 this.save.perform();
                 contextComponentCallback(this, 'onContextChanged', null);
                 this.resourceContextPanel.closeAll();
@@ -102,31 +101,6 @@ export default class OrderConfigManagerEntitiesComponent extends Component {
                 contextComponentCallback(this, 'onContextChanged', null);
             },
         });
-        // this.contextPanel.focus(customEntity, 'editing', {
-        //     args: {
-        //         config: this.config,
-        //         onPressCancel: () => {
-        //             this.contextPanel.clear();
-        //             contextComponentCallback(this, 'onContextChanged', null);
-        //         },
-        //         onSave: (customEntity) => {
-        //             if (index > -1) {
-        //                 this.customEntities = this.customEntities.map((_, i) => {
-        //                     if (i === index) {
-        //                         return customEntity;
-        //                     }
-
-        //                     return _;
-        //                 });
-        //             } else {
-        //                 this.customEntities = [customEntity, ...this.customEntities];
-        //             }
-        //             this.contextPanel.clear();
-        //             this.save.perform();
-        //             contextComponentCallback(this, 'onContextChanged', null);
-        //         },
-        //     },
-        // });
     }
 
     /**

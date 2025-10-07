@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isBlank } from '@ember/utils';
-import { later } from '@ember/runloop';
+import { next } from '@ember/runloop';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 /**
@@ -13,51 +13,13 @@ import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
  * @extends Component
  */
 export default class LiveMapDrawerPlaceListingComponent extends Component {
-    /**
-     * Service for managing context panels within the application.
-     * @service
-     */
-    @service contextPanel;
-
-    /**
-     * Service for triggering notifications.
-     * @service
-     */
+    @service placeActions;
     @service notifications;
-
-    /**
-     * Service for CRUD operations.
-     * @service
-     */
     @service crud;
-
-    /**
-     * Service for intl.
-     * @service
-     */
     @service intl;
-    /**
-     * The list of places to display, tracked for reactivity.
-     * @tracked
-     */
     @tracked places = [];
-
-    /**
-     * The internal list of places used for searching, tracked for reactivity.
-     * @tracked
-     */
     @tracked _places = [];
-
-    /**
-     * The current search query, tracked for reactivity.
-     * @tracked
-     */
     @tracked query = '';
-
-    /**
-     * The table component reference, tracked for reactivity.
-     * @tracked
-     */
     @tracked table = null;
 
     /**
@@ -99,7 +61,7 @@ export default class LiveMapDrawerPlaceListingComponent extends Component {
                 {
                     label: this.intl.t('fleet-ops.component.live-map-drawer.place-listing.edit-place'),
                     fn: (place) => {
-                        return this.focus(place, 'editing');
+                        return this.focus(place, 'edit');
                     },
                 },
                 {
@@ -160,21 +122,17 @@ export default class LiveMapDrawerPlaceListingComponent extends Component {
      * @param {object} place - The place object to focus on.
      * @param {string} intent - The intent for focusing, default is 'viewing'.
      */
-    @action focus(place, intent = 'viewing') {
+    @action focus(place, action = 'view') {
         if (this.liveMap) {
             this.liveMap.focusLayerByRecord(place, 17, {
                 onAfterFocusWithRecord: () => {
-                    later(
-                        this,
-                        () => {
-                            this.contextPanel.focus(place, intent);
-                        },
-                        600 * 2
-                    );
+                    next(this, () => {
+                        this.placeActions.panel[action](place);
+                    });
                 },
             });
         } else {
-            this.contextPanel.focus(place, intent);
+            this.placeActions.panel[action](place);
         }
     }
 

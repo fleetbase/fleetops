@@ -60,6 +60,8 @@ class ServiceRate extends Model
         'per_meter_unit',
         'base_fee',
         'algorithm',
+        'max_distance_unit',
+        'max_distance',
         'rate_calculation_method',
         'has_cod_fee',
         'cod_calculation_method',
@@ -182,17 +184,29 @@ class ServiceRate extends Model
      *
      * @param string $method
      */
-    public function isRateCalculationMethod($method): bool
+    public function isRateCalculationMethod(string|array $method): bool
     {
+        if (is_array($method)) {
+            return in_array($this->rate_calculation_method, $method);
+        }
+
         return $this->rate_calculation_method === $method;
     }
 
     /**
-     * Check if the rate calculation method is "fixed_meter".
+     * Check if the rate calculation method is "fixed_meter" or "fixed_rate".
      */
     public function isFixedMeter(): bool
     {
-        return $this->rate_calculation_method === 'fixed_meter';
+        return $this->rate_calculation_method === 'fixed_meter' || $this->rate_calculation_method === 'fixed_rate';
+    }
+
+    /**
+     * Check if the rate calculation method is "fixed_meter" or "fixed_rate".
+     */
+    public function isFixedRate(): bool
+    {
+        return $this->rate_calculation_method === 'fixed_meter' || $this->rate_calculation_method === 'fixed_rate';
     }
 
     /**

@@ -73,7 +73,7 @@ class ServiceRateController extends Controller
         $serviceRate = ServiceRate::create($input);
 
         // create service rate fee's if applicable
-        if ($request->has('meter_fees') && $serviceRate->isRateCalculationMethod('fixed_meter') && is_array($request->input('meter_fees'))) {
+        if ($request->has('meter_fees') && $serviceRate->isRateCalculationMethod(['fixed_meter', 'fixed_rate']) && is_array($request->input('meter_fees'))) {
             foreach ($request->input('meter_fees') as $meterFee) {
                 ServiceRateFee::create([
                     'service_rate_uuid' => $serviceRate->uuid,

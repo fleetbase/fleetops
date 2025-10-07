@@ -192,16 +192,16 @@ class Vehicle extends Model
      * @var array
      */
     protected $casts = [
-        'current_value' => Money::class,
-        'insurance_value' => Money::class,
-        'acquisition_cost' => Money::class,
-        'location'   => Point::class,
-        'meta'       => Json::class,
-        'telematics' => Json::class,
-        'specs'      => Json::class,
-        'vin_data'   => Json::class,
-        'online'     => 'boolean',
-        'purchased_at'     => 'datetime',
+        'current_value'        => Money::class,
+        'insurance_value'      => Money::class,
+        'acquisition_cost'     => Money::class,
+        'location'             => Point::class,
+        'meta'                 => Json::class,
+        'telematics'           => Json::class,
+        'specs'                => Json::class,
+        'vin_data'             => Json::class,
+        'online'               => 'boolean',
+        'purchased_at'         => 'datetime',
         'lease_expires_at'     => 'datetime',
     ];
 
