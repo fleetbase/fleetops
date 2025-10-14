@@ -21,7 +21,12 @@ export default class ManagementVehiclesIndexNewController extends Controller {
 
             yield this.hostRouter.refresh();
             yield this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details', vehicle);
-            this.notifications.success(this.intl.t('fleet-ops.component.vehicle-form-panel.success-message', { vehicleName: vehicle.display_name }));
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.vehicle'),
+                    resourceName: vehicle.display_name,
+                })
+            );
             this.resetForm();
         } catch (err) {
             this.notifications.serverError(err);

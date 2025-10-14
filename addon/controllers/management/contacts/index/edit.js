@@ -23,7 +23,10 @@ export default class ManagementContactsIndexEditController extends Controller {
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.contacts.index.details', contact);
-            this.notifications.success(this.intl.t('fleet-ops.component.contact-form-panel.success-message', { contactName: contact.name }));
+            this.notifications.success(this.intl.t('common.resource-updated-success', {
+                    resource: this.intl.t('resource.contact'),
+                    resourceName: contact.name,
+                }));
         } catch (err) {
             this.notifications.serverError(err);
         }
@@ -47,9 +50,9 @@ export default class ManagementContactsIndexEditController extends Controller {
 
     #confirmContinueWithUnsavedChanges(contact, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.drivers.index.edit.title'),
-            body: this.intl.t('fleet-ops.management.drivers.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.edit.button'),
+            title: this.intl.t('common.continue-without-saving'),
+            body: this.intl.t('common.continue-without-saving-prompt', { resource: this.intl.t('resource.contact') }),
+            acceptButtonText: this.intl.t('common.continue'),
             confirm: async () => {
                 contact.rollbackAttributes();
                 await this.hostRouter.transitionTo('console.fleet-ops.management.contacts.index.details', contact);

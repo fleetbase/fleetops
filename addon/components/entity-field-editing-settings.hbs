@@ -1,14 +1,14 @@
-<ContentPanel @title={{t "fleet-ops.component.entity-field-editing-settings.entitiy-field-editing-settings"}} @open={{true}}  @wrapperClass="bordered-classic">
+<ContentPanel @title={{t "entity-field-editing-settings.entitiy-field-editing-settings"}} @open={{true}}  @wrapperClass="bordered-classic">
     <OrderConfigManager @onConfigChanged={{this.onConfigChanged}} as |Action Context|>
         <div>
             <InputGroup
-                @name={{t "fleet-ops.component.entity-field-editing-settings.select-order-config"}}
-                @helpText={{t "fleet-ops.component.entity-field-editing-settings.select-order-config-help-text"}}
+                @name={{t "entity-field-editing-settings.select-order-config"}}
+                @helpText={{t "entity-field-editing-settings.select-order-config-help-text"}}
             >
                 <DropdownButton
                     class="order-config-select-button mr-2"
                     @disabled={{not Context.configs}}
-                    @text={{if Context.currentConfig.name Context.currentConfig.name (t "fleet-ops.component.entity-field-editing-settings.select-order-config")}}
+                    @text={{if Context.currentConfig.name Context.currentConfig.name (t "entity-field-editing-settings.select-order-config")}}
                     @textClass="text-sm mr-2"
                     @buttonClass="flex-row-reverse w-44 justify-between"
                     @icon="caret-down"
@@ -48,8 +48,8 @@
                     <Toggle
                         @isToggled={{orderConfigEntityEditingSettings.is_editable}}
                         @onToggle={{this.enableEditableEntityFields}}
-                        @label={{t "fleet-ops.component.entity-field-editing-settings.enable-driver-to-edit-entity-fields"}}
-                        @helpText={{t "fleet-ops.component.entity-field-editing-settings.enable-driver-to-edit-entity-fields-help-text"}}
+                        @label={{t "entity-field-editing-settings.enable-driver-to-edit-entity-fields"}}
+                        @helpText={{t "entity-field-editing-settings.enable-driver-to-edit-entity-fields-help-text"}}
                     />
                 </div>
             </InputGroup>
@@ -67,9 +67,9 @@
             <div class="mt-4 flex items-center">
                 <Button
                     @type="primary"
-                    @size="lg"
+                    @size="sm"
                     @icon="save"
-                    @text={{t "fleet-ops.common.save-changes"}}
+                    @text={{t "common.save-changes"}}
                     @onClick={{perform this.saveEntityEditingSettings}}
                     @isLoading={{not this.saveEntityEditingSettings.isIdle}}
                     @permission="fleet-ops update navigator-settings"

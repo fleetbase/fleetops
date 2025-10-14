@@ -20,10 +20,11 @@ export default class DriverActionsService extends ResourceActionService {
             const driver = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'driver/form',
-                title: 'Create a new driver',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.driver')?.toLowerCase() }),
                 saveOptions: {
                     callback: this.refresh,
                 },
+                useDefaultSaveTask: true,
                 driver,
                 ...options,
             });
@@ -31,7 +32,7 @@ export default class DriverActionsService extends ResourceActionService {
         edit: (driver, options = {}) => {
             return this.resourceContextPanel.open({
                 content: 'driver/form',
-                title: `Edit: ${driver.name}`,
+                title: this.intl.t('common.edit-resource-name', { resourceName: driver.name }),
                 actionButtons: [
                     {
                         icon: 'eye',
@@ -41,6 +42,7 @@ export default class DriverActionsService extends ResourceActionService {
                         },
                     },
                 ],
+                useDefaultSaveTask: true,
                 driver,
                 ...options,
             });
@@ -60,7 +62,7 @@ export default class DriverActionsService extends ResourceActionService {
                 ],
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'driver/details',
                     },
                 ],
@@ -74,8 +76,8 @@ export default class DriverActionsService extends ResourceActionService {
             const driver = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: driver,
-                title: 'Create a new driver',
-                acceptButtonText: 'Create Driver',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.driver')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.driver') }),
                 component: 'driver/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', driver, { refresh: true, ...saveOptions }),
                 ...options,
@@ -84,8 +86,8 @@ export default class DriverActionsService extends ResourceActionService {
         edit: (driver, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: driver,
-                title: `Edit: ${driver.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: driver.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'driver/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', driver, { refresh: true, ...saveOptions }),
@@ -106,8 +108,8 @@ export default class DriverActionsService extends ResourceActionService {
         const { latitude, longitude, location } = driver;
 
         this.modalsManager.show('modals/point-map', {
-            title: this.intl.t('fleet-ops.management.drivers.index.locate-driver', { driverName: driver.name }),
-            acceptButtonText: 'Done',
+            title: this.intl.t('common.resource-location', { resource: driver.name }),
+            acceptButtonText: this.intl.t('common.done'),
             hideDeclineButton: true,
             resource: driver,
             popupText: `${driver.name} (${driver.public_id})`,

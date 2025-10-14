@@ -4,7 +4,10 @@ import { tracked } from '@glimmer/tracking';
 
 export default class ManagementFuelReportsIndexController extends Controller {
     @service fuelReportActions;
+    @service tableContext;
     @service intl;
+
+    /** query params */
     @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'vehicle', 'driver', 'created_by', 'updated_by', 'status', 'country', 'volume', 'odometer'];
     @tracked page = 1;
     @tracked limit;
@@ -18,42 +21,55 @@ export default class ManagementFuelReportsIndexController extends Controller {
     @tracked odometer;
     @tracked status;
     @tracked table;
-    @tracked actionButtons = [
+
+    /** action buttons */
+    get actionButtons() {
+        return [
+            {
+                icon: 'refresh',
+                onClick: this.fuelReportActions.refresh,
+                helpText: this.intl.t('common.refresh'),
+            },
+            {
+                text: this.intl.t('common.new'),
+                type: 'primary',
+                icon: 'plus',
+                onClick: this.fuelReportActions.transition.create,
+            },
+            {
+                text: this.intl.t('common.import'),
+                type: 'magic',
+                icon: 'upload',
+                onClick: this.fuelReportActions.import,
+            },
+            {
+                text: this.intl.t('common.export'),
+                icon: 'long-arrow-up',
+                iconClass: 'rotate-icon-45',
+                wrapperClass: 'hidden md:flex',
+                onClick: this.fuelReportActions.export,
+            },
+        ];
+    }
+
+    /** bulk actions */
+    get bulkActions() {
+        const selected = this.tableContext.getSelectedRows();
+
+        return [
+            {
+                label: this.intl.t('common.delete-selected-count', { count: selected.length }),
+                class: 'text-red-500',
+                fn: this.fuelReportActions.bulkDelete,
+            },
+        ];
+    }
+
+    /** columns */
+    get columns() {
+        return [
         {
-            icon: 'refresh',
-            onClick: this.fuelReportActions.refresh,
-            helpText: this.intl.t('fleet-ops.common.reload-data'),
-        },
-        {
-            text: 'New',
-            type: 'primary',
-            icon: 'plus',
-            onClick: this.fuelReportActions.transition.create,
-        },
-        {
-            text: 'Import',
-            type: 'magic',
-            icon: 'upload',
-            onClick: this.fuelReportActions.import,
-        },
-        {
-            text: 'Export',
-            icon: 'long-arrow-up',
-            iconClass: 'rotate-icon-45',
-            wrapperClass: 'hidden md:flex',
-            onClick: this.fuelReportActions.export,
-        },
-    ];
-    @tracked bulkActions = [
-        {
-            label: 'Delete selected...',
-            class: 'text-red-500',
-            fn: this.fuelReportActions.bulkDelete,
-        },
-    ];
-    @tracked columns = [
-        {
-            label: this.intl.t('fleet-ops.common.id'),
+            label: this.intl.t('column.id'),
             valuePath: 'public_id',
             cellComponent: 'table/cell/anchor',
             action: this.fuelReportActions.transition.view,
@@ -65,7 +81,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
-            label: this.intl.t('fleet-ops.common.reporter'),
+            label: this.intl.t('column.reporter'),
             valuePath: 'reporter_name',
             width: '100px',
             resizable: true,
@@ -77,7 +93,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             model: 'user',
         },
         {
-            label: this.intl.t('fleet-ops.common.driver'),
+            label: this.intl.t('column.driver'),
             valuePath: 'driver_name',
             width: '120px',
             cellComponent: 'table/cell/anchor',
@@ -92,7 +108,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             model: 'driver',
         },
         {
-            label: this.intl.t('fleet-ops.common.vehicle'),
+            label: this.intl.t('column.vehicle'),
             valuePath: 'vehicle_name',
             width: '100px',
             cellComponent: 'table/cell/anchor',
@@ -108,7 +124,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             modelNamePath: 'displayName',
         },
         {
-            label: this.intl.t('fleet-ops.common.status'),
+            label: this.intl.t('column.status'),
             valuePath: 'status',
             cellComponent: 'table/cell/status',
             width: '100px',
@@ -119,7 +135,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             filterOptions: ['draft', 'pending-approval', 'approved', 'rejected', 'revised', 'submitted', 'in-review', 'confirmed', 'processed', 'archived', 'cancelled'],
         },
         {
-            label: this.intl.t('fleet-ops.common.volume'),
+            label: this.intl.t('column.volume'),
             valuePath: 'volume',
             width: '130px',
             cellComponent: 'click-to-copy',
@@ -130,7 +146,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
-            label: this.intl.t('fleet-ops.common.odometer'),
+            label: this.intl.t('column.odometer'),
             valuePath: 'odometer',
             width: '130px',
             cellComponent: 'click-to-copy',
@@ -141,7 +157,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
-            label: this.intl.t('fleet-ops.common.created-at'),
+            label: this.intl.t('column.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
             width: '120px',
@@ -151,7 +167,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
             filterComponent: 'filter/date',
         },
         {
-            label: this.intl.t('fleet-ops.common.updated-at'),
+            label: this.intl.t('column.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
             width: '120px',
@@ -167,18 +183,18 @@ export default class ManagementFuelReportsIndexController extends Controller {
             ddButtonText: false,
             ddButtonIcon: 'ellipsis-h',
             ddButtonIconPrefix: 'fas',
-            ddMenuLabel: 'Fuel Report Actions',
+            ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.fuel-report') }),
             cellClassNames: 'overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
             width: '10%',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.management.fuel-reports.index.view'),
+                    label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.fuel-report') }),
                     fn: this.fuelReportActions.transition.view,
                     permission: 'fleet-ops view fuel-report',
                 },
                 {
-                    label: this.intl.t('fleet-ops.management.fuel-reports.index.edit-fuel'),
+                    label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.fuel-report') }),
                     fn: this.fuelReportActions.transition.edit,
                     permission: 'fleet-ops update fuel-report',
                 },
@@ -186,7 +202,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.management.fuel-reports.index.delete'),
+                    label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.fuel-report') }),
                     fn: this.fuelReportActions.delete,
                     permission: 'fleet-ops delete fuel-report',
                 },
@@ -197,4 +213,5 @@ export default class ManagementFuelReportsIndexController extends Controller {
             searchable: false,
         },
     ];
+}
 }

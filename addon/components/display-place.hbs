@@ -4,9 +4,9 @@
             <div class={{@noAddressClass}}>
                 <span class="text-red-500">
                     {{#if @type}}
-                        {{t "fleet-ops.component.display-panel.no-address" htmlSafe=true type=@type}}
+                        {{t "display-panel.no-address" htmlSafe=true type=@type}}
                     {{else}}
-                        {{t "fleet-ops.component.display-panel.no-address-message"}}
+                        {{t "display-panel.no-address-message"}}
                     {{/if}}
                 </span>
             </div>
@@ -16,7 +16,7 @@
                     <Badge @status={{place.status_code}} />
                 {{/if}}
                 {{#if @eta}}
-                    <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration @eta}}</Badge>
+                    <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">{{t "common.eta"}}:</span> {{format-duration @eta}}</Badge>
                 {{/if}}
                 {{#if @waypointActions}}
                     <DropdownButton @iconClass="icon-text-height" @size="xs" @buttonClass="fleetops-btn-xxs" @icon="ellipsis-h" @iconPrefix="fas" @contentClass="dropdown-menu" as |dd|>

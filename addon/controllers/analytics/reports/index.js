@@ -17,10 +17,10 @@ export default class AnalyticsReportsIndexController extends Controller {
         {
             icon: 'refresh',
             onClick: this.reportActions.refresh,
-            helpText: this.intl.t('fleet-ops.common.reload-data'),
+            helpText: this.intl.t('common.refresh'),
         },
         {
-            text: 'New',
+            text: this.intl.t('common.new'),
             type: 'primary',
             icon: 'plus',
             onClick: this.reportActions.transition.create,
@@ -61,7 +61,7 @@ export default class AnalyticsReportsIndexController extends Controller {
             ddButtonText: false,
             ddButtonIcon: 'ellipsis-h',
             ddButtonIconPrefix: 'fas',
-            ddMenuLabel: 'Driver Actions',
+            ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.Driver') }),
             cellClassNames: 'overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
             width: '10%',

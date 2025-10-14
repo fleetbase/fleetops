@@ -24,19 +24,19 @@ export default class FuelReportActionsService extends ResourceActionService {
             const fuelReport = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'fuel-report/form',
-                title: 'Create a new fuel-report',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.fuel-report')?.toLowerCase() }),
                 saveOptions: {
                     callback: this.refresh,
                 },
+                useDefaultSaveTask: true,
                 fuelReport,
             });
         },
         edit: (fuelReport) => {
             return this.resourceContextPanel.open({
                 content: 'fuel-report/form',
-                title: `Edit: ${fuelReport.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: fuelReport.name }),
+                useDefaultSaveTask: true,
                 fuelReport,
             });
         },
@@ -45,7 +45,7 @@ export default class FuelReportActionsService extends ResourceActionService {
                 fuelReport,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'fuel-report/details',
                     },
                 ],
@@ -58,8 +58,8 @@ export default class FuelReportActionsService extends ResourceActionService {
             const fuelReport = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: fuelReport,
-                title: 'Create a new fuel-report',
-                acceptButtonText: 'Create Fuel Report',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.fuel-report')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.fuel-report') }),
                 component: 'fuel-report/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', fuelReport, { refresh: true, ...saveOptions }),
                 ...options,
@@ -68,8 +68,8 @@ export default class FuelReportActionsService extends ResourceActionService {
         edit: (fuelReport, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: fuelReport,
-                title: `Edit: ${fuelReport.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: fuelReport.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'fuel-report/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', fuelReport, { refresh: true, ...saveOptions }),

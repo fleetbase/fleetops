@@ -17,8 +17,8 @@ export default class SensorActionsService extends ResourceActionService {
             const sensor = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'sensor/form',
-                title: 'Create a new sensor',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.sensor')?.toLowerCase() }),
+                useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -28,8 +28,8 @@ export default class SensorActionsService extends ResourceActionService {
         edit: (sensor) => {
             return this.resourceContextPanel.open({
                 content: 'sensor/form',
-                title: `Edit: ${sensor.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: sensor.name }),
+                useDefaultSaveTask: true,
                 sensor,
             });
         },
@@ -38,7 +38,7 @@ export default class SensorActionsService extends ResourceActionService {
                 sensor,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'sensor/details',
                     },
                 ],
@@ -51,8 +51,8 @@ export default class SensorActionsService extends ResourceActionService {
             const sensor = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: sensor,
-                title: 'Create a new sensor',
-                acceptButtonText: 'Create sensor',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.sensor')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.sensor') }),
                 component: 'sensor/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', sensor, { refresh: true, ...saveOptions }),
                 ...options,
@@ -61,8 +61,8 @@ export default class SensorActionsService extends ResourceActionService {
         edit: (sensor, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: sensor,
-                title: `Edit: ${sensor.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: sensor.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'sensor/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', sensor, { refresh: true, ...saveOptions }),

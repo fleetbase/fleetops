@@ -41,10 +41,10 @@ export default class OrderConfigManagerComponent extends Component {
     get tabs() {
         const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:order-config-manager');
         const defaultTabs = [
-            this.universe._createMenuItem('Details', null, { icon: 'circle-info', component: OrderConfigManagerDetailsComponent }),
-            this.universe._createMenuItem('Custom Fields', null, { icon: 'rectangle-list', component: OrderConfigManagerCustomFieldsComponent }),
-            this.universe._createMenuItem('Activity Flow', null, { icon: 'diagram-project', component: OrderConfigManagerActivityFlowComponent }),
-            this.universe._createMenuItem('Entities', null, { icon: 'boxes-packing', component: OrderConfigManagerEntitiesComponent }),
+            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.details'), null, { icon: 'circle-info', component: OrderConfigManagerDetailsComponent }),
+            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.custom-fields'), null, { icon: 'rectangle-list', component: OrderConfigManagerCustomFieldsComponent }),
+            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.activity-flow'), null, { icon: 'diagram-project', component: OrderConfigManagerActivityFlowComponent }),
+            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.entities'), null, { icon: 'boxes-packing', component: OrderConfigManagerEntitiesComponent }),
         ];
 
         if (isArray(registeredTabs)) {
@@ -162,7 +162,7 @@ export default class OrderConfigManagerComponent extends Component {
         });
 
         this.modalsManager.show('modals/new-order-config', {
-            title: this.intl.t('fleet-ops.component.order-config-manager.create-new-title'),
+            title: this.intl.t('order-config-manager.create-new-title'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             declineButtonIcon: 'times',
@@ -176,7 +176,7 @@ export default class OrderConfigManagerComponent extends Component {
             },
             confirm: (modal) => {
                 if (!orderConfig.name) {
-                    return this.notifications.warning(this.intl.t('fleet-ops.component.order-config-manager.create-warning-message'));
+                    return this.notifications.warning(this.intl.t('order-config-manager.create-warning-message'));
                 }
 
                 modal.startLoading();
@@ -184,7 +184,7 @@ export default class OrderConfigManagerComponent extends Component {
                 orderConfig
                     .save()
                     .then((newOrderConfig) => {
-                        this.notifications.success(this.intl.t('fleet-ops.component.order-config-manager.create-success-message'));
+                        this.notifications.success(this.intl.t('order-config-manager.create-success-message'));
                         this.loadOrderConfigs.perform({
                             onAfter: () => {
                                 this.selectConfig(newOrderConfig);

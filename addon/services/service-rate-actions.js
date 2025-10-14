@@ -28,8 +28,8 @@ export default class ServiceRateActionsService extends ResourceActionService {
             const serviceRate = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'service-rate/form',
-                title: 'Create a new service rate',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.service rate')?.toLowerCase() }),
+                useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -39,8 +39,8 @@ export default class ServiceRateActionsService extends ResourceActionService {
         edit: (serviceRate) => {
             return this.resourceContextPanel.open({
                 content: 'service-rate/form',
-                title: `Edit: ${serviceRate.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: serviceRate.name }),
+                useDefaultSaveTask: true,
                 serviceRate,
             });
         },
@@ -49,7 +49,7 @@ export default class ServiceRateActionsService extends ResourceActionService {
                 serviceRate,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'service-rate/details',
                     },
                 ],
@@ -62,8 +62,8 @@ export default class ServiceRateActionsService extends ResourceActionService {
             const serviceRate = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: serviceRate,
-                title: 'Create a new service rate',
-                acceptButtonText: 'Create serviceRate',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.service rate')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.service-rate') }),
                 component: 'service-rate/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', serviceRate, { refresh: true, ...saveOptions }),
                 ...options,
@@ -72,8 +72,8 @@ export default class ServiceRateActionsService extends ResourceActionService {
         edit: (serviceRate, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: serviceRate,
-                title: `Edit: ${serviceRate.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: serviceRate.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'service-rate/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', serviceRate, { refresh: true, ...saveOptions }),

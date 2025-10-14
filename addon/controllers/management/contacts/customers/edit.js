@@ -17,13 +17,18 @@ export default class ManagementContactsCustomersEditController extends Controlle
         },
     ];
 
-    @task *save(driver) {
+    @task *save(customer) {
         try {
-            yield driver.save();
+            yield customer.save();
             this.overlay?.close();
 
-            yield this.hostRouter.transitionTo('console.fleet-ops.management.contacts.customers.details', driver);
-            this.notifications.success(this.intl.t('fleet-ops.component.driver-form-panel.success-message', { driverName: driver.name }));
+            yield this.hostRouter.transitionTo('console.fleet-ops.management.contacts.customers.details', customer);
+            this.notifications.success(
+                this.intl.t('common.resource-updated-success', {
+                    resource: this.intl.t('resource.customer'),
+                    resourceName: customer.name,
+                })
+            );
         } catch (err) {
             this.notifications.serverError(err);
         }
@@ -47,9 +52,9 @@ export default class ManagementContactsCustomersEditController extends Controlle
 
     #confirmContinueWithUnsavedChanges(customer, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.drivers.index.edit.title'),
-            body: this.intl.t('fleet-ops.management.drivers.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.edit.button'),
+            title: this.intl.t('common.continue-without-saving'),
+            body: this.intl.t('common.continue-without-saving-prompt', { resource: this.intl.t('resource.customer') }),
+            acceptButtonText: this.intl.t('common.continue'),
             confirm: async () => {
                 customer.rollbackAttributes();
                 await this.hostRouter.transitionTo('console.fleet-ops.management.contacts.customers.details', customer);

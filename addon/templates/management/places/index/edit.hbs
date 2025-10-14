@@ -1,11 +1,13 @@
 <Layout::Resource::Panel
     @resource={{@model}}
     @controller={{this}}
-    @headerTitle={{concat "Edit: " @model.name}}
+    @headerTitle={{t "common.edit-resource-name" resourceName=@model.address}}
     @actionButtons={{this.actionButtons}}
     @saveTask={{this.save}}
     @onPressCancel={{this.cancel}}
     @onOverlayReady={{fn (mut this.overlay)}}
+    @headerLeftClass="w-1/2"
+    @titleWrapperClass="w-1/2"
 >
     <Place::Form @resource={{@model}} @controller={{this}} />
     <Spacer @height="200px" />

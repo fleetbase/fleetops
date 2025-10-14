@@ -1,20 +1,20 @@
 <div class="px-6 py-2 space-y-4">
-    <ContentPanel @title={{t "fleet-ops.component.order-config-manager.details.details"}} @open={{true}} @wrapperClass="bordered-classic">
+    <ContentPanel @title={{t "order-config-manager.details.details"}} @open={{true}} @wrapperClass="bordered-classic">
         <InputGroup
-            @name={{t "fleet-ops.component.order-config-manager.details.name"}}
+            @name={{t "order-config-manager.details.name"}}
             @value={{@config.name}}
             @disabled={{or @config.core_service (cannot "fleet-ops update order-config")}}
         />
         <InputGroup
-            @name={{t "fleet-ops.component.order-config-manager.details.description"}}
+            @name={{t "order-config-manager.details.description"}}
             @value={{@config.description}}
             @disabled={{or @config.core_service (cannot "fleet-ops update order-config")}}
         />
-        <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.tags"}}>
+        <InputGroup @name={{t "order-config-manager.details.tags"}}>
             {{#let (or @config.core_service (cannot "fleet-ops update order-config")) as |disabled|}}
                 <TagInput
                     class="form-input {{if disabled 'disabled'}}"
-                    @placeholder={{t "fleet-ops.component.order-config-manager.details.add-tags"}}
+                    @placeholder={{t "order-config-manager.details.add-tags"}}
                     @allowSpacesInTags={{true}}
                     @tags={{@config.tags}}
                     @addTag={{@config.addTag}}
@@ -26,13 +26,13 @@
                 </TagInput>
             {{/let}}
         </InputGroup>
-        <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.key"}} @value={{@config.key}} @disabled={{true}} />
-        <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.namespace"}} @value={{@config.namespace}} @disabled={{true}} />
-        <InputGroup @name={{t "fleet-ops.component.order-config-manager.details.version"}} @value={{@config.version}} @disabled={{true}} />
+        <InputGroup @name={{t "order-config-manager.details.key"}} @value={{@config.key}} @disabled={{true}} />
+        <InputGroup @name={{t "order-config-manager.details.namespace"}} @value={{@config.namespace}} @disabled={{true}} />
+        <InputGroup @name={{t "order-config-manager.details.version"}} @value={{@config.version}} @disabled={{true}} />
     </ContentPanel>
 
     {{#unless @config.core_service}}
-        <ContentPanel @title={{t "fleet-ops.component.order-config-manager.details.controls"}} @open={{true}}>
+        <ContentPanel @title={{t "order-config-manager.details.controls"}} @open={{true}}>
             <div class="flex flex-row items-center py-2 space-x-4">
                 <Button
                     @type="primary"
@@ -46,7 +46,7 @@
                 <Button
                     @type="danger"
                     @icon="trash"
-                    @text={{t "fleet-ops.component.order-config-manager.details.delete-config"}}
+                    @text={{t "order-config-manager.details.delete-config"}}
                     @onClick={{this.delete}}
                     @isLoading={{this.deleteConfig.isRunning}}
                     @permission="fleet-ops delete order-config"

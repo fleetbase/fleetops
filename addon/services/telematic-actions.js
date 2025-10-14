@@ -17,8 +17,8 @@ export default class TelematicActionsService extends ResourceActionService {
             const telematic = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'telematic/form',
-                title: 'Create a new telematic',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.telematic')?.toLowerCase() }),
+                useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -28,8 +28,8 @@ export default class TelematicActionsService extends ResourceActionService {
         edit: (telematic) => {
             return this.resourceContextPanel.open({
                 content: 'telematic/form',
-                title: `Edit: ${telematic.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: telematic.name }),
+                useDefaultSaveTask: true,
                 telematic,
             });
         },
@@ -38,7 +38,7 @@ export default class TelematicActionsService extends ResourceActionService {
                 telematic,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'telematic/details',
                     },
                 ],
@@ -51,8 +51,8 @@ export default class TelematicActionsService extends ResourceActionService {
             const telematic = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: telematic,
-                title: 'Create a new telematic',
-                acceptButtonText: 'Create telematic',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.telematic')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.telematic') }),
                 component: 'telematic/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', telematic, { refresh: true, ...saveOptions }),
                 ...options,
@@ -61,8 +61,8 @@ export default class TelematicActionsService extends ResourceActionService {
         edit: (telematic, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: telematic,
-                title: `Edit: ${telematic.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: telematic.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'telematic/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', telematic, { refresh: true, ...saveOptions }),

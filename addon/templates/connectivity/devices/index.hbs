@@ -1,6 +1,6 @@
 <Layout::Resource::Tabular
     @resource="device"
-    @title="Devices"
+    @title={{t "resource.devices"}}
     @searchQuery={{this.query}}
     @onSearch={{perform this.deviceActions.controllerSearchTask this}}
     @data={{@model}}

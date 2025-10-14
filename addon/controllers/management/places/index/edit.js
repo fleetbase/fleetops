@@ -23,7 +23,12 @@ export default class ManagementPlacesIndexEditController extends Controller {
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.places.index.details', place);
-            this.notifications.success(this.intl.t('fleet-ops.component.place-form-panel.success-message', { placeAddress: place.address }));
+            this.notifications.success(
+                this.intl.t('common.resource-updated-success', {
+                    resource: this.intl.t('resource.place'),
+                    resourceName: place.address,
+                })
+            );
         } catch (err) {
             this.notifications.serverError(err);
         }
@@ -47,9 +52,9 @@ export default class ManagementPlacesIndexEditController extends Controller {
 
     #confirmContinueWithUnsavedChanges(place, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.places.index.edit.title'),
-            body: this.intl.t('fleet-ops.management.places.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.places.index.edit.button'),
+            title: this.intl.t('common.continue-without-saving'),
+            body: this.intl.t('common.continue-without-saving-prompt', { resource: this.intl.t('resource.place') }),
+            acceptButtonText: this.intl.t('common.continue'),
             confirm: async () => {
                 place.rollbackAttributes();
                 await this.hostRouter.transitionTo('console.fleet-ops.management.places.index.details', place);

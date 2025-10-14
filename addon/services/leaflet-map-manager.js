@@ -5,9 +5,8 @@ import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { renderCompleted, waitForInsertedAndSized } from '@fleetbase/ember-ui/utils/dom';
 import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
-import getLeafletLayerById from '../utils/get-leaflet-layer-by-id';
-import findLeafletLayer from '../utils/find-leaflet-layer';
-import flyToLeafletLayer from '../utils/fly-to-leaflet-layer';
+import { getLayerById, findLayer, flyToLayer } from '../utils/leaflet';
+import isUuid from '@fleetbase/ember-core/utils/is-uuid';
 
 export default class LeafletMapManagerService extends Service {
     @service leafletRoutingControl;
@@ -111,7 +110,7 @@ export default class LeafletMapManagerService extends Service {
         if (typeof fn === 'function' && this.map.livemap) {
             return fn(this.map.livemap);
         }
-        if (this.map.livemap && typeof this.map.livemap[fn] === 'function') {
+        if (this.map.livemap && typeof fn === 'string' && typeof this.map.livemap[fn] === 'function') {
             return this.map.livemap[fn](...rest);
         }
 
@@ -119,16 +118,29 @@ export default class LeafletMapManagerService extends Service {
     }
 
     /** layer helpers */
-    getLeafletLayerById(map, layerId) {
-        return getLeafletLayerById(map, layerId);
+    getLayerById(layerId) {
+        return getLayerById(this.map, layerId);
     }
 
-    findLeafletLayer(map, findCallback) {
-        return findLeafletLayer(map, findCallback);
+    findLayer(findCallback) {
+        return findLayer(this.map, findCallback);
     }
 
-    flyToLayer(map, layer, zoom, options = {}) {
-        return flyToLeafletLayer(map, layer, zoom, options);
+    flyToLayer(layer, zoom, options = {}) {
+        return flyToLayer(this.map, layer, zoom, options);
+    }
+
+    getLayerByRecord(record) {
+        const id = isUuid(record) ? record : record?.id;
+        if (!id) return;
+        return this.findLayer((l) => l.record_id === id);
+    }
+
+    flyToRecordLayer(record, zoom, options = {}) {
+        const layer = this.getLayerByRecord(record);
+        if (layer) {
+            this.flyToLayer(layer, zoom, options);
+        }
     }
 
     setDrawControl(control) {

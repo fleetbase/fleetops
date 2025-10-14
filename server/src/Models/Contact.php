@@ -71,7 +71,23 @@ class Contact extends Model
      *
      * @var array
      */
-    protected $fillable = ['_key', 'public_id', 'internal_id', 'company_uuid', 'user_uuid', 'place_uuid', 'photo_uuid', 'name', 'title', 'email', 'phone', 'type', 'notes', 'meta', 'slug'];
+    protected $fillable = [
+        '_key',
+        'public_id',
+        'internal_id',
+        'company_uuid',
+        'user_uuid',
+        'place_uuid',
+        'photo_uuid',
+        'name',
+        'title',
+        'email',
+        'phone',
+        'type',
+        'notes',
+        'meta',
+        'slug',
+    ];
 
     /**
      * The attributes that should be cast to native types.

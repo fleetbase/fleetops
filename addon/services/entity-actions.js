@@ -11,8 +11,8 @@ export default class EntityActionsService extends ResourceActionService {
             const entity = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: entity,
-                title: 'Create a new entity',
-                acceptButtonText: 'Create Entity',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.entity')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.entity') }),
                 component: 'entity/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', entity, { refresh: true, ...saveOptions }),
                 ...options,
@@ -21,8 +21,8 @@ export default class EntityActionsService extends ResourceActionService {
         edit: (entity, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: entity,
-                title: entity.isNew ? 'Create new entity' : `Edit: ${entity.name}`,
-                acceptButtonText: 'Save Changes',
+                title: entity.isNew ? 'Create new entity' : `Edit: ${entity.name ?? entity.public_id}`,
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'entity/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', entity, { refresh: true, ...saveOptions }),
@@ -32,7 +32,7 @@ export default class EntityActionsService extends ResourceActionService {
         view: (entity, options = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: entity,
-                title: entity.name,
+                title: entity.name ?? entity.public_id,
                 component: 'entity/details',
                 ...options,
             });

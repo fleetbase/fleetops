@@ -6,8 +6,13 @@ import fleetOpsOptions from '../../../utils/fleet-ops-options';
 
 export default class ManagementFleetsIndexController extends Controller {
     @service fleetActions;
+    @service serviceAreaActions;
+    @service zoneActions;
+    @service vendorActions;
+    @service tableContext;
     @service intl;
-    @service serviceAreas;
+
+    /** query params */
     @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'zone', 'service_area', 'parent_fleet', 'vendor', 'created_by', 'updated_by', 'status', 'task', 'name'];
     @tracked page = 1;
     @tracked limit;
@@ -21,227 +26,248 @@ export default class ManagementFleetsIndexController extends Controller {
     @tracked name;
     @tracked status;
     @tracked table;
-    @tracked actionButtons = [
-        {
-            icon: 'refresh',
-            onClick: this.fleetActions.refresh,
-            helpText: this.intl.t('fleet-ops.common.reload-data'),
-        },
-        {
-            text: 'New',
-            type: 'primary',
-            icon: 'plus',
-            onClick: this.fleetActions.transition.create,
-        },
-        {
-            text: 'Import',
-            type: 'magic',
-            icon: 'upload',
-            onClick: this.fleetActions.import,
-        },
-        {
-            text: 'Export',
-            icon: 'long-arrow-up',
-            iconClass: 'rotate-icon-45',
-            wrapperClass: 'hidden md:flex',
-            onClick: this.fleetActions.export,
-        },
-    ];
-    @tracked bulkActions = [
-        {
-            label: 'Delete selected...',
-            class: 'text-red-500',
-            fn: this.fleetActions.bulkDelete,
-        },
-    ];
-    @tracked columns = [
-        {
-            label: this.intl.t('fleet-ops.common.name'),
-            valuePath: 'name',
-            width: '150px',
-            cellComponent: 'table/cell/anchor',
-            permission: 'fleet-ops view fleet',
-            action: this.fleetActions.transition.view,
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterParam: 'name',
-            filterComponent: 'filter/string',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.service-area'),
-            cellComponent: 'table/cell/anchor',
-            action: this.viewServiceArea.bind(this),
-            permission: 'fleet-ops view service-area',
-            valuePath: 'service_area.name',
-            resizable: true,
-            width: '130px',
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select service area',
-            filterParam: 'service_area',
-            model: 'service-area',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.parent-fleet'),
-            cellComponent: 'table/cell/anchor',
-            permission: 'fleet-ops view fleet',
-            // action: this.viewParentFleet.bind(this),
-            valuePath: 'parent_fleet.name',
-            resizable: true,
-            width: '130px',
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select fleet',
-            filterParam: 'parent_fleet_uuid',
-            model: 'fleet',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.vendor'),
-            cellComponent: 'table/cell/anchor',
-            permission: 'fleet-ops view vendor',
-            // action: this.viewVendor.bind(this),
-            valuePath: 'vendor.name',
-            resizable: true,
-            width: '130px',
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select vendor',
-            filterParam: 'vendor',
-            model: 'vendor',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.zone'),
-            cellComponent: 'table/cell/anchor',
-            permission: 'fleet-ops view zone',
-            action: this.viewZone.bind(this),
-            valuePath: 'zone.name',
-            resizable: true,
-            width: '130px',
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select zone',
-            filterParam: 'zone',
-            model: 'zone',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.id'),
-            valuePath: 'public_id',
-            width: '120px',
-            cellComponent: 'click-to-copy',
-            action: this.fleetActions.transition.view,
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/string',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.manpower'),
-            valuePath: 'drivers_count',
-            width: '100px',
-            resizable: true,
-            sortable: true,
-            filterable: false,
-        },
-        {
-            label: this.intl.t('fleet-ops.common.active-manpower'),
-            valuePath: 'drivers_online_count',
-            width: '120px',
-            resizable: true,
-            sortable: true,
-            filterable: false,
-        },
-        {
-            label: this.intl.t('fleet-ops.common.task'),
-            valuePath: 'task',
-            cellComponent: 'table/cell/base',
-            width: '120px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/string',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.status'),
-            valuePath: 'status',
-            cellComponent: 'table/cell/status',
-            width: '100px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/multi-option',
-            filterOptionLabel: 'label',
-            filterOptionValue: 'value',
-            filterOptions: fleetOpsOptions('fleetStatuses'),
-        },
-        {
-            label: this.intl.t('fleet-ops.common.created-at'),
-            valuePath: 'createdAt',
-            sortParam: 'created_at',
-            width: '120px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/date',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.updated-at'),
-            valuePath: 'updatedAt',
-            sortParam: 'updated_at',
-            width: '120px',
-            resizable: true,
-            sortable: true,
-            hidden: true,
-            filterable: true,
-            filterComponent: 'filter/date',
-        },
-        {
-            label: '',
-            cellComponent: 'table/cell/dropdown',
-            ddButtonText: false,
-            ddButtonIcon: 'ellipsis-h',
-            ddButtonIconPrefix: 'fas',
-            ddMenuLabel: 'Fleet Actions',
-            cellClassNames: 'overflow-visible',
-            wrapperClass: 'flex items-center justify-end mx-2',
-            width: '10%',
-            actions: [
-                {
-                    label: this.intl.t('fleet-ops.management.fleets.index.view-fleet'),
-                    fn: this.fleetActions.transition.view,
-                    permission: 'fleet-ops view fleet',
-                },
-                {
-                    label: this.intl.t('fleet-ops.management.fleets.index.edit-fleet'),
-                    fn: this.fleetActions.transition.edit,
-                    permission: 'fleet-ops update fleet',
-                },
-                {
-                    label: this.intl.t('fleet-ops.management.fleets.index.assign-driver'),
-                    permission: 'fleet-ops assign-driver-for fleet',
-                    fn: () => {},
-                },
-                {
-                    separator: true,
-                },
-                {
-                    label: this.intl.t('fleet-ops.management.fleets.index.delete-fleet'),
-                    fn: this.fleetActions.delete,
-                    permission: 'fleet-ops delete fleet',
-                },
-            ],
-            sortable: false,
-            filterable: false,
-            resizable: false,
-            searchable: false,
-        },
-    ];
 
-    @action viewServiceArea(fleet, options = {}) {
-        this.serviceAreas.viewServiceAreaInDialog(fleet.get('service_area'), options);
+    /** action buttons */
+    get actionButtons() {
+        return [
+            {
+                icon: 'refresh',
+                onClick: this.fleetActions.refresh,
+                helpText: this.intl.t('common.refresh'),
+            },
+            {
+                text: this.intl.t('common.new'),
+                type: 'primary',
+                icon: 'plus',
+                onClick: this.fleetActions.transition.create,
+            },
+            {
+                text: this.intl.t('common.import'),
+                type: 'magic',
+                icon: 'upload',
+                onClick: this.fleetActions.import,
+            },
+            {
+                text: this.intl.t('common.export'),
+                icon: 'long-arrow-up',
+                iconClass: 'rotate-icon-45',
+                wrapperClass: 'hidden md:flex',
+                onClick: this.fleetActions.export,
+            },
+        ];
     }
 
-    @action viewZone(fleet, options = {}) {
-        this.serviceAreas.viewZoneInDialog(fleet.zone, options);
+    /** bulk actions */
+    get bulkActions() {
+        const selected = this.tableContext.getSelectedRows();
+
+        return [
+            {
+                label: this.intl.t('common.delete-selected-count', { count: selected.length }),
+                class: 'text-red-500',
+                fn: this.fleetActions.bulkDelete,
+            },
+        ];
+    }
+
+    /** columns */
+    get columns() {
+        return [
+            {
+                label: this.intl.t('column.name'),
+                valuePath: 'name',
+                width: '150px',
+                cellComponent: 'table/cell/anchor',
+                permission: 'fleet-ops view fleet',
+                action: this.fleetActions.transition.view,
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterParam: 'name',
+                filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.service-area'),
+                cellComponent: 'table/cell/anchor',
+                action: async (fleet) => {
+                    const serviceArea = await fleet.get('service_area');
+                    this.serviceAreaActions.modal.view(serviceArea);
+                },
+                permission: 'fleet-ops view service-area',
+                valuePath: 'service_area.name',
+                resizable: true,
+                width: '130px',
+                filterable: true,
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select service area',
+                filterParam: 'service_area',
+                model: 'service-area',
+            },
+            {
+                label: this.intl.t('column.parent-fleet'),
+                cellComponent: 'table/cell/anchor',
+                permission: 'fleet-ops view fleet',
+                action: async (fleet) => {
+                    const parentFleet = await fleet.get('parent_fleet');
+                    this.fleetActions.modal.view(parentFleet);
+                },
+                valuePath: 'parent_fleet.name',
+                resizable: true,
+                width: '130px',
+                filterable: true,
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select fleet',
+                filterParam: 'parent_fleet_uuid',
+                model: 'fleet',
+            },
+            {
+                label: this.intl.t('column.vendor'),
+                cellComponent: 'table/cell/anchor',
+                permission: 'fleet-ops view vendor',
+                action: async (fleet) => {
+                    const vendor = await fleet.get('vendor');
+                    this.vendorActions.modal.view(vendor);
+                },
+                valuePath: 'vendor.name',
+                resizable: true,
+                width: '130px',
+                hidden: true,
+                filterable: true,
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select vendor',
+                filterParam: 'vendor',
+                model: 'vendor',
+            },
+            {
+                label: this.intl.t('column.zone'),
+                cellComponent: 'table/cell/anchor',
+                permission: 'fleet-ops view zone',
+                action: async (fleet) => {
+                    const zone = await fleet.get('zone');
+                    this.zoneActions.modal.view(zone);
+                },
+                valuePath: 'zone.name',
+                resizable: true,
+                width: '130px',
+                filterable: true,
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select zone',
+                filterParam: 'zone',
+                model: 'zone',
+            },
+            {
+                label: this.intl.t('column.id'),
+                valuePath: 'public_id',
+                width: '120px',
+                cellComponent: 'click-to-copy',
+                action: this.fleetActions.transition.view,
+                hidden: true,
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.manpower'),
+                valuePath: 'drivers_count',
+                width: '100px',
+                resizable: true,
+                sortable: true,
+                filterable: false,
+            },
+            {
+                label: this.intl.t('column.active-manpower'),
+                valuePath: 'drivers_online_count',
+                hidden: true,
+                width: '120px',
+                resizable: true,
+                sortable: true,
+                filterable: false,
+            },
+            {
+                label: this.intl.t('column.task'),
+                valuePath: 'task',
+                cellComponent: 'table/cell/base',
+                width: '120px',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.status'),
+                valuePath: 'status',
+                cellComponent: 'table/cell/status',
+                width: '100px',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/multi-option',
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
+                filterOptions: fleetOpsOptions('fleetStatuses'),
+            },
+            {
+                label: this.intl.t('column.created-at'),
+                valuePath: 'createdAt',
+                sortParam: 'created_at',
+                width: '120px',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/date',
+            },
+            {
+                label: this.intl.t('column.updated-at'),
+                valuePath: 'updatedAt',
+                sortParam: 'updated_at',
+                width: '120px',
+                resizable: true,
+                sortable: true,
+                hidden: true,
+                filterable: true,
+                filterComponent: 'filter/date',
+            },
+            {
+                label: '',
+                cellComponent: 'table/cell/dropdown',
+                ddButtonText: false,
+                ddButtonIcon: 'ellipsis-h',
+                ddButtonIconPrefix: 'fas',
+                ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.fleet') }),
+                cellClassNames: 'overflow-visible',
+                wrapperClass: 'flex items-center justify-end mx-2',
+                width: '10%',
+                actions: [
+                    {
+                        label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.fleet') }),
+                        fn: this.fleetActions.transition.view,
+                        permission: 'fleet-ops view fleet',
+                    },
+                    {
+                        label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.fleet') }),
+                        fn: this.fleetActions.transition.edit,
+                        permission: 'fleet-ops update fleet',
+                    },
+                    {
+                        label: this.intl.t('fleet.actions.assign-driver'),
+                        permission: 'fleet-ops assign-driver-for fleet',
+                        fn: () => {},
+                    },
+                    {
+                        separator: true,
+                    },
+                    {
+                        label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.fleet') }),
+                        fn: this.fleetActions.delete,
+                        permission: 'fleet-ops delete fleet',
+                    },
+                ],
+                sortable: false,
+                filterable: false,
+                resizable: false,
+                searchable: false,
+            },
+        ];
     }
 }

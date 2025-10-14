@@ -21,7 +21,7 @@
                     @onAdd={{fn this.onServiceAreaAdded @options.serviceArea}}
                     as |polygon|
                 >
-                    <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{@options.serviceArea.name}} {{t "fleet-ops.common.service-area"}}</polygon.tooltip>
+                    <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{@options.serviceArea.name}} {{t "common.service-area"}}</polygon.tooltip>
                 </layers.polygon>
             {{/if}}
         </LeafletMap>

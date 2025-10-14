@@ -143,6 +143,7 @@ class Vehicle extends Model
         'vin',
         'vin_data',
         'specs',
+        'details',
         'notes',
         'meta',
         'telematics',
@@ -192,17 +193,18 @@ class Vehicle extends Model
      * @var array
      */
     protected $casts = [
-        'current_value'        => Money::class,
-        'insurance_value'      => Money::class,
-        'acquisition_cost'     => Money::class,
-        'location'             => Point::class,
-        'meta'                 => Json::class,
-        'telematics'           => Json::class,
-        'specs'                => Json::class,
-        'vin_data'             => Json::class,
-        'online'               => 'boolean',
-        'purchased_at'         => 'datetime',
-        'lease_expires_at'     => 'datetime',
+        'current_value'          => Money::class,
+        'insurance_value'        => Money::class,
+        'acquisition_cost'       => Money::class,
+        'location'               => Point::class,
+        'meta'                   => Json::class,
+        'telematics'             => Json::class,
+        'specs'                  => Json::class,
+        'details'                => Json::class,
+        'vin_data'               => Json::class,
+        'online'                 => 'boolean',
+        'purchased_at'           => 'datetime',
+        'lease_expires_at'       => 'datetime',
     ];
 
     public function photo(): BelongsTo
@@ -619,5 +621,43 @@ class Vehicle extends Model
                     ->orWhereRaw("CONCAT(make, ' ', model, ' ', year) LIKE ?", ["%{$vehicleName}%"])
                     ->orWhereRaw("CONCAT(year, ' ', make, ' ', model) LIKE ?", ["%{$vehicleName}%"]);
         })->first();
+    }
+
+    /**
+     * Set or update a single key/value pair in the `details` JSON column.
+     *
+     * Uses Laravel's `data_set` helper to allow dot notation for nested keys.
+     *
+     * @param string|array $key   the key (or array path) to set within the details
+     * @param mixed        $value the value to assign to the given key
+     *
+     * @return array the updated details array
+     */
+    public function setDetail(string|array $key, mixed $value): array
+    {
+        $details = is_array($this->details) ? $this->details : (array) $this->details;
+        data_set($details, $key, $value);
+        $this->details = $details;
+
+        return $details;
+    }
+
+    /**
+     * Merge multiple values into the `details` JSON column.
+     *
+     * By default this performs a shallow merge (overwrites duplicate keys).
+     * Use `array_replace_recursive` if you need nested merges.
+     *
+     * @param array $newDetails key/value pairs to merge into details
+     *
+     * @return array the updated details array
+     */
+    public function setDetails(array $newDetails = []): array
+    {
+        $details       = is_array($this->details) ? $this->details : (array) $this->details;
+        $details       = array_merge($details, $newDetails);
+        $this->details = $details;
+
+        return $details;
     }
 }

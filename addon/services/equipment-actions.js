@@ -17,8 +17,8 @@ export default class EquipmentActionsService extends ResourceActionService {
             const equipment = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'equipment/form',
-                title: 'Create a new equipment',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.equipment')?.toLowerCase() }),
+                useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -28,8 +28,8 @@ export default class EquipmentActionsService extends ResourceActionService {
         edit: (equipment) => {
             return this.resourceContextPanel.open({
                 content: 'equipment/form',
-                title: `Edit: ${equipment.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: equipment.name }),
+                useDefaultSaveTask: true,
                 equipment,
             });
         },
@@ -38,7 +38,7 @@ export default class EquipmentActionsService extends ResourceActionService {
                 equipment,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'equipment/details',
                     },
                 ],
@@ -51,8 +51,8 @@ export default class EquipmentActionsService extends ResourceActionService {
             const equipment = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: equipment,
-                title: 'Create a new equipment',
-                acceptButtonText: 'Create Equipment',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.equipment')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.equipment') }),
                 component: 'equipment/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', equipment, { refresh: true, ...saveOptions }),
                 ...options,
@@ -61,8 +61,8 @@ export default class EquipmentActionsService extends ResourceActionService {
         edit: (equipment, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: equipment,
-                title: `Edit: ${equipment.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: equipment.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'equipment/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', equipment, { refresh: true, ...saveOptions }),

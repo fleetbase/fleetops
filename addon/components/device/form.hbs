@@ -1,17 +1,23 @@
 <div class="form-wrapper" ...attributes>
-    <ContentPanel @title="Device Details" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "device.fields.title"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
-            <InputGroup @name="Device Name" @wrapperClass="col-span-2">
-                <Input @value={{@resource.device_name}} @type="text" class="w-full form-input" placeholder="Device Name" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "device.fields.device-name"}} @wrapperClass="col-span-2">
+                <Input
+                    @value={{@resource.device_name}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.device-name-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
 
-            <InputGroup @name="Device Type">
+            <InputGroup @name={{t "device.fields.device-type"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.deviceTypeOptions}}
                         @selected={{@resource.device_type}}
                         @onChange={{fn (mut @resource.device_type)}}
-                        @placeholder="Select Device Type"
+                        @placeholder={{t "device.fields.device-type-placeholder"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |type|
@@ -21,61 +27,103 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Device ID">
-                <Input @value={{@resource.device_id}} @type="text" class="w-full form-input" placeholder="Device ID" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "device.fields.device-id"}}>
+                <Input
+                    @value={{@resource.device_id}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.device-id-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
 
-            <InputGroup @name="Device Provider">
-                <Input @value={{@resource.device_provider}} @type="text" class="w-full form-input" placeholder="Device Provider" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "device.fields.device-provider"}}>
+                <Input
+                    @value={{@resource.device_provider}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.device-provider-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
 
-            <InputGroup @name="Device Model">
-                <Input @value={{@resource.device_model}} @type="text" class="w-full form-input" placeholder="Device Model" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "device.fields.device-model"}}>
+                <Input
+                    @value={{@resource.device_model}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.device-model-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
 
-            <InputGroup @name="Manufacturer">
-                <Input @value={{@resource.manufacturer}} @type="text" class="w-full form-input" placeholder="Manufacturer" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "device.fields.manufacturer"}}>
+                <Input
+                    @value={{@resource.manufacturer}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.manufacturer-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
 
-            <InputGroup @name="Serial Number">
-                <Input @value={{@resource.serial_number}} @type="text" class="w-full form-input" placeholder="Serial Number" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "device.fields.serial-number"}}>
+                <Input
+                    @value={{@resource.serial_number}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.serial-number-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
 
-            <InputGroup @name="Device Location">
-                <Input @value={{@resource.device_location}} @type="text" class="w-full form-input" placeholder="Device Location" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "device.fields.device-location"}}>
+                <Input
+                    @value={{@resource.device_location}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.device-location-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
 
-            <InputGroup @name="Installation Date">
+            <InputGroup @name={{t "device.fields.installation-date"}}>
                 <DatePicker
                     @value={{@resource.installation_date}}
                     @onChange={{fn (mut @resource.installation_date)}}
-                    @placeholder="Select Installation Date"
+                    @placeholder={{t "device.fields.installation-date-placeholder"}}
                     @disabled={{cannot-write @resource}}
                     class="w-full form-input"
                 />
             </InputGroup>
 
-            <InputGroup @name="Last Maintenance Date">
+            <InputGroup @name={{t "device.fields.last-maintenance-date"}}>
                 <DatePicker
                     @value={{@resource.last_maintenance_date}}
                     @onChange={{fn (mut @resource.last_maintenance_date)}}
-                    @placeholder="Select Last Maintenance Date"
+                    @placeholder={{t "device.fields.last-maintenance-date-placeholder"}}
                     @disabled={{cannot-write @resource}}
                     class="w-full form-input"
                 />
             </InputGroup>
 
-            <InputGroup @name="Data Frequency">
-                <Input @value={{@resource.data_frequency}} @type="text" class="w-full form-input" placeholder="Data Frequency" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "device.fields.data-frequency"}}>
+                <Input
+                    @value={{@resource.data_frequency}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.data-frequency-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
 
-            <InputGroup @name="Status">
+            <InputGroup @name={{t "device.fields.status"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.statusOptions}}
                         @selected={{@resource.status}}
                         @onChange={{fn (mut @resource.status)}}
-                        @placeholder="Select Status"
+                        @placeholder={{t "device.fields.status-placeholder"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |status|
@@ -85,11 +133,11 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Telematic">
+            <InputGroup @name={{t "device.fields.telematic"}}>
                 <ModelSelect
                     @modelName="telematic"
                     @selectedModel={{@resource.telematic}}
-                    @placeholder="Select Telematic"
+                    @placeholder={{t "device.fields.telematic-placeholder"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -102,11 +150,11 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name="Warranty">
+            <InputGroup @name={{t "device.fields.warranty"}}>
                 <ModelSelect
                     @modelName="warranty"
                     @selectedModel={{@resource.warranty}}
-                    @placeholder="Select Warranty"
+                    @placeholder={{t "device.fields.warranty-placeholder"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -115,17 +163,19 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.policy_number}} - {{model.provider}}
+                    {{model.policy_number}}
+                    -
+                    {{model.provider}}
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name="Notes" @wrapperClass="col-span-2">
+            <InputGroup @name={{t "device.fields.notes"}} @wrapperClass="col-span-2">
                 <Textarea
                     @value={{@resource.notes}}
-                    aria-label="Notes"
+                    aria-label={{t "device.fields.notes"}}
                     class="w-full form-input"
                     disabled={{cannot-write @resource}}
-                    placeholder="Notes"
+                    placeholder={{t "device.fields.notes-placeholder"}}
                     rows={{4}}
                 />
             </InputGroup>

@@ -1,14 +1,14 @@
 <div class="form-wrapper" ...attributes>
     {{#if @resource.isNew}}
-        <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.title"}} @open={{true}} @wrapperClass="bordered-top">
+        <ContentPanel @title={{t "vendor.fields.setup-vendor"}} @open={{true}} @wrapperClass="bordered-top">
             <div class="space-y-2">
-                <InputGroup @name={{t "fleet-ops.component.vendor-form-panel.create-form.select-vendor-type"}}>
+                <InputGroup @name={{t "vendor.fields.select-vendor-type"}}>
                     <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                         <PowerSelect
                             @options={{get-fleet-ops-options "vendorTypes"}}
                             @selected={{find-by "value" @resource.type (get-fleet-ops-options "vendorTypes")}}
                             @onChange={{this.handleTypeSelection}}
-                            @placeholder={{t "fleet-ops.component.vendor-form-panel.create-form.select-vendor-status"}}
+                            @placeholder={{t "vendor.fields.select-vendor-status"}}
                             @triggerClass="form-select form-input"
                             @disabled={{cannot-write @resource}}
                             as |status|
@@ -21,7 +21,7 @@
                     </div>
                 </InputGroup>
                 {{#if @resource.isIntegratedVendor}}
-                    <InputGroup @name={{t "fleet-ops.component.vendor-form-panel.create-form.choose-vendor"}}>
+                    <InputGroup @name={{t "vendor.fields.choose-vendor"}}>
                         <FetchSelect
                             @endpoint="integrated-vendors/supported"
                             @selected={{this.integration.provider_options}}
@@ -44,52 +44,39 @@
     {{#if (and @resource.isIntegratedVendor this.integration)}}
         <IntegratedVendor::Form @resource={{this.integration}} />
     {{else if (not @resource.isIntegratedVendor)}}
-        <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.vendor-details"}} @open={{true}} @wrapperClass="bordered-top">
+        <ContentPanel @title={{t "vendor.fields.vendor-details"}} @open={{true}} @wrapperClass="bordered-top">
             <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
-                <InputGroup
-                    @name={{t "fleet-ops.common.name"}}
-                    @value={{@resource.name}}
-                    @helpText={{t "fleet-ops.component.vendor-form-panel.create-form.name-text"}}
-                    @disabled={{cannot-write @resource}}
-                />
-                <InputGroup
-                    @name={{t "fleet-ops.common.email"}}
-                    @type="email"
-                    @value={{@resource.email}}
-                    @helpText={{t "fleet-ops.component.vendor-form-panel.create-form.email-text"}}
-                    @disabled={{cannot-write @resource}}
-                />
-                <InputGroup @name={{t "fleet-ops.common.phone"}} @helpText={{t "fleet-ops.component.vendor-form-panel.create-form.phone-text"}}>
+                <InputGroup @name={{t "common.name"}} @value={{@resource.name}} @helpText={{t "vendor.fields.name-help-text"}} @disabled={{cannot-write @resource}} />
+                <InputGroup @name={{t "common.email"}} @type="email" @value={{@resource.email}} @helpText={{t "vendor.fields.email-help-text"}} @disabled={{cannot-write @resource}} />
+                <InputGroup @name={{t "common.phone"}} @helpText={{t "vendor.fields.phone-text"}}>
                     <PhoneInput @value={{@resource.phone}} @onInput={{fn (mut @resource.phone)}} class="form-input w-full" disabled={{cannot-write @resource}} />
                 </InputGroup>
-                <InputGroup
-                    @name={{t "fleet-ops.common.website"}}
-                    @value={{@resource.website_url}}
-                    @helpText={{t "fleet-ops.component.vendor-form-panel.create-form.website-text"}}
-                    @disabled={{cannot-write @resource}}
-                />
-                <InputGroup @name={{t "fleet-ops.common.type"}}>
+                <InputGroup @name={{t "vendor.fields.website"}} @value={{@resource.website_url}} @helpText={{t "vendor.fields.website-help-text"}} @disabled={{cannot-write @resource}} />
+                <InputGroup @name={{t "common.type"}}>
                     <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                         <PowerSelect
-                            @options={{@resourceTypes}}
-                            @selected={{@resource.type}}
-                            @onChange={{fn (mut @resource.type)}}
-                            @placeholder={{t "fleet-ops.component.vendor-form-panel.create-form.select-vendor-type"}}
+                            @options={{get-fleet-ops-options "vendorTypes"}}
+                            @selected={{find-by "value" @resource.type (get-fleet-ops-options "vendorTypes")}}
+                            @onChange={{set-model-attr @resource "type"}}
+                            @placeholder={{t "vendor.fields.select-vendor-type"}}
                             @triggerClass="form-select form-input"
                             @disabled={{cannot-write @resource}}
-                            as |type|
+                            as |status|
                         >
-                            {{smart-humanize type}}
+                            <div class="text-sm">
+                                <div class="font-semibold normalize-in-trigger">{{status.label}}</div>
+                                <div class="hide-from-trigger">{{status.description}}</div>
+                            </div>
                         </PowerSelect>
                     </div>
                 </InputGroup>
-                <InputGroup @name={{t "fleet-ops.common.status"}}>
+                <InputGroup @name={{t "common.status"}}>
                     <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                         <PowerSelect
                             @options={{get-fleet-ops-options "vendorStatuses"}}
                             @selected={{find-by "value" @resource.status (get-fleet-ops-options "vendorStatuses")}}
                             @onChange={{set-model-attr @resource "status"}}
-                            @placeholder={{t "fleet-ops.component.vendor-form-panel.create-form.select-vendor-status"}}
+                            @placeholder={{t "vendor.fields.select-vendor-status"}}
                             @triggerClass="form-select form-input"
                             @disabled={{cannot-write @resource}}
                             as |status|
@@ -104,7 +91,7 @@
                 <InputGroup @wrapperClass="col-span-2 my-0.5">
                     <div class="flex items-center justify-between">
                         <label>
-                            {{t "fleet-ops.common.address"}}
+                            {{t "common.address"}}
                         </label>
                         <div class="mb-1.5 space-x-1 flex flex-row">
                             {{#if @resource.has_place}}
@@ -114,11 +101,7 @@
                                 @type="default"
                                 @size="xs"
                                 @icon="edit"
-                                @text={{if
-                                    @resource.has_place
-                                    (t "fleet-ops.component.vendor-form-panel.create-form.edit")
-                                    (t "fleet-ops.component.vendor-form-panel.create-form.new-address")
-                                }}
+                                @text={{if @resource.has_place (t "common.edit-address") (t "common.new-address")}}
                                 @onClick={{this.editPlace}}
                                 @disabled={{cannot-write @resource}}
                             />
@@ -127,7 +110,7 @@
                     <ModelSelect
                         @modelName="place"
                         @selectedModel={{@resource.place}}
-                        @placeholder={{t "fleet-ops.component.vendor-form-panel.create-form.select-address"}}
+                        @placeholder={{t "common.select-address"}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}
@@ -141,13 +124,13 @@
                         </div>
                     </ModelSelect>
                 </InputGroup>
-                <InputGroup @name={{t "fleet-ops.common.country"}}>
+                <InputGroup @name={{t "common.country"}}>
                     <CountrySelect
                         class="w-full form-input form-select form-datalist"
                         @value={{@resource.country}}
                         @onChange={{fn (mut @resource.country)}}
                         @disabled={{cannot-write @resource}}
-                        @placeholder={{t "fleet-ops.common.country"}}
+                        @placeholder={{t "common.country"}}
                     />
                 </InputGroup>
 

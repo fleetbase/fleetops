@@ -22,8 +22,8 @@ export default class ServiceAreaActionsService extends ResourceActionService {
             const serviceArea = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'service-area/form',
-                title: 'Create a new service area',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.service area')?.toLowerCase() }),
+                useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -33,8 +33,8 @@ export default class ServiceAreaActionsService extends ResourceActionService {
         edit: (serviceArea) => {
             return this.resourceContextPanel.open({
                 content: 'service-area/form',
-                title: `Edit: ${serviceArea.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: serviceArea.name }),
+                useDefaultSaveTask: true,
                 serviceArea,
             });
         },
@@ -43,7 +43,7 @@ export default class ServiceAreaActionsService extends ResourceActionService {
                 serviceArea,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'service-area/details',
                     },
                 ],
@@ -57,8 +57,8 @@ export default class ServiceAreaActionsService extends ResourceActionService {
             saveOptions = { ...(options.saveOptions ?? {}), ...(saveOptions ?? {}) };
             return this.modalsManager.show('modals/resource', {
                 resource: serviceArea,
-                title: 'Create a new service area',
-                acceptButtonText: 'Create Service Area',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.service area')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.service-area') }),
                 component: 'service-area/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', serviceArea, { refresh: true, ...saveOptions }),
                 ...options,
@@ -68,8 +68,8 @@ export default class ServiceAreaActionsService extends ResourceActionService {
             saveOptions = { ...(options.saveOptions ?? {}), ...(saveOptions ?? {}) };
             return this.modalsManager.show('modals/resource', {
                 resource: serviceArea,
-                title: `Edit: ${serviceArea.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: serviceArea.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'service-area/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', serviceArea, { refresh: true, ...saveOptions }),

@@ -5,7 +5,7 @@
                 class="min-h-56 dropzone w-full rounded px-4 py-8 min-h text-gray-900 dark:text-white text-center flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-indigo-500"
             >
                 <div class="flex items-center justify-center py-5">
-                    <Spinner class="text-sm dark:text-gray-100" @loadingMessage={{t "fleet-ops.component.modals.order-import.loading-message"}} />
+                    <Spinner class="text-sm dark:text-gray-100" @loadingMessage={{t "modals.order-import.loading-message"}} />
                 </div>
             </div>
         {{else}}
@@ -17,32 +17,32 @@
                 >
                     {{#if dropzone.active}}
                         {{#if dropzone.valid}}
-                            {{t "fleet-ops.component.modals.order-import.drop-upload"}}
+                            {{t "modals.order-import.drop-upload"}}
                         {{else}}
-                            {{t "fleet-ops.component.modals.order-import.invalid"}}
+                            {{t "modals.order-import.invalid"}}
                         {{/if}}
                     {{else if queue.files.length}}
                         <div class="my-2">
                             <FaIcon @icon="file-import" class="text-indigo-500 mr-2" />
                             {{pluralize queue.files.length "spreadsheet"}}
-                            {{t "fleet-ops.component.modals.order-import.ready-upload"}}
+                            {{t "modals.order-import.ready-upload"}}
                         </div>
                         <div class="my-2">({{queue.progress}}%)</div>
                     {{else}}
                         <h4 class="font-semibold mb-8">
                             <FaIcon @icon="file-import" class="text-indigo-500 mr-2" />
-                            {{t "fleet-ops.component.modals.order-import.upload-spreadsheets"}}
+                            {{t "modals.order-import.upload-spreadsheets"}}
                         </h4>
                         <div>
                             {{#if dropzone.supported}}
-                                <p class="text-base font-semibold my-5">{{t "fleet-ops.component.modals.order-import.drag-drop"}}</p>
+                                <p class="text-base font-semibold my-5">{{t "modals.order-import.drag-drop"}}</p>
                             {{/if}}
 
                             <UploadButton
-                                @buttonText={{t "fleet-ops.component.modals.order-import.button-text"}}
+                                @buttonText={{t "modals.order-import.button-text"}}
                                 @type="magic"
                                 @icon="file-import"
-                                @name={{t "fleet-ops.component.modals.order-import.spreadsheets"}}
+                                @name={{t "modals.order-import.spreadsheets"}}
                                 @for="spreadsheets"
                                 @accept={{join "," @options.acceptedFileTypes}}
                                 @multiple={{true}}
@@ -57,7 +57,7 @@
             {{#if @options.uploadQueue}}
                 <div class="mx-0 my-6">
                     <div class="flex items-center justify-between mb-4">
-                        <span class="leading-6 dark:text-gray-100">{{t "fleet-ops.component.modals.order-import.upload-queue"}}</span>
+                        <span class="leading-6 dark:text-gray-100">{{t "modals.order-import.upload-queue"}}</span>
                     </div>
 
                     <div class="table-wrapper table-fluid">

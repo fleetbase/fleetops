@@ -1,7 +1,7 @@
-<ContentPanel @title={{t "fleet-ops.operations.orders.index.new.route"}} @open={{true}} @wrapperClass="bordered-top">
+<ContentPanel @title={{t "order.fields.route"}} @open={{true}} @wrapperClass="bordered-top">
     <div class="flex flex-row items-center justify-between mb-4">
         <div class="flex">
-            <Toggle @isToggled={{this.multipleWaypoints}} @onToggle={{this.toggleWaypoints}} @label={{t "fleet-ops.operations.orders.index.new.route-label"}} />
+            <Toggle @isToggled={{this.multipleWaypoints}} @onToggle={{this.toggleWaypoints}} @label={{t "order.fields.route-label"}} />
         </div>
         <div class="flex flex-1 justify-end space-x-2">
             {{#if this.multipleWaypoints}}
@@ -11,21 +11,21 @@
                     <Button
                         @type="magic"
                         @icon="magic"
-                        @text={{t "fleet-ops.operations.orders.index.new.optimize-route"}}
+                        @text={{t "order.fields.optimize-route"}}
                         @size="xs"
                         @onClick={{perform this.optimizeRoute}}
                         @permission="fleet-ops optimize order"
-                        @helpText={{t "fleet-ops.operations.orders.index.new.optimize-route-help-text"}}
+                        @helpText={{t "order.fields.optimize-route-help-text"}}
                         @disabled={{lt @resource.payload.waypoints.length 3}}
                         @isLoading={{this.optimizeRoute.isRunning}}
                     />
                 {{/if}}
                 <Button
                     @icon="map-marked-alt"
-                    @text={{t "fleet-ops.operations.orders.index.new.add-waypoint"}}
+                    @text={{t "order.fields.add-waypoint"}}
                     @size="xs"
                     @onClick={{fn this.addWaypoint (hash)}}
-                    @helpText={{t "fleet-ops.operations.orders.index.new.add-waypoint-help-text"}}
+                    @helpText={{t "order.fields.add-waypoint-help-text"}}
                     @permission={{cannot-write @resource}}
                 />
             {{/if}}
@@ -48,7 +48,7 @@
                             <ModelSelect
                                 @modelName="place"
                                 @selectedModel={{waypoint.place}}
-                                @placeholder={{concat (t "fleet-ops.operations.orders.index.new.select-waypoint-placeholder") " " (add index 1)}}
+                                @placeholder={{concat (t "order.fields.select-waypoint") " " (add index 1)}}
                                 @triggerClass="form-select form-input truncate max-w-300px"
                                 @infiniteScroll={{false}}
                                 @customSearchEndpoint="places/search"
@@ -64,13 +64,13 @@
                                 <InfoBlock
                                     class="my-2 px-4 py-1.5 danger"
                                     @blockClass="flex flex-row items-center"
-                                    @text={{concat @resource.facilitator.name (t "fleet-ops.operations.orders.index.new.infoblock-text")}}
+                                    @text={{concat @resource.facilitator.name (t "order.fields.infoblock-text")}}
                                 />
                             {{/if}}
                             {{#if waypoint.place.hasInvalidCoordinates}}
                                 <div class="leading-5 text-sm text-red-400 mt-2">
                                     <FaIcon @icon="exclamation-triangle" class="mr-1" />
-                                    {{t "fleet-ops.operations.orders.index.new.invalid-coordinates"}}
+                                    {{t "order.fields.invalid-coordinates"}}
                                 </div>
                             {{/if}}
                         </div>
@@ -78,7 +78,7 @@
                             <ModelSelect
                                 @modelName="customer"
                                 @selectedModel={{waypoint.customer}}
-                                @placeholder={{t "fleet-ops.operations.orders.index.new.customer-placeholder"}}
+                                @placeholder={{t "order.fields.customer-placeholder"}}
                                 @triggerClass="form-select form-input truncate max-w-300px"
                                 @infiniteScroll={{false}}
                                 @renderInPlace={{true}}
@@ -144,7 +144,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
             <InputGroup>
                 <div class="flex items-center justify-between">
-                    <label>{{t "fleet-ops.operations.orders.index.new.pickup"}}</label>
+                    <label>{{t "order.fields.pickup"}}</label>
 
                     <div class="flex-row space-x-1 pr-0.5">
                         {{#if @resource.payload.pickup}}
@@ -161,7 +161,7 @@
                 <ModelSelect
                     @modelName="place"
                     @selectedModel={{@resource.payload.pickup}}
-                    @placeholder={{t "fleet-ops.operations.orders.index.new.select-pickup"}}
+                    @placeholder={{t "order.fields.select-pickup"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @customSearchEndpoint="places/search"
@@ -178,21 +178,21 @@
                     <InfoBlock
                         class="my-2 px-4 py-1.5 danger"
                         @blockClass="flex flex-row items-center"
-                        @text={{concat @resource.facilitator.name (t "fleet-ops.operations.orders.index.new.infoblock-text")}}
+                        @text={{concat @resource.facilitator.name (t "order.fields.infoblock-text")}}
                     />
                 {{/if}}
 
                 {{#if @resource.payload.pickup.hasInvalidCoordinates}}
                     <div class="leading-5 text-sm text-red-400 mt-2">
                         <FaIcon @icon="exclamation-triangle" class="mr-1" />
-                        {{t "fleet-ops.operations.orders.index.new.invalid-coordinates"}}
+                        {{t "order.fields.invalid-coordinates"}}
                     </div>
                 {{/if}}
             </InputGroup>
 
             <InputGroup>
                 <div class="flex items-center justify-between">
-                    <label>{{t "fleet-ops.operations.orders.index.new.dropoff"}}</label>
+                    <label>{{t "order.fields.dropoff"}}</label>
 
                     <div class="flex-row space-x-2 pr-0.5">
                         {{#if @resource.payload.dropoff}}
@@ -209,7 +209,7 @@
                 <ModelSelect
                     @modelName="place"
                     @selectedModel={{@resource.payload.dropoff}}
-                    @placeholder={{t "fleet-ops.operations.orders.index.new.select-dropoff"}}
+                    @placeholder={{t "order.fields.select-dropoff"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @customSearchEndpoint="places/search"
@@ -226,31 +226,31 @@
                     <InfoBlock
                         class="my-2 px-4 py-1.5 danger"
                         @blockClass="flex flex-row items-center"
-                        @text={{concat @resource.facilitator.name (t "fleet-ops.operations.orders.index.new.infoblock-text")}}
+                        @text={{concat @resource.facilitator.name (t "order.fields.infoblock-text")}}
                     />
                 {{/if}}
 
                 {{#if @resource.payload.dropoff.hasInvalidCoordinates}}
                     <div class="leading-5 text-sm text-red-400 mt-2">
                         <FaIcon @icon="exclamation-triangle" class="mr-1" />
-                        {{t "fleet-ops.operations.orders.index.new.invalid-coordinates"}}
+                        {{t "order.fields.invalid-coordinates"}}
                     </div>
                 {{/if}}
             </InputGroup>
 
             <InputGroup>
                 <div class="flex items-center justify-between">
-                    <label>{{t "fleet-ops.operations.orders.index.new.return"}}</label>
+                    <label>{{t "order.fields.return"}}</label>
 
                     {{#if @resource.payload.return}}
-                        <a href="javascript:;" {{on "click" (fn this.editPlace @resource.payload.return)}}>{{t "fleet-ops.operations.orders.index.new.edit-address"}}</a>
+                        <a href="javascript:;" {{on "click" (fn this.editPlace @resource.payload.return)}}>{{t "order.fields.edit-address"}}</a>
                     {{/if}}
                 </div>
 
                 <ModelSelect
                     @modelName="place"
                     @selectedModel={{@resource.payload.return}}
-                    @placeholder={{t "fleet-ops.operations.orders.index.new.select-return"}}
+                    @placeholder={{t "order.fields.select-return"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @customSearchEndpoint="places/search"
@@ -267,14 +267,14 @@
                     <InfoBlock
                         class="my-2 px-4 py-1.5 danger"
                         @blockClass="flex flex-row items-center"
-                        @text={{concat @resource.facilitator.name (t "fleet-ops.operations.orders.index.new.infoblock-text")}}
+                        @text={{concat @resource.facilitator.name (t "order.fields.infoblock-text")}}
                     />
                 {{/if}}
 
                 {{#if @resource.payload.return.hasInvalidCoordinates}}
                     <div class="leading-5 text-sm text-red-400 mt-2">
                         <FaIcon @icon="exclamation-triangle" class="mr-1" />
-                        {{t "fleet-ops.operations.orders.index.new.invalid-coordinates"}}
+                        {{t "order.fields.invalid-coordinates"}}
                     </div>
                 {{/if}}
             </InputGroup>

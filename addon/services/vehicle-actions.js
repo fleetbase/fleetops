@@ -20,11 +20,11 @@ export default class VehicleActionsService extends ResourceActionService {
             const vehicle = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'vehicle/form',
-                title: 'Create a new vehicle',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.vehicle')?.toLowerCase() }),
                 saveOptions: {
                     callback: this.refresh,
                 },
+                useDefaultSaveTask: true,
                 vehicle,
                 ...options,
             });
@@ -32,7 +32,7 @@ export default class VehicleActionsService extends ResourceActionService {
         edit: (vehicle, options = {}) => {
             return this.resourceContextPanel.open({
                 content: 'vehicle/form',
-                title: `Edit: ${vehicle.name}`,
+                title: this.intl.t('common.edit-resource-name', { resourceName: vehicle.name }),
                 actionButtons: [
                     {
                         icon: 'eye',
@@ -42,7 +42,7 @@ export default class VehicleActionsService extends ResourceActionService {
                         },
                     },
                 ],
-
+                useDefaultSaveTask: true,
                 vehicle,
                 ...options,
             });
@@ -62,7 +62,7 @@ export default class VehicleActionsService extends ResourceActionService {
                 ],
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'vehicle/details',
                     },
                 ],
@@ -76,8 +76,8 @@ export default class VehicleActionsService extends ResourceActionService {
             const vehicle = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: vehicle,
-                title: 'Create a new vehicle',
-                acceptButtonText: 'Create Vehicle',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.vehicle')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.vehicle') }),
                 component: 'vehicle/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', vehicle, { refresh: true, ...saveOptions }),
                 ...options,
@@ -86,8 +86,8 @@ export default class VehicleActionsService extends ResourceActionService {
         edit: (vehicle, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: vehicle,
-                title: `Edit: ${vehicle.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: vehicle.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'vehicle/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', vehicle, { refresh: true, ...saveOptions }),
@@ -108,8 +108,8 @@ export default class VehicleActionsService extends ResourceActionService {
         const { latitude, longitude, location } = vehicle;
 
         this.modalsManager.show('modals/point-map', {
-            title: this.intl.t('fleet-ops.management.vehicles.index.locate-title', { vehicleName: vehicle.displayName }),
-            acceptButtonText: 'Done',
+            title: this.intl.t('common.resource-location', { resource: vehicle.displayName }),
+            acceptButtonText: this.intl.t('common.done'),
             hideDeclineButton: true,
             resource: vehicle,
             popupText: `${vehicle.displayName} (${vehicle.public_id})`,

@@ -16,7 +16,7 @@ export default class DeviceEventActionsService extends ResourceActionService {
                 deviceEvent,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'device-event/details',
                     },
                 ],

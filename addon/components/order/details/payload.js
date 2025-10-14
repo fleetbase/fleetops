@@ -10,12 +10,13 @@ export default class OrderDetailsPayloadComponent extends Component {
     @service notifications;
     @service store;
     @service fetch;
+    @service intl;
 
     get actionButtons() {
         return [
             {
                 type: 'default',
-                text: 'Add entity',
+                text: this.intl.t('order.actions.add-entity'),
                 icon: 'plus',
                 iconPrefix: 'fas',
                 permission: 'fleet-ops update order',
@@ -39,16 +40,16 @@ export default class OrderDetailsPayloadComponent extends Component {
             this.args.resource.payload.entities.pushObject(entity);
         } catch (err) {
             debug('Failed to add entity to order: ' + err.message);
-            this.notifications.error('Unable to add new entity to order.');
+            this.notifications.error(this.intl.t('order.prompts.unable-to-add-entity'));
         }
     }
 
     @action async viewWaypointLabel(waypoint) {
         // render dialog to display label within
         this.modalsManager.show(`modals/order-label`, {
-            title: 'Waypoint Label',
+            title: this.intl.t('order.fields.waypoint-label'),
             modalClass: 'modal-xl',
-            acceptButtonText: 'Done',
+            acceptButtonText: this.intl.t('common.done'),
             hideDeclineButton: true,
         });
 
@@ -67,7 +68,7 @@ export default class OrderDetailsPayloadComponent extends Component {
             };
             fileReader.readAsDataURL(blob);
         } catch (err) {
-            this.notifications.error('Failed to load waypoint label.');
+            this.notifications.error(this.intl.t('order.prompts.failed-to-load-waypoint-label'));
             debug('Error loading waypoint label data: ' + err.message);
         }
     }

@@ -3,7 +3,7 @@
         <Button
             @type="primary"
             @icon="square-plus"
-            @text={{t "fleet-ops.component.order-config-manager.custom-fields.new-field-group"}}
+            @text={{t "order-config-manager.custom-fields.new-field-group"}}
             @onClick={{this.createNewFieldGroup}}
             @permission="fleet-ops update order-config"
         />
@@ -14,12 +14,12 @@
                 <Button
                     @type="primary"
                     @icon="square-plus"
-                    @text={{t "fleet-ops.component.order-config-manager.custom-fields.new-custom-field"}}
+                    @text={{t "order-config-manager.custom-fields.new-custom-field"}}
                     @onClick={{fn this.createNewCustomField group}}
                     @permission="fleet-ops update order-config"
                 />
                 <DropdownButton
-                    @text={{concat (t "fleet-ops.component.order-config-manager.custom-fields.grid-size") ": " (or group.meta.grid_size 1)}}
+                    @text={{concat (t "order-config-manager.custom-fields.grid-size") ": " (or group.meta.grid_size 1)}}
                     @textClass="text-sm mr-2"
                     @buttonClass="flex-row-reverse w-44 justify-between"
                     @icon="caret-down"

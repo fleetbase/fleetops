@@ -1,12 +1,12 @@
 <div class="form-wrapper" ...attributes>
-    <ContentPanel @title={{t "fleet-ops.component.fleet-form-panel.fleet-details"}} @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "fleet.fields.fleet-details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
-            <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.fleet-name"}} @value={{@resource.name}} @disabled={{cannot-write @resource}} @wrapperClass="col-span-2" />
-            <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.parent-fleet"}} @value={{@resource.parent_fleet}}>
+            <InputGroup @name={{t "fleet.fields.fleet-name"}} @value={{@resource.name}} @disabled={{cannot-write @resource}} @wrapperClass="col-span-2" />
+            <InputGroup @name={{t "fleet.fields.parent-fleet"}} @value={{@resource.parent_fleet}}>
                 <ModelSelect
                     @modelName="fleet"
                     @selectedModel={{@resource.parent_fleet}}
-                    @placeholder={{t "fleet-ops.component.fleet-form-panel.select-parent-fleet"}}
+                    @placeholder={{t "fleet.fields.select-parent-fleet"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -18,11 +18,11 @@
                     {{model.name}}
                 </ModelSelect>
             </InputGroup>
-            <InputGroup @name={{t "fleet-ops.common.vendor"}} @value={{@resource.vendor}}>
+            <InputGroup @name={{t "resource.vendor"}} @value={{@resource.vendor}}>
                 <ModelSelect
                     @modelName="vendor"
                     @selectedModel={{@resource.vendor}}
-                    @placeholder={{t "fleet-ops.component.fleet-form-panel.select-vendor"}}
+                    @placeholder={{t "fleet.fields.select-vendor"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -34,11 +34,11 @@
                     {{model.name}}
                 </ModelSelect>
             </InputGroup>
-            <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.service-title"}} @value={{@resource.service_area}}>
+            <InputGroup @name={{t "fleet.fields.service-title"}} @value={{@resource.service_area}}>
                 <ModelSelect
                     @modelName="service-area"
                     @selectedModel={{@resource.service_area}}
-                    @placeholder={{t "fleet-ops.component.fleet-form-panel.select-service"}}
+                    @placeholder={{t "fleet.fields.select-service"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -51,12 +51,12 @@
                 </ModelSelect>
             </InputGroup>
             {{#if @resource.service_area}}
-                <InputGroup @name={{t "fleet-ops.component.fleet-form-panel.zone-title"}} @value={{@resource.zone}}>
+                <InputGroup @name={{t "fleet.fields.zone-title"}} @value={{@resource.zone}}>
                     <ModelSelect
                         @modelName="zone"
                         @selectedModel={{@resource.zone}}
                         @query={{hash service_area_uuid=@resource.service_area.id}}
-                        @placeholder={{t "fleet-ops.component.fleet-form-panel.select-zone"}}
+                        @placeholder={{t "fleet.fields.select-zone"}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}
@@ -69,13 +69,13 @@
                     </ModelSelect>
                 </InputGroup>
             {{/if}}
-            <InputGroup @name={{t "fleet-ops.common.status"}} @helpText={{t "fleet-ops.component.fleet-form-panel.select-status-fleet"}}>
+            <InputGroup @name={{t "common.status"}} @helpText={{t "fleet.fields.select-status-fleet"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "fleetStatuses"}}
                         @selected={{find-by "value" @resource.status (get-fleet-ops-options "fleetStatuses")}}
                         @onChange={{set-model-attr @resource "status"}}
-                        @placeholder={{t "fleet-ops.component.fleet-form-panel.select-status"}}
+                        @placeholder={{t "fleet.fields.select-status"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |status|
@@ -88,8 +88,8 @@
                 </div>
             </InputGroup>
             <InputGroup
-                @name={{t "fleet-ops.component.fleet-form-panel.task-mission-title"}}
-                @helpText={{t "fleet-ops.component.fleet-form-panel.task-text"}}
+                @name={{t "fleet.fields.task-mission-title"}}
+                @helpText={{t "fleet.fields.task-text"}}
                 @value={{@resource.task}}
                 @disabled={{cannot-write @resource}}
                 @wrapperClass="col-span-2"

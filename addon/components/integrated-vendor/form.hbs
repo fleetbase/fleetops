@@ -1,27 +1,23 @@
 <div class="form-wrapper" ...attributes>
-    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.provider"}} @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "integrated-vendor.fields.provider"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="flex flex-row items-center">
             <img src={{@resource.provider_options.logo}} alt={{@resource.provider_options.code}} class="w-12 h-12" width="48" height="48" />
             <h3 class="text-base text-black dark:text-white ml-4">{{@resource.provider_options.name}}</h3>
         </div>
     </ContentPanel>
-    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.credentials"}} @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "integrated-vendor.fields.credentials"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="space-y-2">
             {{#each @resource.provider_options.credential_params as |param|}}
                 <InputGroup
                     @name={{smart-humanize param.key}}
                     @value={{mut (get @resource.credentials param.key)}}
-                    @helpText={{concat
-                        (t "fleet-ops.component.vendor-form-panel.create-form.optionally")
-                        (smart-humanize param.key)
-                        (t "fleet-ops.component.vendor-form-panel.create-form.configure-vendor")
-                    }}
+                    @helpText={{t "integrated-vendor.fields.credentials-configure-help-text" param=(smart-humanize param.key)}}
                     @disabled={{cannot-write @resource}}
                 />
             {{/each}}
         </div>
     </ContentPanel>
-    <ContentPanel @title={{t "fleet-ops.common.options"}} @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "integrated-vendor.fields.options"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="space-y-2">
             {{#each @resource.provider_options.option_params as |param|}}
                 {{#if param.options}}
@@ -32,7 +28,7 @@
                             @optionValue={{param.optionValue}}
                             @optionLabel={{param.optionLabel}}
                             @humanize={{true}}
-                            @placeholder={{concat (t "fleet-ops.component.vendor-form-panel.create-form.select") (smart-humanize param.key)}}
+                            @placeholder={{t "common.select-field" field=(smart-humanize param.key)}}
                             @onSelect={{fn (mut (get @resource.options param.key))}}
                             @disabled={{cannot-write @resource}}
                             class="form-select w-full"
@@ -42,11 +38,7 @@
                     <InputGroup
                         @name={{smart-humanize param.key}}
                         @value={{mut (get @resource.options param.key)}}
-                        @helpText={{concat
-                            (t "fleet-ops.component.vendor-form-panel.create-form.optionally")
-                            (smart-humanize param.key)
-                            (t "fleet-ops.component.vendor-form-panel.create-form.configure-vendor")
-                        }}
+                        @helpText={{t "integrated-vendor.fields.credentials-configure-help-text" param=(smart-humanize param.key)}}
                         @disabled={{cannot-write @resource}}
                     />
                 {{/if}}
@@ -54,7 +46,7 @@
             <InputGroup>
                 <Checkbox
                     @value={{@resource.sandbox}}
-                    @label="Sandbox"
+                    @label={{t "integrated-vendor.fields.sandbox"}}
                     @onToggle={{fn (mut @resource.sandbox)}}
                     @alignItems="center"
                     @labelClass="mb-0i"
@@ -63,24 +55,24 @@
             </InputGroup>
         </div>
     </ContentPanel>
-    <ContentPanel @title={{t "fleet-ops.component.vendor-form-panel.create-form.advanced-options"}} @open={{false}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "integrated-vendor.fields.advanced-options"}} @open={{false}} @wrapperClass="bordered-top">
         <div class="space-y-2">
             <InputGroup
-                @name={{t "fleet-ops.component.vendor-form-panel.create-form.host"}}
+                @name={{t "integrated-vendor.fields.host"}}
                 @value={{@resource.host}}
-                @helpText={{t "fleet-ops.component.vendor-form-panel.create-form.host-text"}}
+                @helpText={{t "integrated-vendor.fields.host-help-text"}}
                 @disabled={{cannot-write @resource}}
             />
             <InputGroup
-                @name={{t "fleet-ops.component.vendor-form-panel.create-form.namespace"}}
+                @name={{t "integrated-vendor.fields.namespace"}}
                 @value={{@resource.namespace}}
-                @helpText={{t "fleet-ops.component.vendor-form-panel.create-form.namespace-text"}}
+                @helpText={{t "integrated-vendor.fields.namespace-help-text"}}
                 @disabled={{cannot-write @resource}}
             />
             <InputGroup
-                @name={{t "fleet-ops.component.vendor-form-panel.create-form.webhook"}}
+                @name={{t "integrated-vendor.fields.webhook"}}
                 @value={{@resource.webhook_url}}
-                @helpText={{t "fleet-ops.component.vendor-form-panel.create-form.webhook-text"}}
+                @helpText={{t "integrated-vendor.fields.webhook-help-text"}}
                 @disabled={{cannot-write @resource}}
             />
         </div>

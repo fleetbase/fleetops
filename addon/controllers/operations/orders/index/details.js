@@ -12,6 +12,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     @service leafletLayerVisibilityManager;
     @service hostRouter;
     @service universe;
+    @service sidebar;
     @tracked routingControl;
 
     get tabs() {
@@ -106,9 +107,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
         this.routingControl = await this.leafletMapManager.addRoutingControl(this.model.routeWaypoints);
 
         // Hide sidebar
-        if (this.universe.sidebarContext) {
-            this.universe.sidebarContext.hideNow();
-        }
+        this.sidebar.hideNow();
 
         // Show & track driver assigned
         this.leafletLayerVisibilityManager.hideCategory('drivers');

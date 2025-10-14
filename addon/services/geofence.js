@@ -13,10 +13,11 @@ export default class GeofenceService extends Service {
     @service serviceAreaActions;
     @service zoneActions;
     @service notifications;
+    @service intl;
     #currentEdit = null;
 
     @action createServiceArea() {
-        this.notifications.info('Use drawing controls to the right to draw a service area, complete point connections to save service area.');
+        this.notifications.info(this.intl.t('geofence.prompts.use-draw-controls-create-service-area'));
         this.leafletMapManager.showDrawControl();
         this.leafletMapManager.map.once('draw:created', ({ layer, layerType }) => {
             const border = toMultiPolygon(createGeoJsonFromLayer(layer, { layerType }));
@@ -36,7 +37,7 @@ export default class GeofenceService extends Service {
     }
 
     @action createZone(serviceArea) {
-        this.notifications.info('Use drawing controls to the right to draw a zone within the service area, complete point connections to save zone.');
+        this.notifications.info(this.intl.t('geofence.prompts.use-draw-controls-create-zone'));
         this.leafletMapManager.showDrawControl();
         this.leafletMapManager.map.fitBounds(serviceArea.leafletCoordinates, {
             paddingBottomRight: [300, 0],
@@ -65,12 +66,12 @@ export default class GeofenceService extends Service {
     @action async editServiceArea(serviceArea) {
         const layer = serviceArea?.leafletLayer;
         if (!layer) {
-            this.notifications.warning('No layer found for this Service Area.');
+            this.notifications.info(this.intl.t('geofence.prompts.no-layer-found-for-resource', { resource: this.intl.t('resource.service-area') }));
             return;
         }
 
         try {
-            this.notifications.info('Editing enabled — adjust vertices then click the edit check to apply.');
+            this.notifications.info(this.intl.t('geofence.prompts.editing-enabled'));
             const result = await this.#editPolygonLayer(layer, { focusBounds: serviceArea.leafletCoordinates });
 
             if (result?.type === 'edited') {
@@ -78,25 +79,25 @@ export default class GeofenceService extends Service {
                 serviceArea.set('border', border);
                 await serviceArea.save?.();
 
-                this.notifications.success('Service area boundaries updated.');
+                this.notifications.success(this.intl.t('geofence.prompts.resource-boundaries-updated', { resource: this.intl.t('resource.service-area') }));
             } else {
-                this.notifications.info('Edit canceled.');
+                this.notifications.info(this.intl.t('geofence.prompts.edit-canceled'));
             }
         } catch (e) {
             debug(`editServiceArea error: ${e?.message ?? e}`);
-            this.notifications.serverError?.(e) || this.notifications.danger?.('Failed to update Service Area.');
+            this.notifications.serverError?.(e) || this.notifications.error?.(this.intl.t('geofence.prompts.failed-to-update-resource', { resource: this.intl.t('resource.service-area') }));
         }
     }
 
     @action async editZone(zone) {
         const layer = zone?.leafletLayer;
         if (!layer) {
-            this.notifications.warning('No layer found for this Zone.');
+            this.notifications.info(this.intl.t('geofence.prompts.no-layer-found-for-resource', { resource: this.intl.t('resource.zone') }));
             return;
         }
 
         try {
-            this.notifications.info('Editing enabled — adjust vertices then click the edit check to apply.');
+            this.notifications.info(this.intl.t('geofence.prompts.editing-enabled'));
             const result = await this.#editPolygonLayer(layer, { focusBounds: zone.leafletCoordinates });
 
             if (result?.type === 'edited') {
@@ -104,13 +105,13 @@ export default class GeofenceService extends Service {
                 zone.set('border', border);
                 await zone.save?.();
 
-                this.notifications.success('Zone boundaries updated.');
+                this.notifications.success(this.intl.t('geofence.prompts.resource-boundaries-updated', { resource: this.intl.t('resource.zone') }));
             } else {
-                this.notifications.info('Edit canceled.');
+                this.notifications.info(this.intl.t('geofence.prompts.edit-canceled'));
             }
         } catch (e) {
             debug(`editZone error: ${e?.message ?? e}`);
-            this.notifications.serverError?.(e) || this.notifications.danger?.('Failed to update Zone.');
+            this.notifications.serverError?.(e) || this.notifications.error?.(this.intl.t('geofence.prompts.failed-to-update-resource', { resource: this.intl.t('resource.zone') }));
         }
     }
 

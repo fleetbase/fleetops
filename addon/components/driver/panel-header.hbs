@@ -1,4 +1,4 @@
-<div class="px-4 pt-4">
+<div class="px-4 py-2">
     <div class="flex flex-1 flex-row items-start justify-between">
         <div class="flex flex-row space-x-3">
             <div class="flex items-start justify-start rounded-full">
@@ -16,12 +16,12 @@
                         </div>
                     {{else}}
                         <div class="flex flex-row items-center">
-                            <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{t "fleet-ops.component.driver-panel.no-vehicle-message"}}</span>
-                            {{!-- <Button @icon="plus" @size="xs" @helpText={{t "fleet-ops.component.driver-panel.assign-vehicle-button"}} /> --}}
+                            <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{t "driver.fields.no-vehicle-assigned"}}</span>
+                            {{!-- <Button @icon="plus" @size="xs" @helpText={{t "driver.actions.assign-vehicle"}} /> --}}
                         </div>
                     {{/if}}
                 </div>
-                <Badge @status={{if @resource.online "online" "offline"}}>{{if @resource.online "Online" "Offline"}}</Badge>
+                <Badge @status={{if @resource.online "online" "offline"}}>{{if @resource.online (t "common.online") (t "common.offline")}}</Badge>
             </div>
         </div>
         <div class="next-view-header-right">

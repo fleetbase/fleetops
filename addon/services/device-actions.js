@@ -17,8 +17,8 @@ export default class DeviceActionsService extends ResourceActionService {
             const device = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'device/form',
-                title: 'Create a new device',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.device')?.toLowerCase() }),
+                useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -28,8 +28,8 @@ export default class DeviceActionsService extends ResourceActionService {
         edit: (device) => {
             return this.resourceContextPanel.open({
                 content: 'device/form',
-                title: `Edit: ${device.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: device.name }),
+                useDefaultSaveTask: true,
                 device,
             });
         },
@@ -38,7 +38,7 @@ export default class DeviceActionsService extends ResourceActionService {
                 device,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'device/details',
                     },
                 ],
@@ -51,8 +51,8 @@ export default class DeviceActionsService extends ResourceActionService {
             const device = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: device,
-                title: 'Create a new device',
-                acceptButtonText: 'Create device',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.device')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.device') }),
                 component: 'device/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', device, { refresh: true, ...saveOptions }),
                 ...options,
@@ -61,8 +61,8 @@ export default class DeviceActionsService extends ResourceActionService {
         edit: (device, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: device,
-                title: `Edit: ${device.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: device.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'device/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', device, { refresh: true, ...saveOptions }),

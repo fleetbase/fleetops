@@ -20,7 +20,12 @@ export default class ManagementFuelReportsIndexNewController extends Controller 
 
             yield this.hostRouter.refresh();
             yield this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport);
-            this.notifications.success(this.intl.t('fleet-ops.component.fuel-report-form-panel.success-message'));
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.fuel-report'),
+                    resourceName: fuelReport.public_id,
+                })
+            );
             this.resetForm();
         } catch (err) {
             this.notifications.serverError(err);

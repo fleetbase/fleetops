@@ -6,12 +6,13 @@ export default class OrderDetailsDetailComponent extends Component {
     @service orderActions;
     @service driverActions;
     @service leafletMapManager;
+    @service intl;
 
     get actionButtons() {
         return [
             {
                 type: 'default',
-                text: 'Edit',
+                text: this.intl.t('common.edit'),
                 icon: 'pencil',
                 iconPrefix: 'fas',
                 permission: 'fleet-ops update order',
@@ -22,7 +23,7 @@ export default class OrderDetailsDetailComponent extends Component {
             },
             {
                 type: 'default',
-                text: this.args.resource.driver_assigned_uuid ? 'Change driver' : 'Assign driver',
+                text: this.args.resource.driver_assigned_uuid ? this.intl.t('order.actions.change-driver') : this.intl.t('order.actions.assign-driver'),
                 icon: 'edit',
                 iconPrefix: 'fas',
                 permission: 'fleet-ops assign-driver-for order',

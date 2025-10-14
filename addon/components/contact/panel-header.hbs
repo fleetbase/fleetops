@@ -1,4 +1,4 @@
-<div class="px-4 pt-4">
+<div class="px-4 py-2">
     <div class="flex flex-1 flex-row items-start justify-between">
         <div class="flex flex-row space-x-3">
             <div class="flex items-start justify-start rounded-full">
@@ -9,7 +9,7 @@
             </div>
             <div class="flex flex-col">
                 <h1 class="text-gray-900 dark:text-white font-semibold text-2xl">{{@resource.name}}</h1>
-                <Badge @status="info">{{titleize @resource.type}}</Badge>
+                <Badge @status="info">{{titleize (humanize @resource.type)}}</Badge>
             </div>
         </div>
         <div class="next-view-header-right">

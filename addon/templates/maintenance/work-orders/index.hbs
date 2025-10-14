@@ -1,6 +1,6 @@
 <Layout::Resource::Tabular
     @resource="work-order"
-    @title="Work Orders"
+    @title={{t "resource.work-orders"}}
     @searchQuery={{this.query}}
     @onSearch={{perform this.workOrderActions.controllerSearchTask this}}
     @data={{@model}}

@@ -7,17 +7,39 @@
         </div>
     </div>
     <div class="input-group">
-        <InputLabel @labelText={{t "fleet-ops.component.avatar-picker.select-map-avatar"}} @helpText={{t "fleet-ops.component.avatar-picker.select-avatar-rendering"}} />
+        <InputLabel @labelText={{t "avatar-picker.select-map-avatar"}} @helpText={{t "avatar-picker.select-avatar-rendering"}} />
         <FetchSelect
             @wrapperClass="w-60"
-            @placeholder={{t "fleet-ops.component.avatar-picker.select-avatar"}}
+            @placeholder={{t "avatar-picker.select-avatar"}}
             @endpoint={{this.endpoint}}
             @selected={{this.model.avatar_value}}
             @optionValue="value"
             @onChange={{this.selectAvatar}}
             as |option|
         >
-            {{titleize (humanize option.key)}}
+            <div class="flex flex-row space-x-2">
+                <div class="border border-dashed border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-600 rounded-lg flex items-center justify-center">
+                    <div class="flex items-center justify-center h-10 w-10">
+                        {{#if (is-uuid option.value)}}
+                            <WithRecord @id={{option.value}} @type="file" as |file isLoading|>
+                                {{#if file}}
+                                    <Image alt={{titleize (humanize option.key)}} src={{file.url}} class="w-8 h-8" />
+                                {{else if isLoading}}
+                                    <Spinner />
+                                {{else}}
+                                    <div class="flex items-center justify-center text-center">
+                                        <FaIcon @icon="image" />
+                                        <span class="text-xs text-gray-400 dark:text-gray-600">{{t "avatar-picker.select-for-preview"}}</span>
+                                    </div>
+                                {{/if}}
+                            </WithRecord>
+                        {{else}}
+                            <Image alt={{titleize (humanize option.key)}} src={{option.value}} class="w-8 h-8" />
+                        {{/if}}
+                    </div>
+                </div>
+                <div>{{titleize (humanize option.key)}}</div>
+            </div>
         </FetchSelect>
     </div>
 </div>

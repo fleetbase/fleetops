@@ -17,19 +17,19 @@ export default class PartActionsService extends ResourceActionService {
             const part = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'part/form',
-                title: 'Create a new part',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.part')?.toLowerCase() }),
                 saveOptions: {
                     callback: this.refresh,
                 },
+                useDefaultSaveTask: true,
                 part,
             });
         },
         edit: (part) => {
             return this.resourceContextPanel.open({
                 content: 'part/form',
-                title: `Edit: ${part.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: part.name }),
+                useDefaultSaveTask: true,
                 part,
             });
         },
@@ -38,7 +38,7 @@ export default class PartActionsService extends ResourceActionService {
                 part,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'part/details',
                     },
                 ],
@@ -51,8 +51,8 @@ export default class PartActionsService extends ResourceActionService {
             const part = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: part,
-                title: 'Create a new part',
-                acceptButtonText: 'Create part',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.part')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.part') }),
                 component: 'part/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', part, { refresh: true, ...saveOptions }),
                 ...options,
@@ -61,8 +61,8 @@ export default class PartActionsService extends ResourceActionService {
         edit: (part, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: part,
-                title: `Edit: ${part.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: part.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'part/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', part, { refresh: true, ...saveOptions }),

@@ -23,7 +23,10 @@ export default class ManagementVehiclesIndexEditController extends Controller {
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details', vehicle);
-            this.notifications.success(this.intl.t('fleet-ops.component.vehicle-form-panel.success-message', { vehicleName: vehicle.display_name }));
+            this.notifications.success(this.intl.t('common.resource-updated-success', {
+                    resource: this.intl.t('resource.vehicle'),
+                    resourceName: vehicle.display_name,
+                }));
         } catch (err) {
             this.notifications.serverError(err);
         }
@@ -47,9 +50,9 @@ export default class ManagementVehiclesIndexEditController extends Controller {
 
     #confirmContinueWithUnsavedChanges(vehicle, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.vehicles.index.edit.title'),
-            body: this.intl.t('fleet-ops.management.vehicles.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.vehicles.index.edit.button'),
+            title: this.intl.t('common.continue-without-saving'),
+            body: this.intl.t('common.continue-without-saving-prompt', { resource: this.intl.t('resource.vehicle') }),
+            acceptButtonText: this.intl.t('common.continue'),
             confirm: async () => {
                 vehicle.rollbackAttributes();
                 await this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details', vehicle);

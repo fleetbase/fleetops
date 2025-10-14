@@ -46,7 +46,7 @@ export default class OrderConfigManagerDetailsComponent extends Component {
     @task *save() {
         try {
             yield this.config.save();
-            this.notifications.success(this.intl.t('fleet-ops.component.order-config-manager.saved-success-message', { orderConfigName: this.config.name }));
+            this.notifications.success(this.intl.t('order-config-manager.saved-success-message', { orderConfigName: this.config.name }));
             if (typeof this.args.onConfigUpdated === 'function') {
                 this.args.onConfigUpdated(this.config);
             }
@@ -62,9 +62,9 @@ export default class OrderConfigManagerDetailsComponent extends Component {
      */
     @action delete() {
         this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.component.order-config-manager.details.delete.delete-title'),
-            body: this.intl.t('fleet-ops.component.order-config-manager.details.delete.delete-body-message'),
-            acceptButtonText: this.intl.t('fleet-ops.component.order-config-manager.details.delete.confirm-delete'),
+            title: this.intl.t('order-config-manager.details.delete.delete-title'),
+            body: this.intl.t('order-config-manager.details.delete.delete-body-message'),
+            acceptButtonText: this.intl.t('order-config-manager.details.delete.confirm-delete'),
             confirm: async (modal) => {
                 if (typeof this.args.onConfigDeleting === 'function') {
                     this.args.onConfigDeleting(this.config);

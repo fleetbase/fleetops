@@ -112,9 +112,9 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      */
     @action deleteCustomField(customField) {
         this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-prompt.modal-title'),
-            body: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-prompt.delete-body-message'),
-            acceptButtonText: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-prompt.confirm-delete'),
+            title: this.intl.t('order-config-manager.custom-fields.delete-custom-field-prompt.modal-title'),
+            body: this.intl.t('order-config-manager.custom-fields.delete-custom-field-prompt.delete-body-message'),
+            acceptButtonText: this.intl.t('order-config-manager.custom-fields.delete-custom-field-prompt.confirm-delete'),
             confirm: async (modal) => {
                 modal.startLoading();
 
@@ -174,9 +174,9 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
      */
     @action deleteCustomFieldGroup(group) {
         this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-group-prompt.modal-title'),
-            body: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-group-prompt.delete-body-message'),
-            acceptButtonText: this.intl.t('fleet-ops.component.order-config-manager.custom-fields.delete-custom-field-group-prompt.confirm-delete'),
+            title: this.intl.t('order-config-manager.custom-fields.delete-custom-field-group-prompt.modal-title'),
+            body: this.intl.t('order-config-manager.custom-fields.delete-custom-field-group-prompt.delete-body-message'),
+            acceptButtonText: this.intl.t('order-config-manager.custom-fields.delete-custom-field-group-prompt.confirm-delete'),
             confirm: async (modal) => {
                 modal.startLoading();
 

@@ -19,22 +19,22 @@ export default class ConnectivityDevicesIndexController extends Controller {
         {
             icon: 'refresh',
             onClick: this.deviceActions.refresh,
-            helpText: this.intl.t('fleet-ops.common.reload-data'),
+            helpText: this.intl.t('common.refresh'),
         },
         {
-            text: 'New',
+            text: this.intl.t('common.new'),
             type: 'primary',
             icon: 'plus',
             onClick: this.deviceActions.transition.create,
         },
         {
-            text: 'Import',
+            text: this.intl.t('common.import'),
             type: 'magic',
             icon: 'upload',
             onClick: this.deviceActions.import,
         },
         {
-            text: 'Export',
+            text: this.intl.t('common.export'),
             icon: 'long-arrow-up',
             iconClass: 'rotate-icon-45',
             wrapperClass: 'hidden md:flex',
@@ -54,7 +54,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
     /** columns */
     @tracked columns = [
         {
-            label: this.intl.t('fleet-ops.common.name'),
+            label: this.intl.t('column.name'),
             valuePath: 'name',
             width: '180px',
             cellComponent: 'table/cell/anchor',
@@ -69,7 +69,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
-            label: this.intl.t('fleet-ops.common.created-at'),
+            label: this.intl.t('column.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
             width: '10%',
@@ -79,7 +79,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
             filterComponent: 'filter/date',
         },
         {
-            label: this.intl.t('fleet-ops.common.updated-at'),
+            label: this.intl.t('column.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
             width: '10%',
@@ -96,18 +96,18 @@ export default class ConnectivityDevicesIndexController extends Controller {
             ddButtonText: false,
             ddButtonIcon: 'ellipsis-h',
             ddButtonIconPrefix: 'fas',
-            ddMenuLabel: 'Device Actions',
+            ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.Device') }),
             cellClassNames: 'overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
             width: '10%',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.management.places.index.view-details'),
+                    label: this.intl.t('column.view-details'),
                     fn: this.deviceActions.transition.view,
                     permission: 'fleet-ops view device',
                 },
                 {
-                    label: this.intl.t('fleet-ops.management.places.index.edit-place'),
+                    label: this.intl.t('column.edit-place'),
                     fn: this.deviceActions.transition.edit,
                     permission: 'fleet-ops update device',
                 },
@@ -115,7 +115,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.management.places.index.delete'),
+                    label: this.intl.t('column.delete'),
                     fn: this.deviceActions.delete,
                     permission: 'fleet-ops delete device',
                 },

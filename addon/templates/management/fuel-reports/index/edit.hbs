@@ -1,7 +1,7 @@
 <Layout::Resource::Panel
     @resource={{@model}}
     @controller={{this}}
-    @headerTitle={{concat "Edit: fuel reported on " @model.createdAt}}
+    @headerTitle={{t "common.edit-resource-type-name" resource=(t "resource.fuel-report") resourceName=@model.name}}
     @actionButtons={{this.actionButtons}}
     @saveTask={{this.save}}
     @onPressCancel={{this.cancel}}

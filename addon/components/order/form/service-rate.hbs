@@ -1,24 +1,24 @@
-<ContentPanel @title={{t "fleet-ops.common.service"}} @open={{true}} @wrapperClass="bordered-top">
+<ContentPanel @title={{t "order.fields.service"}} @open={{true}} @wrapperClass="bordered-top">
     <div>
         <Toggle
-            @label={{t "fleet-ops.operations.orders.index.new.apply-service-rate"}}
+            @label={{t "order.fields.apply-service-rate"}}
             @wrapperClass="justify-start-i mb-4"
             @isToggled={{@resource.servicable}}
             @onToggle={{perform this.queryServiceRates}}
             @disabled={{or (cannot-write @resource) (not this.isServicable)}}
-            @helpText={{t "fleet-ops.operations.orders.index.new.service-help-text"}}
+            @helpText={{t "order.fields.service-help-text"}}
         />
         {{#if @resource.servicable}}
             <div>
                 <div class="space-y-2">
                     {{#unless @resource.facilitator.isIntegratedVendor}}
-                        <InputGroup @name={{t "fleet-ops.operations.orders.index.new.select-service-rate"}} @helpText={{t "fleet-ops.operations.orders.index.new.service-quotes-help-text"}}>
+                        <InputGroup @name={{t "order.fields.select-service-rate"}} @helpText={{t "order.fields.service-quotes-help-text"}}>
                             <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                                 <PowerSelect
                                     @options={{this.serviceRates}}
                                     @selected={{this.selectedRate}}
                                     @onChange={{perform this.getServiceQuotes}}
-                                    @placeholder={{t "fleet-ops.operations.orders.index.new.select-service-rate"}}
+                                    @placeholder={{t "order.fields.select-service-rate"}}
                                     @triggerClass="form-select form-input"
                                     @disabled={{cannot-write @resource}}
                                     as |serviceRate|
@@ -33,7 +33,7 @@
                     <div class="flex flex-row justify-end">
                         <Button
                             @icon="refresh"
-                            @text={{t "fleet-ops.operations.orders.index.new.refresh-button"}}
+                            @text={{t "order.fields.refresh-button"}}
                             @isLoading={{this.getServiceQuotes.isRunning}}
                             @disabled={{not this.selectedRate}}
                             @onClick={{perform this.getServiceQuotes this.selectedRate}}
@@ -45,11 +45,11 @@
                         <Spinner
                             class="text-sm dark:text-gray-100 flex flex-row items-center"
                             @iconClass="mr-2"
-                            @loadingMessage={{t "fleet-ops.operations.orders.index.new.loading-message"}}
+                            @loadingMessage={{t "order.fields.loading-message"}}
                         />
                     </div>
                 {{else}}
-                    <InfoBlock class="my-3" @text={{t "fleet-ops.operations.orders.index.new.info-text"}} />
+                    <InfoBlock class="my-3" @text={{t "order.fields.info-text"}} />
                     <div class="radio-group-condensed -space-y-px">
                         {{#each this.serviceQuotes as |serviceQuote|}}
                             <div class="radio-group-item shadow-sm flex-col pl-0i pr-0i {{if (eq @resource.service_quote_uuid serviceQuote.uuid) 'is-checked'}}">
@@ -71,7 +71,7 @@
                                     <table class="table table-fixed flex-1">
                                         <thead>
                                             <tr>
-                                                <th class="text-left">{{t "fleet-ops.operations.orders.index.new.breakdown"}}</th>
+                                                <th class="text-left">{{t "order.fields.breakdown"}}</th>
                                                 <th></th>
                                             </tr>
                                         </thead>
@@ -88,7 +88,7 @@
                                             {{/each}}
                                             <tr class="border-b-0">
                                                 <td class="border-b-0">
-                                                    <span class="font-semibold">{{t "fleet-ops.common.total"}}</span>
+                                                    <span class="font-semibold">{{t "common.total"}}</span>
                                                 </td>
                                                 <td class="border-b-0">
                                                     <span>{{format-currency serviceQuote.amount serviceQuote.currency}}</span>
@@ -104,8 +104,8 @@
                                 @blockClass="flex flex-row items-center"
                                 @text={{if
                                     @resource.payload.payloadCoordinates.length
-                                    (t "fleet-ops.operations.orders.index.new.no-service-info-text")
-                                    (t "fleet-ops.operations.orders.index.new.input-order-info-text")
+                                    (t "order.fields.no-service-info-text")
+                                    (t "order.fields.input-order-info-text")
                                 }}
                             />
                         {{/each}}

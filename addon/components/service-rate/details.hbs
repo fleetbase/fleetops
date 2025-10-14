@@ -2,22 +2,22 @@
     <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
             <div class="field-info-container">
-                <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.service-name"}}</div>
+                <div class="field-name">{{t "service-rate.fields.service-name"}}</div>
                 <div class="field-value">{{n-a @resource.service_name}}</div>
             </div>
 
             <div class="field-info-container">
-                <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.service-order-label"}}</div>
+                <div class="field-name">{{t "service-rate.fields.service-order-label"}}</div>
                 <div class="field-value">{{n-a @resource.order_config.name}}</div>
             </div>
 
             <div class="field-info-container">
-                <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.base-fee-label"}}</div>
+                <div class="field-name">{{t "service-rate.fields.base-fee-label"}}</div>
                 <div class="field-value">{{format-currency @resource.base_fee @resource.currency}}</div>
             </div>
 
             <div class="field-info-container">
-                <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.rate-calculation-label"}}</div>
+                <div class="field-name">{{t "service-rate.fields.rate-calculation-label"}}</div>
                 <div class="field-value">
                     {{#let (find-by "value" @resource.rate_calculation_method (get-fleet-ops-options "serviceRateCalculationMethods")) as |method|}}
                         {{#if method}}
@@ -35,23 +35,23 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {{#if @resource.isParcelService}}
                 <div class="field-info-container">
-                    <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.estimated-days"}}</div>
+                    <div class="field-name">{{t "service-rate.fields.estimated-days"}}</div>
                     <div class="field-value">{{n-a @resource.estimated_days}}</div>
                 </div>
             {{/if}}
             <div class="field-info-container col-span-2">
-                <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.duration-terms-label"}}</div>
+                <div class="field-name">{{t "service-rate.fields.duration-terms-label"}}</div>
                 <div class="field-value">{{n-a @resource.duration_terms}}</div>
             </div>
         </div>
     </ContentPanel>
 
     {{#if @resource.isFixedRate}}
-        <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.fixed-meter"}} @open={{true}} @wrapperClass="bordered-top">
+        <ContentPanel @title={{t "service-rate.fields.fixed-meter"}} @open={{true}} @wrapperClass="bordered-top">
             <div class="mb-3">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
                     <div class="field-info-container">
-                        <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.maximum-distance"}}</div>
+                        <div class="field-name">{{t "service-rate.fields.maximum-distance"}}</div>
                         <div class="field-value">{{n-a @resource.max_distance}}</div>
                     </div>
                     <div class="field-info-container">
@@ -73,8 +73,8 @@
                 <table class="table table-fixed w-full">
                     <thead>
                         <tr>
-                            <th>{{t "fleet-ops.operations.service-rates.index.new.distance"}}</th>
-                            <th>{{t "fleet-ops.operations.service-rates.index.new.fee"}}</th>
+                            <th>{{t "service-rate.fields.distance"}}</th>
+                            <th>{{t "service-rate.fields.fee"}}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -93,14 +93,14 @@
             </div>
         </ContentPanel>
     {{else if @resource.isPerDrop}}
-        <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.per-drop-off-title"}} @open={{true}} @wrapperClass="bordered-top">
+        <ContentPanel @title={{t "service-rate.fields.per-drop-off-title"}} @open={{true}} @wrapperClass="bordered-top">
             <div class="overflow-x-auto">
                 <table class="table table-fixed w-full">
                     <thead>
                         <tr>
-                            <th>{{t "fleet-ops.operations.service-rates.index.new.min-drop"}}</th>
-                            <th>{{t "fleet-ops.operations.service-rates.index.new.max-drop"}}</th>
-                            <th>{{t "fleet-ops.operations.service-rates.index.new.fee"}}</th>
+                            <th>{{t "service-rate.fields.min-drop"}}</th>
+                            <th>{{t "service-rate.fields.max-drop"}}</th>
+                            <th>{{t "service-rate.fields.fee"}}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -120,15 +120,15 @@
             </div>
         </ContentPanel>
     {{else if @resource.isPerMeter}}
-        <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.per-meter"}} @open={{true}} @wrapperClass="bordered-top">
+        <ContentPanel @title={{t "service-rate.fields.per-meter"}} @open={{true}} @wrapperClass="bordered-top">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
                 <div class="field-info-container">
-                    <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.per-meter-rate-fee"}}</div>
+                    <div class="field-name">{{t "service-rate.fields.per-meter-rate-fee"}}</div>
                     <div class="field-value">{{format-currency @resource.per_meter_flat_rate_fee @resource.currency}}</div>
                 </div>
 
                 <div class="field-info-container">
-                    <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.distance-unit"}}</div>
+                    <div class="field-name">{{t "service-rate.fields.distance-unit"}}</div>
                     <div class="field-value">
                         {{#let (find-by "value" @resource.per_meter_unit (get-fleet-ops-options "distanceUnits")) as |unit|}}
                             {{#if unit}}
@@ -152,7 +152,7 @@
             </div>
         </ContentPanel>
     {{else if @resource.isAlgorithm}}
-        <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.custom-algorithm-title"}} @open={{true}} @wrapperClass="bordered-top">
+        <ContentPanel @title={{t "service-rate.fields.custom-algorithm-title"}} @open={{true}} @wrapperClass="bordered-top">
             <div class="field-info-container">
                 <div class="field-name">Algorithm Code</div>
                 <div class="field-value">
@@ -162,11 +162,11 @@
         </ContentPanel>
     {{/if}}
 
-    <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.percel-fee-title"}} @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "service-rate.fields.percel-fee-title"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {{#if @resource.hasParcelFees}}
                 <div class="field-info-container">
-                    <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.cod-fee-label"}}</div>
+                    <div class="field-name">{{t "service-rate.fields.cod-fee-label"}}</div>
                     <div class="field-value">
                         {{#if @resource.cod_calculation_method}}
                             {{#let (find-by "value" @resource.cod_calculation_method (get-fleet-ops-options "serviceRateCodCalculationMethods")) as |method|}}
@@ -188,7 +188,7 @@
                 </div>
 
                 <div class="field-info-container">
-                    <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.peak-hours-fee-label"}}</div>
+                    <div class="field-name">{{t "service-rate.fields.peak-hours-fee-label"}}</div>
                     <div class="field-value">
                         {{#if @resource.peak_hours_calculation_method}}
                             {{#let (find-by "value" @resource.peak_hours_calculation_method (get-fleet-ops-options "serviceRatePeakHourCalculationMethods")) as |method|}}
@@ -216,16 +216,16 @@
         </div>
     </ContentPanel>
 
-    <ContentPanel @title={{t "fleet-ops.operations.service-rates.index.new.restrict-service-title"}} @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "service-rate.fields.restrict-service-title"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
             <div class="field-info-container">
-                <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.service-area-label"}}</div>
+                <div class="field-name">{{t "service-rate.fields.service-area-label"}}</div>
                 <div class="field-value">{{n-a @resource.serviceArea.name}}</div>
             </div>
 
             {{#if @resource.serviceArea}}
                 <div class="field-info-container">
-                    <div class="field-name">{{t "fleet-ops.operations.service-rates.index.new.zone-label"}}</div>
+                    <div class="field-name">{{t "service-rate.fields.zone-label"}}</div>
                     <div class="field-value">{{n-a @resource.zone.name}}</div>
                 </div>
             {{/if}}

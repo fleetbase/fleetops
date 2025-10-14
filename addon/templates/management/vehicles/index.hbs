@@ -1,7 +1,7 @@
 {{#if (eq this.layout "table")}}
     <Layout::Resource::Tabular
         @resource="vehicle"
-        @title={{t "fleet-ops.management.vehicles.index.title"}}
+        @title={{t "resource.vehicles"}}
         @searchQuery={{this.query}}
         @onSearch={{perform this.vehicleActions.controllerSearchTask this}}
         @data={{@model}}
@@ -14,7 +14,7 @@
         @controller={{this}}
     />
 {{else}}
-    <Layout::Section::Header @title="Vehicles" @actionsWrapperClass="space-x-1">
+    <Layout::Section::Header @title={{t "resource.vehicles"}} @actionsWrapperClass="space-x-1">
         <Layout::Resource::TabularActions
             @searchQuery={{this.query}}
             @onSearch={{perform this.vehicleActions.controllerSearchTask this}}

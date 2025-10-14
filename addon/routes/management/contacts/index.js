@@ -25,7 +25,7 @@ export default class ManagementContactsIndexRoute extends Route {
 
     @action loading(transition) {
         this.loader.showOnInitialTransition(transition, 'section.next-view-section', {
-            loadingMessage: this.intl.t('fleet-ops.common.loading-resource', { resourceName: 'Contacts' }),
+            loadingMessage: this.intl.t('common.loading-resource', { resource: 'Contacts' }),
         });
     }
 

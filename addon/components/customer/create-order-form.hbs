@@ -11,7 +11,7 @@
         />
     </Overlay::Header>
     <Overlay::Body @wrapperClass="new-order-overlay-body">
-        <ContentPanel @title={{t "fleet-ops.common.type"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+        <ContentPanel @title={{t "common.type"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
             <div class="input-group">
                 <InputLabel @labelText={{t "fleet-ops.operations.orders.index.new.order-type"}} @helpText="Select the type of order you want to create." />
                 <Select
@@ -264,7 +264,7 @@
                                 </div>
                                 <div class="flex-1 space-y-2">
                                     <div>
-                                        <Input @value={{entity.name}} @type="text" class="w-full form-input form-input-sm" placeholder={{t "fleet-ops.common.name"}} />
+                                        <Input @value={{entity.name}} @type="text" class="w-full form-input form-input-sm" placeholder={{t "common.name"}} />
                                     </div>
                                     <div>
                                         <Input @value={{entity.sku}} @type="text" class="w-full form-input form-input-sm" placeholder={{t "fleet-ops.operations.orders.index.new.sku"}} />
@@ -298,7 +298,7 @@
                 </div>
             </ContentPanel>
 
-            <ContentPanel @title={{t "fleet-ops.common.service"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
+            <ContentPanel @title={{t "common.service"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                 {{#if this.getQuotes.isRunning}}
                     <div class="flex items-center justify-center py-5">
                         <Spinner
@@ -349,7 +349,7 @@
                                             {{/each}}
                                             <tr class="border-b-0">
                                                 <td class="border-b-0">
-                                                    <span class="font-semibold">{{t "fleet-ops.common.total"}}</span>
+                                                    <span class="font-semibold">{{t "common.total"}}</span>
                                                 </td>
                                                 <td class="border-b-0">
                                                     <span>{{format-currency serviceQuote.amount serviceQuote.currency}}</span>
@@ -390,7 +390,7 @@
                             class="dropzone w-full rounded-lg px-4 py-8 bg-gray-50 dark:bg-gray-900 bg-opacity-25 text-gray-900 dark:text-white text-center flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-indigo-500"
                         >
                             <div class="flex items-center justify-center py-5">
-                                <Spinner class="text-sm dar:text-gray-100" @loadingMessage={{t "fleet-ops.common.uploading"}} />
+                                <Spinner class="text-sm dar:text-gray-100" @loadingMessage={{concat (t "common.uploading") "..."}} />
                             </div>
                         </div>
                     {{else}}
@@ -398,24 +398,24 @@
                             <FileDropzone @queue={{queue}} class="dropzone file-dropzone" @disabled={{cannot "fleet-ops create order"}} as |dropzone|>
                                 {{#if dropzone.active}}
                                     {{#if dropzone.valid}}
-                                        {{t "component.dropzone.drop-to-upload"}}
+                                        {{t "dropzone.drop-to-upload"}}
                                     {{else}}
-                                        {{t "component.dropzone.invalid"}}
+                                        {{t "dropzone.invalid"}}
                                     {{/if}}
                                 {{else if queue.files.length}}
                                     <div class="my-2">
                                         <FaIcon @icon="folder-open" class="text-indigo-500 mr-2" />
-                                        {{t "component.dropzone.files-ready-for-upload" numOfFiles=(pluralize queue.files.length (t "component.dropzone.file"))}}
+                                        {{t "dropzone.files-ready-for-upload" numOfFiles=(pluralize queue.files.length (t "dropzone.file"))}}
                                     </div>
                                     <div class="my-2">({{queue.progress}}%)</div>
                                 {{else}}
                                     <h4 class="font-semibold">
                                         <FaIcon @icon="folder-open" @size="lg" class="text-indigo-500 mr-2" />
-                                        {{t "component.dropzone.upload-documents-files"}}
+                                        {{t "dropzone.upload-documents-files"}}
                                     </h4>
                                     <div>
                                         {{#if dropzone.supported}}
-                                            <p class="text-sm my-5">{{t "component.dropzone.dropzone-supported-files"}}</p>
+                                            <p class="text-sm my-5">{{t "dropzone.dropzone-supported-files"}}</p>
                                         {{/if}}
                                         <FileUpload
                                             @name="files"
@@ -425,7 +425,7 @@
                                             @onFileAdded={{perform this.queueFile}}
                                             @disabled={{cannot "fleet-ops create order"}}
                                         >
-                                            <a tabindex={{0}} class="btn btn-magic cursor-pointer ml-1">{{t "component.dropzone.or-select-button-text"}}</a>
+                                            <a tabindex={{0}} class="btn btn-magic cursor-pointer ml-1">{{t "dropzone.or-select-button-text"}}</a>
                                         </FileUpload>
                                     </div>
                                 {{/if}}
@@ -434,7 +434,7 @@
                         {{#if this.uploadQueue}}
                             <div class="mx-4">
                                 <div class="flex items-center justify-between mb-4">
-                                    <span class="leading-6 dark:text-gray-100">{{t "component.dropzone.upload-queue"}}</span>
+                                    <span class="leading-6 dark:text-gray-100">{{t "dropzone.upload-queue"}}</span>
                                 </div>
                                 <div class="space-y-2 mb-4">
                                     {{#each this.uploadQueue as |file|}}

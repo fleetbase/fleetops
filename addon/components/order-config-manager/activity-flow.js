@@ -8,6 +8,7 @@ import { isArray } from '@ember/array';
 import { next } from '@ember/runloop';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
+import lowercase from 'ember-cli-string-helpers/utils/lowercase';
 import generateUUID from '@fleetbase/ember-core/utils/generate-uuid';
 import inlineTask from '@fleetbase/ember-core/utils/inline-task';
 import createFlowActivity from '../../utils/create-flow-activity';
@@ -866,6 +867,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         this.resourceContextPanel.open({
             content: 'activity/form',
             title: 'Create new activity',
+            title: this.intl.t('common.create-new-resource', { resource: lowercase(this.intl.t('resource.activity')) }),
             panelContentClass: 'py-2 px-4',
             resource: activity,
             pojoResource: true,
@@ -873,7 +875,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
                 // Check if the activity exists and if it's not the same instance being updated
                 const existingActivity = this.flow[activity.get('code')];
                 if (existingActivity && existingActivity !== activity) {
-                    return this.notifications.warning(this.intl.t('fleet-ops.component.order-config-manager.activity-flow.edit-activity-unique-code-warning'));
+                    return this.notifications.warning(this.intl.t('order-config-manager.activity-flow.edit-activity-unique-code-warning'));
                 }
 
                 contextComponentCallback(this, 'onContextChanged', null);

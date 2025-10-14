@@ -1,47 +1,55 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { isNone } from '@ember/utils';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 export default class ActivityLogicBuilderComponent extends Component {
+    @service intl;
     @tracked logic = [];
 
+    /**
+     * Returns available logic types used by the logic builder.
+     *
+     * @readonly
+     * @memberof LogicBuilderService
+     * @returns {Array<{type: string, description: string}>}
+     */
     get types() {
         return [
             {
                 type: 'and',
-                description: 'Logical AND: True if all conditions are true',
+                description: this.intl?.t?.('activity.form.logic-builder.types.and') ?? 'Logical AND: True if all conditions are true',
             },
             {
                 type: 'or',
-                description: 'Logical OR: True if at least one condition is true',
+                description: this.intl?.t?.('activity.form.logic-builder.types.or') ?? 'Logical OR: True if at least one condition is true',
             },
             {
                 type: 'not',
-                description: 'Logical NOT: Inverts the truth value of the condition',
+                description: this.intl?.t?.('activity.form.logic-builder.types.not') ?? 'Logical NOT: Inverts the truth value of the condition',
             },
             {
                 type: 'if',
-                description: 'Conditional logic: Executes the following action if the condition is true',
+                description: this.intl?.t?.('activity.form.logic-builder.types.if') ?? 'Conditional logic: Executes the following action if the condition is true',
             },
-            // {
-            //     type: 'conditionalAssignment',
-            //     description: 'Conditional Assignment: Assigns a value to a field based on a condition',
-            // },
-            // {
-            //     type: 'timeBased',
-            //     description: 'Time-Based Condition: Executes logic based on time or date conditions',
-            // },
         ];
     }
 
+    /**
+     * Returns available comparison and logical operators used in the logic builder.
+     *
+     * @readonly
+     * @memberof LogicBuilderService
+     * @returns {Object}
+     */
     get operators() {
         return {
             equal: {
                 symbol: '==',
-                description: 'Checks if two values are equal',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.equal') ?? 'Checks if two values are equal',
                 operandType: 'any',
                 inputCount: 2,
                 leftOperand: true,
@@ -49,7 +57,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             notEqual: {
                 symbol: '!=',
-                description: 'Checks if two values are not equal',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.not-equal') ?? 'Checks if two values are not equal',
                 operandType: 'any',
                 inputCount: 2,
                 leftOperand: true,
@@ -57,7 +65,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             greaterThan: {
                 symbol: '>',
-                description: 'Checks if a value is greater than another',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.greater-than') ?? 'Checks if a value is greater than another',
                 operandType: 'number',
                 inputCount: 2,
                 leftOperand: true,
@@ -65,7 +73,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             lessThan: {
                 symbol: '<',
-                description: 'Checks if a value is less than another',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.less-than') ?? 'Checks if a value is less than another',
                 operandType: 'number',
                 inputCount: 2,
                 leftOperand: true,
@@ -73,7 +81,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             greaterThanOrEqual: {
                 symbol: '>=',
-                description: 'Checks if a value is greater than or equal to another',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.greater-than-or-equal') ?? 'Checks if a value is greater than or equal to another',
                 operandType: 'number',
                 inputCount: 2,
                 leftOperand: true,
@@ -81,7 +89,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             lessThanOrEqual: {
                 symbol: '<=',
-                description: 'Checks if a value is less than or equal to another',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.less-than-or-equal') ?? 'Checks if a value is less than or equal to another',
                 operandType: 'number',
                 inputCount: 2,
                 leftOperand: true,
@@ -89,7 +97,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             exists: {
                 symbol: 'exists',
-                description: 'Checks if a field or value exists',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.exists') ?? 'Checks if a field or value exists',
                 operandType: 'any',
                 inputCount: 1,
                 leftOperand: false,
@@ -97,7 +105,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             has: {
                 symbol: 'has',
-                description: 'Checks if an object has a specific property or if a collection contains a specific element',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.has') ?? 'Checks if an object has a specific property or if a collection contains a specific element',
                 operandType: 'object/array',
                 inputCount: 2,
                 leftOperand: true,
@@ -105,7 +113,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             contains: {
                 symbol: 'contains',
-                description: 'Checks if a string contains another string, or if an array includes a specific element',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.contains') ?? 'Checks if a string contains another string, or if an array includes a specific element',
                 operandType: 'string/array',
                 inputCount: 2,
                 leftOperand: true,
@@ -113,7 +121,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             beginsWith: {
                 symbol: 'begins with',
-                description: 'Checks if a string begins with a specified substring',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.begins-with') ?? 'Checks if a string begins with a specified substring',
                 operandType: 'string',
                 inputCount: 2,
                 leftOperand: true,
@@ -121,7 +129,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             endsWith: {
                 symbol: 'ends with',
-                description: 'Checks if a string ends with a specified substring',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.ends-with') ?? 'Checks if a string ends with a specified substring',
                 operandType: 'string',
                 inputCount: 2,
                 leftOperand: true,
@@ -129,7 +137,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             in: {
                 symbol: 'in',
-                description: 'Checks if a value is within a given set or range',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.in') ?? 'Checks if a value is within a given set or range',
                 operandType: 'any',
                 inputCount: 2,
                 leftOperand: true,
@@ -137,7 +145,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             notIn: {
                 symbol: 'not in',
-                description: 'Checks if a value is not within a given set or range',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.not-in') ?? 'Checks if a value is not within a given set or range',
                 operandType: 'any',
                 inputCount: 2,
                 leftOperand: true,
@@ -145,7 +153,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             and: {
                 symbol: '&&',
-                description: 'Logical AND, true if both operands are true',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.and') ?? 'Logical AND, true if both operands are true',
                 operandType: 'boolean',
                 inputCount: 2,
                 leftOperand: true,
@@ -153,7 +161,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             or: {
                 symbol: '||',
-                description: 'Logical OR, true if at least one operand is true',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.or') ?? 'Logical OR, true if at least one operand is true',
                 operandType: 'boolean',
                 inputCount: 2,
                 leftOperand: true,
@@ -161,7 +169,7 @@ export default class ActivityLogicBuilderComponent extends Component {
             },
             not: {
                 symbol: '!',
-                description: 'Logical NOT, inverts the truth value',
+                description: this.intl?.t?.('activity.form.logic-builder.operators.not') ?? 'Logical NOT, inverts the truth value',
                 operandType: 'boolean',
                 inputCount: 1,
                 leftOperand: false,

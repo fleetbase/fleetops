@@ -17,8 +17,8 @@ export default class IntegratedVendorActionsService extends ResourceActionServic
             const integratedVendor = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'integrated-vendor/form',
-                title: 'Create a new Integrated Vendor',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.Integrated Vendor')?.toLowerCase() }),
+                useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -29,8 +29,8 @@ export default class IntegratedVendorActionsService extends ResourceActionServic
         edit: (integratedVendor, options = {}) => {
             return this.resourceContextPanel.open({
                 content: 'integrated-vendor/form',
-                title: `Edit: ${integratedVendor.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: integratedVendor.name }),
+                useDefaultSaveTask: true,
                 integratedVendor,
                 ...options,
             });
@@ -40,7 +40,7 @@ export default class IntegratedVendorActionsService extends ResourceActionServic
                 integratedVendor,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'integrated-vendor/details',
                     },
                 ],
@@ -54,8 +54,8 @@ export default class IntegratedVendorActionsService extends ResourceActionServic
             const integratedVendor = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: integratedVendor,
-                title: 'Create a new Integrated Vendor',
-                acceptButtonText: 'Create Customer',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.Integrated Vendor')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.customer') }),
                 component: 'integrated-vendor/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', integratedVendor, { refresh: true, ...saveOptions }),
                 ...options,
@@ -64,8 +64,8 @@ export default class IntegratedVendorActionsService extends ResourceActionServic
         edit: (integratedVendor, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: integratedVendor,
-                title: `Edit: ${integratedVendor.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: integratedVendor.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'integrated-vendor/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', integratedVendor, { refresh: true, ...saveOptions }),

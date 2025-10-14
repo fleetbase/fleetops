@@ -7,40 +7,12 @@ import { task } from 'ember-concurrency';
 import { pluralize } from 'ember-inflector';
 
 export default class AdminAvatarManagementComponent extends Component {
-    /**
-     * Inject the `fileQueue` service
-     *
-     * @var {Service}
-     */
     @service fileQueue;
-
-    /**
-     * Injexts the `store` service
-     *
-     * @memberof AdminAvatarManagementComponent
-     */
     @service store;
-
-    /**
-     * Injexts the `fetch` service
-     *
-     * @memberof AdminAvatarManagementComponent
-     */
     @service fetch;
-
-    /**
-     * Inject the `notifications` service for handling notifications.
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `currentUser` service.
-     *
-     * @var {Service}
-     */
     @service currentUser;
+    @service intl;
 
     /**
      * Tracks the files in the upload queue.
@@ -50,13 +22,6 @@ export default class AdminAvatarManagementComponent extends Component {
     @tracked uploadQueue = [];
 
     /**
-     * The only acceptable file types for avatars, png or svg.
-     *
-     * @memberof AdminAvatarManagementComponent
-     */
-    acceptedFileTypes = ['image/svg+xml', 'image/png'];
-
-    /**
      * The current loaded avatars.
      *
      * @var {Array}
@@ -64,37 +29,48 @@ export default class AdminAvatarManagementComponent extends Component {
     @tracked avatars = [];
 
     /**
-     * Selectable categories for avatar management.
-     *
-     * @memberof AdminAvatarManagementComponent
-     */
-    @tracked categories = [
-        {
-            name: 'Vehicles',
-            icon: 'car',
-            type: 'vehicle',
-            avatars: [],
-        },
-        {
-            name: 'Places',
-            icon: 'building',
-            type: 'place',
-            avatars: [],
-        },
-        {
-            name: 'Drivers',
-            icon: 'id-card',
-            type: 'driver',
-            avatars: [],
-        },
-    ];
-
-    /**
      * Tracks the selected category for avatar management.
      *
      * @var {string|null}
      */
     @tracked currentCategory;
+
+    /**
+     * The only acceptable file types for avatars, png or svg.
+     *
+     * @memberof AdminAvatarManagementComponent
+     */
+    get acceptedFileTypes() {
+        return ['image/svg+xml', 'image/png'];
+    }
+
+    /**
+     * Selectable categories for avatar management.
+     *
+     * @memberof AdminAvatarManagementComponent
+     */
+    get categories() {
+        return [
+            {
+                name: this.intl.t('resource.vehicles'),
+                icon: 'car',
+                type: 'vehicle',
+                avatars: [],
+            },
+            {
+                name: this.intl.t('resource.places'),
+                icon: 'building',
+                type: 'place',
+                avatars: [],
+            },
+            {
+                name: this.intl.t('resource.drivers'),
+                icon: 'id-card',
+                type: 'driver',
+                avatars: [],
+            },
+        ];
+    }
 
     /**
      * Creates an instance of AdminAvatarManagementComponent.

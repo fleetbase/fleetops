@@ -1,9 +1,12 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
 
 export default class ActivityEventSelectorComponent extends Component {
+    @service intl;
+
     /**
      * The list of events currently selected for the activity.
      * This is a tracked property, and changes to it will update the component's template.
@@ -18,24 +21,26 @@ export default class ActivityEventSelectorComponent extends Component {
      *
      * @type {Object}
      */
-    availableEvents = {
-        'order.dispatched': {
-            name: 'order.dispatched',
-            description: 'Triggers when an order is successfully dispatched.',
-        },
-        'order.failed': {
-            name: 'order.failed',
-            description: 'Triggers when an order fails due to an error or exception.',
-        },
-        'order.canceled': {
-            name: 'order.canceled',
-            description: 'Triggers when an order is canceled by a user, driver, or system process.',
-        },
-        'order.completed': {
-            name: 'order.completed',
-            description: 'Triggers when an order is completed by a driver, or system process.',
-        },
-    };
+    get availableEvents() {
+        return {
+            'order.dispatched': {
+                name: 'order.dispatched',
+                description: this.intl?.t?.('activity.form.event-selector.events.order.dispatched') ?? 'Triggers when an order is successfully dispatched.',
+            },
+            'order.failed': {
+                name: 'order.failed',
+                description: this.intl?.t?.('activity.form.event-selector.events.order.failed') ?? 'Triggers when an order fails due to an error or exception.',
+            },
+            'order.canceled': {
+                name: 'order.canceled',
+                description: this.intl?.t?.('activity.form.event-selector.events.order.canceled') ?? 'Triggers when an order is canceled by a user, driver, or system process.',
+            },
+            'order.completed': {
+                name: 'order.completed',
+                description: this.intl?.t?.('activity.form.event-selector.events.order.completed') ?? 'Triggers when an order is completed by a driver, or system process.',
+            },
+        };
+    }
 
     /**
      * Constructor for the component. Initializes the component's tracked events.

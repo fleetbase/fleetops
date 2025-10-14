@@ -17,19 +17,19 @@ export default class ZoneActionsService extends ResourceActionService {
             const zone = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'zone/form',
-                title: 'Create a new zone',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.zone')?.toLowerCase() }),
                 saveOptions: {
                     callback: this.refresh,
                 },
+                useDefaultSaveTask: true,
                 zone,
             });
         },
         edit: (zone) => {
             return this.resourceContextPanel.open({
                 content: 'zone/form',
-                title: `Edit: ${zone.displayName}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: zone.name }),
+                useDefaultSaveTask: true,
                 zone,
             });
         },
@@ -38,7 +38,7 @@ export default class ZoneActionsService extends ResourceActionService {
                 zone,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'zone/details',
                     },
                 ],
@@ -51,8 +51,8 @@ export default class ZoneActionsService extends ResourceActionService {
             const zone = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: zone,
-                title: 'Create a new zone',
-                acceptButtonText: 'Create zone',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.zone')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.zone') }),
                 component: 'zone/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', zone, { refresh: true, ...saveOptions }),
                 ...options,
@@ -61,8 +61,8 @@ export default class ZoneActionsService extends ResourceActionService {
         edit: (zone, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: zone,
-                title: `Edit: ${zone.displayName}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: zone.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'zone/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', zone, { refresh: true, ...saveOptions }),
@@ -72,7 +72,7 @@ export default class ZoneActionsService extends ResourceActionService {
         view: (zone, options = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: zone,
-                title: zone.displayName,
+                title: zone.name,
                 component: 'zone/details',
                 ...options,
             });

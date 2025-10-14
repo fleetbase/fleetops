@@ -1,87 +1,87 @@
 <div class="form-wrapper" ...attributes>
-    <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "common.details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="flex flex-row space-x-3 mb-3">
             <div class="flex items-center justify-start rounded-full">
                 <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.vehicleImage"}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
                 <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
-                    <InputInfo @text={{t "fleet-ops.component.driver-form-panel.upload-new-photo"}} />
+                    <InputInfo @text={{t "vehicle.fields.upload-new-photo"}} />
                 </Attach::Tooltip>
             </div>
             <div>
                 <UploadButton
-                    @name={{t "fleet-ops.common.photos"}}
+                    @name={{t "common.photos"}}
                     @accept="image/*"
                     @onFileAdded={{perform this.handlePhotoUpload}}
                     @icon="upload"
                     @size="xs"
-                    @buttonText="Upload image"
+                    @buttonText={{t "common.upload-image"}}
                     @disabled={{cannot-write @resource}}
                 />
                 <div class="px-1">
-                    <span class="text-gray-300 dark:text-gray-600 text-xs">Supports PNGs, JPEGs and GIFs</span>
+                    <span class="text-gray-300 dark:text-gray-600 text-xs">{{t "common.upload-image-supported"}}</span>
                 </div>
             </div>
         </div>
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
-            <InputGroup @name={{t "fleet-ops.common.internal-id"}}>
-                <Input @value={{@resource.internal_id}} @type="text" class="w-full form-input" placeholder={{t "fleet-ops.common.internal-id"}} disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "common.internal-id"}}>
+                <Input @value={{@resource.internal_id}} @type="text" class="w-full form-input" placeholder={{t "common.internal-id"}} disabled={{cannot-write @resource}} />
             </InputGroup>
 
-            <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.plate-number"}}>
+            <InputGroup @name={{t "vehicle.fields.plate-number"}}>
                 <Input
                     @value={{@resource.plate_number}}
                     @type="text"
                     class="w-full form-input"
-                    placeholder={{t "fleet-ops.component.vehicle-form-panel.plate-number"}}
+                    placeholder={{t "vehicle.fields.plate-number"}}
                     disabled={{cannot-write @resource}}
                 />
             </InputGroup>
 
-            <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.vin-number"}}>
+            <InputGroup @name={{t "vehicle.fields.vin-number"}}>
                 <Input
                     @value={{@resource.vin}}
                     @type="text"
                     class="w-full form-input"
-                    placeholder={{t "fleet-ops.component.vehicle-form-panel.vin-number"}}
+                    placeholder={{t "vehicle.fields.vin-number"}}
                     disabled={{cannot-write @resource}}
                 />
             </InputGroup>
 
-            <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.make"}}>
+            <InputGroup @name={{t "vehicle.fields.make"}}>
                 <Input
                     @value={{@resource.make}}
                     @type="text"
                     class="w-full form-input"
-                    placeholder={{t "fleet-ops.component.vehicle-form-panel.vehicle-make"}}
+                    placeholder={{t "vehicle.fields.vehicle-make"}}
                     disabled={{cannot-write @resource}}
                 />
             </InputGroup>
 
-            <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.model"}}>
+            <InputGroup @name={{t "vehicle.fields.model"}}>
                 <Input
                     @value={{@resource.model}}
                     @type="text"
                     class="w-full form-input"
-                    placeholder={{t "fleet-ops.component.vehicle-form-panel.vehicle-model"}}
+                    placeholder={{t "vehicle.fields.vehicle-model"}}
                     disabled={{cannot-write @resource}}
                 />
             </InputGroup>
 
-            <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.year"}}>
+            <InputGroup @name={{t "vehicle.fields.year"}}>
                 <Input
                     @value={{@resource.year}}
                     @type="text"
                     class="w-full form-input"
-                    placeholder={{t "fleet-ops.component.vehicle-form-panel.vehicle-year"}}
+                    placeholder={{t "vehicle.fields.vehicle-year"}}
                     disabled={{cannot-write @resource}}
                 />
             </InputGroup>
 
-            <InputGroup @name={{t "fleet-ops.component.vehicle-form-panel.driver-assigned"}}>
+            <InputGroup @name={{t "vehicle.fields.driver-assigned"}}>
                 <ModelSelect
                     @modelName="driver"
                     @selectedModel={{@resource.driver}}
-                    @placeholder={{t "fleet-ops.component.vehicle-form-panel.select-driver"}}
+                    @placeholder={{t "vehicle.fields.select-driver"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -93,13 +93,13 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name={{t "fleet-ops.common.status"}}>
+            <InputGroup @name={{t "common.status"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.statusOptions}}
                         @selected={{@resource.status}}
                         @onChange={{fn (mut @resource.status)}}
-                        @placeholder={{t "fleet-ops.common.status"}}
+                        @placeholder={{t "common.status"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |status|
@@ -108,7 +108,7 @@
                     </PowerSelect>
                 </div>
             </InputGroup>
-            <InputGroup @name={{t "fleet-ops.common.coordinates"}} @wrapperClass="col-span-2">
+            <InputGroup @name={{t "common.coordinates"}} @wrapperClass="col-span-2">
                 <ModelCoordinatesInput @model={{@resource}} @disabled={{cannot-write @resource}} @autocomplete="location" />
             </InputGroup>
         </div>
@@ -123,7 +123,7 @@
         <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
     </RegistryYield>
 
-    <ContentPanel @title={{t "fleet-ops.component.avatar-picker.avatar"}} @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "avatar-picker.avatar"}} @open={{true}} @wrapperClass="bordered-top">
         <AvatarPicker @model={{@resource}} @defaultAvatar={{config "defaultValues.vehicleAvatar"}} @disabled={{cannot-write @resource}} />
     </ContentPanel>
 </div>

@@ -1,50 +1,50 @@
 <div class="form-wrapper" ...attributes>
     <InputGroup
-        @name={{t "fleet-ops.component.activity-form-panel.key"}}
+        @name={{t "activity.form.key"}}
         @value={{@resource.key}}
-        @helpText={{t "fleet-ops.component.activity-form-panel.key-help"}}
+        @helpText={{t "activity.form.key-help-text"}}
         @disabled={{cannot "fleet-ops update order-config"}}
         {{on "input" this.setActivityKey}}
     />
     <InputGroup
-        @name={{t "fleet-ops.component.activity-form-panel.code"}}
+        @name={{t "activity.form.code"}}
         @value={{@resource.code}}
-        @helpText={{t "fleet-ops.component.activity-form-panel.code-help"}}
+        @helpText={{t "activity.form.code-help-text"}}
         @disabled={{cannot "fleet-ops update order-config"}}
         {{on "input" this.setActivityCode}}
     />
     <InputGroup
-        @name={{t "fleet-ops.component.activity-form-panel.status"}}
+        @name={{t "activity.form.status"}}
         @value={{@resource.status}}
         @disabled={{cannot "fleet-ops update order-config"}}
-        @helpText={{t "fleet-ops.component.activity-form-panel.status-help"}}
+        @helpText={{t "activity.form.status-help-text"}}
     />
     <InputGroup
-        @name={{t "fleet-ops.component.activity-form-panel.details"}}
+        @name={{t "activity.form.details"}}
         @value={{@resource.details}}
         @disabled={{cannot "fleet-ops update order-config"}}
-        @helpText={{t "fleet-ops.component.activity-form-panel.details-help"}}
+        @helpText={{t "activity.form.details-help-text"}}
     />
     <InputGroup>
         <Toggle @isToggled={{@resource.complete}} @onToggle={{fn (mut @resource.complete)}} @disabled={{cannot "fleet-ops update order-config"}}>
-            <span class="dark:text-gray-100 text-sm ml-2">{{t "fleet-ops.component.activity-form-panel.completes-order"}}</span>
+            <span class="dark:text-gray-100 text-sm ml-2">{{t "activity.form.completes-order"}}</span>
         </Toggle>
     </InputGroup>
-    <InputGroup @helpText={{t "fleet-ops.component.activity-form-panel.require-pod-help-text"}}>
+    <InputGroup @helpText={{t "activity.form.require-pod-help-text"}}>
         <Toggle
             @isToggled={{@resource.require_pod}}
             @onToggle={{fn (mut @resource.require_pod)}}
             @disabled={{cannot "fleet-ops update order-config"}}
-            @helpText={{t "fleet-ops.component.activity-form-panel.require-pod-help-text"}}
+            @helpText={{t "activity.form.require-pod-help-text"}}
         >
-            <span class="dark:text-gray-100 text-sm mx-2">{{t "fleet-ops.component.activity-form-panel.require-pod"}}</span>
+            <span class="dark:text-gray-100 text-sm mx-2">{{t "activity.form.require-pod"}}</span>
         </Toggle>
     </InputGroup>
     {{#if @resource.require_pod}}
-        <InputGroup @name={{t "fleet-ops.component.activity-form-panel.select-pod-method"}}>
+        <InputGroup @name={{t "activity.form.select-pod-method"}}>
             <select class="form-select w-full has--placeholder" disabled={{cannot "fleet-ops update order-config"}} {{on "change" this.setProofOfDeliveryMethod}}>
                 <option selected disabled>
-                    {{t "fleet-ops.component.activity-form-panel.pod-method-placeholder"}}
+                    {{t "activity.form.pod-method-placeholder"}}
                 </option>
                 {{#each this.podOptions as |podOption|}}
                     <option value={{podOption}} selected={{eq @resource.pod_method podOption}}>

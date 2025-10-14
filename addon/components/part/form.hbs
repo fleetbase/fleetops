@@ -14,11 +14,11 @@
                     @onFileAdded={{perform this.handlePhotoUpload}}
                     @icon="upload"
                     @size="xs"
-                    @buttonText="Upload image"
+                    @buttonText={{t "common.upload-image"}}
                     @disabled={{cannot-write @resource}}
                 />
                 <div class="px-1">
-                    <span class="text-gray-300 dark:text-gray-600 text-xs">Supports PNGs, JPEGs and GIFs</span>
+                    <span class="text-gray-300 dark:text-gray-600 text-xs">{{t "common.upload-image-supported"}}</span>
                 </div>
             </div>
         </div>

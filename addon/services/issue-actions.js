@@ -30,8 +30,8 @@ export default class IssueActionsService extends ResourceActionService {
             const issue = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'issue/form',
-                title: 'Create a new issue',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.issue')?.toLowerCase() }),
+                useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -41,8 +41,8 @@ export default class IssueActionsService extends ResourceActionService {
         edit: (issue) => {
             return this.resourceContextPanel.open({
                 content: 'issue/form',
-                title: `Edit: ${issue.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: issue.name }),
+                useDefaultSaveTask: true,
                 issue,
             });
         },
@@ -51,7 +51,7 @@ export default class IssueActionsService extends ResourceActionService {
                 issue,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'issue/details',
                     },
                 ],
@@ -64,8 +64,8 @@ export default class IssueActionsService extends ResourceActionService {
             const issue = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: issue,
-                title: 'Create a new issue',
-                acceptButtonText: 'Create Issue',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.issue')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.Issue') }),
                 component: 'issue/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', issue, { refresh: true, ...saveOptions }),
                 ...options,
@@ -74,8 +74,8 @@ export default class IssueActionsService extends ResourceActionService {
         edit: (issue, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: issue,
-                title: `Edit: ${issue.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: issue.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'issue/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', issue, { refresh: true, ...saveOptions }),

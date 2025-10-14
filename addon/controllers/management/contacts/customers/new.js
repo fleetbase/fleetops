@@ -19,7 +19,12 @@ export default class ManagementContactsCustomersNewController extends Controller
 
             yield this.hostRouter.refresh();
             yield this.hostRouter.transitionTo('console.fleet-ops.management.contacts.customers.details', customer);
-            this.notifications.success(this.intl.t('fleet-ops.component.contact-form-panel.success-message', { contactName: customer.name }));
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.customer'),
+                    resourceName: customer.name,
+                })
+            );
             this.resetForm();
         } catch (err) {
             this.notifications.serverError(err);

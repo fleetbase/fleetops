@@ -1,18 +1,18 @@
 <div class="activity-logic-builder rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" ...attributes>
     <div class="activity-logic-builder-actions flex flex-row items-center justify-between px-4 py-2">
         <div>
-            <div class="text-sm font-semibold">{{t "fleet-ops.component.activity-logic-builder.activity-logic"}}</div>
+            <div class="text-sm font-semibold">{{t "activity.form.logic-builder.activity-logic"}}</div>
             <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
-                <InputInfo @text={{t "fleet-ops.component.activity-logic-builder.activity-logic-help-text"}} />
+                <InputInfo @text={{t "activity.form.logic-builder.activity-logic-help-text"}} />
             </Attach::Tooltip>
         </div>
         <div>
             <Button
                 @type="magic"
                 @icon="plus"
-                @text={{t "fleet-ops.component.activity-logic-builder.add-logic"}}
+                @text={{t "activity.form.logic-builder.add-logic"}}
                 @onClick={{this.addLogic}}
-                @helpText={{t "fleet-ops.component.activity-logic-builder.activity-logic-add-logic-help-text"}}
+                @helpText={{t "activity.form.logic-builder.activity-logic-add-logic-help-text"}}
             />
         </div>
     </div>
@@ -25,10 +25,10 @@
                         @buttonClass="activity-logic-builder-condition-type flex-row-reverse justify-between"
                         @icon="caret-down"
                         @iconClass="mr-0i"
-                        @size="sm"
+                        @size="xs"
                         @iconPrefix="fas"
                         @triggerClass="hidden md:flex"
-                        @helpText={{t "fleet-ops.component.activity-logic-builder.activity-logic-select-logic-type-help-text"}}
+                        @helpText={{t "activity.form.logic-builder.activity-logic-select-logic-type-help-text"}}
                         as |dd|
                     >
                         <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
@@ -51,7 +51,7 @@
                         @icon="plus"
                         @text="Add condition"
                         @onClick={{fn this.addCondition index}}
-                        @helpText={{t "fleet-ops.component.activity-logic-builder.activity-logic-add-condition-help-text"}}
+                        @helpText={{t "activity.form.logic-builder.activity-logic-add-condition-help-text"}}
                     />
                     <Button class="activity-logic-builder-add-condition" @type="danger" @size="xs" @icon="trash" @onClick={{fn this.removeLogic index}} />
                 </div>
@@ -63,7 +63,7 @@
                                     <div class="activity-logic-builder-condition">
                                         <div class="activity-logic-builder-condition-field">
                                             <Input
-                                                placeholder={{t "fleet-ops.component.activity-logic-builder.field"}}
+                                                placeholder={{t "activity.form.logic-builder.field"}}
                                                 class="form-input"
                                                 @value={{condition.field}}
                                                 {{on "blur" this.trackConditionInputChanges}}
@@ -107,7 +107,7 @@
                                         </div>
                                         <div class="activity-logic-builder-condition-value">
                                             <Input
-                                                placeholder={{t "fleet-ops.component.activity-logic-builder.value"}}
+                                                placeholder={{t "activity.form.logic-builder.value"}}
                                                 class="form-input"
                                                 @value={{condition.value}}
                                                 {{on "blur" this.trackConditionInputChanges}}
@@ -126,7 +126,7 @@
         {{else}}
             <div class="min-h-24 p-4">
                 <div class="flex items-center justify-center border border-dashed border-gray-300 dark:border-gray-600 p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
-                    <div class="text-center">
+                    <div class="flex flex-col items-center justify-center ">
                         <FaIcon @icon="layer-group" @size="2x" class="text-gray-400 mb-2" />
                         <div class="text-sm text-gray-600 dark:text-gray-400 font-medium">
                             No activity logic
@@ -138,9 +138,9 @@
                             @type="magic"
                             @icon="plus"
                             @size="xs"
-                            @text={{t "fleet-ops.component.activity-logic-builder.add-logic"}}
+                            @text={{t "activity.form.logic-builder.add-logic"}}
                             @onClick={{this.addLogic}}
-                            @helpText={{t "fleet-ops.component.activity-logic-builder.activity-logic-add-logic-help-text"}}
+                            @helpText={{t "activity.form.logic-builder.activity-logic-add-logic-help-text"}}
                         />
                     </div>
                 </div>

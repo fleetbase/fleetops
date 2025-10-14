@@ -23,7 +23,12 @@ export default class ManagementFuelReportsIndexEditController extends Controller
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport);
-            this.notifications.success(this.intl.t('fleet-ops.component.fuel-report-form-panel.success-message'));
+            this.notifications.success(
+                this.intl.t('common.resource-updated-success', {
+                    resource: this.intl.t('resource.fuel-report'),
+                    resourceName: fuelReport.public_id,
+                })
+            );
         } catch (err) {
             this.notifications.serverError(err);
         }
@@ -47,9 +52,9 @@ export default class ManagementFuelReportsIndexEditController extends Controller
 
     #confirmContinueWithUnsavedChanges(fuelReport, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.fuel-reports.index.edit.title'),
-            body: this.intl.t('fleet-ops.management.fuel-reports.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.fuel-reports.index.edit.button'),
+            title: this.intl.t('common.continue-without-saving'),
+            body: this.intl.t('common.continue-without-saving-prompt', { resource: this.intl.t('resource.fuel-report') }),
+            acceptButtonText: this.intl.t('common.continue'),
             confirm: async () => {
                 fuelReport.rollbackAttributes();
                 await this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport);

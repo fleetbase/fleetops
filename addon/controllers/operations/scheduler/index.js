@@ -28,7 +28,7 @@ export default class OperationsSchedulerIndexController extends Controller {
         let event = this.calendar.getEventById(order.id);
 
         this.modalsManager.show('modals/order-event', {
-            title: `Scheduling for ${order.public_id}`,
+            title: this.intl.t('scheduler.scheduling-for', { orderId: order.tracking }),
             acceptButtonText: 'Save Changes',
             acceptButtonIcon: 'save',
             hideDeclineButton: true,
@@ -59,11 +59,11 @@ export default class OperationsSchedulerIndexController extends Controller {
 
                     if (order.scheduled_at) {
                         // notify order has been scheduled
-                        this.notifications.success(this.intl.t('fleet-ops.operations.scheduler.index.info-message', { orderId: order.public_id, orderAt: order.scheduledAt }));
+                        this.notifications.success(this.intl.t('scheduler.info-message', { orderId: order.public_id, orderAt: order.scheduledAt }));
                         // add event to calendar
                         event = this.calendar.addEvent(createFullCalendarEventFromOrder(order));
                     } else {
-                        this.notifications.info(this.intl.t('fleet-ops.operations.scheduler.index.info-message', { orderId: order.public_id }));
+                        this.notifications.info(this.intl.t('scheduler.info-message', { orderId: order.public_id }));
                     }
 
                     // update event props

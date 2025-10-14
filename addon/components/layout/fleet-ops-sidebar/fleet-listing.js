@@ -2,58 +2,62 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { next } from '@ember/runloop';
+import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 
 export default class LayoutFleetOpsSidebarFleetListingComponent extends Component {
     @service store;
     @service universe;
     @service vehicleActions;
+    @service leafletMapManager;
     @service hostRouter;
     @service abilities;
     @service notifications;
+    @service intl;
     @tracked fleets = [];
+
+    get dropdownButtonActions() {
+        return [
+            {
+                label: this.intl.t('common.view-resource-details', { resource: this.intl.t('resource.vehicle') }),
+                onClick: (vehicle) => {
+                    this.vehicleActions.panel.view(vehicle);
+                },
+            },
+            {
+                label: this.intl.t('common.edit-resource-details', { resource: this.intl.t('resource.vehicle') }),
+                onClick: (vehicle) => {
+                    this.vehicleActions.panel.edit(vehicle, { useDefaultSaveTask: true });
+                },
+            },
+            {
+                label: this.intl.t('vehicle.actions.locate-vehicle'),
+                onClick: (vehicle) => {
+                    // If currently on the operations dashboard focus driver on the map
+                    if (typeof this.hostRouter.currentRouteName === 'string' && this.hostRouter.currentRouteName.startsWith('console.fleet-ops.operations.orders')) {
+                        return this.onVehicleClicked(vehicle);
+                    }
+
+                    this.vehicleActions.locate(vehicle);
+                },
+            },
+            {
+                separator: true,
+            },
+            {
+                label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.vehicle') }),
+                onClick: (vehicle) => {
+                    this.vehicleActions.delete(vehicle);
+                },
+            },
+        ];
+    }
 
     constructor() {
         super(...arguments);
         this.fetchFleets.perform();
         this.listenForChanges();
     }
-
-    dropdownButtonActions = [
-        {
-            label: 'View vehicle details...',
-            onClick: (vehicle) => {
-                this.vehicleActions.panel.view(vehicle);
-            },
-        },
-        {
-            label: 'Edit vehicle...',
-            onClick: (vehicle) => {
-                this.vehicleActions.panel.edit(vehicle);
-            },
-        },
-        {
-            label: 'Locate vehicle...',
-            onClick: (vehicle) => {
-                // If currently on the operations dashboard focus driver on the map
-                if (typeof this.hostRouter.currentRouteName === 'string' && this.hostRouter.currentRouteName.startsWith('console.fleet-ops.operations.orders')) {
-                    return this.onVehicleClicked(vehicle);
-                }
-
-                this.vehicleActions.locate(vehicle);
-            },
-        },
-        {
-            separator: true,
-        },
-        {
-            label: 'Delete vehicle...',
-            onClick: (vehicle) => {
-                this.vehicleActions.delete(vehicle);
-            },
-        },
-    ];
 
     @action transitionToRoute(toggleApiContext) {
         if (typeof this.args.route === 'string') {
@@ -67,19 +71,6 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         }
     }
 
-    @action onVehicleClicked(vehicle) {
-        // Transition to dashboard/map display
-        return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } }).then(() => {
-            // Focus vehicle on live map
-            this.focusVehicleOnMap(vehicle);
-
-            // Fire callback
-            if (typeof this.args.onFocusVehicle === 'function') {
-                this.args.onFocusVehicle(vehicle);
-            }
-        });
-    }
-
     @action calculateDropdownItemPosition(trigger) {
         let { top, left, width } = trigger.getBoundingClientRect();
         let style = {
@@ -90,18 +81,37 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         return { style };
     }
 
-    @action focusVehicleOnMap(vehicle) {
-        const liveMap = this.universe.get('component:fleet-ops:live-map');
+    @action async onVehicleClicked(vehicle) {
+        try {
+            await this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } });
+        } catch {}
 
-        if (liveMap) {
-            liveMap.showAll();
-            liveMap.focusLayerByRecord(vehicle, 16, {
-                onAfterFocusWithRecord: function () {
-                    next(this, () => {
-                        liveMap.onVehicleClicked(vehicle);
-                    });
-                },
-            });
+        this.universe.one('fleet-ops.live-map.on-loaded', () => {
+            this.focusVehicleOnMap(vehicle);
+        });
+
+        if (typeof this.args.onFocusVehicle === 'function') {
+            this.args.onFocusVehicle(vehicle);
+        }
+    }
+
+    @action async focusVehicleOnMap(vehicle) {
+        await this.leafletMapManager.ensureInteractive({ timeoutMs: 8000 });
+        this.leafletMapManager.flyToRecordLayer(vehicle, 16, {
+            paddingBottomRight: [300, 200],
+            moveend: () => {
+                this.vehicleActions.panel.view(vehicle, { closeOnTransition: true });
+            },
+        });
+    }
+
+    @task *fetchFleets() {
+        if (this.abilities.cannot('fleet-ops list fleet')) return;
+
+        try {
+            this.fleets = yield this.store.query('fleet', { with: ['vehicles', 'subfleets'], parents_only: true });
+        } catch (error) {
+            this.notifications.serverError(error);
         }
     }
 
@@ -125,17 +135,5 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         this.universe.on('fleet-ops.fleet.driver_unassigned', () => {
             this.fetchFleets.perform();
         });
-    }
-
-    @task *fetchFleets() {
-        if (this.abilities.cannot('fleet-ops list fleet')) {
-            return;
-        }
-
-        try {
-            this.fleets = yield this.store.query('fleet', { with: ['vehicles', 'subfleets'], parents_only: true });
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
     }
 }

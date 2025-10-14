@@ -23,7 +23,12 @@ export default class ManagementVendorsIndexEditController extends Controller {
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.vendors.index.details', vendor);
-            this.notifications.success(this.intl.t('fleet-ops.component.vendor-form-panel.success-message', { vendorName: vendor.name }));
+            this.notifications.success(
+                this.intl.t('common.resource-updated-success', {
+                    resource: this.intl.t('resource.vendor'),
+                    resourceName: vendor.name,
+                })
+            );
         } catch (err) {
             this.notifications.serverError(err);
         }
@@ -47,9 +52,9 @@ export default class ManagementVendorsIndexEditController extends Controller {
 
     #confirmContinueWithUnsavedChanges(vendor, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.vendors.index.edit.title'),
-            body: this.intl.t('fleet-ops.management.vendors.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.vendors.index.edit.button'),
+            title: this.intl.t('common.continue-without-saving'),
+            body: this.intl.t('common.continue-without-saving-prompt', { resource: this.intl.t('resource.vendor') }),
+            acceptButtonText: this.intl.t('common.continue'),
             confirm: async () => {
                 vendor.rollbackAttributes();
                 await this.hostRouter.transitionTo('console.fleet-ops.management.vendors.index.details', vendor);

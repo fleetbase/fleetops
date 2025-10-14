@@ -1,4 +1,4 @@
-<ContentPanel @title="Metadata" @open={{true}} @wrapperClass="bordered-top">
+<ContentPanel @title={{t "common.metadata"}} @open={{true}} @wrapperClass="bordered-top">
     <div>
         <MetadataEditor @value={{@resource.meta}} @onChange={{fn (mut @resource.meta)}} />
     </div>

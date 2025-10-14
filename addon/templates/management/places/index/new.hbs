@@ -2,7 +2,7 @@
     @resource={{this.place}}
     @controller={{this}}
     @actionButtons={{this.actionButtons}}
-    @headerTitle="Create a new place"
+    @headerTitle={{t "common.create-new-resource" resource=(lowercase (t "resource.place"))}}
     @saveTask={{this.save}}
     @onPressCancel={{transition-to "management.places.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}

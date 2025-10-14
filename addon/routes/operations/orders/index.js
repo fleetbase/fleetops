@@ -37,19 +37,19 @@ export default class OperationsOrdersIndexRoute extends Route {
         orderPanelOpen: { refreshModel: false },
     };
 
-    @action willTransition(transition) {
-        const NS = 'operations.orders';
-        const toName = transition.to?.name ?? '';
-        const fromName = transition.from?.name ?? '';
-        const wasInNS = fromName === NS || fromName.startsWith(`${NS}.`);
-        const goingOut = !(toName === NS || toName.startsWith(`${NS}.`));
+    // @action willTransition(transition) {
+    //     const NS = 'operations.orders';
+    //     const toName = transition.to?.name ?? '';
+    //     const fromName = transition.from?.name ?? '';
+    //     const wasInNS = fromName === NS || fromName.startsWith(`${NS}.`);
+    //     const goingOut = !(toName === NS || toName.startsWith(`${NS}.`));
 
-        if (wasInNS && goingOut) {
-            this.leafletMapManager.livemap('hideAll');
-        }
+    //     if (wasInNS && goingOut) {
+    //         this.leafletMapManager.livemap('hideAll');
+    //     }
 
-        return true;
-    }
+    //     return true;
+    // }
 
     model(params) {
         return this.store.query('order', params);

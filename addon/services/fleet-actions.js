@@ -17,11 +17,11 @@ export default class FleetActionsService extends ResourceActionService {
             const fleet = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'fleet/form',
-                title: 'Create a new fleet',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.fleet')?.toLowerCase() }),
                 saveOptions: {
                     callback: this.refresh,
                 },
+                useDefaultSaveTask: true,
                 fleet,
                 ...options,
             });
@@ -29,8 +29,8 @@ export default class FleetActionsService extends ResourceActionService {
         edit: (fleet, options = {}) => {
             return this.resourceContextPanel.open({
                 content: 'fleet/form',
-                title: `Edit: ${fleet.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: fleet.name }),
+                useDefaultSaveTask: true,
                 fleet,
                 ...options,
             });
@@ -40,7 +40,7 @@ export default class FleetActionsService extends ResourceActionService {
                 fleet,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'fleet/details',
                     },
                 ],
@@ -54,8 +54,8 @@ export default class FleetActionsService extends ResourceActionService {
             const fleet = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: fleet,
-                title: 'Create a new fleet',
-                acceptButtonText: 'Create Fleet',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.fleet')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.fleet') }),
                 component: 'fleet/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', fleet, { refresh: true, ...saveOptions }),
                 ...options,
@@ -64,8 +64,8 @@ export default class FleetActionsService extends ResourceActionService {
         edit: (fleet, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: fleet,
-                title: `Edit: ${fleet.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: fleet.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'fleet/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', fleet, { refresh: true, ...saveOptions }),

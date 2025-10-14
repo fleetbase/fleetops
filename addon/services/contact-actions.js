@@ -21,11 +21,11 @@ export default class ContactActionsService extends ResourceActionService {
             const contact = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'contact/form',
-                title: 'Create a new contact',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.contact')?.toLowerCase() }),
                 saveOptions: {
                     callback: this.refresh,
                 },
+                useDefaultSaveTask: true,
                 contact,
                 ...options,
             });
@@ -33,9 +33,9 @@ export default class ContactActionsService extends ResourceActionService {
         edit: (contact, options = {}) => {
             return this.resourceContextPanel.open({
                 content: 'contact/form',
-                title: `Edit: ${contact.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: contact.name }),
                 contact,
+                useDefaultSaveTask: true,
                 ...options,
             });
         },
@@ -44,7 +44,7 @@ export default class ContactActionsService extends ResourceActionService {
                 contact,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'contact/details',
                     },
                 ],
@@ -58,8 +58,8 @@ export default class ContactActionsService extends ResourceActionService {
             const contact = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: contact,
-                title: 'Create a new contact',
-                acceptButtonText: 'Create Contact',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.contact')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.contact') }),
                 component: 'contact/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', contact, { refresh: true, ...saveOptions }),
                 ...options,
@@ -68,8 +68,8 @@ export default class ContactActionsService extends ResourceActionService {
         edit: (contact, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: contact,
-                title: `Edit: ${contact.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: contact.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'contact/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', contact, { refresh: true, ...saveOptions }),

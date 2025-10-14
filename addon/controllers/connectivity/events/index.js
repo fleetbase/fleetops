@@ -19,7 +19,7 @@ export default class ConnectivityEventsIndexController extends Controller {
         {
             icon: 'refresh',
             onClick: this.deviceEventActions.refresh,
-            helpText: this.intl.t('fleet-ops.common.reload-data'),
+            helpText: this.intl.t('common.refresh'),
         },
     ];
 
@@ -29,7 +29,7 @@ export default class ConnectivityEventsIndexController extends Controller {
     /** columns */
     @tracked columns = [
         {
-            label: this.intl.t('fleet-ops.common.name'),
+            label: this.intl.t('column.name'),
             valuePath: 'name',
             width: '180px',
             cellComponent: 'table/cell/anchor',
@@ -44,7 +44,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
-            label: this.intl.t('fleet-ops.common.created-at'),
+            label: this.intl.t('column.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
             width: '10%',
@@ -54,7 +54,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             filterComponent: 'filter/date',
         },
         {
-            label: this.intl.t('fleet-ops.common.updated-at'),
+            label: this.intl.t('column.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
             width: '10%',
@@ -71,13 +71,13 @@ export default class ConnectivityEventsIndexController extends Controller {
             ddButtonText: false,
             ddButtonIcon: 'ellipsis-h',
             ddButtonIconPrefix: 'fas',
-            ddMenuLabel: 'Device Event Actions',
+            ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.Device Event') }),
             cellClassNames: 'overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
             width: '10%',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.management.places.index.view-details'),
+                    label: this.intl.t('column.view-details'),
                     fn: this.deviceEventActions.transition.view,
                     permission: 'fleet-ops view device-event',
                 },

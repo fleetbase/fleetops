@@ -19,7 +19,12 @@ export default class ManagementPlacesIndexNewController extends Controller {
 
             yield this.hostRouter.refresh();
             yield this.hostRouter.transitionTo('console.fleet-ops.management.places.index.details', place);
-            this.notifications.success(this.intl.t('fleet-ops.component.place-form-panel.success-message', { placeAddress: place.address }));
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.place'),
+                    resourceName: place.address,
+                })
+            );
             this.resetForm();
         } catch (err) {
             this.notifications.serverError(err);

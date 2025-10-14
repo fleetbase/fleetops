@@ -2,17 +2,17 @@
     <div class="modal-body-container">
         <div class="flex flex-row justify-between mb-6">
             <div class="flex">
-                <Toggle @isToggled={{@options.order.payload.isMultiDrop}} @onToggle={{@options.toggleMultiDropOrder}} @label={{t "fleet-ops.component.modals.order-route-form.toggle"}} />
+                <Toggle @isToggled={{@options.order.payload.isMultiDrop}} @onToggle={{@options.toggleMultiDropOrder}} @label={{t "modals.order-route-form.toggle"}} />
             </div>
             <div class="flex flex-1 justify-end space-x-2">
                 {{#if @options.order.payload.isMultiDrop}}
-                    {{!-- <Button @type="magic" @icon="magic" @text={{t "fleet-ops.component.modals.order-route-form.optimize"}} @size="sm" @onClick={{fn @options.optimizeRoute}} @helpText={{t "fleet-ops.component.modals.order-route-form.optimize-text"}} @disabled={{lt @options.order.payload.waypoints.length 3}} @isLoading={{@options.isOptimizingRoute}} /> --}}
+                    {{!-- <Button @type="magic" @icon="magic" @text={{t "modals.order-route-form.optimize"}} @size="sm" @onClick={{fn @options.optimizeRoute}} @helpText={{t "modals.order-route-form.optimize-text"}} @disabled={{lt @options.order.payload.waypoints.length 3}} @isLoading={{@options.isOptimizingRoute}} /> --}}
                     <Button
                         @icon="map-marked-alt"
-                        @text={{t "fleet-ops.component.modals.order-route-form.add"}}
+                        @text={{t "modals.order-route-form.add"}}
                         @size="sm"
                         @onClick={{@options.addWaypoint}}
-                        @helpText={{t "fleet-ops.component.modals.order-route-form.add-text"}}
+                        @helpText={{t "modals.order-route-form.add-text"}}
                     />
                 {{/if}}
             </div>
@@ -33,7 +33,7 @@
                             <ModelSelect
                                 @modelName="place"
                                 @selectedModel={{waypoint.place}}
-                                @placeholder={{concat (t "fleet-ops.component.modals.order-route-form.select-waypoint") (add index 1)}}
+                                @placeholder={{concat (t "modals.order-route-form.select-waypoint") (add index 1)}}
                                 @triggerClass="form-select form-input truncate"
                                 @wrapperClass="w-96"
                                 @infiniteScroll={{false}}
@@ -49,7 +49,7 @@
                             {{#if waypoint.place.hasInvalidCoordinates}}
                                 <div class="leading-5 text-sm text-red-400 mt-2">
                                     <FaIcon @icon="exclamation-triangle" class="mr-1" />
-                                    {{t "fleet-ops.component.modals.order-route-form.invalid"}}
+                                    {{t "modals.order-route-form.invalid"}}
                                 </div>
                             {{/if}}
                         </div>
@@ -67,17 +67,17 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs dark:text-gray-100">
                 <div class="input-group">
                     <div class="flex items-center justify-between">
-                        <label>{{t "fleet-ops.component.modals.order-route-form.pickup"}}</label>
+                        <label>{{t "modals.order-route-form.pickup"}}</label>
 
                         {{#if @options.order.payload.pickup}}
-                            <a href="javascript:;" {{on "click" (fn @options.editPlace @options.order.payload.pickup)}}>{{t "fleet-ops.component.modals.order-route-form.edit-address"}}</a>
+                            <a href="javascript:;" {{on "click" (fn @options.editPlace @options.order.payload.pickup)}}>{{t "modals.order-route-form.edit-address"}}</a>
                         {{/if}}
                     </div>
 
                     <ModelSelect
                         @modelName="place"
                         @selectedModel={{@options.order.payload.pickup}}
-                        @placeholder={{t "fleet-ops.component.modals.order-route-form.select-pickup"}}
+                        @placeholder={{t "modals.order-route-form.select-pickup"}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @customSearchEndpoint="places/search"
@@ -92,24 +92,24 @@
                     {{#if @options.order.payload.pickup.hasInvalidCoordinates}}
                         <div class="leading-5 text-sm text-red-400 mt-2">
                             <FaIcon @icon="exclamation-triangle" class="mr-1" />
-                            {{t "fleet-ops.component.modals.order-route-form.invalid"}}
+                            {{t "modals.order-route-form.invalid"}}
                         </div>
                     {{/if}}
                 </div>
 
                 <div class="input-group">
                     <div class="flex items-center justify-between">
-                        <label>{{t "fleet-ops.component.modals.order-route-form.dropoff"}}</label>
+                        <label>{{t "modals.order-route-form.dropoff"}}</label>
 
                         {{#if @options.order.payload.dropoff}}
-                            <a href="javascript:;" {{on "click" (fn @options.editPlace @options.order.payload.dropoff)}}>{{t "fleet-ops.component.modals.order-route-form.edit-address"}}</a>
+                            <a href="javascript:;" {{on "click" (fn @options.editPlace @options.order.payload.dropoff)}}>{{t "modals.order-route-form.edit-address"}}</a>
                         {{/if}}
                     </div>
 
                     <ModelSelect
                         @modelName="place"
                         @selectedModel={{@options.order.payload.dropoff}}
-                        @placeholder={{t "fleet-ops.component.modals.order-route-form.select-dropoff"}}
+                        @placeholder={{t "modals.order-route-form.select-dropoff"}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @customSearchEndpoint="places/search"
@@ -124,24 +124,24 @@
                     {{#if @options.order.payload.dropoff.hasInvalidCoordinates}}
                         <div class="leading-5 text-sm text-red-400 mt-2">
                             <FaIcon @icon="exclamation-triangle" class="mr-1" />
-                            {{t "fleet-ops.component.modals.order-route-form.invalid"}}
+                            {{t "modals.order-route-form.invalid"}}
                         </div>
                     {{/if}}
                 </div>
 
                 <div class="input-group">
                     <div class="flex items-center justify-between">
-                        <label>{{t "fleet-ops.component.modals.order-route-form.return"}}</label>
+                        <label>{{t "modals.order-route-form.return"}}</label>
 
                         {{#if @options.order.payload.return}}
-                            <a href="javascript:;" {{on "click" (fn @options.editPlace @options.order.payload.return)}}>{{t "fleet-ops.component.modals.order-route-form.edit-address"}}</a>
+                            <a href="javascript:;" {{on "click" (fn @options.editPlace @options.order.payload.return)}}>{{t "modals.order-route-form.edit-address"}}</a>
                         {{/if}}
                     </div>
 
                     <ModelSelect
                         @modelName="place"
                         @selectedModel={{@options.order.payload.return}}
-                        @placeholder={{t "fleet-ops.component.modals.order-route-form.select-return"}}
+                        @placeholder={{t "modals.order-route-form.select-return"}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @customSearchEndpoint="places/search"
@@ -156,7 +156,7 @@
                     {{#if @options.order.payload.return.hasInvalidCoordinates}}
                         <div class="leading-5 text-sm text-red-400 mt-2">
                             <FaIcon @icon="exclamation-triangle" class="mr-1" />
-                            {{t "fleet-ops.component.modals.order-route-form.invalid"}}
+                            {{t "modals.order-route-form.invalid"}}
                         </div>
                     {{/if}}
                 </div>

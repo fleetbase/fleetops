@@ -2,7 +2,7 @@
     @resource={{this.order}}
     @controller={{this}}
     @actionButtons={{this.actionButtons}}
-    @headerTitle="New Order"
+    @headerTitle={{t "common.create-a-new-resource" resource=(lowercase (t "resource.order"))}}
     @saveTask={{this.save}}
     @saveDisabled={{this.orderValidation.isNotValid}}
     @onPressCancel={{transition-to "operations.orders.index"}}

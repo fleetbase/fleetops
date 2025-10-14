@@ -1,0 +1,10 @@
+<Kanban
+    @columns={{this.columns}}
+    @onCardMove={{this.handleCardMove}}
+    @headerOffset={{@headerOffset}}
+    @columnIdPath="status"
+    @subject="order"
+    @cardTemplate="order/kanban-card"
+    @onCreateCard={{transition-to "operations.orders.index.new"}}
+    ...attributes
+/>

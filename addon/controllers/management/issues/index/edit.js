@@ -23,7 +23,10 @@ export default class ManagementIssuesIndexEditController extends Controller {
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.issues.index.details', issue);
-            this.notifications.success(this.intl.t('fleet-ops.component.issue-form-panel.success-message', { issueName: issue.title }));
+            this.notifications.success(this.intl.t('common.resource-updated-success', {
+                    resource: this.intl.t('resource.issue'),
+                    resourceName: issue.title ?? issue.public_id,
+                }));
         } catch (err) {
             this.notifications.serverError(err);
         }
@@ -47,9 +50,9 @@ export default class ManagementIssuesIndexEditController extends Controller {
 
     #confirmContinueWithUnsavedChanges(issue, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.issues.index.edit.title'),
-            body: this.intl.t('fleet-ops.management.issues.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.issues.index.edit.button'),
+            title: this.intl.t('common.continue-without-saving'),
+            body: this.intl.t('common.continue-without-saving-prompt', { resource: this.intl.t('resource.issue') }),
+            acceptButtonText: this.intl.t('common.continue'),
             confirm: async () => {
                 issue.rollbackAttributes();
                 await this.hostRouter.transitionTo('console.fleet-ops.management.issues.index.details', issue);

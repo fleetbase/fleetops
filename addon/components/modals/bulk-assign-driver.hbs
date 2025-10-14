@@ -1,6 +1,6 @@
 <Modals::BulkActionModel @options={{@options}} @onConfirm={{@onConfirm}} @onDecline={{@onDecline}} as |options|>
     <div>
-        <InputGroup @name={{t "fleet-ops.common.select-driver"}} @helpText={{t "fleet-ops.operations.orders.index.bulk-assign-driver-helptext"}}>
+        <InputGroup @name={{t "common.select-driver"}} @helpText={{t "fleet-ops.operations.orders.index.bulk-assign-driver-helptext"}}>
             <ModelSelect
                 @modelName="driver"
                 @selectedModel={{options.driverAssigned}}

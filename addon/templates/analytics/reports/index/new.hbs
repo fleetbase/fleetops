@@ -2,7 +2,7 @@
     @resource={{this.report}}
     @controller={{this}}
     @actionButtons={{this.actionButtons}}
-    @headerTitle="Create a new report"
+    @headerTitle={{t "common.create-new-resource" resource=(lowercase (t "resource.report"))}}
     @saveTask={{this.save}}
     @onPressCancel={{transition-to "analytics.reports.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}

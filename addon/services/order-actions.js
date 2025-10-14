@@ -1,5 +1,6 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import { action } from '@ember/object';
+import { isArray } from '@ember/array';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 
@@ -27,11 +28,11 @@ export default class OrderActionsService extends ResourceActionService {
             const order = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'order/form',
-                title: 'Create a new order',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.order') }),
                 saveOptions: {
                     callback: this.refresh,
                 },
+                useDefaultSaveTask: true,
                 order,
                 ...options,
             });
@@ -39,8 +40,8 @@ export default class OrderActionsService extends ResourceActionService {
         edit: (order, options = {}) => {
             return this.resourceContextPanel.open({
                 content: 'order/form',
-                title: `Edit: ${order.tracking}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: order.tracking }),
+                useDefaultSaveTask: true,
                 order,
                 ...options,
             });
@@ -50,7 +51,7 @@ export default class OrderActionsService extends ResourceActionService {
                 order,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'order/details',
                     },
                 ],
@@ -64,8 +65,8 @@ export default class OrderActionsService extends ResourceActionService {
             const order = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: order,
-                title: 'Create a new order',
-                acceptButtonText: 'Create Order',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.order') }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.order') }),
                 component: 'order/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', order, { refresh: true, ...saveOptions }),
                 ...options,
@@ -74,8 +75,8 @@ export default class OrderActionsService extends ResourceActionService {
         edit: (order, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: order,
-                title: `Edit: ${order.tracking}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: order.tracking }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'order/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', order, { refresh: true, ...saveOptions }),
@@ -122,9 +123,9 @@ export default class OrderActionsService extends ResourceActionService {
 
     @action cancel(order, options = {}) {
         this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.operations.orders.index.cancel-title'),
-            body: this.intl.t('fleet-ops.operations.orders.index.cancel-body'),
-            acceptButtonText: 'Cancel Order',
+            title: this.intl.t('order.prompts.cancel-title'),
+            body: this.intl.t('order.prompts.cancel-body'),
+            acceptButtonText: this.intl.t('order.actions.cancel-order'),
             acceptButtonType: 'danger',
             acceptButtonIcon: 'ban',
             order,
@@ -134,7 +135,7 @@ export default class OrderActionsService extends ResourceActionService {
                 try {
                     await this.fetch.patch('orders/cancel', { order: order.id });
                     order.set('status', 'canceled');
-                    this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.cancel-success', { orderId: order.public_id }));
+                    this.notifications.success(this.intl.t('order.prompts.cancel-success', { orderId: order.tracking }));
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -147,10 +148,10 @@ export default class OrderActionsService extends ResourceActionService {
 
     @action dispatch(order, options = {}) {
         this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.operations.orders.index.dispatch-title'),
-            body: this.intl.t('fleet-ops.operations.orders.index.dispatch-body'),
+            title: this.intl.t('order.prompts.dispatch-title'),
+            body: this.intl.t('order.prompts.dispatch-body'),
             acceptButtonScheme: 'primary',
-            acceptButtonText: 'Dispatch',
+            acceptButtonText: this.intl.t('order.actions.dispatch-order'),
             acceptButtonIcon: 'paper-plane',
             order,
             confirm: async (modal) => {
@@ -159,7 +160,7 @@ export default class OrderActionsService extends ResourceActionService {
                 try {
                     await this.fetch.patch('orders/dispatch', { order: order.id });
                     order.set('status', 'dispatched');
-                    this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.dispatch-success', { orderId: order.public_id }));
+                    this.notifications.success(this.intl.t('order.prompts.dispatch-success', { orderId: order.tracking }));
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -170,12 +171,12 @@ export default class OrderActionsService extends ResourceActionService {
         });
     }
 
-    @action bulkCancel() {
-        const selected = this.tableContext.getSelectedRows();
+    @action bulkCancel(selected = []) {
+        selected = [...(isArray(selected) ? selected : []), ...this.tableContext.getSelectedRows()];
         if (!selected) return;
 
         return this.crud.bulkAction('cancel', selected, {
-            acceptButtonText: 'Cancel Orders',
+            acceptButtonText: this.intl.t('common.bulk-cancel-resource', { resource: this.intl.t('resource.orders') }),
             acceptButtonScheme: 'danger',
             acceptButtonIcon: 'ban',
             actionPath: 'orders/bulk-cancel',
@@ -193,12 +194,12 @@ export default class OrderActionsService extends ResourceActionService {
         });
     }
 
-    @action bulkDispatch() {
-        const selected = this.tableContext.getSelectedRows();
+    @action bulkDispatch(selected = []) {
+        selected = [...(isArray(selected) ? selected : []), ...this.tableContext.getSelectedRows()];
         if (!selected) return;
 
         return this.crud.bulkAction('dispatch', selected, {
-            acceptButtonText: 'Dispatch Orders',
+            acceptButtonText: this.intl.t('order.actions.dispatch-orders'),
             acceptButtonScheme: 'magic',
             acceptButtonIcon: 'rocket',
             actionPath: 'orders/bulk-dispatch',
@@ -216,8 +217,8 @@ export default class OrderActionsService extends ResourceActionService {
         });
     }
 
-    @action bulkAssignDriver() {
-        const selected = this.tableContext.getSelectedRows();
+    @action bulkAssignDriver(selected = []) {
+        selected = [...(isArray(selected) ? selected : []), ...this.tableContext.getSelectedRows()];
         if (!selected) return;
 
         const updateFetchParams = (key, value) => {
@@ -229,7 +230,7 @@ export default class OrderActionsService extends ResourceActionService {
 
         return this.crud.bulkAction('assign driver', selected, {
             template: 'modals/bulk-assign-driver',
-            acceptButtonText: 'Assign Driver to Orders',
+            acceptButtonText: this.intl.t('order.actions.assign-driver-to-orders'),
             acceptButtonScheme: 'magic',
             acceptButtonIcon: 'user-plus',
             acceptButtonDisabled: true,
@@ -264,8 +265,8 @@ export default class OrderActionsService extends ResourceActionService {
         });
     }
 
-    @action optimizeOrderRoutes() {
-        const selected = this.tableContext.getSelectedRows();
+    @action optimizeOrderRoutes(selected = []) {
+        selected = [...(isArray(selected) ? selected : []), ...this.tableContext.getSelectedRows()];
         if (!selected) return;
 
         return this.hostRouter.transitionTo('console.fleet-ops.operations.routes.index.new', {
@@ -278,7 +279,7 @@ export default class OrderActionsService extends ResourceActionService {
     @action editRoute(order) {
         this.resourceContextPanel.open({
             content: 'order/route-editor',
-            title: 'Edit order route',
+            title: this.intl.t('order.actions.edit-order-route'),
             panelContentClass: 'py-2 px-4',
             resource: order,
             saveTask: this.saveRoute,
@@ -291,9 +292,9 @@ export default class OrderActionsService extends ResourceActionService {
 
     @action updateActivity(order, options = {}) {
         return this.modalsManager.show('modals/update-order-activity', {
-            title: 'Update order activity',
+            title: this.intl.t('order.actions.update-order-activity'),
             order: order,
-            acceptButtonText: 'Submit new activity',
+            acceptButtonText: this.intl.t('order.actions.submit-new-activity'),
             ...options,
         });
     }
@@ -302,8 +303,8 @@ export default class OrderActionsService extends ResourceActionService {
         options = options === null ? {} : options;
 
         this.modalsManager.show('modals/order-form', {
-            title: this.intl.t('fleet-ops.operations.orders.index.view.edit-order-title'),
-            acceptButtonText: 'Save Changes',
+            title: this.intl.t('order.actions.edit-order-details'),
+            acceptButtonText: this.intl.t('common.save-changes'),
             acceptButtonIcon: 'save',
             setOrderFacilitator: (model) => {
                 order.set('facilitator', model);
@@ -367,15 +368,15 @@ export default class OrderActionsService extends ResourceActionService {
         }
 
         this.modalsManager.show(`modals/order-assign-driver`, {
-            title: order.driver_assigned_uuid ? this.intl.t('fleet-ops.operations.orders.index.view.change-order') : this.intl.t('fleet-ops.operations.orders.index.view.assign-order'),
-            acceptButtonText: 'Save Changes',
+            title: order.driver_assigned_uuid ? this.intl.t('order.actions.change-driver') : this.intl.t('order.actions.assign-driver'),
+            acceptButtonText: this.intl.t('common.save-changes'),
             order,
             confirm: async (modal) => {
                 modal.startLoading();
 
                 try {
                     await order.save();
-                    this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.assign-success', { orderId: order.public_id }));
+                    this.notifications.success(this.intl.t('order.prompts.assign-driver-success', { driverName: order.driver_assigned?.name, orderId: order.tracking }));
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -386,11 +387,11 @@ export default class OrderActionsService extends ResourceActionService {
     }
 
     @action unassignDriver(order, options = {}) {
-        if (!order.driver_assigned) return this.notifications.warning('No driver assigned to order');
+        if (!order.driver_assigned) return this.notifications.warning(this.intl.t('order.prompts.no-driver-assigned-error'));
 
         this.modalsManager.confirm({
-            title: `Unassign driver: ${order.driver_assigned.name}?`,
-            body: this.intl.t('fleet-ops.operations.orders.index.view.unassign-body'),
+            title: this.intl.t('order.prompts.unassign-driver-title', { driverName: order.driver_assigned.name }),
+            body: this.intl.t('order.prompts.unassign-driver-body'),
             order,
             confirm: async (modal) => {
                 modal.startLoading();
@@ -402,7 +403,7 @@ export default class OrderActionsService extends ResourceActionService {
 
                 try {
                     await order.save();
-                    this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.unassign-success'));
+                    this.notifications.success(this.intl.t('order.prompts.unassign-driver-success'));
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -416,8 +417,8 @@ export default class OrderActionsService extends ResourceActionService {
 
     @action viewMetadata(order, options = {}) {
         this.modalsManager.show('modals/view-metadata', {
-            title: 'Order metadata',
-            acceptButtonText: 'Done',
+            title: this.intl.t('order.fields.order-metadata'),
+            acceptButtonText: this.intl.t('common.done'),
             hideDeclineButton: true,
             metadata: order.meta,
         });
@@ -425,8 +426,8 @@ export default class OrderActionsService extends ResourceActionService {
 
     @action editMetadata(order, options = {}) {
         this.modalsManager.show('modals/edit-metadata', {
-            title: 'Edit order metadata',
-            acceptButtonText: 'Save Changes',
+            title: this.intl.t('order.actions.edit-order-metadata'),
+            acceptButtonText: this.intl.t('common.save-changes'),
             acceptButtonIcon: 'save',
             actionsWrapperClass: 'px-3',
             metadata: order.meta,
@@ -438,7 +439,7 @@ export default class OrderActionsService extends ResourceActionService {
 
                 try {
                     await order.save();
-                    this.notifications.success('Metadata saved.');
+                    this.notifications.success(this.intl.t('common.field-saved', { field: this.intl.t('common.metadata') }));
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -452,9 +453,9 @@ export default class OrderActionsService extends ResourceActionService {
     @action async viewLabel(order) {
         // render dialog to display label within
         this.modalsManager.show(`modals/order-label`, {
-            title: 'Order Label',
+            title: this.intl.t('order.fields.order-label'),
             modalClass: 'modal-xl',
-            acceptButtonText: 'Done',
+            acceptButtonText: this.intl.t('common.done'),
             hideDeclineButton: true,
             order,
         });
@@ -474,7 +475,7 @@ export default class OrderActionsService extends ResourceActionService {
             };
             fileReader.readAsDataURL(blob);
         } catch (err) {
-            this.notifications.error('Failed to load order label.');
+            this.notifications.error(this.intl.t('order.prompts.failed-to-load-order-label'));
             debug('Error loading order label data: ' + err.message);
         }
     }

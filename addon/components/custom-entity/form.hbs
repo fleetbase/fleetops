@@ -1,16 +1,16 @@
 <div class="form-wrapper" ...attributes>
-    <ContentPanel @title={{t "fleet-ops.component.custom-entity-issue-form-panel.details"}} @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "custom-entity.form.details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="space-y-2">
-            <InputGroup @name={{t "fleet-ops.component.custom-entity-issue-form-panel.name"}} @value={{@resource.name}} />
-            <InputGroup @name={{t "fleet-ops.component.custom-entity-issue-form-panel.description"}} @value={{@resource.description}} />
-            <InputGroup @name={{t "fleet-ops.component.custom-entity-issue-form-panel.type"}} @value={{@resource.type}} {{on "input" this.setCustomEntityType}} />
+            <InputGroup @name={{t "custom-entity.form.name"}} @value={{@resource.name}} />
+            <InputGroup @name={{t "custom-entity.form.description"}} @value={{@resource.description}} />
+            <InputGroup @name={{t "custom-entity.form.type"}} @value={{@resource.type}} {{on "input" this.setCustomEntityType}} />
         </div>
     </ContentPanel>
-    <ContentPanel @title={{t "fleet-ops.component.custom-entity-issue-form-panel.entity-image"}} @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "custom-entity.form.entity-image"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="w-32 flex flex-col items-center">
             <Image src={{@resource.photo_url}} alt={{@resource.name}} height="128" width="128" class="h-32 w-32 rounded-md" />
             <UploadButton
-                @name={{t "fleet-ops.common.photos"}}
+                @name={{t "common.photos"}}
                 @accept="image/*"
                 @onFileAdded={{this.onFileAdded}}
                 @disabled={{not (and @resource.name @resource.description)}}
@@ -19,32 +19,32 @@
             />
         </div>
     </ContentPanel>
-    <ContentPanel @title={{t "fleet-ops.component.custom-entity-issue-form-panel.measurements"}} @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "custom-entity.form.measurements"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-2 gap-2">
             <InputGroup
-                @name={{t "fleet-ops.component.custom-entity-issue-form-panel.length"}}
-                @helpText={{t "fleet-ops.component.custom-entity-issue-form-panel.length-text"}}
+                @name={{t "custom-entity.form.length"}}
+                @helpText={{t "custom-entity.form.length-text"}}
                 @wrapperClass="mb-2"
             >
                 <UnitInput class="w-full" @value={{@resource.length}} @unit={{@resource.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{this.updateCustomEntityDimensionsUnit}} />
             </InputGroup>
             <InputGroup
-                @name={{t "fleet-ops.component.custom-entity-issue-form-panel.width"}}
-                @helpText={{t "fleet-ops.component.custom-entity-issue-form-panel.width-text"}}
+                @name={{t "custom-entity.form.width"}}
+                @helpText={{t "custom-entity.form.width-text"}}
                 @wrapperClass="mb-2"
             >
                 <UnitInput class="w-full" @value={{@resource.width}} @unit={{@resource.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{this.updateCustomEntityDimensionsUnit}} />
             </InputGroup>
             <InputGroup
-                @name={{t "fleet-ops.component.custom-entity-issue-form-panel.height"}}
-                @helpText={{t "fleet-ops.component.custom-entity-issue-form-panel.height-text"}}
+                @name={{t "custom-entity.form.height"}}
+                @helpText={{t "custom-entity.form.height-text"}}
                 @wrapperClass="mb-2"
             >
                 <UnitInput class="w-full" @value={{@resource.height}} @unit={{@resource.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{this.updateCustomEntityDimensionsUnit}} />
             </InputGroup>
             <InputGroup
-                @name={{t "fleet-ops.component.custom-entity-issue-form-panel.weight"}}
-                @helpText={{t "fleet-ops.component.custom-entity-issue-form-panel.weight-text"}}
+                @name={{t "custom-entity.form.weight"}}
+                @helpText={{t "custom-entity.form.weight-text"}}
                 @wrapperClass="mb-2"
             >
                 <UnitInput

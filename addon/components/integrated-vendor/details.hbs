@@ -10,15 +10,15 @@
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs dark:text-gray-100">
             <div class="field-info-container">
-                <div class="field-name">{{t "fleet-ops.common.sandbox"}}</div>
+                <div class="field-name">{{t "common.sandbox"}}</div>
                 <div class="field-value">{{if @vendor.sandbox "Yes" "No"}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">{{t "fleet-ops.common.host"}}</div>
+                <div class="field-name">{{t "common.host"}}</div>
                 <div class="field-value">{{n-a @vendor.host}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">{{t "fleet-ops.common.namespace"}}</div>
+                <div class="field-name">{{t "common.namespace"}}</div>
                 <div class="field-value">{{n-a @vendor.namespace}}</div>
             </div>
             {{#if (is-object @vendor.options)}}

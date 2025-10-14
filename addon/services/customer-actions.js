@@ -3,7 +3,7 @@ import ContactActionsService from './contact-actions';
 export default class CustomerActionsService extends ContactActionsService {
     constructor() {
         super(...arguments);
-        this.initialize('customer', { defaultAttributes: { type: 'customer', status: 'active' } });
+        this.initialize('contact', { defaultAttributes: { type: 'customer', status: 'active' } });
     }
 
     transition = {
@@ -17,8 +17,8 @@ export default class CustomerActionsService extends ContactActionsService {
             const customer = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'customer/form',
-                title: 'Create a new customer',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.customer')?.toLowerCase() }),
+                useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -29,8 +29,8 @@ export default class CustomerActionsService extends ContactActionsService {
         edit: (customer, options = {}) => {
             return this.resourceContextPanel.open({
                 content: 'customer/form',
-                title: `Edit: ${customer.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: customer.name }),
+                useDefaultSaveTask: true,
                 customer,
                 ...options,
             });
@@ -40,7 +40,7 @@ export default class CustomerActionsService extends ContactActionsService {
                 customer,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'customer/details',
                     },
                 ],
@@ -54,8 +54,8 @@ export default class CustomerActionsService extends ContactActionsService {
             const customer = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: customer,
-                title: 'Create a new customer',
-                acceptButtonText: 'Create Customer',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.customer')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.customer') }),
                 component: 'customer/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', customer, { refresh: true, ...saveOptions }),
                 ...options,
@@ -64,8 +64,8 @@ export default class CustomerActionsService extends ContactActionsService {
         edit: (customer, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: customer,
-                title: `Edit: ${customer.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: customer.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'customer/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', customer, { refresh: true, ...saveOptions }),

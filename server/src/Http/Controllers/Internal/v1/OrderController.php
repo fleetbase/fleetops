@@ -35,6 +35,7 @@ use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -341,7 +342,8 @@ class OrderController extends FleetOpsController
                 'status'  => 'OK',
                 'message' => 'Deleted ' . $count . ' orders',
                 'count'   => $count,
-            ]);
+            ]
+        );
     }
 
     /**
@@ -772,21 +774,118 @@ class OrderController extends FleetOpsController
     }
 
     /**
-     * Get all status options for an order.
+     * Retrieve all distinct order statuses for the authenticated company.
      *
-     * @return \Illuminate\Http\Response
+     * This endpoint compiles:
+     * 1. All unique `status` values from the `orders` table for the current company.
+     * 2. Optionally, all `Activity` codes defined in `OrderConfig` records that are
+     *    actually referenced by existing orders (via `order_config_uuid`).
+     *
+     * ---
+     * ### Query Parameters
+     * - `include_order_config_activities` (bool, optional)
+     *   When true, includes `Activity` codes from relevant `OrderConfig` instances.
+     *
+     * - `order_config_key` (string, optional)
+     *   Restricts both `orders` and `order_configs` to a specific configuration key.
+     *
+     * ---
+     * ### Behavior
+     * - Only includes order configs that are actually used by orders.
+     * - Uses the `activities()` method on each `OrderConfig` to extract all activity codes.
+     * - Merges and deduplicates both order statuses and activity codes.
+     *
+     * ---
+     * ### Example Response
+     * ```json
+     * [
+     *   "created",
+     *   "dispatched",
+     *   "completed",
+     *   "canceled",
+     *   "pickup_ready",
+     *   "awaiting_payment"
+     * ]
+     * ```
+     *
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function statuses()
+    public function statuses(Request $request)
     {
-        $statuses = DB::table('orders')
-            ->select('status')
-            ->where('company_uuid', session('company'))
-            ->distinct()
-            ->get()
-            ->pluck('status')
-            ->filter();
+        $companyUuid = $request->user()->company_uuid ?? session('company');
 
-        return response()->json($statuses);
+        $includeActivities = $request->boolean('include_order_config_activities', true);
+        $orderConfigKey    = trim((string) $request->string('order_config_key'));
+
+        // Get distinct statuses from orders
+        $ordersQuery = DB::table('orders')
+            ->where('company_uuid', $companyUuid)
+            ->whereNotNull('status');
+
+        if ($orderConfigKey !== '') {
+            $ordersQuery->whereExists(function ($q) use ($companyUuid, $orderConfigKey) {
+                $q->select(DB::raw(1))
+                  ->from('order_configs as oc')
+                  ->whereColumn('oc.uuid', 'orders.order_config_uuid')
+                  ->where('oc.company_uuid', $companyUuid)
+                  ->where('oc.key', $orderConfigKey);
+            });
+        }
+
+        $orderStatuses = $ordersQuery->distinct()->pluck('status')->filter();
+
+        // Optionally include activity codes from used order configs
+        $activityCodes = collect();
+
+        if ($includeActivities) {
+            $configUuidsOnOrders = DB::table('orders')
+                ->where('company_uuid', $companyUuid)
+                ->when($orderConfigKey !== '', function ($q) use ($companyUuid, $orderConfigKey) {
+                    $q->whereExists(function ($sub) use ($companyUuid, $orderConfigKey) {
+                        $sub->select(DB::raw(1))
+                            ->from('order_configs as oc')
+                            ->whereColumn('oc.uuid', 'orders.order_config_uuid')
+                            ->where('oc.company_uuid', $companyUuid)
+                            ->where('oc.key', $orderConfigKey);
+                    });
+                })
+                ->whereNotNull('order_config_uuid')
+                ->distinct()
+                ->pluck('order_config_uuid')
+                ->filter();
+
+            if ($configUuidsOnOrders->isNotEmpty()) {
+                $orderConfigs = OrderConfig::where('company_uuid', $companyUuid)
+                    ->whereIn('uuid', $configUuidsOnOrders)
+                    ->get();
+
+                /** @var \Fleetbase\FleetOps\Models\OrderConfig $config */
+                foreach ($orderConfigs as $config) {
+                    if (!method_exists($config, 'activities')) {
+                        continue;
+                    }
+
+                    $activities = $config->activities();
+
+                    if ($activities instanceof Collection) {
+                        $codes = $activities
+                            ->map(fn ($activity) => $activity->code ?? null)
+                            ->filter()
+                            ->values();
+
+                        $activityCodes = $activityCodes->merge($codes);
+                    }
+                }
+            }
+        }
+
+        // Merge & deduplicate everything
+        $result = $orderStatuses
+            ->merge($activityCodes)
+            ->unique()
+            ->values();
+
+        return response()->json($result);
     }
 
     /**

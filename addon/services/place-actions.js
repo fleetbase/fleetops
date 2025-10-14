@@ -8,7 +8,7 @@ export default class PlaceActionsService extends ResourceActionService {
 
     constructor() {
         super(...arguments);
-        this.initialize('place', { modelNamePath: 'displayName' });
+        this.initialize('place', { modelNamePath: 'address' });
     }
 
     transition = {
@@ -22,8 +22,8 @@ export default class PlaceActionsService extends ResourceActionService {
             const place = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'place/form',
-                title: 'Create a new place',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.place')?.toLowerCase() }),
+                useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -33,8 +33,10 @@ export default class PlaceActionsService extends ResourceActionService {
         edit: (place) => {
             return this.resourceContextPanel.open({
                 content: 'place/form',
-                title: `Edit: ${place.displayName}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: place.address }),
+                useDefaultSaveTask: true,
+                headerLeftClass: 'w-1/2',
+                titleWrapperClass: 'w-1/2',
                 place,
             });
         },
@@ -43,7 +45,7 @@ export default class PlaceActionsService extends ResourceActionService {
                 place,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'place/details',
                     },
                 ],
@@ -56,8 +58,8 @@ export default class PlaceActionsService extends ResourceActionService {
             const place = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: place,
-                title: 'Create a new place',
-                acceptButtonText: 'Create Place',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.place')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.place') }),
                 component: 'place/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', place, { refresh: true, ...saveOptions }),
                 ...options,
@@ -66,8 +68,8 @@ export default class PlaceActionsService extends ResourceActionService {
         edit: (place, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: place,
-                title: `Edit: ${place.displayName}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: place.address }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'place/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', place, { refresh: true, ...saveOptions }),
@@ -88,8 +90,8 @@ export default class PlaceActionsService extends ResourceActionService {
         const { latitude, longitude, location } = place;
 
         return this.modalsManager.show('modals/point-map', {
-            title: this.intl.t('fleet-ops.management.places.index.locate-title', { placeName: place.displayName }),
-            acceptButtonText: 'Done',
+            title: this.intl.t('common.resource-location', { resource: place.address }),
+            acceptButtonText: this.intl.t('common.done'),
             hideDeclineButton: true,
             resource: place,
             icon: leafletIcon({
@@ -108,14 +110,14 @@ export default class PlaceActionsService extends ResourceActionService {
     @action assignVendor(place, options = {}) {
         return this.modalsManager.show('modals/place-assign-vendor', {
             title: this.intl.t('fleet-ops.management.places.index.title'),
-            acceptButtonText: this.intl.t('fleet-ops.management.places.index.confirm-button'),
+            acceptButtonText: this.intl.t('common.confirm'),
             hideDeclineButton: true,
             place,
             confirm: async (modal) => {
                 modal.startLoading();
                 try {
                     await place.save();
-                    this.notifications.success(this.intl.t('fleet-ops.management.places.index.success-message', { placeName: place.name }));
+                    this.notifications.success(this.intl.t('vendor.prompts.vendor-assigned-success', { placeName: place.address }));
                     modal.done();
                 } catch (err) {
                     this.notifications.serverError(err);

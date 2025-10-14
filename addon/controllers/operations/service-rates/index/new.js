@@ -26,7 +26,12 @@ export default class OperationsServiceRatesIndexNewController extends Controller
 
             yield this.hostRouter.refresh();
             yield this.hostRouter.transitionTo('console.fleet-ops.operations.service-rates.index.details', serviceRate);
-            this.notifications.success(this.intl.t('fleet-ops.operations.service-rates.index.new.success-message', { serviceName: serviceRate.service_name }));
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.service-rate'),
+                    resourceName: serviceRate.service_name,
+                })
+            );
             this.resetForm();
         } catch (err) {
             this.notifications.serverError(err);

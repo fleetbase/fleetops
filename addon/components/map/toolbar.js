@@ -30,14 +30,6 @@ export default class MapToolbarComponent extends Component {
 
     @action toggleSearch() {}
 
-    @action toggleOrderListOverlay() {
-        this.orderListOverlay.toggle();
-    }
-
-    @action toggleDrawer() {
-        this.mapDrawer.toggle();
-    }
-
     @task *getActiveOrderCount() {
         try {
             const count = yield this.fetch.get('fleet-ops/metrics', { discover: ['orders_in_progress'] });

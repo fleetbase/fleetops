@@ -23,7 +23,10 @@ export default class ManagementDriversIndexEditController extends Controller {
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.drivers.index.details', driver);
-            this.notifications.success(this.intl.t('fleet-ops.component.driver-form-panel.success-message', { driverName: driver.name }));
+            this.notifications.success(this.intl.t('common.resource-updated-success', {
+                    resource: this.intl.t('resource.driver'),
+                    resourceName: driver.name,
+                }));
         } catch (err) {
             this.notifications.serverError(err);
         }
@@ -47,9 +50,9 @@ export default class ManagementDriversIndexEditController extends Controller {
 
     #confirmContinueWithUnsavedChanges(driver, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.drivers.index.edit.title'),
-            body: this.intl.t('fleet-ops.management.drivers.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.edit.button'),
+            title: this.intl.t('common.continue-without-saving'),
+            body: this.intl.t('common.continue-without-saving-prompt', { resource: this.intl.t('resource.driver') }),
+            acceptButtonText: this.intl.t('common.continue'),
             confirm: async () => {
                 driver.rollbackAttributes();
                 await this.hostRouter.transitionTo('console.fleet-ops.management.drivers.index.details', driver);

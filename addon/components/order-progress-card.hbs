@@ -40,23 +40,23 @@
     <div class="order-progress-card-footer">
         <div class="grid grid-cols-2 gap-2 mt-1 px-1">
             <div class="flex flex-col text-xs">
-                <div class="font-semibold">Current ETA:</div>
+                <div class="font-semibold">{{t "order.fields.current-eta"}}:</div>
                 <div class="">{{format-duration this.order.tracker_data.current_destination_eta}}</div>
             </div>
             <div class="flex flex-col text-xs">
-                <div class="font-semibold">ECT:</div>
+                <div class="font-semibold">{{t "order.fields.ect"}}:</div>
                 <div class="">{{n-a this.order.tracker_data.estimated_completion_time_formatted}}</div>
             </div>
             <div class="flex flex-col text-xs">
-                <div class="font-semibold">Driver:</div>
+                <div class="font-semibold">{{t "order.fields.driver"}}:</div>
                 <div class="truncate {{if this.order.has_driver_assigned 'text-green-900 dark:text-green-200' 'text-yellow-900 dark:text-yellow-200'}}">{{if
                         this.order.has_driver_assigned
-                        "Driver Assigned"
-                        "No Driver Assigned"
+                        (t "order.fields.driver-assigned")
+                        (t "order.fields.no-driver-assigned")
                     }}</div>
             </div>
             <div class="flex flex-col text-xs">
-                <div class="font-semibold">Current Destination:</div>
+                <div class="font-semibold">{{t "order.fields.current-destination"}}:</div>
                 <div class="truncate">{{n-a this.order.tracker_data.current_destination.address}}</div>
             </div>
         </div>

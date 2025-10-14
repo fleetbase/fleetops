@@ -1,9 +1,9 @@
-<ContentPanel @title={{t "fleet-ops.operations.orders.index.view.notes-title"}} @isLoading={{@isLoading}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
+<ContentPanel @title={{t "order.fields.notes-title"}} @isLoading={{@isLoading}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
     {{#if this.isEditing}}
         <Textarea
             @value={{@resource.notes}}
             class="form-input w-full"
-            placeholder={{t "fleet-ops.operations.orders.index.view.notes-placeholder"}}
+            placeholder={{t "order.fields.notes-placeholder"}}
             rows={{4}}
             disabled={{cannot-write @resource}}
         />
@@ -12,12 +12,12 @@
                 @type="primary"
                 @icon="save"
                 @size="xs"
-                @text={{t "fleet-ops.operations.orders.index.view.save-order-note"}}
+                @text={{t "order.fields.save-order-note"}}
                 @onClick={{perform this.save}}
                 @isLoading={{this.save.isRunning}}
                 @permission="fleet-ops update order"
             />
-            <Button @type="default" @icon="times" @size="xs" @text={{t "fleet-ops.common.cancel"}} @onClick={{this.stopEditing}} />
+            <Button @type="default" @icon="times" @size="xs" @text={{t "common.cancel"}} @onClick={{this.stopEditing}} />
         </div>
     {{else}}
         {{#if @resource.notes}}

@@ -7,6 +7,7 @@ import { task } from 'ember-concurrency';
 export default class OrderDetailsActivityComponent extends Component {
     @service orderActions;
     @service appCache;
+    @service intl;
     @tracked layout = this.appCache.get('fleetops:order:activity:layout', 'timeline');
 
     get actionButtons() {
@@ -14,7 +15,7 @@ export default class OrderDetailsActivityComponent extends Component {
             {
                 items: [
                     {
-                        text: 'Update activity',
+                        text: this.intl.t('order.actions.update-activity'),
                         icon: 'signal',
                         disabled: this.args.resource.status === 'canceled',
                         onClick: () => {
@@ -28,14 +29,14 @@ export default class OrderDetailsActivityComponent extends Component {
                         },
                     },
                     {
-                        text: 'Reload activity',
+                        text: this.intl.t('order.actions.reload-activity'),
                         icon: 'refresh',
                         onClick: () => {
                             this.loadActivity.perform();
                         },
                     },
                     {
-                        text: this.layout === 'timeline' ? 'View as list' : 'View as timeline',
+                        text: this.layout === 'timeline' ? this.intl.t('order.actions.view-activity-as-list') : this.intl.t('order.actions.view-activity-as-timeline'),
                         icon: this.layout === 'timeline' ? 'list' : 'timeline',
                         onClick: () => {
                             this.layout = this.layout === 'timeline' ? 'list' : 'timeline';

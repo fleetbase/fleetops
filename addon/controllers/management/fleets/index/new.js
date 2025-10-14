@@ -19,7 +19,12 @@ export default class ManagementFleetsIndexNewController extends Controller {
 
             yield this.hostRouter.refresh();
             yield this.hostRouter.transitionTo('console.fleet-ops.management.fleets.index.details', fleet);
-            this.notifications.success(this.intl.t('fleet-ops.component.fleet-form-panel.success-message', { fleetName: fleet.name }));
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.fleet'),
+                    resourceName: fleet.name,
+                })
+            );
             this.resetForm();
         } catch (err) {
             this.notifications.serverError(err);

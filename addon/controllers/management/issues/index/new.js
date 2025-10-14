@@ -21,7 +21,12 @@ export default class ManagementIssuesIndexNewController extends Controller {
 
             yield this.hostRouter.refresh();
             yield this.hostRouter.transitionTo('console.fleet-ops.management.issues.index.details', issue);
-            this.notifications.success(this.intl.t('fleet-ops.component.issue-form-panel.success-message', { issueName: issue.title }));
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.issue'),
+                    resourceName: issue.title ?? issue.public_id,
+                })
+            );
             this.resetForm();
         } catch (err) {
             this.notifications.serverError(err);

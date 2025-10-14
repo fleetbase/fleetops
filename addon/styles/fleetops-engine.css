@@ -1045,6 +1045,13 @@ body[data-theme='light'] .flb--modal.flb--default-modal.finalize-service-quote-p
     padding: 0 !important;
 }
 
+.order-list-overlay-panel-header {
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
+    height: 45px;
+    max-height: 45px;
+}
+
 .next-content-overlay-panel-body.fleetops-order-list-overlay .fleetops-order-list-overlay-inner-wrapper .fleetops-order-list-overlay-list .next-content-panel-header {
     padding: 0 0.35rem;
     display: flex;

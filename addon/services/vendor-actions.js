@@ -24,8 +24,8 @@ export default class VendorActionsService extends ResourceActionService {
             const vendor = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'vendor/form',
-                title: 'Create a new vendor',
-
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.vendor')?.toLowerCase() }),
+                useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -35,8 +35,8 @@ export default class VendorActionsService extends ResourceActionService {
         edit: (vendor) => {
             return this.resourceContextPanel.open({
                 content: 'vendor/form',
-                title: `Edit: ${vendor.name}`,
-
+                title: this.intl.t('common.edit-resource-name', { resourceName: vendor.name }),
+                useDefaultSaveTask: true,
                 vendor,
             });
         },
@@ -45,7 +45,7 @@ export default class VendorActionsService extends ResourceActionService {
                 vendor,
                 tabs: [
                     {
-                        label: 'Overview',
+                        label: this.intl.t('common.overview'),
                         component: 'vendor/details',
                     },
                 ],
@@ -58,8 +58,8 @@ export default class VendorActionsService extends ResourceActionService {
             const vendor = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: vendor,
-                title: 'Create a new vendor',
-                acceptButtonText: 'Create Vendor',
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.vendor')?.toLowerCase() }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.vendor') }),
                 component: 'vendor/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', vendor, { refresh: true, ...saveOptions }),
                 ...options,
@@ -68,8 +68,8 @@ export default class VendorActionsService extends ResourceActionService {
         edit: (vendor, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: vendor,
-                title: `Edit: ${vendor.name}`,
-                acceptButtonText: 'Save Changes',
+                title: this.intl.t('common.edit-resource-name', { resourceName: vendor.name }),
+                acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'vendor/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', vendor, { refresh: true, ...saveOptions }),

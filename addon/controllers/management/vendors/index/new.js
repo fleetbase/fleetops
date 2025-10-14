@@ -22,7 +22,12 @@ export default class ManagementVendorsIndexNewController extends Controller {
 
             yield this.hostRouter.refresh();
             yield this.hostRouter.transitionTo('console.fleet-ops.management.vendors.index.details', vendor);
-            this.notifications.success(this.intl.t('fleet-ops.component.vendor-form-panel.success-message', { vendorName: vendor.name }));
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.vendor'),
+                    resourceName: vendor.name,
+                })
+            );
             this.resetForm();
         } catch (err) {
             this.notifications.serverError(err);

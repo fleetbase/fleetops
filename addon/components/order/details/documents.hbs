@@ -1,11 +1,11 @@
-<ContentPanel @title={{t "fleet-ops.operations.orders.index.view.documents-panel-title"}} @open={{true}} @wrapperClass="bordered-top">
+<ContentPanel @title={{t "order.fields.documents-panel-title"}} @open={{true}} @wrapperClass="bordered-top">
     <div class="space-y-2">
         {{#if this.queueFile.isRunning}}
             <div
                 class="dropzone w-full rounded-lg px-4 py-8 bg-gray-50 dark:bg-gray-900 bg-opacity-25 text-gray-900 dark:text-white text-center flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-indigo-500"
             >
                 <div class="flex items-center justify-center py-5">
-                    <Spinner class="text-sm dar:text-gray-100" @loadingMessage={{t "fleet-ops.common.uploading"}} />
+                    <Spinner class="text-sm dar:text-gray-100" @loadingMessage={{concat (t "common.uploading") "..."}} />
                 </div>
             </div>
         {{else}}
@@ -13,24 +13,24 @@
                 <FileDropzone @queue={{queue}} class="dropzone file-dropzone" @disabled={{cannot-write @resource}} as |dropzone|>
                     {{#if dropzone.active}}
                         {{#if dropzone.valid}}
-                            {{t "component.dropzone.drop-to-upload"}}
+                            {{t "dropzone.drop-to-upload"}}
                         {{else}}
-                            {{t "component.dropzone.invalid"}}
+                            {{t "dropzone.invalid"}}
                         {{/if}}
                     {{else if queue.files.length}}
                         <div class="my-2">
                             <FaIcon @icon="folder-open" class="text-indigo-500 mr-2" />
-                            {{t "component.dropzone.files-ready-for-upload" numOfFiles=(pluralize queue.files.length (t "component.dropzone.file"))}}
+                            {{t "dropzone.files-ready-for-upload" numOfFiles=(pluralize queue.files.length (t "dropzone.file"))}}
                         </div>
                         <div class="my-2">({{queue.progress}}%)</div>
                     {{else}}
                         <h4 class="font-semibold">
                             <FaIcon @icon="folder-open" @size="lg" class="text-indigo-500 mr-2" />
-                            {{t "component.dropzone.upload-documents-files"}}
+                            {{t "dropzone.upload-documents-files"}}
                         </h4>
                         <div>
                             {{#if dropzone.supported}}
-                                <p class="text-sm my-5">{{t "component.dropzone.dropzone-supported-files"}}</p>
+                                <p class="text-sm my-5">{{t "dropzone.dropzone-supported-files"}}</p>
                             {{/if}}
                             <FileUpload
                                 @name="files"
@@ -40,7 +40,7 @@
                                 @onFileAdded={{perform this.queueFile}}
                                 @disabled={{cannot-write @resource}}
                             >
-                                <a tabindex={{0}} class="btn btn-magic cursor-pointer ml-1">{{t "component.dropzone.or-select-button-text"}}</a>
+                                <a tabindex={{0}} class="btn btn-magic cursor-pointer ml-1">{{t "dropzone.or-select-button-text"}}</a>
                             </FileUpload>
                         </div>
                     {{/if}}
@@ -49,7 +49,7 @@
             {{#if this.uploadQueue}}
                 <div class="mx-0.5">
                     <div class="flex items-center justify-between">
-                        <span class="leading-6 text-sm font-semibold dark:text-gray-100">{{t "component.dropzone.upload-queue"}}</span>
+                        <span class="leading-6 text-sm font-semibold dark:text-gray-100">{{t "dropzone.upload-queue"}}</span>
                     </div>
                     <div class="space-y-2 mb-2">
                         {{#each this.uploadQueue as |file|}}

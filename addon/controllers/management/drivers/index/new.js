@@ -19,7 +19,12 @@ export default class ManagementDriversIndexNewController extends Controller {
 
             yield this.hostRouter.refresh();
             yield this.hostRouter.transitionTo('console.fleet-ops.management.drivers.index.details', driver);
-            this.notifications.success(this.intl.t('fleet-ops.component.driver-form-panel.success-message', { driverName: driver.name }));
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.driver'),
+                    resourceName: driver.name,
+                })
+            );
             this.resetForm();
         } catch (err) {
             this.notifications.serverError(err);

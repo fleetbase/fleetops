@@ -30,7 +30,12 @@ export default class OperationsServiceRatesIndexEditController extends Controlle
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.operations.service-rates.index.details', serviceRate);
-            this.notifications.success(this.intl.t('fleet-ops.operations.service-rates.index.edit.success-message', { serviceName: serviceRate.service_name }));
+            this.notifications.success(
+                this.intl.t('common.resource-updated-success', {
+                    resource: this.intl.t('resource.service-rate'),
+                    resourceName: serviceRate.service_name,
+                })
+            );
         } catch (err) {
             this.notifications.serverError(err);
         }
@@ -54,9 +59,9 @@ export default class OperationsServiceRatesIndexEditController extends Controlle
 
     #confirmContinueWithUnsavedChanges(serviceRate, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.places.index.edit.title'),
-            body: this.intl.t('fleet-ops.management.places.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.places.index.edit.button'),
+            title: this.intl.t('common.continue-without-saving'),
+            body: this.intl.t('common.continue-without-saving-prompt', { resource: this.intl.t('resource.service-rate') }),
+            acceptButtonText: this.intl.t('common.continue'),
             confirm: async () => {
                 serviceRate.rollbackAttributes();
                 await this.hostRouter.transitionTo('console.fleet-ops.operations.service-rates.index.details', serviceRate);

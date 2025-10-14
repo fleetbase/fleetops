@@ -1,4 +1,4 @@
-<ContentPanel @title={{t "fleet-ops.operations.orders.index.view.payload"}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
+<ContentPanel @title={{t "order.fields.payload"}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
     {{#if @resource.isMultiDropOrder}}
         <div class="space-y-2">
             {{#each @resource.entitiesByDestination as |group|}}
@@ -27,7 +27,7 @@
                             {{/if}}
                             <DisplayPlace @place={{group.waypoint}} @addressClass="text-sm" />
                             <div class="my-2">
-                                <span class="rounded-md bg-yellow-300 text-yellow-900 px-2 py-1 text-sm">{{t "fleet-ops.operations.orders.index.view.tracking"}}
+                                <span class="rounded-md bg-yellow-300 text-yellow-900 px-2 py-1 text-sm">{{t "order.fields.tracking"}}
                                     {{group.waypoint.tracking}}
                                 </span>
                             </div>
@@ -49,7 +49,7 @@
                                     <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                                         <div class="px-1">
                                             <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-300">
-                                                {{t "fleet-ops.operations.orders.index.view.waypoint-actions"}}
+                                                {{t "order.fields.waypoint-actions"}}
                                             </div>
                                         </div>
                                         <div class="next-dd-menu-seperator"></div>
@@ -60,10 +60,10 @@
                                                 disabled={{cannot "fleet-ops view order"}}
                                                 {{on "click" (dropdown-fn dd this.viewWaypointLabel group.waypoint)}}
                                             >
-                                                {{t "fleet-ops.operations.orders.index.view.get-label"}}
+                                                {{t "order.fields.get-label"}}
                                             </a>
                                             {{!-- <a href="javascript:;" class="next-dd-item">
-                                                        {{t "fleet-ops.operations.orders.index.view.view-activity"}}
+                                                        {{t "order.fields.view-activity"}}
                                                     </a> --}}
                                         </div>
                                     </div>
@@ -71,7 +71,7 @@
                                 <Button
                                     @icon="plus"
                                     @iconPrefix="fas"
-                                    @text={{t "fleet-ops.operations.orders.index.view.add-item-button"}}
+                                    @text={{t "order.fields.add-item-button"}}
                                     @size="sm"
                                     @onClick={{perform this.addEntity group.waypoint}}
                                     @permission="fleet-ops update order"

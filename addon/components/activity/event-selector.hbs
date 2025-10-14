@@ -1,9 +1,9 @@
 <div class="activity-event-selector rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" ...attributes>
     <div class="activity-event-selector-actions flex flex-row items-center justify-between px-4 py-2">
         <div>
-            <div class="text-sm font-semibold">{{t "fleet-ops.component.activity-event-selector.activity-events"}}</div>
+            <div class="text-sm font-semibold">{{t "activity.form.event-selector.activity-events"}}</div>
             <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
-                <InputInfo @text={{t "fleet-ops.component.activity-event-selector.activity-events"}} />
+                <InputInfo @text={{t "activity.form.event-selector.activity-events"}} />
             </Attach::Tooltip>
         </div>
         <div></div>
@@ -11,14 +11,14 @@
     <div class="activity-event-selector-events-container">
         <div class="px-4 mb-2">
             <DropdownButton
-                @text={{t "fleet-ops.component.activity-event-selector.select-event-to-add"}}
+                @text={{t "activity.form.event-selector.select-event-to-add"}}
                 @buttonClass="flex-row-reverse justify-between w-48"
                 @icon="caret-down"
                 @iconClass="mr-0i"
                 @size="sm"
                 @iconPrefix="fas"
                 @triggerClass="hidden md:flex"
-                @helpText={{t "fleet-ops.component.activity-event-selector.activity-events-select-events-info"}}
+                @helpText={{t "activity.form.event-selector.activity-events-select-events-info"}}
                 as |dd|
             >
                 <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">

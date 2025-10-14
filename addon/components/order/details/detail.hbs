@@ -5,7 +5,7 @@
                 <Badge @hideStatusDot={{false}} @status="Dispatched" />
             {{/if}}
             {{#if @resource.adhoc}}
-                <Badge @hideStatusDot={{false}} @disableHumanize={{true}} @status="success">{{t "fleet-ops.operations.orders.index.view.ad-hoc"}}</Badge>
+                <Badge @hideStatusDot={{false}} @disableHumanize={{true}} @status="success">{{t "order.fields.ad-hoc"}}</Badge>
             {{/if}}
         </div>
     </:title>
@@ -13,7 +13,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-4 mt-1">
             <div class="field-info-container">
                 <div class="field-name">
-                    <span>{{t "fleet-ops.operations.orders.index.view.driver-assigned"}}</span>
+                    <span>{{t "order.fields.driver-assigned"}}</span>
                 </div>
                 <div class="field-value">
                     <div>
@@ -39,7 +39,7 @@
             </div>
             <div class="field-info-container">
                 <div class="field-name flex flex-row items-center justify-between">
-                    <span>{{t "fleet-ops.operations.orders.index.view.vehicle-assigned"}}</span>
+                    <span>{{t "order.fields.vehicle-assigned"}}</span>
                 </div>
                 <div class="field-value">
                     <a href="javascript:;" class="flex flex-row space-x-2 shrink-0">
@@ -81,12 +81,12 @@
             </div>
             <div class="field-info-container">
                 {{#if @resource.isMultiDrop}}
-                    <div class="field-name">{{pluralize (t "fleet-ops.operations.orders.index.view.customer")}}</div>
+                    <div class="field-name">{{pluralize (t "order.fields.customer")}}</div>
                     <div class="field-value">
                         <Order::CustomerAvatarStack @waypoints={{@resource.orderWaypoints}} @size="sm" @overlap="tight" />
                     </div>
                 {{else}}
-                    <div class="field-name">{{t "fleet-ops.operations.orders.index.view.customer"}}</div>
+                    <div class="field-name">{{t "order.fields.customer"}}</div>
                     <div class="field-value">
                         <div class="flex flex-row space-x-2">
                             <div>
@@ -108,7 +108,7 @@
                 {{/if}}
             </div>
             <div class="field-info-container">
-                <div class="field-name">{{t "fleet-ops.operations.orders.index.view.facilitator"}}</div>
+                <div class="field-name">{{t "order.fields.facilitator"}}</div>
                 <div class="field-value">
                     <div class="flex flex-row space-x-2">
                         <div>
@@ -135,32 +135,32 @@
                 <ClickToCopy @value={{@resource.public_id}} class="field-value">{{n-a @resource.public_id}}</ClickToCopy>
             </div>
             <div class="field-info-container field-vertical-container dashed-bottom">
-                <div class="field-name">{{t "fleet-ops.common.internal-id"}}</div>
+                <div class="field-name">{{t "common.internal-id"}}</div>
                 <ClickToCopy @value={{@resource.internal_id}} class="field-value">{{n-a @resource.internal_id}}</ClickToCopy>
             </div>
             <div class="field-info-container field-vertical-container dashed-bottom">
-                <div class="field-name">{{t "fleet-ops.operations.orders.index.view.tracking-number"}}</div>
+                <div class="field-name">{{t "order.fields.tracking-number"}}</div>
                 <ClickToCopy @value={{@resource.tracking_number.tracking_number}} class="field-value">{{n-a @resource.tracking_number.tracking_number}}</ClickToCopy>
             </div>
             <div class="field-info-container field-vertical-container dashed-bottom">
-                <div class="field-name">{{t "fleet-ops.operations.orders.index.view.date-scheduled"}}</div>
+                <div class="field-name">{{t "order.fields.date-scheduled"}}</div>
                 <div class="field-value">{{n-a @resource.scheduledAt}}</div>
             </div>
             <div class="field-info-container field-vertical-container dashed-bottom">
-                <div class="field-name">{{t "fleet-ops.operations.orders.index.view.date-dispatched"}}</div>
+                <div class="field-name">{{t "order.fields.date-dispatched"}}</div>
                 <div class="field-value">{{n-a @resource.dispatchedAt}}</div>
             </div>
             <div class="field-info-container field-vertical-container dashed-bottom">
-                <div class="field-name">{{t "fleet-ops.operations.orders.index.view.date-started"}}</div>
+                <div class="field-name">{{t "order.fields.date-started"}}</div>
                 <div class="field-value">{{n-a @resource.startedAt}}</div>
             </div>
             <div class="field-info-container field-vertical-container dashed-bottom">
-                <div class="field-name">{{t "fleet-ops.common.type"}}</div>
+                <div class="field-name">{{t "common.type"}}</div>
                 <div class="field-value">{{n-a (humanize @resource.type)}}</div>
             </div>
             {{#if @resource.pod_required}}
                 <div class="field-info-container field-vertical-container">
-                    <div class="field-name">{{t "fleet-ops.operations.orders.index.view.proof-of-delivery"}}</div>
+                    <div class="field-name">{{t "order.fields.proof-of-delivery"}}</div>
                     <div class="field-value">{{n-a (smart-humanize @resource.pod_method)}}</div>
                 </div>
             {{/if}}

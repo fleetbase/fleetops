@@ -21,41 +21,45 @@ export default class OperationsOrdersIndexNewController extends Controller {
     @service orderValidation;
     @tracked order = this.orderCreation.newOrder();
     @tracked overlay;
-    @tracked actionButtons = [
-        {
-            text: 'Import',
-            icon: 'upload',
-            type: 'magic',
-            onClick: () => this.orderImport.promptImport(this.order),
-        },
-        {
-            icon: 'ellipsis-h',
-            triggerClass: 'hidden md:flex',
-            items: [
-                {
-                    icon: 'user-plus',
-                    text: this.intl.t('fleet-ops.operations.orders.index.new.create-new-customer'),
-                    fn: this.customerActions.modal.create,
-                },
-                {
-                    icon: 'truck',
-                    text: this.intl.t('fleet-ops.operations.orders.index.new.create-new-facilitator'),
-                    fn: this.vendorActions.modal.create,
-                },
-                {
-                    icon: 'map-pin',
-                    text: this.intl.t('fleet-ops.operations.orders.index.new.create-new-place'),
-                    fn: this.placeActions.modal.create,
-                },
-            ],
-        },
-    ];
+
+    /** action buttons */
+    get actionButtons() {
+        return [
+            {
+                text: this.intl.t('common.import'),
+                icon: 'upload',
+                type: 'magic',
+                onClick: () => this.orderImport.promptImport(this.order),
+            },
+            {
+                icon: 'ellipsis-h',
+                triggerClass: 'hidden md:flex',
+                items: [
+                    {
+                        icon: 'user-plus',
+                        text: this.intl.t('order.actions.create-new-customer'),
+                        fn: this.customerActions.modal.create,
+                    },
+                    {
+                        icon: 'truck',
+                        text: this.intl.t('order.actions.create-new-facilitator'),
+                        fn: this.vendorActions.modal.create,
+                    },
+                    {
+                        icon: 'map-pin',
+                        text: this.intl.t('order.actions.create-new-place'),
+                        fn: this.placeActions.modal.create,
+                    },
+                ],
+            },
+        ];
+    }
 
     @task *save(order) {
         if (this.orderValidation.validationFails(order)) return;
 
         // Display loader
-        this.loader.showLoader('body', { loadingMessage: 'Creating Order...' });
+        this.loader.showLoader('body', { loadingMessage: this.intl.t('common.creating-resource', { resource: this.intl.t('resource.order') }) + '...' });
 
         try {
             // Trigger creating event
@@ -73,7 +77,7 @@ export default class OperationsOrdersIndexNewController extends Controller {
 
             // Order creation completed
             yield this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index.details', createdOrder);
-            this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.new.success-message', { orderId: createdOrder.public_id }));
+            this.notifications.success(this.intl.t('common.resource-created-success-name', { resource: this.intl.t('resource.order'), resourceName: createdOrder.tracking }));
         } catch (err) {
             console.error(err);
             debug('Error creating order: ' + err.message);

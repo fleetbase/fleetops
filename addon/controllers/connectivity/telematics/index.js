@@ -19,22 +19,22 @@ export default class ConnectivityTelematicsIndexController extends Controller {
         {
             icon: 'refresh',
             onClick: this.telematicActions.refresh,
-            helpText: this.intl.t('fleet-ops.common.reload-data'),
+            helpText: this.intl.t('common.refresh'),
         },
         {
-            text: 'New',
+            text: this.intl.t('common.new'),
             type: 'primary',
             icon: 'plus',
             onClick: this.telematicActions.transition.create,
         },
         {
-            text: 'Import',
+            text: this.intl.t('common.import'),
             type: 'magic',
             icon: 'upload',
             onClick: this.telematicActions.import,
         },
         {
-            text: 'Export',
+            text: this.intl.t('common.export'),
             icon: 'long-arrow-up',
             iconClass: 'rotate-icon-45',
             wrapperClass: 'hidden md:flex',
@@ -54,7 +54,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
     /** columns */
     @tracked columns = [
         {
-            label: this.intl.t('fleet-ops.common.name'),
+            label: this.intl.t('column.name'),
             valuePath: 'name',
             width: '180px',
             cellComponent: 'table/cell/anchor',
@@ -69,7 +69,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
-            label: this.intl.t('fleet-ops.common.created-at'),
+            label: this.intl.t('column.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
             width: '10%',
@@ -79,7 +79,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             filterComponent: 'filter/date',
         },
         {
-            label: this.intl.t('fleet-ops.common.updated-at'),
+            label: this.intl.t('column.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
             width: '10%',
@@ -96,18 +96,18 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             ddButtonText: false,
             ddButtonIcon: 'ellipsis-h',
             ddButtonIconPrefix: 'fas',
-            ddMenuLabel: 'Telematic Actions',
+            ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.Telematic') }),
             cellClassNames: 'overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
             width: '10%',
             actions: [
                 {
-                    label: this.intl.t('fleet-ops.management.places.index.view-details'),
+                    label: this.intl.t('column.view-details'),
                     fn: this.telematicActions.transition.view,
                     permission: 'fleet-ops view telematic',
                 },
                 {
-                    label: this.intl.t('fleet-ops.management.places.index.edit-place'),
+                    label: this.intl.t('column.edit-place'),
                     fn: this.telematicActions.transition.edit,
                     permission: 'fleet-ops update telematic',
                 },
@@ -115,7 +115,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('fleet-ops.management.places.index.delete'),
+                    label: this.intl.t('column.delete'),
                     fn: this.telematicActions.delete,
                     permission: 'fleet-ops delete telematic',
                 },
