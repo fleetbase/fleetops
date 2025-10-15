@@ -1,0 +1,79 @@
+<div class="px-4 py-2">
+    <div class="flex flex-1 flex-row items-start justify-between">
+        <div class="flex flex-row space-x-3">
+            <div class="flex items-start justify-start rounded-full">
+                <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{@resource.displayName}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                    <InputInfo @text={{@resource.displayName}} />
+                </Attach::Tooltip>
+            </div>
+            <div class="flex flex-col">
+                <h1 class="text-gray-900 dark:text-white font-semibold text-2xl">{{@resource.displayName}}</h1>
+                <div class="-mt-1">
+                    {{#if @resource.driver}}
+                        <div class="flex flex-row items-center">
+                            <a href="javascript:;" class="text-sm dark:text-blue-400 text-blue-600 hover:opacity-50">{{@resource.driver.name}}</a>
+                        </div>
+                    {{else}}
+                        <div class="flex flex-row items-center">
+                            <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{t "common.no-driver-assigned"}}</span>
+                            {{!-- <Button @icon="plus" @size="xs" @helpText={{t "vehicle.actions.assign-driver"}} /> --}}
+                        </div>
+                    {{/if}}
+                </div>
+                <Badge @status={{if @resource.online "online" "offline"}}>{{if @resource.online "Online" "Offline"}}</Badge>
+            </div>
+        </div>
+        <div class="next-view-header-right">
+            <div class="flex flex-row flex-1 justify-end space-x-2">
+                {{yield}}
+                {{#if @saveTask}}
+                    <Button
+                        @type="primary"
+                        @icon={{if @resource.isNew "check" "save"}}
+                        @text={{if @resource.isNew (concat "Create " this.modelName) "Save Changes"}}
+                        @onClick={{perform @saveTask @resource}}
+                        @disabled={{cannot-write @resource schema=@authSchema}}
+                        @isLoading={{@saveTask.isRunning}}
+                    />
+                {{/if}}
+                {{#each @actionButtons as |actionButton|}}
+                    <Button
+                        @type={{actionButton.type}}
+                        @text={{actionButton.text}}
+                        @onClick={{if actionButton.perform (perform actionButton.perform) (or actionButton.onClick actionButton.fn)}}
+                        @size={{actionButton.size}}
+                        @buttonType={{actionButton.buttonType}}
+                        @disabled={{actionButton.disabled}}
+                        @exampleText={{actionButton.exampleText}}
+                        @helpText={{actionButton.helpText}}
+                        @icon={{actionButton.icon}}
+                        @iconClass={{actionButton.iconClass}}
+                        @iconFlip={{actionButton.iconFlip}}
+                        @iconPrefix={{actionButton.iconPrefix}}
+                        @iconRotation={{actionButton.iconRotation}}
+                        @iconSize={{actionButton.iconSize}}
+                        @isLoading={{actionButton.isLoading}}
+                        @outline={{actionButton.outline}}
+                        @permission={{actionButton.permission}}
+                        @wrapperClass={{actionButton.wrapperClass}}
+                        @textClass={{actionButton.textClass}}
+                        @tooltipPlacement={{actionButton.tooltipPlacement}}
+                        @visible={{actionButton.visible}}
+                    />
+                {{/each}}
+                {{#if @onPressCancel}}
+                    <button
+                        type="button"
+                        class="next-content-overlay-panel-cancel-button {{@cancelButtonClass}}"
+                        {{set-height @cancelButtonHeight}}
+                        {{set-width @cancelButtonWidth}}
+                        {{on "click" @onPressCancel}}
+                    >
+                        <FaIcon @icon={{or @cancelIcon "times"}} @size={{@iconSize}} @prefix={{or @iconPrefix "fas"}} class={{@iconClass}} />
+                    </button>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</div>

@@ -19,6 +19,7 @@ body[data-theme='dark'] .scheduler-left-sidebar {
     border-top: 0;
     border-left: 0;
     border-right: 0;
+    margin-bottom: 0;
 }
 
 .scheduler-left-sidebar > .next-content-panel-wrapper > .next-content-panel-container > .next-content-panel > .next-content-panel-body {
@@ -26,6 +27,20 @@ body[data-theme='dark'] .scheduler-left-sidebar {
     border-right: 0;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
+}
+
+.scheduler-left-sidebar > .next-content-panel-wrapper:not(.is-closed) + .next-content-panel-wrapper > .next-content-panel-container > .next-content-panel > .next-content-panel-header {
+    border-top: 1px rgba(229, 231, 235, var(--tw-border-opacity, 1)) solid;
+}
+
+body[data-theme='dark']
+    .scheduler-left-sidebar
+    > .next-content-panel-wrapper:not(.is-closed)
+    + .next-content-panel-wrapper
+    > .next-content-panel-container
+    > .next-content-panel
+    > .next-content-panel-header {
+    border-top: 1px rgba(55, 65, 81, var(--tw-border-opacity, 1)) solid;
 }
 
 .fleetbase-console.console-fleet-ops-operations-orders-index-new,
@@ -284,6 +299,8 @@ body[data-theme='light'] .flow-activity-status-pill text {
     padding-left: 1.5rem;
     padding-top: 1rem;
     z-index: 99;
+    display: flex;
+    flex-direction: column;
 }
 
 .activity-flow-zoom-controls > .btn-wrapper:first-child > .btn {
@@ -744,7 +761,7 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-wrapper > .ord
 .customer-order-details-container,
 .customer-live-map-wrapper .customer-order-details-container {
     position: absolute;
-    z-index: 9999;
+    z-index: 1010;
     bottom: 0;
     top: 0;
     right: 0;
@@ -1026,6 +1043,13 @@ body[data-theme='light'] .flb--modal.flb--default-modal.finalize-service-quote-p
 
 .next-content-overlay-panel-body.fleetops-order-list-overlay {
     padding: 0 !important;
+}
+
+.order-list-overlay-panel-header {
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
+    height: 45px;
+    max-height: 45px;
 }
 
 .next-content-overlay-panel-body.fleetops-order-list-overlay .fleetops-order-list-overlay-inner-wrapper .fleetops-order-list-overlay-list .next-content-panel-header {

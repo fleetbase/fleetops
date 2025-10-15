@@ -1,0 +1,14 @@
+<Layout::Resource::Panel
+    @resource={{@model}}
+    @controller={{this}}
+    @headerTitle={{t "common.edit-resource-name" resourceName=@model.name}}
+    @actionButtons={{this.actionButtons}}
+    @saveTask={{this.save}}
+    @onPressCancel={{this.cancel}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+    @headerLeftClass="w-1/2"
+    @titleWrapperClass="w-1/2"
+>
+    <WorkOrder::Form @resource={{@model}} @controller={{this}} />
+    <Spacer @height="200px" />
+</Layout::Resource::Panel>

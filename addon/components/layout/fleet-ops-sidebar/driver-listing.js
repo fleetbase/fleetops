@@ -2,18 +2,89 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 
 export default class LayoutFleetOpsSidebarDriverListingComponent extends Component {
+    @service driverActions;
+    @service leafletMapManager;
     @service store;
     @service universe;
-    @service contextPanel;
-    @service driverActions;
     @service hostRouter;
     @service abilities;
     @service notifications;
+    @service intl;
     @tracked drivers = [];
+    @tracked displayPanelDropdown = true;
+
+    get panelDropdownButtonActions() {
+        return [
+            {
+                label: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.driver') }),
+                disabled: this.abilities.cannot('fleet-ops create driver'),
+                onClick: () => {
+                    this.driverActions.panel.create();
+                },
+            },
+        ];
+    }
+
+    get dropdownButtonActions() {
+        return [
+            {
+                label: this.intl.t('common.view-resource-details', { resource: this.intl.t('resource.driver') }),
+                disabled: this.abilities.cannot('fleet-ops view driver'),
+                onClick: (driver) => {
+                    this.driverActions.panel.view(driver);
+                },
+            },
+            {
+                label: this.intl.t('common.edit-resource-details', { resource: this.intl.t('resource.driver') }),
+                disabled: this.abilities.cannot('fleet-ops update driver'),
+                onClick: (driver) => {
+                    this.driverActions.panel.edit(driver, { useDefaultSaveTask: true });
+                },
+            },
+            {
+                separator: true,
+            },
+            {
+                label: this.intl.t('driver.actions.assign-order'),
+                disabled: this.abilities.cannot('fleet-ops assign-order-for driver'),
+                onClick: (driver) => {
+                    this.driverActions.assignOrder(driver);
+                },
+            },
+            {
+                label: this.intl.t('driver.actions.assign-vehicle'),
+                disabled: this.abilities.cannot('fleet-ops assign-vehicle-for driver'),
+                onClick: (driver) => {
+                    this.driverActions.assignVehicle(driver);
+                },
+            },
+            {
+                label: this.intl.t('driver.actions.locate-driver'),
+                disabled: this.abilities.cannot('fleet-ops view driver'),
+                onClick: (driver) => {
+                    // If currently on the operations dashboard focus driver on the map
+                    if (typeof this.hostRouter.currentRouteName === 'string' && this.hostRouter.currentRouteName.startsWith('console.fleet-ops.operations.orders')) {
+                        return this.onDriverClicked(driver);
+                    }
+
+                    this.driverActions.locate(driver);
+                },
+            },
+            {
+                separator: true,
+            },
+            {
+                label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.driver') }),
+                disabled: this.abilities.cannot('fleet-ops delete driver'),
+                onClick: (driver) => {
+                    this.driverActions.delete(driver);
+                },
+            },
+        ];
+    }
 
     constructor() {
         super(...arguments);
@@ -22,74 +93,6 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
             this.fetchDrivers.perform();
         });
     }
-
-    displayPanelDropdown = true;
-    panelDropdownButtonActions = [
-        {
-            label: 'Create new driver...',
-            disabled: this.abilities.cannot('fleet-ops create driver'),
-            onClick: () => {
-                const driver = this.store.createRecord('driver');
-                this.contextPanel.focus(driver, 'editing');
-            },
-        },
-    ];
-
-    dropdownButtonActions = [
-        {
-            label: 'View driver details...',
-            disabled: this.abilities.cannot('fleet-ops view driver'),
-            onClick: (driver) => {
-                this.contextPanel.focus(driver);
-            },
-        },
-        {
-            label: 'Edit driver details...',
-            disabled: this.abilities.cannot('fleet-ops update driver'),
-            onClick: (driver) => {
-                this.contextPanel.focus(driver, 'editing');
-            },
-        },
-        {
-            separator: true,
-        },
-        {
-            label: 'Assign order to driver...',
-            disabled: this.abilities.cannot('fleet-ops assign-order-for driver'),
-            onClick: (driver) => {
-                this.driverActions.assignOrder(driver);
-            },
-        },
-        {
-            label: 'Assign vehicle to driver...',
-            disabled: this.abilities.cannot('fleet-ops assign-vehicle-for driver'),
-            onClick: (driver) => {
-                this.driverActions.assignVehicle(driver);
-            },
-        },
-        {
-            label: 'Locate driver on map...',
-            disabled: this.abilities.cannot('fleet-ops view driver'),
-            onClick: (driver) => {
-                // If currently on the operations dashboard focus driver on the map
-                if (typeof this.hostRouter.currentRouteName === 'string' && this.hostRouter.currentRouteName.startsWith('console.fleet-ops.operations.orders')) {
-                    return this.onDriverClicked(driver);
-                }
-
-                this.driverActions.locate(driver);
-            },
-        },
-        {
-            separator: true,
-        },
-        {
-            label: 'Delete driver...',
-            disabled: this.abilities.cannot('fleet-ops delete driver'),
-            onClick: (driver) => {
-                this.driverActions.delete(driver);
-            },
-        },
-    ];
 
     @action calculateDropdownPosition(trigger, content) {
         let { top, left, width, height } = trigger.getBoundingClientRect();
@@ -124,40 +127,33 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
         }
     }
 
-    @action onDriverClicked(driver) {
-        // Transition to dashboard/map display
-        return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } }).then(() => {
-            // Focus vehicle on live map
+    /* eslint-disable no-empty */
+    @action async onDriverClicked(driver) {
+        try {
+            await this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } });
+        } catch {}
+
+        if (this.leafletMapManager._livemap?.isReady()) {
             this.focusDriverOnMap(driver);
-
-            // Fire callback
-            if (typeof this.args.onFocusDriver === 'function') {
-                this.args.onFocusDriver(driver);
-            }
-        });
-    }
-
-    focusDriverOnMap(driver) {
-        const liveMap = this.universe.get('component:fleet-ops:live-map');
-
-        if (liveMap) {
-            if (liveMap.contextPanel) {
-                liveMap.contextPanel.clear();
-            }
-
-            liveMap.showAll();
-            liveMap.focusLayerByRecord(driver, 16, {
-                onAfterFocusWithRecord: function () {
-                    later(
-                        this,
-                        () => {
-                            liveMap.onDriverClicked(driver);
-                        },
-                        1200
-                    );
-                },
+        } else {
+            this.universe.one('fleet-ops.live-map.on-loaded', () => {
+                this.focusDriverOnMap(driver);
             });
         }
+
+        if (typeof this.args.onFocusDriver === 'function') {
+            this.args.onFocusDriver(driver);
+        }
+    }
+
+    @action async focusDriverOnMap(driver) {
+        await this.leafletMapManager.ensureInteractive({ timeoutMs: 8000 });
+        this.leafletMapManager.flyToRecordLayer(driver, 16, {
+            paddingBottomRight: [300, 200],
+            moveend: () => {
+                this.driverActions.panel.view(driver, { closeOnTransition: true });
+            },
+        });
     }
 
     @task *fetchDrivers() {

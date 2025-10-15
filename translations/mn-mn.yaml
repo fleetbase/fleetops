@@ -1,0 +1,1768 @@
+fleet-ops:
+  extension-name: Fleet-Ops
+common:
+  proof-of-delivery: Хүргэлтийн баталгаа
+  ad-hoc: Тусгай
+  bulk-dispatch: Бөөнөөр илгээх
+  dispatch-orders: Илгээх захиалгууд
+  dispatch-order: Илгээх захиалга
+  assign-driver: Жолоочийг томилох
+  no-driver-assigned: Жолооч томилогдоогүй
+  details: Дэлгэрэнгүй
+  name: Нэр
+  title: Гарчиг
+  email: И-мэйл
+  phone: Утас
+  internal-id: Дотоод ID
+  type: Төрөл
+  address: Хаяг
+  create-order: Захиалга үүсгэх
+  coordinates: Координатууд
+  city: Хот
+  country: Улс
+  status: Төлөв
+  upload-new-photo: Шинэ зураг оруулах
+  resource-actions: '{resource} Үйлдлүүд'
+  resource-location: '{resource} Байршил'
+  search-countries: Улсуудыг хайх
+  select-resource-filter-by: '{resource} -г шүүлтүүрээр сонгох'
+  table-view: Хүснэгтийн харагдац
+  grid-view: Сүлжээний харагдац
+  livemap: Амьд газрын зураг
+  tracking: Хянах
+  activity: Үйл ажиллагаа
+  eta: Хүрэх цаг
+  position: Байрлал
+  pos: POS
+  edit-address: Хаягийг засах
+  new-address: Шинэ хаяг
+  select-address: Хаяг сонгох
+menu:
+  operations: Үйл ажиллагаа
+  dashboard: Хяналтын самбар
+  orders: Захиалгууд
+  service-rates: Үйлчилгээний тариф
+  scheduler: Хуваарьлагч
+  order-config: Захиалгын тохиргоо
+  resources: Нөөцүүд
+  drivers: Жолооч нар
+  vehicles: Тээврийн хэрэгслүүд
+  fleets: Флийтүүд
+  vendors: Нийлүүлэгчид
+  contacts: Холбоо барих
+  places: Газрууд
+  fuel-reports: Түлшний тайлан
+  issues: Асуудлууд
+  maintenance: Үйлчилгээ
+  work-orders: Ажлын захиалгууд
+  equipment: Тоног төхөөрөмж
+  parts: Сэлбэгүүд
+  connectivity: Холболт
+  telematics: Телематикийн систем
+  devices: Төхөөрөмжүүд
+  sensors: Мэдрэгчүүд
+  events: Үйл явдлууд
+  tracking: Хянах
+  analytics: Аналитик
+  reports: Тайлангууд
+  settings: Тохиргоо
+  navigator-app: Навигатор апп
+  payments: Төлбөрүүд
+  notifications: Мэдэгдэлүүд
+  routing: Замнал
+  custom-fields: Захиалгат талбарууд
+  order-board: Захиалгын самбар
+resource:
+  asset: Хөрөнгө
+  assets: Хөрөнгүүд
+  activity: Үйл ажиллагаа
+  activities: Үйл ажиллагаанууд
+  contact: Холбоо барих
+  contacts: Холбоо барихууд
+  customer-contact: Хэрэглэгчийн холбоо барих
+  customer-contacts: Хэрэглэгчийн холбоо барихууд
+  customer-vendor: Хэрэглэгчийн нийлүүлэгч
+  customer-vendors: Хэрэглэгчийн нийлүүлэгчид
+  customer: Хэрэглэгч
+  customers: Хэрэглэгчид
+  custom-entity: Захиалгат объект
+  custom-entities: Захиалгат объектууд
+  device-event: Төхөөрөмжийн үйл явдал
+  device-events: Төхөөрөмжийн үйл явдлууд
+  device: Төхөөрөмж
+  devices: Төхөөрөмжүүд
+  driver: Жолооч
+  drivers: Жолооч нар
+  entity: Объект
+  entities: Объектууд
+  equipment: Тоног төхөөрөмж
+  equipments: Тоног төхөөрөмжүүд
+  facilitator-contact: Туслагчийн холбоо барих
+  facilitator-contacts: Туслагчийн холбоо барихууд
+  facilitator-customer: Туслагчийн хэрэглэгч
+  facilitator-customers: Туслагчийн хэрэглэгчид
+  facilitator-integrated-vendor: Туслагчийн нэгдсэн нийлүүлэгч
+  facilitator-integrated-vendors: Туслах нэгдсэн нийлүүлэгчид
+  facilitator-vendor: Туслах нийлүүлэгч
+  facilitator-vendors: Туслах нийлүүлэгчид
+  facilitator: Туслах
+  facilitators: Туслахууд
+  fleet-driver: Флотын жолооч
+  fleet-drivers: Флотын жолооч нар
+  fleet: Флот
+  fleets: Флотууд
+  fuel-report: Түлшний тайлан
+  fuel-reports: Түлшний тайлангууд
+  integrated-vendor: Нэгдсэн нийлүүлэгч
+  integrated-vendors: Нэгдсэн нийлүүлэгчид
+  issue: Асуудал
+  issues: Асуудлууд
+  maintenance: Үйлчилгээ
+  maintenances: Үйлчилгээний ажлууд
+  order-config: Захиалгын тохиргоо
+  order-configs: Захиалгын тохиргоонууд
+  order: Захиалга
+  orders: Захиалгууд
+  part: Хэсэг
+  parts: Хэсгүүд
+  payload: Ачаа
+  payloads: Ачаанууд
+  place: Газрын байрлал
+  places: Газрууд
+  purchase-rate: Худалдан авах үнэ
+  purchase-rates: Худалдан авах үнүүд
+  route: Зам
+  routes: Замууд
+  sensor: Мэдрэгч
+  sensors: Мэдрэгчүүд
+  service-area: Үйлчилгээний бүс
+  service-areas: Үйлчилгээний бүсүүд
+  service-quote-item: Үйлчилгээний үнийн саналын зүйл
+  service-quote-items: Үйлчилгээний үнийн саналын зүйлүүд
+  service-quote: Үйлчилгээний үнийн санал
+  service-quotes: Үйлчилгээний үнийн саналууд
+  service-rate-fee: Үйлчилгээний тарифын хураамж
+  service-rate-fees: Үйлчилгээний тарифын хураамжууд
+  service-rate-parcel-fee: Үйлчилгээний тарифын багцын хураамж
+  service-rate-parcel-fees: Үйлчилгээний тарифын багцын хураамжууд
+  service-rate: Үйлчилгээний тариф
+  service-rates: Үйлчилгээний тарифууд
+  telematic: Телематикийн
+  telematics: Телематикийн системүүд
+  tracking-number: Хянах дугаар
+  tracking-numbers: Хянах дугаарууд
+  tracking-status: Хянах байдал
+  tracking-statuses: Хянах Байдал
+  vehicle-device: Тээврийн хэрэгслийн төхөөрөмж
+  vehicle-devices: Тээврийн хэрэгслийн төхөөрөмжүүд
+  vehicle: Тээврийн хэрэгсэл
+  vehicles: Тээврийн хэрэгслүүд
+  vendor: Нийлүүлэгч
+  vendors: Нийлүүлэгчид
+  warranty: Баталгаа
+  warranties: Баталгаанууд
+  waypoint: Замын цэг
+  waypoints: Замын цэгүүд
+  work-order: Ажлын захиалга
+  work-orders: Ажлын захиалгууд
+  zone: Бүс
+  zones: Бүсүүд
+order-status:
+  created: Үүсгэсэн
+  ready: Бэлэн
+  dispatched: Илгээгдсэн
+  started: Эхэлсэн
+  completed: Дууссан
+  canceled: Цуцлагдсан
+column:
+  address: Хаяг
+  country: Улс
+  created-at: Үүсгэсэн огноо
+  id: ID
+  internal-id: Дотоод ID
+  name: Нэр
+  phone: Утас
+  status: Байдал
+  type: Төрөл
+  updated-at: Шинэчлэгдсэн огноо
+  vehicle: Тээврийн хэрэгсэл
+  vendor: Нийлүүлэгч
+  created: Үүсгэсэн
+  email: И-мэйл
+  title: Гарчиг
+  updated: Шинэчлэгдсэн
+  fleet: Флот
+  license: Лиценз
+  active-manpower: Идэвхтэй хүний нөөц
+  manpower: Хүний нөөц
+  parent-fleet: Эцэг флот
+  service-area: Үйлчилгээний бүс
+  task: Даалгавар
+  zone: Бүс
+  driver: Жолооч
+  edit-fuel: Түлш засах
+  odometer: Одоометр
+  reporter: Тайлагнасан хүн
+  view: Харах
+  volume: Хэмжээ
+  assignee: Хариуцах хүн
+  category: Ангилал
+  priority: Чухал байдал
+  city: Хот
+  neighborhood: Хөршийн бүс
+  postal-code: Шуудангийн код
+  state: Аймаг/Нутгийн нэр
+  make: Үйлдвэрлэгч
+  model: Загвар
+  plate-number: Торгон дугаар
+  year: Он
+  website-url: Вэб хаяг
+  created-by: Үүсгэсэн хүн
+  customer: Хэрэглэгч
+  driver-assigned: Жолооч томилсон
+  dropoff: Хүргэлт
+  facilitator: Туслах хүн
+  items: Бараа
+  payload: Ачаа
+  pickup: Хүлээн авах
+  scheduled-at: Төлөвлөсөн огноо
+  tracking: Хяналт
+  transaction: Гүйлгээ
+  updated-by: Шинэчилсэн хүн
+  vehicle-assigned: Тээврийн хэрэгсэл томилсон
+  service: Үйлчилгээ
+  location: Байршил
+  coordinates: Зай координат
+  current-job: Одоогийн ажил
+  last-seen: Сүүлд харагдсан
+  place: Газрын нэр
+map:
+  visibility-controls:
+    title: Харагдах байдлын удирдлага
+    hide-places: Бүх газрыг нуух
+    show-places: Бүх газрыг харуулах
+    driver-controls: Жолоочийн удирдлага
+    driver-visibility-controls: Жолоочийн харагдах байдлын удирдлага
+    show-drivers: Бүх жолоочийг харуулах
+    hide-drivers: Бүх жолоочийг нуух
+    show-online-drivers: Зөвхөн онлайн жолоочийг харуулах
+    show-offline-drivers: Зөвхөн оффлайн жолоочийг харуулах
+    vehicle-controls: Тээврийн хэрэгслийн удирдлага
+    vehicle-visibility-controls: Тээврийн хэрэгслийн харагдах байдлын удирдлага
+    hide-vehicles: Бүх тээврийн хэрэгслийг нуух
+    show-vehicles: Бүх тээврийн хэрэгслийг харуулах
+    show-online-vehicles: Зөвхөн онлайн тээврийн хэрэгслийг харуулах
+    show-offline-vehicles: Зөвхөн оффлайн тээврийн хэрэгслийг харуулах
+  zones-panel:
+    title: Үйлчилгээний бүсүүд
+    create-service: Шинэ үйлчилгээний бүс үүсгэх
+    show: Бүх үйлчилгээний бүсийг харуулах
+    hide: Бүх Үйлчилгээний Талбайг Нуух
+    action: Үйлдлүүд
+    focus: Анхаарлаа Төвлүүлэх
+    focus-resource: 'Анхаарлаа Төвлүүлэх: {resource}'
+    blur: Үйлчилгээний Талбайг Нуух
+    blur-resource: 'Нуух: {resource}'
+    create-zone: Дотор Нэгж Үүсгэх
+    create-zone-inside: 'Нэгж Үүсгэх: {serviceAreaName}'
+    edit-resource-boundaries: '{resource} Хүрээг Засах'
+    edit-boundaries: 'Хүрээг Засах: {resource}'
+  toolbar:
+    create: Захиалга Үүсгэх
+    view-order: Захиалгуудыг Үзэх
+    view-service-area: Үйлчилгээний Талбайг Үзэх
+    visibility: Харагдах Байдлын Тохиргоо
+    scope: Хүрээ
+activity:
+  form:
+    code: Код
+    code-help-text: Энэ үйл ажиллагаанд онцгой танигч оруулна уу.
+    completes-order: Захиалгыг Дуусгана
+    details: Дэлгэрэнгүй
+    details-help-text: Эцсийн хэрэглэгчийн ойлголтод зориулан үйл ажиллагааны дэлгэрэнгүй
+      тайлбарыг өгнө үү.
+    key: Түлхүүр
+    key-help-text: '"Программын шийдвэр гаргалтад ашиглагдах түлхүүр оруулна уу. Энэ
+      түлхүүр нь ижил танигчтай нэг буюу хэд хэдэн үйл ажиллагааг төлөөлж болно. Анхаар:
+      Энэ түлхүүр нь онцгой байх шаардлагагүй."'
+    pod-method-placeholder: Хүргэлтийн Баталгааны Аргыг Сонгоно уу
+    require-pod: Хүргэлтийн Баталгаа Шаардлагатай
+    require-pod-help-text: Энэ үйл ажиллагаанд захиалгад хэрэглэхийн өмнө баталгаа
+      үүсгэх шаардлагатай.
+    select-pod-method: Хүргэлтийн Баталгааны Арга
+    status: Төлөв
+    status-help-text: Энэ үйл ажиллагаа идэвхжих үед эцсийн хэрэглэгчид харуулах төлөвийг
+      заана уу.
+    logic-builder:
+      activity-logic: Үйл ажиллагааны Логик
+      activity-logic-help-text: Үйл ажиллагаа хэзээ ажиллахыг тодорхойлох өөрийн логик
+        нөхцлүүдийг тодорхойлно уу. Энэ функц нь тодорхой шалгуурын дагуу урсгалыг
+        тохируулж, үйл ажиллагаа зөвхөн урьдчилан тогтоосон нөхцлүүд биелсэн үед идэвхжихийг
+        баталгаажуулдаг.
+      activity-logic-add-logic-help-text: Үйл ажиллагаа хэзээ идэвхжихийг тодорхойлох
+        шинэ нөхцлийн багцыг үүсгэнэ үү. Шинэ логик дүрэм боловсруулахыг эхлүүлэхийн
+        тулд үүнийг дарна уу.
+      activity-logic-select-logic-type-help-text: Энэ нөхцөл дагах логикийн төрлийг
+        сонгоно уу. Шууд нөхцөлд 'If', нийлмэл нөхцөлд 'And'/'Or', эсвэл нөхцөлийг
+        үгүйсгэхэд 'Not' сонгоно уу.
+      activity-logic-add-condition-help-text: Энэ логикийн багцад хангах ёстой тодорхой
+        шаардлагыг нэмнэ үү. Үүнийг ашиглан үйл ажиллагааны боломжийг хянах нэмэлт
+        шалгуурыг зааж өгнө.
+      field: Талбар
+      value: Утга
+      add-logic: Логик Нэмэх
+      types:
+        and: 'Логикийн AND: Бүх нөхцөл үнэн бол үнэн'
+        or: 'Логикийн OR: Ядаж нэг нөхцөл үнэн бол үнэн'
+        not: 'Логикийн NOT: Нөхцлийн үнэн утгыг эсрэг болгоно'
+        if: 'Нөхцөлт логик: Нөхцөл үнэн бол дараах үйлдлийг гүйцэтгэнэ'
+      operators:
+        equal: Хоёр утга тэнцүү эсэхийг шалгана
+        not-equal: Хоёр утга тэнцүү биш эсэхийг шалгана
+        greater-than: Нэг утга нөгөө утгаас их эсэхийг шалгана
+        less-than: Нэг утга нөгөө утгаас бага эсэхийг шалгана
+        greater-than-or-equal: Нэг утга нөгөө утгаас их эсвэл тэнцүү эсэхийг шалгана
+        less-than-or-equal: Нэг утга нөгөө утгаас бага эсвэл тэнцүү эсэхийг шалгана
+        exists: Талбар эсвэл утга байгаа эсэхийг шалгана
+        has: Обьект тодорхой шинж чанартай эсвэл цуглуулга тодорхой элементийг агуулж
+          байгаа эсэхийг шалгана
+        contains: Мөрөнд өөр мөр агуулагдаж байгаа эсвэл массив тодорхой элементийг
+          агуулж байгаа эсэхийг шалгана
+        begins-with: Мөр тодорхой доод мөрөөр эхэлж байгаа эсэхийг шалгана
+        ends-with: Мөр тодорхой хэсгээр төгсдөг эсэхийг шалгана
+        in: Утга тодорхой багц эсвэл хүрээнд байгаа эсэхийг шалгана
+        not-in: Утга тодорхой багц эсвэл хүрээнд байхгүй эсэхийг шалгана
+        and: Логик AND, хоёр талын аль аль нь үнэн бол үнэн
+        or: Логик OR, дор хаяж нэг тал үнэн бол үнэн
+        not: Логик NOT, үнэн утгыг эсрэгээр нь хувиргана
+    event-selector:
+      activity-events: Үйл ажиллагааны үйл явдлууд
+      activity-events-select-to-fire: Энэ үйл ажиллагаа болох үед идэвхжүүлэх үйл
+        явдлуудыг сонгоно уу.
+      activity-events-select-events-info: Энэ үйл ажиллагаанд хариу үйлдэл үзүүлэх
+        тодорхой үйл явдлыг сонгоно уу.
+      select-event-to-add: Нэмэх үйл явдлыг сонгоно уу...
+      events:
+        order:
+          dispatched: Захиалга амжилттай илгээгдсэн үед идэвхждэг.
+          failed: Захиалга алдаа эсвэл онцгой байдлаас болж амжилтгүй болсон үед идэвхждэг.
+          canceled: Захиалгыг хэрэглэгч, жолооч эсвэл системийн процесс цуцалсан үед
+            идэвхждэг.
+          completed: Захиалгыг жолооч эсвэл системийн процесс дуусгасан үед идэвхждэг.
+contact:
+  fields:
+    contact-details: Холбоо барих дэлгэрэнгүй
+    upload-new-photo: Шинэ зураг байршуулна уу
+customer:
+  fields:
+    customer-details: Харилцагчийн дэлгэрэнгүй
+    select-address: Хаягийг сонгоно уу
+    new-address: Шинэ хаяг
+    select-user: Хэрэглэгчийг сонгоно уу
+    upload-new-photo: Шинэ зураг байршуулна уу
+    user-account: Хэрэглэгчийн данс
+    user-account-help-text: Тус бүр харилцагчийн профайл тодорхой хэрэглэгчийн данстай
+      холбогдсон байх шаардлагатай. Энэ холбоо нь баталгаажуулалтын процессыг зохицуулахад
+      чухал бөгөөд харилцагч бүр аюулгүйгээр өөрийн профайл болон бусад үйлчилгээг
+      удирдах боломжийг олгоно.
+custom-entity:
+  fields:
+    description: Тодорхойлолт
+    details: Дэлгэрэнгүй
+    entity-image: Объектын зураг
+    height: Өндөр
+    height-text: Өндрийн текст
+    length: Урт
+    length-text: Уртын текст
+    measurements: Хэмжээсүүд
+    name: Нэр
+    type: Төрөл
+    weight: Жин
+    weight-text: Жингийн текст
+    width: Өргөн
+    width-text: Өргөний текст
+driver:
+  fields:
+    avatar: Профайл зураг
+    driver-details: Жолоочийн дэлгэрэнгүй
+    select-user: Хэрэглэгчийг сонгоно уу
+    select-vehicle: Тээврийн хэрэгслийг сонгоно уу
+    upload-new-photo: Шинэ зураг байршуулна уу
+    user-account: Хэрэглэгчийн данс
+    user-account-help-text: Тус бүр жолоочийн профайл тодорхой хэрэглэгчийн данстай
+      холбогдсон байх шаардлагатай. Энэ холбоо нь баталгаажуулалтын процессыг зохицуулахад
+      чухал бөгөөд жолооч бүр аюулгүйгээр өөрийн профайл удирдах боломжийг олгоно.
+    vendor: Нийлүүлэгч
+    select-vendor: Нийлүүлэгчийг сонгоно уу
+    driver-license: Жолоочийн үнэмлэх
+    no-vehicle-assigned: Тээврийн хэрэгсэл оноогдоогүй
+  actions:
+    assign-order: Захиалгыг жолоочид оноох
+    assign-vehicle: Тээврийн хэрэгслийг жолоочид оноох
+    locate-driver: Жолоочийг газрын зураг дээр олох
+device:
+  fields:
+    title: Төхөөрөмжийн дэлгэрэнгүй
+    device-name: Төхөөрөмжийн нэр
+    device-name-placeholder: Төхөөрөмжийн нэр
+    device-type: Төхөөрөмжийн төрөл
+    device-type-placeholder: Төхөөрөмжийн төрлийг сонгоно уу
+    device-id: Төхөөрөмжийн ID
+    device-id-placeholder: Төхөөрөмжийн ID
+    device-provider: Төхөөрөмж нийлүүлэгч
+    device-provider-placeholder: Төхөөрөмж нийлүүлэгч
+    device-model: Төхөөрөмжийн загвар
+    device-model-placeholder: Төхөөрөмжийн загвар
+    manufacturer: Үйлдвэрлэгч
+    manufacturer-placeholder: Үйлдвэрлэгч
+    serial-number: Дарааллын дугаар
+    serial-number-placeholder: Дарааллын дугаар
+    device-location: Төхөөрөмжийн байршил
+    device-location-placeholder: Төхөөрөмжийн байршил
+    installation-date: Суурилуулсан огноо
+    installation-date-placeholder: Суурилуулсан огноог сонгоно уу
+    last-maintenance-date: Сүүлд засварласан огноо
+    last-maintenance-date-placeholder: Сүүлд засварласан огноог сонгоно уу
+    data-frequency: Өгөгдлийн давтамж
+    data-frequency-placeholder: Өгөгдлийн давтамж
+    status: Төлөв
+    status-placeholder: Төлөвийг сонгоно уу
+    telematic: Телематикийн
+    telematic-placeholder: Телематикийн сонгоно уу
+    warranty: Баталгаа
+    warranty-placeholder: Баталгааг сонгоно уу
+    notes: Тэмдэглэл
+    notes-placeholder: Тэмдэглэл
+entity:
+  fields:
+    declare: Мэдэгдэх
+    declare-text: Мэдэгдэх текст
+    description: Тодорхойлолт
+    description-text: Тодорхойлолтын текст
+    height: Өндөр
+    height-text: Өндрийн текст
+    id-text: ID текст
+    length: Урт
+    length-text: Уртын текст
+    measurement-title: Хэмжих гарчиг
+    name-text: Нэрийн текст
+    price: Үнэ
+    price-text: Үнийн текст
+    price-title: Үнийн гарчиг
+    sale-price: Хямдралтай үнэ
+    sale-price-text: Хямдралтай үнийн текст
+    sku: SKU
+    sku-text: SKU текст
+    weight: Жин
+    weight-text: Жингийн Текст
+    width: Өргөн
+    width-text: Өргөний Текст
+fleet:
+  fields:
+    fleet-details: Флотын Мэдээлэл
+    fleet-name: Флотын Нэр
+    parent-fleet: Эцэг Флот
+    select-parent-fleet: Флотыг хуваарилах эцэг флотыг сонгоно уу
+    select-service: Флотыг хуваарилах үйлчилгээний бүсийг сонгоно уу
+    select-status: Статусыг сонгоно уу
+    select-status-fleet: Флотын статусыг сонгоно уу.
+    select-vendor: Флотыг хуваарилах нийлүүлэгчийг сонгоно уу
+    select-zone: Флотыг хуваарилах бүсийг сонгоно уу
+    service-title: Үйлчилгээний Бүсэд Хуваарилах
+    task-mission-title: Даалгавар/ Эрхэм зорилго
+    task-text: Хэрэв тохиромжтой бол энэ флотыг голчлон гүйцэтгэх даалгавар эсвэл
+      эрхэм зорилгыг тайлбарлана уу.
+    zone-title: Бүсэд Хуваарилах
+    active-manpower: Идэвхтэй Хүний Нөөц
+    task: Даалгавар
+  driver-listing:
+    search-driver: Флот дахь жолооч нарыг хайх
+    add-driver: Флотод жолооч нэмэх
+    loading-message: Флотын жолооч нарыг ачаалж байна...
+  vehicle-listing:
+    search-vehicle: Флот дахь тээврийн хэрэгслийг хайх
+    add-vehicle: Флотод тээврийн хэрэгсэл нэмэх
+    loading-message: Флотын тээврийн хэрэгслийг ачаалж байна...
+  actions:
+    assign-driver: Жолоочийг Флотод Хуваарилах
+fuel-report:
+  fields:
+    details: Түлшний Тайлангийн Мэдээлэл
+    reporter: Тайлан гаргагч
+    select-reporter: Тайлан гаргагчийг сонгоно уу
+    fuel-cost: Түлшний Зардал
+    odometer: Одоометр
+    select-volume-help-text: Тайлагнах түлшний хэмжих нэгж болон хэмжээг сонгоно уу.
+    fuel-volume: Түлш/ Хэмжээ
+issue:
+  fields:
+    title: Гарчиг
+    add-tags: Таг нэмэх
+    assigned-to: Хуваарилагдсан Хүн
+    category: Асуудлын Ангилал
+    issue-report: Асуудлын Тайлан
+    priority: Асуудлын Эрэмбэ
+    report: Асуудлын Тайлан
+    reported-by: Тайлагнасан Хүн
+    select-assign: Хуваарилагдсан Хүнээ сонгоно уу
+    select-category: Асуудлын ангиллыг сонгоно уу
+    select-priority: Асуудлын эрэмбийг сонгоно уу
+    select-reporter: Тайлан гаргагчийг сонгоно уу
+    select-status: Асуудлын статустай сонгоно уу
+    select-type: Асуудлын төрлийг сонгоно уу
+    tags: Асуудлын Тагууд
+    type: Асуудлын Төрөл
+order:
+  fields:
+    ad-hoc: Тусгай
+    ad-hoc-help-text: Ad-Hoc-г асаах нь захиалгын хүрээний ойролцоо жолооч нарыг ухаалаг
+      байдлаар мэдэгдэх боломжийг олгож, анхны боломжит жолооч захиалгыг хүлээн авах
+      боломжтой болно. Энэ нь бодит цагийн захиалгуудыг гараар жолооч томилохоос өөр
+      сонголт юм.
+    add-entity: Байгууллага нэмэх
+    add-item-button: Бараа нэмэх
+    add-item-order: Захиалгад бараа нэмэх
+    add-waypoint: Зогсоол нэмэх
+    add-waypoint-help-text: '`Зогсоол нэмэх` товчийг ашиглан энэ захиалгад илүү олон
+      зогсоол нэмнэ үү. Fleetbase-ийн маршрутын хөдөлгүүр зогсоол бүр нэмэгдэх эсвэл
+      устгагдах үед маршрутыг автоматаар оновчтой болгоно.'
+    adhoc-ping: Adhoc мэдэгдэх зай
+    adhoc-ping-help-text: Энэ тохиргоо нь энэ захиалгын мэдэгдэх adhoc зайг тодорхойлно,
+      тохиргоо хийгдээгүй бол анхдагч тохиргоонд шилжинэ.
+    adhoc-ping-message: Зай нь метрээр байх ёстой
+    apply-service-rate: Үйлчилгээний хөлсийг хэрэглэх
+    assign-driver: Жолооч томилох
+    assign-driver-help-text: Энэ захиалгыг илгээх жолоочийг томилно уу.
+    assign-driver-placeholder: Жолооч сонгох
+    assign-vehicle: Тээврийн хэрэгсэл томилох
+    assign-vehicle-help-text: Энэ захиалгыг гүйцэтгэх тээврийн хэрэгслийг томилно
+      уу.
+    assign-vehicle-placeholder: Тээврийн хэрэгсэл сонгох
+    breakdown: Гэмтэл
+    customer: Хэрэглэгч
+    customer-help-text: Заавал биш боловч энэ захиалгын хэрэглэгчийг томилж болно.
+      Хэрэв шинэ хэрэглэгч бол дээрх 'Шинэ хэрэглэгч' товчийг ашиглана уу.
+    customer-placeholder: Хэрэглэгч сонгох
+    dispatch: Илгээх
+    dispatch-help-text: Илгээхийг асаах нь захиалгыг үүссэний дараа шууд илгээх болно.
+    documents-panel-title: Баримт бичиг ба Файлууд
+    dropoff: Хүргэх
+    edit-address: Хаяг засах
+    edit-item: Бараа засах
+    facilitator: Туслагч
+    facilitator-help-text: Заавал биш боловч энэ захиалгын туслагчийг томилж болно,
+      туслагч нь 3-р талын гэрээт гүйцэтгэгч эсвэл энэ захиалгын тээвэрлэлтэд туслах
+      үйлчилгээ байж болно.
+    facilitator-placeholder: Туслагч сонгох
+    info-text: Энэ захиалгад хэрэглэх бодит цагийн үйлчилгээний үнийн санал сонгоно
+      уу. Үнийн санал захиалгад хэрэгжсэнээр худалдан авсан хөлс болно. Гүйлгээ Fleetbase-ийн
+      бүртгэлд хянагдана.
+    internal-id: Дотоод ID
+    internal-id-help-text: Энэ талбарыг ашиглан захиалгын хувийн эсвэл дотоод танигчийг
+      зааж болно.
+    invalid-coordinates: Буруу координатууд!
+    items-drop: Бараа буух газар
+    loading-message: Үйлчилгээний үнийн саналуудыг ачааллаж байна...
+    notes-placeholder: Захиалгын тэмдэглэл энд оруулна уу....
+    notes-title: Тэмдэглэл
+    optimize-route: Маршрутыг оновчтой болгох
+    optimize-route-help-text: Fleetbase маршрутыг автоматаар оновчтой болгоно.
+    order-type: Захиалгын төрөл
+    order-type-help-text: Захиалгын төрлийг сонгох нь fleetbase-д ямар тохиргоог ашиглахыг
+      заана.
+    order-type-placeholder: Захиалгын төрөл сонгох
+    payload-entities: Ачаа / Байгууллагууд
+    pickup: Хүлээн авах
+    proof-delivery: Хүргэлтийн баталгаа
+    proof-delivery-help-text: Шаардлагатай хүргэлтийн баталгааны төрлийг сонгоно уу.
+      Энэ нь QR код уншилт эсвэл гарын үсгийн арга байж болно.
+    proof-delivery-placeholder: Хүргэлтийн баталгааны аргыг сонгох
+    refresh-button: Шинэчлэх
+    require-proof: Хүргэлтийн баталгаа шаардах
+    require-proof-help-text: Энэ тохиргоог асаах нь жолоочоос хүргэлтийн баталгааг
+      гүйцэтгэхийг шаардана.
+    return: Буцах
+    route: Зам
+    route-error: Замын оновчлол амжилтгүй боллоо, замын оруулгыг шалгаж дахин оролдоно
+      уу.
+    route-label: Олон буулгах газар
+    schedule: Хуваарь
+    schedule-help-text: Захиалга илгээгдэх огноо, цаг. Илгээх үед жолооч томилогдоогүй
+      бол илгээх үйлдэл амжилтгүй болно. Хэрэв захиалга Ad-Hoc бол тээвэрлэх ойролцоох
+      жолооч нарт мэдэгдэнэ.
+    select-destination: Очих газрыг сонгоно уу
+    select-dropoff: Буулгах газрыг сонгоно уу
+    select-pickup: Авах газрыг сонгоно уу
+    select-return: Буцах газрыг сонгоно уу
+    select-waypoint: Замын цэгийг сонгоно уу
+    service: Үйлчилгээ
+    select-service-rate: Үйлчилгээний хөлсийг сонгоно уу
+    service-help-text: Энэ захиалгад бодит цагийн үйлчилгээний үнийн санал үүсгэхийн
+      тулд тодорхойлсон үйлчилгээний хөлсийг сонгоно уу.
+    service-quotes-help-text: Үнийн санал авах үйлчилгээний хөлсийг сонгоно уу.
+    service-type: Үйлчилгээний төрөл
+    service-type-placeholder: Үйлчилгээний төрлийг сонгоно уу
+    sku: SKU
+    activity: Үйл ажиллагаа
+    comments-title: Сэтгэгдэл
+    date-dispatched: Илгээсэн огноо
+    date-scheduled: Төлөвлөсөн огноо
+    date-started: Эхэлсэн огноо
+    driver: Жолооч
+    driver-assigned: Жолооч томилогдсон
+    no-driver-assigned: Жолооч томилогдоогүй
+    get-label: Шошго авах
+    order-notes-updated: Захиалгын тэмдэглэл шинэчлэгдлээ.
+    payload: Ачаа
+    proof-of-delivery: Хүргэлтийн баталгаа
+    purchase-rate-panel-title: Худалдан авах хөлс
+    route-panel-title: Зам
+    save-order-note: Захиалгын тэмдэглэл хадгалах
+    tracking: Хянах
+    tracking-number: Хянах дугаар
+    vehicle-assigned: Тээврийн хэрэгсэл томилогдсон
+    view-activity: Үйл ажиллагааг харах
+    waypoint-actions: Замын цэгийн үйлдлүүд
+    documents-files: Баримт бичиг ба файлууд
+    order-metadata: Захиалгын мета өгөгдөл
+    order-label: Захиалгын шошго
+    waypoint-label: Замын цэгийн шошго
+    current-eta: Одоогийн тооцоолсон хүрэх цаг
+    ect: ECT
+    current-destination: Одоогийн очих газар
+  prompts:
+    update-details-success: '{orderId} дэлгэрэнгүй мэдээлэл шинэчлэгдлээ.'
+    route-error: Замын оновчлол амжилтгүй боллоо, замын оруулгыг шалгаж дахин оролдоно
+      уу.
+    route-update-success: '{orderId} замын дэлгэрэнгүй мэдээлэл шинэчлэгдлээ.'
+    unassign-driver-title: Та энэ захиалгаас жолооч ({driverName})-ыг томилохгүй болгохыг
+      хүсч байна уу?
+    unassign-driver-body: Жолоочийг томилохгүй болгоход жолооч энэ захиалгын дэлгэрэнгүй
+      мэдээлэлд хандах эрхгүй болно.
+    unassign-driver-success: Жолоочийг энэ захиалгаас хаслаа.
+    no-driver-assigned-error: Энэ захиалгад жолооч томилогдоогүй байна.
+    failed-to-load-order-label: Захиалгын шошгыг ачааллахад алдаа гарлаа.
+    failed-to-load-waypoint-label: Замын цэгийн шошгыг ачааллахад алдаа гарлаа.
+    unable-to-add-entity: Захиалгад шинэ объект нэмэх боломжгүй байна.
+    assign-driver-success: Жолооч ({driverName}) захиалга {orderId}-д томилогдлоо.
+    cancel-title: Та энэ захиалгыг цуцлахдаа итгэлтэй байна уу?
+    cancel-body: Энэ захиалгыг цуцалсны дараа захиалгын бүртгэл харагдах боловч үйл
+      ажиллагаа нэмэх боломжгүй болно.
+    cancel-success: Захиалга {orderId} цуцлагдлаа.
+    dispatch-title: Та энэ захиалгыг илгээхдээ итгэлтэй байна уу?
+    dispatch-body: Энэ захиалга илгээгдсэн даруйд томилогдсон жолоочид мэдэгдэнэ.
+    dispatch-success: Захиалга {orderId} илгээгдлээ.
+    order-bulk-search: Олон захиалгын хайлт хийхийн тулд таслалаар тусгаарласан захиалгын
+      дугаар эсвэл хяналтын дугаарыг оруулна уу
+  actions:
+    create-new-customer: Шинэ Үйлчлүүлэгч Үүсгэх
+    create-new-facilitator: Шинэ Туслагч Үүсгэх
+    create-new-place: Шинэ Байршил Үүсгэх
+    change-driver: Жолоочийг Солих
+    assign-driver: Жолоочийг Томилох
+    update-activity: Үйл ажиллагааг Шинэчлэх
+    reload-activity: Үйл ажиллагааг Дахин Ачааллах
+    view-activity-as-timeline: Цаг хугацааны шугамаар харах
+    view-activity-as-list: Жагсаалтаар харах
+    cancel-order: Захиалгыг Цуцлах
+    dispatch-order: Захиалгыг Илгээх
+    dispatch-orders: Захиалгуудыг Илгээх
+    assign-driver-to-orders: Жолоочийг Захиалгууд руу Томилох
+    edit-order-details: Захиалгын Дэлгэрэнгүйг Засах
+    edit-order-route: Захиалгын Замыг Засах
+    edit-order-metadata: Захиалгын Мета өгөгдлийг Засах
+    update-order-activity: Захиалгын Үйл ажиллагааг Шинэчлэх
+    submit-new-activity: Шинэ Үйл ажиллагаа Илгээх
+    add-entity: Объект Нэмэх
+    unassign-driver-name: 'Жолоочийг Хасах: {driverName}'
+  schedule-card:
+    destination: Очих газар
+    unassign-driver: Жолоочийг Хасах уу?
+    unassign-text: Та захиалга {orderId}-ийн жолоочийг хасах гэж байна. Жолоочийг
+      хасахыг баталгаажуулахын тулд үргэлжлүүлнэ үү.
+    unassign-button: Үргэлжлүүлж жолоочийг хасах
+    assign-driver: Шинэ Жолооч Томилох уу?
+    assign-text: Та захиалга {orderId}-д шинэ жолооч ({driverName}) томилох гэж байна.
+      Жолоочийг баталгаажуулахын тулд үргэлжлүүлнэ үү.
+    assign-button: Үргэлжлүүлж жолоочийг томилох
+    date: Төлөвлөсөн огноо
+    driver-assigned: Жолооч
+    vehicle-assigned: Тээврийн хэрэгсэл
+    no-driver: Жолооч байхгүй
+    no-vehicle: Тээврийн хэрэгсэл байхгүй
+    select-driver: Жолоочийг Сонгох
+    select-vehicle: Тээврийн хэрэгслийг Сонгох
+  kanban:
+    status-updated: Захиалгын үйл ажиллагаа {status} төлөвт шинэчлэгдлээ.
+    cannot-update-status: Захиалга {status} төлөвт шилжих боломжгүй байна.
+order-config-manager:
+  title: Захиалгын Тохиргоо
+  message: Захиалгын тохиргоо нь Fleetbase-д захиалгын төрөл бүрийг хэрхэн гүйцэтгэхийг
+    заах динамик тохиргоог тодорхойлоход тусалдаг.
+  configuration: Тохиргоо
+  new-order-config: Шинэ захиалгын тохиргоо
+  select-order-config: Захиалгын тохиргоо сонгох
+  create-new-title: Шинэ захиалгын тохиргоо үүсгэх
+  create-warning-message: Захиалгын тохиргоонд нэр шаардлагатай
+  create-success-message: Шинэ захиалгын тохиргоо амжилттай үүслээ.
+  no-order-config-selected: Захиалгын тохиргоо сонгогдоогүй байна.
+  saved-success-message: '{orderConfigName} тохиргоо хадгалагдлаа.'
+  cloned-success-message: Захиалгын тохиргоо амжилттай хуулбарлагдлаа.
+  enter-clone-name: Хуулбарласан тохиргооны нэрийг оруулна уу
+  no-config-name-warning-message: Тохиргооны нэр оруулаагүй байна.
+  delete-warning-message: Энэ захиалгын тохиргоог устгаснаар дахин ашиглаж захиалга
+    үүсгэх боломжгүй болно. Та итгэлтэй байна уу?
+  uninstall-order-config: Тохиргоог устгах
+  uninstall-order-config-success-message: Өргөтгөл {extensionName} устгагдлаа.
+  select-order-config-to-start: Эхлэхийн тулд захиалгын тохиргоо сонгох эсвэл үүсгэх.
+  tabs:
+    details: Дэлгэрэнгүй
+    custom-fields: Захиалгат талбарууд
+    activity-flow: Үйл ажиллагааны урсгал
+    entities: Объектууд
+  details:
+    details: Дэлгэрэнгүй
+    name: Нэр
+    description: Тайлбар
+    tags: Тагууд
+    add-tags: Таг нэмэх
+    key: Түлхүүр
+    version: Хувилбар
+    namespace: Нэймспэйс
+    controls: Удирдлага
+    delete-config: Тохиргоог устгах
+    delete:
+      delete-title: Энэ захиалгын тохиргоог устгах уу?
+      delete-body-message: Энэ захиалгын тохиргоог устгаснаар сэргээх боломжгүй бөгөөд
+        бүх тохиргоо алдагдана.
+      confirm-delete: Устгах
+  activity-flow:
+    save-activity-flow: Үйл ажиллагааны урсгалыг хадгалах
+    edit-activity-unique-code-warning: Үйл ажиллагааны код давтагдашгүй байх ёстой!
+  custom-fields:
+    new-field-group: Шинэ талбарын бүлэг
+    new-custom-field: Шинэ захиалгат талбар үүсгэх
+    grid-size: Сүлжээний хэмжээ
+    delete-custom-field-prompt:
+      modal-title: Энэ захиалгат талбарыг устгах уу?
+      delete-body-message: Энэ захиалгат талбарыг устгаснаар сэргээх боломжгүй бөгөөд
+        бүх тохиргоо алдагдана.
+      confirm-delete: Устгах
+    delete-custom-field-group-prompt:
+      modal-title: Энэ талбарын бүлгийг устгах уу?
+      delete-body-message: Энэ талбарын бүлгийг устгаснаар сэргээх боломжгүй бөгөөд
+        доторх бүх захиалгат талбарууд алдагдана.
+      confirm-delete: Устгах
+  entities:
+    new-custom-entity: Шинэ захиалгат объект
+    name: Нэр
+    description: Тайлбар
+    type: Төрөл
+    length: Урт
+    width: Өргөн
+    height: Өндөр
+    weight: Жин
+    delete-custom-entity-title: Энэ захиалгын төрөлхтнийг устгах уу?
+    delete-custom-entity-body: Энэ захиалгын төрөлхтнийг устгасны дараа сэргээх боломжгүй
+      бөгөөд бүх тохиргоог алдана.
+    confirm-delete: Батлах
+  types:
+    no-order-installed: Захиалгын тохиргоо суулгагдаагүй байна!
+    you-have-no-configs: Танд одоогоор ямар ч захиалгын тохиргоо суулгагдаагүй байна,
+      эхлэхийн тулд захиалгын тохиргоог суулгахын тулд өргөтгөлүүдийг шалгаарай.
+    view-extensions: Өргөтгөлүүдийг харах
+place:
+  fields:
+    details: Байршлын дэлгэрэнгүй
+    building: Барилга
+    neighborhood: Хөршийн бүс
+    postal-code: Шуудангийн код
+    security-access-code: Аюулгүй байдлын нэвтрэх код
+    city: Хот
+    province: Аймаг
+    country: Улс
+    state: Аймаг/Нутгийн захиргаа
+    street-1: Гудамж 1
+    street-2: Гудамж 2
+    coordinates: Координатууд
+    phone: Утас
+  prompts:
+    vendor-assigned-success: Нийлүүлэгч {placeName}-г шинэ нийлүүлэгчийн байршил болгон
+      томиллоо.
+  actions:
+    locate-place: Газрыг газрын зураг дээр олох
+service-area:
+  fields:
+    details: Үйлчилгээний бүсийн дэлгэрэнгүй
+    area-color: Дүүргэх өнгө
+    area-color-help-text: Энэ үйлчилгээний бүсийн дүүргэх өнгийг өөрчлөх.
+    border-color: Хаягийн өнгө
+    border-color-help-text: Энэ үйлчилгээний бүсийн хаягийн өнгийг өөрчлөх.
+    country: Улс
+    country-help-text: Заавал биш ч энэ Үйлчилгээний бүс байрлаж буй эсвэл үндэслэсэн
+      улсыг тохируулна уу.
+    name: Нэр
+    name-help-text: Үйлчилгээний бүсийн дэлгэцийн нэрийг тохируулна уу.
+    type: Төрөл
+    type-help-text: Энэ үйлчилгээний бүсийн төрөл тодорхойлолтыг сонгоно уу.
+service-rate:
+  fields:
+    details: Үйлчилгээний тарифын дэлгэрэнгүй
+    terms: Нөхцөлүүд
+    add-drop-off-button: Хаягдах хүрээ нэмэх
+    additional-fee: Нэмэлт төлбөр
+    algorithm-help-text: Энэ үйлчилгээний тарифыг тооцоолох томъёог тодорхойлно уу.
+    algorithm-label: Алгоритм
+    algorithm-placeholder: (( '{distance}' / 50 ) * .05 ) + (( '{time}' / 60 ) * .01)
+    base-fee-help-text: Энэ үйлчилгээний хамгийн бага зардлыг төлөөлөх үндсэн төлбөрийг
+      тохируулна уу.
+    base-fee-label: Үндсэн төлбөр
+    calculation-method-help-text: COD төлбөрийг тооцоолох арга.
+    calculation-method-label: COD төлбөрийн тооцооллын арга
+    calculation-method-placeholder: COD төлбөрийн тооцооллын аргыг сонгоно уу
+    cash-delivery-label: '`Бэлэн мөнгөөр хүргэх` захиалгуудын нэмэлт төлбөрийг идэвхжүүлэх
+      үү?'
+    cash-delivery-title: Бэлэн мөнгөөр хүргэх
+    custom-algorithm-info-message: Энэ сонголт нь энэ үйлчилгээний төлбөрийг хувьсагчтайгаар
+      өөрийн томъёогоор тодорхойлоход зориулагдсан.
+    custom-algorithm-info-second-message: Хувьсагчид ганц хаалттай хавтгай дотроо
+      байх ёстойг анхаарна уу.
+    custom-algorithm-title: Захиалгат алгоритм
+    delivery-flat-fee: Хүргэлтийн бэлэн мөнгөний нэгж төлбөр
+    delivery-flat-fee-help-text: Оргил цагийн үед нэмэгдэх нэгж төлбөрийг тодорхойлно.
+    deminsions-unit: Хэмжээ
+    distance: Зай
+    distance-continue-message: '- захиалгын маршрутаас метрээр зай.'
+    distance-message: зай
+    distance-unit: Зайны нэгж
+    distance-unit-help-text: Зайны нэгж нь километр эсвэл метр байж болно.
+    distance-unit-placeholder: Зайны нэгжийг сонгоно уу.
+    duration-terms-help-text: Энэ үйлчилгээний хугацаатай холбоотой нэмэлт үйлчилгээний
+      нөхцлийг нэмнэ үү.
+    duration-terms-label: Хугацааны нөхцөл
+    duration-terms-placeholder: Хугацааны нөхцөл хэрэв тохиромжтой бол
+    estimated-days: Тооцоолсон хүргэлтийн хоногууд
+    estimated-days-help-text: Энэ үйлчилгээний хэрэгжих тооцоолсон хоногийн тоо. Нэг
+      өдрийн үйлчилгээний хувьд `0` гэж оруулна.
+    example: Жишээ
+    example-message: Хэрэв захиалгын хүсэлт 2,200 метр зайтай бөгөөд ETA нь 30 минут
+      бол.
+    example-second-message: Тэгвэл дараах томъёо нь үндсэн төлбөрт нэмэгдэх $2.50
+      үйлчилгээний төлбөрийг тооцоолно.
+    fee: Төлбөр
+    fee-percentage: Хүргэлтийн бэлэн мөнгөний төлбөрийн хувь
+    fee-percentage-help-text: Үйлчилгээний төлбөрийн нийлбэрээс COD төлбөр болгон
+      нэмэгдэх хувь хэмжээг тодорхойлно.
+    fixed-meter: Тогтмол метрийн сонголтууд
+    fixed-meter-example-text: 'Жишээ нь: Километр бүрт тогтмол төлбөр тогтоогдсон.
+      Хэрэв захиалгын явсан зай 3,300 метр бол 3 дахь километрийн тогтмол төлбөр үндсэн
+      төлбөрийн нийлбэрт нэмэгдэх болно.'
+    fixed-meter-text: Энэ сонголт нь километр тутамд тогтмол төлбөрийг тодорхойлно.
+    flat-fee-help-text: Оргил цагийн үед нэмэгдэх нэгж төлбөрийг тодорхойлно.
+    flat-fee-label: Оргил цагийн нэгж төлбөр
+    height-label: Өндөр
+    height-placeholder: '{parcelFeeDimension} дахь өндөр'
+    length-label: Урт
+    length-placeholder: '{parcelFeeDimension} дахь урт'
+    max: Хамгийн их
+    max-drop: Хамгийн их буулгалт
+    maximum-distance: Хамгийн их зай
+    maximum-distance-help-text: Хамгийн их үйлчилгээ үзүүлэх зай.
+    min: Хамгийн бага
+    min-drop: Хамгийн бага буулгалт
+    order-type-placeholder: Захиалгын төрлийн байршуулалт
+    peak-hours-end-help-text: Оргил цагийн төлбөр хаана дуусахыг тодорхойлно.
+    peak-hours-end-label: Оргил цагийн төгсгөл
+    peak-hours-fee-help-text: Оргил цагийн төлбөрийг тооцоолох арга.
+    peak-hours-fee-label: Оргил цагийн төлбөрийн тооцооллын арга
+    peak-hours-fee-placeholder: Оргил цагийн төлбөрийн тооцооллын аргыг сонгоно уу
+    peak-hours-label: Үйлчилгээний тодорхойлсон `оргил цаг` үед захиалга хийхэд нэмэлт
+      төлбөр нэмэх үү?
+    peak-hours-percentage-help-text: Оргил цагийн үед үйлчилгээний төлбөрийн нийлбэрээс
+      нэмэгдэх хувь хэмжээг тодорхойлно.
+    peak-hours-percentage-label: Оргил цагийн төлбөрийн хувь
+    peak-hours-start-help-text: Оргил цагийн төлбөр хаана эхлэхийг тодорхойлно.
+    peak-hours-start-label: Оргил цагийн эхлэл
+    peak-hours-title: Оргил цаг
+    per-drop-off-example-text: 'Жишээ нь: Захиалгад 1-5 буулгалт хийхэд $x төлбөртэй,
+      5-10 буулгалт хийхэд $x төлбөртэй. Энэ нь үндсэн төлбөрийн нийлбэрт нэмэгдэх
+      болно.'
+    per-drop-off-text: Энэ сонголт нь буулгалт тутамд тогтмол төлбөрийг тодорхойлно.
+    per-drop-off-title: Тус бүрийн буулгалтын сонголтууд
+    per-meter: Метр тутамд
+    per-meter-example-text: 'Жишээ нь: ''{fee}'' * ''{distance}'' + ''{baseFee}'''
+    per-meter-rate-fee: Метр тутамд нэгтгэсэн төлбөр
+    per-meter-rate-fee-help-text: Нэг удаагийн нэгтгэсэн төлбөрийг зайд үржүүлнэ.
+    per-meter-text: Энэ сонголт нь үйлчилгээний төлбөрийг километр эсвэл метрээр тооцох
+      боломжийг олгодог, үүнд та нэгтгэсэн төлбөрийг тодорхойлж, дараа нь метр эсвэл
+      километрээр хэмжигдэх зайд үржүүлнэ.
+    percel-fee-title: Багцын төлбөрүүд
+    percentage-placeholder: Хувь хэмжээ
+    rate-calculation-help-text: Энэ үйлчилгээ нь асуулт ирэхэд төлбөрийг тооцоолох
+      аргачлал.
+    rate-calculation-label: Төлбөр тооцоолох арга
+    rate-calculation-placeholder: Төлбөр тооцоолох аргыг сонгоно уу
+    restrict-service-title: Үйлчилгээг хязгаарлах
+    select-unit-placeholder: Нэгжийг сонгоно уу
+    select-order-type: Захиалгын төрлийг сонгоно уу
+    service-area-help-text: Энэ үйлчилгээг зөвхөн үйлчилгээний бүсээс ирсэн захиалгын
+      хүсэлтэд хязгаарлана.
+    service-area-label: Үйлчилгээний бүс
+    service-area-placeholder: Үйлчилгээний бүсэд хязгаарлах
+    service-name: Үйлчилгээний нэр
+    service-name-help-text: Энэ үйлчилгээний дэлгэцийн нэр.
+    service-order-help-text: Энэ үйлчилгээний төлбөрийг зөвхөн сонгогдсон захиалгын
+      тохиргоонд хэрэглэнэ. Ингэснээр зөвхөн сонгогдсон захиалгын тохиргоогоор үүсгэсэн
+      захиалгууд энэ тусгай үйлчилгээний төлбөрийг ашиглах боломжтой болно.
+    service-order-label: Үйлчилгээний захиалгын төрөл
+    time-continue-message: '- замын ETA секундээр.'
+    time-message: цаг хугацаа
+    weight-label: Жин
+    weight-unit: Жингийн нэгж
+    width-label: Өргөн
+    width-placeholder: Өргөн {parcelFeeDimension} -д
+    zone-help-text: Энэ үйлчилгээг тодорхой бүсээс ирсэн захиалгын хүсэлтэд хязгаарлана.
+    zone-label: Бүс
+    zone-placeholder: Бүсэд хязгаарлах
+    cod-fee-label: Нийлүүлэлтийн төлбөрийн шошго
+vehicle:
+  fields:
+    avatar: Профайл зураг
+    driver-assigned: Жолооч томилогдсон
+    make: Үйлдвэрлэгч
+    model: Загвар
+    plate-number: Торгон дугаар
+    select-driver: Жолооч сонгох
+    upload-new-photo: Шинэ зураг оруулах
+    vehicle-make: Тээврийн хэрэгслийн үйлдвэрлэгч
+    vehicle-model: Тээврийн хэрэгслийн загвар
+    vehicle-year: Тээврийн хэрэгслийн он
+    vin-number: VIN дугаар
+    year: Он
+  actions:
+    locate-vehicle: Тээврийн хэрэгслийг газрын зураг дээр олох
+vendor:
+  fields:
+    setup-vendor: Нийлүүлэгчийг тохируулах
+    choose-vendor: Интеграцчилсан нийлүүлэгчийг сонгох
+    email-help-text: Нийлүүлэгчийн имэйл, энэ нь нийлүүлэгчид имэйл илгээхэд ашиглагдана.
+    name-help-text: Нийлүүлэгчийн нэр, ихэвчлэн бизнесийн нэр.
+    phone-text: Нийлүүлэгчийн утасны дугаар, энэ нь SMS эсвэл мессеж илгээхэд ашиглагдана.
+    website: Вэбсайтын URL
+    edit-address: Хаягийг засах
+    new-address: Шинэ хаяг
+    select-address: Хаяг сонгох
+    select-vendor-status: Нийлүүлэгчийн төлөвийг сонгох
+    select-vendor-type: Нийлүүлэгчийн төрлийг сонгох
+    title: Тохиргоо
+    vendor-details: Нийлүүлэгчийн дэлгэрэнгүй
+    website-help-text: Нийлүүлэгчийн вэбсайт, заавал биш ч лавлагаа болгон нийлүүлэгчийн
+      вэбсайтыг нэмнэ үү.
+integrated-vendor:
+  fields:
+    provider: Нийлүүлэгч
+    credentials: Нэвтрэх мэдээлэл
+    credentials-configure-help-text: Энэхүү нийлүүлэгчийг тохируулахын тулд өөрийн
+      {param} өгч болно.
+    options: Сонголтууд
+    choose-vendor: Нэгдсэн нийлүүлэгчийг сонгох
+    select-integrated: Нэгдсэн нийлүүлэгчийг сонгоно уу.
+    advanced-options: Ахисан түвшний сонголтууд
+    cancel-credentials: Нэвтрэх мэдээллийг дахин тохируулахыг цуцлах
+    sensitive-credentials: Эмзэг нэвтрэх мэдээллийг зөвхөн дахин тохируулж болно,
+      шинэчлэхийн тулд нэвтрэх мэдээллээ дахин оруулах шаардлагатай.
+    reset-credentials: Нэвтрэх мэдээллийг дахин тохируулахын тулд энд дарна уу
+    sandbox: Туршилтын орчин
+    webhook: Webhook URL
+    webhook-help-text: Нэгдсэн нийлүүлэгчид ихэвчлэн үүнийг шаардах бөгөөд Fleetbase
+      захиалгын үйл ажиллагааны шинэчлэлтийг хүлээн авах боломжтой болно. Юу хийж
+      байгаагаа мэдэхгүй бол битгий өөрчил! Үүнийг өөрчлөх нь таны захиалгын шинэчлэлтийг
+      эвдэж болзошгүй!
+    host: Захиалгат хост
+    host-help-text: Энэхүү интеграцад ашиглах захиалгат хостыг өгч болно.
+    namespace: Захиалгат нэрийн сан
+    namespace-help-text: Интеграцад ашиглах захиалгат нэрийн сан эсвэл api хувилбарыг
+      өгч болно.
+zone:
+  fields:
+    details: Бүсийн дэлгэрэнгүй
+    border-color: Хүрээний өнгө
+    customize-border: Хүрээг тохируулах
+    customize-fill-color: Дүүргэх өнгийг тохируулах
+    description: Тайлбар
+    name: Нэр
+    name-help-text: Энэ бүсэд нэр оруулна уу.
+    zone-color: Бүсийн өнгө
+activity-logic-builder:
+  activity-logic: Үйл ажиллагааны логик
+  activity-logic-help-text: Үйл ажиллагаа ажиллах нөхцлийг тодорхойлж, урсгалд үйл
+    ажиллагаа хэзээ боломжтой болохыг тохируулна. Энэ функц нь тодорхой шалгуур дээр
+    үндэслэн урсгалыг өөрчлөх боломжийг олгодог бөгөөд үйл ажиллагаа зөвхөн урьдчилан
+    тогтоосон нөхцөл биелсэн үед идэвхждэг.
+  activity-logic-add-logic-help-text: Үйл ажиллагаа хэзээ идэвхжихийг тодорхойлох
+    шинэ нөхцлийн багцыг үүсгэнэ. Шинэ логик дүрэм боловсруулахыг эхлүүлэхийн тулд
+    дарна уу.
+  activity-logic-select-logic-type-help-text: Энэ нөхцөл дагах логикийн төрлийг сонгоно
+    уу. Шууд нөхцөлд 'If', нийлмэл нөхцөлд 'And'/'Or', эсвэл нөхцөлийг үгүйсгэхэд
+    'Not' сонгоно.
+  activity-logic-add-condition-help-text: Энэ логикийн багцад биелүүлэх ёстой тодорхой
+    шаардлагыг нэмнэ. Үйл ажиллагааны боломжийг хянах нэмэлт шалгуурыг заахад ашиглана.
+  field: Талбар
+  value: Утга
+  add-logic: Логик нэмэх
+activity-event-selector:
+  activity-events: Үйл ажиллагааны үйл явдлууд
+  activity-events-select-to-fire: Энэ үйл ажиллагаа болох үед идэвхжүүлэх үйл явдлуудыг
+    сонгоно уу.
+  activity-events-select-events-info: Энэ үйл ажиллагаанд хариу үйлдэл үзүүлэх тодорхой
+    үйл явдлыг сонгоно уу.
+  select-event-to-add: Нэмэх үйл явдлыг сонгоно уу...
+custom-field-form-panel:
+  meta-col-span: 'Мета: Баганын өргөн'
+  col-span-size: Баганын өргөний хэмжээ
+  custom-field-title-concat: 'Захиалгат талбар: '
+  new-custom-field: Шинэ захиалгат талбар
+  close-new-custom-field: Захиалгат талбарын өөрчлөлтийг цуцлах
+  save-custom-field: Өөрчлөлтийг хадгалах
+  create-custom-field: Шинэ талбар үүсгэх
+  field-name: Талбарын нэр
+  field-label: Талбарын шошго
+  field-type: Талбарын төрөл
+  select-field-type: Талбарын төрлийг сонгоно уу...
+  field-description: Талбарын тайлбар
+  field-help-text: Талбарын туслах текст
+  field-default-value: Талбарын анхдагч утга
+  field-is-required: Талбар шаардлагатай
+  field-is-editable: Талбар засварлах боломжтой
+  field-options: Талбарын сонголтууд
+  field-validation-rules: Талбарын баталгаажуулах дүрэм
+  field-model-type: Талбарын загварын төрөл
+  field-select-model-type: Загварын төрлийг сонгоно уу
+  add-new-option: Шинэ сонголт нэмэх
+activity-form-panel:
+  title-concat: 'Үйл ажиллагаа: '
+  new-activity-title: Шинэ үйл ажиллагаа үүсгэх
+  key: Түлхүүр
+  code: Код
+  status: Төлөв
+  details: Дэлгэрэнгүй
+  proof-of-delivery: Хүргэлтийн баталгаа
+  require-pod: Хүргэлтийн баталгаа шаардлагатай
+  require-pod-help-text: Энэ үйл ажиллагаа захиалгад хэрэглэхийн өмнө баталгааг үүсгэх
+    шаардлагатай.
+  select-pod-method: Хүргэлтийн баталгааны арга
+  pod-method-placeholder: Хүргэлтийн баталгааны аргыг сонгоно уу
+  completes-order: Захиалгыг дуусгана
+  complete: Дуусгах
+  key-help: 'Программын шийдвэр гаргалтад ашиглах түлхүүр оруулна уу. Энэ түлхүүр
+    нь нэг эсвэл хэд хэдэн ижил танигчтай үйл ажиллагааг төлөөлж болно. Анхаар: Энэ
+    түлхүүр давтагдашгүй байх шаардлагагүй.'
+  code-help: Энэ үйл ажиллагаанд онцгой танигч оруулна уу.
+  status-help: Энэ үйл ажиллагаа идэвхжсэн үед эцсийн хэрэглэгчид харуулах төлөвийг
+    заана уу.
+  details-help: Эцсийн хэрэглэгчийн ойлголтод зориулсан үйл ажиллагааны дэлгэрэнгүй
+    тайлбарыг өгнө үү.
+custom-entity-issue-form-panel:
+  new-custom-entity: Шинэ захиалгат объект
+  name: Нэр
+  description: Тайлбар
+  details: Дэлгэрэнгүй
+  type: Төрөл
+  length: Урт
+  width: Өргөн
+  height: Өндөр
+  weight: Жин
+  entity-image: Объектын зураг
+  measurements: Хэмжилтүүд
+avatar-picker:
+  avatar: Аватар
+  select-map-avatar: Газрын зурагт зориулсан аватарыг сонгоно уу
+  select-avatar-rendering: Геолокацийн хяналтын функц ашиглах үед газрын зураг дээр
+    дүрслэх аватарыг сонгоно уу.
+  select-avatar: Аватарыг сонгоно уу
+  select-for-preview: Урьдчилсан үзэлтэд сонгох
+admin:
+  navigator-app:
+    title: Навигатор Апп
+    name: Жишээ холбоос URL
+    message: Энэхүү URL-ийг ашиглан албан ёсны Navigator аппликейшнийг энэ {companyName}
+      жишээнд холбож болно. Гар утас дээр энэ URL-ийг нээхэд Navigator апп нээгдэж,
+      түүний тохиргоо болон брэнд шинэчлэгдэнэ.
+    settings: Байгууллагын Тохиргоо
+    select-input: Жолоочид байгууллагын дэлгэрэнгүй мэдээллийг шинэчлэхийг зөвшөөрөх
+    driver-settings: Жолоочийн Тохиргоо
+    description: Жолоочийг бүртгэхийг идэвхжүүлэх
+    upload-document: Жолоочоос баримт бичиг оруулахыг шаардах
+    upload-body: Баримт бичиг нэмэх
+    document: Баримт бичиг
+  avatar-management:
+    upload-avatar: Аватар оруулах
+    view-avatar: Аватарыг харах
+    vehicles: Тээврийн хэрэгсэл
+    drivers: Жолооч нар
+    places: Газрууд
+entity-field-editing-settings:
+  entitiy-field-editing-settings: Байгууллагын талбар засварлах тохиргоо
+  entity-field-editing-settings-help-text: Эдгээр тохиргоо нь жолоочид Navigator апп-аар
+    дамжуулан байгууллагын аль талбаруудыг засварлах боломжтойг тодорхойлно
+  select-order-config: Захиалгын тохиргоо сонгох
+  select-order-config-help-text: Эдгээр тохиргоо ямар захиалгын тохиргоонд хамаарахыг
+    сонгоно уу
+  enable-driver-to-edit-entity-fields: Жолоочид байгууллагын дэлгэрэнгүй мэдээллийг
+    засахыг зөвшөөрөх
+  enable-driver-to-edit-entity-fields-help-text: Энэ тохиргоог идэвхжүүлснээр жолоочид
+    доор сонгогдсон тодорхой байгууллагын талбаруудыг өөрчлөх эрх олгоно.
+driver-onboard-settings:
+  driver-onboard-settings: Жолооч бүртгэх тохиргоо
+  enable-driver-onboard-from-app: Navigator апп-аас жолооч бүртгэхийг идэвхжүүлэх
+  enable-driver-onboard-from-app-help-text: Энэ тохиргоог идэвхжүүлснээр жолооч нар
+    Navigator апп-аар дамжуулан өөрсдийн бүртгэл үүсгэж бие даан бүртгүүлэх боломжтой
+    болно.
+  select-onboard-method: Жолооч бүртгэх аргыг сонгох
+  select-onboard-method-help-text: Энэ тохиргоо нь жолооч нар Navigator апп-аар хэрхэн
+    бүртгэл үүсгэхийг тодорхойлно. Хэрэв жолооч нар бүртгэл үүсгэхийн тулд имэйл урилга
+    авах шаардлагатай бол 'Урилга' сонголтыг сонгоно уу. Хэн ч жолоочийн бүртгэл үүсгэх
+    боломжтой товчийг идэвхжүүлэхийг хүсвэл 'Товч' сонголтыг сонгоно уу.
+  require-driver-to-upload-onboard-documents: Жолоочоос бүртгэлд шаардлагатай баримт
+    бичиг оруулахыг шаардах
+  require-driver-to-upload-onboard-documents-help-text: Энэ тохиргоо нь жолооч бүртгэл
+    үүсгэхийн өмнө өгөх ёстой баримт бичгүүдийг шаарддаг.
+  required-onboard-documents: Шаардлагатай бүртгэлийн баримт бичгүүд
+  required-onboard-documents-help-text: Жолоочоос шаардагдах бүх бүртгэлийн баримт
+    бичгүүдийг доор "Бүртгэлийн баримт бичиг нэмэх" товчоор оруулна уу.
+  enter-document-name: Баримт бичгийн нэр оруулна уу
+  add-onboard-document: Бүртгэлийн баримт бичиг нэмэх
+cell:
+  driver-name:
+    not-assigned: Жолооч томилогдоогүй
+live-map-drawer:
+  driver-listing:
+    location: Байршил
+    current-job: Одоогийн ажил
+    last-seen: Сүүлд харагдсан
+    view-driver: Жолоочийн дэлгэрэнгүйг харах...
+    edit-driver: Жолоочийг засах...
+    locate-driver: Жолоочийг олох...
+    delete-driver: Жолоочийг устгах...
+    warning-message: Жолоочийг олох боломжгүй байна.
+    message: Жолооч нарыг түлхүүр үгээр шүүх...
+  place-listing:
+    location: Байршил
+    place: Газар
+    view-place: Газрын дэлгэрэнгүйг харах...
+    edit-place: Газрыг засах...
+    locate-place: Газрыг олох...
+    delete-place: Газрыг устгах...
+    warning-message: Газыг олох боломжгүй байна.
+    message: Газруудыг түлхүүр үгээр шүүх...
+  vehicle-listing:
+    location: Байршил
+    last-seen: Сүүлд харагдсан
+    view-vehicle: Тээврийн хэрэгслийн дэлгэрэнгүйг харах...
+    edit-vehicle: Тээврийн хэрэгслийг засах...
+    locate-vehicle: Тээврийн хэрэгслийг олох...
+    delete-vehicle: Тээврийн хэрэгслийг устгах...
+    warning-message: Тээврийн хэрэгслийг олох боломжгүй байна.
+    message: Тээврийн хэрэгслийг түлхүүр үгээр шүүх...
+scheduler:
+  success-message: Захиалга {orderId} {orderAt} цагт төлөвлөгдсөн.
+  info-message: Захиалга {orderId} төлөвлөгдөөгүй боллоо.
+  title: Төлөвлөгч
+  unscheduled-orders: Төлөвлөгдөөгүй захиалгууд
+  scheduled-orders: Төлөвлөгдсөн захиалгууд
+  unauthorized-to-schedule: Та захиалгыг төлөвлөх эрхгүй байна.
+  scheduling-for: '{orderId} захиалгын төлөвлөлт'
+modals:
+  new-custom-field-group:
+    modal-title: Шинэ захиалгат талбарын бүлэг үүсгэх
+    group-name: Бүлгийн нэр
+  assign-driver:
+    select-driver: Жолооч сонгох
+    select-assign: Хуваарилах жолоочийг сонгох
+  clone-config-form:
+    name: Тохиргооны нэр
+    description: Тохиргооны тайлбар
+  driver-assign-order:
+    order: Захиалга сонгох
+    assign-order: Хуваарилах захиалгыг сонгох
+  driver-assign-vehicle:
+    vehicle: Тээврийн хэрэгсэл сонгох
+    assign-vehicle: Хуваарилах тээврийн хэрэгслийг сонгох
+  driver-assign-vendor:
+    vendor: Нийлүүлэгч сонгох
+  driver-details:
+    job: Одоогийн ажил
+    view: Газрын зураг дээр харах
+  driver-form:
+    select-vendor: Нийлүүлэгч сонгох
+    select-vehicle: Тээврийн хэрэгсэл сонгох
+  edit-meta-form:
+    add: Метаталбар нэмэх
+  entity-form:
+    name-text: Зүйл эсвэл объектын нэр.
+    id-text: Объектын хувийн эсвэл дотоод дугаарыг сонгож оруулах талбар.
+    sku: SKU
+    sku-text: Хэрэв байгаа бол агуулахын кодын дугаар.
+    description: Тайлбар
+    description-text: Объектын нэмэлт тайлбар.
+    price-title: Үнийн мэдээлэл ба үнэ цэнэ
+    price: Үнэ
+    price-text: Объектын үнэ.
+    sale-price: Хямдралтай үнэ
+    sale-price-text: Объектын хямдралтай эсвэл борлуулалтын үнэ.
+    declare: Тодорхойлсон үнэ цэнэ
+    declare-text: Объектын тодорхойлсон үнэ цэнэ, даатгалд ашигтай.
+    measurement-title: Хэмжээ ба жин
+    length: Урт
+    length-text: Объектын урт.
+    width: Өргөн
+    width-text: Объектын өргөн.
+    height: Өндөр
+    height-text: Объектын өндөр.
+    weight: Жин
+    weight-text: Биеийн жин.
+  entity-meta-field-prompt:
+    name: Мета талбарын түлхүүр
+  fleet-form:
+    title: Флотын нэр
+    assign: Үйлчилгээний бүсэд томилох
+    assign-text: Флотыг томилох үйлчилгээний бүсийг сонгоно уу
+    zone: Бүсэд томилох
+    zone-text: Флотыг томилох бүсийг сонгоно уу
+    task: Үүрэг/ Даалгавар
+    task-text: Хэрэв тохиромжтой бол энэ флотыг гол үүрэг эсвэл даалгаврын талаар
+      тайлбар өгнө үү.
+    select-task: Үүрэг сонгох
+    status-text: Флотын төлөвийг сонгоно уу.
+    select-status: Төлөв сонгох
+  fuel-report-details:
+    fuel: Түлш/ Хэмжээ
+  fuel-report-form:
+    select-driver: Жолооч сонгох
+    select-vehicle: Тээврийн хэрэгсэл сонгох
+    volume: Хэмжээ
+    volume-text: Түлшний хэмжих нэгж болон хэмжээг сонгоно уу.
+  group-details:
+    name: Бүлгийн нэр
+    member: Гишүүд
+    address: Хаяг
+  group-form:
+    title: Бүлгийн нэр
+    users-add: Бүлэгт нэмэх хэрэглэгчдийг сонгоно уу
+    search: Энэ бүлэгт нэмэх хэрэглэгчдийг хайж сонгоно уу.
+    select-user: Бүлэгт нэмэх хэрэглэгчийг сонгоно уу
+    no-users: Бүлэгт нэмэгдсэн хэрэглэгч байхгүй
+  install-prompt:
+    message: Та {extensionName} өргөтгөл суулгах гэж байна. Та энэ суулгалтыг үргэлжлүүлэхийг
+      хүсч байна уу?
+    sub-message: Зарим өргөтгөлүүд таны нөөцөд хандах шаардлагатай.
+  issue-details:
+    assigned: Томилсон
+    type: Асуудлын төрөл
+    category: Асуудлын ангилал
+  issue-form:
+    reported: Тайлагнасан
+    select-reporter: Тайлагнагчаа сонгох
+    assigned: Томилсон
+    select-assignee: Томилогдогчийг сонгох
+    select-driver: Жолоочийг сонгох
+    select-vehicle: Тээврийн хэрэгслийг сонгох
+    select-type: Төрөл сонгох
+    select-category: Ангилал сонгох
+    type: Асуудлын төрөл
+    type-text: Асуудлын төрлийг сонгоно уу
+    category: Асуудлын ангилал
+    category-text: Асуудлын ангиллыг сонгоно уу
+    report: Асуудлын тайлан
+    tags: Асуудлын шошгууд
+    add-tags: Шошгууд нэмэх
+    select-status: Асуудлын төлөвийг сонгоно уу
+  map-layer-form:
+    layer-type: Давхаргын төрөл
+    layer-type-text: Үүсгэх давхаргын төрлийг сонгоно уу.
+    select-layer-type: Давхаргын төрлийг сонгох...
+    service-area: Үйлчилгээний бүс
+    service-area-text: Энэ бүсийг холбох үйлчилгээний бүсийг сонгоно уу.
+    select-service-area: Флийтийг хуваарилах үйлчилгээний бүсийг сонгоно уу
+    set-name: '{options} -ийн дэлгэцийн нэрийг тохируулна уу.'
+    service-type: Үйлчилгээний бүсийн төрөл
+    service-type-text: Энэ үйлчилгээний бүсийн төрлийн тодорхойлолтыг сонгоно уу.
+    select-service-type: Үйлчилгээний бүсийн төрлийг сонгоно уу...
+    customize-border: Энэ {options}-ийн хилийн өнгийг тохируулна уу.
+    customize-fill-color: Энэ {options}-ийн дүүргэлтийн өнгийг тохируулна уу.
+    service-area-country: Үйлчилгээний бүсийн улс
+    service-area-country-text: Сонголтоор энэ үйлчилгээний бүс байрлаж буй эсвэл үндэслэсэн
+      улсыг тохируулна уу.
+  new-order-config:
+    name: Тохиргооны нэр
+    description: Тохиргооны тайлбар
+    tags: Тохиргооны шошгууд
+    add-tags: Шошгууд нэмэх
+  order-assign-driver:
+    select-driver: Жолооч сонгох
+    select-assign: Хуваарилах жолоочийг сонгоно уу
+  order-config-new-status:
+    new-status: Шинэ төлөв
+    status-text: Үйл явцад нэмэх шинэ үйл ажиллагааны төлөв оруулна уу
+  order-event:
+    schedule: Хуваарьлах
+    unschedule: Хуваарьгүй болгох
+  order-form:
+    id-text: Захиалгын хувийн эсвэл дотоод дугаарыг сонголтоор оруулах талбар.
+    schedule-text: Захиалга илгээгдэх өдөр, цаг. Илгээх үед жолооч томилогдоогүй бол
+      илгээх нь бүтэлгүйтнэ. Хэрэв захиалга түргэн бол ойролцоох жолооч нарт мэдэгдэнэ.
+    customer: Хэрэглэгч
+    customer-text: Энэ захиалгын хэрэглэгчийг сонголтоор томилно уу. Хэрэв шинэ хэрэглэгч
+      бол дээрх 'Шинэ хэрэглэгч' товчийг ашиглана уу.
+    select-customer: Хэрэглэгч сонгох
+    facilitator: Туслагч
+    facilitator-text: Энэ захиалгын туслагчийг сонголтоор томилно уу, туслагч нь гуравдагч
+      этгээдийн гэрээт ажилтан эсвэл үйлчилгээ байж болно.
+    select-facilitator: Туслагч сонгох
+    assign-driver: Жолооч томилох
+    assign-driver-text: Энэ захиалгыг илгээх жолоочийг томилно уу.
+    select-driver: Жолооч сонгох
+    assign-vehicle: Тээврийн хэрэгсэл томилох
+    assign-vehicle-text: Энэ захиалгыг гүйцэтгэх тээврийн хэрэгслийг томилно уу.
+    select-vehicle: Тээврийн хэрэгсэл сонгох
+  order-import:
+    loading-message: Импорт боловсруулж байна...
+    drop-upload: Ачаалахын тулд унагаана уу
+    invalid: Буруу
+    ready-upload: ачаалахад бэлэн байна.
+    upload-spreadsheets: Хуудаснуудыг ачаалах
+    drag-drop: Энэ унагаах бүс дээр хуудасны файлуудыг чирнэ үү
+    button-text: эсвэл ачаалахын тулд хуудаснуудыг сонгоно уу
+    spreadsheets: хуудаснууд
+    upload-queue: Ачаалгын дараалал
+  order-label:
+    loading: Шошго ачаалж байна...
+  order-new-activity:
+    select-message: Захиалгын хяналтын үйл ажиллагааг шинэчлэхийн тулд үйл ажиллагааны
+      төлөвийг сонгоно уу эсвэл өөрийн үйл ажиллагааг оруулна уу.
+    order-currently-message: Энэ захиалга одоогоор {options} байна, нэмэлт үйл ажиллагаа
+      энэ төлөвийг солих болно.
+    not-recommend-message: Fleetbase үүнийг зөвлөдөггүй, хэрэв та юу хийж байгаагаа
+      бүрэн мэдэхгүй бол.
+    activity-options: Үйл ажиллагааны сонголтууд
+    activity: үйл ажиллагаа
+    dispatch: Энэ нь захиалгыг илгээхэд хүргэнэ.
+    status: Захиалгын үйл ажиллагааны статус
+    details: Захиалгын үйл ажиллагааны дэлгэрэнгүй
+    code: Захиалгын үйл ажиллагааны код
+    fleetbase-message: Fleetbase үүнийг зөвлөдөггүй, хэрэв та юу хийж байгаагаа бүрэн
+      мэдэхгүй бол.
+  order-route-form:
+    toggle: Олон буух цэгийг асаах/унтраах
+    optimize: Замыг оновчлох
+    optimize-text: Fleetbase автоматаар замыг оновчлох болно.
+    add: Буух цэг нэмэх
+    add-text: '`Буух цэг нэмэх` товчийг ашиглан энэ захиалгын зогсоолуудыг нэмнэ үү.
+      Fleetbase-ийн маршрутын хөдөлгүүр нь зогсоол бүр нэмэгдэх эсвэл устгагдах үед
+      замыг автоматаар оновчлох болно.'
+    select-waypoint: Буух цэг сонгох
+    pickup: Авах
+    edit-address: Хаягийг засах
+    select-pickup: Авах цэг сонгох
+    invalid: Буруу координатууд!
+    dropoff: Хаях
+    select-dropoff: Хаях цэг сонгох
+    return: Буцах
+    select-return: Буцах цэг сонгох
+  place-assign-vendor:
+    select-vendor: Нийлүүлэгч сонгох
+  place-details:
+    view: Газрын зураг дээр харах
+  policy-form:
+    name: Бодлогын нэр
+    name-text: Бодлогын нэрийг оруулна уу
+    description: Бодлогын тайлбар
+    description-text: Бодлогын тайлбарыг оруулна уу
+    permissions: Зөвшөөрлийг сонгох
+  role-form:
+    name: Үүргийн нэр
+    name-text: Энэ үүргийн нэрийг оруулна уу
+    permissions: Зөвшөөрлийг сонгох
+  select-payment-method:
+    card-ending: '{method} дуусах карт'
+  service-area-form:
+    name: Үйлчилгээний бүсийн нэр
+    name-text: Үйлчилгээний бүсийн дэлгэцийн нэрийг тохируулна уу.
+    type: Үйлчилгээний бүсийн төрөл
+    type-text: Энэ үйлчилгээний бүсийн төрлийг сонгоно уу.
+    select-type: Үйлчилгээний бүсийн төрлийг сонгоно уу...
+    border-color: Үйлчилгээний бүсийн хилний өнгө
+    customize-border-color: Энэ үйлчилгээний бүсийн хилний өнгийг тохируулна уу.
+    area-color: Үйлчилгээний бүсийн өнгө
+    customize-area-color: Энэ үйлчилгээний бүсийн дүүргэлтийн өнгийг тохируулна уу.
+    country: Үйлчилгээний бүсийн улс
+    country-text: Сонголтоор энэ үйлчилгээний бүс байрлаж буй эсвэл үндэслэсэн улсыг
+      тохируулна уу.
+  set-password:
+    message: Fleetbase-д тавтай морил! Эхлэхээсээ өмнө доор шинэ нууц үг тохируулна
+      уу.
+    new-password: Шинэ нууц үг
+    confirm-password: Нууц үгийг баталгаажуулах
+    help-text: Үргэлжлүүлэхийн тулд дор хаяж 8 тэмдэгт бүхий нууц үг оруулна уу.
+  uninstall-prompt:
+    message: Та "{options}" өргөтгөлийг устгах гэж байна. Та энэ устгалтыг үргэлжлүүлэхийг
+      хүсч байна уу?
+    sub-message: Бүх тохиргоо болон хувийн тохируулгууд устах болно.
+  vehicle-details:
+    make: Үйлдвэрлэгч
+    model: Загвар
+    year: Он
+    driver-assigned: Жолооч томилогдсон
+    no-driver-assigned: Жолооч томилогдоогүй
+    vehicle-assigned: Тээврийн хэрэгсэл томилогдсон
+    no-vehicle-assigned: Тээврийн хэрэгсэл томилогдоогүй
+    avatar: Аватар
+    model-information: Загварын мэдээлэл
+    acceleration: 0-аас 100 км/ц
+    body: Бие
+    doors: Хаалга
+    length: Урт (мм)
+    seats: Суудал
+    top-speed: Дээд хурд (км/ц)
+    transmission: Шилжүүлгийн төрөл
+    weight: Жин (кг)
+    wheelbase: Дугуйны суурь (мм)
+    width: Өргөн (мм)
+    engine-information: Моторын мэдээлэл
+    engine-bore: Моторын диаметр (мм)
+    cc: СС
+    compression: Шахалтын харьцаа
+    cylinder: Цилиндрүүд
+    position: Байрлал
+    power-ps: Хүч (ps)
+    power-rpm: Хүч (rpm)
+    stroke: Хөдөлгөөн (мм)
+    torque-nm: Момент (nm)
+    torque-rpm: Момент (rpm)
+    valves: Цилиндр тутамд хавхлага
+    fuel-information: Түлшний мэдээлэл
+    fuel: Түлш
+    fuel-cap: Түлшний савны багтаамж (л)
+    liters-city: Хот дотор км тутам литр
+    liters-highway: Тамир замд км тутам литр
+    liters-mixed: Холимог км тутам литр
+  vehicle-form:
+    map-avatar: Газрын зургийн аватар сонгох
+    map-avatar-text: Гео байршлын хяналтын функц ашиглах үед газрын зураг дээр дүрслэхэд
+      ашиглах аватарыг сонгоно уу.
+    select-avatar: Аватар сонгох
+    make: Тээврийн хэрэгслийн үйлдвэрлэгч
+    model: Тээврийн хэрэгслийн загвар
+    year: Тээврийн хэрэгслийн он
+    select-driver: Жолооч сонгох
+    body: Тээврийн хэрэгслийн биеийн төрөл
+    doors: Хаалганы тоо
+    type: Тээврийн хэрэгслийн жолоодлогын төрөл
+    length: Тээврийн хэрэгслийн урт (мм)
+    seats: Суудлын тоо
+    top-speed: Тээврийн хэрэгслийн дээд хурд (км/ц)
+    transmission: Тээврийн хэрэгслийн шилжүүлгийн төрөл
+    weight: Тээврийн хэрэгслийн жин (кг)
+    wheelbase: Тээврийн хэрэгслийн дугуйны суурь (мм)
+    width: Тээврийн хэрэгслийн өргөн (мм)
+    engine-bore: Моторын нүхний диаметр (мм)
+    cc: СС
+    compression: Моторын шахалт
+    cylinder: Моторын цилиндрүүд
+    position: Моторын байрлал
+    power-ps: Моторын хүч (ps)
+    power-rpm: Моторын хүч (rpm)
+    stroke: Цохилтын урт (мм)
+    torque-nm: Моторын эргэлтийн момент (nm)
+    torque-rpm: Моторын эргэлтийн момент (rpm)
+    fuel-type: Түлшний төрөл
+    fuel-cap: Түлшний савны багтаамж (л)
+  vendor-details:
+    sandbox: Туршилтын орчин
+    host: Хост
+    namespace: Нэймспэйс
+  vendor-form:
+    choose-vendor: Нэгдсэн нийлүүлэгчийг сонгох
+    create-vendor: Захиалгат нийлүүлэгч үүсгэх
+    credentials: Нэвтрэх мэдээлэл
+    options: Сонголтууд
+    hide-advanced: Дэвшилтэт тохиргоог нуух
+    show-advanced: Дэвшилтэт тохиргоог харуулах
+    custom-host: Захиалгат хост
+    host-text: Энэхүү интеграцад ашиглах захиалгат хостыг сонголтоор оруулна уу.
+    custom-namespace: Захиалгат нэймспэйс
+    namespace-text: Интеграцад ашиглах захиалгат нэймспэйс эсвэл api хувилбарыг сонголтоор
+      оруулна уу.
+    webhook: Webhook URL
+    webhook-text: Нэгдсэн нийлүүлэгчид ихэвчлэн үүнийг шаардах бөгөөд Fleetbase захиалгын
+      үйл ажиллагааны шинэчлэлтийг хүлээн авах боломжтой болно. Юу хийж байгаагаа
+      мэдэхгүй бол өөрчлөхгүй байхыг анхаарна уу! Үүнийг өөрчлөх нь таны захиалгын
+      шинэчлэлтийг эвдэж болзошгүй!
+    cancel-credentials: Нэвтрэх мэдээллийг дахин тохируулахыг цуцлах
+    reset-message: Нууц мэдээллийг зөвхөн дахин тохируулах боломжтой, мэдээллийг шинэчлэхийн
+      тулд нэвтрэх мэдээллийг дахин оруулах шаардлагатай.
+    optionally: Сонголтоор өөрийнхөө
+    configure-vendor: нийг тохируулах.
+    select: Сонгох
+    sandbox: Туршилтын орчин
+    name-text: Нийлүүлэгчийн нэр, ихэвчлэн бизнесийн нэр.
+    email-text: Нийлүүлэгчийн имэйл, энэ нь нийлүүлэгчид имэйл илгээхэд ашиглагдана.
+    phone-text: Нийлүүлэгчийн утасны дугаар, энэ нь SMS эсвэл мессеж илгээхэд ашиглагдана.
+    website-text: Нийлүүлэгчийн вэбсайт, лавлагаанд зориулж нийлүүлэгчийн вэбсайтыг
+      сонголтоор нэмнэ үү.
+    select-address: Хаягийг сонгох
+  zone-form:
+    name: Бүсийн нэр
+    name-text: Бүсийн дэлгэцийн нэрийг тохируулна уу.
+    border-color: Бүсийн хилний өнгө
+    customize-border: Энэхүү бүсийн хилний өнгийг тохируулна уу.
+    zone-color: Бүсийн өнгө
+    customize-fill-color: Энэхүү бүсийн дүүргэлтийн өнгийг тохируулна уу.
+    optionally: Сонголтоор бүсэд тайлбар өгнө үү.
+    description-zone: Бүсийн тайлбар
+widget:
+  fleet-ops-quickstart:
+    message: Үйл ажиллагааг эхлүүлэхийн тулд юу хийж чадахаа харцгаая...
+    start-task: Ажлыг эхлүүлэх
+  key-metrics:
+    title: Флийт-Опсын хэмжүүрүүд
+    earnings: Орлого
+    fuel-expenses: Түлшний зардал
+    traveled: Явсан зай
+    total-time: Нийт хугацаа
+    order-scheduled: Төлөвлөгдсөн захиалгууд
+    order-completed: Гүйцэтгэсэн захиалгууд
+    order-progress: Явж буй захиалгууд
+    order-canceled: Цуцлагдсан захиалгууд
+    driver-online: Онлайн жолооч нар
+    customers: Хэрэглэгчид
+    open-issue: Нээлттэй асуудал
+    closed-issues: Хаагдсан асуудлууд
+  live-order-map:
+    loading: Явж буй захиалгуудыг ачааллаж байна...
+    assigned: Жолооч томилогдсон
+    no-order: Явж буй захиалга байхгүй
+    message: Захиалгууд явж байх үед энэ виджет дээр харагдаж бодит цагийн үйл ажиллагааг
+      харуулна.
+  recent-orders:
+    title: Сүүлийн захиалгууд
+    loading: Сүүлийн захиалгуудыг ачааллаж байна...
+    no-orders: Энэ долоо хоногт захиалга байхгүй
+    message-part-1: Энэ долоо хоногт захиалга байхгүй байна, хөдөлгөөн эхлүүлэхийн
+      тулд
+    message-part-2: шинэ захиалга үүсгээрэй
+    message-part-3: эсвэл хэрэглэгчдэдээ API-ээр дамжуулан захиалга өгөх боломж олгоорой.
+  transactions:
+    title: Сүүлийн гүйлгээ
+    loading: Сүүлийн гүйлгээг ачааллаж байна...
+    no-transactions: Энэ долоо хоногт гүйлгээ байхгүй
+    message: Захиалгууд үйлчилгээний хураамжтайгаар явагдаж байх үед Fleetbase гүйлгээг
+      автоматаар хянадаг.
+display-panel:
+  no-address: '{type} хаяг байхгүй!'
+  no-address-message: Хаяг байхгүй!
+driver-card:
+  no-fleets: Флийт байхгүй
+global-search:
+  search: Түлхүүр үгээр хайх...
+integrated-order-details:
+  order-id: Захиалгын дугаар
+  quotation-id: Үнийн саналын дугаар
+  driver-id: Жолоочийн дугаар
+  link: Хуваалцах холбоос
+  price-breakdown: Үнэний задлал
+  metadata: Метамэдээлэл
+geofence:
+  prompts:
+    use-draw-controls-create-service-area: Баруун талын зурж буй удирдлагыг ашиглан
+      үйлчилгээний талбайг зурна уу, цэгүүдийг холбож үйлчилгээний талбайг хадгална.
+    use-draw-controls-create-zone: Баруун талын зурж буй удирдлагыг ашиглан үйлчилгээний
+      талбай дотор бүсийг зурна уу, цэгүүдийг холбож бүсийг хадгална.
+    no-layer-found-for-resource: Энэ {resource}-ийн давхарга олдсонгүй.
+    editing-enabled: Засварлах боломжтой — оройнуудыг тохируулж, дараа нь засварлах
+      баталгааг дарна уу.
+    resource-boundaries-updated: '{resource} хил хязгаар амжилттай шинэчлэгдлээ.'
+    edit-canceled: Засварлахыг цуцаллаа.
+    failed-to-update-resource: '{resource}-ийг шинэчлэхэд амжилтгүй боллоо.'
+live-map:
+  show-coordinates: Координатуудыг харуулах
+  center-map: Газрыг төвлөрүүлэх
+  zoom-in: Ойртуулах
+  zoom-out: Холдуулах
+  toggle-draw-controls: Зурж буй удирдлагыг асаах/унтраах
+  hide-draw: Зурж буй удирдлагыг нуух
+  enable-draw: Зурж буй удирдлагыг идэвхжүүлэх
+  create-new-service: Шинэ үйлчилгээний бүс үүсгэх
+  focus-service: 'Үйлчилгээний бүс дээр төвлөрөх: {serviceName}'
+  view-driver: 'Жолоочийг харах: {driverName}'
+  edit-driver: 'Жолоочийг засах: {driverName}'
+  delete-driver: 'Жолоочийг устгах: {driverName}'
+  view-vehicle-for: 'Тээврийн хэрэгслийг харах: {driverName}'
+  view-vehicle: 'Тээврийн хэрэгслийг харах: {vehicleName}'
+  edit-vehicle: 'Тээврийн хэрэгслийг засах: {vehicleName}'
+  delete-vehicle: 'Тээврийн хэрэгслийг устгах: {vehicleName}'
+  edit-zone: 'Бүсийг засах: {zoneName}'
+  delete-zone: 'Бүсийг устгах: {zoneName}'
+  assign-zone: 'Флитыг бүсэд томилох: {zoneName}'
+  blur-service: 'Үйлчилгээний бүсийг нуух: {serviceName}'
+  create-zone: 'Дотор нь бүс үүсгэх: {serviceName}'
+  assign-fleet: 'Флитыг үйлчилгээний бүсэд томилох: {serviceName}'
+  edit-service: 'Үйлчилгээний бүсийг засах: {serviceName}'
+  delete-service: 'Үйлчилгээний бүсийг устгах: {serviceName}'
+  service-area: Үйлчилгээний бүс
+  edit-boundaries: 'Хязгааруудыг засах: {resource}'
+  zone: Бүс
+order-config:
+  create-new-title: Шинэ захиалгын тохиргоо үүсгэх
+  warning-message: Захиалгын тохиргоонд нэр шаардлагатай
+  success-message: Шинэ захиалгын тохиргоо амжилттай үүсгэгдлээ.
+  no-order-warning: Захиалгын тохиргоо сонгогдоогүй байна.
+  saved-success: '{orderName} захиалгын тохиргоо хадгалагдлаа.'
+  enter-name-title: Хуулбарласан тохиргооны нэрийг оруулна уу
+  no-config-warning: Тохиргооны нэр оруулаагүй байна.
+  cloned-success: Захиалгын тохиргоо амжилттай хуулбарлагдлаа.
+  body: Энэ захиалгын тохиргоог устгаснаар дахин үүнийг ашиглан захиалга үүсгэх боломжгүй
+    болно. Та итгэлтэй байна уу?
+  uninstall-title: Тохиргоог устгах
+  uninstall-success: Өргөтгөл {extensionName} устгагдлаа.
+  activity-flow-editor:
+    add-status: Шинэ төлөв нэмэх
+    no-status: Төлөв оруулаагүй байна.
+    overwrite: Энэ нь одоогийн төлөвийг давхардах болно!
+    overwrite-text: Энэ урсгалд аль хэдийн {statusName} төлөв байгаа тул үргэлжлүүлбэл
+      энэ төлөв давхардах болно. Өмнөх {statusName} төлөвийг давхардуулах уу?
+    overwrite-button: Тийм, давхардуул!
+    remove: Төлөвийг устгах
+    remove-text: Та энэ төлөвийг устгахдаа итгэлтэй байна уу? Холбогдох бүх үйл ажиллагаа
+      ба логик мөн устгагдана.
+    delete-button: Тийм, устгах
+    unable-warning: '{status} нь энэ дарааллын дагуу байх ёстой, шилжүүлэх боломжгүй.'
+    order-warning: Үүсгэсэн төлөв нь захиалгын урсгалын эхний дараалал байх ёстой.
+    title: Үйл ажиллагааны урсгал
+    message: Үйл ажиллагааны урсгалын тохиргоо нь энэ захиалгын төрөлд тохирох янз
+      бүрийн хяналтын төлөвүүдийг тодорхойлоход тусална. Үйл ажиллагааны урсгалын
+      логикыг мөн тохируулах боломжтой.
+    order-flow: Захиалгын урсгал
+    waypoint-flow: Замын цэгийн урсгал
+    new-activity: Шинэ үйл ажиллагаа
+    activity-details: Үйл ажиллагааны дэлгэрэнгүй
+    logic-stack: Логикийн цуваа
+    add-logic: Логикийн нөхцөл нэмэх
+    select-field: Талбар сонгох
+    select-operator: Үйлдлийг сонгох
+    enter-value: Харьцуулах утга оруулах
+    no-logic: Логикийн нөхцөлүүд хэрэглэгдээгүй
+  details-editor:
+    success: Суусан
+    key-text: Энэ түлхүүрийг таны захиалгын төрөлд дамжуулж, энэ тохиргоогоор захиалгыг
+      тохируулах боломжтой.
+    namespace-text: Энэ өргөтгөлд зориулсан өвөрмөц нэрийн орон.
+    id: Өргөтгөлийн ID
+    id-text: Энэ өргөтгөлийн өвөрмөц ID.
+    version: Өргөтгөлийн хувилбар
+    version-text: Энэ өргөтгөлийн хувилбар.
+    clone: Тохиргоог хуулбарлах
+    uninstall: Тохиргоог устгах
+    delete: Тохиргоог устгах
+  entities-editor:
+    warning-message: Мета талбарын түлхүүрийн нэр оруулаагүй байна.
+    title: Байгууллагууд
+    message: Байгууллагуудын тохиргоо нь энэ захиалгын төрөлд сонгогдох ёстой өөр
+      өөр төрлийн байгууллагуудыг тодорхойлоход тусална. Эдгээрийг гар аргаар захиалга
+      үүсгэхийг хурдан болгохын тулд загвар болгон ашиглах ёстой.
+    type: Байгууллагын төрөл
+    add-meta: Мета талбар нэмэх
+  fields-editor:
+    text-field: Текст талбар
+    boolean: Логик утга
+    boolean-text: Хэрэглэгчид чекбоксоор үнэн эсвэл худал шинж чанарыг унтраах боломжийг
+      олгоно
+    dropdown: Унждаг сонголт
+    dropdown-text: Хэрэглэгчид сонголтуудын унждаг жагсаалтаас нэгийг сонгох боломжийг
+      олгоно
+    datetime: Огноо, цаг сонгогч
+    datetime-text: Хэрэглэгчид огноо ба цагийг сонгох боломжийг олгоно
+    port: Боомт сонгогч
+    port-text: Хэрэглэгчид боомтыг сонгох боломжийг олгоно
+    vessel: Хөлөг онгоц сонгогч
+    vessel-text: Хэрэглэгчид хөлөг онгоцыг сонгох боломжийг олгоно
+    warning-message: Бүлгийн нэр оруулаагүй байна.
+    field-title: Мета талбарууд
+    new-field: Шинэ захиалгат талбар
+    new-custom-field: Шинэ захиалгат талбарын бүлэг
+    field-text: Мета талбарын тохиргоо нь захиалгад хэрэглэгдэх захиалгат оруулах
+      талбаруудыг тодорхойлоход тусална.
+    custom-field-group: Захиалгат талбарын бүлэг
+    default-field: Анхдагч талбарууд
+    custom-field: Захиалгат талбар
+    type: Талбарын төрөл
+    select-type: Талбарын төрлийг сонгох
+    add-option: Сонголт нэмэх
+  select-message: Өөрчлөх захиалгын тохиргоог сонгоно уу, эсвэл "Шинэ тохиргоо" дээр
+    дарж шинэ захиалгын тохиргоо үүсгээрэй.
+  new-config: Шинэ тохиргоо
+  loading-configuration: Таны захиалгын тохиргоог ачааллаж байна...
+  select-order: Захиалгын тохиргоог сонгох
+  save-changes: Өөрчлөлтийг хадгалах
+  details: Дэлгэрэнгүй
+  fields: Захиалгат талбарууд
+  flow: Үйл ажиллагааны урсгал
+  entities: Байгууллагууд
+order-list-overlay:
+  search: Захиалгуудыг хайх...
+  selected: Сонгогдсон
+  assign: Жолоочид томилох...
+  cancel: Захиалгуудыг цуцлах...
+  delete: Захиалгуудыг устгах...
+  dispatch: Захиалгуудыг илгээх...
+  actions: Үйлдлүүд
+  create-order: Шинэ захиалга үүсгэх...
+  create-fleet: Шинэ флот үүсгэх...
+  active-orders: Идэвхтэй захиалгууд
+  unassigned-orders: Томилогдоогүй захиалгууд
+route-list:
+  expand: Өргөтгөхийн тулд товшино уу
+  collapse: Багасгахын тулд товшино уу
+  more-waypoints: нэмэлт чиглэлүүд
+settings:
+  custom-fields: Захиалгат талбарууд
+  notifications:
+    fleet-ops-notification-settings: Флот-Үйл ажиллагааны мэдэгдлийн тохиргоо
+    fleet-ops-notifications: Флот-Үйл ажиллагааны мэдэгдлүүд
+    configure-notifications: Мэдэгдлийг тохируулах
+    select-notifiables: Мэдэгдүүлэх хүмүүсийг сонгох
+  routing:
+    fleet-ops-routing-settings: Флот-Үйл ажиллагааны чиглүүлэлтийн тохиргоо
+    fleet-ops-routing: Флот-Үйл ажиллагааны чиглүүлэлт
+    configure-routing: Чиглүүлэлтийг тохируулах
+    select-routing-service: Чиглүүлэлтийн үйлчилгээг сонгох
+    routing-service: Чиглүүлэлтийн үйлчилгээ
+    routing-service-help-text: Газрын зураг дээр чиглэл тооцоолох, зураглах үүрэгтэй
+      үйлчилгээг сонгоно уу.
+    select-routing-distance-unit: Чиглүүлэлтийн зайны нэгжийг сонгох
+    routing-distance-unit: Чиглүүлэлтийн зайны нэгж
+    routing-distance-unit-help-text: Зай ба чиглэлийг тооцоолоход ашиглагдах нэгж.
+  navigator-app:
+    navigator-app-settings: Навигатор апп-ийн тохиргоо
+  payments:
+    payments: Төлбөрүүд
+    payment-settings: Төлбөрийн тохиргоо
+    account-not-setup-for-payments: Таны данс одоогоор төлбөр хүлээн авахад тохируулагдаагүй
+      байна.
+    to-accept-payments: Төлбөр хүлээн авч боловсруулахын тулд Stripe-аар дамжуулан
+      бүртгэлээ дуусгах шаардлагатай.
+    system-stripe-not-setup: Энэ систем одоогоор төлбөр хүлээн авах эсвэл боловсруулах
+      боломжгүй байна, төлбөрийн тохиргоог хийхийн тулд системийн администратортой
+      холбоо барина уу.
+    loading-settings: Төлбөрийн тохиргоог ачааллаж байна...
+    onboard:
+      header-title: Төлбөрийн бүртгэл
+      title-completed: Бүртгэл амжилттай дууслаа!
+      title-incomplete: Төлбөр хүлээн авахын тулд бүртгэлийг дуусгана уу.
+      subtitle-completed: Таны бүртгэл амжилттай хийгдсэн бөгөөд одоо та үйлчлүүлэгчид
+        болон гуравдагч этгээдүүдээс төлбөр хүлээн авч чадна.
+      subtitle-incomplete: Захиалгын төлбөрийг хүлээн авахын тулд энэ бүртгэлийг дуусгах
+        шаардлагатай.
+      button-continue: Үргэлжлүүлэх
+      button-start: Одоо бүртгэл эхлүүлэх
+      button-in-progress: Бүртгэл явагдаж байна

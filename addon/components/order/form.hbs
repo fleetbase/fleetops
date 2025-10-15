@@ -1,0 +1,28 @@
+<div class="form-wrapper" ...attributes>
+    {{#if (has-block)}}
+        {{yield
+            (hash
+                Details=(component "order/form/details" resource=@resource)
+                CustomFields=(component "order/form/custom-fields" resource=@resource customFields=@customFields)
+                Route=(component "order/form/route" resource=@resource)
+                RegistryYield=(component "registry-yield" registry="fleet-ops:component:order:form" order=@resource)
+                Payload=(component "order/form/payload" resource=@resource)
+                ServiceRate=(component "order/form/service-rate" resource=@resource)
+                Notes=(component "order/form/notes" resource=@resource)
+                Documents=(component "order/form/documents" resource=@resource)
+                Metadata=(component "order/form/metadata" resource=@resource)
+            )
+        }}
+    {{else}}
+        <Order::Form::Details @resource={{@resource}} />
+        <Order::Form::Route @resource={{@resource}} />
+        <RegistryYield @registry="fleet-ops:component:order:form" as |RegistryComponent|>
+            <RegistryComponent @order={{@order}} />
+        </RegistryYield>
+        <Order::Form::Payload @resource={{@resource}} />
+        <Order::Form::ServiceRate @resource={{@resource}} />
+        <Order::Form::Notes @resource={{@resource}} />
+        <Order::Form::Documents @resource={{@resource}} />
+        <Order::Form::Metadata @resource={{@resource}} />
+    {{/if}}
+</div>

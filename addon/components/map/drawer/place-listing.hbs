@@ -1,0 +1,11 @@
+<div class="flex flex-row items-center px-5 py-2 border-b border-gray-200 dark:border-gray-700">
+    <div>
+        <Input
+            @value={{this.query}}
+            @type="text"
+            class="form-input form-input-sm w-60"
+            placeholder={{t "live-map-drawer.place-listing.message"}}
+        />
+    </div>
+</div>
+<Table @rows={{this.filteredPlaces}} @columns={{this.columns}} />

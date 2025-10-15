@@ -8,12 +8,12 @@
     @onContextChanged={{this.onContextChanged}}
     as |Action Context|
 >
-    <Layout::Section::Header @title={{t "fleet-ops.component.order-config-manager.title"}}>
+    <Layout::Section::Header @title={{t "order-config-manager.title"}}>
         {{#if Context.ready}}
             <DropdownButton
                 class="order-config-select-button mr-2"
                 @disabled={{not Context.configs}}
-                @text={{if Context.currentConfig.name Context.currentConfig.name (t "fleet-ops.component.order-config-manager.select-order-config")}}
+                @text={{if Context.currentConfig.name Context.currentConfig.name (t "order-config-manager.select-order-config")}}
                 @textClass="text-sm mr-2"
                 @buttonClass="flex-row-reverse w-44 justify-between"
                 @icon="caret-down"
@@ -80,10 +80,10 @@
             {{else}}
                 <div class="h-full">
                     <div class="flex flex-col items-center justify-center h-40">
-                        <h4 class="text-lg text-gray-400 mb-4">{{t "fleet-ops.component.order-config-manager.select-order-config-to-start"}}</h4>
+                        <h4 class="text-lg text-gray-400 mb-4">{{t "order-config-manager.select-order-config-to-start"}}</h4>
                         <Button
                             @type="primary"
-                            @text={{t "fleet-ops.component.order-config-manager.new-order-config"}}
+                            @text={{t "order-config-manager.new-order-config"}}
                             @onClick={{Context.onClickCreateOrderConfig}}
                             @permission="fleet-ops create order-config"
                             @icon="plus"

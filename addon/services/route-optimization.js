@@ -57,7 +57,7 @@ export default class RouteOptimizationService extends Service {
 
     #initializeRegistry() {
         const registry = 'registry:route-optimization-engines';
-        const application = this.universe.getApplicationInstance();
+        const application = typeof this.universe?.getApplicationInstance === 'function' ? this.universe.getApplicationInstance() : window.Fleetbase;
         if (!application.hasRegistration(registry)) {
             application.register(registry, new RouteOptimizationRegistry(), { instantiate: false });
         }

@@ -1,95 +1,37 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 
-export default class ManagementPlacesIndexNewController extends BaseController {
-    /**
-     * Inject the `store` service
-     *
-     * @memberof ManagementplacesIndexNewController
-     */
-    @service store;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementplacesIndexNewController
-     */
+export default class ManagementPlacesIndexNewController extends Controller {
+    @service placeActions;
     @service hostRouter;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @memberof intl
-     */
     @service intl;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementplacesIndexNewController
-     */
-    @service modalsManager;
-
-    /**
-     * The overlay component context.
-     *
-     * @memberof ManagementplacesIndexNewController
-     */
+    @service notifications;
     @tracked overlay;
+    @tracked place = this.placeActions.createNewInstance();
 
-    /**
-     * The place being created.
-     *
-     * @var {placeModel}
-     */
-    @tracked place = this.store.createRecord('place');
+    @task *save(place) {
+        try {
+            yield place.save();
+            this.overlay?.close();
 
-    /**
-     * Set the overlay component context object.
-     *
-     * @param {OverlayContext} overlay
-     * @memberof ManagementplacesIndexNewController
-     */
-    @action setOverlayContext(overlay) {
-        this.overlay = overlay;
-    }
-
-    /**
-     * When exiting the overlay.
-     *
-     * @return {Transition}
-     * @memberof ManagementplacesIndexNewController
-     */
-    @action transitionBack() {
-        return this.transitionToRoute('management.places.index');
-    }
-
-    /**
-     * Trigger a route refresh and focus the new place created.
-     *
-     * @param {placeModel} place
-     * @return {Promise}
-     * @memberof ManagementplacesIndexNewController
-     */
-    @action onAfterSave(place) {
-        if (this.overlay) {
-            this.overlay.close();
-        }
-
-        this.hostRouter.refresh();
-        return this.transitionToRoute('management.places.index.details', place).then(() => {
+            yield this.hostRouter.refresh();
+            yield this.hostRouter.transitionTo('console.fleet-ops.management.places.index.details', place);
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.place'),
+                    resourceName: place.address,
+                })
+            );
             this.resetForm();
-        });
+        } catch (err) {
+            this.notifications.serverError(err);
+        }
     }
 
-    /**
-     * Resets the form with a new place record
-     *
-     * @memberof ManagementplacesIndexNewController
-     */
-    resetForm() {
-        this.place = this.store.createRecord('place');
+    @action resetForm() {
+        this.place = this.placeActions.createNewInstance();
     }
 }

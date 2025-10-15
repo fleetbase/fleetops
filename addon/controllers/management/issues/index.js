@@ -1,27 +1,15 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
-import { isBlank } from '@ember/object';
-import { timeout, task } from 'ember-concurrency';
-import getIssueTypes from '../../../utils/get-issue-types';
-import getIssueCategories from '../../../utils/get-issue-categories';
+import fleetOpsOptions from '../../../utils/fleet-ops-options';
 
-export default class ManagementIssuesIndexController extends BaseController {
-    @service notifications;
-    @service modalsManager;
+export default class ManagementIssuesIndexController extends Controller {
+    @service issueActions;
+    @service tableContext;
     @service intl;
-    @service crud;
-    @service store;
-    @service hostRouter;
-    @service filters;
 
-    /**
-     * Queryable parameters for this controller's model
-     *
-     * @var {Array}
-     */
-    queryParams = [
+    /** query params */
+    @tracked queryParams = [
         'page',
         'limit',
         'sort',
@@ -39,414 +27,241 @@ export default class ManagementIssuesIndexController extends BaseController {
         'cateogry',
         'type',
     ];
-
-    /**
-     * The current page of data being viewed
-     *
-     * @var {Integer}
-     */
     @tracked page = 1;
-
-    /**
-     * The maximum number of items to show per page
-     *
-     * @var {Integer}
-     */
     @tracked limit;
-
-    /**
-     * The param to sort the data on, the param with prepended `-` is descending
-     *
-     * @var {String}
-     */
     @tracked sort = '-created_at';
-
-    /**
-     * The filterable param `public_id`
-     *
-     * @var {String}
-     */
     @tracked public_id;
-
-    /**
-     * The filterable param `status`
-     *
-     * @var {String}
-     */
     @tracked status;
-
-    /**
-     * The filterable param `priority`
-     *
-     * @var {Array|String}
-     */
     @tracked priority;
-
-    /**
-     * The filterable param `type`
-     *
-     * @var {String}
-     */
     @tracked type;
-
-    /**
-     * The filterable param `category`
-     *
-     * @var {String}
-     */
     @tracked category;
-
-    /**
-     * The filterable param `vehicle`
-     *
-     * @var {String}
-     */
     @tracked vehicle;
-
-    /**
-     * The filterable param `driver`
-     *
-     * @var {String}
-     */
     @tracked driver;
-
-    /**
-     * The filterable param `assignee`
-     *
-     * @var {String}
-     */
     @tracked assignee;
-
-    /**
-     * The filterable param `reporter`
-     *
-     * @var {String}
-     */
     @tracked reporter;
+    @tracked table;
 
-    /**
-     * All columns applicable for orders
-     *
-     * @var {Array}
-     */
-    @tracked columns = [
-        {
-            label: this.intl.t('fleet-ops.common.id'),
-            valuePath: 'public_id',
-            cellComponent: 'table/cell/anchor',
-            action: this.viewIssue,
-            permission: 'fleet-ops view issue',
-            width: '110px',
-            resizable: true,
-            sortable: true,
-        },
-        {
-            label: this.intl.t('fleet-ops.common.priority'),
-            valuePath: 'priority',
-            cellComponent: 'table/cell/status',
-            width: '100px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/multi-option',
-            filterOptions: ['low', 'medium', 'high', 'critical', 'scheduled-maintenance', 'operational-suggestion'],
-        },
-        {
-            label: this.intl.t('fleet-ops.common.type'),
-            valuePath: 'type',
-            width: '100px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/select',
-            filterOptions: getIssueTypes(),
-            placeholder: 'Select issue type',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.category'),
-            valuePath: 'category',
-            width: '120px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/select',
-            filterOptions: getIssueCategories(),
-            placeholder: 'Select issue category',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.reporter'),
-            valuePath: 'reporter_name',
-            width: '100px',
-            cellComponent: 'table/cell/anchor',
-            permission: 'iam view user',
-            onClick: async (issue) => {
-                let reporter = await this.store.findRecord('user', issue.reported_by_uuid);
-
-                if (reporter) {
-                    this.contextPanel.focus(reporter);
-                }
+    /** action buttons */
+    get actionButtons() {
+        return [
+            {
+                icon: 'refresh',
+                onClick: this.issueActions.refresh,
+                helpText: this.intl.t('common.refresh'),
             },
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select reporter',
-            filterParam: 'reporter',
-            model: 'user',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.assignee'),
-            valuePath: 'assignee_name',
-            width: '100px',
-            cellComponent: 'table/cell/anchor',
-            permission: 'iam view user',
-            onClick: async (issue) => {
-                let assignee = await this.store.findRecord('user', issue.assigned_to_uuid);
-
-                if (assignee) {
-                    this.contextPanel.focus(assignee);
-                }
+            {
+                text: this.intl.t('common.new'),
+                type: 'primary',
+                icon: 'plus',
+                onClick: this.issueActions.transition.create,
             },
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select assignee',
-            filterParam: 'assignee',
-            model: 'user',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.driver'),
-            valuePath: 'driver_name',
-            width: '100px',
-            cellComponent: 'table/cell/anchor',
-            permission: 'fleet-ops view driver',
-            onClick: async (issue) => {
-                let driver = await issue.loadDriver();
-
-                if (driver) {
-                    this.contextPanel.focus(driver);
-                }
+            {
+                text: this.intl.t('common.import'),
+                type: 'magic',
+                icon: 'upload',
+                onClick: this.issueActions.import,
             },
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select driver',
-            filterParam: 'driver',
-            model: 'driver',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.vehicle'),
-            valuePath: 'vehicle_name',
-            width: '100px',
-            cellComponent: 'table/cell/anchor',
-            permission: 'fleet-ops view vehicle',
-            onClick: async (issue) => {
-                let vehicle = await issue.loadVehicle();
-
-                if (vehicle) {
-                    this.contextPanel.focus(vehicle);
-                }
+            {
+                text: this.intl.t('common.export'),
+                icon: 'long-arrow-up',
+                iconClass: 'rotate-icon-45',
+                wrapperClass: 'hidden md:flex',
+                onClick: this.issueActions.export,
             },
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select vehicle',
-            filterParam: 'vehicle',
-            model: 'vehicle',
-            modelNamePath: 'displayName',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.status'),
-            valuePath: 'status',
-            cellComponent: 'table/cell/status',
-            width: '120px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/multi-option',
-            filterOptions: ['pending', 'in-progress', 'backlogged', 'requires-update', 'in-review', 're-opened', 'duplicate', 'pending-review', 'escalated', 'completed', 'canceled'],
-        },
-        {
-            label: this.intl.t('fleet-ops.common.created-at'),
-            valuePath: 'createdAt',
-            sortParam: 'created_at',
-            width: '120px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/date',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.updated-at'),
-            valuePath: 'updatedAt',
-            sortParam: 'updated_at',
-            width: '120px',
-            resizable: true,
-            sortable: true,
-            hidden: true,
-            filterable: true,
-            filterComponent: 'filter/date',
-        },
-        {
-            label: '',
-            cellComponent: 'table/cell/dropdown',
-            ddButtonText: false,
-            ddButtonIcon: 'ellipsis-h',
-            ddButtonIconPrefix: 'fas',
-            ddMenuLabel: 'Issue Actions',
-            cellClassNames: 'overflow-visible',
-            wrapperClass: 'flex items-center justify-end mx-2',
-            width: '10%',
-            actions: [
-                {
-                    label: this.intl.t('fleet-ops.management.issues.index.view'),
-                    fn: this.viewIssue,
-                    permission: 'fleet-ops view issue',
-                },
-                {
-                    label: this.intl.t('fleet-ops.management.issues.index.edit-issues'),
-                    fn: this.editIssue,
-                    permission: 'fleet-ops update issue',
-                },
-                {
-                    separator: true,
-                },
-                {
-                    label: this.intl.t('fleet-ops.management.issues.index.delete'),
-                    fn: this.deleteIssue,
-                    permission: 'fleet-ops delete issue',
-                },
-            ],
-            sortable: false,
-            filterable: false,
-            resizable: false,
-            searchable: false,
-        },
-    ];
-
-    /**
-     * The search task.
-     *
-     * @void
-     */
-    @task({ restartable: true }) *search({ target: { value } }) {
-        // if no query don't search
-        if (isBlank(value)) {
-            this.query = null;
-            return;
-        }
-
-        // timeout for typing
-        yield timeout(250);
-
-        // reset page for results
-        if (this.page > 1) {
-            this.page = 1;
-        }
-
-        // update the query param
-        this.query = value;
+        ];
     }
 
-    /**
-     * Toggles dialog to export a issue
-     *
-     * @void
-     */
-    @action exportIssues() {
-        const selections = this.table.selectedRows.map((_) => _.id);
-        this.crud.export('issue', { params: { selections } });
-    }
+    /** bulk actions */
+    get bulkActions() {
+        const selected = this.tableContext.getSelectedRows();
 
-    /**
-     * Handles and prompts for spreadsheet imports of issues.
-     *
-     * @void
-     */
-    @action importIssues() {
-        this.crud.import('issue', {
-            onImportCompleted: () => {
-                this.hostRouter.refresh();
+        return [
+            {
+                label: this.intl.t('common.delete-selected-count', { count: selected.length }),
+                class: 'text-red-500',
+                fn: this.issueActions.bulkDelete,
             },
-            onImportTemplate: () => {
-                window.open('https://flb-assets.s3.ap-southeast-1.amazonaws.com/import-templates/Fleetbase_Issue_Import_Template.xlsx');
+        ];
+    }
+
+    /** columns */
+    get columns() {
+        return [
+            {
+                label: this.intl.t('column.id'),
+                valuePath: 'public_id',
+                cellComponent: 'table/cell/anchor',
+                action: this.issueActions.transition.view,
+                permission: 'fleet-ops view issue',
+                width: '110px',
+                resizable: true,
+                sortable: true,
             },
-        });
-    }
-
-    /**
-     * Reload layout view.
-     */
-    @action reload() {
-        return this.hostRouter.refresh();
-    }
-
-    /**
-     * View the selected issue
-     *
-     * @param {IssueModel} issue
-     * @param {Object} options
-     * @void
-     */
-    @action viewIssue(issue) {
-        return this.transitionToRoute('management.issues.index.details', issue);
-    }
-
-    /**
-     * Create a new `issue` in modal
-     *
-     * @void
-     */
-    @action createIssue() {
-        return this.transitionToRoute('management.issues.index.new');
-    }
-
-    /**
-     * Edit a `issue` details
-     *
-     * @param {IssueModel} issue
-     * @void
-     */
-    @action editIssue(issue) {
-        return this.transitionToRoute('management.issues.index.edit', issue);
-    }
-
-    /**
-     * Delete a `issue` via confirm prompt
-     *
-     * @param {IssueModel} issue
-     * @param {Object} options
-     * @void
-     */
-    @action deleteIssue(issue, options = {}) {
-        this.crud.delete(issue, {
-            acceptButtonIcon: 'trash',
-            onConfirm: () => {
-                this.hostRouter.refresh();
+            {
+                label: this.intl.t('column.priority'),
+                valuePath: 'priority',
+                cellComponent: 'table/cell/status',
+                width: '100px',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/multi-option',
+                filterOptions: ['low', 'medium', 'high', 'critical', 'scheduled-maintenance', 'operational-suggestion'],
             },
-            ...options,
-        });
-    }
-
-    /**
-     * Bulk deletes selected `issues` via confirm prompt
-     *
-     * @param {Array} selected an array of selected models
-     * @void
-     */
-    @action bulkDeleteIssues() {
-        const selected = this.table.selectedRows;
-
-        this.crud.bulkDelete(selected, {
-            modelNamePath: 'id',
-            acceptButtonText: this.intl.t('fleet-ops.management.issues.index.delete-button'),
-            onSuccess: async () => {
-                await this.hostRouter.refresh();
-                this.table.untoggleSelectAll();
+            {
+                label: this.intl.t('column.type'),
+                valuePath: 'type',
+                width: '100px',
+                humanize: true,
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/select',
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
+                filterOptions: fleetOpsOptions('issueTypes'),
+                placeholder: 'Select issue type',
             },
-        });
+            {
+                label: this.intl.t('column.category'),
+                valuePath: 'category',
+                width: '120px',
+                humanize: true,
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/select',
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
+                filterOptions: fleetOpsOptions('issueCategories'),
+                placeholder: 'Select issue category',
+            },
+            {
+                label: this.intl.t('column.reporter'),
+                valuePath: 'reporter_name',
+                width: '100px',
+                permission: 'iam view user',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                hidden: true,
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select reporter',
+                filterParam: 'reporter',
+                model: 'user',
+            },
+            {
+                label: this.intl.t('column.assignee'),
+                valuePath: 'assignee_name',
+                width: '100px',
+                permission: 'iam view user',
+                hidden: true,
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select assignee',
+                filterParam: 'assignee',
+                model: 'user',
+            },
+            {
+                label: this.intl.t('column.driver'),
+                valuePath: 'driver_name',
+                width: '100px',
+                cellComponent: 'table/cell/anchor',
+                permission: 'fleet-ops view driver',
+                onClick: this.issueActions.viewDriver,
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select driver',
+                filterParam: 'driver',
+                model: 'driver',
+            },
+            {
+                label: this.intl.t('column.vehicle'),
+                valuePath: 'vehicle_name',
+                width: '100px',
+                cellComponent: 'table/cell/anchor',
+                permission: 'fleet-ops view vehicle',
+                onClick: this.issueActions.viewVehicle,
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select vehicle',
+                filterParam: 'vehicle',
+                model: 'vehicle',
+                modelNamePath: 'displayName',
+            },
+            {
+                label: this.intl.t('column.status'),
+                valuePath: 'status',
+                cellComponent: 'table/cell/status',
+                width: '120px',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/multi-option',
+                filterOptions: ['pending', 'in-progress', 'backlogged', 'requires-update', 'in-review', 're-opened', 'duplicate', 'pending-review', 'escalated', 'completed', 'canceled'],
+            },
+            {
+                label: this.intl.t('column.created-at'),
+                valuePath: 'createdAt',
+                sortParam: 'created_at',
+                width: '120px',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/date',
+            },
+            {
+                label: this.intl.t('column.updated-at'),
+                valuePath: 'updatedAt',
+                sortParam: 'updated_at',
+                width: '120px',
+                resizable: true,
+                sortable: true,
+                hidden: true,
+                filterable: true,
+                filterComponent: 'filter/date',
+            },
+            {
+                label: '',
+                cellComponent: 'table/cell/dropdown',
+                ddButtonText: false,
+                ddButtonIcon: 'ellipsis-h',
+                ddButtonIconPrefix: 'fas',
+                ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.issue') }),
+                cellClassNames: 'overflow-visible',
+                wrapperClass: 'flex items-center justify-end mx-2',
+                width: '10%',
+                actions: [
+                    {
+                        label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.issue') }),
+                        fn: this.issueActions.transition.view,
+                        permission: 'fleet-ops view issue',
+                    },
+                    {
+                        label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.issue') }),
+                        fn: this.issueActions.transition.edit,
+                        permission: 'fleet-ops update issue',
+                    },
+                    {
+                        separator: true,
+                    },
+                    {
+                        label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.issue') }),
+                        fn: this.issueActions.delete,
+                        permission: 'fleet-ops delete issue',
+                    },
+                ],
+                sortable: false,
+                filterable: false,
+                resizable: false,
+                searchable: false,
+            },
+        ];
     }
 }

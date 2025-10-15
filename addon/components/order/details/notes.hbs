@@ -1,0 +1,43 @@
+<ContentPanel @title={{t "order.fields.notes-title"}} @isLoading={{@isLoading}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
+    {{#if this.isEditing}}
+        <Textarea
+            @value={{@resource.notes}}
+            class="form-input w-full"
+            placeholder={{t "order.fields.notes-placeholder"}}
+            rows={{4}}
+            disabled={{cannot-write @resource}}
+        />
+        <div class="flex items-center space-x-2">
+            <Button
+                @type="primary"
+                @icon="save"
+                @size="xs"
+                @text={{t "order.fields.save-order-note"}}
+                @onClick={{perform this.save}}
+                @isLoading={{this.save.isRunning}}
+                @permission="fleet-ops update order"
+            />
+            <Button @type="default" @icon="times" @size="xs" @text={{t "common.cancel"}} @onClick={{this.stopEditing}} />
+        </div>
+    {{else}}
+        {{#if @resource.notes}}
+            <div>
+                <p class="text-xs font-mono">{{@resource.notes}}</p>
+            </div>
+        {{else}}
+            <div class="min-h-24 p-4">
+                <div class="flex items-center justify-center border border-dashed border-gray-300 dark:border-gray-600 p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
+                    <div class="text-center">
+                        <FaIcon @icon="note-sticky" @size="2x" class="text-gray-400 mb-2" />
+                        <div class="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                            No notes
+                        </div>
+                        <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                            Click edit above to add a note to this order
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {{/if}}
+    {{/if}}
+</ContentPanel>

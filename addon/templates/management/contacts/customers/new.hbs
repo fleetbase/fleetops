@@ -1,1 +1,14 @@
-<CustomerFormPanel @customer={{this.customer}} @controller={{this}} @onPressCancel={{this.transitionBack}} @onAfterSave={{this.onAfterSave}} @onLoad={{this.setOverlayContext}} />
+<Layout::Resource::Panel
+    @resource={{this.customer}}
+    @controller={{this}}
+    @actionButtons={{this.actionButtons}}
+    @headerTitle="Create a new customer"
+    @modelName="Customer"
+    @saveTask={{this.save}}
+    @onPressCancel={{transition-to "management.contacts.customers"}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+>
+    <Customer::Form @resource={{this.customer}} @controller={{this}} />
+    <Spacer @height="200px" />
+</Layout::Resource::Panel>
+

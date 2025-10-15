@@ -1,25 +1,25 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
         <div class="grid grid-cols-2 gap-4 text-xs dark:text-gray-100">
-            <InputGroup @name={{t "fleet-ops.common.internal-id"}} @value={{@options.order.internal_id}} @helpText={{t "fleet-ops.component.modals.order-form.id-text"}} />
+            <InputGroup @name={{t "common.internal-id"}} @value={{@options.order.internal_id}} @helpText={{t "order.fields.id-text"}} />
 
             <div class="input-group">
-                <InputLabel @labelText={{t "fleet-ops.common.schedule"}} @helpText={{t "fleet-ops.component.modals.order-form.schedule-text"}} />
+                <InputLabel @labelText={{t "order.fields.date-scheduled"}} @helpText={{t "order.fields.schedule-help-text"}} />
                 <DateTimeInput
                     class="form-input"
                     @value={{@options.order.scheduled_at}}
-                    @minDate={{format-date (now) "yyyy-MM-d"}}
-                    @minTime={{format-date (now) "HH:mm"}}
+                    @minDate={{format-date-fns (now) "yyyy-MM-d"}}
+                    @minTime={{format-date-fns (now) "HH:mm"}}
                     @onUpdate={{@options.scheduleOrder}}
                     @disabled={{@options.order.isIntegratedVendorOrder}}
                 />
             </div>
 
-            <InputGroup @name={{t "fleet-ops.component.modals.order-form.customer"}} @helpText={{t "fleet-ops.component.modals.order-form.customer-text"}}>
+            <InputGroup @name={{t "order.fields.customer"}} @helpText={{t "order.fields.customer-help-text"}}>
                 <ModelSelect
                     @modelName="customer"
                     @selectedModel={{@options.order.customer}}
-                    @placeholder={{t "fleet-ops.component.modals.order-form.select-customer"}}
+                    @placeholder={{t "common.select-field" field=(t "resource.customer")}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -38,11 +38,11 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name={{t "fleet-ops.component.modals.order-form.facilitator"}} @helpText={{t "fleet-ops.component.modals.order-form.facilitator-text"}}>
+            <InputGroup @name={{t "order.fields.facilitator"}} @helpText={{t "order.fields.facilitator-help-text"}}>
                 <ModelSelect
                     @modelName="facilitator"
                     @selectedModel={{@options.order.facilitator}}
-                    @placeholder={{t "fleet-ops.component.modals.order-form.select-facilitator"}}
+                    @placeholder={{t "common.select-field" field=(t "resource.facilitator")}}
                     @triggerClass="form-select form-input"
                     @allowClear={{true}}
                     @infiniteScroll={{false}}
@@ -66,12 +66,12 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name={{t "fleet-ops.component.modals.order-form.assign-driver"}} @helpText={{t "fleet-ops.component.modals.order-form.assign-driver-text"}}>
+            <InputGroup @name={{t "order.fields.assign-driver"}} @helpText={{t "order.fields.assign-driver-help-text"}}>
                 <ModelSelect
                     @modelName="driver"
                     @selectedModel={{@options.order.driver_assigned}}
                     @query={{this.driversQuery}}
-                    @placeholder={{t "fleet-ops.component.modals.order-form.select-driver"}}
+                    @placeholder={{t "common.select-field" field=(t "resource.driver")}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -99,12 +99,12 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name={{t "fleet-ops.component.modals.order-form.assign-vehicle"}} @helpText={{t "fleet-ops.component.modals.order-form.assign-vehicle-text"}}>
+            <InputGroup @name={{t "order.fields.assign-vehicle"}} @helpText={{t "order.fields.assign-vehicle-help-text"}}>
                 <ModelSelect
                     @modelName="vehicle"
                     @selectedModel={{@options.order.vehicle_assigned}}
                     @query={{this.driversQuery}}
-                    @placeholder={{t "fleet-ops.component.modals.order-form.select-vehicle"}}
+                    @placeholder={{t "common.select-field" field=(t "resource.vehicle")}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}

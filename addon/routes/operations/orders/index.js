@@ -1,12 +1,11 @@
 import Route from '@ember/routing/route';
-import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
 
 export default class OperationsOrdersIndexRoute extends Route {
     @service store;
+    @service leafletMapManager;
 
-    @tracked queryParams = {
+    queryParams = {
         page: { refreshModel: true },
         limit: { refreshModel: true },
         sort: { refreshModel: true },
@@ -35,14 +34,6 @@ export default class OperationsOrdersIndexRoute extends Route {
         drawerTab: { refreshModel: false },
         orderPanelOpen: { refreshModel: false },
     };
-
-    @action willTransition(transition) {
-        const shouldReset = typeof transition.to.name === 'string' && !transition.to.name.includes('operations.orders');
-
-        if (this.controller && shouldReset) {
-            this.controller.resetView(transition);
-        }
-    }
 
     model(params) {
         return this.store.query('order', params);

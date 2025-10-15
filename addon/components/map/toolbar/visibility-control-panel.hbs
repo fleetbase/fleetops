@@ -1,0 +1,130 @@
+{{!-- template-lint-disable require-context-role --}}
+<div class="next-dd-menu overflow-visible">
+    <div class="px-1">
+        <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1 text-gray-800 dark:text-gray-300">
+            {{t "map.visibility-controls.title"}}
+        </div>
+    </div>
+
+    <div class="next-dd-menu-seperator"></div>
+
+    <div class="px-1">
+        <button type="button" class="next-dd-item w-full flex-row items-center justify-between relative" aria-pressed={{this.arePlacesHidden}} {{on "click" this.togglePlaces}}>
+            <div class="flex flex-row items-center">
+                <div class="w-6 flex"><FaIcon @icon="building" /></div>
+                <span>
+                    {{#if this.arePlacesHidden}}
+                        {{t "map.visibility-controls.show-places"}}
+                    {{else}}
+                        {{t "map.visibility-controls.hide-places"}}
+                    {{/if}}
+                </span>
+            </div>
+            <div>
+                <Badge @status="info" @hideStatusDot={{true}} @spanClass="rounded-full -mr-2">{{this.places.length}}</Badge>
+            </div>
+        </button>
+
+        <BasicDropdownHover @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
+            <dd.Trigger
+                @tagName="button"
+                type="button"
+                class="next-dd-item flex-row items-center justify-between relative {{if dd.isOpen 'active'}}"
+                aria-haspopup="menu"
+                aria-expanded={{dd.isOpen}}
+            >
+                <div class="flex flex-row items-center">
+                    <div class="w-6"><FaIcon @icon="user" /></div>
+                    <span>
+                        {{t "map.visibility-controls.driver-controls"}}
+                    </span>
+                </div>
+                <div>
+                    <Badge @status="info" @hideStatusDot={{true}} @spanClass="rounded-full -mr-2">{{this.drivers.length}}</Badge>
+                </div>
+            </dd.Trigger>
+
+            <dd.Content>
+                <div class="next-dd-menu" role="menu">
+                    <div class="px-1">
+                        <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1 text-gray-800 dark:text-gray-300 truncate">
+                            <FaIcon @icon="binoculars" class="mr-2" />
+                            <span>{{t "map.visibility-controls.driver-visibility-controls"}}</span>
+                        </div>
+                    </div>
+
+                    <div class="next-dd-menu-seperator"></div>
+
+                    <div class="px-1">
+                        <button type="button" role="menuitem" class="next-dd-item w-full" {{on "click" (fn this.toggleDrivers true)}}>
+                            {{#if this.areDriversHidden}}
+                                {{t "map.visibility-controls.show-drivers"}}
+                            {{else}}
+                                {{t "map.visibility-controls.hide-drivers"}}
+                            {{/if}}
+                        </button>
+
+                        <button type="button" role="menuitem" class="next-dd-item w-full" {{on "click" (fn this.toggleDriversByOnline true)}}>
+                            {{t "map.visibility-controls.show-online-drivers"}}
+                        </button>
+
+                        <button type="button" role="menuitem" class="next-dd-item w-full" {{on "click" (fn this.toggleDriversByOnline false)}}>
+                            {{t "map.visibility-controls.show-offline-drivers"}}
+                        </button>
+                    </div>
+                </div>
+            </dd.Content>
+        </BasicDropdownHover>
+
+        <BasicDropdownHover @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
+            <dd.Trigger
+                @tagName="button"
+                type="button"
+                class="next-dd-item flex-row items-center justify-between relative {{if dd.isOpen 'active'}}"
+                aria-haspopup="menu"
+                aria-expanded={{dd.isOpen}}
+            >
+                <div class="flex flex-row items-center">
+                    <div class="w-6"><FaIcon @icon="car" /></div>
+                    <span>
+                        {{t "map.visibility-controls.vehicle-controls"}}
+                    </span>
+                </div>
+                <div>
+                    <Badge @status="info" @hideStatusDot={{true}} @spanClass="rounded-full -mr-2">{{this.vehicles.length}}</Badge>
+                </div>
+            </dd.Trigger>
+
+            <dd.Content>
+                <div class="next-dd-menu" role="menu">
+                    <div class="px-1">
+                        <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1 text-gray-800 dark:text-gray-300 truncate">
+                            <FaIcon @icon="binoculars" class="mr-2" />
+                            <span>{{t "map.visibility-controls.vehicle-visibility-controls"}}</span>
+                        </div>
+                    </div>
+
+                    <div class="next-dd-menu-seperator"></div>
+
+                    <div class="px-1">
+                        <button type="button" role="menuitem" class="next-dd-item w-full" {{on "click" (fn this.toggleVehicles true)}}>
+                            {{#if this.areVehiclesHidden}}
+                                {{t "map.visibility-controls.show-vehicles"}}
+                            {{else}}
+                                {{t "map.visibility-controls.hide-vehicles"}}
+                            {{/if}}
+                        </button>
+
+                        <button type="button" role="menuitem" class="next-dd-item w-full" {{on "click" (fn this.toggleVehiclesByOnline true)}}>
+                            {{t "map.visibility-controls.show-online-vehicles"}}
+                        </button>
+
+                        <button type="button" role="menuitem" class="next-dd-item w-full" {{on "click" (fn this.toggleVehiclesByOnline false)}}>
+                            {{t "map.visibility-controls.show-offline-vehicles"}}
+                        </button>
+                    </div>
+                </div>
+            </dd.Content>
+        </BasicDropdownHover>
+    </div>
+</div>

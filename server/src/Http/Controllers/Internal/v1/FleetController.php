@@ -13,6 +13,7 @@ use Fleetbase\FleetOps\Models\FleetVehicle;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -27,10 +28,21 @@ class FleetController extends FleetOpsController
     public $resource = 'fleet';
 
     /**
+     * Handle post save transactions.
+     */
+    public function afterSave(Request $request, Fleet $fleet)
+    {
+        $customFieldValues = $request->array('fleet.custom_field_values');
+        if ($customFieldValues) {
+            $fleet->syncCustomFieldValues($customFieldValues);
+        }
+    }
+
+    /**
      * Query callback when querying record.
      *
      * @param \Illuminate\Database\Query\Builder $query
-     * @param \Illuminate\Http\Request           $request
+     * @param Request                            $request
      */
     public static function onQueryRecord($query, $request): void
     {
@@ -94,7 +106,7 @@ class FleetController extends FleetOpsController
     /**
      * Removes a driver from a fleet.
      *
-     * @param \Illuminate\Http\Request $request
+     * @param Request $request
      *
      * @return \Illuminate\Http\Response
      */
@@ -118,7 +130,7 @@ class FleetController extends FleetOpsController
     /**
      * Adds a driver to a fleet.
      *
-     * @param \Illuminate\Http\Request $request
+     * @param Request $request
      *
      * @return \Illuminate\Http\Response
      */
@@ -151,7 +163,7 @@ class FleetController extends FleetOpsController
     /**
      * Removes a vehicle from a fleet.
      *
-     * @param \Illuminate\Http\Request $request
+     * @param Request $request
      *
      * @return \Illuminate\Http\Response
      */
@@ -175,7 +187,7 @@ class FleetController extends FleetOpsController
     /**
      * Adds a vehicle to a fleet.
      *
-     * @param \Illuminate\Http\Request $request
+     * @param Request $request
      *
      * @return \Illuminate\Http\Response
      */

@@ -1,95 +1,45 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 
-export default class ManagementVendorsIndexNewController extends BaseController {
-    /**
-     * Inject the `store` service
-     *
-     * @memberof ManagementVendorIndexNewController
-     */
-    @service store;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementVendorIndexNewController
-     */
+export default class ManagementVendorsIndexNewController extends Controller {
+    @service vendorActions;
     @service hostRouter;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @memberof intl
-     */
     @service intl;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementVendorIndexNewController
-     */
-    @service modalsManager;
-
-    /**
-     * The overlay component context.
-     *
-     * @memberof ManagementVendorIndexNewController
-     */
+    @service notifications;
     @tracked overlay;
+    @tracked vendor = this.vendorActions.createNewInstance();
+    @tracked integratedVendor;
 
-    /**
-     * The vendor being created.
-     *
-     * @var {VendorModel}
-     */
-    @tracked vendor = this.store.createRecord('vendor', { status: 'active' });
+    @task *save(vendor) {
+        vendor = this.integratedVendor ? this.integratedVendor : vendor;
 
-    /**
-     * Set the overlay component context object.
-     *
-     * @param {OverlayContext} overlay
-     * @memberof ManagementVendorsIndexNewController
-     */
-    @action setOverlayContext(overlay) {
-        this.overlay = overlay;
-    }
+        try {
+            yield vendor.save();
+            this.overlay?.close();
 
-    /**
-     * When exiting the overlay.
-     *
-     * @return {Transition}
-     * @memberof ManagementVendorIndexNewController
-     */
-    @action transitionBack() {
-        return this.transitionToRoute('management.vendors.index');
-    }
-
-    /**
-     * Trigger a route refresh and focus the new vendor created.
-     *
-     * @param {VendorModel} vendor
-     * @return {Promise}
-     * @memberof ManagementVendorsIndexNewController
-     */
-    @action onAfterSave(vendor) {
-        if (this.overlay) {
-            this.overlay.close();
-        }
-
-        this.hostRouter.refresh();
-        return this.transitionToRoute('management.vendors.index.details', vendor).then(() => {
+            yield this.hostRouter.refresh();
+            yield this.hostRouter.transitionTo('console.fleet-ops.management.vendors.index.details', vendor);
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.vendor'),
+                    resourceName: vendor.name,
+                })
+            );
             this.resetForm();
-        });
+        } catch (err) {
+            this.notifications.serverError(err);
+        }
     }
 
-    /**
-     * Resets the form with a new vendor record
-     *
-     * @memberof ManagementVendorIndexNewController
-     */
-    resetForm() {
-        this.vendor = this.store.createRecord('vendor', { status: 'active' });
+    @action resetForm() {
+        this.vendor = this.vendorActions.createNewInstance();
+        this.integratedVendor = null;
+    }
+
+    @action setIntegration(integratedVendor) {
+        this.integratedVendor = integratedVendor;
     }
 }

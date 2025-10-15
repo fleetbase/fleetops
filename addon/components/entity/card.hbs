@@ -1,0 +1,28 @@
+<Layout::Resource::Card ...attributes as |Card|>
+    <Card.header class={{@headerClass}}>
+        <div class="font-semibold">{{or @resource.name @resource.public_id}}</div>
+        <div class="text-gray-300 dark:text-gray-500 text-sm">{{or @resource.tracking @resource.sku @resource.internal_id}}</div>
+        {{#if (has-block "header")}}
+            {{yield to="header"}}
+        {{/if}}
+    </Card.header>
+    <Card.body class={{@bodyClass}}>
+        <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.entityImage"}} class="card-img-sm" />
+        {{#if (has-block "body")}}
+            {{yield to="body"}}
+        {{/if}}
+    </Card.body>
+    <Card.footer class={{@footerClass}}>
+        <div class="flex flex-row items-center space-x-1">
+            <Button @icon="pencil" @size="xs" @onClick={{fn this.entityActions.modal.edit @resource}} />
+            <Button @icon="trash" @size="xs" @type="danger" @onClick={{fn this.entityActions.delete @resource}} />
+        </div>
+        {{#if (has-block "footer")}}
+            {{yield to="footer"}}
+        {{/if}}
+        <div class="mt-1">
+            <div class="text-gray-300 dark:text-gray-500 text-xs">Last Modified: {{@resource.updatedAt}}</div>
+        </div>
+    </Card.footer>
+</Layout::Resource::Card>
+{{yield}}

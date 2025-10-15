@@ -1,6 +1,6 @@
 <div class="order-schedule-card border border-gray-200 dark:border-gray-700" ...attributes>
     <a href="javascript:;" class="{{@titleClass}} card-title border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900" {{on "click" (fn this.onTitleClick @order)}}>
-        <span>{{@order.public_id}}</span>
+        <span>{{@order.tracking}}</span>
         <div>
             <Badge @status={{@order.status}} />
         </div>
@@ -11,7 +11,7 @@
                 <div class="w-4">
                     <FaIcon @icon="clock" @size="xs" />
                 </div>
-                <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.date"}}</span>
+                <span class="font-semibold">{{t "order.schedule-card.date"}}</span>
             </div>
             <span class={{unless @order.scheduled_at "dark:text-gray-600 text-gray-400"}}>{{n-a @order.scheduledAt "Not Scheduled"}}</span>
         </div>
@@ -29,7 +29,7 @@
                 <div class="w-4">
                     <FaIcon @icon="id-card-alt" @size="xs" />
                 </div>
-                <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.driver-assigned"}}</span>
+                <span class="font-semibold">{{t "order.schedule-card.driver-assigned"}}</span>
                 <div class="ml-1">
                     {{#let (cannot "fleet-ops assign-driver-for order") as |unauthorized|}}
                         <a
@@ -53,7 +53,7 @@
                     <ModelSelect
                         @modelName="driver"
                         @selectedModel={{@order.driver_assigned}}
-                        @placeholder={{t "fleet-ops.component.order.schedule-card.select-driver"}}
+                        @placeholder={{t "order.schedule-card.select-driver"}}
                         @triggerClass="form-select form-input form-input-sm w-48"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}
@@ -74,7 +74,7 @@
                         disabled={{not @order.driver_assigned}}
                         class={{unless @order.driver_assigned "dark:text-gray-600 text-gray-400"}}
                         {{on "click" (fn this.onClickDriver @order.driver_assigned)}}
-                    >{{n-a @order.driver_assigned.name (t "fleet-ops.component.order.schedule-card.no-driver")}}</a>
+                    >{{n-a @order.driver_assigned.name (t "order.schedule-card.no-driver")}}</a>
                 {{/if}}
             </div>
         </div>
@@ -83,7 +83,7 @@
                 <div class="w-4">
                     <FaIcon @icon="car" @size="xs" />
                 </div>
-                <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.vehicle-assigned"}}</span>
+                <span class="font-semibold">{{t "order.schedule-card.vehicle-assigned"}}</span>
             </div>
             {{#if @order.vehicle_assigned}}
                 <a
@@ -91,16 +91,16 @@
                     disabled={{not @order.vehicle_assigned}}
                     class={{unless @order.vehicle_assigned "dark:text-gray-600 text-gray-400"}}
                     {{on "click" (fn this.onClickVehicle @order.vehicle_assigned)}}
-                >{{n-a @order.vehicle_assigned.display_name (t "fleet-ops.component.order.schedule-card.no-vehicle")}}</a>
+                >{{n-a @order.vehicle_assigned.display_name (t "order.schedule-card.no-vehicle")}}</a>
             {{else if @order.driver_assigned.vehicle}}
                 <a
                     href="javascript:;"
                     disabled={{not @order.driver_assigned.vehicle}}
                     class={{unless @order.driver_assigned.vehicle "dark:text-gray-600 text-gray-400"}}
                     {{on "click" (fn this.onClickVehicle @order.driver_assigned.vehicle)}}
-                >{{n-a @order.driver_assigned.vehicle_name (t "fleet-ops.component.order.schedule-card.no-vehicle")}}</a>
+                >{{n-a @order.driver_assigned.vehicle_name (t "order.schedule-card.no-vehicle")}}</a>
             {{else}}
-                <div class="dark:text-gray-600 text-gray-400">{{t "fleet-ops.component.order.schedule-card.no-vehicle"}}</div>
+                <div class="dark:text-gray-600 text-gray-400">{{t "order.schedule-card.no-vehicle"}}</div>
             {{/if}}
         </div>
         <div class="flex items-center justify-between">
@@ -108,7 +108,7 @@
                 <div class="w-4">
                     <FaIcon @icon="location-dot" @size="xs" />
                 </div>
-                <span class="font-semibold">{{t "fleet-ops.component.order.schedule-card.destination"}}</span>
+                <span class="font-semibold">{{t "order.schedule-card.destination"}}</span>
             </div>
             <span>{{n-a @order.pickupName}}</span>
         </div>

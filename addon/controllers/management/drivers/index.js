@@ -1,31 +1,19 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { isBlank } from '@ember/utils';
-import { equal } from '@ember/object/computed';
-import { timeout, task } from 'ember-concurrency';
 
-export default class ManagementDriversIndexController extends BaseController {
-    @service notifications;
-    @service modalsManager;
-    @service intl;
-    @service crud;
+export default class ManagementDriversIndexController extends Controller {
     @service driverActions;
-    @service store;
-    @service fetch;
-    @service hostRouter;
-    @service filters;
-    @service currentUser;
-    @service contextPanel;
-    @service abilities;
+    @service fleetActions;
+    @service vendorActions;
+    @service vehicleActions;
+    @service notifications;
+    @service tableContext;
+    @service intl;
 
-    /**
-     * Queryable parameters for this controller's model
-     *
-     * @var {Array}
-     */
-    queryParams = [
+    /** query params */
+    @tracked queryParams = [
         'page',
         'limit',
         'sort',
@@ -43,513 +31,292 @@ export default class ManagementDriversIndexController extends BaseController {
         'updated_at',
         'status',
     ];
-
-    /**
-     * The current page of data being viewed
-     *
-     * @var {Integer}
-     */
     @tracked page = 1;
-
-    /**
-     * The maximum number of items to show per page
-     *
-     * @var {Integer}
-     */
     @tracked limit;
-
-    /**
-     * The param to sort the data on, the param with prepended `-` is descending
-     *
-     * @var {String}
-     */
     @tracked sort = '-created_at';
-
-    /**
-     * The filterable param `public_id`
-     *
-     * @var {String}
-     */
     @tracked public_id;
-
-    /**
-     * The filterable param `internal_id`
-     *
-     * @var {String}
-     */
     @tracked internal_id;
-
-    /**
-     * The filterable param `name`
-     *
-     * @var {String}
-     */
     @tracked name;
-
-    /**
-     * The filterable param `vehicle`
-     *
-     * @var {String}
-     */
     @tracked vehicle;
-
-    /**
-     * The filterable param `fleet`
-     *
-     * @var {String}
-     */
     @tracked fleet;
-
-    /**
-     * The filterable param `drivers_license_number`
-     *
-     * @var {String}
-     */
     @tracked drivers_license_number;
-
-    /**
-     * The filterable param `phone`
-     *
-     * @var {String}
-     */
     @tracked phone;
-
-    /**
-     * The filterable param `status`
-     *
-     * @var {Array|String}
-     */
     @tracked status;
-
-    /**
-     * The filterable param `created_at`
-     *
-     * @var {String}
-     */
     @tracked created_at;
-
-    /**
-     * The filterable param `updated_at`
-     *
-     * @var {String}
-     */
     @tracked updated_at;
-
-    /**
-     * The current layout.
-     *
-     * @memberof ManagementDriversIndexController
-     */
     @tracked layout = 'table';
+    @tracked table;
 
-    /**
-     * True if the current layout style is grid.
-     *
-     * @memberof ManagementDriversIndexController
-     */
-    @equal('layout', 'grid') isGridLayout;
-
-    /**
-     *Ttrue if the current layour style is table.
-     *
-     * @memberof ManagementDriversIndexController
-     */
-    @equal('layout', 'table') isTableLayout;
-
-    /**
-     * All columns applicable for orders
-     *
-     * @var {Array}
-     */
-    @tracked columns = [
-        {
-            label: this.intl.t('fleet-ops.common.name'),
-            valuePath: 'name',
-            width: '200px',
-            cellComponent: 'table/cell/driver-name',
-            permission: 'fleet-ops view driver',
-            action: this.viewDriver,
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/string',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.id'),
-            valuePath: 'public_id',
-            width: '130px',
-            cellComponent: 'click-to-copy',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            hidden: false,
-            filterComponent: 'filter/string',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.internal-id'),
-            valuePath: 'internal_id',
-            cellComponent: 'click-to-copy',
-            width: '130px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/string',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.vendor'),
-            cellComponent: 'table/cell/anchor',
-            permission: 'fleet-ops view vendor',
-            onClick: async (driver) => {
-                const vendor = await driver.loadVendor();
-
-                if (vendor) {
-                    this.contextPanel.focus(vendor);
-                }
+    /** action buttons */
+    get actionButtons() {
+        return [
+            {
+                icon: 'refresh',
+                onClick: this.driverActions.refresh,
+                helpText: this.intl.t('common.refresh'),
             },
-            valuePath: 'vendor.name',
-            modelNamePath: 'name',
-            width: '180px',
-            resizable: true,
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select vendor to filter by',
-            filterParam: 'vendor',
-            model: 'vendor',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.vehicle'),
-            cellComponent: 'table/cell/anchor',
-            permission: 'fleet-ops view vehicle',
-            onClick: (driver) => {
-                return driver
-                    .loadVehicle()
-                    .then((vehicle) => {
-                        return this.contextPanel.focus(vehicle);
-                    })
-                    .catch((error) => {
-                        this.notifications.serverError(error);
-                    });
+            {
+                text: this.intl.t('common.new'),
+                type: 'primary',
+                icon: 'plus',
+                onClick: this.driverActions.transition.create,
             },
-            valuePath: 'vehicle.display_name',
-            modelNamePath: 'display_name',
-            resizable: true,
-            width: '180px',
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select vehicle to filter by',
-            filterParam: 'vehicle',
-            model: 'vehicle',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.fleet'),
-            cellComponent: 'table/cell/link-list',
-            cellComponentLabelPath: 'name',
-            action: (fleet) => {
-                this.contextPanel.focus(fleet);
+            {
+                text: this.intl.t('common.import'),
+                type: 'magic',
+                icon: 'upload',
+                onClick: this.driverActions.import,
             },
-            valuePath: 'fleets',
-            width: '180px',
-            resizable: true,
-            hidden: true,
-            filterable: true,
-            filterComponent: 'filter/model',
-            filterComponentPlaceholder: 'Select fleet to filter by',
-            filterParam: 'fleet',
-            model: 'fleet',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.license'),
-            valuePath: 'drivers_license_number',
-            cellComponent: 'table/cell/base',
-            width: '150px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/string',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.phone'),
-            valuePath: 'phone',
-            cellComponent: 'table/cell/base',
-            width: '150px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterParam: 'phone',
-            filterComponent: 'filter/string',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.country'),
-            valuePath: 'country',
-            cellComponent: 'table/cell/country',
-            cellClassNames: 'uppercase',
-            width: '120px',
-            resizable: true,
-            hidden: true,
-            sortable: true,
-            filterable: true,
-            filterParam: 'country',
-            filterComponent: 'filter/multi-option',
-            filterFetchOptions: 'lookup/countries',
-            filterOptionLabel: 'name',
-            filterOptionValue: 'cca2',
-            multiOptionSearchEnabled: true,
-            multiOptionSearchPlaceholder: 'Search countries...',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.status'),
-            valuePath: 'status',
-            cellComponent: 'table/cell/status',
-            width: '10%',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/multi-option',
-            filterFetchOptions: 'drivers/statuses',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.created-at'),
-            valuePath: 'createdAt',
-            sortParam: 'created_at',
-            filterParam: 'created_at',
-            width: '130px',
-            resizable: true,
-            sortable: true,
-            filterable: true,
-            filterComponent: 'filter/date',
-        },
-        {
-            label: this.intl.t('fleet-ops.common.updated-at'),
-            valuePath: 'updatedAt',
-            sortParam: 'updated_at',
-            filterParam: 'updated_at',
-            width: '130px',
-            resizable: true,
-            sortable: true,
-            hidden: true,
-            filterable: true,
-            filterComponent: 'filter/date',
-        },
-        {
-            label: '',
-            cellComponent: 'table/cell/dropdown',
-            ddButtonText: false,
-            ddButtonIcon: 'ellipsis-h',
-            ddButtonIconPrefix: 'fas',
-            ddMenuLabel: 'Driver Actions',
-            cellClassNames: 'overflow-visible',
-            wrapperClass: 'flex items-center justify-end mx-2',
-            width: '10%',
-            actions: [
-                {
-                    label: this.intl.t('fleet-ops.management.drivers.index.view-details'),
-                    fn: this.viewDriver,
-                    permission: 'fleet-ops view driver',
-                },
-                {
-                    label: this.intl.t('fleet-ops.management.drivers.index.edit-details'),
-                    fn: this.editDriver,
-                    permission: 'fleet-ops update driver',
-                },
-                {
-                    separator: true,
-                },
-                {
-                    label: this.intl.t('fleet-ops.management.drivers.index.assign-order-driver'),
-                    fn: this.assignOrder,
-                    permission: 'fleet-ops assign-order-for driver',
-                },
-                {
-                    label: this.intl.t('fleet-ops.management.drivers.index.assign-vehicle-driver'),
-                    fn: this.assignVehicle,
-                    permission: 'fleet-ops assign-vehicle-for driver',
-                },
-                {
-                    label: this.intl.t('fleet-ops.management.drivers.index.locate-driver-map'),
-                    fn: this.locateDriver,
-                    permission: 'fleet-ops view driver',
-                },
-                {
-                    separator: true,
-                },
-                {
-                    label: this.intl.t('fleet-ops.management.drivers.index.delete-driver'),
-                    fn: this.deleteDriver,
-                    permission: 'fleet-ops delete driver',
-                },
-            ],
-            sortable: false,
-            filterable: false,
-            resizable: false,
-            searchable: false,
-        },
-    ];
-
-    /**
-     * The search task.
-     *
-     * @void
-     */
-    @task({ restartable: true }) *search({ target: { value } }) {
-        // if no query don't search
-        if (isBlank(value)) {
-            this.query = null;
-            return;
-        }
-
-        // timeout for typing
-        yield timeout(250);
-
-        // reset page for results
-        if (this.page > 1) {
-            this.page = 1;
-        }
-
-        // update the query param
-        this.query = value;
+            {
+                text: this.intl.t('common.export'),
+                icon: 'long-arrow-up',
+                iconClass: 'rotate-icon-45',
+                wrapperClass: 'hidden md:flex',
+                onClick: this.driverActions.export,
+            },
+        ];
     }
 
-    /**
-     * Switch layout view.
-     *
-     * @param {String} layout
-     * @memberof ManagementDriversIndexController
-     */
+    /** bulk actions */
+    get bulkActions() {
+        const selected = this.tableContext.getSelectedRows();
+
+        return [
+            {
+                label: this.intl.t('common.delete-selected-count', { count: selected.length }),
+                class: 'text-red-500',
+                fn: this.driverActions.bulkDelete,
+            },
+        ];
+    }
+
+    /** columns */
+    get columns() {
+        return [
+            {
+                label: this.intl.t('column.name'),
+                valuePath: 'name',
+                width: '200px',
+                cellComponent: 'table/cell/driver-name',
+                permission: 'fleet-ops view driver',
+                action: this.driverActions.transition.view,
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.id'),
+                valuePath: 'public_id',
+                width: '130px',
+                cellComponent: 'click-to-copy',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                hidden: false,
+                filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.internal-id'),
+                valuePath: 'internal_id',
+                cellComponent: 'click-to-copy',
+                width: '130px',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.vendor'),
+                cellComponent: 'table/cell/anchor',
+                permission: 'fleet-ops view vendor',
+                onClick: async (driver) => {
+                    try {
+                        const vendor = await driver.loadVendor();
+                        if (vendor) this.vendorActions.panel.view(vendor);
+                    } catch (err) {
+                        this.notifications.serverError(err);
+                    }
+                },
+                valuePath: 'vendor.name',
+                modelNamePath: 'name',
+                width: '180px',
+                resizable: true,
+                filterable: true,
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select vendor to filter by',
+                filterParam: 'vendor',
+                model: 'vendor',
+            },
+            {
+                label: this.intl.t('column.vehicle'),
+                cellComponent: 'table/cell/anchor',
+                permission: 'fleet-ops view vehicle',
+                onClick: async (driver) => {
+                    try {
+                        const vehicle = await driver.loadVehicle();
+                        if (vehicle) this.vehicleActions.panel.view(vehicle);
+                    } catch (err) {
+                        this.notifications.serverError(err);
+                    }
+                },
+                valuePath: 'vehicle.display_name',
+                modelNamePath: 'display_name',
+                resizable: true,
+                width: '180px',
+                filterable: true,
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select vehicle to filter by',
+                filterParam: 'vehicle',
+                model: 'vehicle',
+            },
+            {
+                label: this.intl.t('column.fleet'),
+                cellComponent: 'table/cell/link-list',
+                cellComponentLabelPath: 'name',
+                action: (fleet) => {
+                    this.fleetActions.panel.view(fleet);
+                },
+                valuePath: 'fleets',
+                width: '180px',
+                resizable: true,
+                hidden: true,
+                filterable: true,
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select fleet to filter by',
+                filterParam: 'fleet',
+                model: 'fleet',
+            },
+            {
+                label: this.intl.t('column.license'),
+                valuePath: 'drivers_license_number',
+                cellComponent: 'table/cell/base',
+                width: '150px',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.phone'),
+                valuePath: 'phone',
+                cellComponent: 'table/cell/base',
+                width: '150px',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterParam: 'phone',
+                filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.country'),
+                valuePath: 'country',
+                cellComponent: 'table/cell/country',
+                cellClassNames: 'uppercase',
+                width: '120px',
+                resizable: true,
+                hidden: true,
+                sortable: true,
+                filterable: true,
+                filterParam: 'country',
+                filterComponent: 'filter/multi-option',
+                filterFetchOptions: 'lookup/countries',
+                filterOptionLabel: 'name',
+                filterOptionValue: 'cca2',
+                multiOptionSearchEnabled: true,
+                multiOptionSearchPlaceholder: this.intl.t('common.search-countries'),
+            },
+            {
+                label: this.intl.t('column.status'),
+                valuePath: 'status',
+                cellComponent: 'table/cell/status',
+                width: '10%',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/multi-option',
+                filterFetchOptions: 'drivers/statuses',
+            },
+            {
+                label: this.intl.t('column.created-at'),
+                valuePath: 'createdAt',
+                sortParam: 'created_at',
+                filterParam: 'created_at',
+                width: '130px',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/date',
+            },
+            {
+                label: this.intl.t('column.updated-at'),
+                valuePath: 'updatedAt',
+                sortParam: 'updated_at',
+                filterParam: 'updated_at',
+                width: '130px',
+                resizable: true,
+                sortable: true,
+                hidden: true,
+                filterable: true,
+                filterComponent: 'filter/date',
+            },
+            {
+                label: '',
+                cellComponent: 'table/cell/dropdown',
+                ddButtonText: false,
+                ddButtonIcon: 'ellipsis-h',
+                ddButtonIconPrefix: 'fas',
+                ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.driver') }),
+                cellClassNames: 'overflow-visible',
+                wrapperClass: 'flex items-center justify-end mx-2',
+                width: '10%',
+                actions: [
+                    {
+                        label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.driver') }),
+                        fn: this.driverActions.transition.view,
+                        permission: 'fleet-ops view driver',
+                    },
+                    {
+                        label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.driver') }),
+                        fn: this.driverActions.transition.edit,
+                        permission: 'fleet-ops update driver',
+                    },
+                    {
+                        separator: true,
+                    },
+                    {
+                        label: this.intl.t('driver.actions.assign-order'),
+                        fn: this.driverActions.assignOrder,
+                        permission: 'fleet-ops assign-order-for driver',
+                    },
+                    {
+                        label: this.intl.t('driver.actions.assign-vehicle'),
+                        fn: this.driverActions.assignVehicle,
+                        permission: 'fleet-ops assign-vehicle-for driver',
+                    },
+                    {
+                        label: this.intl.t('driver.actions.locate-driver'),
+                        fn: this.driverActions.locate,
+                        permission: 'fleet-ops view driver',
+                    },
+                    {
+                        separator: true,
+                    },
+                    {
+                        label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.driver') }),
+                        fn: this.driverActions.delete,
+                        permission: 'fleet-ops delete driver',
+                    },
+                ],
+                sortable: false,
+                filterable: false,
+                resizable: false,
+                searchable: false,
+            },
+        ];
+    }
+
     @action changeLayout(layout) {
         this.layout = layout;
-    }
-
-    /**
-     * Reload layout view.
-     */
-    @action reload() {
-        return this.hostRouter.refresh();
-    }
-
-    /**
-     * Bulk deletes selected `driver` via confirm prompt
-     *
-     * @param {Array} selected an array of selected models
-     * @void
-     */
-    @action bulkDeleteDrivers() {
-        const selected = this.table.selectedRows;
-
-        this.crud.bulkDelete(selected, {
-            modelNamePath: `name`,
-            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.delete-button'),
-            onSuccess: async () => {
-                await this.hostRouter.refresh();
-                this.table.untoggleSelectAll();
-            },
-        });
-    }
-
-    /**
-
-    /**
-     * Toggles dialog to export `drivers`
-     *
-     * @void
-     */
-    @action exportDrivers() {
-        const selections = this.table.selectedRows.map((_) => _.id);
-        this.crud.export('driver', { params: { selections } });
-    }
-
-    /**
-     * Handles and prompts for spreadsheet imports of drivers.
-     *
-     * @void
-     */
-    @action importDrivers() {
-        this.crud.import('driver', {
-            onImportCompleted: () => {
-                this.hostRouter.refresh();
-            },
-            onImportTemplate: () => {
-                window.open('https://flb-assets.s3.ap-southeast-1.amazonaws.com/import-templates/Fleetbase_Driver_Import_Template.xlsx');
-            },
-        });
-    }
-
-    /**
-     * View a `driver` details in modal
-     *
-     * @param {DriverModel} driver
-     * @param {Object} options
-     * @void
-     */
-    @action viewDriver(driver) {
-        return this.transitionToRoute('management.drivers.index.details', driver);
-    }
-
-    /**
-     * Create a new `driver` in modal
-     *
-     * @param {Object} options
-     * @void
-     */
-    @action createDriver() {
-        return this.transitionToRoute('management.drivers.index.new');
-    }
-
-    /**
-     * View a `driver` details in modal
-     *
-     * @param {VehicleModel} driver
-     * @param {Object} options
-     * @void
-     */
-    @action editDriver(driver) {
-        return this.transitionToRoute('management.drivers.index.edit', driver);
-    }
-
-    /**
-     * Delete a `driver` via confirm prompt
-     *
-     * @param {DriverModel} driver
-     * @param {Object} options
-     * @void
-     */
-    @action deleteDriver(driver, options = {}) {
-        this.driverActions.delete(driver, {
-            onSuccess: () => {
-                return this.hostRouter.refresh();
-            },
-            ...options,
-        });
-    }
-
-    /**
-     * Prompt user to assign a `order` to a `driver`
-     *
-     * @param {DriverModel} driver
-     * @param {Object} options
-     * @void
-     */
-    @action assignOrder(driver, options = {}) {
-        this.driverActions.assignOrder(driver, options);
-    }
-
-    /**
-     * Prompt user to assign a `driver` to a `driver`
-     *
-     * @param {DriverModel} driver
-     * @param {Object} options
-     * @void
-     */
-    @action assignVehicle(driver, options = {}) {
-        this.driverActions.assignVehicle(driver, options);
-    }
-
-    /**
-     * Display a dialog with a map view of the `driver` location
-     *
-     * @param {DriverModel} driver
-     * @void
-     */
-    @action locateDriver(driver, options = {}) {
-        this.driverActions.locate(driver, options);
     }
 }

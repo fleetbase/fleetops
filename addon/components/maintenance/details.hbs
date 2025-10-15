@@ -1,0 +1,123 @@
+<div class="details-wrapper" ...attributes>
+    <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+            <div class="field-info-container col-span-3">
+                <div class="field-name">Summary</div>
+                <div class="field-value">{{n-a @resource.summary}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Type</div>
+                <div class="field-value">{{smart-humanize @resource.type}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Status</div>
+                <div class="field-value">
+                    <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Priority</div>
+                <div class="field-value">
+                    {{#if (eq @resource.priority "critical")}}
+                        <Badge @status="danger">Critical</Badge>
+                    {{else if (eq @resource.priority "high")}}
+                        <Badge @status="warning">High</Badge>
+                    {{else if (eq @resource.priority "medium")}}
+                        <Badge @status="info">Medium</Badge>
+                    {{else}}
+                        <Badge @status="default">Low</Badge>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Work Order</div>
+                <div class="field-value">{{n-a @resource.work_order_subject}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Maintainable</div>
+                <div class="field-value">{{n-a @resource.maintainable_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Performed By</div>
+                <div class="field-value">{{n-a @resource.performed_by_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Scheduled At</div>
+                <div class="field-value">{{format-date @resource.scheduled_at}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Started At</div>
+                <div class="field-value">{{format-date @resource.started_at}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Completed At</div>
+                <div class="field-value">{{format-date @resource.completed_at}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Odometer</div>
+                <div class="field-value">{{n-a @resource.odometer}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Engine Hours</div>
+                <div class="field-value">{{n-a @resource.engine_hours}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Duration</div>
+                <div class="field-value">{{n-a @resource.duration_hours}} hours</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Labor Cost</div>
+                <div class="field-value">{{format-currency @resource.labor_cost}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Parts Cost</div>
+                <div class="field-value">{{format-currency @resource.parts_cost}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Tax</div>
+                <div class="field-value">{{format-currency @resource.tax}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Total Cost</div>
+                <div class="field-value"><strong>{{format-currency @resource.total_cost}}</strong></div>
+            </div>
+
+            {{#if @resource.is_overdue}}
+                <div class="field-info-container">
+                    <div class="field-name">Overdue Status</div>
+                    <div class="field-value">
+                        <Badge @status="danger">Overdue</Badge>
+                    </div>
+                </div>
+            {{else if @resource.days_until_due}}
+                <div class="field-info-container">
+                    <div class="field-name">Days Until Due</div>
+                    <div class="field-value">{{@resource.days_until_due}} days</div>
+                </div>
+            {{/if}}
+
+            <div class="field-info-container col-span-3">
+                <div class="field-name">Notes</div>
+                <div class="field-value">{{n-a @resource.notes}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+</div>

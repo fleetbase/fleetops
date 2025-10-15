@@ -1,0 +1,48 @@
+<div class="details-wrapper" ...attributes>
+    <ContentPanel @title={{t "fuel-report.fields.details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">{{t "common.id"}}</div>
+                <ClickToCopy @value={{@resource.public_id}} class="field-value">{{n-a @resource.public_id}}</ClickToCopy>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "common.status"}}</div>
+                <div class="field-value"><Badge @status={{@resource.status}} /></div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "fuel-report.fields.reporter"}}</div>
+                <div class="field-value">{{n-a @resource.reporter_name}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "resource.driver"}}</div>
+                <div class="field-value">{{n-a @resource.driver_name}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "resource.vehicle"}}</div>
+                <div class="field-value">{{n-a @resource.vehicle_name}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "fuel-report.fields.odometer"}}</div>
+                <div class="field-value">{{n-a @resource.odometer}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "fuel-report.fields.fuel-cost"}}</div>
+                <div class="field-value">{{format-currency @resource.amount @resource.currency}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "fuel-report.fields.fuel-volume"}}</div>
+                <div class="field-value">{{pluralize (or @resource.volume 0) (n-a @resource.metric_unit)}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "common.date-created"}}</div>
+                <div class="field-value">{{@resource.createdAt}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "common.coordinates"}}</div>
+                <div class="field-value">{{point-coordinates @resource.location}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+</div>

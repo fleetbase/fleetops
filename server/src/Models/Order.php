@@ -711,7 +711,6 @@ class Order extends Model
      */
     public function createPayload(?array $attributes = [], bool $setPayload = true): Payload
     {
-        // set payload type if not set
         if (!isset($attributes['type'])) {
             $attributes['type'] = $this->type;
         }
@@ -760,7 +759,6 @@ class Order extends Model
      */
     public function insertPayload(?array $attributes = [], bool $setPayload = true): Payload
     {
-        // set payload type if not set
         if (!isset($attributes['type'])) {
             $attributes['type'] = $this->type;
         }
@@ -785,7 +783,7 @@ class Order extends Model
 
         $fillable   = $this->getFillable();
         $insertKeys = array_keys($attributes);
-        // clean insert data
+
         foreach ($insertKeys as $key) {
             if (!in_array($key, $fillable)) {
                 unset($attributes[$key]);
@@ -804,10 +802,8 @@ class Order extends Model
             return $this->createPayload($attributes);
         }
 
-        // get newly inserted payload
         $payload = Payload::find($uuid);
 
-        // manyally trigger payload created event
         $payload->fireModelEvent('created', false);
 
         if ($setPayload) {
@@ -951,8 +947,6 @@ class Order extends Model
      */
     public function purchaseQuote(string $serviceQuoteId, $meta = [])
     {
-        // $serviceQuote = ServiceQuote::where('uuid', $serviceQuoteId)->first();
-        // create purchase rate for order
         $purchasedRate = PurchaseRate::create([
             'customer_uuid'      => $this->customer_uuid,
             'customer_type'      => $this->customer_type,
@@ -980,7 +974,6 @@ class Order extends Model
     public function purchaseServiceQuote($serviceQuote, $meta = [])
     {
         if (!$serviceQuote) {
-            // create transaction for order
             $this->createOrderTransactionWithoutServiceQuote();
 
             return $this;
@@ -1024,7 +1017,6 @@ class Order extends Model
         $transaction = null;
 
         try {
-            // create transaction and transaction items
             $transaction = Transaction::create([
                 'company_uuid'           => session('company', $this->company_uuid),
                 'customer_uuid'          => $this->customer_uuid,
@@ -1038,10 +1030,8 @@ class Order extends Model
                 'status'                 => 'success',
             ]);
 
-            // set transaction to order
             $this->update(['transaction_uuid' => $transaction->uuid]);
         } catch (\Throwable $e) {
-            // log error unable to create order transaction
         }
 
         return $transaction;
@@ -1072,21 +1062,16 @@ class Order extends Model
      *
      * @throws \LogicException if the order is already dispatched
      */
-    public function dispatch(bool $save = true): static
+    public function dispatch(bool $save = true): self
     {
         $this->dispatched    = true;
         $this->dispatched_at = now();
 
         if ($save) {
-            // Save quietly to avoid duplicate model events;
-            // wrap in a transaction if your code is not already in one.
             $this->saveQuietly();
-
-            // Flush any attribute cache that depends on persisted state
             $this->flushAttributesCache();
         }
 
-        // Queue the OrderDispatched event to run after the DB commit succeeds
         dispatch(fn () => event(new OrderDispatched($this)))->afterCommit();
 
         return $this;
@@ -1100,7 +1085,6 @@ class Order extends Model
      */
     public function insertDispatchActivity(): Order
     {
-        // get dispatch activity if any and apply to order
         $dispatchActivity = $this->config()->getDispatchActivity();
 
         if ($dispatchActivity) {
@@ -1147,7 +1131,7 @@ class Order extends Model
      */
     public function firstDispatchWithActivity(): Order
     {
-        if (!$this->dispatched) {
+        if (!$this->hasDispatchedStatus()) {
             $this->dispatchWithActivity();
         }
 
@@ -1164,12 +1148,10 @@ class Order extends Model
     {
         $this->status = 'canceled';
 
-        // if saving update the status and add the cancel activity
         $this->loadMissing('orderConfig');
         $canceledActivity = $this->orderConfig->getCanceledActivity();
         $this->updateActivity($canceledActivity);
 
-        // trigger integrated vendor cancelation
         if ($this->isIntegratedVendorOrder()) {
             $api = $this->facilitator->api();
 
@@ -1209,16 +1191,12 @@ class Order extends Model
             return $this;
         }
 
-        // Get location
         $location = $this->getLastLocation();
 
-        // Insert dispatch activity
         $this->insertActivity($activity, $location, $proof);
 
-        // Update status using code
         $this->setStatus($activity->get('code'), true);
 
-        // Fire activity events
         $activity->fireEvents($this);
 
         return $this;
@@ -1292,8 +1270,6 @@ class Order extends Model
             $doesNotStartWithFleetOps = !Str::startsWith($type, 'fleet-ops');
             $isValidType              = $type === 'contact' || $type === 'vendor';
 
-            // preprend fleet-ops IF not a namespace and does not start with fleet-ops
-            // this is for handling ember style registry spacing
             if ($isNotNamespace && $doesNotStartWithFleetOps && $isValidType) {
                 $type = 'fleet-ops:' . $type;
             }
@@ -1315,8 +1291,6 @@ class Order extends Model
             $doesNotStartWithFleetOps = !Str::startsWith($type, 'fleet-ops');
             $isValidType              = $type === 'contact' || $type === 'vendor';
 
-            // preprend fleet-ops IF not a namespace and does not start with fleet-ops
-            // this is for handling ember style registry spacing
             if ($isNotNamespace && $doesNotStartWithFleetOps && $isValidType) {
                 $type = 'fleet-ops:' . $type;
             }
@@ -1341,8 +1315,6 @@ class Order extends Model
             }
         }
 
-        // if payload is using a special key `pickup_is_driver_location`
-        // and driver is assigned set the pickup point as the drivers current location
         if ($this->isDirty('driver_assigned_uuid') && !empty($this->driver_assigned_uuid) && $this->payload && $this->payload->hasMeta('pickup_is_driver_location')) {
             $this->load('driverAssigned');
 
@@ -1372,7 +1344,6 @@ class Order extends Model
      */
     public function updateStatus($code = null)
     {
-        // update multiple status codes
         if (is_array($code)) {
             return collect($code)->every(function ($activityCode) {
                 return $this->updateStatus($activityCode);
@@ -1380,7 +1351,7 @@ class Order extends Model
         }
 
         $orderConfig = $this->config();
-        // @todo if no order config set the order config based on order type
+
         $flow         = $orderConfig->activities();
         $activity     = $orderConfig->nextActivity();
 
@@ -1408,7 +1379,6 @@ class Order extends Model
         $this->setStatus($activity->code);
         $this->insertActivity($activity, $location);
 
-        // fire events if any
         $activity->fireEvents($this);
 
         return true;
@@ -1657,8 +1627,7 @@ class Order extends Model
      */
     public function resolveDynamicProperty(string $property)
     {
-        // Special payload shortcuts
-        $root       = Str::before($property, '.');   // e.g. "pickup" in "pickup.address"
+        $root       = Str::before($property, '.');
         $payloadMap = [
             'pickup'                => 'payload.pickup',
             'dropoff'               => 'payload.dropoff',
@@ -1671,15 +1640,12 @@ class Order extends Model
             $this->loadMissing($payloadMap[$root]);
             $target = data_get($this, $payloadMap[$root]);
 
-            // “pickup”, “dropoff”, or “currentWaypoint” on their own
             if ($property === $root) {
                 return $target;
             }
 
-            // e.g. "address.city" part of "pickup.address.city"
             $subKey = Str::after($property, $root . '.');
 
-            // if waypoint we can do "waypoint.place.address" or "waypoint.address" for resolution
             $isWaypointMarker = Str::startsWith($root, 'currentWaypoint') || $root === 'waypoint';
             if ($isWaypointMarker && $target instanceof Waypoint) {
                 $target->loadMissing('place');
@@ -1690,13 +1656,11 @@ class Order extends Model
             return data_get($target, $subKey);
         }
 
-        // Direct attribute on the model
         $snake = Str::snake($property);
         if (array_key_exists($snake, $this->getAttributes())) {
             return $this->getAttribute($snake);
         }
 
-        // Custom-field / meta look-ups
         if ($this->isCustomField($property)) {
             return $this->getCustomFieldValueByKey($property);
         }
@@ -1705,7 +1669,6 @@ class Order extends Model
             return $this->getMeta($property);
         }
 
-        // Fallback deep-path access
         return data_get($this, $property);
     }
 
@@ -1788,12 +1751,10 @@ class Order extends Model
     public function resolveDynamicNotifiable(string $property)
     {
         if ($property === 'customer') {
-            // Load payload and waypoint markers if not already loaded
             $this->loadMissing(['payload', 'payload.waypointMarkers']);
 
             $payload = $this->payload;
 
-            // Attempt to resolve customer from the current waypoint
             if ($payload && $payload->current_waypoint_uuid) {
                 $currentWaypoint = $payload->waypointMarkers
                     ?->firstWhere('place_uuid', $payload->current_waypoint_uuid);
@@ -1807,16 +1768,35 @@ class Order extends Model
                 }
             }
 
-            // Fallback to the order's customer
             return $this->customer;
         }
 
-        // For other relationships, load dynamically
         if (!$this->relationLoaded($property)) {
             $this->load($property);
         }
 
         return $this->{$property};
+    }
+
+    /**
+     * Determine whether this order already has a "dispatched" tracking status.
+     *
+     * Uses the in-memory relationship when available to avoid extra queries.
+     * Falls back to a lightweight EXISTS query when the relationship isn't loaded.
+     *
+     * @return bool true if a tracking status with code "dispatched" exists; otherwise false
+     */
+    public function hasDispatchedStatus(): bool
+    {
+        if ($this->relationLoaded('trackingStatuses')) {
+            return $this->trackingStatuses->contains(
+                fn ($ts) => strcasecmp((string) $ts->code, 'dispatched') === 0
+            );
+        }
+
+        return TrackingStatus::where('tracking_number_uuid', $this->tracking_number_uuid)
+            ->whereRaw('LOWER(code) = ?', ['dispatched'])
+            ->exists();
     }
 
     public function findClosestDrivers(int $distance = 6000): Collection

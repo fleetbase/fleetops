@@ -1,0 +1,33 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title="Service Area Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-2">
+            <InputGroup
+                @name={{t "modals.zone-form.name"}}
+                @value={{@resource.name}}
+                @type="text"
+                @placeholder={{t "modals.zone-form.name"}}
+                @helpText={{t "modals.zone-form.name-text"}}
+                @required={{true}}
+            />
+
+            <InputGroup
+                @type="color"
+                @value={{@resource.stroke_color}}
+                @name={{t "modals.zone-form.border-color"}}
+                @helpText={{t "modals.zone-form.customize-border"}}
+                class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none"
+            />
+            <InputGroup
+                @type="color"
+                @value={{@resource.color}}
+                @name={{t "modals.zone-form.zone-color"}}
+                @helpText={{t "modals.zone-form.customize-fill-color"}}
+                class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none"
+            />
+
+            <InputGroup @name={{t "modals.zone-form.description-zone"}} @helpText={{t "modals.zone-form.optionally"}}>
+                <Textarea @value={{@resource.description}} rows={{3}} type="text" class="w-full form-input" placeholder={{t "modals.zone-form.description-zone"}} />
+            </InputGroup>
+        </div>
+    </ContentPanel>
+</div>

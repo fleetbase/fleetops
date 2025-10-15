@@ -1,0 +1,14 @@
+<Layout::Resource::Tabular
+    @resource="telematic"
+    @title={{t "resource.telematics"}}
+    @searchQuery={{this.query}}
+    @onSearch={{perform this.telematicActions.controllerSearchTask this}}
+    @data={{@model}}
+    @columns={{this.columns}}
+    @page={{this.page}}
+    @onPageChange={{fn (mut this.page)}}
+    @actionButtons={{this.actionButtons}}
+    @bulkActions={{this.bulkActions}}
+    @controller={{this}}
+/>
+{{outlet}}

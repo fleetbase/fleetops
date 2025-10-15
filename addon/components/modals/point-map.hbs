@@ -1,15 +1,18 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
-    <div class="modal-body-container">
-        <LeafletMap class="rounded-md shadow-md map-height-base" @lat={{@options.latitude}} @lng={{@options.longitude}} @zoom={{12}} as |layers|>
+    <div class="fleetbase-leaflet-map-container">
+        <LeafletMap class="map-height-base" @lat={{@options.latitude}} @lng={{@options.longitude}} @zoom={{12}} as |layers|>
             <layers.tile @url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png" />
 
-            <layers.marker @icon={{@options.icon}} @location={{point-to-coordinates @options.location}} as |marker|>
+            <layers.marker @icon={{@options.icon}} @location={{point-to-coordinates @options.location}} @riseOnHover={{true}} as |marker|>
                 <marker.popup @maxWidth="500" @minWidth="180">
                     {{#if @options.popupText}}
                         <div>{{@options.popupText}}</div>
                     {{/if}}
                     <div>{{format-point @options.location}}</div>
                 </marker.popup>
+                {{#if @options.tooltip}}
+                    <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">{{@options.tooltip}}</marker.tooltip>
+                {{/if}}
             </layers.marker>
         </LeafletMap>
     </div>

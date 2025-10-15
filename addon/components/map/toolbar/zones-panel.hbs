@@ -1,0 +1,55 @@
+<div class="next-dd-menu overflow-visible">
+    <div class="px-1">
+        <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1 text-gray-800 dark:text-gray-300">
+            {{t "map.zones-panel.title"}}
+        </div>
+    </div>
+    <div class="next-dd-menu-seperator"></div>
+    <div class="px-1">
+        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn @dd this.geofence.createServiceArea)}}>{{t "map.zones-panel.create-service"}}</a>
+        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn @dd this.geofence.showAllServiceAreas)}}>{{t "map.zones-panel.show"}}</a>
+        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn @dd this.geofence.hideAllServiceAreas)}}>{{t "map.zones-panel.hide"}}</a>
+        {{#each this.serviceAreaActions.serviceAreas as |serviceArea|}}
+            <BasicDropdownHover @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
+                <dd.Trigger class="next-dd-item {{if dd.isOpen 'active'}}">
+                    <FaIcon @icon="drafting-compass" class="mr-2" />
+                    <span>{{serviceArea.name}}</span>
+                </dd.Trigger>
+                <dd.Content>
+                    <div class="next-dd-menu">
+                        <div class="px-1">
+                            <div class="text-sm flex flex-row items-center px-3 py-0.5 rounded-md my-1 text-gray-800 dark:text-gray-300 truncate">
+                                <FaIcon @icon="drafting-compass" class="mr-2" />
+                                <span>{{t "common.resource-actions" resource=serviceArea.name}}</span>
+                            </div>
+                        </div>
+                        <div class="next-dd-menu-seperator"></div>
+                        <div class="px-1">
+                            {{#if (is-model-leaflet-layer-hidden serviceArea)}}
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.geofence.focusServiceArea serviceArea)}}>
+                                    <span>{{t "map.zones-panel.focus-resource" resource=serviceArea.name}}</span>
+                                </a>
+                            {{else}}
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.geofence.blurServiceArea serviceArea)}}>
+                                    <span>{{t "map.zones-panel.blur-resource" resource=serviceArea.name}}</span>
+                                </a>
+                            {{/if}}
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.geofence.createZone serviceArea)}}>
+                                <span>{{t "map.zones-panel.create-zone-inside" serviceAreaName=serviceArea.name}}</span>
+                            </a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.serviceAreaActions.modal.edit serviceArea)}}>
+                                <span>{{t "common.edit-resource-name" resourceName=serviceArea.name}}</span>
+                            </a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.geofence.editServiceArea serviceArea)}}>
+                                <span>{{t "map.zones-panel.edit-boundaries" resource=serviceArea.name}}</span>
+                            </a>
+                            <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.serviceAreaActions.delete serviceArea)}}>
+                                <span>{{t "common.delete-resource-name" resourceName=serviceArea.name}}</span>
+                            </a>
+                        </div>
+                    </div>
+                </dd.Content>
+            </BasicDropdownHover>
+        {{/each}}
+    </div>
+</div>

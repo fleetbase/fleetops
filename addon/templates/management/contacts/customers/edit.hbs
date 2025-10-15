@@ -1,8 +1,14 @@
-<CustomerFormPanel
-    @customer={{@model}}
+<Layout::Resource::Panel
+    @resource={{@model}}
     @controller={{this}}
-    @onPressCancel={{this.transitionBack}}
-    @onAfterSave={{this.onAfterSave}}
-    @onViewDetails={{this.onViewDetails}}
-    @onLoad={{this.setOverlayContext}}
-/>
+    @headerTitle={{t "common.edit-resource-name" resourceName=@model.name}}
+    @modelName="Customer"
+    @actionButtons={{this.actionButtons}}
+    @saveTask={{this.save}}
+    @onPressCancel={{this.cancel}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+>
+    <Customer::Form @resource={{@model}} @controller={{this}} />
+    <Spacer @height="200px" />
+</Layout::Resource::Panel>
+

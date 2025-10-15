@@ -1,0 +1,113 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title="Work Order Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <InputGroup @name="Code">
+                <Input @value={{@resource.code}} @type="text" class="w-full form-input" placeholder="Work Order Code" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Status">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.statusOptions}}
+                        @selected={{@resource.status}}
+                        @onChange={{fn (mut @resource.status)}}
+                        @placeholder="Select Status"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |status|
+                    >
+                        {{smart-humanize status}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name="Subject" @wrapperClass="col-span-2">
+                <Input @value={{@resource.subject}} @type="text" class="w-full form-input" placeholder="Subject" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Priority">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.priorityOptions}}
+                        @selected={{@resource.priority}}
+                        @onChange={{fn (mut @resource.priority)}}
+                        @placeholder="Select Priority"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |priority|
+                    >
+                        {{smart-humanize priority}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name="Assignee">
+                <ModelSelect
+                    @modelName="user"
+                    @selectedModel={{@resource.assignee}}
+                    @placeholder="Select Assignee"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.assignee)}}
+                    @onChangeId={{fn (mut @resource.assignee_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name="Opened At">
+                <DatePicker
+                    @value={{@resource.opened_at}}
+                    @onChange={{fn (mut @resource.opened_at)}}
+                    @placeholder="Select Opened Date"
+                    @disabled={{cannot-write @resource}}
+                    class="w-full form-input"
+                />
+            </InputGroup>
+
+            <InputGroup @name="Due At">
+                <DatePicker
+                    @value={{@resource.due_at}}
+                    @onChange={{fn (mut @resource.due_at)}}
+                    @placeholder="Select Due Date"
+                    @disabled={{cannot-write @resource}}
+                    class="w-full form-input"
+                />
+            </InputGroup>
+
+            <InputGroup @name="Closed At">
+                <DatePicker
+                    @value={{@resource.closed_at}}
+                    @onChange={{fn (mut @resource.closed_at)}}
+                    @placeholder="Select Closed Date"
+                    @disabled={{cannot-write @resource}}
+                    class="w-full form-input"
+                />
+            </InputGroup>
+
+            <InputGroup @name="Instructions" @wrapperClass="col-span-2">
+                <Textarea
+                    @value={{@resource.instructions}}
+                    aria-label="Instructions"
+                    class="w-full form-input"
+                    disabled={{cannot-write @resource}}
+                    placeholder="Instructions"
+                    rows={{5}}
+                />
+            </InputGroup>
+
+            <RegistryYield @registry="fleet-ops:component:work-order:form:details" as |RegistryComponent|>
+                <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+            </RegistryYield>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <RegistryYield @registry="fleet-ops:component:work-order:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+</div>

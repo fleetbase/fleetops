@@ -1,11 +1,11 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
         <div class="grid grid-cols-1 text-xs dark:text-gray-100">
-            <InputGroup @name={{t "fleet-ops.common.driver"}}>
+            <InputGroup @name={{t "common.driver"}}>
                 <ModelSelect
                     @modelName="driver"
                     @selectedModel={{@options.fuelReport.driver}}
-                    @placeholder={{t "fleet-ops.component.modals.fuel-report-form.select-driver"}}
+                    @placeholder={{t "modals.fuel-report-form.select-driver"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -16,11 +16,11 @@
                     {{model.name}}
                 </ModelSelect>
             </InputGroup>
-            <InputGroup @name={{t "fleet-ops.common.vehicle"}}>
+            <InputGroup @name={{t "common.vehicle"}}>
                 <ModelSelect
                     @modelName="vehicle"
                     @selectedModel={{@options.fuelReport.vehicle}}
-                    @placeholder={{t "fleet-ops.component.modals.fuel-report-form.select-vehicle"}}
+                    @placeholder={{t "modals.fuel-report-form.select-vehicle"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -31,8 +31,8 @@
                     {{model.display_name}}
                 </ModelSelect>
             </InputGroup>
-            <InputGroup @name={{t "fleet-ops.common.odometer"}} @type="number" @value={{@options.fuelReport.odometer}} />
-            <InputGroup @name={{t "fleet-ops.common.cost"}}>
+            <InputGroup @name={{t "common.odometer"}} @type="number" @value={{@options.fuelReport.odometer}} />
+            <InputGroup @name={{t "common.cost"}}>
                 <MoneyInput
                     class="w-full"
                     @value={{@options.fuelReport.amount}}
@@ -41,7 +41,7 @@
                     @onCurrencyChange={{fn (mut @options.fuelReport.currency)}}
                 />
             </InputGroup>
-            <InputGroup @name={{t "fleet-ops.component.modals.fuel-report-form.volume"}} @helpText={{t "fleet-ops.component.modals.fuel-report-form.volume-text"}} @wrapperClass="w-full">
+            <InputGroup @name={{t "modals.fuel-report-form.volume"}} @helpText={{t "modals.fuel-report-form.volume-text"}} @wrapperClass="w-full">
                 <UnitInput
                     class="w-full"
                     @measurement="volume"
@@ -51,7 +51,7 @@
                     @onUnitChange={{fn (mut @options.fuelReport.metric_unit)}}
                 />
             </InputGroup>
-            <InputGroup @name={{t "fleet-ops.common.coordinates"}}>
+            <InputGroup @name={{t "common.coordinates"}}>
                 <CoordinatesInput @value={{@options.fuelReport.location}} @onChange={{fn (mut @options.fuelReport.location)}} />
             </InputGroup>
         </div>

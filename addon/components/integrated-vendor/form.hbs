@@ -1,0 +1,80 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title={{t "integrated-vendor.fields.provider"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="flex flex-row items-center">
+            <img src={{@resource.provider_options.logo}} alt={{@resource.provider_options.code}} class="w-12 h-12" width="48" height="48" />
+            <h3 class="text-base text-black dark:text-white ml-4">{{@resource.provider_options.name}}</h3>
+        </div>
+    </ContentPanel>
+    <ContentPanel @title={{t "integrated-vendor.fields.credentials"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-2">
+            {{#each @resource.provider_options.credential_params as |param|}}
+                <InputGroup
+                    @name={{smart-humanize param.key}}
+                    @value={{mut (get @resource.credentials param.key)}}
+                    @helpText={{t "integrated-vendor.fields.credentials-configure-help-text" param=(smart-humanize param.key)}}
+                    @disabled={{cannot-write @resource}}
+                />
+            {{/each}}
+        </div>
+    </ContentPanel>
+    <ContentPanel @title={{t "integrated-vendor.fields.options"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-2">
+            {{#each @resource.provider_options.option_params as |param|}}
+                {{#if param.options}}
+                    <InputGroup @name={{smart-humanize param.key}}>
+                        <Select
+                            @value={{mut (get @resource.options param.key)}}
+                            @options={{param.options}}
+                            @optionValue={{param.optionValue}}
+                            @optionLabel={{param.optionLabel}}
+                            @humanize={{true}}
+                            @placeholder={{t "common.select-field" field=(smart-humanize param.key)}}
+                            @onSelect={{fn (mut (get @resource.options param.key))}}
+                            @disabled={{cannot-write @resource}}
+                            class="form-select w-full"
+                        />
+                    </InputGroup>
+                {{else}}
+                    <InputGroup
+                        @name={{smart-humanize param.key}}
+                        @value={{mut (get @resource.options param.key)}}
+                        @helpText={{t "integrated-vendor.fields.credentials-configure-help-text" param=(smart-humanize param.key)}}
+                        @disabled={{cannot-write @resource}}
+                    />
+                {{/if}}
+            {{/each}}
+            <InputGroup>
+                <Checkbox
+                    @value={{@resource.sandbox}}
+                    @label={{t "integrated-vendor.fields.sandbox"}}
+                    @onToggle={{fn (mut @resource.sandbox)}}
+                    @alignItems="center"
+                    @labelClass="mb-0i"
+                    @disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+        </div>
+    </ContentPanel>
+    <ContentPanel @title={{t "integrated-vendor.fields.advanced-options"}} @open={{false}} @wrapperClass="bordered-top">
+        <div class="space-y-2">
+            <InputGroup
+                @name={{t "integrated-vendor.fields.host"}}
+                @value={{@resource.host}}
+                @helpText={{t "integrated-vendor.fields.host-help-text"}}
+                @disabled={{cannot-write @resource}}
+            />
+            <InputGroup
+                @name={{t "integrated-vendor.fields.namespace"}}
+                @value={{@resource.namespace}}
+                @helpText={{t "integrated-vendor.fields.namespace-help-text"}}
+                @disabled={{cannot-write @resource}}
+            />
+            <InputGroup
+                @name={{t "integrated-vendor.fields.webhook"}}
+                @value={{@resource.webhook_url}}
+                @helpText={{t "integrated-vendor.fields.webhook-help-text"}}
+                @disabled={{cannot-write @resource}}
+            />
+        </div>
+    </ContentPanel>
+</div>

@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
+import { getOwner } from '@ember/application';
 import { debug } from '@ember/debug';
 import { task, timeout } from 'ember-concurrency';
 import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
@@ -22,7 +23,6 @@ export default class CustomerOrdersComponent extends Component {
     @service currentUser;
     @service universe;
     @service urlSearchParams;
-    @service modalsManager;
     @service customerSession;
     @service hostRouter;
     @service leafletRoutingControl;
@@ -40,11 +40,22 @@ export default class CustomerOrdersComponent extends Component {
     @tracked query;
     @tracked tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
 
+    get modalsManager() {
+        const owner = getOwner(this);
+        const application = typeof this.universe.getApplicationInstance === 'function' ? this.universe.getApplicationInstance() : window.Fleetbase;
+        const modalsManager = application ? application.lookup('service:modals-manager') : owner.lookup('service:modals-manager');
+        return modalsManager;
+    }
+
     constructor(owner) {
         super(...arguments);
         registerComponent(owner, OrderProgressCardComponent, { as: 'order-progress-card' });
         registerComponent(owner, DisplayPlaceComponent, { as: 'display-place' });
         registerComponent(owner, CustomerCreateOrderFormComponent, { as: 'customer/create-order-form' });
+        // hack - just stick currentUser serivce on the location work
+        if (this.location && typeof this.location === 'object') {
+            this.location.currentUser = this.currentUser;
+        }
         this.loadCustomerOrders.perform();
         later(
             this,

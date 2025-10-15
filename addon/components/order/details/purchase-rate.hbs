@@ -1,0 +1,39 @@
+{{#if @resource.purchase_rate}}
+    <ContentPanel @title={{t "order.fields.purchase-rate-panel-title"}} @isLoading={{@isLoading}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="order-view-purchase-rate-table-wrapper next-table-wrapper no-scroll h-auto table-fluid rounded-b-md">
+            <table id="order-view-purchase-rate-table" class="table table-fixed flex-1">
+                <thead>
+                    <tr>
+                        <th class="text-left">{{t "fleet-ops.operations.orders.index.new.breakdown"}}</th>
+                        <th>
+                            <div class="flex flex-row items-center justify-end">{{@resource.purchase_rate.service_quote.currency}}</div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each @resource.purchase_rate.service_quote.items as |item|}}
+                        <tr>
+                            <td>
+                                <span class="font-semibold">{{smart-humanize item.details}}</span>
+                            </td>
+                            <td>
+                                <div class="flex flex-row items-center justify-end">{{format-currency item.amount @resource.purchase_rate.service_quote.currency}}</div>
+                            </td>
+                        </tr>
+                    {{/each}}
+                    <tr class="border-b-0">
+                        <td class="border-b-0">
+                            <span class="font-semibold">{{t "common.total"}}</span>
+                        </td>
+                        <td class="border-b-0">
+                            <div class="flex flex-row items-center justify-end">{{format-currency
+                                    @resource.purchase_rate.service_quote.amount
+                                    @resource.purchase_rate.service_quote.currency
+                                }}</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </ContentPanel>
+{{/if}}

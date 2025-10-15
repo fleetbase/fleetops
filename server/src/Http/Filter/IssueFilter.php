@@ -41,16 +41,11 @@ class IssueFilter extends Filter
         }
     }
 
-    public function status($status)
+    public function status(string|array $status)
     {
-        if (Str::contains($status, ',')) {
-            $status = explode(',', $status);
-        }
-
-        if (is_array($status)) {
+        $status = Utils::arrayFrom($status);
+        if ($status) {
             $this->builder->whereIn('status', $status);
-        } else {
-            $this->builder->where('status', $status);
         }
     }
 

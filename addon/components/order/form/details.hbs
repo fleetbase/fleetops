@@ -1,0 +1,249 @@
+<ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+        <InputGroup @name={{t "order.fields.order-type"}} @helpText={{t "order.fields.order-type-help-text"}}>
+            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                <PowerSelect
+                    @options={{this.orderConfigActions.allOrderConfigs}}
+                    @selected={{@resource.order_config}}
+                    @onChange={{perform this.selectOrderConfig}}
+                    @placeholder={{t "order.fields.order-type-placeholder"}}
+                    @triggerClass="form-select form-input"
+                    @disabled={{cannot-write @resource}}
+                    as |orderConfig|
+                >
+                    <div class="text-sm">
+                        <div class="font-semibold normalize-in-trigger">{{orderConfig.name}}</div>
+                        <div class="hide-from-trigger">{{n-a orderConfig.description}}</div>
+                    </div>
+                </PowerSelect>
+            </div>
+        </InputGroup>
+
+        <InputGroup
+            @name={{t "order.fields.internal-id"}}
+            @value={{@resource.internal_id}}
+            @helpText={{t "order.fields.internal-id-help-text"}}
+            @disabled={{cannot-write @resource}}
+        />
+
+        <InputGroup>
+            <InputLabel @labelText={{t "order.fields.schedule"}} @helpText={{t "order.fields.schedule-help-text"}} />
+            <DateTimeInput
+                class="form-input"
+                @value={{@resource.scheduled_at}}
+                @minDate={{format-date-fns (now) "yyyy-MM-dd"}}
+                @minTime={{format-date-fns (now) "HH:mm"}}
+                @onUpdate={{fn (mut @resource.scheduled_at)}}
+                @disabled={{or @resource.dispatched (cannot-write @resource)}}
+            />
+        </InputGroup>
+
+        <InputGroup @name={{t "order.fields.customer"}} @helpText={{t "order.fields.customer-help-text"}}>
+            <ModelSelect
+                @modelName="customer"
+                @selectedModel={{@resource.customer}}
+                @placeholder={{t "order.fields.customer-placeholder"}}
+                @triggerClass="form-select form-input"
+                @infiniteScroll={{false}}
+                @renderInPlace={{true}}
+                @allowClear={{true}}
+                @disabled={{or @resource.hasWaypoints (cannot-write @resource)}}
+                @onChange={{fn (mut @resource.customer)}}
+                @onChangeId={{fn (mut @resource.customer_uuid)}}
+                as |model|
+            >
+                <div class="flex items-center">
+                    <div class="w-7 flex-grow-0 flex-shrink-0">
+                        <FaIcon @icon={{if model.isVendor "warehouse" "user"}} />
+                    </div>
+                    <span class="uppercase">
+                        {{model.name}}
+                    </span>
+                </div>
+            </ModelSelect>
+        </InputGroup>
+
+        <InputGroup @name={{t "order.fields.facilitator"}} @helpText={{t "order.fields.facilitator-help-text"}}>
+            <ModelSelect
+                @modelName="facilitator"
+                @selectedModel={{@resource.facilitator}}
+                @placeholder={{t "order.fields.facilitator-placeholder"}}
+                @triggerClass="form-select form-input"
+                @allowClear={{true}}
+                @infiniteScroll={{false}}
+                @renderInPlace={{true}}
+                @disabled={{cannot-write @resource}}
+                @onChange={{this.selectFacilitator}}
+                as |model|
+            >
+                <div class="flex items-center">
+                    <div class="w-7 flex-grow-0 flex-shrink-0">
+                        {{#if model.isIntegratedVendor}}
+                            <Image src={{model.photo_url}} alt={{model.name}} class="w-4 h-4" width="16" height="16" />
+                        {{else}}
+                            <FaIcon @icon={{if model.isVendor "warehouse" "user"}} />
+                        {{/if}}
+                    </div>
+                    <span class="uppercase">
+                        {{model.name}}
+                    </span>
+                </div>
+            </ModelSelect>
+        </InputGroup>
+
+        {{#if (and @resource.facilitator.isIntegratedVendor @resource.facilitator.service_types.length)}}
+            <InputGroup
+                @name={{t "order.fields.service-type"}}
+                @helpText={{concat (t "order.fields.service-type-help-text") @resource.facilitator.name "."}}
+            >
+                <Select
+                    class="w-full"
+                    @options={{@resource.facilitator.service_types}}
+                    @value={{this.integratedVendorServiceType}}
+                    @optionLabel="description"
+                    @optionValue="key"
+                    @onSelect={{this.selectIntegratedServiceType}}
+                    @placeholder={{t "order.fields.service-type-placeholder"}}
+                    @disabled={{cannot "fleet-ops create order"}}
+                />
+            </InputGroup>
+        {{/if}}
+
+        <InputGroup @name={{t "order.fields.assign-driver"}} @helpText={{t "order.fields.assign-driver-help-text"}}>
+            <ModelSelect
+                @modelName="driver"
+                @selectedModel={{@resource.driver_assigned}}
+                @query={{if @resource.facilitator (hash facilitator=@resource.facilitator.id) (hash)}}
+                @placeholder={{t "order.fields.assign-driver-placeholder"}}
+                @triggerClass="form-select form-input"
+                @infiniteScroll={{false}}
+                @renderInPlace={{true}}
+                @allowClear={{true}}
+                @disabled={{@resource.facilitator.isIntegratedVendor}}
+                @permission="fleet-ops create order"
+                @onChange={{perform this.selectDriver}}
+                as |model|
+            >
+                <div class="flex items-center">
+                    <div class="w-7 flex-grow-0 flex-shrink-0">
+                        <FaIcon @icon="id-card-alt" />
+                    </div>
+                    <div class="flex-1 flex flex-row truncate">
+                        <span class="uppercase mr-2">{{model.name}}</span>
+                        <span class="uppercase">{{model.phone}}</span>
+                    </div>
+                    {{#if @resource.facilitator}}
+                        <div class="px-1 ml-2 leading-5 bg-green-400 rounded shadow">
+                            <span class="text-xs text-green-900">
+                                {{@resource.facilitator.name}}
+                            </span>
+                        </div>
+                    {{/if}}
+                </div>
+            </ModelSelect>
+        </InputGroup>
+
+        <InputGroup @name={{t "order.fields.assign-vehicle"}} @helpText={{t "order.fields.assign-vehicle-help-text"}}>
+            <ModelSelect
+                @modelName="vehicle"
+                @selectedModel={{@resource.vehicle_assigned}}
+                @placeholder={{t "order.fields.assign-vehicle-placeholder"}}
+                @triggerClass="form-select form-input"
+                @infiniteScroll={{false}}
+                @renderInPlace={{true}}
+                @allowClear={{true}}
+                @disabled={{@resource.facilitator.isIntegratedVendor}}
+                @permission="fleet-ops create order"
+                @onChange={{fn (mut @resource.vehicle_assigned)}}
+                as |model|
+            >
+                <div class="flex items-center">
+                    <div class="w-7 flex-grow-0 flex-shrink-0">
+                        <Image @src={{model.avatar_url}} @fallbackSrc={{config "defaultValues.vehicleAvatar"}} class="w-4 h-4 shadow-sm rounded-md" />
+                    </div>
+                    <div class="flex-1 flex flex-row truncate">
+                        <span class="uppercase">{{model.display_name}}</span>
+                    </div>
+                </div>
+            </ModelSelect>
+        </InputGroup>
+
+        {{#if (and @resource.pod_required (not @resource.facilitator.isIntegratedVendor))}}
+            <InputGroup @name={{t "order.fields.proof-delivery"}} @helpText={{t "order.fields.proof-delivery-help-text"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "podOptions"}}
+                        @selected={{find-by "value" @resource.pod_method (get-fleet-ops-options "podOptions")}}
+                        @onChange={{set-model-attr @resource "pod_method"}}
+                        @placeholder={{t "order.fields.proof-delivery-placeholder"}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{option.label}}</div>
+                            <div class="hide-from-trigger">{{option.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+        {{/if}}
+
+        {{#if @resource.adhoc}}
+            <div>
+                <InputGroup
+                    @name={{t "order.fields.adhoc-ping"}}
+                    @type="number"
+                    @value={{@resource.adhoc_distance}}
+                    @wrapperClass="mb-0"
+                    @helpText={{t "order.fields.adhoc-ping-help-text"}}
+                />
+                <div class="mt-2 px-3 py-1 rounded-lg border border-blue-600 bg-blue-100 flex items-center">
+                    <FaIcon @icon="triangle-exclamation" class="text-blue-900 mr-1.5" />
+                    <span class="text-blue-900 text-xs">{{t "order.fields.adhoc-ping-message"}}</span>
+                </div>
+            </div>
+        {{/if}}
+
+        <div class="lg:col-span-2">
+            <InputGroup @wrapperClass="pt-2">
+                <Toggle
+                    @label={{t "order.fields.ad-hoc"}}
+                    @wrapperClass="justify-start-i"
+                    @isToggled={{@resource.adhoc}}
+                    @onToggle={{this.toggleAdhoc}}
+                    @disabled={{or (cannot-write @resource) @resource.facilitator.isIntegratedVendor}}
+                    @helpText={{t "order.fields.ad-hoc-help-text"}}
+                />
+            </InputGroup>
+        </div>
+
+        <div class="lg:col-span-2">
+            <InputGroup @wrapperClass="pt-1">
+                <Toggle
+                    @label={{t "order.fields.dispatch"}}
+                    @wrapperClass="justify-start-i"
+                    @isToggled={{@resource.dispatched}}
+                    @onToggle={{fn (mut @resource.dispatched)}}
+                    @disabled={{or (cannot-write @resource) @resource.facilitator.isIntegratedVendor}}
+                    @helpText={{t "order.fields.dispatch-help-text"}}
+                />
+            </InputGroup>
+        </div>
+
+        <div class="lg:col-span-2">
+            <InputGroup @wrapperClass="pt-1">
+                <Toggle
+                    @label={{t "order.fields.require-proof"}}
+                    @wrapperClass="justify-start-i"
+                    @isToggled={{@resource.pod_required}}
+                    @onToggle={{this.toggleProofOfDelivery}}
+                    @disabled={{cannot-write @resource}}
+                    @helpText={{t "order.fields.require-proof-help-text"}}
+                />
+            </InputGroup>
+        </div>
+    </div>
+</ContentPanel>
+
+<Order::Form::CustomFields @resource={{@resource}} @customFields={{this.customFields}} />

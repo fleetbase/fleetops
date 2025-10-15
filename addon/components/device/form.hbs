@@ -1,0 +1,194 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title={{t "device.fields.title"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <InputGroup @name={{t "device.fields.device-name"}} @wrapperClass="col-span-2">
+                <Input
+                    @value={{@resource.device_name}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.device-name-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.device-type"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.deviceTypeOptions}}
+                        @selected={{@resource.device_type}}
+                        @onChange={{fn (mut @resource.device_type)}}
+                        @placeholder={{t "device.fields.device-type-placeholder"}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |type|
+                    >
+                        {{smart-humanize type}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.device-id"}}>
+                <Input
+                    @value={{@resource.device_id}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.device-id-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.device-provider"}}>
+                <Input
+                    @value={{@resource.device_provider}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.device-provider-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.device-model"}}>
+                <Input
+                    @value={{@resource.device_model}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.device-model-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.manufacturer"}}>
+                <Input
+                    @value={{@resource.manufacturer}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.manufacturer-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.serial-number"}}>
+                <Input
+                    @value={{@resource.serial_number}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.serial-number-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.device-location"}}>
+                <Input
+                    @value={{@resource.device_location}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.device-location-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.installation-date"}}>
+                <DatePicker
+                    @value={{@resource.installation_date}}
+                    @onChange={{fn (mut @resource.installation_date)}}
+                    @placeholder={{t "device.fields.installation-date-placeholder"}}
+                    @disabled={{cannot-write @resource}}
+                    class="w-full form-input"
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.last-maintenance-date"}}>
+                <DatePicker
+                    @value={{@resource.last_maintenance_date}}
+                    @onChange={{fn (mut @resource.last_maintenance_date)}}
+                    @placeholder={{t "device.fields.last-maintenance-date-placeholder"}}
+                    @disabled={{cannot-write @resource}}
+                    class="w-full form-input"
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.data-frequency"}}>
+                <Input
+                    @value={{@resource.data_frequency}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "device.fields.data-frequency-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.status"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.statusOptions}}
+                        @selected={{@resource.status}}
+                        @onChange={{fn (mut @resource.status)}}
+                        @placeholder={{t "device.fields.status-placeholder"}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |status|
+                    >
+                        {{smart-humanize status}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.telematic"}}>
+                <ModelSelect
+                    @modelName="telematic"
+                    @selectedModel={{@resource.telematic}}
+                    @placeholder={{t "device.fields.telematic-placeholder"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.telematic)}}
+                    @onChangeId={{fn (mut @resource.telematic_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.warranty"}}>
+                <ModelSelect
+                    @modelName="warranty"
+                    @selectedModel={{@resource.warranty}}
+                    @placeholder={{t "device.fields.warranty-placeholder"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.warranty)}}
+                    @onChangeId={{fn (mut @resource.warranty_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.policy_number}}
+                    -
+                    {{model.provider}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name={{t "device.fields.notes"}} @wrapperClass="col-span-2">
+                <Textarea
+                    @value={{@resource.notes}}
+                    aria-label={{t "device.fields.notes"}}
+                    class="w-full form-input"
+                    disabled={{cannot-write @resource}}
+                    placeholder={{t "device.fields.notes-placeholder"}}
+                    rows={{4}}
+                />
+            </InputGroup>
+
+            <RegistryYield @registry="fleet-ops:component:device:form:details" as |RegistryComponent|>
+                <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+            </RegistryYield>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <RegistryYield @registry="fleet-ops:component:device:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+</div>

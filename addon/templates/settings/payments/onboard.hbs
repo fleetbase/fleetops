@@ -1,4 +1,4 @@
-<Layout::Section::Header @title="Payments Onboard" />
+<Layout::Section::Header @title={{t "payment.settings.onboard.header-title"}} />
 
 <Layout::Section::Body class="overflow-y-scroll h-full">
     <div class="container">
@@ -13,27 +13,34 @@
                     >
                         <h2 id="title" class="text-base">
                             {{#if this.onboardCompleted}}
-                                Onboarding was completed successfully!
+                                {{t "payment.settings.onboard.title-completed"}}
                             {{else}}
-                                Complete this onboard process to accept payments.
+                                {{t "payment.settings.onboard.title-incomplete"}}
                             {{/if}}
                         </h2>
                         <span id="subtitle">
                             {{#if this.onboardCompleted}}
-                                Your onboard was successful and you're now able to accept and receive payments from customers and 3rd parties.
+                                {{t "payment.settings.onboard.subtitle-completed"}}
                             {{else}}
-                                This onboard process must be completed for payments to be accepted for orders.
+                                {{t "payment.settings.onboard.subtitle-incomplete"}}
                             {{/if}}
                         </span>
                         <div class="mt-4 mb-1">
                             {{#if this.onboardCompleted}}
-                                <Button @icon="check" @type="primary" @size="lg" @text="Continue" @onClick={{transition-to "settings.payments.index"}} @disabled={{this.onboardInProgress}} />
+                                <Button
+                                    @icon="check"
+                                    @type="primary"
+                                    @size="lg"
+                                    @text={{t "payment.settings.onboard.button-continue"}}
+                                    @onClick={{transition-to "settings.payments.index"}}
+                                    @disabled={{this.onboardInProgress}}
+                                />
                             {{else}}
                                 <Button
                                     @icon="play"
                                     @type="primary"
                                     @size="lg"
-                                    @text={{if this.onboardInProgress "Onboard in progress" "Start onboard now"}}
+                                    @text={{if this.onboardInProgress (t "payment.settings.onboard.button-in-progress") (t "payment.settings.onboard.button-start")}}
                                     @onClick={{perform this.startOnboard}}
                                     @isLoading={{this.startOnboard.isRunning}}
                                     @disabled={{this.onboardInProgress}}

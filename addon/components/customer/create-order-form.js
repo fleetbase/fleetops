@@ -11,9 +11,7 @@ import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-ma
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import engineService from '@fleetbase/ember-core/decorators/engine-service';
 import registerHelper from '@fleetbase/ember-core/utils/register-helper';
-import registerComponent from '@fleetbase/ember-core/utils/register-component';
 import WaypointLabelHelper from '../../helpers/waypoint-label';
-import CustomFieldComponent from '../../components/custom-field';
 import isModel from '@fleetbase/ember-core/utils/is-model';
 import isNotEmpty from '@fleetbase/ember-core/utils/is-not-empty';
 import config from 'ember-get-config';
@@ -29,6 +27,7 @@ export default class CustomerCreateOrderFormComponent extends Component {
     @service customerSession;
     @service customerPayment;
     @service urlSearchParams;
+    @service customFieldsRegistry;
     @service fetch;
     @service intl;
     @service universe;
@@ -57,9 +56,7 @@ export default class CustomerCreateOrderFormComponent extends Component {
     @tracked orderConfigs = [];
     @tracked orderConfig;
     @tracked enabledOrderConfigs = [];
-    @tracked customFieldGroups = [];
-    @tracked customFields = [];
-    @tracked customFieldValues = {};
+    @tracked customFields;
     @tracked isCustomFieldsValid = true;
     @tracked paymentsEnabled = false;
     @tracked paymentsOnboardCompleted = false;
@@ -103,7 +100,6 @@ export default class CustomerCreateOrderFormComponent extends Component {
         this.customerPayment.loadAndInitialize();
         this.displayCompletingOrderDialog();
         this.load.perform();
-        registerComponent(owner, CustomFieldComponent);
         registerHelper(owner, 'waypoint-label', WaypointLabelHelper);
     }
 
@@ -115,15 +111,14 @@ export default class CustomerCreateOrderFormComponent extends Component {
     @task *loadCustomerOrderConfig() {
         try {
             this.orderConfigs = yield this.store.findAll('order-config');
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
-
-        try {
-            this.enabledOrderConfigs = yield this.fetch.get('fleet-ops/settings/customer-enabled-order-configs');
-            this.orderConfigs = this.orderConfigs.filter((orderConfig) => this.enabledOrderConfigs.includes(orderConfig.id));
-            if (this.orderConfigs) {
-                this._setOrderConfig(this.orderConfigs[0].id);
+            try {
+                this.enabledOrderConfigs = yield this.fetch.get('fleet-ops/settings/customer-enabled-order-configs');
+                this.orderConfigs = this.orderConfigs.filter((orderConfig) => this.enabledOrderConfigs.includes(orderConfig.id));
+                if (this.orderConfigs?.length) {
+                    this._setOrderConfig(this.orderConfigs[0].id);
+                }
+            } catch (error) {
+                this.notifications.serverError(error);
             }
         } catch (error) {
             this.notifications.serverError(error);
@@ -152,20 +147,17 @@ export default class CustomerCreateOrderFormComponent extends Component {
     }
 
     @task *createOrder() {
+        // use order validatin service in the future
+        // if (this.orderValidation.validationFails(order)) return;
         // validate order inputs
-        if (!this.isValid()) {
-            return;
-        }
+        if (!this.isValid()) return;
 
         // valiadate custom field inputs
-        for (let i = 0; i < this.customFields.length; i++) {
-            const customField = this.customFields[i];
-            if (customField.required) {
-                const customFieldValue = this.customFieldValues[customField.id];
-                if (!customFieldValue || isBlank(customFieldValue.value)) {
-                    return this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.new.input-field-required', { inputFieldName: customField.label }));
-                }
-            }
+        const { isValid, errors } = this.customFields.validateRequired();
+        if (!isValid) {
+            const messages = [...errors.values()].join('\n');
+            this.notifications.error(messages);
+            return;
         }
 
         // Handle payments if enabled
@@ -173,21 +165,14 @@ export default class CustomerCreateOrderFormComponent extends Component {
             return this.startCheckoutSession();
         }
 
-        // create custom field values
-        for (let customFieldId in this.customFieldValues) {
-            const { value, value_type } = this.customFieldValues[customFieldId];
-            const customFieldValue = this.store.createRecord('custom-field-value', {
-                custom_field_uuid: customFieldId,
-                value,
-                value_type,
-            });
-            this.order.custom_field_values.push(customFieldValue);
-        }
-
         this.removeRoutingControlPreview();
 
         const { order, payload, entities, waypoints } = this;
         const route = this.getRoute();
+
+        // Save custom field values
+        const { created: customFieldValues } = yield order.cfManager.saveTo(order);
+        order.custom_field_values.pushObjects(customFieldValues);
 
         // set purchase rate
         if (this.purchaseRate) {
@@ -276,71 +261,16 @@ export default class CustomerCreateOrderFormComponent extends Component {
     }
 
     @task *loadCustomFields(orderConfig) {
-        this.customFieldGroups = yield this.store.query('category', { owner_uuid: orderConfig.id, for: 'custom_field_group' });
-        this.customFields = yield this.store.query('custom-field', { subject_uuid: orderConfig.id });
-        this.groupCustomFields();
-        this.checkIfCustomFieldsValid();
-    }
-
-    /**
-     * Organizes custom fields into their respective groups.
-     */
-    groupCustomFields() {
-        for (let i = 0; i < this.customFieldGroups.length; i++) {
-            const group = this.customFieldGroups[i];
-            group.set(
-                'customFields',
-                this.customFields.filter((customField) => {
-                    if (this.customFieldValues[customField.id]) {
-                        const { value, value_type } = this.customFieldValues[customField.id];
-                        if (value_type === 'date') {
-                            customField.value = new Date(value);
-                        } else {
-                            customField.value = value;
-                        }
-                    }
-
-                    return customField.category_uuid === group.id;
-                })
-            );
-        }
-    }
-
-    @action setCustomFieldValue(value, customField) {
-        this.customFieldValues = {
-            ...this.customFieldValues,
-            [customField.id]: {
-                value,
-                value_type: this._getCustomFieldValueType(customField),
-            },
-        };
-        this.checkIfCustomFieldsValid();
-    }
-
-    checkIfCustomFieldsValid() {
-        this.isCustomFieldsValid = this.customFields.every((customField) => {
-            if (!customField.required) {
-                return true;
+        try {
+            const customFieldsManager = yield this.customFieldsRegistry.loadSubjectCustomFields.perform(orderConfig);
+            this.customFields = customFieldsManager;
+            this.order.cfManager = customFieldsManager;
+            if (typeof this.args.onCustomFieldsReady === 'function') {
+                this.args.onCustomFieldsReady(customFieldsManager);
             }
-            const customFieldValue = this.customFieldValues[customField.id];
-            return customFieldValue && !isBlank(customFieldValue.value);
-        });
-    }
-
-    _getCustomFieldValueType(customField) {
-        if (customField.type === 'file-upload') {
-            return 'file';
+        } catch (err) {
+            debug('Error loading order custom fields: ' + err.message);
         }
-
-        if (customField.type === 'date-time-input') {
-            return 'date';
-        }
-
-        if (customField.type === 'model-select') {
-            return 'model';
-        }
-
-        return 'text';
     }
 
     @action cancelOrderCreation() {
@@ -361,6 +291,7 @@ export default class CustomerCreateOrderFormComponent extends Component {
     _setOrderConfig(id) {
         const orderConfig = this.store.peekRecord('order-config', id);
         this.orderConfig = orderConfig;
+        this.order.set('order_config', orderConfig);
         this.order.set('order_config_uuid', orderConfig.id);
         this.order.set('type', orderConfig.key);
 
@@ -696,9 +627,7 @@ export default class CustomerCreateOrderFormComponent extends Component {
     @task *queueFile(file) {
         // since we have dropzone and upload button within dropzone validate the file state first
         // as this method can be called twice from both functions
-        if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) {
-            return;
-        }
+        if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) return;
 
         // Queue and upload immediatley
         this.uploadQueue.pushObject(file);

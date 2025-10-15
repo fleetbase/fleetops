@@ -1,0 +1,14 @@
+<Layout::Resource::Panel
+    @resource={{this.report}}
+    @controller={{this}}
+    @actionButtons={{this.actionButtons}}
+    @headerTitle={{t "common.create-new-resource" resource=(lowercase (t "resource.report"))}}
+    @saveTask={{this.save}}
+    @onPressCancel={{transition-to "analytics.reports.index"}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+    @width="800px"
+    @authScheme="iam"
+>
+    <ReportBuilder @report={{this.report}} @extension="fleet-ops" />
+    <Spacer @height="300px" />
+</Layout::Resource::Panel>

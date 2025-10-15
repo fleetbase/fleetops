@@ -1,0 +1,41 @@
+<ContentPanel @title={{t "order.fields.tracking"}} @prefixTitleRight={{@resource.tracking}} @isLoading={{@isLoading}} @open={{true}} @wrapperClass="bordered-top">
+    {{#if @resource.tracker_data}}
+        <div class="mb-4">
+            <div class="mb-6">
+                <OrderProgressBar
+                    @order={{@resource}}
+                    @progress={{@resource.tracker_data.progress_percentage}}
+                    @firstWaypointCompleted={{@resource.tracker_data.first_waypoint_completed}}
+                    @lastWaypointCompleted={{@resource.tracker_data.last_waypoint_completed}}
+                />
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div class="field-info-container space-y-1">
+                    <div class="field-name">Current ETA</div>
+                    <div class="field-value">{{n-a (format-duration @resource.tracker_data.current_destination_eta)}}</div>
+                </div>
+                <div class="field-info-container space-y-1">
+                    <div class="field-name">Current ECT</div>
+                    <div class="field-value">{{n-a @resource.tracker_data.estimated_completion_time_formatted}}</div>
+                </div>
+                <div class="field-info-container space-y-1">
+                    <div class="field-name">Current Destination</div>
+                    <div class="field-value">{{n-a @resource.tracker_data.current_destination.address}}</div>
+                </div>
+            </div>
+        </div>
+    {{/if}}
+    <div class="flex flex-col border border-gray-200 bg-gray-50 dark:bg-gray-900 dark:border-gray-700 rounded-md px-4 py-4 shadow-sm">
+        <div class="flex flex-row items-center justify-center space-x-4">
+            <div class="rounded-md bg-white p-2">
+                <img src={{concat "data:image/png;base64," @resource.tracking_number.qr_code}} class="w-14 h-14" alt={{@resource.public_id}} />
+            </div>
+            <div class="rounded-md bg-white p-2">
+                <img src={{concat "data:image/png;base64," @resource.tracking_number.barcode}} class="w-40 h-14" alt={{@resource.public_id}} />
+            </div>
+        </div>
+        <div class="mt-4 flex justify-center items-center">
+            <Button @size="xs" @type="default" @icon="barcode" @text="Get Order Label" @onClick={{fn this.orderActions.viewLabel @resource}} @permission="fleet-ops view order" />
+        </div>
+    </div>
+</ContentPanel>

@@ -31,12 +31,14 @@ class CreateServiceRateRequest extends FleetbaseRequest
             'service_type'                  => [Rule::requiredIf($this->isMethod('POST')), 'string'],
             'service_area'                  => [Rule::exists('service_areas', 'public_id')->whereNull('deleted_at')],
             'zone'                          => [Rule::exists('zones', 'public_id')->whereNull('deleted_at')],
-            'rate_calculation_method'       => [Rule::requiredIf($this->isMethod('POST')), 'string', 'in:fixed_meter,per_meter,per_drop,algo'],
+            'rate_calculation_method'       => [Rule::requiredIf($this->isMethod('POST')), 'string', 'in:fixed_meter,fixed_rate,per_meter,per_drop,algo'],
             'currency'                      => ['required', 'size:3'],
             'base_fee'                      => ['numeric'],
             'per_meter_unit'                => ['required_if:rate_calculation_method,per_meter', 'string', 'in:km,m'],
             'per_meter_flat_rate_fee'       => ['required_if:rate_calculation_method,per_meter', 'numeric'],
-            'meter_fees'                    => ['required_if:rate_calculation_method,fixed_meter', 'array'],
+            'meter_fees'                    => [Rule::requiredIf(function ($input) {
+                return in_array($input->rate_calculation_method, ['fixed_meter', 'fixed_rate']);
+            }), 'array'],
             'meter_fees.*.distance'         => ['numeric'],
             'meter_fees.*.fee'              => ['numeric'],
             'algorithm'                     => ['required_if:rate_calculation_method,algo', new ComputableAlgo(), 'string'],

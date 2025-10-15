@@ -5,10 +5,11 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
-import { later } from '@ember/runloop';
-import { debug } from '@ember/debug';
+import { next } from '@ember/runloop';
 import { task } from 'ember-concurrency';
+import lowercase from 'ember-cli-string-helpers/utils/lowercase';
 import generateUUID from '@fleetbase/ember-core/utils/generate-uuid';
+import inlineTask from '@fleetbase/ember-core/utils/inline-task';
 import createFlowActivity from '../../utils/create-flow-activity';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 
@@ -17,7 +18,7 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
  * @extends Component
  */
 export default class OrderConfigManagerActivityFlowComponent extends Component {
-    @service contextPanel;
+    @service resourceContextPanel;
     @service notifications;
     @service intl;
     @service abilities;
@@ -51,6 +52,13 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @type {Object}
      */
     @tracked graph;
+
+    /**
+     * Checks if listener pointerdown listener is called.
+     *
+     * @type {Boolean}
+     */
+    @tracked listeningForClicks = false;
 
     /**
      * Initializes the component with the given configuration.
@@ -167,10 +175,13 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * Listens for element click events within the JointJS paper.
      */
     listenForElementClicks() {
+        if (this.listeningForClicks === true) return;
+
         this.paper.on('element:pointerdown', (elementView, event) => {
             this.onActivityClicked(elementView);
             contextComponentCallback(this, 'onActivityClicked', elementView, event);
         });
+        this.listeningForClicks = true;
     }
 
     /**
@@ -242,19 +253,15 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @memberof OrderConfigManagerCustomFieldsComponent
      */
     initializeContext() {
-        later(
-            this,
-            () => {
-                const { context, contextModel } = this.args;
-                if (typeof context === 'string' && contextModel === 'activity') {
-                    const contextActivity = Object.values(this.flow).find((activity) => activity.get('internalId') === context);
-                    if (contextActivity) {
-                        this.editActivity(contextActivity);
-                    }
+        next(this, () => {
+            const { context, contextModel } = this.args;
+            if (typeof context === 'string' && contextModel === 'activity') {
+                const contextActivity = Object.values(this.flow).find((activity) => activity.get('internalId') === context);
+                if (contextActivity) {
+                    this.editActivity(contextActivity);
                 }
-            },
-            300
-        );
+            }
+        });
     }
 
     /**
@@ -409,9 +416,8 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      */
     onActivityClicked(elementView) {
         // Disable editing activity if core service or if cannot view order config
-        if (this.config.core_service || this.abilities.cannot('fleet-ops view order-config')) {
-            return;
-        }
+        if (this.config.core_service || this.abilities.cannot('fleet-ops view order-config')) return;
+
         const { model } = elementView;
         const activity = this.getActivityById(model.id);
         if (activity) {
@@ -463,8 +469,6 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
                     let lastChildActivity = null;
                     return activityObject.forEach((childActivityObject, childIndex) => {
                         if (childIndex > 0 && lastChildActivity) {
-                            debug('[lastChildActivity]', lastChildActivity);
-                            debug('[childActivityObject]', childActivityObject);
                             this.addNewLinkedActivity(lastChildActivity, childActivityObject);
                             return;
                         }
@@ -856,34 +860,31 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      */
     editActivity(activity, targetActivity) {
         // if immutable do nothing
-        if (this.immutableActivities.includes(activity.get('code'))) {
-            return;
-        }
+        if (this.immutableActivities.includes(activity.get('code'))) return;
 
         contextComponentCallback(this, 'onContextChanged', this._createContextualActivity(activity));
-        this.contextPanel.focus(activity, 'editing', {
-            args: {
-                targetActivity,
-                onPressCancel: () => {
-                    this.contextPanel.clear();
-                    contextComponentCallback(this, 'onContextChanged', null);
-                },
-                onSave: (activity) => {
-                    const existingActivity = this.flow[activity.get('code')];
+        this.resourceContextPanel.open({
+            content: 'activity/form',
+            title: this.intl.t('common.create-new-resource', { resource: lowercase(this.intl.t('resource.activity')) }),
+            panelContentClass: 'py-2 px-4',
+            resource: activity,
+            pojoResource: true,
+            saveTask: inlineTask(() => {
+                // Check if the activity exists and if it's not the same instance being updated
+                const existingActivity = this.flow[activity.get('code')];
+                if (existingActivity && existingActivity !== activity) {
+                    return this.notifications.warning(this.intl.t('order-config-manager.activity-flow.edit-activity-unique-code-warning'));
+                }
 
-                    // Check if the activity exists and if it's not the same instance being updated
-                    if (existingActivity && existingActivity !== activity) {
-                        this.notifications.warning(this.intl.t('fleet-ops.component.order-config-manager.activity-flow.edit-activity-unique-code-warning'));
-                        return;
-                    }
-
-                    contextComponentCallback(this, 'onContextChanged', null);
-                    this.contextPanel.clear();
-                    this.updateActivityInFlowMap(activity);
-                    if (targetActivity) {
-                        this.addNewLinkedActivity(targetActivity, activity);
-                    }
-                },
+                contextComponentCallback(this, 'onContextChanged', null);
+                this.updateActivityInFlowMap(activity);
+                if (targetActivity) {
+                    this.addNewLinkedActivity(targetActivity, activity);
+                }
+                this.resourceContextPanel.closeAll();
+            }),
+            onClose: () => {
+                contextComponentCallback(this, 'onContextChanged', null);
             },
         });
     }

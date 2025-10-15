@@ -1,0 +1,97 @@
+<ContentPanel @title={{t "order.fields.payload"}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
+    {{#if @resource.isMultiDropOrder}}
+        <div class="space-y-2">
+            {{#each @resource.entitiesByDestination as |group|}}
+                <div class="rounded-md border border-gray-200 dark:border-gray-900 p-3">
+                    <div class="mb-3 flex justify-between items-start">
+                        <div class="flex-1">
+                            {{#if group.waypoint.customer}}
+                                <div class="field-info-container">
+                                    <div class="flex flex-row">
+                                        <div>
+                                            <Image
+                                                src={{avatar-url group.waypoint.customer.photo_url}}
+                                                @fallbackSrc={{config "defaultValues.contactImage"}}
+                                                class="w-8 h-8 rounded-md shadow-sm mr-2"
+                                                alt={{group.waypoint.customer.name}}
+                                            />
+                                        </div>
+                                        <div>
+                                            <div class="field-value">{{n-a group.waypoint.customer.name "No Customer"}}</div>
+                                            {{#if group.waypoint.customer}}
+                                                <div>{{n-a group.waypoint.customer.phone "No Phone"}}</div>
+                                            {{/if}}
+                                        </div>
+                                    </div>
+                                </div>
+                            {{/if}}
+                            <DisplayPlace @place={{group.waypoint}} @addressClass="text-sm" />
+                            <div class="my-2">
+                                <span class="rounded-md bg-yellow-300 text-yellow-900 px-2 py-1 text-sm">{{t "order.fields.tracking"}}
+                                    {{group.waypoint.tracking}}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="mb-2 flex justify-end">
+                                <Badge @status={{group.waypoint.status_code}} />
+                            </div>
+                            <div class="flex items-start">
+                                <DropdownButton
+                                    @triggerClass="mr-2"
+                                    @iconClass="icon-text-height"
+                                    @buttonSize="sm"
+                                    @icon="ellipsis-h"
+                                    @iconPrefix="fas"
+                                    @contentClass="dropdown-menu"
+                                    as |dd|
+                                >
+                                    <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
+                                        <div class="px-1">
+                                            <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-300">
+                                                {{t "order.fields.waypoint-actions"}}
+                                            </div>
+                                        </div>
+                                        <div class="next-dd-menu-seperator"></div>
+                                        <div class="px-1">
+                                            <a
+                                                href="javascript:;"
+                                                class="next-dd-item"
+                                                disabled={{cannot "fleet-ops view order"}}
+                                                {{on "click" (dropdown-fn dd this.viewWaypointLabel group.waypoint)}}
+                                            >
+                                                {{t "order.fields.get-label"}}
+                                            </a>
+                                            {{!-- <a href="javascript:;" class="next-dd-item">
+                                                        {{t "order.fields.view-activity"}}
+                                                    </a> --}}
+                                        </div>
+                                    </div>
+                                </DropdownButton>
+                                <Button
+                                    @icon="plus"
+                                    @iconPrefix="fas"
+                                    @text={{t "order.fields.add-item-button"}}
+                                    @size="sm"
+                                    @onClick={{perform this.addEntity group.waypoint}}
+                                    @permission="fleet-ops update order"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                        {{#each group.entities as |entity|}}
+                            <Entity::Card @resource={{entity}} />
+                        {{/each}}
+                    </div>
+                </div>
+            {{/each}}
+        </div>
+    {{else}}
+        <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
+            {{#each @resource.payload.entities as |entity|}}
+                <Entity::Card @resource={{entity}} />
+            {{/each}}
+        </div>
+    {{/if}}
+</ContentPanel>

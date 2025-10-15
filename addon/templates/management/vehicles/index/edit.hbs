@@ -1,8 +1,13 @@
-<VehicleFormPanel
-    @vehicle={{@model}}
+<Layout::Resource::Panel
+    @resource={{@model}}
     @controller={{this}}
-    @onPressCancel={{this.transitionBack}}
-    @onAfterSave={{this.onAfterSave}}
-    @onViewDetails={{this.onViewDetails}}
-    @onLoad={{this.setOverlayContext}}
-/>
+    @headerTitle={{t "common.edit-resource-name" resourceName=@model.display_name}}
+    @actionButtons={{this.actionButtons}}
+    @saveTask={{this.save}}
+    @onPressCancel={{this.cancel}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+>
+    <Vehicle::Form @resource={{@model}} @controller={{this}} />
+    <Spacer @height="200px" />
+</Layout::Resource::Panel>
+

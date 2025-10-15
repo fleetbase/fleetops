@@ -1,0 +1,108 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title={{t "fleet.fields.fleet-details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <InputGroup @name={{t "fleet.fields.fleet-name"}} @value={{@resource.name}} @disabled={{cannot-write @resource}} @wrapperClass="col-span-2" />
+            <InputGroup @name={{t "fleet.fields.parent-fleet"}} @value={{@resource.parent_fleet}}>
+                <ModelSelect
+                    @modelName="fleet"
+                    @selectedModel={{@resource.parent_fleet}}
+                    @placeholder={{t "fleet.fields.select-parent-fleet"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn this.updateRelationship "parent_fleet"}}
+                    @allowClear={{true}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+            <InputGroup @name={{t "resource.vendor"}} @value={{@resource.vendor}}>
+                <ModelSelect
+                    @modelName="vendor"
+                    @selectedModel={{@resource.vendor}}
+                    @placeholder={{t "fleet.fields.select-vendor"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn this.updateRelationship "vendor"}}
+                    @allowClear={{true}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+            <InputGroup @name={{t "fleet.fields.service-title"}} @value={{@resource.service_area}}>
+                <ModelSelect
+                    @modelName="service-area"
+                    @selectedModel={{@resource.service_area}}
+                    @placeholder={{t "fleet.fields.select-service"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn this.updateRelationship "service_area"}}
+                    @allowClear={{true}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+            {{#if @resource.service_area}}
+                <InputGroup @name={{t "fleet.fields.zone-title"}} @value={{@resource.zone}}>
+                    <ModelSelect
+                        @modelName="zone"
+                        @selectedModel={{@resource.zone}}
+                        @query={{hash service_area_uuid=@resource.service_area.id}}
+                        @placeholder={{t "fleet.fields.select-zone"}}
+                        @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
+                        @onChange={{fn this.updateRelationship "zone"}}
+                        @allowClear={{true}}
+                        @disabled={{cannot-write @resource}}
+                        as |model|
+                    >
+                        {{model.name}}
+                    </ModelSelect>
+                </InputGroup>
+            {{/if}}
+            <InputGroup @name={{t "common.status"}} @helpText={{t "fleet.fields.select-status-fleet"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "fleetStatuses"}}
+                        @selected={{find-by "value" @resource.status (get-fleet-ops-options "fleetStatuses")}}
+                        @onChange={{set-model-attr @resource "status"}}
+                        @placeholder={{t "fleet.fields.select-status"}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |status|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{status.label}}</div>
+                            <div class="hide-from-trigger">{{status.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+            <InputGroup
+                @name={{t "fleet.fields.task-mission-title"}}
+                @helpText={{t "fleet.fields.task-text"}}
+                @value={{@resource.task}}
+                @disabled={{cannot-write @resource}}
+                @wrapperClass="col-span-2"
+            />
+            <RegistryYield @registry="fleet-ops:component:fleet:form:details" as |RegistryComponent|>
+                <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+            </RegistryYield>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <RegistryYield @registry="fleet-ops:component:fleet:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+</div>

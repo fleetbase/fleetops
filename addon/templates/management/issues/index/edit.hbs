@@ -1,8 +1,13 @@
-<IssueFormPanel
-    @issue={{@model}}
+<Layout::Resource::Panel
+    @resource={{@model}}
     @controller={{this}}
-    @onPressCancel={{this.transitionBack}}
-    @onAfterSave={{this.onAfterSave}}
-    @onViewDetails={{this.onViewDetails}}
-    @onLoad={{this.setOverlayContext}}
-/>
+    @headerTitle={{t "common.edit-resource-name" resourceName=@model.title}}
+    @actionButtons={{this.actionButtons}}
+    @saveTask={{this.save}}
+    @onPressCancel={{this.cancel}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+>
+    <Issue::Form @resource={{@model}} @controller={{this}} />
+    <Spacer @height="400px" />
+</Layout::Resource::Panel>
+

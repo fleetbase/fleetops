@@ -6,12 +6,11 @@ import services from '@fleetbase/ember-core/exports/services';
 import NavigatorAppConfigComponent from './components/admin/navigator-app';
 import WidgetFleetOpsKeyMetricsComponent from './components/widget/fleet-ops-key-metrics';
 import AdminAvatarManagementComponent from './components/admin/avatar-management';
-import CustomerOrdersComponent from './components/customer/orders';
-import CustomerAdminSettingsComponent from './components/customer/admin-settings';
 import OrderTrackingLookupComponent from './components/order-tracking-lookup';
 import { RoutingControl } from './services/leaflet-routing-control';
 import { OSRMv1 } from '@fleetbase/leaflet-routing-machine';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
+import setupCustomerPortal from './utils/setup-customer-portal';
 
 const { modulePrefix } = config;
 const externalRoutes = ['console', 'extensions'];
@@ -104,31 +103,33 @@ export default class FleetOpsEngine extends Engine {
         universe.createRegistries([
             'engine:fleet-ops',
             'fleet-ops:component:live-map-drawer',
-            'fleet-ops:component:vehicle-panel',
-            'fleet-ops:component:driver-panel',
+            'fleet-ops:component:vehicle:details',
+            'fleet-ops:component:driver:details',
             'fleet-ops:component:order-config-manager',
-            'fleet-ops:component:contact-form-panel',
-            'fleet-ops:component:contact-form-panel:details',
-            'fleet-ops:component:customer-form-panel',
-            'fleet-ops:component:customer-form-panel:details',
-            'fleet-ops:component:driver-form-panel',
-            'fleet-ops:component:driver-form-panel:details',
-            'fleet-ops:component:fleet-form-panel',
-            'fleet-ops:component:fleet-form-panel:details',
-            'fleet-ops:component:place-form-panel',
-            'fleet-ops:component:place-form-panel:details',
-            'fleet-ops:component:vehicle-form-panel',
-            'fleet-ops:component:vehicle-form-panel:details',
-            'fleet-ops:component:vendor-form-panel:edit',
-            'fleet-ops:component:vendor-form-panel:edit:details',
-            'fleet-ops:component:vendor-form-panel:create',
-            'fleet-ops:component:vendor-form-panel:create:details',
-            'fleet-ops:component:issue-form-panel',
-            'fleet-ops:component:issue-form-panel:details',
-            'fleet-ops:component:fuel-report-form-panel',
-            'fleet-ops:component:fuel-report-form-panel:details',
+            'fleet-ops:component:contact:form',
+            'fleet-ops:component:contact:form:details',
+            'fleet-ops:component:customer:form',
+            'fleet-ops:component:customer:form:details',
+            'fleet-ops:component:driver:form',
+            'fleet-ops:component:driver:form:details',
+            'fleet-ops:component:fleet:form',
+            'fleet-ops:component:fleet:form:details',
+            'fleet-ops:component:place:form',
+            'fleet-ops:component:place:form:details',
+            'fleet-ops:component:vehicle:form',
+            'fleet-ops:component:vehicle:form:details',
+            'fleet-ops:component:vendor:form:edit',
+            'fleet-ops:component:vendor:form:edit:details',
+            'fleet-ops:component:vendor:form:create',
+            'fleet-ops:component:vendor:form:create:details',
+            'fleet-ops:component:issue:form',
+            'fleet-ops:component:issue:form:details',
+            'fleet-ops:component:fuel-report:form',
+            'fleet-ops:component:fuel-report:form:details',
             'fleet-ops:contextmenu:vehicle',
             'fleet-ops:contextmenu:driver',
+            'fleet-ops:component:order:details',
+            'fleet-ops:component:order:form',
             'fleet-ops:template:operations:orders:view',
             'fleet-ops:template:operations:orders:new',
             'fleet-ops:template:operations:orders:new:entities-input',
@@ -136,12 +137,7 @@ export default class FleetOpsEngine extends Engine {
             'fleet-ops:template:settings:routing',
         ]);
 
-        universe.afterBoot(function (universe) {
-            universe.registerMenuItems('customer-portal:sidebar', [
-                universe._createMenuItem('Orders', 'customer-portal.portal.virtual', { icon: 'boxes-packing', component: CustomerOrdersComponent }),
-            ]);
-            universe.registerRenderableComponent('@fleetbase/customer-portal-engine', 'customer-portal:admin-settings', CustomerAdminSettingsComponent);
-        });
+        setupCustomerPortal(app, engine, universe);
     };
 }
 

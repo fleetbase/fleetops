@@ -1,0 +1,13 @@
+<ContentPanel
+    @title={{t "order.fields.activity"}}
+    @open={{true}}
+    @actionButtons={{this.actionButtons}}
+    @isLoading={{or @isLoadingActivity this.loadActivity.isRunning @isLoading}}
+    @wrapperClass="bordered-top"
+>
+    {{#if (eq this.layout "timeline")}}
+        <Order::ActivityTimeline @resource={{@resource}} />
+    {{else}}
+        <Order::ActivityList @resource={{@resource}} />
+    {{/if}}
+</ContentPanel>

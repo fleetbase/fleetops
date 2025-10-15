@@ -13,7 +13,7 @@
                             <FaIcon @icon="handshake" @size="xl" class="text-blue-500" />
                         </div>
                         <div>
-                            <span class="text-gray-900 dark:text-gray-100 text-lg">{{t "fleet-ops.component.modals.vendor-form.choose-vendor"}}</span>
+                            <span class="text-gray-900 dark:text-gray-100 text-lg">{{t "modals.vendor-form.choose-vendor"}}</span>
                         </div>
                     </button>
                     <button
@@ -26,7 +26,7 @@
                             <FaIcon @icon="building" @size="xl" class="text-blue-500" />
                         </div>
                         <div>
-                            <span class="text-gray-900 dark:text-gray-100 text-lg">{{t "fleet-ops.component.modals.vendor-form.create-vendor"}}</span>
+                            <span class="text-gray-900 dark:text-gray-100 text-lg">{{t "modals.vendor-form.create-vendor"}}</span>
                         </div>
                     </button>
                 </div>
@@ -53,21 +53,21 @@
 
             {{#if @options.selectedIntegratedVendor}}
                 <div class="mb-2">
-                    <label class="mb-2 block dark:text-gray-400 text-xs">{{t "fleet-ops.component.modals.vendor-form.credentials"}}</label>
+                    <label class="mb-2 block dark:text-gray-400 text-xs">{{t "modals.vendor-form.credentials"}}</label>
                     {{#each @options.selectedIntegratedVendor.credential_params as |param|}}
                         <InputGroup
                             @name={{smart-humanize param.key}}
                             @value={{mut (get @options.integratedVendor.credentials param.key)}}
                             @helpText={{concat
-                                (t "fleet-ops.component.modals.vendor-form.optionally")
+                                (t "modals.vendor-form.optionally")
                                 (smart-humanize param.key)
-                                (t "fleet-ops.component.modals.vendor-form.configure-vendor")
+                                (t "modals.vendor-form.configure-vendor")
                             }}
                         />
                     {{/each}}
                 </div>
                 <div class="mb-2">
-                    <label class="mb-2 block dark:text-gray-400 text-xs">{{t "fleet-ops.component.modals.vendor-form.options"}}</label>
+                    <label class="mb-2 block dark:text-gray-400 text-xs">{{t "modals.vendor-form.options"}}</label>
                     {{#each @options.selectedIntegratedVendor.option_params as |param|}}
                         {{#if param.options}}
                             <InputGroup @name={{smart-humanize param.key}}>
@@ -77,7 +77,7 @@
                                     @optionValue={{param.optionValue}}
                                     @optionLabel={{param.optionLabel}}
                                     @humanize={{true}}
-                                    @placeholder={{concat (t "fleet-ops.component.modals.vendor-form.select") (smart-humanize param.key)}}
+                                    @placeholder={{concat (t "modals.vendor-form.select") (smart-humanize param.key)}}
                                     @onSelect={{fn (mut (get @options.integratedVendor.options param.key))}}
                                 />
                             </InputGroup>
@@ -86,9 +86,9 @@
                                 @name={{smart-humanize param.key}}
                                 @value={{mut (get @options.integratedVendor.options param.key)}}
                                 @helpText={{concat
-                                    (t "fleet-ops.component.modals.vendor-form.optionally")
+                                    (t "modals.vendor-form.optionally")
                                     (smart-humanize param.key)
-                                    (t "fleet-ops.component.modals.vendor-form.configure-vendor")
+                                    (t "modals.vendor-form.configure-vendor")
                                 }}
                             />
                         {{/if}}
@@ -97,7 +97,7 @@
                 <InputGroup @wrapperClass="mb-2">
                     <Checkbox
                         @value={{@options.integratedVendor.sandbox}}
-                        @label={{t "fleet-ops.component.modals.vendor-form.sandbox"}}
+                        @label={{t "modals.vendor-form.sandbox"}}
                         @onToggle={{fn (mut @options.integratedVendor.sandbox)}}
                         @alignItems="center"
                         @labelClass="mb-0i"
@@ -106,26 +106,26 @@
                 <div>
                     <button type="button" class="btn-link text-xs outline-none text-blue-600 hover:text-blue-600 mb-3" {{on "click" @options.toggleAdvancedOptions}}>
                         {{#if @options.showAdvancedOptions}}
-                            <span>{{t "fleet-ops.component.modals.vendor-form.hide-advanced"}}</span>
+                            <span>{{t "modals.vendor-form.hide-advanced"}}</span>
                         {{else}}
-                            <span>{{t "fleet-ops.component.modals.vendor-form.show-advanced"}}</span>
+                            <span>{{t "modals.vendor-form.show-advanced"}}</span>
                         {{/if}}
                     </button>
                     {{#if @options.showAdvancedOptions}}
                         <InputGroup
-                            @name={{t "fleet-ops.component.modals.vendor-form.custom-host"}}
+                            @name={{t "modals.vendor-form.custom-host"}}
                             @value={{@options.integratedVendor.host}}
-                            @helpText={{t "fleet-ops.component.modals.vendor-form.host-text"}}
+                            @helpText={{t "modals.vendor-form.host-text"}}
                         />
                         <InputGroup
-                            @name={{t "fleet-ops.component.modals.vendor-form.custom-namespace"}}
+                            @name={{t "modals.vendor-form.custom-namespace"}}
                             @value={{@options.integratedVendor.namespace}}
-                            @helpText={{t "fleet-ops.component.modals.vendor-form.namespace-text"}}
+                            @helpText={{t "modals.vendor-form.namespace-text"}}
                         />
                         <InputGroup
-                            @name={{t "fleet-ops.component.modals.vendor-form.webhook"}}
+                            @name={{t "modals.vendor-form.webhook"}}
                             @value={{@options.integratedVendor.webhook_url}}
-                            @helpText={{t "fleet-ops.component.modals.vendor-form.webhook-text"}}
+                            @helpText={{t "modals.vendor-form.webhook-text"}}
                         />
                     {{/if}}
                 </div>
@@ -141,22 +141,22 @@
                     </div>
                 </div>
                 <div class="mb-2">
-                    <label class="mb-2 block dark:text-gray-400 text-xs">{{t "fleet-ops.component.modals.vendor-form.credentials"}}</label>
+                    <label class="mb-2 block dark:text-gray-400 text-xs">{{t "modals.vendor-form.credentials"}}</label>
                     {{#if @options.isEditingCredentials}}
                         {{#each @options.vendor.provider_settings.credential_params as |param|}}
                             <InputGroup
                                 @name={{smart-humanize param.key}}
                                 @value={{mut (get @options.vendor.credentials param.key)}}
                                 @helpText={{concat
-                                    (t "fleet-ops.component.modals.vendor-form.optionally")
+                                    (t "modals.vendor-form.optionally")
                                     (smart-humanize param.key)
-                                    (t "fleet-ops.component.modals.vendor-form.configure-vendor")
+                                    (t "modals.vendor-form.configure-vendor")
                                 }}
                             />
                         {{/each}}
                         <div class="my-4">
                             <Button
-                                @text={{t "fleet-ops.component.modals.vendor-form.cancel-credentials"}}
+                                @text={{t "modals.vendor-form.cancel-credentials"}}
                                 @type="danger"
                                 @size="sm"
                                 @icon="times"
@@ -166,7 +166,7 @@
                     {{else}}
                         <div>
                             <div class="rounded-md border border-blue-300 dark:border-blue-600 bg-blue-100 dark:bg-blue-500 text-blue-900 dark:text-white text-sm px-4 py-2 mb-4">
-                                <p class="mb-2">{{t "fleet-ops.component.modals.vendor-form.reset-message"}}</p>
+                                <p class="mb-2">{{t "modals.vendor-form.reset-message"}}</p>
                                 <Button @type="default" @size="xs" @icon="repeat" @text="Click here to reset" @onClick={{@options.toggleCredentialsReset}} />
                             </div>
                         </div>
@@ -176,16 +176,16 @@
                                 @value="*********"
                                 @disabled="true"
                                 @helpText={{concat
-                                    (t "fleet-ops.component.modals.vendor-form.optionally")
+                                    (t "modals.vendor-form.optionally")
                                     (smart-humanize param.key)
-                                    (t "fleet-ops.component.modals.vendor-form.configure-vendor")
+                                    (t "modals.vendor-form.configure-vendor")
                                 }}
                             />
                         {{/each}}
                     {{/if}}
                 </div>
                 <div class="mb-2">
-                    <label class="mb-2 block dark:text-gray-400 text-xs">{{t "fleet-ops.component.modals.vendor-form.options"}}</label>
+                    <label class="mb-2 block dark:text-gray-400 text-xs">{{t "modals.vendor-form.options"}}</label>
                     {{#each @options.vendor.provider_settings.option_params as |param|}}
                         {{#if param.options}}
                             <InputGroup @name={{smart-humanize param.key}}>
@@ -195,7 +195,7 @@
                                     @optionValue={{param.optionValue}}
                                     @optionLabel={{param.optionLabel}}
                                     @humanize={{true}}
-                                    @placeholder={{concat (t "fleet-ops.component.modals.vendor-form.select") (smart-humanize param.key)}}
+                                    @placeholder={{concat (t "modals.vendor-form.select") (smart-humanize param.key)}}
                                     @onSelect={{fn (mut (get @options.vendor.options param.key))}}
                                 />
                             </InputGroup>
@@ -204,9 +204,9 @@
                                 @name={{smart-humanize param.key}}
                                 @value={{mut (get @options.vendor.options param.key)}}
                                 @helpText={{concat
-                                    (t "fleet-ops.component.modals.vendor-form.optionally")
+                                    (t "modals.vendor-form.optionally")
                                     (smart-humanize param.key)
-                                    (t "fleet-ops.component.modals.vendor-form.configure-vendor")
+                                    (t "modals.vendor-form.configure-vendor")
                                 }}
                             />
                         {{/if}}
@@ -218,69 +218,69 @@
                 <div>
                     <button type="button" class="btn-link text-xs outline-none text-blue-600 hover:text-blue-600 mb-3" {{on "click" @options.toggleAdvancedOptions}}>
                         {{#if @options.showAdvancedOptions}}
-                            <span>{{t "fleet-ops.component.modals.vendor-form.hide-advanced"}}</span>
+                            <span>{{t "modals.vendor-form.hide-advanced"}}</span>
                         {{else}}
-                            <span>{{t "fleet-ops.component.modals.vendor-form.show-advanced"}}</span>
+                            <span>{{t "modals.vendor-form.show-advanced"}}</span>
                         {{/if}}
                     </button>
                     {{#if @options.showAdvancedOptions}}
                         <InputGroup
-                            @name={{t "fleet-ops.component.modals.vendor-form.custom-host"}}
+                            @name={{t "modals.vendor-form.custom-host"}}
                             @value={{@options.vendor.host}}
-                            @helpText={{t "fleet-ops.component.modals.vendor-form.host-text"}}
+                            @helpText={{t "modals.vendor-form.host-text"}}
                         />
                         <InputGroup
-                            @name={{t "fleet-ops.component.modals.vendor-form.custom-namespace"}}
+                            @name={{t "modals.vendor-form.custom-namespace"}}
                             @value={{@options.vendor.namespace}}
-                            @helpText={{t "fleet-ops.component.modals.vendor-form.namespace-text"}}
+                            @helpText={{t "modals.vendor-form.namespace-text"}}
                         />
                         <InputGroup
-                            @name={{t "fleet-ops.component.modals.vendor-form.webhook"}}
+                            @name={{t "modals.vendor-form.webhook"}}
                             @value={{@options.vendor.webhook_url}}
-                            @helpText={{t "fleet-ops.component.modals.vendor-form.webhook-text"}}
+                            @helpText={{t "modals.vendor-form.webhook-text"}}
                         />
                     {{/if}}
                 </div>
             {{else}}
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-2 text-xs dark:text-gray-100">
-                    <InputGroup @name={{t "fleet-ops.common.name"}} @value={{@options.vendor.name}} @wrapperClass="mb-0" @helpText={{t "fleet-ops.component.modals.vendor-form.name-text"}} />
+                    <InputGroup @name={{t "common.name"}} @value={{@options.vendor.name}} @wrapperClass="mb-0" @helpText={{t "modals.vendor-form.name-text"}} />
                     <InputGroup
-                        @name={{t "fleet-ops.common.email"}}
+                        @name={{t "common.email"}}
                         @type="email"
                         @value={{@options.vendor.email}}
                         @wrapperClass="mb-0"
-                        @helpText={{t "fleet-ops.component.modals.vendor-form.email-text"}}
+                        @helpText={{t "modals.vendor-form.email-text"}}
                     />
                     <InputGroup
-                        @name={{t "fleet-ops.common.phone"}}
+                        @name={{t "common.phone"}}
                         @type="tel"
                         @value={{@options.vendor.phone}}
                         @wrapperClass="mb-0"
-                        @helpText={{t "fleet-ops.component.modals.vendor-form.phone-text"}}
+                        @helpText={{t "modals.vendor-form.phone-text"}}
                     />
                     <InputGroup
-                        @name={{t "fleet-ops.common.website"}}
+                        @name={{t "common.website"}}
                         @value={{@options.vendor.website}}
                         @wrapperClass="mb-0"
-                        @helpText={{t "fleet-ops.component.modals.vendor-form.website-text"}}
+                        @helpText={{t "modals.vendor-form.website-text"}}
                     />
                     <InputGroup @wrapperClass="mb-0 col-span-2">
                         <div class="flex items-start justify-between">
                             <label>
-                                {{t "fleet-ops.common.address"}}
+                                {{t "common.address"}}
                             </label>
                             <div class="mb-1.5 flex flex-row">
                                 {{#if @options.vendor.has_place}}
-                                    <Button @type="default" @size="xs" @icon="edit" @text={{t "fleet-ops.common.edit"}} @onClick={{@options.editAddress}} />
+                                    <Button @type="default" @size="xs" @icon="edit" @text={{t "common.edit"}} @onClick={{@options.editAddress}} />
                                 {{/if}}
-                                <Button @type="default" @size="xs" @icon="plus" @text={{t "fleet-ops.common.new"}} @onClick={{@options.newAddress}} />
+                                <Button @type="default" @size="xs" @icon="plus" @text={{t "common.new"}} @onClick={{@options.newAddress}} />
                             </div>
                         </div>
 
                         <ModelSelect
                             @modelName="place"
                             @selectedModel={{@options.vendor.place}}
-                            @placeholder={{t "fleet-ops.component.modals.vendor-form.select-address"}}
+                            @placeholder={{t "modals.vendor-form.select-address"}}
                             @triggerClass="form-select form-input"
                             @infiniteScroll={{false}}
                             @renderInPlace={{true}}
@@ -293,12 +293,12 @@
                         </ModelSelect>
                     </InputGroup>
 
-                    <InputGroup @name={{t "fleet-ops.common.country"}} @wrapperClass="mb-0">
+                    <InputGroup @name={{t "common.country"}} @wrapperClass="mb-0">
                         <CountrySelect
                             class="w-full form-input form-select form-datalist"
                             @value={{@options.vendor.country}}
                             @onChange={{fn (mut @options.vendor.country)}}
-                            placeholder={{t "fleet-ops.common.country"}}
+                            placeholder={{t "common.country"}}
                         />
                     </InputGroup>
                 </div>

@@ -14,9 +14,9 @@ export default class ApplicationRoute extends Route {
     @service currentUser;
 
     @action loading(transition) {
-        const resourceName = getResourceNameFromTransition(transition, { humanize: true });
+        const resource = getResourceNameFromTransition(transition, { humanize: true });
         this.loader.showOnInitialTransition(transition, 'section.next-view-section', {
-            loadingMessage: resourceName ? this.intl.t('fleet-ops.common.loading-resource', { resourceName }) : this.intl.t('fleet-ops.common.loading'),
+            loadingMessage: (resource ? this.intl.t('common.loading-resource', { resource }) : this.intl.t('common.loading')) + '...',
         });
     }
 

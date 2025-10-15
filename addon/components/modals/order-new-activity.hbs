@@ -1,17 +1,17 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
-        <p class="mb-5 dark:text-gray-100">{{t "fleet-ops.component.modals.order-new-activity.select-message"}}</p>
+        <p class="mb-5 dark:text-gray-100">{{t "modals.order-new-activity.select-message"}}</p>
 
         {{#if @options.order.activityHasEnded}}
             <InfoBlock class="warning mt-2" @icon="exclamation-triangle">
-                {{t "fleet-ops.component.modals.order-new-activity.order-currently-message" htmlSafe=true options=@options.order.status}}
-                {{t "fleet-ops.component.modals.order-new-activity.fleetbase-message"}}
+                {{t "modals.order-new-activity.order-currently-message" htmlSafe=true options=@options.order.status}}
+                {{t "modals.order-new-activity.fleetbase-message"}}
             </InfoBlock>
         {{/if}}
 
         <fieldset class="my-5">
             <legend class="sr-only">
-                {{t "fleet-ops.component.modals.order-new-activity.activity-options"}}
+                {{t "modals.order-new-activity.activity-options"}}
             </legend>
 
             <div class="radio-group-condensed -space-y-px">
@@ -23,7 +23,7 @@
                                 @radioId={{concat "activity_" index}}
                                 @value={{index}}
                                 @groupValue={{@options.selected}}
-                                @name={{t "fleet-ops.component.modals.order-new-activity.activity"}}
+                                @name={{t "modals.order-new-activity.activity"}}
                                 @changed={{fn (mut @options.selected)}}
                             />
                         </div>
@@ -39,7 +39,7 @@
                                         class="warning xs mt-2"
                                         @icon="exclamation-triangle"
                                         @textClass="text-yellow-900 focus:text-yellow-900"
-                                        @text={{t "fleet-ops.component.modals.order-new-activity.dispatch"}}
+                                        @text={{t "modals.order-new-activity.dispatch"}}
                                     />
                                 {{/if}}
                             </span>
@@ -57,20 +57,20 @@
                             @radioId="activity_custom"
                             @value="custom"
                             @groupValue={{@options.selected}}
-                            @name={{t "fleet-ops.component.modals.order-new-activity.activity"}}
+                            @name={{t "modals.order-new-activity.activity"}}
                             @changed={{fn (mut @options.selected)}}
                         />
                     </div>
                     <label for="activity_custom" class="ml-3 flex flex-col cursor-pointer w-full pr-5">
                         <span class="block text-sm font-medium">
-                            <Input @type="text" class="form-input form-input-sm w-full rounded-b-none" placeholder={{t "fleet-ops.component.modals.order-new-activity.status"}} />
+                            <Input @type="text" class="form-input form-input-sm w-full rounded-b-none" placeholder={{t "modals.order-new-activity.status"}} />
                         </span>
                         <span class="block text-sm">
-                            <Input @type="text" class="form-input form-input-sm w-full rounded-t-none" placeholder={{t "fleet-ops.component.modals.order-new-activity.details"}} />
+                            <Input @type="text" class="form-input form-input-sm w-full rounded-t-none" placeholder={{t "modals.order-new-activity.details"}} />
                         </span>
                     </label>
                     <div>
-                        <Input @type="text" class="form-input form-input-sm" placeholder={{t "fleet-ops.component.modals.order-new-activity.code"}} />
+                        <Input @type="text" class="form-input form-input-sm" placeholder={{t "modals.order-new-activity.code"}} />
                     </div>
                 </div>
             </div>

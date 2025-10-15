@@ -1,72 +1,37 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 
-export default class ManagementContactsCustomersNewController extends BaseController {
-    @service store;
+export default class ManagementContactsCustomersNewController extends Controller {
+    @service customerActions;
     @service hostRouter;
     @service intl;
-    @service modalsManager;
-
-    /**
-     * The overlay component context.
-     *
-     * @memberof ManagementContactsCustomersNewController
-     */
+    @service notifications;
     @tracked overlay;
+    @tracked customer = this.customerActions.createNewInstance();
 
-    /**
-     * The customer being created.
-     *
-     * @var {contactModel}
-     */
-    @tracked customer = this.store.createRecord('contact', { type: 'customer', status: 'active' });
+    @task *save(customer) {
+        try {
+            yield customer.save();
+            this.overlay?.close();
 
-    /**
-     * Set the overlay component context object.
-     *
-     * @param {OverlayContext} overlay
-     * @memberof ManagementContactsCustomersNewController
-     */
-    @action setOverlayContext(overlay) {
-        this.overlay = overlay;
-    }
-
-    /**
-     * When exiting the overlay.
-     *
-     * @return {Transition}
-     * @memberof ManagementContactsCustomersNewController
-     */
-    @action transitionBack() {
-        return this.transitionToRoute('management.contacts.customers');
-    }
-
-    /**
-     * Trigger a route refresh and focus the new customer created.
-     *
-     * @param {contactModel} customer
-     * @return {Promise}
-     * @memberof ManagementContactsCustomersNewController
-     */
-    @action onAfterSave(customer) {
-        if (this.overlay) {
-            this.overlay.close();
-        }
-
-        this.hostRouter.refresh();
-        return this.transitionToRoute('management.contacts.customers.details', customer).then(() => {
+            yield this.hostRouter.refresh();
+            yield this.hostRouter.transitionTo('console.fleet-ops.management.contacts.customers.details', customer);
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.customer'),
+                    resourceName: customer.name,
+                })
+            );
             this.resetForm();
-        });
+        } catch (err) {
+            this.notifications.serverError(err);
+        }
     }
 
-    /**
-     * Resets the form with a new customer record
-     *
-     * @memberof ManagementContactsCustomersNewController
-     */
-    resetForm() {
-        this.customer = this.store.createRecord('contact', { type: 'customer', status: 'active' });
+    @action resetForm() {
+        this.customer = this.customerActions.createNewInstance();
     }
 }

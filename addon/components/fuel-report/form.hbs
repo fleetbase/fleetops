@@ -1,0 +1,110 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title={{t "fuel-report.fields.details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <InputGroup @name={{t "fuel-report.fields.reporter"}}>
+                <ModelSelect
+                    @modelName="user"
+                    @selectedModel={{@resource.reporter}}
+                    @placeholder={{t "fuel-report.fields.select-reporter"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{this.setReporter}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+            <InputGroup @name={{t "resource.driver"}}>
+                <ModelSelect
+                    @modelName="driver"
+                    @selectedModel={{@resource.driver}}
+                    @placeholder={{t "common.select-field" field=(t "resource.driver")}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.driver)}}
+                    @onChangeId={{fn (mut @resource.driver_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+            <InputGroup @name={{t "resource.vehicle"}}>
+                <ModelSelect
+                    @modelName="vehicle"
+                    @selectedModel={{@resource.vehicle}}
+                    @placeholder={{t "common.select-field" field=(t "resource.vehicle")}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.vehicle)}}
+                    @onChangeId={{fn (mut @resource.vehicle_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.display_name}}
+                </ModelSelect>
+            </InputGroup>
+            <InputGroup @name={{t "common.status"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "fuelReportStatuses"}}
+                        @selected={{find-by "value" @resource.status (get-fleet-ops-options "fuelReportStatuses")}}
+                        @onChange={{set-model-attr @resource "status"}}
+                        @placeholder={{t "common.select-field" field=(t "common.status")}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |status|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{status.label}}</div>
+                            <div class="hide-from-trigger">{{status.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+            <InputGroup @name={{t "fuel-report.fields.odometer"}} @type="number" @value={{@resource.odometer}} />
+            <InputGroup @name={{t "fuel-report.fields.fuel-cost"}}>
+                <MoneyInput
+                    class="w-full"
+                    @value={{@resource.amount}}
+                    @currency={{@resource.currency}}
+                    @canSelectCurrency={{true}}
+                    @onCurrencyChange={{fn (mut @resource.currency)}}
+                    @disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+            <InputGroup
+                @name={{t "fuel-report.fields.fuel-volume"}}
+                @helpText={{t "fuel-report.fields.select-volume-help-text"}}
+                @wrapperClass="w-full"
+            >
+                <UnitInput
+                    class="w-full"
+                    @measurement="volume"
+                    @value={{@resource.volume}}
+                    @unit={{@resource.metric_unit}}
+                    @canSelectUnit={{true}}
+                    @onUnitChange={{fn (mut @resource.metric_unit)}}
+                    @disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+            <InputGroup @name={{t "common.coordinates"}} @wrapperClass="col-span-2">
+                <ModelCoordinatesInput @model={{@resource}} @disabled={{cannot-write @resource}} @autocomplete="location" />
+            </InputGroup>
+
+            <RegistryYield @registry="fleet-ops:component:fuel-report:form:details" as |RegistryComponent|>
+                <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+            </RegistryYield>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <RegistryYield @registry="fleet-ops:component:fuel-report:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+</div>

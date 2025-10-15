@@ -3,6 +3,8 @@
     @title={{@title}}
     @titleIcon={{@icon}}
     @hideCaret={{true}}
+    @caretLeft={{true}}
+    @caretIcon="caret"
     @toggleOnCaretOnly={{true}}
     @onClickPanelTitle={{this.transitionToRoute}}
     @wrapperClass="next-driver-listing"
@@ -10,7 +12,7 @@
     @dropdownButtonActions={{this.panelDropdownButtonActions}}
     @dropdownButtonRenderInPlace={{false}}
     @dropdownButtonCalculatePosition={{this.calculateDropdownPosition}}
-    @dropdownButtonMenuLabel={{t "fleet-ops.component.layout.fleet-ops-sidebar.drivers"}}
+    @dropdownButtonMenuLabel={{t "resource.drivers"}}
     @dropdownMenuWrapperClass="next-sidebar-panel-menu-dropdown"
 >
     {{#each this.drivers as |driver|}}

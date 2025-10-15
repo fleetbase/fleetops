@@ -1,0 +1,108 @@
+<div class="details-wrapper" ...attributes>
+    <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+            <div class="field-info-container">
+                <div class="field-name">Name</div>
+                <div class="field-value">{{n-a @resource.name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Sensor Type</div>
+                <div class="field-value">{{smart-humanize @resource.sensor_type}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Unit</div>
+                <div class="field-value">{{n-a @resource.unit}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Status</div>
+                <div class="field-value">
+                    <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Minimum Threshold</div>
+                <div class="field-value">{{n-a @resource.min_threshold}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Maximum Threshold</div>
+                <div class="field-value">{{n-a @resource.max_threshold}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Threshold Inclusive</div>
+                <div class="field-value">
+                    {{#if @resource.threshold_inclusive}}
+                        <Badge @status="success">Yes</Badge>
+                    {{else}}
+                        <Badge @status="default">No</Badge>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Report Frequency</div>
+                <div class="field-value">{{n-a @resource.report_frequency_sec}} seconds</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Device</div>
+                <div class="field-value">{{n-a @resource.device_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Warranty</div>
+                <div class="field-value">{{n-a @resource.warranty_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Attached To</div>
+                <div class="field-value">{{n-a @resource.attached_to_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Active Status</div>
+                <div class="field-value">
+                    {{#if @resource.is_active}}
+                        <Badge @status="success">Active</Badge>
+                    {{else}}
+                        <Badge @status="warning">Inactive</Badge>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Last Reading</div>
+                <div class="field-value">{{n-a @resource.last_reading_formatted}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Last Reading At</div>
+                <div class="field-value">{{format-date @resource.last_reading_at}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Threshold Status</div>
+                <div class="field-value">
+                    {{#if (eq @resource.threshold_status "normal")}}
+                        <Badge @status="success">Normal</Badge>
+                    {{else if (eq @resource.threshold_status "out_of_range")}}
+                        <Badge @status="danger">Out of Range</Badge>
+                    {{else if (eq @resource.threshold_status "above_maximum")}}
+                        <Badge @status="warning">Above Maximum</Badge>
+                    {{else if (eq @resource.threshold_status "below_minimum")}}
+                        <Badge @status="warning">Below Minimum</Badge>
+                    {{else}}
+                        <Badge @status="default">{{smart-humanize @resource.threshold_status}}</Badge>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+</div>

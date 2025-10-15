@@ -70,12 +70,20 @@ class FleetOps
             'actions' => ['subcontract', 'create-order-for', 'export', 'import'],
         ],
         [
+            'name'    => 'integrated-vendor',
+            'actions' => ['export', 'import'],
+        ],
+        [
             'name'    => 'contact',
             'actions' => ['subcontract', 'create-order-for', 'export', 'import'],
         ],
         [
             'name'    => 'customer',
             'actions' => ['reset-credentials-for'],
+        ],
+        [
+            'name'    => 'report',
+            'actions' => ['export', 'execute'],
         ],
         [
             'name'    => 'facilitator',
@@ -104,6 +112,10 @@ class FleetOps
         [
             'name'    => 'issue',
             'actions' => ['export', 'import'],
+        ],
+        [
+            'name'    => 'custom-field',
+            'actions' => [],
         ],
         [
             'name'           => 'navigator-settings', // the navigator mobile app used by drivers

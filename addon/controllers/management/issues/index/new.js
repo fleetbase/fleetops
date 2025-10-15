@@ -1,102 +1,38 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 
-export default class ManagementIssuesIndexNewController extends BaseController {
-    /**
-     * Inject the `store` service
-     *
-     * @memberof ManagementissuesIndexNewController
-     */
-    @service store;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementissuesIndexNewController
-     */
+export default class ManagementIssuesIndexNewController extends Controller {
+    @service issueActions;
     @service hostRouter;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @memberof intl
-     */
     @service intl;
-
-    /**
-     * Inject the `currentUser` service
-     *
-     * @memberof ManagementissuesIndexNewController
-     */
     @service currentUser;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementissuesIndexNewController
-     */
-    @service modalsManager;
-
-    /**
-     * The overlay component context.
-     *
-     * @memberof ManagementissuesIndexNewController
-     */
+    @service notifications;
     @tracked overlay;
+    @tracked issue = this.issueActions.createNewInstance({ reporter: this.currentUser.user });
 
-    /**
-     * The issue being created.
-     *
-     * @var {issueModel}
-     */
-    @tracked issue = this.store.createRecord('issue', { reporter: this.currentUser.user, status: 'pending', priority: 'low', type: 'operational' });
+    @task *save(issue) {
+        try {
+            yield issue.save();
+            this.overlay?.close();
 
-    /**
-     * Set the overlay component context object.
-     *
-     * @param {OverlayContext} overlay
-     * @memberof ManagementissuesIndexNewController
-     */
-    @action setOverlayContext(overlay) {
-        this.overlay = overlay;
-    }
-
-    /**
-     * When exiting the overlay.
-     *
-     * @return {Transition}
-     * @memberof ManagementissuesIndexNewController
-     */
-    @action transitionBack() {
-        return this.transitionToRoute('management.issues.index');
-    }
-
-    /**
-     * Trigger a route refresh and focus the new issue created.
-     *
-     * @param {issueModel} issue
-     * @return {Promise}
-     * @memberof ManagementissuesIndexNewController
-     */
-    @action onAfterSave(issue) {
-        if (this.overlay) {
-            this.overlay.close();
-        }
-
-        this.hostRouter.refresh();
-        return this.transitionToRoute('management.issues.index.details', issue).then(() => {
+            yield this.hostRouter.refresh();
+            yield this.hostRouter.transitionTo('console.fleet-ops.management.issues.index.details', issue);
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.issue'),
+                    resourceName: issue.title ?? issue.public_id,
+                })
+            );
             this.resetForm();
-        });
+        } catch (err) {
+            this.notifications.serverError(err);
+        }
     }
 
-    /**
-     * Resets the form with a new issue record
-     *
-     * @memberof ManagementissuesIndexNewController
-     */
-    resetForm() {
-        this.issue = this.store.createRecord('issue', { reporter: this.currentUser.user, status: 'pending', priority: 'low', type: 'operational' });
+    @action resetForm() {
+        this.issue = this.issueActions.createNewInstance({ reporter: this.currentUser.user });
     }
 }

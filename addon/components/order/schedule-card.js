@@ -10,7 +10,8 @@ import { inject as service } from '@ember/service';
  * @memberof OrderScheduleCardComponent
  */
 export default class OrderScheduleCardComponent extends Component {
-    @service contextPanel;
+    @service driverActions;
+    @service vehicleActions;
     @service intl;
     @service modalsManager;
     @service notifications;
@@ -41,7 +42,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @memberof OrderScheduleCardComponent
      */
     @action onClickDriver(driver) {
-        this.contextPanel.focus(driver);
+        this.driverActions.panel.view(driver);
     }
 
     /**
@@ -51,7 +52,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @memberof OrderScheduleCardComponent
      */
     @action onClickVehicle(vehicle) {
-        this.contextPanel.focus(vehicle);
+        this.vehicleActions.panel.view(vehicle);
     }
 
     /**
@@ -77,9 +78,9 @@ export default class OrderScheduleCardComponent extends Component {
 
         if (isBlank(driver)) {
             return this.modalsManager.confirm({
-                title: this.intl.t('fleet-ops.component.order.schedule-card.unassign-driver'),
-                body: this.intl.t('fleet-ops.component.order.schedule-card.unassign-text', { orderId: order.public_id }),
-                acceptButtonText: this.intl.t('fleet-ops.component.order.schedule-card.unassign-button'),
+                title: this.intl.t('schedule-card.unassign-driver'),
+                body: this.intl.t('schedule-card.unassign-text', { orderId: order.tracking }),
+                acceptButtonText: this.intl.t('schedule-card.unassign-button'),
                 confirm: async (modal) => {
                     order.setProperties({
                         driver_assigned: null,
@@ -105,9 +106,9 @@ export default class OrderScheduleCardComponent extends Component {
         }
 
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.component.order.schedule-card.assign-driver'),
-            body: this.intl.t('fleet-ops.component.order.schedule-card.assign-text', { driverName: driver.name, orderId: order.public_id }),
-            acceptButtonText: this.intl.t('fleet-ops.component.order.schedule-card.assign-button'),
+            title: this.intl.t('schedule-card.assign-driver'),
+            body: this.intl.t('schedule-card.assign-text', { driverName: driver.name, orderId: order.tracking }),
+            acceptButtonText: this.intl.t('schedule-card.assign-button'),
             confirm: () => {
                 order.set('driver_assigned_uuid', driver.id);
                 return order

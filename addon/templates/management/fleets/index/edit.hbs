@@ -1,8 +1,13 @@
-<FleetFormPanel
-    @fleet={{@model}}
+<Layout::Resource::Panel
+    @resource={{@model}}
     @controller={{this}}
-    @onPressCancel={{this.transitionBack}}
-    @onViewDetails={{this.onViewDetails}}
-    @onAfterSave={{this.onAfterSave}}
-    @onLoad={{this.setOverlayContext}}
-/>
+    @headerTitle={{t "common.edit-resource-name" resourceName=@model.name}}
+    @actionButtons={{this.actionButtons}}
+    @saveTask={{this.save}}
+    @onPressCancel={{this.cancel}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+>
+    <Fleet::Form @resource={{@model}} @controller={{this}} />
+    <Spacer @height="200px" />
+</Layout::Resource::Panel>
+

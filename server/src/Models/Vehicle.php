@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\Money;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Support\VehicleData;
@@ -106,23 +107,51 @@ class Vehicle extends Model
         'warranty_uuid',
         'photo_uuid',
         'avatar_url',
+        'name',
+        'description',
         'make',
+        'model',
+        'model_type',
+        'year',
+        'color',
         'location',
         'speed',
         'heading',
         'altitude',
-        'model',
-        'year',
+        'odometer',
+        'odometer_unit',
+        'fuel_type',
+        'fuel_volume_unit',
         'trim',
+        'transmission',
+        'measurement_system',
+        'body_type',
+        'body_sub_type',
+        'usage_type',
+        'ownership_type',
         'type',
+        'class',
         'plate_number',
+        'call_sign',
+        'serial_number',
+        'financing_status',
+        'currency',
+        'insurance_value',
+        'depreciation_rate',
+        'current_value',
+        'acquisition_cost',
         'vin',
         'vin_data',
+        'specs',
+        'details',
+        'notes',
         'meta',
         'telematics',
         'status',
         'online',
         'slug',
+        'purchased_at',
+        'lease_expires_at',
     ];
 
     /**
@@ -164,12 +193,18 @@ class Vehicle extends Model
      * @var array
      */
     protected $casts = [
-        'location'   => Point::class,
-        'meta'       => Json::class,
-        'telematics' => Json::class,
-        'model_data' => Json::class,
-        'vin_data'   => Json::class,
-        'online'     => 'boolean',
+        'current_value'          => Money::class,
+        'insurance_value'        => Money::class,
+        'acquisition_cost'       => Money::class,
+        'location'               => Point::class,
+        'meta'                   => Json::class,
+        'telematics'             => Json::class,
+        'specs'                  => Json::class,
+        'details'                => Json::class,
+        'vin_data'               => Json::class,
+        'online'                 => 'boolean',
+        'purchased_at'           => 'datetime',
+        'lease_expires_at'       => 'datetime',
     ];
 
     public function photo(): BelongsTo
@@ -179,7 +214,7 @@ class Vehicle extends Model
 
     public function driver(): HasOne
     {
-        return $this->hasOne(Driver::class)->without(['vehicle']);
+        return $this->hasOne(Driver::class, 'vehicle_uuid', 'uuid')->without(['vehicle']);
     }
 
     public function category(): BelongsTo
@@ -219,20 +254,17 @@ class Vehicle extends Model
 
     public function equipments(): HasMany
     {
-        return $this->hasMany(Equipment::class, 'equipable_uuid', 'uuid')
-            ->where('equipable_type', static::class);
+        return $this->hasMany(Equipment::class, 'equipable_uuid', 'uuid')->where('equipable_type', static::class);
     }
 
     public function maintenances(): HasMany
     {
-        return $this->hasMany(Maintenance::class, 'maintainable_uuid', 'uuid')
-            ->where('maintainable_type', static::class);
+        return $this->hasMany(Maintenance::class, 'maintainable_uuid', 'uuid')->where('maintainable_type', static::class);
     }
 
     public function sensors(): HasMany
     {
-        return $this->hasMany(Sensor::class, 'sensorable_uuid', 'uuid')
-            ->where('sensorable_type', static::class);
+        return $this->hasMany(Sensor::class, 'sensorable_uuid', 'uuid')->where('sensorable_type', static::class);
     }
 
     public function parts(): MorphMany
@@ -261,7 +293,7 @@ class Vehicle extends Model
         $nameSegments = [];
 
         // Populate the nameSegments array with the values of the attributes
-        $keys = ['year', 'make', 'model', 'trim', 'plate_number'];
+        $keys = ['year', 'make', 'model', 'trim'];
         foreach ($keys as $key) {
             if (!empty($this->{$key})) {
                 $nameSegments[] = $this->{$key};
@@ -584,8 +616,48 @@ class Vehicle extends Model
             $query->where('public_id', $vehicleName)
                     ->orWhere('plate_number', $vehicleName)
                     ->orWhere('vin', $vehicleName)
+                    ->orWhere('serial_number', $vehicleName)
+                    ->orWhere('call_sign', $vehicleName)
                     ->orWhereRaw("CONCAT(make, ' ', model, ' ', year) LIKE ?", ["%{$vehicleName}%"])
                     ->orWhereRaw("CONCAT(year, ' ', make, ' ', model) LIKE ?", ["%{$vehicleName}%"]);
         })->first();
+    }
+
+    /**
+     * Set or update a single key/value pair in the `details` JSON column.
+     *
+     * Uses Laravel's `data_set` helper to allow dot notation for nested keys.
+     *
+     * @param string|array $key   the key (or array path) to set within the details
+     * @param mixed        $value the value to assign to the given key
+     *
+     * @return array the updated details array
+     */
+    public function setDetail(string|array $key, mixed $value): array
+    {
+        $details = is_array($this->details) ? $this->details : (array) $this->details;
+        data_set($details, $key, $value);
+        $this->details = $details;
+
+        return $details;
+    }
+
+    /**
+     * Merge multiple values into the `details` JSON column.
+     *
+     * By default this performs a shallow merge (overwrites duplicate keys).
+     * Use `array_replace_recursive` if you need nested merges.
+     *
+     * @param array $newDetails key/value pairs to merge into details
+     *
+     * @return array the updated details array
+     */
+    public function setDetails(array $newDetails = []): array
+    {
+        $details       = is_array($this->details) ? $this->details : (array) $this->details;
+        $details       = array_merge($details, $newDetails);
+        $this->details = $details;
+
+        return $details;
     }
 }

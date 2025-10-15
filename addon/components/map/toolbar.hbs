@@ -1,0 +1,115 @@
+<div class="next-map-container-toolbar-container {{if @horizontal 'toolbar-container-horizontal'}} {{if (eq @position 'bottom') 'position-bottom'}}" ...attributes>
+    <div class="next-map-container-toolbar next-map-container-toolbar-zoom-control">
+        <div id="map-toolbar-zoom-in-button-wrapper">
+            <button type="button" id="map-toolbar-zoom-in-button" class="toolbar-button" {{on "click" this.leafletMapManager.zoomIn}}>
+                <FaIcon @icon="plus" @prefix="fas" class="text-gray-100" />
+            </button>
+        </div>
+        <div id="map-toolbar-zoom-out-button-wrapper">
+            <button type="button" class="toolbar-button" {{on "click" this.leafletMapManager.zoomOut}}>
+                <FaIcon @icon="minus" id="map-toolbar-zoom-out-button" @prefix="fas" class="text-gray-100" />
+            </button>
+        </div>
+    </div>
+    <div class="next-map-container-toolbar-panel next-map-container-toolbar-actions">
+        {{#let (cannot "fleet-ops create order") as |unauthorized|}}
+            <button
+                type="button"
+                id="map-toolbar-create-order-button"
+                class="toolbar-button is-action {{if unauthorized 'unauthorized'}}"
+                {{on "click" (transition-to "operations.orders.index.new")}}
+                disabled={{unauthorized}}
+            >
+                <FaIcon @icon="paper-plane" />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                    {{#let (if unauthorized (concat (t "common.unauthorized-to") " " (t "common.create-order")) (t "common.create-order")) as |unauthorizedMessage|}}
+                        <InputInfo @text={{unauthorizedMessage}} @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+                    {{/let}}
+                </Attach::Tooltip>
+            </button>
+        {{/let}}
+        {{#let (cannot "fleet-ops list order") as |unauthorized|}}
+            <button
+                type="button"
+                id="map-toolbar-search-button"
+                class="toolbar-button {{if unauthorized 'unauthorized'}}"
+                {{on "click" this.globalSearch.toggle}}
+                disabled={{unauthorized}}
+            >
+                <FaIcon @icon="search" />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                    {{#let (if unauthorized (concat (t "common.unauthorized-to") " " (t "common.search")) (t "common.search")) as |unauthorizedMessage|}}
+                        <InputInfo @text={{unauthorizedMessage}} @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+                    {{/let}}
+                </Attach::Tooltip>
+            </button>
+        {{/let}}
+        {{#let (cannot "fleet-ops list order") as |unauthorized|}}
+            <button
+                type="button"
+                id="map-toolbar-view-orders-button"
+                class="toolbar-button relative {{if unauthorized 'unauthorized'}}"
+                {{on "click" this.orderListOverlay.toggle}}
+            >
+                <div class="active-orders-count absolute top-0 right-0 -mr-2.5 -mt-1">
+                    <div class="relative flex w-5 h-5 rounded-full">
+                        <div class="absolute inset-0 rounded-full w-5 h-5 text-xs bg-blue-500 opacity-75 {{if this.activeOrderCount 'animate-ping'}}"></div>
+                        <div class="relative inline-flex items-center justify-center rounded-full w-5 h-5 text-xs bg-blue-500 text-white z-10">{{this.activeOrderCount}}</div>
+                    </div>
+                </div>
+                <FaIcon @icon="layer-group" />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                    {{#let
+                        (if
+                            unauthorized
+                            (concat (t "common.unauthorized-to") " " (t "map.toolbar.view-order"))
+                            (t "map.toolbar.view-order")
+                        )
+                        as |unauthorizedMessage|
+                    }}
+                        <InputInfo @text={{unauthorizedMessage}} @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+                    {{/let}}
+                </Attach::Tooltip>
+            </button>
+        {{/let}}
+        {{#let (cannot "fleet-ops list service-area") as |unauthorized|}}
+            <BasicDropdown id="map-toolbar-service-areas-button" @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
+                <dd.Trigger class="toolbar-button {{if unauthorized 'unauthorized'}}">
+                    <FaIcon @icon="map-marked-alt" />
+                    <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                        {{#let
+                            (if
+                                unauthorized
+                                (concat (t "common.unauthorized-to") " " (t "map.toolbar.view-service-area"))
+                                (t "map.toolbar.view-service-area")
+                            )
+                            as |unauthorizedMessage|
+                        }}
+                            <InputInfo @text={{unauthorizedMessage}} @iconClass="hidden" class="{{if dd.isOpen 'hidden'}} py-1 px-2 bg-gray-900 -mt-1" />
+                        {{/let}}
+                    </Attach::Tooltip>
+                </dd.Trigger>
+                <dd.Content>
+                    <Map::Toolbar::ZonesPanel @dd={{dd}} />
+                </dd.Content>
+            </BasicDropdown>
+        {{/let}}
+        <BasicDropdown id="map-toolbar-visibility-controls-button" @horizontalPosition="right" @calculatePosition={{this.calculatePosition}} @renderInPlace={{true}} as |dd|>
+            <dd.Trigger class="toolbar-button">
+                <FaIcon @icon="eye" />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                    <InputInfo @text={{t "map.toolbar.visibility"}} @iconClass="hidden" class="{{if dd.isOpen 'hidden'}} py-1 px-2 bg-gray-900 -mt-1" />
+                </Attach::Tooltip>
+            </dd.Trigger>
+            <dd.Content>
+                <Map::Toolbar::VisibilityControlPanel @dd={{dd}} />
+            </dd.Content>
+        </BasicDropdown>
+        <button type="button" id="map-toolbar-live-map-drawer-button" class="toolbar-button is-action mb-0i" {{on "click" this.mapDrawer.toggle}}>
+            <FaIcon @icon="binoculars" />
+            <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
+                <InputInfo @text={{t "map.toolbar.scope"}} @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
+            </Attach::Tooltip>
+        </button>
+    </div>
+</div>

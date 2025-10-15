@@ -1,0 +1,85 @@
+<div class="kanban-card-content">
+    <div class="flex flex-row justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-600">
+        <div class="flex-1">
+            <h4 class="kanban-card-title">{{@card.tracking}}</h4>
+            <Badge @status={{@card.status}} />
+        </div>
+        <div class="flex flex-row space-x-1">
+            {{#unless @card.driver_assigned}}
+                <Button @size="xs" @icon="user-plus" @onClick={{fn this.orderActions.assignDriver @card}} @helpText={{t "order.actions.assign-driver"}} @wrapperClass="self-start" />
+            {{/unless}}
+            <Button @size="xs" @icon="eye" @onClick={{transition-to "operations.orders.index.details" @card}} @wrapperClass="self-start" />
+        </div>
+    </div>
+    <div class="px-3">
+        <div class="order-listing-row-progress mb-2">
+            <OrderProgressBar
+                @card={{@card}}
+                @progress={{@card.tracker_data.progress_percentage}}
+                @firstWaypointCompleted={{@card.tracker_data.first_waypoint_completed}}
+                @lastWaypointCompleted={{@card.tracker_data.last_waypoint_completed}}
+            />
+        </div>
+        <div class="order-listing-row-body flex flex-row">
+            <div class="flex-1 order-listing-row-body-address start">
+                <div class="font-semibold text-sm">Pickup</div>
+                <div class="address-text text-xs">
+                    {{#if @card.payload.isMultiDrop}}
+                        {{@card.payload.firstWaypoint.address}}
+                    {{else}}
+                        {{@card.payload.pickup.address}}
+                    {{/if}}
+                </div>
+            </div>
+            <div class="flex-1 order-listing-row-body-address end">
+                <div class="font-semibold text-sm">Dropoff</div>
+                <div class="address-text text-xs">
+                    {{#if @card.payload.isMultiDrop}}
+                        {{@card.payload.lastWaypoint.address}}
+                    {{else}}
+                        {{@card.payload.dropoff.address}}
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="py-2 px-3 border-t border-gray-200 dark:border-gray-600">
+        <div class="flex flex-row">
+            <div class="flex-1">
+                <div class="flex flex-row space-x-2">
+                    <div class="resource-assigned-photo">
+                        <Image
+                            src={{avatar-url @card.customer.photo_url}}
+                            @fallbackSrc={{config "defaultValues.contactImage"}}
+                            class="w-5 h-5 rounded-lg shadow-sm"
+                            alt={{@card.customer.name}}
+                        />
+                    </div>
+                    <div class="resource-assigned-details">
+                        <div class="font-semibold text-xs">Customer</div>
+                        <div class="text-xs">{{n-a @card.customer.name "No Customer"}}</div>
+                        <div class="text-xs">{{n-a @card.customer.phone "No Phone"}}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-1">
+                <div class="flex flex-row space-x-2">
+                    <div class="resource-assigned-photo">
+                        <Image
+                            src={{avatar-url @card.driver_assigned.photo_url}}
+                            @fallbackSrc={{config "defaultValues.driverImage"}}
+                            class="w-5 h-5 rounded-lg shadow-sm"
+                            alt={{@card.driver_assigned.name}}
+                        />
+                        <FaIcon @icon="circle" @size="2xs" class="absolute left-0 top-0 h-2 w-2 -ml-1 -mt-1 {{if @card.driver_assigned.online 'text-green-500' 'text-yellow-200'}}" />
+                    </div>
+                    <div class="resource-assigned-details">
+                        <div class="font-semibold text-xs">Driver Assigned</div>
+                        <div class="text-xs">{{n-a @card.driver_assigned.name "No Driver"}}</div>
+                        <div class="text-xs">{{n-a @card.driver_assigned.phone "No Phone"}}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

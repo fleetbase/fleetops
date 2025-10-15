@@ -1,8 +1,14 @@
-<PlaceFormPanel
-    @place={{@model}}
+<Layout::Resource::Panel
+    @resource={{@model}}
     @controller={{this}}
-    @onPressCancel={{this.transitionBack}}
-    @onAfterSave={{this.onAfterSave}}
-    @onViewDetails={{this.onViewDetails}}
-    @onLoad={{this.setOverlayContext}}
-/>
+    @headerTitle={{t "common.edit-resource-name" resourceName=@model.address}}
+    @actionButtons={{this.actionButtons}}
+    @saveTask={{this.save}}
+    @onPressCancel={{this.cancel}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+    @headerLeftClass="w-1/2"
+    @titleWrapperClass="w-1/2"
+>
+    <Place::Form @resource={{@model}} @controller={{this}} />
+    <Spacer @height="200px" />
+</Layout::Resource::Panel>

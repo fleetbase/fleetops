@@ -13,6 +13,7 @@ module.exports = buildEngine({
         if (type === 'css') {
             tree = new Funnel(tree, {
                 exclude: ['**/@fleetbase/ember-ui/**/*.css'],
+                allowEmpty: true,
             });
         }
 
@@ -54,7 +55,7 @@ module.exports = buildEngine({
         const jointJsPath = path.join(this.pathBase('@joint/core'), 'dist');
         trees.push(
             new Funnel(jointJsPath, {
-                destDir: '/',
+                destDir: '',
                 include: ['joint.min.js'],
                 exclude: [],
             })
@@ -77,7 +78,7 @@ module.exports = buildEngine({
         const jointJsTree = this.treeForJointJs();
         const assetsTree = [
             new Funnel(path.join(__dirname, 'assets'), {
-                destDir: '/',
+                destDir: '',
             }),
             ...leafletTree,
             ...jointJsTree,

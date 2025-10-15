@@ -1,1 +1,13 @@
-<VendorFormPanel @vendor={{this.vendor}} @controller={{this}} @onPressCancel={{this.transitionBack}} @onAfterSave={{this.onAfterSave}} @onLoad={{this.setOverlayContext}} />
+<Layout::Resource::Panel
+    @resource={{this.vendor}}
+    @controller={{this}}
+    @actionButtons={{this.actionButtons}}
+    @headerTitle="Create a new vendor"
+    @saveTask={{this.save}}
+    @onPressCancel={{transition-to "management.vendors.index"}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+>
+    <Vendor::Form @resource={{this.vendor}} @onIntegrationCreated={{this.setIntegration}} @controller={{this}} />
+    <Spacer @height="200px" />
+</Layout::Resource::Panel>
+

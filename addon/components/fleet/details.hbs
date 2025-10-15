@@ -1,0 +1,32 @@
+<div class="details-wrapper" ...attributes>
+    <ContentPanel @title={{t "common.details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">{{t "common.name"}}</div>
+                <div class="field-value">{{n-a @resource.name}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "resource.service-area"}}</div>
+                <div class="field-value">{{n-a @resource.service_area.name}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "resource.zone"}}</div>
+                <div class="field-value">{{n-a @resource.zone.name}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "fleet.fields.task"}}</div>
+                <div class="field-value">{{n-a @resource.task}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "fleet.fields.active-manpower"}}</div>
+                <div class="field-value">{{@resource.drivers_online_count}} of {{@resource.drivers_count}} Online</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "common.date-created"}}</div>
+                <div class="field-value">{{@resource.createdAtShort}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+</div>

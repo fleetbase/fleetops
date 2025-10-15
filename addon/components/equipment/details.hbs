@@ -1,0 +1,95 @@
+<div class="details-wrapper" ...attributes>
+    <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+            <div class="field-info-container">
+                <div class="field-name">Name</div>
+                <div class="field-value">{{n-a @resource.name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Code</div>
+                <div class="field-value">{{n-a @resource.code}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Type</div>
+                <div class="field-value">{{smart-humanize @resource.type}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Status</div>
+                <div class="field-value">
+                    <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Serial Number</div>
+                <div class="field-value">{{n-a @resource.serial_number}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Manufacturer</div>
+                <div class="field-value">{{n-a @resource.manufacturer}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Model</div>
+                <div class="field-value">{{n-a @resource.model}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Purchased At</div>
+                <div class="field-value">{{format-date @resource.purchased_at}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Purchase Price</div>
+                <div class="field-value">{{format-currency @resource.purchase_price}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Warranty</div>
+                <div class="field-value">{{n-a @resource.warranty_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Equipped To</div>
+                <div class="field-value">{{n-a @resource.equipped_to_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Equipped Status</div>
+                <div class="field-value">
+                    {{#if @resource.is_equipped}}
+                        <Badge @status="success">Equipped</Badge>
+                    {{else}}
+                        <Badge @status="default">Not Equipped</Badge>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Age</div>
+                <div class="field-value">{{n-a @resource.age_in_days}} days</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Depreciated Value</div>
+                <div class="field-value">{{format-currency @resource.depreciated_value}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+
+    <ContentPanel @title="Photo" @open={{true}} @wrapperClass="bordered-top">
+        <div class="flex px-1">
+            <div class="border border-dashed border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-600 rounded-lg flex items-center justify-center">
+                <div class="flex items-center justify-center h-20 w-24">
+                    <Image alt={{@resource.name}} src={{or @resource.photo_url (config "defaultValues.equipmentImage")}} @fallbackSrc={{config "defaultValues.equipmentImage"}} class="w-12 h-12" />
+                </div>
+            </div>
+        </div>
+    </ContentPanel>
+</div>

@@ -1,0 +1,183 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title={{t "issue.fields.issue-report"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <InputGroup @name="Title" @value={{@resource.title}} @wrapperClass="col-span-2" />
+            <InputGroup @name={{t "issue.fields.reported-by"}}>
+                <ModelSelect
+                    @modelName="user"
+                    @selectedModel={{@resource.reporter}}
+                    @placeholder={{t "issue.fields.select-reporter"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.reporter)}}
+                    @onChangeId={{fn (mut @resource.reported_by_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name={{t "issue.fields.assigned-to"}}>
+                <ModelSelect
+                    @modelName="user"
+                    @selectedModel={{@resource.assignee}}
+                    @placeholder={{t "issue.fields.select-assign"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.assignee)}}
+                    @onChangeId={{fn (mut @resource.assigned_to_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name={{t "resource.driver"}}>
+                <ModelSelect
+                    @modelName="driver"
+                    @selectedModel={{@resource.driver}}
+                    @placeholder={{t "common.select-field" field=(t "resource.driver")}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.driver)}}
+                    @onChangeId={{fn (mut @resource.driver_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name={{t "resource.vehicle"}}>
+                <ModelSelect
+                    @modelName="vehicle"
+                    @selectedModel={{@resource.vehicle}}
+                    @placeholder={{t "common.select-field" field=(t "resource.vehicle")}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.vehicle)}}
+                    @onChangeId={{fn (mut @resource.vehicle_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.displayName}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name={{t "issue.fields.type"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "issueTypes"}}
+                        @selected={{find-by "value" @resource.type (get-fleet-ops-options "issueTypes")}}
+                        @onChange={{set-model-attr @resource "type"}}
+                        @placeholder={{t "issue.fields.select-type"}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |type|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{type.label}}</div>
+                            <div class="hide-from-trigger">{{type.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name={{t "issue.fields.category"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    {{#let (filter-by "group" @resource.type (get-fleet-ops-options "issueCategories")) as |categories|}}
+                        <PowerSelect
+                            @options={{categories}}
+                            @selected={{find-by "value" @resource.category categories}}
+                            @onChange={{set-model-attr @resource "category"}}
+                            @placeholder={{t "issue.fields.select-category"}}
+                            @triggerClass="form-select form-input"
+                            @disabled={{or (cannot-write @resource) (not categories)}}
+                            as |category|
+                        >
+                            <div class="text-sm">
+                                <div class="font-semibold normalize-in-trigger">{{category.label}}</div>
+                                <div class="hide-from-trigger">{{category.description}}</div>
+                            </div>
+                        </PowerSelect>
+                    {{/let}}
+                </div>
+            </InputGroup>
+
+            <InputGroup @name={{t "issue.fields.report"}} @wrapperClass="col-span-2">
+                <Textarea
+                    @value={{@resource.report}}
+                    aria-label="Issue Report"
+                    class="w-full form-input"
+                    disabled={{cannot-write @resource}}
+                    placeholder={{t "issue.fields.report"}}
+                    rows={{5}}
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "issue.fields.tags"}} @wrapperClass="col-span-2">
+                <ModelTagInput @model={{@resource}} @placeholder={{t "issue.fields.add-tags"}} @disabled={{cannot-write @resource}} as |tag|>
+                    {{tag}}
+                </ModelTagInput>
+            </InputGroup>
+
+            <InputGroup @name={{t "issue.fields.priority"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "issuePriorities"}}
+                        @selected={{find-by "value" @resource.priority (get-fleet-ops-options "issuePriorities")}}
+                        @onChange={{set-model-attr @resource "priority"}}
+                        @placeholder={{t "issue.fields.select-priority"}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |priority|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{priority.label}}</div>
+                            <div class="hide-from-trigger">{{priority.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name={{t "common.status"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "issueStatuses"}}
+                        @selected={{find-by "value" @resource.status (get-fleet-ops-options "issueStatuses")}}
+                        @onChange={{set-model-attr @resource "status"}}
+                        @placeholder={{t "issue.fields.select-status"}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |status|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{status.label}}</div>
+                            <div class="hide-from-trigger">{{status.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name={{t "common.coordinates"}} @wrapperClass="col-span-2">
+                <ModelCoordinatesInput @model={{@resource}} @disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <RegistryYield @registry="fleet-ops:component:issue:form:details" as |RegistryComponent|>
+                <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+            </RegistryYield>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <RegistryYield @registry="fleet-ops:component:issue:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+</div>

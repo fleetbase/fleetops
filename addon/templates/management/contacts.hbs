@@ -1,9 +1,18 @@
-<div class="pt-4">
-    <div class="ui-tabs">
-        <nav>
-            <LinkTo @route="management.contacts.index" class="ui-tab">Contacts</LinkTo>
-            <LinkTo @route="management.contacts.customers" class="ui-tab">Customers</LinkTo>
-        </nav>
-    </div>
-</div>
-{{outlet}}
+<TabNavigation @tabs={{this.tabs}} @size="lg" @tablistClass="next-view-section-subheader-fixed-height pl-2">
+    <:actions>
+        <div class="flex flex-row items-center space-x-1 pr-4">
+            <Layout::Resource::TabularActions
+                @columns={{this.childController.columns}}
+                @actionButtons={{this.childController.actionButtons}}
+                @bulkActions={{this.childController.bulkActions}}
+                @searchQuery={{this.childController.query}}
+                @onSearch={{perform this.childController.search}}
+                @table={{this.childController.table}}
+                @bulkActionIconOnly={{true}}
+            />
+        </div>
+    </:actions>
+    <:default>
+        {{outlet}}
+    </:default>
+</TabNavigation>

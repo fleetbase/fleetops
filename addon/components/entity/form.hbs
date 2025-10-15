@@ -1,0 +1,86 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title={{t "common.details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div>
+            <div class="flex flex-row space-x-3 mb-3">
+                <div class="flex items-center justify-start rounded-full">
+                    <Image src={{@resource.photo_url}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-md shadow-sm" />
+                </div>
+                <div>
+                    <UploadButton
+                        @name={{t "common.photos"}}
+                        @accept="image/*"
+                        @onFileAdded={{perform this.handlePhotoUpload}}
+                        @icon="upload"
+                        @size="xs"
+                        @buttonText={{t "common.upload-image"}}
+                        @disabled={{cannot-write @resource}}
+                    />
+                    <div class="px-1">
+                        <span class="text-gray-300 dark:text-gray-600 text-xs">{{t "common.upload-image-supported"}}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                <InputGroup @name={{t "common.name"}} @value={{@resource.name}} @helpText={{t "modals.entity-form.name-text"}} />
+                <InputGroup @name={{t "common.internal-id"}} @value={{@resource.internal_id}} @helpText={{t "modals.entity-form.id-text"}} />
+                <InputGroup @name={{t "modals.entity-form.sku"}} @value={{@resource.sku}} @helpText={{t "modals.entity-form.sku-text"}} />
+                <div></div>
+                <InputGroup
+                    @name={{t "modals.entity-form.description"}}
+                    @helpText={{t "modals.entity-form.description-text"}}
+                    @wrapperClass="col-span-2"
+                >
+                    <Textarea @value={{@resource.description}} type="text" class="w-full form-input" placeholder={{t "modals.entity-form.description"}} />
+                </InputGroup>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title={{t "modals.entity-form.price-title"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <InputGroup @name={{t "modals.entity-form.price"}} @helpText={{t "modals.entity-form.price-text"}}>
+                <MoneyInput class="w-full" @value={{@resource.price}} @currency={{@resource.currency}} @canSelectCurrency={{true}} @onCurrencyChange={{fn (mut @resource.currency)}} />
+            </InputGroup>
+            <InputGroup @name={{t "modals.entity-form.sale-price"}} @helpText={{t "modals.entity-form.sale-price-text"}}>
+                <MoneyInput class="w-full" @value={{@resource.sale_price}} @currency={{@resource.currency}} @canSelectCurrency={{true}} @onCurrencyChange={{fn (mut @resource.currency)}} />
+            </InputGroup>
+            <InputGroup @name={{t "modals.entity-form.declare"}} @helpText={{t "modals.entity-form.declare-text"}}>
+                <MoneyInput
+                    class="w-full"
+                    @value={{@resource.declared_value}}
+                    @currency={{@resource.currency}}
+                    @canSelectCurrency={{true}}
+                    @onCurrencyChange={{fn (mut @resource.currency)}}
+                />
+            </InputGroup>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title={{t "modals.entity-form.measurement-title"}} @open={{true}} @wrapperClass="bordered-top">
+        <div>
+            <div class="grid grid-cols-3 gap-2">
+                <InputGroup @name={{t "modals.entity-form.length"}} @helpText={{t "modals.entity-form.length-text"}}>
+                    <UnitInput class="w-full" @value={{@resource.length}} @unit={{@resource.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut @resource.dimensions_unit)}} />
+                </InputGroup>
+                <InputGroup @name={{t "modals.entity-form.width"}} @helpText={{t "modals.entity-form.width-text"}}>
+                    <UnitInput class="w-full" @value={{@resource.width}} @unit={{@resource.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut @resource.dimensions_unit)}} />
+                </InputGroup>
+                <InputGroup @name={{t "modals.entity-form.height"}} @helpText={{t "modals.entity-form.height-text"}}>
+                    <UnitInput class="w-full" @value={{@resource.height}} @unit={{@resource.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{fn (mut @resource.dimensions_unit)}} />
+                </InputGroup>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <InputGroup @name={{t "modals.entity-form.weight"}} @helpText={{t "modals.entity-form.weight-text"}}>
+                    <UnitInput
+                        class="w-full"
+                        @value={{@resource.weight}}
+                        @measurement="weight"
+                        @unit={{@resource.weight_unit}}
+                        @canSelectUnit={{true}}
+                        @onUnitChange={{fn (mut @resource.weight_unit)}}
+                    />
+                </InputGroup>
+            </div>
+        </div>
+    </ContentPanel>
+</div>

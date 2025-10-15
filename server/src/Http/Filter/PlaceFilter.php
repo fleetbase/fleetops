@@ -30,6 +30,11 @@ class PlaceFilter extends Filter
         $this->builder->searchWhere('public_id', $publicId);
     }
 
+    public function id(?string $id)
+    {
+        $this->builder->searchWhere('public_id', $id)->orWhere('uuid', $id);
+    }
+
     public function postalCode(?string $postalCode)
     {
         $this->builder->searchWhere('postal_code', $postalCode);

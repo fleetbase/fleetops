@@ -1,0 +1,10 @@
+<Layout::Section::Header @title={{t "settings.custom-fields"}} />
+
+<Layout::Section::Body class="overflow-y-scroll h-full">
+    <div class="container mx-auto h-screen">
+        <div class="max-w-3xl my-10 mx-auto space-y-6">
+            <CustomFieldsManager @subjects={{this.subjects}} />
+        </div>
+    </div>
+    <Spacer @height="600px" />
+</Layout::Section::Body>

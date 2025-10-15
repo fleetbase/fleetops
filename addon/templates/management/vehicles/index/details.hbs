@@ -1,1 +1,15 @@
-<VehiclePanel @vehicle={{@model}} @tab={{this.view}} @onTabChanged={{this.onTabChanged}} @onPressCancel={{this.transitionBack}} @onEdit={{this.onEdit}} />
+<Layout::Resource::Panel
+    @resource={{@model}}
+    @controller={{this}}
+    @headerComponent={{component "vehicle/panel-header" resource=@model}}
+    @headerTitle={{or @model.displayName}}
+    @actionButtons={{this.actionButtons}}
+    @onPressCancel={{transition-to "management.vehicles.index"}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+    @headerClass="no-bottom-border"
+    @bodyClass="no-scroll"
+>
+    <TabNavigation @tabs={{this.tabs}} @contentClass="scrollable" @tablistClass="pl-2">
+        {{outlet}}
+    </TabNavigation>
+</Layout::Resource::Panel>

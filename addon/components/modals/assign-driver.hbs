@@ -1,10 +1,10 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
-        <InputGroup @name={{t "fleet-ops.component.modals.assign-driver.select-driver"}}>
+        <InputGroup @name={{t "modals.assign-driver.select-driver"}}>
             <ModelSelect
                 @modelName="driver"
                 @selectedModel={{@options.order.driver_assigned}}
-                @placeholder={{t "fleet-ops.component.modals.assign-driver.select-assign"}}
+                @placeholder={{t "modals.assign-driver.select-assign"}}
                 @triggerClass="form-select form-input"
                 @infiniteScroll={{false}}
                 @renderInPlace={{true}}

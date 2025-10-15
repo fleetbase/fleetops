@@ -1,0 +1,49 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title={{t "service-area.fields.details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-2">
+            <InputGroup
+                @value={{@resource.name}}
+                @name={{t "modals.service-area-form.name"}}
+                @helpText={{t "modals.service-area-form.name-text"}}
+                @required={{true}}
+            />
+            <InputGroup @name={{t "modals.service-area-form.type"}} @helpText={{t "modals.service-area-form.type-text"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "serviceAreaTypes"}}
+                        @selected={{find-by "value" @resource.type (get-fleet-ops-options "serviceAreaTypes")}}
+                        @onChange={{set-model-attr @resource "type"}}
+                        @placeholder={{t "modals.service-area-form.select-type"}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |status|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{status.label}}</div>
+                            <div class="hide-from-trigger">{{status.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                <InputGroup
+                    @type="color"
+                    @value={{@resource.stroke_color}}
+                    @name={{t "modals.service-area-form.border-color"}}
+                    @helpText={{t "modals.service-area-form.customize-border-color"}}
+                    class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none"
+                />
+                <InputGroup
+                    @type="color"
+                    @value={{@resource.color}}
+                    @name={{t "modals.service-area-form.area-color"}}
+                    @helpText={{t "modals.service-area-form.customize-area-color"}}
+                    class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none"
+                />
+            </div>
+            <InputGroup @name={{t "modals.service-area-form.country"}} @helpText={{t "modals.service-area-form.country-text"}}>
+                <CountrySelect class="w-full form-input" @value={{@resource.country}} @onChange={{fn (mut @resource.country)}} />
+            </InputGroup>
+        </div>
+    </ContentPanel>
+</div>

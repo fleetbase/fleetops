@@ -5,7 +5,9 @@ import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency';
+import lowercase from 'ember-cli-string-helpers/utils/lowercase';
 import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
+import inlineTask from '@fleetbase/ember-core/utils/inline-task';
 import ObjectProxy from '@ember/object/proxy';
 import createCustomEntity from '../../utils/create-custom-entity';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
@@ -18,14 +20,9 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
  * @extends Component
  */
 export default class OrderConfigManagerEntitiesComponent extends Component {
-    @service contextPanel;
+    @service resourceContextPanel;
     @service modalsManager;
     @service notifications;
-
-    /**
-     * Internationalization service for handling translations.
-     * @service
-     */
     @service intl;
 
     /**
@@ -74,29 +71,30 @@ export default class OrderConfigManagerEntitiesComponent extends Component {
      */
     @action editCustomEntity(customEntity, index) {
         contextComponentCallback(this, 'onContextChanged', customEntity);
-        this.contextPanel.focus(customEntity, 'editing', {
-            args: {
-                config: this.config,
-                onPressCancel: () => {
-                    this.contextPanel.clear();
-                    contextComponentCallback(this, 'onContextChanged', null);
-                },
-                onSave: (customEntity) => {
-                    if (index > -1) {
-                        this.customEntities = this.customEntities.map((_, i) => {
-                            if (i === index) {
-                                return customEntity;
-                            }
+        this.resourceContextPanel.open({
+            content: 'custom-entity/form',
+            title: this.intl.t('common.create-new-resource', { resource: lowercase(this.intl.t('resource.custom-entity')) }),
+            resource: customEntity,
+            pojoResource: true,
+            saveTask: inlineTask(() => {
+                if (index > -1) {
+                    this.customEntities = this.customEntities.map((_, i) => {
+                        if (i === index) {
+                            return customEntity;
+                        }
 
-                            return _;
-                        });
-                    } else {
-                        this.customEntities = [customEntity, ...this.customEntities];
-                    }
-                    this.contextPanel.clear();
-                    this.save.perform();
-                    contextComponentCallback(this, 'onContextChanged', null);
-                },
+                        return _;
+                    });
+                } else {
+                    this.customEntities = [customEntity, ...this.customEntities];
+                }
+
+                this.save.perform();
+                contextComponentCallback(this, 'onContextChanged', null);
+                this.resourceContextPanel.closeAll();
+            }),
+            onClose: () => {
+                contextComponentCallback(this, 'onContextChanged', null);
             },
         });
     }
@@ -109,9 +107,9 @@ export default class OrderConfigManagerEntitiesComponent extends Component {
      */
     @action deleteCustomEntity(customEntity, index) {
         this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.component.order-config-manager.entities.delete-custom-entity-title'),
-            body: this.intl.t('fleet-ops.component.order-config-manager.entities.delete-custom-entity-body'),
-            acceptButtonText: this.intl.t('fleet-ops.component.order-config-manager.entities.confirm-delete'),
+            title: this.intl.t('order-config-manager.entities.delete-custom-entity-title'),
+            body: this.intl.t('order-config-manager.entities.delete-custom-entity-body'),
+            acceptButtonText: this.intl.t('order-config-manager.entities.confirm-delete'),
             confirm: (modal) => {
                 this.customEntities = this.customEntities.filter((_, i) => i !== index);
                 this.save.perform();

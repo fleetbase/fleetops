@@ -1,0 +1,5 @@
+{{#if @resource.isIntegratedVendorOrder}}
+        <ContentPanel @title={{concat @resource.facilitator.name (t "order.fields.order-details-title")}} @open={{true}} @wrapperClass="bordered-top">
+            <IntegratedOrderDetails @integratedVendor={{@resource.facilitator}} @details={{@resource.meta.integrated_vendor_order}} />
+        </ContentPanel>
+    {{/if}}

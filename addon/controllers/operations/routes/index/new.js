@@ -17,7 +17,6 @@ export default class OperationsRoutesIndexNewController extends Controller {
 
     @task *loadSelectedOrders(selectedOrders) {
         const orders = yield this.store.query('order', { only: selectedOrders });
-        console.log('[orders]', orders);
         this.extractWaypoints(orders);
     }
 

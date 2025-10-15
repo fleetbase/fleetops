@@ -18,8 +18,8 @@ export default class ManagementPlacesIndexRoute extends Route {
         neighborhood: { refreshModel: true },
         postal_code: { refreshModel: true },
         state: { refreshModel: true },
-        createdAt: { refreshModel: true },
-        updatedAt: { refreshModel: true },
+        created_at: { refreshModel: true },
+        updated_at: { refreshModel: true },
     };
 
     model(params) {

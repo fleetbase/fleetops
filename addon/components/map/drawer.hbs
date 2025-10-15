@@ -1,0 +1,5 @@
+<Drawer @onResizeEnd={{this.mapDrawer.handleResizeEnd}} @onResizeStart={{@onResizeStart}} @isMinimized={{this.mapDrawer.isMinimized}} @isOpen={{@isOpen}} @notchEnabled={{true}} @onLoad={{this.setDrawerContext}}>
+    <TabNavigation @tabs={{this.tabs}} @activeTabId={{this.mapDrawer.activeTabId}} @onTabChange={{this.mapDrawer.setActiveTab}} as |activeTab|>
+        {{component activeTab.component}}
+    </TabNavigation>
+</Drawer>

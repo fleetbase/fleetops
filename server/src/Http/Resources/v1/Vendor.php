@@ -17,7 +17,9 @@ class Vendor extends FleetbaseResource
      */
     public function toArray($request)
     {
-        return [
+        $this->loadMissing(['place', 'places']);
+
+        return $this->withCustomFields([
             'id'                         => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'uuid'                       => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'                  => $this->when(Http::isInternalRequest(), $this->public_id),
@@ -33,7 +35,7 @@ class Vendor extends FleetbaseResource
             'logo_url'                   => $this->logo_url,
             'photo_url'                  => Utils::or($this, ['logo_url', 'photo_url']),
             'place'                      => $this->whenLoaded('place', new Place($this->place)),
-            'places'                     => $this->whenLoaded('place', Place::collection($this->places)),
+            'places'                     => $this->whenLoaded('places', Place::collection($this->places)),
             'personnels'                 => $this->whenLoaded('personnels', Contact::collection($this->personnels)),
             'address'                    => $this->when(Http::isInternalRequest(), data_get($this, 'place.address')),
             'address_street'             => $this->when(Http::isInternalRequest(), data_get($this, 'place.street1')),
@@ -45,7 +47,7 @@ class Vendor extends FleetbaseResource
             'updated_at'                 => $this->updated_at,
             'created_at'                 => $this->created_at,
             'website_url'                => $this->website_url,
-        ];
+        ]);
     }
 
     /**

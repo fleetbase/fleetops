@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class Waypoint extends Model
 {
@@ -235,5 +236,62 @@ class Waypoint extends Model
         $this->loadMissing('place');
 
         return $this->place ?? Place::where('uuid', $this->place_uuid)->first();
+    }
+
+    /**
+     * Find the first waypoint for a given place and order/payload.
+     *
+     * This method attempts to locate a waypoint belonging to the provided order's payload
+     * that is associated with the given place. It supports lookup by:
+     * - `Place` model instance (direct UUID match),
+     * - UUID string (direct lookup on `place_uuid`),
+     * - or public identifier string (fallback through `whereHas('place')`).
+     *
+     * @param \Fleetbase\Models\Place|string                    $place   the place instance or identifier (UUID or public_id)
+     * @param \Fleetbase\Models\Order|\Fleetbase\Models\Payload $order   the order or payload model to scope the search
+     * @param array                                             $with    optional relationships to eager load
+     * @param array                                             $columns columns to select from the waypoints table
+     *
+     * @return static|null the matching waypoint, or null if none is found
+     *
+     * @throws \InvalidArgumentException if the provided order or payload is missing a payload UUID
+     */
+    public static function findByPlace(
+        Place|string $place,
+        Order|Payload $order,
+        array $with = [],
+        array $columns = ['*'],
+    ): ?self {
+        $payloadId = match (true) {
+            $order instanceof Order   => $order->payload_uuid,
+            $order instanceof Payload => $order->uuid,
+            default                   => null,
+        };
+
+        if (!$payloadId) {
+            throw new \InvalidArgumentException('Missing payload UUID for lookup.');
+        }
+
+        if ($place instanceof Place) {
+            return static::with($with)
+                ->select($columns)
+                ->where('payload_uuid', $payloadId)
+                ->where('place_uuid', $place->uuid)
+                ->first();
+        }
+
+        if (Str::isUuid($place)) {
+            return static::with($with)
+                ->select($columns)
+                ->where('payload_uuid', $payloadId)
+                ->where('place_uuid', $place)
+                ->first();
+        }
+
+        return static::with($with)
+            ->select($columns)
+            ->where('payload_uuid', $payloadId)
+            ->whereHas('place', fn ($q) => $q->where('public_id', $place))
+            ->first();
     }
 }

@@ -4,15 +4,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { pluralize } from 'ember-inflector';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
-
-function isUuid(str) {
-    if (typeof str !== 'string') {
-        return false;
-    }
-
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
-}
+import isUuid from '@fleetbase/ember-core/utils/is-uuid';
 
 export default class AvatarPickerComponent extends Component {
     @service store;
@@ -31,27 +23,65 @@ export default class AvatarPickerComponent extends Component {
     /**
      * Set the selected avatar
      *
-     * @param {String} url
+     * @param {String} input
      */
-    @action selectAvatar(url) {
-        // custom avatar file selected
-        if (isUuid(url)) {
-            return this.store.findRecord('file', url).then((file) => {
-                this.model.set('avatar_custom_url', file.url);
-                this.model.set('avatar_url', file.id);
+    @action async selectAvatar(input) {
+        // Normalize: empty -> clear to default
+        if (!input) {
+            const changed = this.model.avatar_url !== null || this.model.avatar_custom_url !== null;
 
-                if (typeof this.args.onSelect === 'function') {
-                    this.args.onSelect(this.model, file.url);
-                }
+            this.model.setProperties({
+                avatar_url: null,
+                avatar_custom_url: null,
             });
+
+            if (changed) this.args.onSelect?.(this.model, null);
+            return;
         }
 
-        // default url
-        this.model.set('avatar_url', url);
-        this.model.set('avatar_custom_url', null);
+        // UUID path: fetch File and use its URL
+        if (isUuid(input)) {
+            const id = input;
 
-        if (typeof this.args.onSelect === 'function') {
-            this.args.onSelect(this.model, url);
+            // Correct Ember Data usage
+            let file = this.store.peekRecord('file', id);
+            if (!file) {
+                try {
+                    file = await this.store.findRecord('file', id);
+                } catch (e) {
+                    // Optional: surface a toast here if you want
+                    return;
+                }
+            }
+            if (!file) return;
+
+            // No-op fast path
+            if (this.model.avatar_url === file.id && this.model.avatar_custom_url === file.url) {
+                this.args.onSelect?.(this.model, file.url);
+                return;
+            }
+
+            this.model.setProperties({
+                avatar_url: file.id,
+                avatar_custom_url: file.url,
+            });
+
+            this.args.onSelect?.(this.model, file.url);
+            return;
         }
+
+        // URL path (treat any non-UUID string as a URL)
+        const url = String(input);
+        if (this.model.avatar_url === url && this.model.avatar_custom_url === null) {
+            this.args.onSelect?.(this.model, url);
+            return;
+        }
+
+        this.model.setProperties({
+            avatar_url: url,
+            avatar_custom_url: null,
+        });
+
+        this.args.onSelect?.(this.model, url);
     }
 }

@@ -1,0 +1,11 @@
+<ContentPanel @title={{t "order.fields.notes-title"}} @open={{true}} @wrapperClass="bordered-top">
+    <div>
+        <Textarea
+            @value={{@resource.notes}}
+            class="form-input w-full"
+            placeholder={{t "order.fields.notes-placeholder"}}
+            disabled={{cannot-write @resource}}
+            rows={{or @rows 4}}
+        />
+    </div>
+</ContentPanel>

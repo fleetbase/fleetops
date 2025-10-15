@@ -396,6 +396,15 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->post('import', $controller('import'));
                             }
                         );
+                        $router->fleetbaseRoutes('devices');
+                        $router->fleetbaseRoutes('device-events');
+                        $router->fleetbaseRoutes('sensors');
+                        $router->fleetbaseRoutes('telematics');
+                        $router->fleetbaseRoutes('work-orders');
+                        $router->fleetbaseRoutes('maintenance');
+                        $router->fleetbaseRoutes('equipment');
+                        $router->fleetbaseRoutes('parts');
+                        $router->fleetbaseRoutes('warranties');
                         $router->group(
                             ['prefix' => 'query'],
                             function () use ($router) {

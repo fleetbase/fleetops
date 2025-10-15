@@ -1,0 +1,62 @@
+<div class="form-wrapper" ...attributes>
+    <InputGroup
+        @name={{t "activity.form.key"}}
+        @value={{@resource.key}}
+        @helpText={{t "activity.form.key-help-text"}}
+        @disabled={{cannot "fleet-ops update order-config"}}
+        {{on "input" this.setActivityKey}}
+    />
+    <InputGroup
+        @name={{t "activity.form.code"}}
+        @value={{@resource.code}}
+        @helpText={{t "activity.form.code-help-text"}}
+        @disabled={{cannot "fleet-ops update order-config"}}
+        {{on "input" this.setActivityCode}}
+    />
+    <InputGroup
+        @name={{t "activity.form.status"}}
+        @value={{@resource.status}}
+        @disabled={{cannot "fleet-ops update order-config"}}
+        @helpText={{t "activity.form.status-help-text"}}
+    />
+    <InputGroup
+        @name={{t "activity.form.details"}}
+        @value={{@resource.details}}
+        @disabled={{cannot "fleet-ops update order-config"}}
+        @helpText={{t "activity.form.details-help-text"}}
+    />
+    <InputGroup>
+        <Toggle @isToggled={{@resource.complete}} @onToggle={{fn (mut @resource.complete)}} @disabled={{cannot "fleet-ops update order-config"}}>
+            <span class="dark:text-gray-100 text-sm ml-2">{{t "activity.form.completes-order"}}</span>
+        </Toggle>
+    </InputGroup>
+    <InputGroup @helpText={{t "activity.form.require-pod-help-text"}}>
+        <Toggle
+            @isToggled={{@resource.require_pod}}
+            @onToggle={{fn (mut @resource.require_pod)}}
+            @disabled={{cannot "fleet-ops update order-config"}}
+            @helpText={{t "activity.form.require-pod-help-text"}}
+        >
+            <span class="dark:text-gray-100 text-sm mx-2">{{t "activity.form.require-pod"}}</span>
+        </Toggle>
+    </InputGroup>
+    {{#if @resource.require_pod}}
+        <InputGroup @name={{t "activity.form.select-pod-method"}}>
+            <select class="form-select w-full has--placeholder" disabled={{cannot "fleet-ops update order-config"}} {{on "change" this.setProofOfDeliveryMethod}}>
+                <option selected disabled>
+                    {{t "activity.form.pod-method-placeholder"}}
+                </option>
+                {{#each this.podOptions as |podOption|}}
+                    <option value={{podOption}} selected={{eq @resource.pod_method podOption}}>
+                        {{smart-humanize podOption}}
+                    </option>
+                {{/each}}
+            </select>
+        </InputGroup>
+    {{/if}}
+    {{#unless (cannot "fleet-ops update order-config")}}
+        <Activity::LogicBuilder @activity={{@resource}} @onChange={{this.updateActivityLogic}} class="mb-4" />
+        <Activity::EventSelector @activity={{@resource}} @onChange={{this.updateActivityEvents}} />
+    {{/unless}}
+    <Spacer @height="400px" />
+</div>

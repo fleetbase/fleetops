@@ -1,0 +1,36 @@
+<div class="px-4 py-2">
+    <div class="flex flex-1 flex-row items-start justify-between">
+        <div class="flex flex-row space-x-3">
+            <div class="pt-1">
+                <div class="rounded-md bg-white p-1">
+                    <img src={{concat "data:image/png;base64," @resource.tracking_number.qr_code}} class="w-12 h-12" alt={{@resource.public_id}} />
+                </div>
+            </div>
+            <div class="flex flex-col">
+                <div class="font-semibold">{{@resource.tracking}}</div>
+                <div class="flex flex-row space-x-1">
+                    <Badge @status={{@resource.status}} />
+                    {{#if @resource.dispatched_at}}
+                        <Badge @status="dispatched">{{concat "Dispatched at " @resource.dispatchedAt}}</Badge>
+                    {{/if}}
+                </div>
+                <div class="mt-1">
+                    <div class="text-xs text-gray-400 dark:text-gray-500">Date Created: {{@resource.createdAt}}</div>
+                    <div class="text-xs text-gray-400 dark:text-gray-500">Type: {{smart-humanize @resource.type}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="next-view-header-right">
+            <Layout::Resource::Panel::HeaderActions
+                @resource={{@resource}}
+                @saveTask={{@saveTask}}
+                @saveOptions={{@saveOptions}}
+                @saveDisabled={{@saveDisabled}}
+                @pojoResource={{@pojoResource}}
+                @authSchema={{@authSchema}}
+                @actionButtons={{@actionButtons}}
+                @onPressCancel={{@onPressCancel}}
+            />
+        </div>
+    </div>
+</div>

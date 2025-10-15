@@ -1,0 +1,144 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title={{t "customer.fields.user-account"}} @open={{true}} @actionButtons={{this.userAccountActionButtons}} @wrapperClass="bordered-top">
+        <div class="space-y-2">
+            <InputGroup @name={{t "customer.fields.user-account"}} @helpText={{t "customer.fields.user-account-help-text"}}>
+                <ModelSelect
+                    @modelName="user"
+                    @selectedModel={{@resource.user}}
+                    @placeholder={{t "customer.fields.select-user"}}
+                    @query={{hash doesnt_have_contact=true}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.user)}}
+                    @permission="fleet-ops update-user-for customer"
+                    as |model|
+                >
+                    <div class="flex flex-row">
+                        <div class="mr-2 w-6">
+                            <Image src={{model.avatar_url}} @fallbackSrc={{config "defaultValues.userImage"}} alt={{this.user.name}} class="w-6 h-6 rounded-md" />
+                        </div>
+                        <div class="flex flex-col">
+                            <div class="font-semibold">{{model.name}}</div>
+                            <div class="text-xs flex flex-row items-center leading-4">
+                                <FaIcon @icon="envelope" @size="sm" class="mr-1 opacity-75" />
+                                <span>{{n-a model.email}}</span>
+                            </div>
+                            <div class="text-xs flex flex-row items-center leading-4">
+                                <FaIcon @icon="phone" @size="sm" class="mr-1 opacity-75" />
+                                <span>{{n-a model.phone}}</span>
+                            </div>
+                        </div>
+                    </div>
+                </ModelSelect>
+            </InputGroup>
+            {{#if @resource.user}}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 no-input-group-padding">
+                    <InputGroup @name={{t "common.name"}} @wrapperClass="col-span-2 mb-0i">
+                        <Input @value={{@resource.user.name}} @type="text" class="w-full form-input" placeholder={{t "common.name"}} disabled={{true}} />
+                    </InputGroup>
+                    <InputGroup @name={{t "common.email"}} @wrapperClass="mb-0i">
+                        <Input @value={{@resource.user.email}} @type="text" class="w-full form-input" placeholder={{t "common.email"}} disabled={{true}} />
+                    </InputGroup>
+                    <InputGroup @name={{t "common.phone"}} @wrapperClass="mb-0i">
+                        <PhoneInput @value={{@resource.user.phone}} @onInput={{fn (mut @resource.phone)}} class="form-input w-full" disabled={{true}} />
+                    </InputGroup>
+                </div>
+            {{/if}}
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title={{t "customer.fields.customer-details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="flex flex-row space-x-3 mb-3">
+            <div class="flex items-center justify-start rounded-full">
+                <Image
+                    src={{@resource.photo_url}}
+                    @fallbackSrc={{config "defaultValues.contactImage"}}
+                    alt={{@resource.name}}
+                    height="48"
+                    width="48"
+                    class="h-14 w-14 rounded-full shadow-sm"
+                />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                    <InputInfo @text={{t "common.upload-new-photo"}} />
+                </Attach::Tooltip>
+            </div>
+            <div>
+                <UploadButton
+                    @name={{t "common.photos"}}
+                    @accept="image/*"
+                    @onFileAdded={{perform this.handlePhotoUpload}}
+                    @icon="upload"
+                    @size="xs"
+                    @buttonText={{t "common.upload-image"}}
+                    @disabled={{cannot-write @resource}}
+                />
+                <div class="px-1">
+                    <span class="text-gray-300 dark:text-gray-600 text-xs">{{t "common.upload-image-supported"}}</span>
+                </div>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs no-input-group-padding">
+            <InputGroup @name={{t "common.name"}}>
+                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder={{t "common.name"}} disabled={{cannot-write @resource}} />
+            </InputGroup>
+            <InputGroup @name={{t "common.title"}}>
+                <Input @value={{@resource.title}} @type="text" class="w-full form-input" placeholder={{t "common.title"}} disabled={{cannot-write @resource}} />
+            </InputGroup>
+            <InputGroup @name={{t "common.email"}}>
+                <Input @value={{@resource.email}} @type="text" class="w-full form-input" placeholder={{t "common.email"}} disabled={{cannot-write @resource}} />
+            </InputGroup>
+            <InputGroup @name={{t "common.phone"}}>
+                <PhoneInput @value={{@resource.phone}} @onInput={{fn (mut @resource.phone)}} class="form-input w-full" disabled={{cannot-write @resource}} />
+            </InputGroup>
+            <InputGroup @name={{t "common.internal-id"}}>
+                <Input @value={{@resource.internal_id}} @type="text" class="w-full form-input" placeholder={{t "common.internal-id"}} disabled={{cannot-write @resource}} />
+            </InputGroup>
+            <InputGroup @wrapperClass="col-span-2">
+                <div class="flex items-center justify-between">
+                    <label>
+                        {{t "common.address"}}
+                    </label>
+                    <div class="mb-1.5 space-x-1 flex flex-row">
+                        {{#if @resource.has_place}}
+                            <Button @type="danger" @size="xs" @icon="trash" @text="Remove" @onClick={{this.removePlace}} @disabled={{cannot-write @resource}} />
+                        {{/if}}
+                        <Button
+                            @type="default"
+                            @size="xs"
+                            @icon="edit"
+                            @text={{if @resource.has_place (t "common.edit") (t "customer.fields.new-address")}}
+                            @onClick={{this.editPlace}}
+                            @disabled={{cannot-write @resource}}
+                        />
+                    </div>
+                </div>
+                <ModelSelect
+                    @modelName="place"
+                    @selectedModel={{@resource.place}}
+                    @placeholder={{t "common.select-field" field=(t "common.address")}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{this.selectPlace}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    <div class="flex items-center flex-row justify-between">
+                        <div class="truncate flex-1">{{n-a model.address}}</div>
+                        <Badge @hideStatusDot={{true}} @status="info">{{model.public_id}}</Badge>
+                    </div>
+                </ModelSelect>
+            </InputGroup>
+            <RegistryYield @registry="fleet-ops:component:customer:form:details" as |RegistryComponent|>
+                <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+            </RegistryYield>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <RegistryYield @registry="fleet-ops:component:customer:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+</div>

@@ -1,102 +1,38 @@
-import BaseController from '@fleetbase/fleetops-engine/controllers/base-controller';
+import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 
-export default class ManagementFuelReportsIndexNewController extends BaseController {
-    /**
-     * Inject the `store` service
-     *
-     * @memberof ManagementFuelReportsIndexNewController
-     */
-    @service store;
-
-    /**
-     * Inject the `currentUser` service
-     *
-     * @memberof ManagementFuelReportsIndexNewController
-     */
+export default class ManagementFuelReportsIndexNewController extends Controller {
+    @service fuelReportActions;
     @service currentUser;
-
-    /**
-     * Inject the `intl` service
-     *
-     * @memberof intl
-     */
-    @service intl;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementFuelReportsIndexNewController
-     */
     @service hostRouter;
-
-    /**
-     * Inject the `hostRouter` service
-     *
-     * @memberof ManagementFuelReportsIndexNewController
-     */
-    @service modalsManager;
-
-    /**
-     * The overlay component context.
-     *
-     * @memberof ManagementFuelReportsIndexNewController
-     */
+    @service intl;
+    @service notifications;
     @tracked overlay;
+    @tracked fuelReport = this.fuelReportActions.createNewInstance({ reporter: this.currentUser.user });
 
-    /**
-     * The fuel report being created.
-     *
-     * @var {FuelReportModel}
-     */
-    @tracked fuelReport = this.store.createRecord('fuelReport', { reporter: this.currentUser.user });
+    @task *save(fuelReport) {
+        try {
+            yield fuelReport.save();
+            this.overlay?.close();
 
-    /**
-     * Set the overlay component context object.
-     *
-     * @param {OverlayContext} overlay
-     * @memberof ManagementFuelReportsIndexNewController
-     */
-    @action setOverlayContext(overlay) {
-        this.overlay = overlay;
-    }
-
-    /**
-     * When exiting the overlay.
-     *
-     * @return {Transition}
-     * @memberof ManagementFuelReportsIndexNewController
-     */
-    @action transitionBack() {
-        return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index');
-    }
-
-    /**
-     * Trigger a route refresh and focus the new fuel report created.
-     *
-     * @param {FuelReportModel} fuelReport
-     * @return {Promise}
-     * @memberof ManagementFuelReportsIndexNewController
-     */
-    @action onAfterSave(fuelReport) {
-        if (this.overlay) {
-            this.overlay.close();
-        }
-
-        this.hostRouter.refresh();
-        return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport.public_id).then(() => {
+            yield this.hostRouter.refresh();
+            yield this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport);
+            this.notifications.success(
+                this.intl.t('common.resource-created-success-name', {
+                    resource: this.intl.t('resource.fuel-report'),
+                    resourceName: fuelReport.public_id,
+                })
+            );
             this.resetForm();
-        });
+        } catch (err) {
+            this.notifications.serverError(err);
+        }
     }
 
-    /**
-     * Resets the form with a new fuel report record
-     *
-     * @memberof ManagementFuelReportsIndexNewController
-     */
-    resetForm() {
-        this.fuelReport = this.store.createRecord('fuelReport', { reporter: this.currentUser.user });
+    @action resetForm() {
+        this.fuelReport = this.fuelReportActions.createNewInstance({ reporter: this.currentUser.user });
     }
 }

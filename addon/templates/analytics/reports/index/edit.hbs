@@ -1,0 +1,13 @@
+<Layout::Resource::Panel
+    @resource={{@model}}
+    @controller={{this}}
+    @headerTitle={{t "common.edit-resource-name" resourceName=@model.title}}
+    @actionButtons={{this.actionButtons}}
+    @saveTask={{this.save}}
+    @onPressCancel={{this.cancel}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+    @width="800px"
+>
+    <ReportBuilder @report={{@model}} @extension="fleet-ops" />
+    <Spacer @height="300px" />
+</Layout::Resource::Panel>

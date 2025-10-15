@@ -1,0 +1,40 @@
+<div class="px-4 py-2">
+    <div class="flex flex-1 flex-row items-start justify-between">
+        <div class="flex flex-row space-x-3">
+            <div class="flex items-start justify-start rounded-full">
+                <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                    <InputInfo @text={{@resource.name}} />
+                </Attach::Tooltip>
+            </div>
+            <div class="flex flex-col">
+                <h1 class="text-gray-900 dark:text-white font-semibold text-2xl">{{@resource.name}}</h1>
+                <div class="-mt-1">
+                    {{#if @resource.vehicle}}
+                        <div class="flex flex-row items-center">
+                            <a href="javascript:;" class="text-sm dark:text-blue-400 text-blue-600 hover:opacity-50">{{@resource.vehicle.displayName}}</a>
+                        </div>
+                    {{else}}
+                        <div class="flex flex-row items-center">
+                            <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{t "driver.fields.no-vehicle-assigned"}}</span>
+                            {{!-- <Button @icon="plus" @size="xs" @helpText={{t "driver.actions.assign-vehicle"}} /> --}}
+                        </div>
+                    {{/if}}
+                </div>
+                <Badge @status={{if @resource.online "online" "offline"}}>{{if @resource.online (t "common.online") (t "common.offline")}}</Badge>
+            </div>
+        </div>
+        <div class="next-view-header-right">
+            <Layout::Resource::Panel::HeaderActions
+                @resource={{@resource}}
+                @saveTask={{@saveTask}}
+                @saveOptions={{@saveOptions}}
+                @saveDisabled={{@saveDisabled}}
+                @pojoResource={{@pojoResource}}
+                @authSchema={{@authSchema}}
+                @actionButtons={{@actionButtons}}
+                @onPressCancel={{@onPressCancel}}
+            />
+        </div>
+    </div>
+</div>

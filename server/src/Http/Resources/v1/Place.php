@@ -20,7 +20,7 @@ class Place extends FleetbaseResource
     {
         $this->loadMissing('owner');
 
-        return [
+        return $this->withCustomFields([
             'id'                    => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'uuid'                  => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'             => $this->when(Http::isInternalRequest(), $this->public_id),
@@ -45,14 +45,14 @@ class Place extends FleetbaseResource
             'country'               => $this->country ?? null,
             'country_name'          => $this->when(Http::isInternalRequest(), $this->country_name),
             'phone'                 => $this->phone ?? null,
-            'owner'                 => Resolve::resourceForMorph($this->owner_type, $this->owner_uuid),
+            'owner'                 => $this->whenLoaded('owner', fn () => Resolve::resourceForMorph($this->owner_type, $this->owner_uuid)?->without(['place', 'places'])),
             'tracking_number'       => $this->whenLoaded('trackingNumber', fn () => $this->trackingNumber),
             'type'                  => $this->type ?? 'place',
             'meta'                  => data_get($this, 'meta', Utils::createObject()),
             'eta'                   => $this->when($this->eta, $this->eta),
             'updated_at'            => $this->updated_at,
             'created_at'            => $this->created_at,
-        ];
+        ]);
     }
 
     /**

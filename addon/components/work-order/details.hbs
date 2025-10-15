@@ -1,0 +1,93 @@
+<div class="details-wrapper" ...attributes>
+    <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+            <div class="field-info-container">
+                <div class="field-name">Code</div>
+                <div class="field-value">{{n-a @resource.code}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Status</div>
+                <div class="field-value">
+                    <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Priority</div>
+                <div class="field-value">
+                    {{#if (eq @resource.priority "critical")}}
+                        <Badge @status="danger">Critical</Badge>
+                    {{else if (eq @resource.priority "high")}}
+                        <Badge @status="warning">High</Badge>
+                    {{else if (eq @resource.priority "medium")}}
+                        <Badge @status="info">Medium</Badge>
+                    {{else}}
+                        <Badge @status="default">Low</Badge>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container col-span-3">
+                <div class="field-name">Subject</div>
+                <div class="field-value">{{n-a @resource.subject}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Target</div>
+                <div class="field-value">{{n-a @resource.target_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Assignee</div>
+                <div class="field-value">{{n-a @resource.assignee_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Completion</div>
+                <div class="field-value">{{n-a @resource.completion_percentage}}%</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Opened At</div>
+                <div class="field-value">{{format-date @resource.opened_at}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Due At</div>
+                <div class="field-value">{{format-date @resource.due_at}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Closed At</div>
+                <div class="field-value">{{format-date @resource.closed_at}}</div>
+            </div>
+
+            {{#if @resource.is_overdue}}
+                <div class="field-info-container">
+                    <div class="field-name">Overdue Status</div>
+                    <div class="field-value">
+                        <Badge @status="danger">Overdue</Badge>
+                    </div>
+                </div>
+            {{else if @resource.days_until_due}}
+                <div class="field-info-container">
+                    <div class="field-name">Days Until Due</div>
+                    <div class="field-value">{{@resource.days_until_due}} days</div>
+                </div>
+            {{/if}}
+
+            <div class="field-info-container">
+                <div class="field-name">Estimated Duration</div>
+                <div class="field-value">{{n-a @resource.estimated_duration}}</div>
+            </div>
+
+            <div class="field-info-container col-span-3">
+                <div class="field-name">Instructions</div>
+                <div class="field-value">{{n-a @resource.instructions}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+</div>

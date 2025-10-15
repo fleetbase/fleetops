@@ -1,0 +1,67 @@
+<div class="px-4 py-2">
+    <div class="flex flex-1 flex-row items-start justify-between">
+        <div class="flex flex-row space-x-3">
+            <div class="flex items-start justify-start rounded-full">
+                <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.userImage"}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                    <InputInfo @text={{@resource.name}} />
+                </Attach::Tooltip>
+            </div>
+            <div class="flex flex-col">
+                <h1 class="text-gray-900 dark:text-white font-semibold text-2xl">{{@resource.name}}</h1>
+                <Badge @status="info">{{titleize (humanize @resource.type)}}</Badge>
+            </div>
+        </div>
+        <div class="next-view-header-right">
+            <div class="flex flex-row flex-1 justify-end space-x-2">
+                {{yield}}
+                {{#if @saveTask}}
+                    <Button
+                        @type="primary"
+                        @icon={{if @resource.isNew "check" "save"}}
+                        @text={{if @resource.isNew (concat "Create " this.modelName) "Save Changes"}}
+                        @onClick={{perform @saveTask @resource}}
+                        @disabled={{cannot-write @resource schema=@authSchema}}
+                        @isLoading={{@saveTask.isRunning}}
+                    />
+                {{/if}}
+                {{#each @actionButtons as |actionButton|}}
+                    <Button
+                        @type={{actionButton.type}}
+                        @text={{actionButton.text}}
+                        @onClick={{if actionButton.perform (perform actionButton.perform) (or actionButton.onClick actionButton.fn)}}
+                        @size={{actionButton.size}}
+                        @buttonType={{actionButton.buttonType}}
+                        @disabled={{actionButton.disabled}}
+                        @exampleText={{actionButton.exampleText}}
+                        @helpText={{actionButton.helpText}}
+                        @icon={{actionButton.icon}}
+                        @iconClass={{actionButton.iconClass}}
+                        @iconFlip={{actionButton.iconFlip}}
+                        @iconPrefix={{actionButton.iconPrefix}}
+                        @iconRotation={{actionButton.iconRotation}}
+                        @iconSize={{actionButton.iconSize}}
+                        @isLoading={{actionButton.isLoading}}
+                        @outline={{actionButton.outline}}
+                        @permission={{actionButton.permission}}
+                        @wrapperClass={{actionButton.wrapperClass}}
+                        @textClass={{actionButton.textClass}}
+                        @tooltipPlacement={{actionButton.tooltipPlacement}}
+                        @visible={{actionButton.visible}}
+                    />
+                {{/each}}
+                {{#if @onPressCancel}}
+                    <button
+                        type="button"
+                        class="next-content-overlay-panel-cancel-button {{@cancelButtonClass}}"
+                        {{set-height @cancelButtonHeight}}
+                        {{set-width @cancelButtonWidth}}
+                        {{on "click" @onPressCancel}}
+                    >
+                        <FaIcon @icon={{or @cancelIcon "times"}} @size={{@iconSize}} @prefix={{or @iconPrefix "fas"}} class={{@iconClass}} />
+                    </button>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</div>

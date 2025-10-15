@@ -1,4 +1,4 @@
-<Layout::Section::Header @title={{t "fleet-ops.settings.payments.payments"}}>
+<Layout::Section::Header @title={{t "settings.payments.payments"}}>
     {{#if this.hasStripeConnectAccount}}
         <div class="flex flex-row items-center space-x-2">
             {{#each-in @model.amount_totals as |currency total|}}
@@ -14,7 +14,7 @@
 <Layout::Section::Body class="overflow-y-scroll h-full">
     {{#if this.lookupStripeConnectAccount.isRunning}}
         <div class="flex items-center justify-center flex-1 p-4">
-            <Spinner @loadingMessage="Loading payment settings..." @loadingMessageClass="ml-2 text-black dark:text-white" @wrapperClass="flex flex-row items-center" />
+            <Spinner @loadingMessage={{t "settings.payments.loading-settings"}} @loadingMessageClass="ml-2 text-black dark:text-white" @wrapperClass="flex flex-row items-center" />
         </div>
     {{else}}
         {{#if this.hasStripeConnectAccount}}
@@ -36,10 +36,10 @@
                         <div class="flex flex-col items-center justify-center">
                             <InfoBlock @type="info" @icon="triangle-exclamation" @iconWrapperClass="leading-5" class="w-full">
                                 <h2 id="title" class="text-base">
-                                    Your account is not setup to accept payments yet.
+                                    {{t "settings.payments.account-not-setup-for-payments"}}
                                 </h2>
                                 <span id="subtitle">
-                                    To accept and process payments, you must complete the onboard process via Stripe.
+                                    {{t "settings.payments.to-accept-payments"}}
                                 </span>
                                 {{#if this.isStripeEnabled}}
                                     <Button
@@ -56,7 +56,7 @@
                             {{#unless this.isStripeEnabled}}
                                 <InfoBlock
                                     @type="warning"
-                                    @text="This system is unable to acceot or process payments at this time, contact the system administrator to configure payments."
+                                    @text={{t "settings.payments.system-stripe-not-setup"}}
                                     class="mt-4"
                                 />
                             {{/unless}}

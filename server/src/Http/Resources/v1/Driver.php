@@ -21,7 +21,7 @@ class Driver extends FleetbaseResource
      */
     public function toArray($request)
     {
-        return [
+        return $this->withCustomFields([
             'id'                            => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'uuid'                          => $this->when(Http::isInternalRequest(), $this->uuid),
             'user_uuid'                     => $this->when(Http::isInternalRequest(), $this->user_uuid),
@@ -63,7 +63,7 @@ class Driver extends FleetbaseResource
             'meta'                          => data_get($this, 'meta', Utils::createObject()),
             'updated_at'                    => $this->updated_at,
             'created_at'                    => $this->created_at,
-        ];
+        ]);
     }
 
     public function getJobs(): AnonymousResourceCollection|FleetbaseResourceCollection

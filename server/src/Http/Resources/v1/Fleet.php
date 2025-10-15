@@ -25,7 +25,7 @@ class Fleet extends FleetbaseResource
             $this->load($with);
         }
 
-        return [
+        return $this->withCustomFields([
             'id'                    => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'uuid'                  => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'             => $this->when(Http::isInternalRequest(), $this->public_id),
@@ -45,7 +45,7 @@ class Fleet extends FleetbaseResource
             'vehicles'              => $this->whenLoaded('vehicles', fn () => Vehicle::collection($this->vehicles)),
             'updated_at'            => $this->updated_at,
             'created_at'            => $this->created_at,
-        ];
+        ]);
     }
 
     /**

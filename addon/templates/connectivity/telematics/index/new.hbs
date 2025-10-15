@@ -1,0 +1,12 @@
+<Layout::Resource::Panel
+    @resource={{this.telematic}}
+    @controller={{this}}
+    @actionButtons={{this.actionButtons}}
+    @headerTitle="Create a new telematic"
+    @saveTask={{this.save}}
+    @onPressCancel={{transition-to "connectivity.telematics.index"}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+>
+    <Telematic::Form @resource={{this.telematic}} @controller={{this}} />
+    <Spacer @height="200px" />
+</Layout::Resource::Panel>

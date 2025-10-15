@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Imports\ContactImport;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -19,6 +20,17 @@ class ContactController extends FleetOpsController
      * @var string
      */
     public $resource = 'contact';
+
+    /**
+     * Handle post save transactions.
+     */
+    public function afterSave(Request $request, Contact $contact)
+    {
+        $customFieldValues = $request->array('contact.custom_field_values');
+        if ($customFieldValues) {
+            $contact->syncCustomFieldValues($customFieldValues);
+        }
+    }
 
     /**
      * Returns the contact as a `facilitator-contact`.

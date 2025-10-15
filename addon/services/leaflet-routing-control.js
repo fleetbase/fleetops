@@ -21,6 +21,7 @@ export class RoutingControl {
 
 export default class LeafletRoutingControlService extends Service {
     @service universe;
+    @service currentUser;
     registry = this.#initializeRegistry();
 
     get availableEngines() {
@@ -49,12 +50,18 @@ export default class LeafletRoutingControlService extends Service {
     }
 
     get(name) {
+        name = name ?? this.getRouter();
         return this.registry.routers[underscore(name)];
+    }
+
+    getRouter(fallback = 'osrm') {
+        const routingSettings = this.currentUser.getOption('routing', { router: fallback ?? 'osrm' });
+        return routingSettings.router;
     }
 
     #initializeRegistry() {
         const registry = 'registry:routing-controls';
-        const application = this.universe.getApplicationInstance();
+        const application = typeof this.universe?.getApplicationInstance === 'function' ? this.universe.getApplicationInstance() : window.Fleetbase;
         if (!application.hasRegistration(registry)) {
             application.register(registry, new RoutingControlRegistry(), { instantiate: false });
         }

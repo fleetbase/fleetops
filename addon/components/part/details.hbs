@@ -1,0 +1,108 @@
+<div class="details-wrapper" ...attributes>
+    <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+            <div class="field-info-container">
+                <div class="field-name">SKU</div>
+                <div class="field-value">{{n-a @resource.sku}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Name</div>
+                <div class="field-value">{{n-a @resource.name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Type</div>
+                <div class="field-value">{{smart-humanize @resource.type}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Status</div>
+                <div class="field-value">
+                    <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Manufacturer</div>
+                <div class="field-value">{{n-a @resource.manufacturer}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Model</div>
+                <div class="field-value">{{n-a @resource.model}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Serial Number</div>
+                <div class="field-value">{{n-a @resource.serial_number}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Barcode</div>
+                <div class="field-value">{{n-a @resource.barcode}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Quantity On Hand</div>
+                <div class="field-value">
+                    {{n-a @resource.quantity_on_hand}}
+                    {{#if @resource.is_low_stock}}
+                        <Badge @status="warning">Low Stock</Badge>
+                    {{else if @resource.is_in_stock}}
+                        <Badge @status="success">In Stock</Badge>
+                    {{else}}
+                        <Badge @status="danger">Out of Stock</Badge>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Unit Cost</div>
+                <div class="field-value">{{format-currency @resource.unit_cost}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">MSRP</div>
+                <div class="field-value">{{format-currency @resource.msrp}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Total Value</div>
+                <div class="field-value"><strong>{{format-currency @resource.total_value}}</strong></div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Vendor</div>
+                <div class="field-value">{{n-a @resource.vendor_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Warranty</div>
+                <div class="field-value">{{n-a @resource.warranty_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Asset</div>
+                <div class="field-value">{{n-a @resource.asset_name}}</div>
+            </div>
+
+            <div class="field-info-container col-span-3">
+                <div class="field-name">Description</div>
+                <div class="field-value">{{n-a @resource.description}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+
+    <ContentPanel @title="Photo" @open={{true}} @wrapperClass="bordered-top">
+        <div class="flex px-1">
+            <div class="border border-dashed border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-600 rounded-lg flex items-center justify-center">
+                <div class="flex items-center justify-center h-20 w-24">
+                    <Image alt={{@resource.name}} src={{or @resource.photo_url (config "defaultValues.partImage")}} @fallbackSrc={{config "defaultValues.partImage"}} class="w-12 h-12" />
+                </div>
+            </div>
+        </div>
+    </ContentPanel>
+</div>

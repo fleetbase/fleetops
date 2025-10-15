@@ -1,0 +1,81 @@
+<div class="details-wrapper" ...attributes>
+    <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+            <div class="field-info-container">
+                <div class="field-name">Provider</div>
+                <div class="field-value">{{n-a @resource.provider}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Policy Number</div>
+                <div class="field-value">{{n-a @resource.policy_number}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Status</div>
+                <div class="field-value">
+                    {{#if @resource.is_active}}
+                        <Badge @status="success">Active</Badge>
+                    {{else if @resource.is_expired}}
+                        <Badge @status="danger">Expired</Badge>
+                    {{else}}
+                        <Badge @status="default">Inactive</Badge>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Vendor</div>
+                <div class="field-value">{{n-a @resource.vendor_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Subject</div>
+                <div class="field-value">{{n-a @resource.subject_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Coverage Summary</div>
+                <div class="field-value">{{n-a @resource.coverage_summary}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Start Date</div>
+                <div class="field-value">{{format-date @resource.start_date}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">End Date</div>
+                <div class="field-value">{{format-date @resource.end_date}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Days Remaining</div>
+                <div class="field-value">
+                    {{#if @resource.is_expired}}
+                        <Badge @status="danger">Expired</Badge>
+                    {{else if @resource.days_remaining}}
+                        {{@resource.days_remaining}} days
+                        {{#if (lt @resource.days_remaining 30)}}
+                            <Badge @status="warning">Expiring Soon</Badge>
+                        {{/if}}
+                    {{else}}
+                        N/A
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container col-span-3">
+                <div class="field-name">Terms</div>
+                <div class="field-value">{{n-a @resource.terms}}</div>
+            </div>
+
+            <div class="field-info-container col-span-3">
+                <div class="field-name">Policy Document</div>
+                <div class="field-value">{{n-a @resource.policy}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+</div>

@@ -1,6 +1,6 @@
 {
     "name": "@fleetbase/fleetops-engine",
-    "version": "0.6.18",
+    "version": "0.6.19",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "fleetbase": {
         "route": "fleet-ops"
@@ -44,7 +44,7 @@
         "@babel/core": "^7.23.2",
         "@fleetbase/ember-core": "latest",
         "@fleetbase/ember-ui": "latest",
-        "@fleetbase/fleetops-data": "latest",
+        "@fleetbase/fleetops-data": "^0.1.20",
         "@fleetbase/leaflet-routing-machine": "^3.2.17",
         "@fortawesome/ember-fontawesome": "^2.0.0",
         "@fortawesome/fontawesome-svg-core": "6.4.0",
@@ -54,6 +54,8 @@
         "@joint/layout-directed-graph": "^4.0.1",
         "@stripe/connect-js": "^3.3.10",
         "@terraformer/spatial": "^2.1.2",
+        "@turf/boolean-point-in-polygon": "^7.2.0",
+        "@turf/helpers": "^7.2.0",
         "@zestia/ember-dragula": "^12.0.0",
         "broccoli-funnel": "^3.0.8",
         "broccoli-merge-trees": "^4.2.0",
@@ -62,6 +64,7 @@
         "ember-cli-htmlbars": "^6.3.0",
         "ember-drag-sort": "^3.0.1",
         "ember-intl": "6.3.2",
+        "ember-maybe-in-element": "^2.1.0",
         "ember-radio-button": "^3.0.0-beta.1",
         "ember-tag-input": "^3.1.0",
         "ember-wormhole": "^0.6.0",

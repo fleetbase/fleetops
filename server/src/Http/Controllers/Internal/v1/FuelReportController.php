@@ -5,8 +5,10 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 use Fleetbase\FleetOps\Exports\FuelReportExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\FuelReportImport;
+use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -18,6 +20,17 @@ class FuelReportController extends FleetOpsController
      * @var string
      */
     public $resource = 'fuel_report';
+
+    /**
+     * Handle post save transactions.
+     */
+    public function afterSave(Request $request, FuelReport $fuelReport)
+    {
+        $customFieldValues = $request->array('fuel_report.custom_field_values');
+        if ($customFieldValues) {
+            $fuelReport->syncCustomFieldValues($customFieldValues);
+        }
+    }
 
     /**
      * Export the fleets to excel or csv.

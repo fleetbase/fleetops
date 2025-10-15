@@ -1,0 +1,42 @@
+<div class="details-wrapper" ...attributes>
+    <ContentPanel @title={{t "contact.fields.contact-details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">{{t "common.name"}}</div>
+                <div class="field-value">{{n-a @resource.name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "common.title"}}</div>
+                <div class="field-value">{{n-a @resource.title}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "common.email"}}</div>
+                <ClickToCopy @value={{@resource.email}} class="field-value">{{n-a @resource.email}}</ClickToCopy>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "common.email"}}</div>
+                <ClickToCopy @value={{@resource.phone}} class="field-value">{{n-a @resource.phone}}</ClickToCopy>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "common.internal-id"}}</div>
+                <div class="field-value">{{n-a @resource.internal_id}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "common.type"}}</div>
+                <div class="field-value"><Badge @status="info" @hideStatusDot={{true}}>{{smart-humanize @resource.type}}</Badge></div>
+            </div>
+
+            <div class="field-info-container col-span-2">
+                <div class="field-name">{{t "common.address"}}</div>
+                <div class="field-value">{{n-a @resource.address}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+</div>

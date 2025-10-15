@@ -1,21 +1,21 @@
-{{#if @visible}}
-    <div class="next-map-search-bar-container {{if @visible 'is-visible'}}" {{did-insert this.setupComponent}}>
+{{#if this.globalSearch.visible}}
+    <div class="next-map-search-bar-container {{if this.globalSearch.visible 'is-visible'}}" {{on "keydown" this.onKeydown}} {{did-insert this.setupComponent}}>
         <div class="next-map-search-bar">
             <FaIcon @icon="search" class="ml-4" />
-            <Input @value={{@value}} {{on "input" this.search}} placeholder={{t "fleet-ops.component.global-search.search"}} />
+            <Input @value={{this.query}} {{on "input" this.onInput}} placeholder={{t "global-search.search"}} />
             <div class="pr-4 flex items-center justify-center">
-                {{#if this.isLoading}}
+                {{#if this.search.isRunning}}
                     <Spinner class="text-sky-400" />
                 {{/if}}
             </div>
         </div>
         <div class="next-map-search-results flex flex-col {{if this.results 'has-results'}}">
             {{#each this.results as |result|}}
-                <a href="javascript:;" class="next-map-search-result" {{on "click" (fn this.onAction "onPressOrder" result)}}>
+                <a href="javascript:;" class="next-map-search-result" {{on "click" (fn this.orderActions.transition.view result)}}>
                     <div class="px-4">
                         <div class="flex items-start justify-between mb-2">
                             <div class="flex-1 truncate">
-                                <h3 class="text-base font-semibold">{{result.public_id}}</h3>
+                                <h3 class="text-base font-semibold">{{result.tracking}}</h3>
                                 <div class="flex flex-row items-center space-x-2">
                                     <Badge @hideStatusDot={{true}} @status="default">{{result.createdAt}}</Badge>
                                     <Badge @hideStatusDot={{true}} @status={{if result.has_driver_assigned "assigned" "default"}}>

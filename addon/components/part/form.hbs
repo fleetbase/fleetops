@@ -1,0 +1,163 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title="Part Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="flex flex-row space-x-3 mb-3">
+            <div class="flex items-center justify-start rounded-full">
+                <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.partImage"}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                    <InputInfo @text="Upload new photo" />
+                </Attach::Tooltip>
+            </div>
+            <div>
+                <UploadButton
+                    @name="Photos"
+                    @accept="image/*"
+                    @onFileAdded={{perform this.handlePhotoUpload}}
+                    @icon="upload"
+                    @size="xs"
+                    @buttonText={{t "common.upload-image"}}
+                    @disabled={{cannot-write @resource}}
+                />
+                <div class="px-1">
+                    <span class="text-gray-300 dark:text-gray-600 text-xs">{{t "common.upload-image-supported"}}</span>
+                </div>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <InputGroup @name="SKU">
+                <Input @value={{@resource.sku}} @type="text" class="w-full form-input" placeholder="SKU" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Name">
+                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder="Name" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Manufacturer">
+                <Input @value={{@resource.manufacturer}} @type="text" class="w-full form-input" placeholder="Manufacturer" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Model">
+                <Input @value={{@resource.model}} @type="text" class="w-full form-input" placeholder="Model" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Serial Number">
+                <Input @value={{@resource.serial_number}} @type="text" class="w-full form-input" placeholder="Serial Number" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Barcode">
+                <Input @value={{@resource.barcode}} @type="text" class="w-full form-input" placeholder="Barcode" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Type">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.partTypeOptions}}
+                        @selected={{@resource.type}}
+                        @onChange={{fn (mut @resource.type)}}
+                        @placeholder="Select Part Type"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |type|
+                    >
+                        {{smart-humanize type}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name="Status">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.statusOptions}}
+                        @selected={{@resource.status}}
+                        @onChange={{fn (mut @resource.status)}}
+                        @placeholder="Select Status"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |status|
+                    >
+                        {{smart-humanize status}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name="Quantity On Hand" @type="number">
+                <Input @value={{@resource.quantity_on_hand}} @type="number" class="w-full form-input" placeholder="Quantity" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Unit Cost">
+                <MoneyInput
+                    class="w-full"
+                    @value={{@resource.unit_cost}}
+                    @currency={{or @resource.currency "USD"}}
+                    @canSelectCurrency={{true}}
+                    @onCurrencyChange={{fn (mut @resource.currency)}}
+                    @disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name="MSRP">
+                <MoneyInput
+                    class="w-full"
+                    @value={{@resource.msrp}}
+                    @currency={{or @resource.currency "USD"}}
+                    @canSelectCurrency={{true}}
+                    @disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name="Vendor">
+                <ModelSelect
+                    @modelName="vendor"
+                    @selectedModel={{@resource.vendor}}
+                    @placeholder="Select Vendor"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.vendor)}}
+                    @onChangeId={{fn (mut @resource.vendor_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.name}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name="Warranty">
+                <ModelSelect
+                    @modelName="warranty"
+                    @selectedModel={{@resource.warranty}}
+                    @placeholder="Select Warranty"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.warranty)}}
+                    @onChangeId={{fn (mut @resource.warranty_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{model.policy_number}} - {{model.provider}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name="Description" @wrapperClass="col-span-2">
+                <Textarea
+                    @value={{@resource.description}}
+                    aria-label="Description"
+                    class="w-full form-input"
+                    disabled={{cannot-write @resource}}
+                    placeholder="Description"
+                    rows={{4}}
+                />
+            </InputGroup>
+
+            <RegistryYield @registry="fleet-ops:component:part:form:details" as |RegistryComponent|>
+                <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+            </RegistryYield>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <RegistryYield @registry="fleet-ops:component:part:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+</div>

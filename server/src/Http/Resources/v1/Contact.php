@@ -19,7 +19,9 @@ class Contact extends FleetbaseResource
      */
     public function toArray($request)
     {
-        return [
+        $this->loadMissing(['place', 'places']);
+
+        return $this->withCustomFields([
             'id'                            => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'customer_id'                   => $this->when($this->type === 'customer' && Http::isPublicRequest(), Str::replace('contact', 'customer', $this->public_id)),
             'uuid'                          => $this->when(Http::isInternalRequest(), $this->uuid),
@@ -34,8 +36,8 @@ class Contact extends FleetbaseResource
             'email'                         => $this->email ?? null,
             'phone'                         => $this->phone ?? null,
             'photo_url'                     => $this->photo_url ?? null,
-            'place'                         => $this->whenLoaded('place', fn () => new Place($this->place)),
-            'places'                        => $this->whenLoaded('places', fn () => Place::collection($this->places)),
+            'place'                         => $this->whenLoaded('place', fn () => (new Place($this->place))->without('owner')),
+            'places'                        => $this->whenLoaded('places', fn () => Place::collection($this->places)->without('owner')),
             'user'                          => $this->when(Http::isInternalRequest(), fn () => new User($this->user), fn () => $this->user ? $this->user->public_id : null),
             'address'                       => $this->when(Http::isInternalRequest(), data_get($this, 'place.address')),
             'address_street'                => $this->when(Http::isInternalRequest(), data_get($this, 'place.street1')),
@@ -46,7 +48,7 @@ class Contact extends FleetbaseResource
             'slug'                          => $this->slug ?? null,
             'updated_at'                    => $this->updated_at,
             'created_at'                    => $this->created_at,
-        ];
+        ]);
     }
 
     /**

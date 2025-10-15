@@ -1,0 +1,60 @@
+<div class="form-wrapper" ...attributes>
+    <ContentPanel @title={{t "place.fields.details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-3 gap-2 text-xs dark:text-gray-100 no-input-group-padding">
+            <InputGroup @name={{t "common.name"}} @wrapperClass="col-span-3">
+                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder={{t "common.name"}} disabled={{cannot-write @resource}} />
+            </InputGroup>
+            <InputGroup @name={{t "place.fields.street-1"}} @value={{@resource.street1}} @wrapperClass="col-span-3">
+                <AutocompleteInput
+                    @value={{@resource.street1}}
+                    @fetchUrl="places/lookup"
+                    @onSelect={{this.onAutocomplete}}
+                    disabled={{cannot-write @resource}}
+                    placeholder={{t "place.fields.street-1"}}
+                    class="w-full"
+                    as |result|
+                >
+                    {{result.address}}
+                </AutocompleteInput>
+            </InputGroup>
+            <InputGroup
+                @name={{t "place.fields.street-2"}}
+                @autocomplete="nope"
+                @value={{@resource.street2}}
+                @wrapperClass="col-span-3"
+                @disabled={{cannot-write @resource}}
+            />
+            <InputGroup @name={{t "place.fields.neighborhood"}} @autocomplete="nope" @value={{@resource.neighborhood}} @disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "place.fields.building"}} @autocomplete="nope" @value={{@resource.building}} @disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "place.fields.security-access-code"}} @autocomplete="nope" @value={{@resource.security_access_code}} @disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "place.fields.postal-code"}} @autocomplete="nope" @value={{@resource.postal_code}} @disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "place.fields.city"}} @autocomplete="nope" @value={{@resource.city}} @disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "place.fields.state"}} @autocomplete="nope" @value={{@resource.province}} @disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "place.fields.country"}} @wrapperClass="col-span-2">
+                <CountrySelect
+                    class="w-full form-input form-select form-datalist"
+                    @value={{@resource.country}}
+                    @onChange={{fn (mut @resource.country)}}
+                    @resourceholder={{t "place.fields.country"}}
+                    @disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+            <InputGroup @name={{t "place.fields.coordinates"}} @wrapperClass="col-span-2">
+                <ModelCoordinatesInput @model={{@resource}} @disabled={{cannot-write @resource}} @autocomplete="all" @onInputReady={{fn (mut this.coordinatesInput)}} />
+            </InputGroup>
+            <InputGroup @name={{t "place.fields.phone"}} @wrapperClass="col-span-2">
+                <PhoneInput @value={{@resource.phone}} @autocomplete="nope" @onInput={{this.phone}} disabled={{cannot-write @resource}} class="form-input w-full" />
+            </InputGroup>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <ContentPanel @title={{t "avatar-picker.avatar"}} @open={{true}} @wrapperClass="bordered-top">
+        <AvatarPicker @model={{@resource}} @defaultAvatar={{config "defaultValues.placeAvatar"}} @disabled={{cannot-write @resource}} />
+    </ContentPanel>
+
+    <RegistryYield @registry="fleet-ops:component:place:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+</div>

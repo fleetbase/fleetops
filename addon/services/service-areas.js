@@ -183,8 +183,8 @@ export default class ServiceAreasService extends Service {
             const angle = (i / numPoints) * 2 * Math.PI;
             const latOffset = radiusInDegrees * Math.sin(angle);
             const lngOffset = radiusInDegrees * Math.cos(angle);
-            // Convert generated point to [lng, lat] order
-            let point = [center.lng + lngOffset, center.lat + latOffset];
+            // Convert generated point to [lat, lng] order
+            let point = [center.lat + latOffset, center.lng + lngOffset];
             // Wrap the longitude of this point
             point = wrapCoordinates(point);
             latLngs.push(point);
@@ -419,7 +419,7 @@ export default class ServiceAreasService extends Service {
     @action editServiceAreaDetails(serviceArea, options = {}) {
         this.modalsManager.show('modals/service-area-form', {
             title: 'Edit Service Area',
-            acceptButtonText: 'Save Changes',
+            acceptButtonText: this.intl.t('common.save-changes'),
             acceptButtonIcon: 'save',
             declineButtonIcon: 'times',
             declineButtonIconPrefix: 'fas',
@@ -533,7 +533,7 @@ export default class ServiceAreasService extends Service {
     @action editZone(zone, serviceArea, options = {}) {
         this.modalsManager.show('modals/zone-form', {
             title: 'Edit Zone',
-            acceptButtonText: 'Save Changes',
+            acceptButtonText: this.intl.t('common.save-changes'),
             acceptButtonIcon: 'save',
             declineButtonIcon: 'times',
             declineButtonIconPrefix: 'fas',
@@ -597,7 +597,7 @@ export default class ServiceAreasService extends Service {
         this.modalsManager.show('modals/view-service-area', {
             title: `Service Area (${serviceArea.get('name')})`,
             modalClass: 'modal-lg',
-            acceptButtonText: 'Done',
+            acceptButtonText: this.intl.t('common.done'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             hideDeclineButton: true,
@@ -617,7 +617,7 @@ export default class ServiceAreasService extends Service {
         this.modalsManager.show('modals/view-zone', {
             title: `Zone (${zone.get('name')})`,
             modalClass: 'modal-lg',
-            acceptButtonText: 'Done',
+            acceptButtonText: this.intl.t('common.done'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             hideDeclineButton: true,

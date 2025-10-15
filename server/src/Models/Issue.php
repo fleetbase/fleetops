@@ -63,6 +63,8 @@ class Issue extends Model
         'category',
         'type',
         'report',
+        'title',
+        'tags',
         'priority',
         'meta',
         'resolved_at',
@@ -84,6 +86,7 @@ class Issue extends Model
     protected $casts = [
         'location'        => Point::class,
         'meta'            => Json::class,
+        'tags'            => Json::class,
         'resolved_at'     => 'date',
     ];
 
@@ -154,6 +157,24 @@ class Issue extends Model
     public function driver()
     {
         return $this->belongsTo(Driver::class);
+    }
+
+    /**
+     * Set the title attribute for the Issue model.
+     *
+     * If no value is provided, a default title is generated in the form:
+     * "Issue reported on {created_at date, e.g., 15 Sep 25, 14:30}".
+     *
+     * @param string|null $value
+     *
+     * @return void
+     */
+    public function setTitleAttribute($value)
+    {
+        $created      = $this->created_at ?? now();
+        $defaultTitle = 'Issue reported on ' . $created->format('d M y, H:i');
+
+        $this->attributes['title'] = $value !== null ? trim($value) : $defaultTitle;
     }
 
     /**

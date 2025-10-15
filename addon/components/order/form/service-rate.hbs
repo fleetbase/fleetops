@@ -1,0 +1,109 @@
+<ContentPanel @title={{t "order.fields.service"}} @open={{true}} @wrapperClass="bordered-top">
+    <div>
+        <Toggle
+            @label={{t "order.fields.apply-service-rate"}}
+            @wrapperClass="justify-start-i mb-4"
+            @isToggled={{@resource.servicable}}
+            @onToggle={{perform this.queryServiceRates}}
+            @disabled={{or (cannot-write @resource) (not this.isServicable)}}
+            @helpText={{t "order.fields.service-help-text"}}
+        />
+        {{#if @resource.servicable}}
+            <div>
+                <div class="space-y-2">
+                    {{#unless @resource.facilitator.isIntegratedVendor}}
+                        <InputGroup @name={{t "order.fields.select-service-rate"}} @helpText={{t "order.fields.service-quotes-help-text"}}>
+                            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                                <PowerSelect
+                                    @options={{this.serviceRates}}
+                                    @selected={{this.selectedRate}}
+                                    @onChange={{perform this.getServiceQuotes}}
+                                    @placeholder={{t "order.fields.select-service-rate"}}
+                                    @triggerClass="form-select form-input"
+                                    @disabled={{cannot-write @resource}}
+                                    as |serviceRate|
+                                >
+                                    <div class="text-sm">
+                                        <div class="font-semibold normalize-in-trigger">{{serviceRate.service_name}}</div>
+                                    </div>
+                                </PowerSelect>
+                            </div>
+                        </InputGroup>
+                    {{/unless}}
+                    <div class="flex flex-row justify-end">
+                        <Button
+                            @icon="refresh"
+                            @text={{t "order.fields.refresh-button"}}
+                            @isLoading={{this.getServiceQuotes.isRunning}}
+                            @disabled={{not this.selectedRate}}
+                            @onClick={{perform this.getServiceQuotes this.selectedRate}}
+                        />
+                    </div>
+                </div>
+                {{#if this.getServiceQuotes.isRunning}}
+                    <div class="flex items-center justify-center py-5">
+                        <Spinner class="text-sm dark:text-gray-100 flex flex-row items-center" @iconClass="mr-2" @loadingMessage={{t "order.fields.loading-message"}} />
+                    </div>
+                {{else}}
+                    <InfoBlock class="my-3" @text={{t "order.fields.service-quote-info"}} />
+                    <div class="radio-group-condensed -space-y-px">
+                        {{#each this.serviceQuotes as |serviceQuote|}}
+                            <div class="radio-group-item shadow-sm flex-col pl-0i pr-0i {{if (eq @resource.service_quote_uuid serviceQuote.uuid) 'is-checked'}}">
+                                <div class="flex flex-row items-center mb-2.5 px-4">
+                                    <RadioButton
+                                        @radioClass="focus:ring-blue-500 h-6 w-6 text-blue-500"
+                                        @radioId={{serviceQuote.uuid}}
+                                        @value={{serviceQuote.uuid}}
+                                        @groupValue={{@resource.service_quote_uuid}}
+                                        @name="serviceQuote"
+                                        @changed={{fn (mut @resource.service_quote_uuid)}}
+                                    />
+                                    <label for={{serviceQuote.uuid}} class="ml-3 flex-1">{{serviceQuote.public_id}}</label>
+                                    <Badge @hideStatusDot={{true}} @status="info">
+                                        {{serviceQuote.request_id}}
+                                    </Badge>
+                                </div>
+                                <div class="next-table-wrapper no-scroll h-auto table-fluid rounded-none">
+                                    <table class="table table-fixed flex-1">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-left">{{t "order.fields.breakdown"}}</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {{#each serviceQuote.items as |item|}}
+                                                <tr>
+                                                    <td>
+                                                        <span class="font-semibold">{{smart-humanize item.details}}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span>{{format-currency item.amount serviceQuote.currency}}</span>
+                                                    </td>
+                                                </tr>
+                                            {{/each}}
+                                            <tr class="border-b-0">
+                                                <td class="border-b-0">
+                                                    <span class="font-semibold">{{t "common.total"}}</span>
+                                                </td>
+                                                <td class="border-b-0">
+                                                    <span>{{format-currency serviceQuote.amount serviceQuote.currency}}</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {{else}}
+                            <InfoBlock
+                                class="my-2 px-4 py-1.5 warning"
+                                @blockClass="flex flex-row items-center"
+                                @text={{if @resource.payload.payloadCoordinates.length (t "order.fields.no-service-quotes") (t "order.fields.input-order-routes")}}
+                            />
+                        {{/each}}
+                    </div>
+                {{/if}}
+            </div>
+        {{/if}}
+    </div>
+</ContentPanel>

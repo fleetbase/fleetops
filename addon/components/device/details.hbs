@@ -1,0 +1,105 @@
+<div class="details-wrapper" ...attributes>
+    <ContentPanel @title={{t "device.fields.title"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.device-name"}}</div>
+                <div class="field-value">{{n-a @resource.device_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.device-type"}}</div>
+                <div class="field-value">{{smart-humanize @resource.device_type}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.device-id"}}</div>
+                <div class="field-value">{{n-a @resource.device_id}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.provider"}}</div>
+                <div class="field-value">{{n-a @resource.device_provider}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.model"}}</div>
+                <div class="field-value">{{n-a @resource.device_model}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.manufacturer"}}</div>
+                <div class="field-value">{{n-a @resource.manufacturer}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.serial-number"}}</div>
+                <div class="field-value">{{n-a @resource.serial_number}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.location"}}</div>
+                <div class="field-value">{{n-a @resource.device_location}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.status"}}</div>
+                <div class="field-value">
+                    <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.installation-date"}}</div>
+                <div class="field-value">{{format-date @resource.installation_date}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.last-maintenance"}}</div>
+                <div class="field-value">{{format-date @resource.last_maintenance_date}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.data-frequency"}}</div>
+                <div class="field-value">{{n-a @resource.data_frequency}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.telematic"}}</div>
+                <div class="field-value">{{n-a @resource.telematic_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.warranty"}}</div>
+                <div class="field-value">{{n-a @resource.warranty_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.online-status"}}</div>
+                <div class="field-value">
+                    {{#if @resource.is_online}}
+                        <Badge @status="success">{{t "device.fields.online"}}</Badge>
+                    {{else}}
+                        <Badge @status="danger">{{t "device.fields.offline"}}</Badge>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.attached-to"}}</div>
+                <div class="field-value">{{n-a @resource.attached_to_name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "device.fields.last-online"}}</div>
+                <div class="field-value">{{format-date @resource.last_online_at}}</div>
+            </div>
+
+            <div class="field-info-container col-span-3">
+                <div class="field-name">{{t "device.fields.notes"}}</div>
+                <div class="field-value">{{n-a @resource.notes}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+</div>

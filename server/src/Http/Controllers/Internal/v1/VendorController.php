@@ -25,6 +25,17 @@ class VendorController extends FleetOpsController
     public $resource = 'vendor';
 
     /**
+     * Handle post save transactions.
+     */
+    public function afterSave(Request $request, Vendor $vendor)
+    {
+        $customFieldValues = $request->array('vendor.custom_field_values');
+        if ($customFieldValues) {
+            $vendor->syncCustomFieldValues($customFieldValues);
+        }
+    }
+
+    /**
      * Returns the vendor as a `facilitator-vendor`.
      *
      * @var string id

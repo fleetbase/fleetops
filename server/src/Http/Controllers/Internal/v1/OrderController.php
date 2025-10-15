@@ -29,12 +29,13 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\Internal\BulkActionRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
-use Fleetbase\Models\CustomFieldValue;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
 use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -58,6 +59,11 @@ class OrderController extends FleetOpsController
         if ($waypoints) {
             $order->loadMissing('payload');
             $order->payload->updateWaypoints($waypoints);
+        }
+
+        $customFieldValues = $request->array('order.custom_field_values');
+        if ($customFieldValues) {
+            $order->syncCustomFieldValues($customFieldValues);
         }
     }
 
@@ -146,16 +152,7 @@ class OrderController extends FleetOpsController
 
                     // save custom field values
                     if (is_array($customFieldValues)) {
-                        foreach ($customFieldValues as $customFieldValue) {
-                            CustomFieldValue::create([
-                                'company_uuid'      => session('company'),
-                                'custom_field_uuid' => data_get($customFieldValue, 'custom_field_uuid'),
-                                'subject_uuid'      => $order->uuid,
-                                'subject_type'      => Utils::getMutationType($order),
-                                'value'             => data_get($customFieldValue, 'value'),
-                                'value_type'        => data_get($customFieldValue, 'value_type', 'text'),
-                            ]);
-                        }
+                        $order->syncCustomFieldValues($customFieldValues);
                     }
 
                     // if it's integrated vendor order apply to meta
@@ -168,19 +165,19 @@ class OrderController extends FleetOpsController
                         );
                     }
 
+                    // dispatch if flagged true
+                    $order->firstDispatchWithActivity();
+
+                    // set driving distance and time
+                    $order->setPreliminaryDistanceAndTime();
+
+                    // if service quote attached purchase
+                    $order->purchaseServiceQuote($serviceQuote);
+
                     // Run background processes on queue
-                    dispatch(function () use ($order, $serviceQuote): void {
+                    dispatch(function () use ($order): void {
                         // notify driver if assigned
                         $order->notifyDriverAssigned();
-
-                        // set driving distance and time
-                        $order->setPreliminaryDistanceAndTime();
-
-                        // if service quote attached purchase
-                        $order->purchaseServiceQuote($serviceQuote);
-
-                        // dispatch if flagged true
-                        $order->firstDispatchWithActivity();
 
                         // Trigger order created event
                         event(new OrderReady($order));
@@ -192,12 +189,12 @@ class OrderController extends FleetOpsController
             $record->load(['payload', 'trackingNumber']);
 
             return ['order' => new $this->resource($record)];
-        } catch (\Exception $e) {
-            return response()->error($e->getMessage());
-        } catch (\Illuminate\Database\QueryException $e) {
-            return response()->error($e->getMessage());
+        } catch (QueryException $e) {
+            return response()->error(env('DEBUG') ? $e->getMessage() : 'Error occurred while trying to create a ' . $this->resourceSingularlName);
         } catch (FleetbaseRequestValidationException $e) {
             return response()->error($e->getErrors());
+        } catch (\Exception $e) {
+            return response()->error($e->getMessage());
         }
     }
 
@@ -345,7 +342,8 @@ class OrderController extends FleetOpsController
                 'status'  => 'OK',
                 'message' => 'Deleted ' . $count . ' orders',
                 'count'   => $count,
-            ]);
+            ]
+        );
     }
 
     /**
@@ -540,7 +538,7 @@ class OrderController extends FleetOpsController
         /**
          * @var Order
          */
-        $order = Order::select(['uuid', 'driver_assigned_uuid', 'order_config_uuid', 'adhoc', 'dispatched', 'dispatched_at'])->where('uuid', $request->input('order'))->withoutGlobalScopes()->first();
+        $order = Order::findById($request->input('order'), ['orderConfig', 'driverAssigned']);
         if (!$order) {
             return response()->error('No order found to dispatch.');
         }
@@ -661,14 +659,7 @@ class OrderController extends FleetOpsController
      */
     public function updateActivity(string $id, Request $request)
     {
-        $order = Order::withoutGlobalScopes()
-            ->where('uuid', $id)
-            ->with(['driverAssigned'])
-            ->whereNull('deleted_at')
-            ->orWhere('public_id', $id)
-            ->with(['payload.entities'])
-            ->first();
-
+        $order = Order::findById($id, ['driverAssigned', 'payload.entities']);
         if (!$order) {
             return response()->error('No order found.');
         }
@@ -685,7 +676,7 @@ class OrderController extends FleetOpsController
                 return response()->error('No driver assigned for order to dispatch to.');
             }
 
-            $order->dispatch();
+            $order->dispatchWithActivity();
 
             return response()->json(['status' => 'dispatched']);
         }
@@ -725,22 +716,13 @@ class OrderController extends FleetOpsController
      */
     public function nextActivity(string $id, Request $request)
     {
-        $waypointId = $request->input('waypoint');
-
         try {
-            $order = Order::findRecordOrFail($id, ['payload']);
-        } catch (ModelNotFoundException $exception) {
+            $order = Order::findByIdOrFail($id);
+        } catch (ModelNotFoundException $e) {
             return response()->error('No order found.');
         }
 
-        // Get waypoint record if available
-        $waypoint = null;
-        if ($waypointId) {
-            $waypoint = Waypoint::where('payload_uuid', $order->payload_uuid)->whereHas('place', function ($query) use ($waypointId) {
-                $query->where('public_id', $waypointId);
-            })->first();
-        }
-
+        $waypoint   = $request->filled('waypoint') ? Waypoint::findByPlace($request->input('waypoint'), $order) : null;
         $activities = $order->config()->nextActivity($waypoint);
 
         // If activity is to complete order add proof of delivery properties if required
@@ -768,11 +750,7 @@ class OrderController extends FleetOpsController
      */
     public function trackerInfo(string $id)
     {
-        $order = Order::withoutGlobalScopes()
-            ->where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->first();
-
+        $order = Order::findById($id);
         if (!$order) {
             return response()->error('No order found.');
         }
@@ -784,11 +762,7 @@ class OrderController extends FleetOpsController
 
     public function waypointEtas(string $id)
     {
-        $order = Order::withoutGlobalScopes()
-            ->where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->first();
-
+        $order = Order::findById($id);
         if (!$order) {
             return response()->error('No order found.');
         }
@@ -800,21 +774,118 @@ class OrderController extends FleetOpsController
     }
 
     /**
-     * Get all status options for an order.
+     * Retrieve all distinct order statuses for the authenticated company.
      *
-     * @return \Illuminate\Http\Response
+     * This endpoint compiles:
+     * 1. All unique `status` values from the `orders` table for the current company.
+     * 2. Optionally, all `Activity` codes defined in `OrderConfig` records that are
+     *    actually referenced by existing orders (via `order_config_uuid`).
+     *
+     * ---
+     * ### Query Parameters
+     * - `include_order_config_activities` (bool, optional)
+     *   When true, includes `Activity` codes from relevant `OrderConfig` instances.
+     *
+     * - `order_config_key` (string, optional)
+     *   Restricts both `orders` and `order_configs` to a specific configuration key.
+     *
+     * ---
+     * ### Behavior
+     * - Only includes order configs that are actually used by orders.
+     * - Uses the `activities()` method on each `OrderConfig` to extract all activity codes.
+     * - Merges and deduplicates both order statuses and activity codes.
+     *
+     * ---
+     * ### Example Response
+     * ```json
+     * [
+     *   "created",
+     *   "dispatched",
+     *   "completed",
+     *   "canceled",
+     *   "pickup_ready",
+     *   "awaiting_payment"
+     * ]
+     * ```
+     *
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function statuses()
+    public function statuses(Request $request)
     {
-        $statuses = DB::table('orders')
-            ->select('status')
-            ->where('company_uuid', session('company'))
-            ->distinct()
-            ->get()
-            ->pluck('status')
-            ->filter();
+        $companyUuid = $request->user()->company_uuid ?? session('company');
 
-        return response()->json($statuses);
+        $includeActivities = $request->boolean('include_order_config_activities', true);
+        $orderConfigKey    = trim((string) $request->string('order_config_key'));
+
+        // Get distinct statuses from orders
+        $ordersQuery = DB::table('orders')
+            ->where('company_uuid', $companyUuid)
+            ->whereNotNull('status');
+
+        if ($orderConfigKey !== '') {
+            $ordersQuery->whereExists(function ($q) use ($companyUuid, $orderConfigKey) {
+                $q->select(DB::raw(1))
+                  ->from('order_configs as oc')
+                  ->whereColumn('oc.uuid', 'orders.order_config_uuid')
+                  ->where('oc.company_uuid', $companyUuid)
+                  ->where('oc.key', $orderConfigKey);
+            });
+        }
+
+        $orderStatuses = $ordersQuery->distinct()->pluck('status')->filter();
+
+        // Optionally include activity codes from used order configs
+        $activityCodes = collect();
+
+        if ($includeActivities) {
+            $configUuidsOnOrders = DB::table('orders')
+                ->where('company_uuid', $companyUuid)
+                ->when($orderConfigKey !== '', function ($q) use ($companyUuid, $orderConfigKey) {
+                    $q->whereExists(function ($sub) use ($companyUuid, $orderConfigKey) {
+                        $sub->select(DB::raw(1))
+                            ->from('order_configs as oc')
+                            ->whereColumn('oc.uuid', 'orders.order_config_uuid')
+                            ->where('oc.company_uuid', $companyUuid)
+                            ->where('oc.key', $orderConfigKey);
+                    });
+                })
+                ->whereNotNull('order_config_uuid')
+                ->distinct()
+                ->pluck('order_config_uuid')
+                ->filter();
+
+            if ($configUuidsOnOrders->isNotEmpty()) {
+                $orderConfigs = OrderConfig::where('company_uuid', $companyUuid)
+                    ->whereIn('uuid', $configUuidsOnOrders)
+                    ->get();
+
+                /** @var OrderConfig $config */
+                foreach ($orderConfigs as $config) {
+                    if (!method_exists($config, 'activities')) {
+                        continue;
+                    }
+
+                    $activities = $config->activities();
+
+                    if ($activities instanceof Collection) {
+                        $codes = $activities
+                            ->map(fn ($activity) => $activity->code ?? null)
+                            ->filter()
+                            ->values();
+
+                        $activityCodes = $activityCodes->merge($codes);
+                    }
+                }
+            }
+        }
+
+        // Merge & deduplicate everything
+        $result = $orderStatuses
+            ->merge($activityCodes)
+            ->unique()
+            ->values();
+
+        return response()->json($result);
     }
 
     /**
