@@ -83,7 +83,7 @@ export function createGeoJsonCircle(layer, { properties, steps = 64 } = {}) {
     const center = toPos(layer.getLatLng());
     const radius = layer.getRadius?.(); // meters
 
-    return new Circle({ center, radius, steps });
+    return new Circle(center, radius, steps);
 }
 
 /** ---- Catch-all: pick helper by Leaflet layer type ---- */

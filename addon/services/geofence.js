@@ -25,7 +25,7 @@ export default class GeofenceService extends Service {
                     saveOptions: {
                         callback: (serviceArea) => {
                             this.leafletMapManager.hideDrawControl();
-                            this.showServiceArea(serviceArea);
+                            this.#showServiceArea(serviceArea);
                         },
                     },
                 }
@@ -52,7 +52,7 @@ export default class GeofenceService extends Service {
                     saveOptions: {
                         callback: (zone) => {
                             this.leafletMapManager.hideDrawControl();
-                            this.showZone(zone);
+                            this.#showZone(zone);
                         },
                     },
                 }
@@ -265,6 +265,10 @@ export default class GeofenceService extends Service {
             map.once('draw:edited', onEdited);
             map.once('draw:editstop', onEditStop);
         });
+    }
+
+    #showZone(zone) {
+        this.leafletLayerVisibilityManager.showModelLayer(zone);
     }
 
     #showServiceArea(serviceArea) {

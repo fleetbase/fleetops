@@ -57,7 +57,7 @@ export default class ServiceAreaActionsService extends ResourceActionService {
             saveOptions = { ...(options.saveOptions ?? {}), ...(saveOptions ?? {}) };
             return this.modalsManager.show('modals/resource', {
                 resource: serviceArea,
-                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.service area')?.toLowerCase() }),
+                title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.service-area')?.toLowerCase() }),
                 acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.service-area') }),
                 component: 'service-area/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', serviceArea, { refresh: true, ...saveOptions }),

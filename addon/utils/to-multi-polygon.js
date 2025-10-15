@@ -35,20 +35,22 @@ export default function toMultiPolygon(input, { asFeature = false } = {}) {
     const { geom, props, id, bbox, wasFeature } = unwrap(input);
 
     // Circle: your implementation already sets .geometry to a Polygon
-    if (geom?.type === 'Circle') {
+    if (input instanceof Circle || geom?.type === 'Circle') {
         // if someone passed raw Circle geometry (unlikely), reconstruct to get Polygon
         const circle = input instanceof Circle ? input : new Circle(geom.properties?.center, geom.properties?.radius, geom.properties?.steps);
         const coords = circle.geometry?.coordinates; // polygon coords
         const mp = new MultiPolygon([coords]);
 
-        return asFeature || wasFeature ? new Feature({ type: 'MultiPolygon', coordinates: mp.coordinates, properties: props, id, bbox }) : mp;
+        // return asFeature || wasFeature ? new Feature({ type: 'MultiPolygon', coordinates: mp.coordinates, properties: props, id, bbox }) : mp;
+        return mp;
     }
 
     if (geom?.type === 'Polygon' || input instanceof Polygon) {
         const coords = geom.coordinates ?? input.coordinates;
         const mp = new MultiPolygon([coords]);
 
-        return asFeature || wasFeature ? new Feature({ type: 'MultiPolygon', coordinates: mp.coordinates, properties: props, id, bbox }) : mp;
+        // return asFeature || wasFeature ? new Feature({ type: 'MultiPolygon', coordinates: mp.coordinates, properties: props, id, bbox }) : mp;
+        return mp;
     }
 
     if (geom?.type === 'MultiPolygon' || input instanceof MultiPolygon) {
