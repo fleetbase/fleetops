@@ -1,7 +1,6 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { debug } from '@ember/debug';
 
 export default class OperationsOrdersIndexDetailsRoute extends Route {
     @service notifications;
@@ -37,7 +36,7 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
             }
         }
 
-        return true; // allow transition
+        return true;
     }
 
     @action error(error) {

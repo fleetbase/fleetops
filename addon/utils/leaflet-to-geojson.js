@@ -1,8 +1,7 @@
+/* eslint-disable no-unused-vars */
 import { MultiPolygon, Polygon, Circle, Feature, FeatureCollection } from '@fleetbase/fleetops-data/utils/geojson';
 import { isArray } from '@ember/array';
 import wrapCoordinates from './leaflet-wrap-coordinates';
-
-const L = window.leaflet || window.L;
 
 export function toPos(ll) {
     // Accept Leaflet LatLng or plain {lat,lng}

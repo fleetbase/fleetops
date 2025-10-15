@@ -14,7 +14,7 @@ class ReportSchemaServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Register the FleetOps report schema
-        $this->app->afterResolving(ReportSchemaRegistry::class, function (ReportSchemaRegistry $registry) {
+        $this->callAfterResolving(ReportSchemaRegistry::class, function (ReportSchemaRegistry $registry) {
             $schema = new FleetOpsReportSchema();
             $schema->registerReportSchema($registry);
         });

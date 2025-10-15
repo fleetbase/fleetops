@@ -2,6 +2,7 @@ import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
+import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 
 export default class OrderImportService extends Service {
@@ -70,18 +71,19 @@ export default class OrderImportService extends Service {
                 this.#reset();
                 modal.done();
             },
+            ...options,
         });
     }
 
     @task *importFiles(files = []) {
-        const ids = uploadedFiles.map((file) => file.id);
+        const ids = files.map((file) => file.id);
 
         try {
             const results = yield this.fetch.post('orders/process-imports', { files: ids });
             return results;
-        } catch (error) {
+        } catch (err) {
             debug('Error processing file imports: ' + err.message);
-            this.notifications.serverError(error);
+            this.notifications.serverError(err);
         }
     }
 

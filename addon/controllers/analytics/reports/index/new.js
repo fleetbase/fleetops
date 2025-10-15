@@ -26,7 +26,12 @@ export default class AnalyticsReportsIndexNewController extends Controller {
 
                 yield this.hostRouter.refresh();
                 yield this.hostRouter.transitionTo('console.fleet-ops.analytics.reports.index.details', report);
-                this.notifications.success('Report created successfully.');
+                this.notifications.success(
+                    this.intl.t('common.resource-created-success-name', {
+                        resource: this.intl.t('resource.report'),
+                        resourceName: report.title,
+                    })
+                );
                 this.resetForm();
             } catch (err) {
                 this.notifications.serverError(err);

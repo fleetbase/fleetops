@@ -52,7 +52,7 @@ export default class OrderScheduleCardComponent extends Component {
      * @memberof OrderScheduleCardComponent
      */
     @action onClickVehicle(vehicle) {
-        this.vehicleActions.panel.view(driver);
+        this.vehicleActions.panel.view(vehicle);
     }
 
     /**

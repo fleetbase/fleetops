@@ -4,7 +4,7 @@ import { inject as service } from '@ember/service';
 export default class IsModelLeafletLayerHidden extends Helper {
     @service leafletLayerVisibilityManager;
 
-    compute([model], named = {}) {
+    compute([model]) {
         return this.leafletLayerVisibilityManager.isModelLayerHidden(model);
     }
 }

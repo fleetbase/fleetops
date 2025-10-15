@@ -1,10 +1,11 @@
-import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
+import ResourceActionService, { service } from '@fleetbase/ember-core/services/resource-action';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 
 export default class OrderActionsService extends ResourceActionService {
+    @service store;
     modelNamePath = 'tracking';
 
     constructor() {
@@ -421,6 +422,7 @@ export default class OrderActionsService extends ResourceActionService {
             acceptButtonText: this.intl.t('common.done'),
             hideDeclineButton: true,
             metadata: order.meta,
+            ...options,
         });
     }
 
@@ -447,6 +449,7 @@ export default class OrderActionsService extends ResourceActionService {
                     modal.stopLoading();
                 }
             },
+            ...options,
         });
     }
 

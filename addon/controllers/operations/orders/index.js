@@ -2,9 +2,6 @@ import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { equal } from '@ember/object/computed';
-import { debug } from '@ember/debug';
-import { task } from 'ember-concurrency';
 
 export default class OperationsOrdersIndexController extends Controller {
     @service orderActions;

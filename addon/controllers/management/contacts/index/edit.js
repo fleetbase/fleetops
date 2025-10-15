@@ -23,10 +23,12 @@ export default class ManagementContactsIndexEditController extends Controller {
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.contacts.index.details', contact);
-            this.notifications.success(this.intl.t('common.resource-updated-success', {
+            this.notifications.success(
+                this.intl.t('common.resource-updated-success', {
                     resource: this.intl.t('resource.contact'),
                     resourceName: contact.name,
-                }));
+                })
+            );
         } catch (err) {
             this.notifications.serverError(err);
         }

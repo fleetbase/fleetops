@@ -6,7 +6,7 @@ export default class ServiceRateFormComponent extends Component {
     @service orderConfigActions;
     @service serviceRateActions;
 
-    constructor(owner) {
+    constructor() {
         super(...arguments);
         this.orderConfigActions.loadAll.perform();
     }

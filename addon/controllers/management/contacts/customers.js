@@ -1,5 +1,4 @@
 import ManagementContactsIndexController from './index';
-import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 
 export default class ManagementContactsCustomersController extends ManagementContactsIndexController {

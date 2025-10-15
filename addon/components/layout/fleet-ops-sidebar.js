@@ -2,7 +2,6 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { pluralize } from 'ember-inflector';
 import FleetListingComponent from './fleet-ops-sidebar/fleet-listing';
 import DriverListingComponent from './fleet-ops-sidebar/driver-listing';
 
@@ -31,6 +30,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         this.universeSettingsMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'settings');
     }
 
+    /* eslint-disable no-unused-vars */
     createMenuPanels() {
         const operationsItems = [
             {

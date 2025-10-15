@@ -111,6 +111,7 @@
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
                     @onChange={{fn (mut @resource.vehicle)}}
+                    @onChangeId={{fn (mut @resource.vehicle_uuid)}}
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >

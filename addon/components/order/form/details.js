@@ -15,7 +15,7 @@ export default class OrderFormDetailsComponent extends Component {
     @service currentUser;
     @tracked customFields;
 
-    constructor(owner) {
+    constructor() {
         super(...arguments);
         this.orderConfigActions.loadAll.perform();
     }

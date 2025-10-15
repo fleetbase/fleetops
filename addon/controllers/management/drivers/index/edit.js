@@ -23,10 +23,12 @@ export default class ManagementDriversIndexEditController extends Controller {
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.drivers.index.details', driver);
-            this.notifications.success(this.intl.t('common.resource-updated-success', {
+            this.notifications.success(
+                this.intl.t('common.resource-updated-success', {
                     resource: this.intl.t('resource.driver'),
                     resourceName: driver.name,
-                }));
+                })
+            );
         } catch (err) {
             this.notifications.serverError(err);
         }

@@ -3,7 +3,6 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-import { format } from 'date-fns';
 
 export default class ManagementIssuesIndexNewController extends Controller {
     @service issueActions;

@@ -1,7 +1,7 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
+import { action, set } from '@ember/object';
 import { isArray } from '@ember/array';
 import { renderCompleted, waitForInsertedAndSized } from '@fleetbase/ember-ui/utils/dom';
 import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
@@ -98,7 +98,7 @@ export default class LeafletMapManagerService extends Service {
 
         // wait until inserted + non-zero size
         await renderCompleted();
-        const el = await waitForInsertedAndSized(getContainer, { timeoutMs });
+        await waitForInsertedAndSized(getContainer, { timeoutMs });
 
         // tell Leaflet to re-measure, then give it one paint
         this.map.invalidateSize(false);
@@ -220,6 +220,7 @@ export default class LeafletMapManagerService extends Service {
     }
 
     /** routing methods */
+    /* eslint-disable no-empty */
     async addRoutingControl(waypoints, options = {}) {
         if (!isArray(waypoints) || waypoints.length === 0) return;
 
@@ -296,6 +297,7 @@ export default class LeafletMapManagerService extends Service {
         return this.addRoutingControl(waypoints, options);
     }
 
+    /* eslint-disable no-empty */
     removeRoutingControl(routingControl, options = {}) {
         return new Promise((resolve) => {
             let removed = false;
@@ -322,6 +324,7 @@ export default class LeafletMapManagerService extends Service {
         });
     }
 
+    /* eslint-disable no-empty */
     forceRemoveRoutingControl({ routingControl, filter } = {}) {
         if (!this.map) return;
 
@@ -357,6 +360,7 @@ export default class LeafletMapManagerService extends Service {
         this.routingControl = null;
     }
 
+    /* eslint-disable no-empty */
     #tagRoutingControl(routingControl, tag) {
         // keep the tag on the control
         routingControl._routingTag = tag;

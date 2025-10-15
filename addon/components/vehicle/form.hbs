@@ -85,7 +85,7 @@
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
-                    @onChange={{fn (mut @resource.driver)}}
+                    @onChange={{this.assignDriver}}
                     @permission="fleet-ops assign-driver-for vehicle"
                     as |model|
                 >

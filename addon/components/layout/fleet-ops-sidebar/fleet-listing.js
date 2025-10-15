@@ -2,7 +2,6 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 
 export default class LayoutFleetOpsSidebarFleetListingComponent extends Component {
@@ -81,14 +80,19 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
         return { style };
     }
 
+    /* eslint-disable no-empty */
     @action async onVehicleClicked(vehicle) {
         try {
             await this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } });
         } catch {}
 
-        this.universe.one('fleet-ops.live-map.on-loaded', () => {
+        if (this.leafletMapManager._livemap?.isReady()) {
             this.focusVehicleOnMap(vehicle);
-        });
+        } else {
+            this.universe.one('fleet-ops.live-map.on-loaded', () => {
+                this.focusVehicleOnMap(vehicle);
+            });
+        }
 
         if (typeof this.args.onFocusVehicle === 'function') {
             this.args.onFocusVehicle(vehicle);

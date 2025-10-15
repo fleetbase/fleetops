@@ -6,7 +6,6 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { next } from '@ember/runloop';
-import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 import lowercase from 'ember-cli-string-helpers/utils/lowercase';
 import generateUUID from '@fleetbase/ember-core/utils/generate-uuid';
@@ -866,7 +865,6 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         contextComponentCallback(this, 'onContextChanged', this._createContextualActivity(activity));
         this.resourceContextPanel.open({
             content: 'activity/form',
-            title: 'Create new activity',
             title: this.intl.t('common.create-new-resource', { resource: lowercase(this.intl.t('resource.activity')) }),
             panelContentClass: 'py-2 px-4',
             resource: activity,

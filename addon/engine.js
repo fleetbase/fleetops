@@ -6,12 +6,11 @@ import services from '@fleetbase/ember-core/exports/services';
 import NavigatorAppConfigComponent from './components/admin/navigator-app';
 import WidgetFleetOpsKeyMetricsComponent from './components/widget/fleet-ops-key-metrics';
 import AdminAvatarManagementComponent from './components/admin/avatar-management';
-// import CustomerOrdersComponent from './components/customer/orders';
-// import CustomerAdminSettingsComponent from './components/customer/admin-settings';
 import OrderTrackingLookupComponent from './components/order-tracking-lookup';
 import { RoutingControl } from './services/leaflet-routing-control';
 import { OSRMv1 } from '@fleetbase/leaflet-routing-machine';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
+import setupCustomerPortal from './utils/setup-customer-portal';
 
 const { modulePrefix } = config;
 const externalRoutes = ['console', 'extensions'];
@@ -138,12 +137,7 @@ export default class FleetOpsEngine extends Engine {
             'fleet-ops:template:settings:routing',
         ]);
 
-        // universe.afterBoot(function (universe) {
-        //     universe.registerMenuItems('customer-portal:sidebar', [
-        //         universe._createMenuItem('Orders', 'customer-portal.portal.virtual', { icon: 'boxes-packing', component: CustomerOrdersComponent }),
-        //     ]);
-        //     universe.registerRenderableComponent('@fleetbase/customer-portal-engine', 'customer-portal:admin-settings', CustomerAdminSettingsComponent);
-        // });
+        setupCustomerPortal(app, engine, universe);
     };
 }
 

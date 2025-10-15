@@ -2,51 +2,49 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { later } from '@ember/runloop';
+import { isArray } from '@ember/array';
+import { debug } from '@ember/debug';
+import { next } from '@ember/runloop';
+import { task, timeout } from 'ember-concurrency';
 
 export default class GlobalSearchComponent extends Component {
     @service store;
+    @service globalSearch;
+    @service orderActions;
     @tracked results = [];
-    @tracked isLoading;
+    @tracked query = '';
 
     @action setupComponent(element) {
-        later(
-            this,
-            () => {
-                element.querySelector('input').focus();
-            },
-            300
-        );
+        next(() => {
+            element.querySelector('input').focus();
+        });
     }
 
-    @action search(event) {
-        const { target } = event;
-        const { value } = target;
+    @action onInput(e) {
+        this.search.perform(e.target.value);
+    }
 
-        if (!value) {
+    @action onKeydown(e) {
+        if (e.key === 'Escape') this.globalSearch.hide();
+    }
+
+    // for now we only search and display orders but in the future it will perform
+    // system wide resource search
+    @task({ restartable: true }) *search() {
+        yield timeout(300);
+
+        const query = this.query;
+        if (!query) {
             this.results = [];
             return;
         }
 
-        this.isLoading = true;
-
-        this.store
-            .query('order', { query: value })
-            .then((orders) => {
-                this.results = orders;
-            })
-            .finally(() => {
-                this.isLoading = false;
-            });
-    }
-
-    @action onAction(actionName, ...params) {
-        if (typeof this[actionName] === 'function') {
-            this[actionName](...params);
-        }
-
-        if (typeof this.args[actionName] === 'function') {
-            this.args[actionName](...params);
+        try {
+            const results = yield this.store.query('order', { query });
+            this.results = isArray(results) ? results : [];
+        } catch (err) {
+            debug('Search failed: ' + err.message);
+            this.results = [];
         }
     }
 }

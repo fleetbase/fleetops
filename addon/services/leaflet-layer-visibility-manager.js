@@ -19,6 +19,7 @@ export default class LeafletLayerVisibilityService extends Service {
     }
 
     /** Hide popups/tooltips and remember whether they were open */
+    /* eslint-disable no-empty */
     #hideOverlays(layer, remember = true) {
         next(() => {
             // Safely fetch tooltip/popup (may be undefined)
@@ -228,7 +229,6 @@ export default class LeafletLayerVisibilityService extends Service {
 
     registerLayer(category, layer, { id, hidden = false } = {}) {
         if (!this.map || !layer) return;
-        const { paneName } = this.ensurePane(category) || {};
 
         // keep registry (same as you had)
         if (!this.#byCategory.has(category)) this.#byCategory.set(category, new Set());

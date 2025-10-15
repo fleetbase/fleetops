@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
+import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 import titleize from 'ember-cli-string-helpers/utils/titleize';
 
@@ -58,6 +59,7 @@ export default class OrderKanbanComponent extends Component {
         this.loadStatuses.perform();
     }
 
+    /* eslint-disable no-unused-vars */
     @action async handleCardMove(card, targetColumnId, targetPosition, sourceColumnId) {
         // work against the array the UI renders from
         const order = this.orders.find((o) => o.id === card.id);

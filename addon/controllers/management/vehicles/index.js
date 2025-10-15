@@ -48,6 +48,7 @@ export default class ManagementVehiclesIndexController extends Controller {
     @tracked layout = this.appCache.get('fleetops:vehicles:layout', 'table');
 
     /** action buttons */
+    /* eslint-disable ember/no-side-effects */
     get actionButtons() {
         return [
             {

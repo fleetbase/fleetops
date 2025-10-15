@@ -1,9 +1,7 @@
 import Component from '@glimmer/component';
-import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action, get } from '@ember/object';
-import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 
 export default class OrderFormRouteComponent extends Component {

@@ -186,6 +186,10 @@ export default class MapLeafletLiveMapComponent extends Component {
         }
     }
 
+    isReady() {
+        return this.ready === true;
+    }
+
     #setMap(map) {
         set(map, 'livemap', this);
         this.map = map;

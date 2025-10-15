@@ -13,15 +13,20 @@ export default class VehicleFormComponent extends Component {
     @tracked statusOptions = ['active', 'pending'];
 
     @action updateAvatarUrl(option) {
-        if (option.key === 'custom_avatar') {
-            this.vehicle.avatar_url = option.value;
-        } else {
-            this.vehicle.avatar_url = [option.value];
-        }
+        this.args.resource.avatar_url = option.key === 'custom_avatar' ? option.value : [option.value];
     }
 
     @action updateSelectedImage(url) {
-        this.vehicle.avatar_url = url;
+        this.args.resource.avatar_url = url;
+    }
+
+    @action assignDriver(driver) {
+        this.args.resource.driver = driver;
+        // trigger modified attributes via meta
+        const meta = this.args.resource.meta ?? {};
+        this.args.resource.meta = {
+            ...meta,
+        };
     }
 
     @task *handlePhotoUpload(file) {

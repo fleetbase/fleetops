@@ -1,7 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
 export default class OrderDetailsActivityComponent extends Component {
@@ -10,6 +9,7 @@ export default class OrderDetailsActivityComponent extends Component {
     @service intl;
     @tracked layout = this.appCache.get('fleetops:order:activity:layout', 'timeline');
 
+    /* eslint-disable ember/no-side-effects */
     get actionButtons() {
         return [
             {

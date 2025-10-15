@@ -1,7 +1,9 @@
+import Service from '@ember/service';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point as turfPoint, polygon as turfPolygon } from '@turf/helpers';
 
 const L = window.leaflet || window.L;
+
 export default class LeafletMapManagerService extends Service {
     #restrictionPolyLayer = null; // L.Polygon the user must stay inside
     #restrictionPolyTurf = null; // turf polygon for fast tests

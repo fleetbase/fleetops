@@ -2,6 +2,8 @@ export function initialize() {
     let waitForLeaflet = setInterval(() => {
         let leafletLoaded = window.L !== undefined;
         if (leafletLoaded) {
+            clearInterval(waitForLeaflet);
+
             window.L.Bounds.prototype.intersects = function (bounds) {
                 var min = this.min,
                     max = this.max,

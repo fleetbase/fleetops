@@ -9,6 +9,7 @@ export default class OrderDetailsNotesComponent extends Component {
     @service notifications;
     @tracked isEditing = false;
 
+    /* eslint-disable ember/no-side-effects */
     get actionButtons() {
         return [
             {

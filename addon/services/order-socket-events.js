@@ -62,6 +62,7 @@ export default class OrderSocketEventsService extends Service {
         return { stop: () => this.stop(channelId) };
     }
 
+    /* eslint-disable no-empty */
     async stop(key) {
         const channelId = typeof key === 'string' ? key : `order.${key?.public_id}`;
         const sub = this.subs.get(channelId);
@@ -94,6 +95,7 @@ export default class OrderSocketEventsService extends Service {
         }
     }
 
+    /* eslint-disable no-unused-vars */
     async #watchReconnect(channelId) {
         const sub = this.subs.get(channelId);
         if (!sub?.isActive) return;
@@ -225,6 +227,7 @@ export default class OrderSocketEventsService extends Service {
     }
 
     /** Stop the company-level listener */
+    /* eslint-disable no-empty */
     async stopCompany() {
         const sub = this._company;
         if (!sub) return;

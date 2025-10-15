@@ -22,14 +22,19 @@ export default class AnalyticsReportsIndexEditController extends Controller {
             yield report.validate();
 
             try {
-                const result = yield report.execute();
+                const result = yield report.executeQuery();
                 report.fillResult(result);
 
                 yield report.save();
                 this.overlay?.close();
 
                 yield this.hostRouter.transitionTo('console.fleet-ops.analytics.reports.index.details', report);
-                this.notifications.success('Report updated successfully');
+                this.notifications.success(
+                    this.intl.t('common.resource-updated-success', {
+                        resource: this.intl.t('resource.report'),
+                        resourceName: report.title,
+                    })
+                );
             } catch (err) {
                 this.notifications.serverError(err);
             }
@@ -60,9 +65,9 @@ export default class AnalyticsReportsIndexEditController extends Controller {
 
     #confirmContinueWithUnsavedChanges(report, options = {}) {
         return this.modalsManager.confirm({
-            title: this.intl.t('fleet-ops.management.reports.index.edit.title'),
-            body: this.intl.t('fleet-ops.management.reports.index.edit.body'),
-            acceptButtonText: this.intl.t('fleet-ops.management.reports.index.edit.button'),
+            title: this.intl.t('common.continue-without-saving'),
+            body: this.intl.t('common.continue-without-saving-prompt', { resource: this.intl.t('resource.report') }),
+            acceptButtonText: this.intl.t('common.continue'),
             confirm: async () => {
                 report.rollbackAttributes();
                 await this.hostRouter.transitionTo('console.fleet-ops.analytics.reports.index.details', report);

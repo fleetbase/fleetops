@@ -1,9 +1,6 @@
 import Service, { inject as service } from '@ember/service';
-import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { debug } from '@ember/debug';
-import { next } from '@ember/runloop';
-import { task } from 'ember-concurrency';
 import { createGeoJsonFromLayer } from '../utils/leaflet-to-geojson';
 import toMultiPolygon from '../utils/to-multi-polygon';
 
@@ -149,6 +146,7 @@ export default class GeofenceService extends Service {
         });
     }
 
+    /* eslint-disable no-empty */
     async #editPolygonLayer(originalLayer, { focusBounds = null } = {}) {
         const map = this.leafletMapManager.map;
         const draw = this.leafletMapManager.drawControl;

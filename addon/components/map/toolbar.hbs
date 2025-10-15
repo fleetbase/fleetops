@@ -33,7 +33,7 @@
                 type="button"
                 id="map-toolbar-search-button"
                 class="toolbar-button {{if unauthorized 'unauthorized'}}"
-                {{on "click" this.toggleSearch}}
+                {{on "click" this.globalSearch.toggle}}
                 disabled={{unauthorized}}
             >
                 <FaIcon @icon="search" />

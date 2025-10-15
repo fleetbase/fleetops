@@ -18,7 +18,7 @@ importers:
         specifier: latest
         version: 0.3.5(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(@glimmer/component@1.1.2(@babel/core@7.27.1))(@glimmer/tracking@1.1.2)(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(postcss@8.5.3)(rollup@2.79.2)(tracked-built-ins@3.4.0(@babel/core@7.27.1))(webpack@5.99.8)
       '@fleetbase/fleetops-data':
-        specifier: latest
+        specifier: ^0.1.20
         version: 0.1.20(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)
       '@fleetbase/leaflet-routing-machine':
         specifier: ^3.2.17

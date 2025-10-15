@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { debug } from '@ember/debug';
 
 export default class OrderDetailsRouteComponent extends Component {
     @service orderActions;

@@ -612,6 +612,9 @@ order:
     current-eta: Current ETA
     ect: ECT
     current-destination: Current Destination
+    no-service-quotes: No service quotes.
+    input-order-routes: Input order route to view service quotes.
+    service-quote-info: Select a real time service quote to apply to this order. Once a quote is applied to the order, it will become a purchased rate. Transactions will be tracked within the Fleetbase ledger.
   prompts:
     update-details-success: '{orderId} details has been updated.'
     route-error: Route optimization failed, check route entry and try again.

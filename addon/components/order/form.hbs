@@ -3,6 +3,7 @@
         {{yield
             (hash
                 Details=(component "order/form/details" resource=@resource)
+                CustomFields=(component "order/form/custom-fields" resource=@resource customFields=@customFields)
                 Route=(component "order/form/route" resource=@resource)
                 RegistryYield=(component "registry-yield" registry="fleet-ops:component:order:form" order=@resource)
                 Payload=(component "order/form/payload" resource=@resource)

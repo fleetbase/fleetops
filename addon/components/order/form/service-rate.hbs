@@ -42,14 +42,10 @@
                 </div>
                 {{#if this.getServiceQuotes.isRunning}}
                     <div class="flex items-center justify-center py-5">
-                        <Spinner
-                            class="text-sm dark:text-gray-100 flex flex-row items-center"
-                            @iconClass="mr-2"
-                            @loadingMessage={{t "order.fields.loading-message"}}
-                        />
+                        <Spinner class="text-sm dark:text-gray-100 flex flex-row items-center" @iconClass="mr-2" @loadingMessage={{t "order.fields.loading-message"}} />
                     </div>
                 {{else}}
-                    <InfoBlock class="my-3" @text={{t "order.fields.info-text"}} />
+                    <InfoBlock class="my-3" @text={{t "order.fields.service-quote-info"}} />
                     <div class="radio-group-condensed -space-y-px">
                         {{#each this.serviceQuotes as |serviceQuote|}}
                             <div class="radio-group-item shadow-sm flex-col pl-0i pr-0i {{if (eq @resource.service_quote_uuid serviceQuote.uuid) 'is-checked'}}">
@@ -102,11 +98,7 @@
                             <InfoBlock
                                 class="my-2 px-4 py-1.5 warning"
                                 @blockClass="flex flex-row items-center"
-                                @text={{if
-                                    @resource.payload.payloadCoordinates.length
-                                    (t "order.fields.no-service-info-text")
-                                    (t "order.fields.input-order-info-text")
-                                }}
+                                @text={{if @resource.payload.payloadCoordinates.length (t "order.fields.no-service-quotes") (t "order.fields.input-order-routes")}}
                             />
                         {{/each}}
                     </div>

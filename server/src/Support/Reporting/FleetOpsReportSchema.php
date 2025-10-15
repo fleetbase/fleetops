@@ -24,17 +24,8 @@ class FleetOpsReportSchema implements ReportSchema
         // Register Vehicles table
         $registry->registerTable($this->createVehiclesTable());
 
-        // Register Payloads table
-        $registry->registerTable($this->createPayloadsTable());
-
         // Register Places table
         $registry->registerTable($this->createPlacesTable());
-
-        // Register Entities table
-        $registry->registerTable($this->createEntitiesTable());
-
-        // Register Waypoints table
-        $registry->registerTable($this->createWaypointsTable());
 
         // Register Contacts table
         $registry->registerTable($this->createContactsTable());
@@ -191,22 +182,18 @@ class FleetOpsReportSchema implements ReportSchema
             ->relationships([
                 // Auto-join relationships for seamless access
                 Relationship::hasAutoJoin('payload', 'payloads')
-                    ->label('Order Payload')
+                    ->label('Payload')
                     ->localKey('payload_uuid')
                     ->foreignKey('uuid')
-                    ->columns([
-                        Column::make('type', 'string')->label('Payload Type'),
-                        Column::make('pickup_name', 'string')->label('Pickup Name'),
-                        Column::make('dropoff_name', 'string')->label('Dropoff Name'),
-                    ])
                     ->with([
                         Relationship::hasAutoJoin('pickup', 'places')
-                            ->label('Pickup Location')
+                            ->label('Pickup')
                             ->localKey('pickup_uuid')
                             ->foreignKey('uuid')
                             ->columns([
                                 Column::make('name', 'string')->label('Name'),
                                 Column::make('street1', 'string')->label('Street'),
+                                Column::make('street2', 'string')->label('Street 2'),
                                 Column::make('city', 'string')->label('City'),
                                 Column::make('province', 'string')->label('Province'),
                                 Column::make('postal_code', 'string')->label('Postal Code'),
@@ -214,12 +201,13 @@ class FleetOpsReportSchema implements ReportSchema
                             ]),
 
                         Relationship::hasAutoJoin('dropoff', 'places')
-                            ->label('Dropoff Location')
+                            ->label('Dropoff')
                             ->localKey('dropoff_uuid')
                             ->foreignKey('uuid')
                             ->columns([
                                 Column::make('name', 'string')->label('Name'),
                                 Column::make('street1', 'string')->label('Street'),
+                                Column::make('street2', 'string')->label('Street 2'),
                                 Column::make('city', 'string')->label('City'),
                                 Column::make('province', 'string')->label('Province'),
                                 Column::make('postal_code', 'string')->label('Postal Code'),
@@ -228,18 +216,29 @@ class FleetOpsReportSchema implements ReportSchema
                     ]),
 
                 Relationship::hasAutoJoin('driver_assigned', 'drivers')
-                    ->label('Assigned Driver')
+                    ->label('Driver')
                     ->localKey('driver_assigned_uuid')
                     ->foreignKey('uuid')
                     ->columns([
-                        Column::make('name', 'string')->label('Driver Name'),
-                        Column::make('email', 'string')->label('Email'),
-                        Column::make('phone', 'string')->label('Phone'),
+                        Column::make('drivers_license_number', 'string')->label('License Number'),
+                        Column::make('country', 'string')->label('Country'),
+                        Column::make('city', 'string')->label('City'),
                         Column::make('status', 'string')->label('Status'),
+                        Column::make('online', 'boolean')->label('Online'),
+                    ])->with([
+                        Relationship::hasAutoJoin('user', 'users')
+                            ->label('Driver') 
+                            ->localKey('user_uuid')
+                            ->foreignKey('uuid')
+                            ->columns([
+                                Column::make('name', 'string')->label('Name'),
+                                Column::make('email', 'string')->label('Email'),
+                                Column::make('phone', 'string')->label('Phone'),
+                            ]),
                     ]),
 
                 Relationship::hasAutoJoin('vehicle_assigned', 'vehicles')
-                    ->label('Assigned Vehicle')
+                    ->label('Vehicle')
                     ->localKey('vehicle_assigned_uuid')
                     ->foreignKey('uuid')
                     ->columns([
@@ -247,6 +246,9 @@ class FleetOpsReportSchema implements ReportSchema
                         Column::make('model', 'string')->label('Model'),
                         Column::make('year', 'integer')->label('Year'),
                         Column::make('plate_number', 'string')->label('Plate Number'),
+                        Column::make('vin', 'string')->label('VIN'),
+                        Column::make('serial_number', 'string')->label('Serial Number'),
+                        Column::make('call_sign', 'string')->label('Call Sign'),
                     ]),
 
                 Relationship::hasAutoJoin('customer', 'contacts')
@@ -254,21 +256,21 @@ class FleetOpsReportSchema implements ReportSchema
                     ->localKey('customer_uuid')
                     ->foreignKey('uuid')
                     ->columns([
-                        Column::make('name', 'string')->label('Customer Name'),
+                        Column::make('name', 'string')->label('Name'),
                         Column::make('email', 'string')->label('Email'),
                         Column::make('phone', 'string')->label('Phone'),
-                        Column::make('type', 'string')->label('Contact Type'),
+                        Column::make('type', 'string')->label('Type'),
                     ]),
 
                 Relationship::hasAutoJoin('facilitator', 'vendors')
-                    ->label('Service Provider')
+                    ->label('Faciliator')
                     ->localKey('facilitator_uuid')
                     ->foreignKey('uuid')
                     ->columns([
-                        Column::make('name', 'string')->label('Provider Name'),
+                        Column::make('name', 'string')->label('Name'),
                         Column::make('email', 'string')->label('Email'),
                         Column::make('phone', 'string')->label('Phone'),
-                        Column::make('type', 'string')->label('Provider Type'),
+                        Column::make('type', 'string')->label('Type'),
                     ]),
             ]);
     }
@@ -353,7 +355,7 @@ class FleetOpsReportSchema implements ReportSchema
             ])
             ->relationships([
                 Relationship::hasAutoJoin('current_vehicle', 'vehicles')
-                    ->label('Current Vehicle')
+                    ->label('Vehicle')
                     ->localKey('current_vehicle_uuid')
                     ->foreignKey('uuid')
                     ->columns([
@@ -451,87 +453,13 @@ class FleetOpsReportSchema implements ReportSchema
             ])
             ->relationships([
                 Relationship::hasAutoJoin('current_driver', 'drivers')
-                    ->label('Current Driver')
+                    ->label('Driver')
                     ->localKey('current_driver_uuid')
                     ->foreignKey('uuid')
                     ->columns([
                         Column::make('name', 'string')->label('Driver Name'),
                         Column::make('email', 'string')->label('Driver Email'),
                         Column::make('phone', 'string')->label('Driver Phone'),
-                    ]),
-            ]);
-    }
-
-    /**
-     * Create the Payloads table definition.
-     */
-    protected function createPayloadsTable(): Table
-    {
-        return Table::make('payloads')
-            ->label('Payloads')
-            ->description('Order payloads and route information')
-            ->category('Operations')
-            ->extension('fleet-ops')
-            ->excludeColumns(['uuid', 'deleted_at', 'meta'])
-            ->maxRows(50000)
-            ->columns([
-                Column::make('public_id', 'string')
-                    ->label('Payload ID')
-                    ->description('Public payload identifier')
-                    ->searchable()
-                    ->filterable()
-                    ->sortable(),
-
-                Column::make('type', 'string')
-                    ->label('Type')
-                    ->description('Payload type')
-                    ->filterable()
-                    ->aggregatable(),
-
-                Column::make('pickup_name', 'string')
-                    ->label('Pickup Name')
-                    ->description('Pickup location name')
-                    ->searchable()
-                    ->filterable(),
-
-                Column::make('dropoff_name', 'string')
-                    ->label('Dropoff Name')
-                    ->description('Dropoff location name')
-                    ->searchable()
-                    ->filterable(),
-
-                Column::make('created_at', 'datetime')
-                    ->label('Created At')
-                    ->description('When the payload was created')
-                    ->filterable()
-                    ->sortable()
-                    ->aggregatable(),
-            ])
-            ->relationships([
-                Relationship::hasAutoJoin('pickup', 'places')
-                    ->label('Pickup Location')
-                    ->localKey('pickup_uuid')
-                    ->foreignKey('uuid')
-                    ->columns([
-                        Column::make('name', 'string')->label('Name'),
-                        Column::make('street1', 'string')->label('Street'),
-                        Column::make('city', 'string')->label('City'),
-                        Column::make('province', 'string')->label('Province'),
-                        Column::make('postal_code', 'string')->label('Postal Code'),
-                        Column::make('country', 'string')->label('Country'),
-                    ]),
-
-                Relationship::hasAutoJoin('dropoff', 'places')
-                    ->label('Dropoff Location')
-                    ->localKey('dropoff_uuid')
-                    ->foreignKey('uuid')
-                    ->columns([
-                        Column::make('name', 'string')->label('Name'),
-                        Column::make('street1', 'string')->label('Street'),
-                        Column::make('city', 'string')->label('City'),
-                        Column::make('province', 'string')->label('Province'),
-                        Column::make('postal_code', 'string')->label('Postal Code'),
-                        Column::make('country', 'string')->label('Country'),
                     ]),
             ]);
     }
@@ -601,124 +529,6 @@ class FleetOpsReportSchema implements ReportSchema
                     ->aggregatable(),
             ]);
     }
-
-    /**
-     * Create the Entities table definition.
-     */
-    protected function createEntitiesTable(): Table
-    {
-        return Table::make('entities')
-            ->label('Entities')
-            ->description('Packages, containers, passengers and other entities')
-            ->category('Operations')
-            ->extension('fleet-ops')
-            ->excludeColumns(['uuid', 'deleted_at', 'meta'])
-            ->maxRows(100000)
-            ->columns([
-                Column::make('public_id', 'string')
-                    ->label('Entity ID')
-                    ->description('Public entity identifier')
-                    ->searchable()
-                    ->filterable()
-                    ->sortable(),
-
-                Column::make('name', 'string')
-                    ->label('Name')
-                    ->description('Entity name or description')
-                    ->searchable()
-                    ->filterable(),
-
-                Column::make('type', 'string')
-                    ->label('Type')
-                    ->description('Entity type (package, container, passenger, etc.)')
-                    ->filterable()
-                    ->aggregatable(),
-
-                Column::make('weight', 'decimal')
-                    ->label('Weight')
-                    ->description('Entity weight')
-                    ->aggregatable()
-                    ->sortable(),
-
-                Column::make('length', 'decimal')
-                    ->label('Length')
-                    ->description('Entity length')
-                    ->aggregatable(),
-
-                Column::make('width', 'decimal')
-                    ->label('Width')
-                    ->description('Entity width')
-                    ->aggregatable(),
-
-                Column::make('height', 'decimal')
-                    ->label('Height')
-                    ->description('Entity height')
-                    ->aggregatable(),
-
-                Column::make('created_at', 'datetime')
-                    ->label('Created At')
-                    ->description('When the entity was created')
-                    ->filterable()
-                    ->sortable()
-                    ->aggregatable(),
-            ]);
-    }
-
-    /**
-     * Create the Waypoints table definition.
-     */
-    protected function createWaypointsTable(): Table
-    {
-        return Table::make('waypoints')
-            ->label('Waypoints')
-            ->description('Route waypoints and stops')
-            ->category('Operations')
-            ->extension('fleet-ops')
-            ->excludeColumns(['uuid', 'deleted_at', 'meta'])
-            ->maxRows(200000)
-            ->columns([
-                Column::make('public_id', 'string')
-                    ->label('Waypoint ID')
-                    ->description('Public waypoint identifier')
-                    ->searchable()
-                    ->filterable()
-                    ->sortable(),
-
-                Column::make('type', 'string')
-                    ->label('Type')
-                    ->description('Waypoint type (pickup, dropoff, waypoint)')
-                    ->filterable()
-                    ->aggregatable(),
-
-                Column::make('order', 'integer')
-                    ->label('Order')
-                    ->description('Waypoint order in route')
-                    ->sortable()
-                    ->aggregatable(),
-
-                Column::make('created_at', 'datetime')
-                    ->label('Created At')
-                    ->description('When the waypoint was created')
-                    ->filterable()
-                    ->sortable()
-                    ->aggregatable(),
-            ])
-            ->relationships([
-                Relationship::hasAutoJoin('place', 'places')
-                    ->label('Location')
-                    ->localKey('place_uuid')
-                    ->foreignKey('uuid')
-                    ->columns([
-                        Column::make('name', 'string')->label('Name'),
-                        Column::make('street1', 'string')->label('Street'),
-                        Column::make('city', 'string')->label('City'),
-                        Column::make('province', 'string')->label('Province'),
-                        Column::make('postal_code', 'string')->label('Postal Code'),
-                        Column::make('country', 'string')->label('Country'),
-                    ]),
-            ]);
-    }
-
     /**
      * Create the Contacts table definition.
      */

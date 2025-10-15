@@ -1,5 +1,3 @@
-import { isArray } from '@ember/array';
-import { next } from '@ember/runloop';
 const L = window.leaflet || window.L;
 
 export function findLayer(map, findCallback) {

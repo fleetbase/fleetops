@@ -23,10 +23,12 @@ export default class ManagementVehiclesIndexEditController extends Controller {
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details', vehicle);
-            this.notifications.success(this.intl.t('common.resource-updated-success', {
+            this.notifications.success(
+                this.intl.t('common.resource-updated-success', {
                     resource: this.intl.t('resource.vehicle'),
                     resourceName: vehicle.display_name,
-                }));
+                })
+            );
         } catch (err) {
             this.notifications.serverError(err);
         }

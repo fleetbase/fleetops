@@ -23,10 +23,12 @@ export default class ManagementIssuesIndexEditController extends Controller {
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.issues.index.details', issue);
-            this.notifications.success(this.intl.t('common.resource-updated-success', {
+            this.notifications.success(
+                this.intl.t('common.resource-updated-success', {
                     resource: this.intl.t('resource.issue'),
                     resourceName: issue.title ?? issue.public_id,
-                }));
+                })
+            );
         } catch (err) {
             this.notifications.serverError(err);
         }

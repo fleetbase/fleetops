@@ -286,7 +286,7 @@ export default class OrderConfigManagerComponent extends Component {
      * @action
      */
     @action onEdit() {
-        const isActionOverrided = contextComponentCallback(this, 'onEdit');
+        return contextComponentCallback(this, 'onEdit');
     }
 
     /**

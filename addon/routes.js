@@ -17,7 +17,6 @@ export default buildRoutes(function () {
         this.route('orders', { path: '/' }, function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');
-                this.route('view', { path: '/:public_id' });
                 this.route('details', { path: '/:public_id' }, function () {
                     this.route('index', { path: '/' });
                 });

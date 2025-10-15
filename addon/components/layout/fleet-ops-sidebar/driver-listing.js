@@ -2,7 +2,6 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 
 export default class LayoutFleetOpsSidebarDriverListingComponent extends Component {
@@ -128,14 +127,19 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
         }
     }
 
+    /* eslint-disable no-empty */
     @action async onDriverClicked(driver) {
         try {
             await this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } });
         } catch {}
 
-        this.universe.one('fleet-ops.live-map.on-loaded', () => {
+        if (this.leafletMapManager._livemap?.isReady()) {
             this.focusDriverOnMap(driver);
-        });
+        } else {
+            this.universe.one('fleet-ops.live-map.on-loaded', () => {
+                this.focusDriverOnMap(driver);
+            });
+        }
 
         if (typeof this.args.onFocusDriver === 'function') {
             this.args.onFocusDriver(driver);

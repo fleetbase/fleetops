@@ -761,7 +761,7 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-wrapper > .ord
 .customer-order-details-container,
 .customer-live-map-wrapper .customer-order-details-container {
     position: absolute;
-    z-index: 9999;
+    z-index: 1010;
     bottom: 0;
     top: 0;
     right: 0;
