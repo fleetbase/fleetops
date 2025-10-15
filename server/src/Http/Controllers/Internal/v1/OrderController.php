@@ -859,7 +859,7 @@ class OrderController extends FleetOpsController
                     ->whereIn('uuid', $configUuidsOnOrders)
                     ->get();
 
-                /** @var \Fleetbase\FleetOps\Models\OrderConfig $config */
+                /** @var OrderConfig $config */
                 foreach ($orderConfigs as $config) {
                     if (!method_exists($config, 'activities')) {
                         continue;

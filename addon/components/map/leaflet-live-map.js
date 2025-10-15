@@ -148,7 +148,6 @@ export default class MapLeafletLiveMapComponent extends Component {
             this.trigger('onLoaded', { map: this.map, data });
             this.ready = true;
         } catch (err) {
-            console.log(err);
             debug('Failed to load live map: ' + err.message);
         }
     }

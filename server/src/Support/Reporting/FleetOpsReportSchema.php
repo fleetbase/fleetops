@@ -227,7 +227,7 @@ class FleetOpsReportSchema implements ReportSchema
                         Column::make('online', 'boolean')->label('Online'),
                     ])->with([
                         Relationship::hasAutoJoin('user', 'users')
-                            ->label('Driver') 
+                            ->label('Driver')
                             ->localKey('user_uuid')
                             ->foreignKey('uuid')
                             ->columns([
@@ -529,6 +529,7 @@ class FleetOpsReportSchema implements ReportSchema
                     ->aggregatable(),
             ]);
     }
+
     /**
      * Create the Contacts table definition.
      */

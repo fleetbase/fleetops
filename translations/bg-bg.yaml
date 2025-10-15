@@ -1,0 +1,1799 @@
+fleet-ops:
+  extension-name: Fleet-Ops
+common:
+  proof-of-delivery: Доказателство за доставка
+  ad-hoc: Спонтанно
+  bulk-dispatch: Масово изпращане
+  dispatch-orders: Поръчки за изпращане
+  dispatch-order: Поръчка за изпращане
+  assign-driver: Назначаване на шофьор
+  no-driver-assigned: Няма назначен шофьор
+  details: Подробности
+  name: Име
+  title: Заглавие
+  email: Имейл
+  phone: Телефон
+  internal-id: Вътрешен ID
+  type: Тип
+  address: Адрес
+  create-order: Създаване на поръчка
+  coordinates: Координати
+  city: Град
+  country: Държава
+  status: Статус
+  upload-new-photo: Качване на нова снимка
+  resource-actions: Действия за {resource}
+  resource-location: Местоположение на {resource}
+  search-countries: Търсене на държави
+  select-resource-filter-by: Изберете {resource} за филтриране
+  table-view: Табличен изглед
+  grid-view: Мрежов изглед
+  livemap: Жива карта
+  tracking: Проследяване
+  activity: Активност
+  eta: Очаквано време на пристигане
+  position: Позиция
+  pos: POS
+  edit-address: Редактиране на адрес
+  new-address: Нов адрес
+  select-address: Избор на адрес
+menu:
+  operations: Операции
+  dashboard: Табло
+  orders: Поръчки
+  service-rates: Тарифни услуги
+  scheduler: Планиране
+  order-config: Настройки на поръчки
+  resources: Ресурси
+  drivers: Шофьори
+  vehicles: Превозни средства
+  fleets: Флотилии
+  vendors: Доставчици
+  contacts: Контакти
+  places: Места
+  fuel-reports: Доклади за гориво
+  issues: Проблеми
+  maintenance: Поддръжка
+  work-orders: Работни поръчки
+  equipment: Оборудване
+  parts: Части
+  connectivity: Свързаност
+  telematics: Телематика
+  devices: Устройства
+  sensors: Сензори
+  events: Събития
+  tracking: Проследяване
+  analytics: Анализи
+  reports: Доклади
+  settings: Настройки
+  navigator-app: Приложение Навигатор
+  payments: Плащания
+  notifications: Известия
+  routing: Маршрутизиране
+  custom-fields: Потребителски полета
+  order-board: Табло с поръчки
+resource:
+  asset: Актив
+  assets: Активи
+  activity: Дейност
+  activities: Дейности
+  contact: Контакт
+  contacts: Контакти
+  customer-contact: Контакт на клиент
+  customer-contacts: Контакти на клиенти
+  customer-vendor: Доставчик на клиент
+  customer-vendors: Доставчици на клиенти
+  customer: Клиент
+  customers: Клиенти
+  custom-entity: Потребителска единица
+  custom-entities: Потребителски единици
+  device-event: Събитие на устройство
+  device-events: Събития на устройства
+  device: Устройство
+  devices: Устройства
+  driver: Шофьор
+  drivers: Шофьори
+  entity: Единица
+  entities: Единици
+  equipment: Оборудване
+  equipments: Оборудвания
+  facilitator-contact: Контакт на посредник
+  facilitator-contacts: Контакти на посредници
+  facilitator-customer: Клиент на посредник
+  facilitator-customers: Клиенти на посредници
+  facilitator-integrated-vendor: Интегриран доставчик на посредник
+  facilitator-integrated-vendors: Интегрирани доставчици на фасилитатор
+  facilitator-vendor: Доставчик на фасилитатор
+  facilitator-vendors: Доставчици на фасилитатор
+  facilitator: Фасилитатор
+  facilitators: Фасилитатори
+  fleet-driver: Шофьор на автопарк
+  fleet-drivers: Шофьори на автопарк
+  fleet: Автопарк
+  fleets: Автопаркове
+  fuel-report: Доклад за гориво
+  fuel-reports: Доклади за гориво
+  integrated-vendor: Интегриран доставчик
+  integrated-vendors: Интегрирани доставчици
+  issue: Проблем
+  issues: Проблеми
+  maintenance: Поддръжка
+  maintenances: Поддръжки
+  order-config: Конфигурация на поръчка
+  order-configs: Конфигурации на поръчки
+  order: Поръчка
+  orders: Поръчки
+  part: Част
+  parts: Части
+  payload: Полезен товар
+  payloads: Полезни товари
+  place: Място
+  places: Места
+  purchase-rate: Покупна ставка
+  purchase-rates: Покупни ставки
+  route: Маршрут
+  routes: Маршрути
+  sensor: Сензор
+  sensors: Сензори
+  service-area: Област на обслужване
+  service-areas: Области на обслужване
+  service-quote-item: Артикул в оферта за услуга
+  service-quote-items: Артикули в оферти за услуги
+  service-quote: Оферта за услуга
+  service-quotes: Оферти за услуги
+  service-rate-fee: Такса за ставка на услуга
+  service-rate-fees: Такси за ставки на услуги
+  service-rate-parcel-fee: Такса за ставка на услуга за пратка
+  service-rate-parcel-fees: Такси за ставки на услуги за пратки
+  service-rate: Ставка на услуга
+  service-rates: Ставки на услуги
+  telematic: Телематичен
+  telematics: Телематика
+  tracking-number: Номер за проследяване
+  tracking-numbers: Номера за проследяване
+  tracking-status: Статус на проследяване
+  tracking-statuses: Статуси на проследяване
+  vehicle-device: Устройство за превозно средство
+  vehicle-devices: Устройства за превозни средства
+  vehicle: Превозно средство
+  vehicles: Превозни средства
+  vendor: Доставчик
+  vendors: Доставчици
+  warranty: Гаранция
+  warranties: Гаранции
+  waypoint: Контролна точка
+  waypoints: Контролни точки
+  work-order: Работна поръчка
+  work-orders: Работни поръчки
+  zone: Зона
+  zones: Зони
+order-status:
+  created: Създадено
+  ready: Готово
+  dispatched: Изпратено
+  started: Започнато
+  completed: Завършено
+  canceled: Отменено
+column:
+  address: Адрес
+  country: Държава
+  created-at: Създадено на
+  id: ID
+  internal-id: Вътрешен ID
+  name: Име
+  phone: Телефон
+  status: Статус
+  type: Тип
+  updated-at: Обновено на
+  vehicle: Превозно средство
+  vendor: Доставчик
+  created: Създадено
+  email: Имейл
+  title: Заглавие
+  updated: Обновено
+  fleet: Флот
+  license: Лиценз
+  active-manpower: Активен персонал
+  manpower: Персонал
+  parent-fleet: Главен флот
+  service-area: Област на обслужване
+  task: Задача
+  zone: Зона
+  driver: Шофьор
+  edit-fuel: Редактиране на гориво
+  odometer: Одометър
+  reporter: Докладчик
+  view: Преглед
+  volume: Обем
+  assignee: Назначен на
+  category: Категория
+  priority: Приоритет
+  city: Град
+  neighborhood: Квартал
+  postal-code: Пощенски код
+  state: Област
+  make: Марка
+  model: Модел
+  plate-number: Регистрационен номер
+  year: Година
+  website-url: Уебсайт URL
+  created-by: Създаден от
+  customer: Клиент
+  driver-assigned: Назначен шофьор
+  dropoff: Крайна точка
+  facilitator: Фасилитатор
+  items: Артикули
+  payload: Полезен товар
+  pickup: Начална точка
+  scheduled-at: Планирано за
+  tracking: Проследяване
+  transaction: Транзакция
+  updated-by: Обновено от
+  vehicle-assigned: Назначено превозно средство
+  service: Услуга
+  location: Местоположение
+  coordinates: Координати
+  current-job: Текуща задача
+  last-seen: Последно видян
+  place: Място
+map:
+  visibility-controls:
+    title: Контроли за видимост
+    hide-places: Скрий всички места
+    show-places: Покажи всички места
+    driver-controls: Контроли за шофьори
+    driver-visibility-controls: Контроли за видимост на шофьори
+    show-drivers: Покажи всички шофьори
+    hide-drivers: Скрий всички шофьори
+    show-online-drivers: Покажи само онлайн шофьори
+    show-offline-drivers: Покажи само офлайн шофьори
+    vehicle-controls: Контроли за превозни средства
+    vehicle-visibility-controls: Контроли за видимост на превозни средства
+    hide-vehicles: Скрий всички превозни средства
+    show-vehicles: Покажи всички превозни средства
+    show-online-vehicles: Покажи само онлайн превозни средства
+    show-offline-vehicles: Покажи само офлайн превозни средства
+  zones-panel:
+    title: Области на обслужване
+    create-service: Създаване на нова област за обслужване
+    show: Покажи всички области за обслужване
+    hide: Скрий всички обслужващи зони
+    action: Действия
+    focus: Фокус
+    focus-resource: 'Фокус: {resource}'
+    blur: Скрий обслужващата зона
+    blur-resource: 'Скрий: {resource}'
+    create-zone: Създай зона вътре
+    create-zone-inside: 'Създай зона: {serviceAreaName}'
+    edit-resource-boundaries: Редактирай границите на {resource}
+    edit-boundaries: 'Редактирай границите: {resource}'
+  toolbar:
+    create: Създай поръчка
+    view-order: Преглед на поръчки
+    view-service-area: Преглед на обслужващи зони
+    visibility: Контрол на видимостта
+    scope: Обхват
+activity:
+  form:
+    code: Код
+    code-help-text: Въведете уникален идентификатор, специфичен за тази дейност.
+    completes-order: Завършва поръчката
+    details: Подробности
+    details-help-text: Осигурете подробно описание на дейността за разбиране от крайния
+      потребител.
+    key: Ключ
+    key-help-text: '"Въведете ключ, използван за програмно вземане на решения. Този
+      ключ може да представлява една или няколко дейности с един и същ идентификатор.
+      Забележка: Този ключ не е задължително да е уникален."'
+    pod-method-placeholder: Изберете метод за доказателство за доставка
+    require-pod: Изисква доказателство за доставка
+    require-pod-help-text: Тази дейност изисква да бъде създадено доказателство, преди
+      да може да бъде приложена към поръчката.
+    select-pod-method: Метод за доказателство за доставка
+    status: Статус
+    status-help-text: Определете статуса, който се показва на крайния потребител,
+      когато тази дейност бъде задействана.
+    logic-builder:
+      activity-logic: Логика на дейността
+      activity-logic-help-text: Дефинирайте персонализирани логически условия, които
+        определят кога дейността става налична в работния процес. Тази функция ви
+        позволява да адаптирате потока въз основа на конкретни критерии, като гарантира,
+        че всяка дейност се задейства само когато нейните предварително зададени условия
+        са изпълнени.
+      activity-logic-add-logic-help-text: Създайте нов набор от условия, които ще
+        определят кога дейността трябва да бъде активирана. Кликнете тук, за да започнете
+        създаването на ново логическо правило.
+      activity-logic-select-logic-type-help-text: Изберете типа логика, която това
+        условие ще следва. Изберете 'If' за директно условие, 'And'/'Or' за сложни
+        условия или 'Not' за отричане на условие.
+      activity-logic-add-condition-help-text: Добавете конкретно изискване, което
+        трябва да бъде изпълнено в този логически набор. Използвайте това, за да уточните
+        допълнителни критерии, които контролират наличността на дейността.
+      field: Поле
+      value: Стойност
+      add-logic: Добави логика
+      types:
+        and: 'Логическо И: Вярно, ако всички условия са верни'
+        or: 'Логическо ИЛИ: Вярно, ако поне едно условие е вярно'
+        not: 'Логическо НЕ: Инвертира истинността на условието'
+        if: 'Условна логика: Изпълнява следващото действие, ако условието е вярно'
+      operators:
+        equal: Проверява дали две стойности са равни
+        not-equal: Проверява дали две стойности не са равни
+        greater-than: Проверява дали една стойност е по-голяма от друга
+        less-than: Проверява дали една стойност е по-малка от друга
+        greater-than-or-equal: Проверява дали една стойност е по-голяма или равна
+          на друга
+        less-than-or-equal: Проверява дали една стойност е по-малка или равна на друга
+        exists: Проверява дали поле или стойност съществува
+        has: Проверява дали обектът има конкретно свойство или дали колекцията съдържа
+          конкретен елемент
+        contains: Проверява дали низ съдържа друг низ или дали масив включва конкретен
+          елемент
+        begins-with: Проверява дали низ започва с определен подниз
+        ends-with: Проверява дали низът завършва със зададен подниз
+        in: Проверява дали стойността е в даден набор или диапазон
+        not-in: Проверява дали стойността не е в даден набор или диапазон
+        and: Логическо И, вярно ако и двата операнда са верни
+        or: Логическо ИЛИ, вярно ако поне един от операндите е верен
+        not: Логическо НЕ, обръща стойността на истинност
+    event-selector:
+      activity-events: Събития на активността
+      activity-events-select-to-fire: Изберете кои събития ще се активират при настъпване
+        на тази активност.
+      activity-events-select-events-info: Изберете конкретното събитие, което искате
+        да задействате в отговор на тази активност.
+      select-event-to-add: Изберете събитие за добавяне...
+      events:
+        order:
+          dispatched: Задейства се, когато поръчка е успешно изпратена.
+          failed: Задейства се, когато поръчката се провали поради грешка или изключение.
+          canceled: Задейства се, когато поръчка бъде отменена от потребител, шофьор
+            или системен процес.
+          completed: Задейства се, когато поръчка бъде завършена от шофьор или системен
+            процес.
+contact:
+  fields:
+    contact-details: Данни за контакт
+    upload-new-photo: Качване на нова снимка
+customer:
+  fields:
+    customer-details: Данни за клиента
+    select-address: Изберете адрес
+    new-address: Нов адрес
+    select-user: Изберете потребител
+    upload-new-photo: Качване на нова снимка
+    user-account: Потребителски акаунт
+    user-account-help-text: Всеки клиентски профил трябва да бъде свързан с конкретен
+      потребителски акаунт. Тази връзка е от съществено значение за обработка на процеса
+      на удостоверяване, като гарантира, че всеки клиент може сигурно да достъпва
+      и управлява своя профил и други услуги.
+custom-entity:
+  fields:
+    description: Описание
+    details: Подробности
+    entity-image: Изображение на обекта
+    height: Височина
+    height-text: Текст за височина
+    length: Дължина
+    length-text: Текст за дължина
+    measurements: Размери
+    name: Име
+    type: Тип
+    weight: Тегло
+    weight-text: Текст за тегло
+    width: Ширина
+    width-text: Текст за ширина
+driver:
+  fields:
+    avatar: Аватар
+    driver-details: Данни за шофьора
+    select-user: Изберете потребител
+    select-vehicle: Изберете превозно средство
+    upload-new-photo: Качване на нова снимка
+    user-account: Потребителски акаунт
+    user-account-help-text: Всеки профил на шофьор трябва да бъде свързан с конкретен
+      потребителски акаунт. Тази връзка е от съществено значение за обработка на процеса
+      на удостоверяване, като гарантира, че всеки шофьор може сигурно да достъпва
+      и управлява своя профил.
+    vendor: Доставчик
+    select-vendor: Изберете доставчик
+    driver-license: Шофьорска книжка
+    no-vehicle-assigned: Няма зададено превозно средство
+  actions:
+    assign-order: Присвояване на поръчка на шофьор
+    assign-vehicle: Присвояване на превозно средство на шофьор
+    locate-driver: Намери шофьора на картата
+device:
+  fields:
+    title: Детайли за устройството
+    device-name: Име на устройството
+    device-name-placeholder: Име на устройството
+    device-type: Тип устройство
+    device-type-placeholder: Изберете тип устройство
+    device-id: ID на устройството
+    device-id-placeholder: ID на устройството
+    device-provider: Доставчик на устройството
+    device-provider-placeholder: Доставчик на устройството
+    device-model: Модел на устройството
+    device-model-placeholder: Модел на устройството
+    manufacturer: Производител
+    manufacturer-placeholder: Производител
+    serial-number: Сериен номер
+    serial-number-placeholder: Сериен номер
+    device-location: Местоположение на устройството
+    device-location-placeholder: Местоположение на устройството
+    installation-date: Дата на инсталиране
+    installation-date-placeholder: Изберете дата на инсталиране
+    last-maintenance-date: Дата на последна поддръжка
+    last-maintenance-date-placeholder: Изберете дата на последна поддръжка
+    data-frequency: Честота на данните
+    data-frequency-placeholder: Честота на данните
+    status: Статус
+    status-placeholder: Изберете статус
+    telematic: Телематичен
+    telematic-placeholder: Изберете телематичен
+    warranty: Гаранция
+    warranty-placeholder: Изберете гаранция
+    notes: Бележки
+    notes-placeholder: Бележки
+entity:
+  fields:
+    declare: Декларирай
+    declare-text: Текст за декларация
+    description: Описание
+    description-text: Текст на описанието
+    height: Височина
+    height-text: Текст за височина
+    id-text: Текст за ID
+    length: Дължина
+    length-text: Текст за дължина
+    measurement-title: Заглавие на измерването
+    name-text: Текст за име
+    price: Цена
+    price-text: Текст за цена
+    price-title: Заглавие на цената
+    sale-price: Цена на разпродажба
+    sale-price-text: Текст за цена на разпродажба
+    sku: SKU
+    sku-text: Текст за SKU
+    weight: Тегло
+    weight-text: Текст за тегло
+    width: Ширина
+    width-text: Текст за ширина
+fleet:
+  fields:
+    fleet-details: Детайли за флота
+    fleet-name: Име на флота
+    parent-fleet: Главен флот
+    select-parent-fleet: Изберете главен флот, към който да се присвои този флот
+    select-service: Изберете обслужваща зона, към която да се присвои флотът
+    select-status: Изберете статус
+    select-status-fleet: Изберете статуса на флота.
+    select-vendor: Изберете доставчик, към който да се присвои флотът
+    select-zone: Изберете зона, към която да се присвои флотът
+    service-title: Присвояване към обслужваща зона
+    task-mission-title: Задача/ Мисия
+    task-text: Дайте описание на основната задача или мисия на този флот, ако е приложимо.
+    zone-title: Присвояване към зона
+    active-manpower: Активен персонал
+    task: Задача
+  driver-listing:
+    search-driver: Търсене на шофьори във флота
+    add-driver: Добавяне на шофьор към флота
+    loading-message: Зареждане на шофьори във флота...
+  vehicle-listing:
+    search-vehicle: Търсене на превозно средство във флота
+    add-vehicle: Добавяне на превозно средство към флота
+    loading-message: Зареждане на превозни средства във флота...
+  actions:
+    assign-driver: Присвояване на шофьор към флота
+fuel-report:
+  fields:
+    details: Детайли за доклада за гориво
+    reporter: Докладчик
+    select-reporter: Изберете докладчик
+    fuel-cost: Цена на горивото
+    odometer: Одометър
+    select-volume-help-text: Изберете мерната единица и обема на горивото за докладване.
+    fuel-volume: Гориво/ Обем
+issue:
+  fields:
+    title: Заглавие
+    add-tags: Добавяне на етикети
+    assigned-to: Присвоено на
+    category: Категория на проблема
+    issue-report: Доклад за проблема
+    priority: Приоритет на проблема
+    report: Доклад за проблема
+    reported-by: Докладвано от
+    select-assign: Изберете получател
+    select-category: Изберете категория на проблема
+    select-priority: Изберете приоритет на проблема
+    select-reporter: Изберете докладчик
+    select-status: Изберете статус на проблема
+    select-type: Изберете тип на проблема
+    tags: Етикети на проблема
+    type: Тип на проблема
+order:
+  fields:
+    ad-hoc: Спонтанен
+    ad-hoc-help-text: Активирането на Ad-Hoc ще позволи на поръчката интелигентно
+      да изпраща сигнали на шофьорите в близост до мястото за вземане на поръчката,
+      позволявайки на първия наличен шофьор да приеме поръчката. Това е алтернатива
+      на ръчното назначаване на шофьор за поръчки в реално време.
+    add-entity: Добави обект
+    add-item-button: Добави артикул
+    add-item-order: Добави артикул към поръчката
+    add-waypoint: Добави междинна точка
+    add-waypoint-help-text: Използвайте бутона „Добави междинна точка“, за да добавите
+      повече спирки за тази поръчка. Маршрутизиращият двигател на Fleetbase автоматично
+      ще оптимизира маршрута при добавяне или премахване на всяка спирка.
+    adhoc-ping: Разстояние за Adhoc сигнал
+    adhoc-ping-help-text: Тази настройка определя разстоянието за adhoc сигнал за
+      тази поръчка, ако не е зададена, ще се използва стойността по подразбиране.
+    adhoc-ping-message: Разстоянието трябва да е в метри
+    apply-service-rate: Приложи тарифата за услуга
+    assign-driver: Назначи шофьор
+    assign-driver-help-text: Назначете шофьора, на когото ще бъде изпратена тази поръчка.
+    assign-driver-placeholder: Изберете шофьор
+    assign-vehicle: Назначи превозно средство
+    assign-vehicle-help-text: Назначете превозното средство, с което ще се изпълни
+      тази поръчка.
+    assign-vehicle-placeholder: Изберете превозно средство
+    breakdown: Повреда
+    customer: Клиент
+    customer-help-text: По избор назначете клиента на тази поръчка. Ако е нов клиент,
+      използвайте бутона „Нов клиент“ по-горе.
+    customer-placeholder: Изберете клиент
+    dispatch: Изпращане
+    dispatch-help-text: Активирането на изпращането ще изпрати тази поръчка незабавно
+      след създаването ѝ.
+    documents-panel-title: Документи и файлове
+    dropoff: Крайна точка
+    edit-address: Редактирай адрес
+    edit-item: Редактирай артикул
+    facilitator: Фасилитатор
+    facilitator-help-text: По избор назначете фасилитатор за тази поръчка, фасилитатор
+      може да бъде трета страна подизпълнител или услуга, която ще улесни транспорта
+      на тази поръчка.
+    facilitator-placeholder: Изберете фасилитатор
+    info-text: Изберете оферта за услуга в реално време, която да се приложи към тази
+      поръчка. След като офертата бъде приложена, тя ще стане закупена тарифа. Транзакциите
+      ще бъдат проследявани в счетоводната книга на Fleetbase.
+    internal-id: Вътрешен идентификатор
+    internal-id-help-text: Използвайте това поле, за да зададете по избор персонален
+      или вътрешен идентификатор за поръчката.
+    invalid-coordinates: Невалидни координати!
+    items-drop: Артикулите се оставят на
+    loading-message: Зареждане на оферти за услуги...
+    notes-placeholder: Въведете бележки за поръчката тук....
+    notes-title: Бележки
+    optimize-route: Оптимизирай маршрута
+    optimize-route-help-text: Fleetbase автоматично ще оптимизира маршрута.
+    order-type: Тип поръчка
+    order-type-help-text: Изборът на тип поръчка ще информира Fleetbase какви конфигурации
+      за поръчката да използва.
+    order-type-placeholder: Изберете тип поръчка
+    payload-entities: Товар / Обекти
+    pickup: Вземане
+    proof-delivery: Доказателство за доставка
+    proof-delivery-help-text: Изберете типа доказателство за доставка, което да се
+      изисква. Това може да бъде сканиране на QR код или метод с подпис.
+    proof-delivery-placeholder: Изберете метод за доказателство за доставка
+    refresh-button: Обнови
+    require-proof: Изисквай доказателство за доставка
+    require-proof-help-text: Активирането на тази опция ще изисква шофьорът да завърши
+      доказателство за доставка.
+    return: Връщане
+    route: Маршрут
+    route-error: Оптимизацията на маршрута не бе успешна, проверете въведения маршрут
+      и опитайте отново.
+    route-label: Множество места за доставка
+    schedule: График
+    schedule-help-text: Дата и час, когато поръчката ще бъде изпратена. Ако няма назначен
+      шофьор по време на изпращането, изпращането ще се провали. Ако поръчката е Ad-Hoc,
+      тя ще бъде изпратена на шофьори в близост до мястото на вземане.
+    select-destination: Изберете дестинация
+    select-dropoff: Изберете място за доставка
+    select-pickup: Изберете място за вземане
+    select-return: Изберете връщане
+    select-waypoint: Изберете междинна точка
+    service: Услуга
+    select-service-rate: Изберете тарифата за услуга
+    service-help-text: Изберете дефинирана тарифата за услуга, за да генерирате реалновремеви
+      оферти за услугата, които да се приложат към тази поръчка.
+    service-quotes-help-text: Изберете за коя тарифата за услуга да се вземат оферти.
+    service-type: Тип услуга
+    service-type-placeholder: Изберете тип услуга
+    sku: SKU
+    activity: Активност
+    comments-title: Коментари
+    date-dispatched: Дата на изпращане
+    date-scheduled: Планирана дата
+    date-started: Дата на започване
+    driver: Шофьор
+    driver-assigned: Назначен шофьор
+    no-driver-assigned: Няма назначен шофьор
+    get-label: Вземи етикет
+    order-notes-updated: Бележките по поръчката са актуализирани.
+    payload: Полезен товар
+    proof-of-delivery: Доказателство за доставка
+    purchase-rate-panel-title: Покупна тарифа
+    route-panel-title: Маршрут
+    save-order-note: Запази бележка за поръчката
+    tracking: Проследяване
+    tracking-number: Номер за проследяване
+    vehicle-assigned: Назначено превозно средство
+    view-activity: Преглед на активността
+    waypoint-actions: Действия за междинна точка
+    documents-files: Документи и файлове
+    order-metadata: Метаданни на поръчката
+    order-label: Етикет на поръчката
+    waypoint-label: Етикет на междинната точка
+    current-eta: Текущо очаквано време на пристигане
+    ect: ECT
+    current-destination: Текуща дестинация
+  prompts:
+    update-details-success: Детайлите на {orderId} бяха актуализирани.
+    route-error: Оптимизацията на маршрута не бе успешна, проверете въведения маршрут
+      и опитайте отново.
+    route-update-success: Детайлите на маршрута за {orderId} бяха актуализирани.
+    unassign-driver-title: Сигурни ли сте, че искате да премахнете шофьора ({driverName})
+      от тази поръчка?
+    unassign-driver-body: След като шофьорът бъде премахнат, той вече няма да има
+      достъп до детайлите на тази поръчка.
+    unassign-driver-success: Шофьорът е премахнат от тази поръчка.
+    no-driver-assigned-error: Няма назначен шофьор за тази поръчка.
+    failed-to-load-order-label: Неуспешно зареждане на етикета на поръчката.
+    failed-to-load-waypoint-label: Неуспешно зареждане на етикета на точката.
+    unable-to-add-entity: Не може да се добави нов обект към поръчката.
+    assign-driver-success: Шофьорът ({driverName}) е назначен за поръчка {orderId}.
+    cancel-title: Сигурни ли сте, че искате да отмените тази поръчка?
+    cancel-body: След като тази поръчка бъде отменена, записът за поръчката все още
+      ще бъде видим, но няма да може да се добавя активност към нея.
+    cancel-success: Поръчка {orderId} е отменена.
+    dispatch-title: Сигурни ли сте, че искате да изпратите тази поръчка?
+    dispatch-body: След като тази поръчка бъде изпратена, назначеното лице ще бъде
+      уведомено.
+    dispatch-success: Поръчка {orderId} е изпратена.
+    order-bulk-search: Въведете ID-та на поръчки или номера за проследяване, разделени
+      със запетая, за да извършите масово търсене
+  actions:
+    create-new-customer: Създаване на нов клиент
+    create-new-facilitator: Създаване на нов посредник
+    create-new-place: Създаване на ново място
+    change-driver: Смяна на шофьор
+    assign-driver: Назначаване на шофьор
+    update-activity: Актуализиране на активността
+    reload-activity: Презареждане на активността
+    view-activity-as-timeline: Преглед като хронология
+    view-activity-as-list: Преглед като списък
+    cancel-order: Отмяна на поръчка
+    dispatch-order: Изпращане на поръчка
+    dispatch-orders: Изпращане на поръчки
+    assign-driver-to-orders: Назначаване на шофьор на поръчки
+    edit-order-details: Редактиране на детайли на поръчката
+    edit-order-route: Редактиране на маршрута на поръчката
+    edit-order-metadata: Редактиране на метаданни на поръчката
+    update-order-activity: Актуализиране на активността на поръчката
+    submit-new-activity: Изпращане на нова активност
+    add-entity: Добавяне на обект
+    unassign-driver-name: 'Премахване на шофьор: {driverName}'
+  schedule-card:
+    destination: Местоназначение
+    unassign-driver: Премахване на шофьор?
+    unassign-text: Вие сте на път да премахнете шофьора за поръчка {orderId}. Натиснете
+      продължи, за да потвърдите премахването на шофьора.
+    unassign-button: Продължи и премахни шофьора
+    assign-driver: Назначаване на нов шофьор?
+    assign-text: Вие сте на път да назначите нов шофьор ({driverName}) за поръчка
+      {orderId}. Натиснете продължи, за да потвърдите шофьора.
+    assign-button: Продължи и назначи шофьора
+    date: Планирана дата
+    driver-assigned: Шофьор
+    vehicle-assigned: Превозно средство
+    no-driver: Без шофьор
+    no-vehicle: Без превозно средство
+    select-driver: Изберете шофьор
+    select-vehicle: Изберете превозно средство
+  kanban:
+    status-updated: Активността на поръчката е актуализирана на статус {status}.
+    cannot-update-status: Поръчката не може да премине в статус {status}.
+order-config-manager:
+  title: Конфигурация на поръчките
+  message: Конфигурациите на поръчките ви позволяват да дефинирате динамични конфигурации,
+    които ще указват на Fleetbase как трябва да се изпълняват различните видове поръчки.
+  configuration: Конфигурация
+  new-order-config: Нова конфигурация на поръчка
+  select-order-config: Изберете конфигурация на поръчка
+  create-new-title: Създайте нова конфигурация на поръчка
+  create-warning-message: Конфигурацията на поръчката изисква име
+  create-success-message: Нова конфигурация на поръчка беше създадена успешно.
+  no-order-config-selected: Не е избрана конфигурация на поръчка.
+  saved-success-message: Конфигурацията {orderConfigName} е запазена.
+  cloned-success-message: Конфигурацията на поръчката беше успешно клонирана.
+  enter-clone-name: Въведете име на клонираната конфигурация
+  no-config-name-warning-message: Не е въведено име на конфигурацията.
+  delete-warning-message: След като тази конфигурация на поръчката бъде изтрита, няма
+    да можете повече да създавате поръчки с нея. Сигурни ли сте?
+  uninstall-order-config: Деинсталиране на конфигурация
+  uninstall-order-config-success-message: Разширението {extensionName} е деинсталирано.
+  select-order-config-to-start: Изберете или създайте конфигурация на поръчка, за
+    да започнете.
+  tabs:
+    details: Подробности
+    custom-fields: Потребителски полета
+    activity-flow: Поток на дейностите
+    entities: Същности
+  details:
+    details: Подробности
+    name: Име
+    description: Описание
+    tags: Етикети
+    add-tags: Добави етикети
+    key: Ключ
+    version: Версия
+    namespace: Име на пространство
+    controls: Контроли
+    delete-config: Изтрий конфигурацията
+    delete:
+      delete-title: Изтриване на тази конфигурация на поръчка?
+      delete-body-message: След като тази конфигурация на поръчка бъде изтрита, тя
+        няма да може да бъде възстановена и ще загубите всички конфигурации.
+      confirm-delete: Изтрий
+  activity-flow:
+    save-activity-flow: Запази поток на дейностите
+    edit-activity-unique-code-warning: Кодът на дейността трябва да е уникален!
+  custom-fields:
+    new-field-group: Нова група полета
+    new-custom-field: Създаване на ново потребителско поле
+    grid-size: Размер на мрежата
+    delete-custom-field-prompt:
+      modal-title: Изтриване на това потребителско поле?
+      delete-body-message: След като това потребителско поле бъде изтрито, няма да
+        може да бъде възстановено и ще загубите всички конфигурации.
+      confirm-delete: Изтрий
+    delete-custom-field-group-prompt:
+      modal-title: Изтриване на тази група полета?
+      delete-body-message: След като тази група полета бъде изтрита, няма да може
+        да бъде възстановена и ще загубите всички потребителски полета в нея.
+      confirm-delete: Изтрий
+  entities:
+    new-custom-entity: Нова потребителска същност
+    name: Име
+    description: Описание
+    type: Тип
+    length: Дължина
+    width: Ширина
+    height: Височина
+    weight: Тегло
+    delete-custom-entity-title: Изтриване на този персонализиран обект?
+    delete-custom-entity-body: След изтриването този персонализиран обект няма да
+      може да бъде възстановен и ще загубите всички конфигурации.
+    confirm-delete: Потвърди
+  types:
+    no-order-installed: Няма инсталирани конфигурации за поръчки!
+    you-have-no-configs: В момента нямате инсталирани конфигурации за поръчки, проверете
+      в разширенията, за да инсталирате конфигурация за поръчки и да започнете.
+    view-extensions: Преглед на разширения
+place:
+  fields:
+    details: Данни за мястото
+    building: Сграда
+    neighborhood: Квартал
+    postal-code: Пощенски код
+    security-access-code: Код за достъп за сигурност
+    city: Град
+    province: Област
+    country: Държава
+    state: Щат
+    street-1: Улица 1
+    street-2: Улица 2
+    coordinates: Координати
+    phone: Телефон
+  prompts:
+    vendor-assigned-success: Доставчикът зададе {placeName} като ново място на доставчика.
+  actions:
+    locate-place: Намери мястото на картата
+service-area:
+  fields:
+    details: Данни за обслужващата зона
+    area-color: Цвят на запълване
+    area-color-help-text: Персонализирайте цвета на запълване за тази обслужваща зона.
+    border-color: Цвят на границата
+    border-color-help-text: Персонализирайте цвета на границата за тази обслужваща
+      зона.
+    country: Държава
+    country-help-text: По избор задайте държавата, в която се намира или е базирана
+      тази обслужваща зона.
+    name: Име
+    name-help-text: Задайте показвано име за обслужващата зона.
+    type: Тип
+    type-help-text: Изберете тип дефиниция за тази обслужваща зона.
+service-rate:
+  fields:
+    details: Данни за тарифата на услугата
+    terms: Условия
+    add-drop-off-button: Добави диапазон за оставяне
+    additional-fee: Допълнителна такса
+    algorithm-help-text: Дефинирайте формула, която да се изчислява за тази тарифа
+      на услугата.
+    algorithm-label: Алгоритъм
+    algorithm-placeholder: (( '{distance}' / 50 ) * .05 ) + (( '{time}' / 60 ) * .01)
+    base-fee-help-text: Задайте основна такса, която представлява минималната цена
+      за тази услуга.
+    base-fee-label: Основна такса
+    calculation-method-help-text: Метод, използван за изчисляване на таксата за наложен
+      платеж.
+    calculation-method-label: Метод за изчисляване на таксата за наложен платеж
+    calculation-method-placeholder: Изберете метод за изчисляване на таксата за наложен
+      платеж
+    cash-delivery-label: Активиране на допълнителна такса за поръчки с „наложен платеж“?
+    cash-delivery-title: Наложен платеж
+    custom-algorithm-info-message: Тази опция е за дефиниране на персонализирано изчисление
+      на таксата за тази услуга с променливи.
+    custom-algorithm-info-second-message: Обърнете внимание, че променливите трябва
+      да са оградени с единична къдрава скоба.
+    custom-algorithm-title: Персонализиран алгоритъм
+    delivery-flat-fee: Фиксирана такса за наложен платеж
+    delivery-flat-fee-help-text: Определя фиксирана такса, която се добавя по време
+      на пикови часове.
+    deminsions-unit: Размер
+    distance: Разстояние
+    distance-continue-message: '- разстоянието в метри от маршрута на поръчката.'
+    distance-message: разстояние
+    distance-unit: Единица за разстояние
+    distance-unit-help-text: Единицата за разстояние може да бъде километър или метър.
+    distance-unit-placeholder: Изберете единица за разстояние.
+    duration-terms-help-text: Добавете допълнителни условия за продължителността на
+      услугата за този тарифен план.
+    duration-terms-label: Условия за продължителност
+    duration-terms-placeholder: Условия за продължителност, ако е приложимо
+    estimated-days: Очаквани дни за доставка
+    estimated-days-help-text: Очакваният брой дни, които ще отнеме тази услуга. За
+      услуга в същия ден използвайте `0`.
+    example: Пример
+    example-message: Ако заявката за поръчка е на разстояние 2200 метра с ETA от 30
+      минути.
+    example-second-message: Тогава следната формула ще изчисли такса за услугата от
+      $2.50, която ще бъде добавена към базовата такса.
+    fee: Такса
+    fee-percentage: Процент такса за наложен платеж
+    fee-percentage-help-text: Определя процентна такса от междинната сума на тарифата
+      за услугата, която се добавя като такса за наложен платеж.
+    fixed-meter: Опции за фиксиран метър
+    fixed-meter-example-text: 'Например: За всеки 1 километър се определя фиксирана
+      такса. Ако разстоянието, изминато от поръчката, е 3300 метра, фиксираната такса
+      за 3-тия километър ще бъде добавена към сумата на базовата такса.'
+    fixed-meter-text: Тази опция определя фиксирана такса на километър.
+    flat-fee-help-text: Определя фиксирана такса, която се добавя по време на пикови
+      часове.
+    flat-fee-label: Фиксирана такса за пикови часове
+    height-label: Височина
+    height-placeholder: Височина в {parcelFeeDimension}
+    length-label: Дължина
+    length-placeholder: Дължина в {parcelFeeDimension}
+    max: Макс
+    max-drop: Максимален брой спирания
+    maximum-distance: Максимално разстояние
+    maximum-distance-help-text: Максималното обслужвано разстояние.
+    min: Мин
+    min-drop: Минимален брой спирания
+    order-type-placeholder: Плейсхолдър за тип поръчка
+    peak-hours-end-help-text: Определя кога приключва таксата за пикови часове.
+    peak-hours-end-label: Край на пиковите часове
+    peak-hours-fee-help-text: Метод за изчисляване на таксата за пикови часове.
+    peak-hours-fee-label: Метод за изчисляване на таксата за пикови часове
+    peak-hours-fee-placeholder: Изберете метод за изчисляване на таксата за пикови
+      часове
+    peak-hours-label: Активиране на допълнителна такса за поръчки направени по време
+      на дефинираните `пикови часове`?
+    peak-hours-percentage-help-text: Определя процентна такса от междинната сума на
+      тарифата за услугата, която се добавя по време на пикови часове.
+    peak-hours-percentage-label: Процентна такса за пикови часове
+    peak-hours-start-help-text: Определя кога започва таксата за пикови часове.
+    peak-hours-start-label: Начало на пиковите часове
+    peak-hours-title: Пикови часове
+    per-drop-off-example-text: 'Например: 1-5 спирания в поръчката ще струват $x сума,
+      5-10 спирания на поръчка ще струват $x сума. Това ще бъде добавено към сумата
+      на базовата такса.'
+    per-drop-off-text: Тази опция определя фиксирана такса на спиране.
+    per-drop-off-title: Опции на база на всяко предаване
+    per-meter: На метър
+    per-meter-example-text: 'Например: ''{fee}'' * ''{distance}'' + ''{baseFee}'''
+    per-meter-rate-fee: Фиксирана такса на метър
+    per-meter-rate-fee-help-text: Еднократната фиксирана такса, която ще се умножи
+      по разстоянието.
+    per-meter-text: Тази опция позволява услугата да се изчислява на километър или
+      метър, което означава, че задавате фиксирана такса, която след това се умножава
+      по разстоянието, което може да бъде метър или километър.
+    percel-fee-title: Такси за пратки
+    percentage-placeholder: Процент
+    rate-calculation-help-text: Методът, който тази услуга ще използва за изчисляване
+      на тарифите при заявка.
+    rate-calculation-label: Метод за изчисляване на тарифа
+    rate-calculation-placeholder: Изберете метод за изчисляване на тарифа
+    restrict-service-title: Ограничаване на услугата
+    select-unit-placeholder: Изберете единица
+    select-order-type: Изберете тип поръчка
+    service-area-help-text: Ограничете тази услуга само за заявки за поръчки, идващи
+      от обслужваща зона.
+    service-area-label: Обслужваща зона
+    service-area-placeholder: Ограничете до обслужваща зона
+    service-name: Име на услугата
+    service-name-help-text: Показвано име за тази услуга.
+    service-order-help-text: Изберете конфигурация на поръчка, към която тази тарифна
+      услуга ще се прилага изключително. Това гарантира, че само поръчки, създадени
+      с избраната конфигурация, могат да използват тази конкретна тарифна услуга.
+    service-order-label: Тип поръчка на услугата
+    time-continue-message: '- ETA на маршрута в секунди.'
+    time-message: време
+    weight-label: Тегло
+    weight-unit: Единица тегло
+    width-label: Ширина
+    width-placeholder: Ширина в {parcelFeeDimension}
+    zone-help-text: Ограничете тази услуга само за заявки за поръчки, идващи от конкретна
+      зона.
+    zone-label: Зона
+    zone-placeholder: Ограничете до зона
+    cod-fee-label: Етикет за такса при наложен платеж
+vehicle:
+  fields:
+    avatar: Аватар
+    driver-assigned: Назначен шофьор
+    make: Марка
+    model: Модел
+    plate-number: Регистрационен номер
+    select-driver: Изберете шофьор
+    upload-new-photo: Качете нова снимка
+    vehicle-make: Марка на превозното средство
+    vehicle-model: Модел на превозното средство
+    vehicle-year: Година на превозното средство
+    vin-number: VIN номер
+    year: Година
+  actions:
+    locate-vehicle: Намери превозното средство на картата
+vendor:
+  fields:
+    setup-vendor: Настройка на доставчик
+    choose-vendor: Изберете интегриран доставчик
+    email-help-text: Имейлът на доставчика, който може да се използва за изпращане
+      на имейли към доставчика.
+    name-help-text: Името на доставчика, обикновено името на фирмата.
+    phone-text: Телефонният номер на доставчика, който може да се използва за изпращане
+      на SMS или съобщения към доставчика.
+    website: URL на уебсайт
+    edit-address: Редактиране на адрес
+    new-address: Нов адрес
+    select-address: Изберете адрес
+    select-vendor-status: Изберете статус на доставчика
+    select-vendor-type: Изберете тип доставчик
+    title: Настройка
+    vendor-details: Данни за доставчика
+    website-help-text: Уебсайтът на доставчика, по избор добавете уебсайта на доставчика
+      за справка.
+integrated-vendor:
+  fields:
+    provider: Доставчик
+    credentials: Удостоверения
+    credentials-configure-help-text: По избор предоставете свои собствени {param}
+      за конфигуриране на този доставчик.
+    options: Опции
+    choose-vendor: Изберете интегриран доставчик
+    select-integrated: Изберете интегриран доставчик.
+    advanced-options: Разширени опции
+    cancel-credentials: Откажете нулирането на удостоверенията
+    sensitive-credentials: Чувствителните удостоверения могат само да бъдат нулирани,
+      за да актуализирате удостоверенията, трябва да ги въведете отново.
+    reset-credentials: Кликнете тук, за да нулирате удостоверенията
+    sandbox: Пясъчник
+    webhook: URL на Webhook
+    webhook-help-text: Интегрираните доставчици обикновено изискват това, за да може
+      Fleetbase да получава актуализации за активността по поръчката. Не променяйте,
+      освен ако не знаете какво правите! Промяната може да прекъсне актуализациите
+      на поръчките ви!
+    host: Потребителски хост
+    host-help-text: По избор предоставете потребителски хост, който трябва да се използва
+      за тази интеграция.
+    namespace: Потребителско пространство от имена
+    namespace-help-text: По избор предоставете потребителско пространство от имена
+      или версия на API, която трябва да се използва за интеграцията.
+zone:
+  fields:
+    details: Данни за зоната
+    border-color: Цвят на рамката
+    customize-border: Персонализиране на рамката
+    customize-fill-color: Персонализиране на цвета на запълване
+    description: Описание
+    name: Име
+    name-help-text: Въведете име за тази зона.
+    zone-color: Цвят на зоната
+activity-logic-builder:
+  activity-logic: Логика на активността
+  activity-logic-help-text: Дефинирайте персонализирани логически условия, които определят
+    кога една активност става налична в работния процес. Тази функция ви позволява
+    да адаптирате потока въз основа на конкретни критерии, като гарантира, че всяка
+    активност се задейства само когато предварително зададените ѝ условия са изпълнени.
+  activity-logic-add-logic-help-text: Създайте нов набор от условия, които ще определят
+    кога активността трябва да бъде активирана. Кликнете тук, за да започнете създаването
+    на ново логическо правило.
+  activity-logic-select-logic-type-help-text: Изберете типа логика, която това условие
+    ще следва. Изберете 'Ако' за директно условие, 'И'/'Или' за съставни условия или
+    'Не' за отрицание на условие.
+  activity-logic-add-condition-help-text: Добавете конкретно изискване, което трябва
+    да бъде изпълнено в този логически набор. Използвайте това, за да посочите допълнителни
+    критерии, които контролират наличността на активността.
+  field: Поле
+  value: Стойност
+  add-logic: Добави логика
+activity-event-selector:
+  activity-events: Събития на активността
+  activity-events-select-to-fire: Изберете кои събития да бъдат активирани, когато
+    тази активност се случи.
+  activity-events-select-events-info: Изберете конкретното събитие, което искате да
+    задействате в отговор на тази активност.
+  select-event-to-add: Изберете събитие за добавяне...
+custom-field-form-panel:
+  meta-col-span: 'Мета: Обхват на колона'
+  col-span-size: Размер на обхвата на колоната
+  custom-field-title-concat: 'Потребителско поле: '
+  new-custom-field: Ново потребителско поле
+  close-new-custom-field: Откажете промените в потребителското поле
+  save-custom-field: Запази промените
+  create-custom-field: Създай ново поле
+  field-name: Име на полето
+  field-label: Етикет на полето
+  field-type: Тип на полето
+  select-field-type: Изберете тип на полето...
+  field-description: Описание на полето
+  field-help-text: Помощен текст за полето
+  field-default-value: Стойност по подразбиране на полето
+  field-is-required: Полето е задължително
+  field-is-editable: Полето е редактираемо
+  field-options: Опции на полето
+  field-validation-rules: Правила за валидиране на полето
+  field-model-type: Тип на модела на полето
+  field-select-model-type: Изберете тип на модела
+  add-new-option: Добави нова опция
+activity-form-panel:
+  title-concat: 'Дейност: '
+  new-activity-title: Създаване на нова дейност
+  key: Ключ
+  code: Код
+  status: Статус
+  details: Подробности
+  proof-of-delivery: Доказателство за доставка
+  require-pod: Изисква доказателство за доставка
+  require-pod-help-text: Тази дейност изисква да бъде създадено доказателство, преди
+    да може да бъде приложена към поръчката.
+  select-pod-method: Метод за доказателство за доставка
+  pod-method-placeholder: Изберете метод за доказателство за доставка
+  completes-order: Завършва поръчката
+  complete: Завърши
+  key-help: 'Въведете ключ, използван за програмно вземане на решения. Този ключ може
+    да представлява една или няколко дейности със същия идентификатор. Забележка:
+    Този ключ не е необходимо да бъде уникален.'
+  code-help: Въведете уникален идентификатор, специфичен за тази дейност.
+  status-help: Посочете статуса, който се показва на крайния потребител, когато тази
+    дейност бъде задействана.
+  details-help: Предоставете подробно описание на дейността за разбиране от крайния
+    потребител.
+custom-entity-issue-form-panel:
+  new-custom-entity: Нова потребителска единица
+  name: Име
+  description: Описание
+  details: Подробности
+  type: Тип
+  length: Дължина
+  width: Ширина
+  height: Височина
+  weight: Тегло
+  entity-image: Изображение на единицата
+  measurements: Размери
+avatar-picker:
+  avatar: Аватар
+  select-map-avatar: Изберете аватар за картата
+  select-avatar-rendering: Изберете аватар, който да се използва за визуализация на
+    картите при използване на функции за проследяване на геолокация.
+  select-avatar: Изберете аватар
+  select-for-preview: Изберете за преглед
+admin:
+  navigator-app:
+    title: Приложение Навигатор
+    name: URL за свързване на инстанция
+    message: Използвайте този URL, за да свържете официалното приложение Navigator
+      с тази инстанция на {companyName}. Отварянето на този URL на мобилно устройство
+      ще отвори приложението Navigator и ще актуализира неговата конфигурация и брандиране.
+    settings: Настройки на обекта
+    select-input: Позволи на шофьора да актуализира детайлите на обекта
+    driver-settings: Настройки на шофьора
+    description: Активиране на шофьора в системата
+    upload-document: Изискване шофьорът да качва документи
+    upload-body: Добавяне на документи
+    document: Документ
+  avatar-management:
+    upload-avatar: Качване на аватар
+    view-avatar: Преглед на аватар
+    vehicles: Превозни средства
+    drivers: Шофьори
+    places: Места
+entity-field-editing-settings:
+  entitiy-field-editing-settings: Настройки за редактиране на полета на обекта
+  entity-field-editing-settings-help-text: Тези настройки определят кои полета на
+    обекта могат да бъдат редактирани от шофьора чрез приложението Navigator
+  select-order-config: Изберете конфигурация на поръчка
+  select-order-config-help-text: Изберете конфигурация на поръчка, към която ще се
+    прилагат тези настройки
+  enable-driver-to-edit-entity-fields: Позволи на шофьора да редактира детайлите на
+    обекта
+  enable-driver-to-edit-entity-fields-help-text: Активирането на този превключвател
+    дава на шофьора разрешение да променя определени избрани по-долу полета на обекта.
+driver-onboard-settings:
+  driver-onboard-settings: Настройки за включване на шофьора
+  enable-driver-onboard-from-app: Активиране на включване на шофьора чрез приложението
+    Navigator
+  enable-driver-onboard-from-app-help-text: Активирането на тази настройка позволява
+    на шофьорите самостоятелно да се включват (да създават собствен акаунт) чрез приложението
+    Navigator.
+  select-onboard-method: Изберете метод за включване на шофьора
+  select-onboard-method-help-text: Тази настройка определя как шофьорите могат да
+    създават своите акаунти чрез приложението Navigator. Изберете 'Покана', ако шофьорите
+    трябва да получат имейл покана за създаване на акаунт. Изберете 'Бутон', ако искате
+    да активирате бутон в приложението, който позволява на всеки да създаде акаунт
+    на шофьор.
+  require-driver-to-upload-onboard-documents: Изискване шофьорът да качва документи
+    за включване
+  require-driver-to-upload-onboard-documents-help-text: Тази настройка налага документи,
+    които шофьорът трябва да предостави преди създаването на акаунта му.
+  required-onboard-documents: Задължителни документи за включване
+  required-onboard-documents-help-text: Въведете всички задължителни документи за
+    включване, които шофьорът трябва да предостави, като използвате бутона „Добави
+    документ за включване“ по-долу.
+  enter-document-name: Въведете име на документ
+  add-onboard-document: Добави документ за включване
+cell:
+  driver-name:
+    not-assigned: Няма назначен шофьор
+live-map-drawer:
+  driver-listing:
+    location: Местоположение
+    current-job: Текуща задача
+    last-seen: Последно виждан
+    view-driver: Преглед на детайли за шофьора...
+    edit-driver: Редактиране на шофьора...
+    locate-driver: Намиране на шофьора...
+    delete-driver: Изтриване на шофьора...
+    warning-message: Не може да се намери шофьорът.
+    message: Филтриране на шофьори по ключова дума...
+  place-listing:
+    location: Местоположение
+    place: Място
+    view-place: Преглед на детайли за мястото...
+    edit-place: Редактиране на мястото...
+    locate-place: Намиране на мястото...
+    delete-place: Изтриване на мястото...
+    warning-message: Не може да се намери мястото.
+    message: Филтриране на места по ключова дума...
+  vehicle-listing:
+    location: Местоположение
+    last-seen: Последно видян
+    view-vehicle: Виж подробности за превозното средство...
+    edit-vehicle: Редактирай превозното средство...
+    locate-vehicle: Намери превозното средство...
+    delete-vehicle: Изтрий превозното средство...
+    warning-message: Не може да се намери превозното средство.
+    message: Филтрирай превозните средства по ключова дума...
+scheduler:
+  success-message: Поръчка {orderId} е насрочена за {orderAt}.
+  info-message: Поръчка {orderId} е отменена от графика.
+  title: График
+  unscheduled-orders: Ненасрочени поръчки
+  scheduled-orders: Насрочени поръчки
+  unauthorized-to-schedule: Нямате права да насрочвате поръчки.
+  scheduling-for: Насрочване за {orderId}
+modals:
+  new-custom-field-group:
+    modal-title: Създаване на нова група персонализирани полета
+    group-name: Име на групата
+  assign-driver:
+    select-driver: Изберете шофьор
+    select-assign: Изберете шофьор за назначаване
+  clone-config-form:
+    name: Име на конфигурацията
+    description: Описание на конфигурацията
+  driver-assign-order:
+    order: Изберете поръчка
+    assign-order: Изберете поръчка за назначаване
+  driver-assign-vehicle:
+    vehicle: Изберете превозно средство
+    assign-vehicle: Изберете превозно средство за назначаване
+  driver-assign-vendor:
+    vendor: Изберете доставчик
+  driver-details:
+    job: Текуща задача
+    view: Виж на картата
+  driver-form:
+    select-vendor: Изберете доставчик
+    select-vehicle: Изберете превозно средство
+  edit-meta-form:
+    add: Добави метаполе
+  entity-form:
+    name-text: Име на елемента или обекта.
+    id-text: Използвайте това поле, за да зададете по избор персонализиран или вътрешен
+      идентификатор за обекта.
+    sku: SKU
+    sku-text: Номер на складова единица, ако е приложимо.
+    description: Описание
+    description-text: Допълнителен описателен текст на обекта.
+    price-title: Ценообразуване и стойност
+    price: Цена
+    price-text: Цена на обекта.
+    sale-price: Промоционална цена
+    sale-price-text: Промоционална или намалена цена на обекта.
+    declare: Обявена стойност
+    declare-text: Обявена стойност на обекта, полезна при застраховане.
+    measurement-title: Размери и тегло
+    length: Дължина
+    length-text: Дължината на обекта.
+    width: Ширина
+    width-text: Ширината на обекта.
+    height: Височина
+    height-text: Височината на обекта.
+    weight: Тегло
+    weight-text: Теглото на обекта.
+  entity-meta-field-prompt:
+    name: Ключ на мета поле
+  fleet-form:
+    title: Име на флота
+    assign: Назначаване към обслужваща зона
+    assign-text: Изберете обслужваща зона, към която да се назначи флотът
+    zone: Назначаване към зона
+    zone-text: Изберете зона, към която да се назначи флотът
+    task: Задача/Мисия
+    task-text: Дайте описание на основната задача или мисия на този флот, ако е приложимо.
+    select-task: Изберете задача
+    status-text: Изберете статуса на флота.
+    select-status: Изберете статус
+  fuel-report-details:
+    fuel: Гориво/Обем
+  fuel-report-form:
+    select-driver: Изберете шофьор
+    select-vehicle: Изберете превозно средство
+    volume: Обем
+    volume-text: Изберете мерната единица и обема на горивото за докладване.
+  group-details:
+    name: Име на група
+    member: Членове
+    address: Адрес
+  group-form:
+    title: Име на група
+    users-add: Изберете потребители за добавяне към групата
+    search: Търсете и изберете потребители за добавяне към тази група.
+    select-user: Изберете потребител за добавяне към групата
+    no-users: Няма добавени потребители в групата
+  install-prompt:
+    message: Опитвате се да инсталирате разширението {extensionName}. Сигурни ли сте,
+      че искате да продължите с тази инсталация?
+    sub-message: Някои разширения изискват достъп до вашите ресурси.
+  issue-details:
+    assigned: Назначено на
+    type: Тип проблем
+    category: Категория проблем
+  issue-form:
+    reported: Докладвано от
+    select-reporter: Изберете докладчик
+    assigned: Назначено на
+    select-assignee: Изберете назначен
+    select-driver: Изберете шофьор
+    select-vehicle: Изберете превозно средство
+    select-type: Изберете тип
+    select-category: Изберете категория
+    type: Тип проблем
+    type-text: Изберете тип проблем
+    category: Категория проблем
+    category-text: Изберете категория проблем
+    report: Доклад за проблем
+    tags: Етикети за проблем
+    add-tags: Добавяне на етикети
+    select-status: Изберете статус на проблема
+  map-layer-form:
+    layer-type: Тип слой
+    layer-type-text: Изберете типа слой, който искате да създадете.
+    select-layer-type: Изберете тип слой...
+    service-area: Област на обслужване
+    service-area-text: Изберете областта на обслужване, към която да бъде приписана
+      тази зона.
+    select-service-area: Изберете област на обслужване, за да присвоите флота
+    set-name: Задайте показвано име за {options}.
+    service-type: Тип област на обслужване
+    service-type-text: Изберете тип дефиниция за тази област на обслужване.
+    select-service-type: Изберете тип област на обслужване...
+    customize-border: Персонализирайте цвета на границата за този {options}.
+    customize-fill-color: Персонализирайте цвета на запълване за този {options}.
+    service-area-country: Държава на областта на обслужване
+    service-area-country-text: По избор задайте държавата, в която се намира или е
+      базирана тази област на обслужване.
+  new-order-config:
+    name: Име на конфигурацията
+    description: Описание на конфигурацията
+    tags: Етикети на конфигурацията
+    add-tags: Добавяне на етикети
+  order-assign-driver:
+    select-driver: Изберете шофьор
+    select-assign: Изберете шофьор за присвояване
+  order-config-new-status:
+    new-status: Нов статус
+    status-text: Въведете нов статус на активност, който да добавите към потока
+  order-event:
+    schedule: График
+    unschedule: Премахване от графика
+  order-form:
+    id-text: Използвайте това поле, за да зададете по избор персонализиран идентификатор
+      или вътрешен идентификатор за поръчката.
+    schedule-text: Дата и час, в които поръчката ще бъде изпратена. Ако по време на
+      изпращането не е зададен шофьор, изпращането ще се провали. Ако поръчката е
+      Ad-Hoc, тя ще бъде изпратена на шофьори в близост до мястото на вземане.
+    customer: Клиент
+    customer-text: По избор задайте клиента на тази поръчка. Ако е нов клиент, използвайте
+      бутона 'Нов клиент' по-горе.
+    select-customer: Изберете клиент
+    facilitator: Фасилитатор
+    facilitator-text: По избор задайте фасилитатор за тази поръчка, фасилитатор може
+      да бъде трета страна подизпълнител или услуга, която ще улесни транспорта на
+      тази поръчка.
+    select-facilitator: Изберете фасилитатор
+    assign-driver: Назначете шофьор
+    assign-driver-text: Назначете шофьора, на когото ще бъде изпратена тази поръчка.
+    select-driver: Изберете шофьор
+    assign-vehicle: Назначете превозно средство
+    assign-vehicle-text: Назначете превозното средство, с което ще се изпълни тази
+      поръчка.
+    select-vehicle: Изберете превозно средство
+  order-import:
+    loading-message: Обработка на импорта...
+    drop-upload: Пуснете за качване
+    invalid: Невалиден
+    ready-upload: готов за качване.
+    upload-spreadsheets: Качване на електронни таблици
+    drag-drop: Плъзнете и пуснете файлове с електронни таблици в тази зона
+    button-text: или изберете електронни таблици за качване
+    spreadsheets: електронни таблици
+    upload-queue: Опашка за качване
+  order-label:
+    loading: Зареждане на етикета...
+  order-new-activity:
+    select-message: Изберете статус на активност, за да актуализирате проследяването
+      на поръчката, или въведете персонализирана активност.
+    order-currently-message: Тази поръчка в момента е {options}, допълнителната активност
+      ще презапише този статус.
+    not-recommend-message: Fleetbase не препоръчва това, освен ако абсолютно не знаете
+      какво правите.
+    activity-options: Опции за активност
+    activity: активност
+    dispatch: Това ще задейства изпращането на поръчката.
+    status: Потребителски статус на активността
+    details: Потребителски детайли на активността
+    code: Потребителски код на активността
+    fleetbase-message: Fleetbase не препоръчва това, освен ако наистина не знаете
+      какво правите.
+  order-route-form:
+    toggle: Превключване на множество точки за доставка
+    optimize: Оптимизиране на маршрута
+    optimize-text: Fleetbase автоматично ще оптимизира маршрута.
+    add: Добавяне на междинна точка
+    add-text: Използвайте бутона „Добавяне на междинна точка“, за да добавите още
+      спирки за тази поръчка. Рутинг двигателят на Fleetbase автоматично ще оптимизира
+      маршрута при всяко добавяне или премахване на спирка.
+    select-waypoint: Изберете междинна точка
+    pickup: Вземане
+    edit-address: Редактиране на адрес
+    select-pickup: Изберете място за вземане
+    invalid: Невалидни координати!
+    dropoff: Доставка
+    select-dropoff: Изберете място за доставка
+    return: Връщане
+    select-return: Изберете връщане
+  place-assign-vendor:
+    select-vendor: Изберете доставчик
+  place-details:
+    view: Виж на картата
+  policy-form:
+    name: Име на политика
+    name-text: Въведете име за вашата политика
+    description: Описание на политика
+    description-text: Въведете описание за вашата политика
+    permissions: Изберете разрешения
+  role-form:
+    name: Име на роля
+    name-text: Въведете име за тази роля
+    permissions: Изберете разрешения
+  select-payment-method:
+    card-ending: Карта завършваща на {method}
+  service-area-form:
+    name: Име на обслужваща зона
+    name-text: Задайте показвано име за обслужващата зона.
+    type: Тип обслужваща зона
+    type-text: Изберете тип дефиниция за тази обслужваща зона.
+    select-type: Изберете тип обслужваща зона...
+    border-color: Цвят на границата на обслужващата зона
+    customize-border-color: Персонализирайте цвета на границата за тази обслужваща
+      зона.
+    area-color: Цвят на обслужващата зона
+    customize-area-color: Персонализирайте цвета на запълване за тази обслужваща зона.
+    country: Държава на обслужващата зона
+    country-text: По избор задайте държавата, в която се намира или е базирана тази
+      обслужваща зона.
+  set-password:
+    message: Добре дошли във Fleetbase! Преди да започнете, задайте нова парола, за
+      да продължите по-долу.
+    new-password: Нова парола
+    confirm-password: Потвърдете паролата
+    help-text: Въведете парола с поне 8 символа, за да продължите.
+  uninstall-prompt:
+    message: Опитвате се да деинсталирате разширението „{options}“. Сигурни ли сте,
+      че искате да продължите с тази деинсталация?
+    sub-message: Всички настройки и персонализации ще бъдат загубени.
+  vehicle-details:
+    make: Марка
+    model: Модел
+    year: Година
+    driver-assigned: Назначен шофьор
+    no-driver-assigned: Няма назначен шофьор
+    vehicle-assigned: Назначено превозно средство
+    no-vehicle-assigned: Няма назначено превозно средство
+    avatar: Аватар
+    model-information: Информация за модела
+    acceleration: От 0 до 100 км/ч
+    body: Каросерия
+    doors: Врати
+    length: Дължина (мм)
+    seats: Места
+    top-speed: Максимална скорост (км/ч)
+    transmission: Тип скоростна кутия
+    weight: Тегло (кг)
+    wheelbase: Междуосие (мм)
+    width: Ширина (мм)
+    engine-information: Информация за двигателя
+    engine-bore: Диаметър на цилиндъра (мм)
+    cc: Куб. см
+    compression: Компресия
+    cylinder: Цилиндри
+    position: Позиция
+    power-ps: Мощност (к.с.)
+    power-rpm: Мощност (обороти в минута)
+    stroke: Ход (мм)
+    torque-nm: Въртящ момент (Nm)
+    torque-rpm: Въртящ момент (обороти в минута)
+    valves: Вентили на цилиндър
+    fuel-information: Информация за горивото
+    fuel: Гориво
+    fuel-cap: Капацитет на резервоара (л)
+    liters-city: Литри на км в града
+    liters-highway: Литри на км на магистрала
+    liters-mixed: Литри на км смесен цикъл
+  vehicle-form:
+    map-avatar: Изберете аватар за карта
+    map-avatar-text: Изберете аватар, който да се използва за визуализация на картите
+      при използване на функции за геолокационно проследяване.
+    select-avatar: Изберете аватар
+    make: Марка на превозното средство
+    model: Модел на превозното средство
+    year: Година на превозното средство
+    select-driver: Изберете шофьор
+    body: Тип каросерия на превозното средство
+    doors: Брой врати
+    type: Тип задвижване на превозното средство
+    length: Дължина на превозното средство (мм)
+    seats: Брой места
+    top-speed: Максимална скорост на превозното средство (км/ч)
+    transmission: Тип скоростна кутия на превозното средство
+    weight: Тегло на превозното средство (кг)
+    wheelbase: Междуосие на превозното средство (мм)
+    width: Ширина на превозното средство (мм)
+    engine-bore: Диаметър на цилиндъра (мм)
+    cc: куб. см
+    compression: Компресия на двигателя
+    cylinder: Цилиндри на двигателя
+    position: Позиция на двигателя
+    power-ps: Мощност на двигателя (к.с.)
+    power-rpm: Мощност на двигателя (обороти в минута)
+    stroke: Ход на буталото (мм)
+    torque-nm: Въртящ момент на двигателя (Nm)
+    torque-rpm: Въртящ момент на двигателя (обороти в минута)
+    fuel-type: Тип гориво
+    fuel-cap: Обем на резервоара (л)
+  vendor-details:
+    sandbox: Пясъчник
+    host: Хост
+    namespace: Име на пространство
+  vendor-form:
+    choose-vendor: Изберете интегриран доставчик
+    create-vendor: Създайте персонализиран доставчик
+    credentials: Удостоверения
+    options: Опции
+    hide-advanced: Скрий разширени
+    show-advanced: Покажи разширени
+    custom-host: Персонализиран хост
+    host-text: По избор предоставете персонализиран хост, който трябва да се използва
+      за тази интеграция.
+    custom-namespace: Персонализирано пространство от имена
+    namespace-text: По избор предоставете персонализирано пространство от имена или
+      версия на API, която трябва да се използва за интеграцията.
+    webhook: URL за уеб кука
+    webhook-text: Интегрираните доставчици обикновено изискват това, за да може Fleetbase
+      да получава актуализации за дейността по поръчката. Не променяйте, освен ако
+      не знаете какво правите! Промяната може да прекъсне актуализациите на поръчките
+      ви!
+    cancel-credentials: Откажете нулирането на удостоверенията
+    reset-message: Чувствителните удостоверения могат да бъдат само нулирани, за да
+      актуализирате удостоверенията, трябва да ги въведете отново.
+    optionally: По избор предоставете свои
+    configure-vendor: за да конфигурирате този доставчик.
+    select: Изберете
+    sandbox: Пясъчник
+    name-text: Името на доставчика, обикновено името на бизнес.
+    email-text: Имейлът на доставчика, може да се използва за изпращане на имейли
+      до доставчика.
+    phone-text: Телефонният номер на доставчика, може да се използва за изпращане
+      на SMS или съобщения до доставчика.
+    website-text: Уебсайтът на доставчика, по избор добавете уебсайта на доставчика
+      за справка.
+    select-address: Изберете адрес
+  zone-form:
+    name: Име на зоната
+    name-text: Задайте показвано име за зоната.
+    border-color: Цвят на границата на зоната
+    customize-border: Персонализирайте цвета на границата за тази зона.
+    zone-color: Цвят на зоната
+    customize-fill-color: Персонализирайте цвета на запълване за тази зона.
+    optionally: По избор дайте описание на зоната.
+    description-zone: Описание на зоната
+widget:
+  fleet-ops-quickstart:
+    message: Нека видим какво можете да направите, за да стартирате операциите...
+    start-task: Започнете задача
+  key-metrics:
+    title: Метрики на Fleet-Ops
+    earnings: Печалби
+    fuel-expenses: Разходи за гориво
+    traveled: Изминато разстояние
+    total-time: Общо време
+    order-scheduled: Планирани поръчки
+    order-completed: Завършени поръчки
+    order-progress: Поръчки в процес
+    order-canceled: Отменени поръчки
+    driver-online: Шофьори онлайн
+    customers: Клиенти
+    open-issue: Отворен проблем
+    closed-issues: Затворени проблеми
+  live-order-map:
+    loading: Зареждане на поръчки в процес...
+    assigned: Шофьорът е назначен
+    no-order: Няма поръчки в процес
+    message: Когато поръчките са в процес, те ще се показват в този уиджет и ще показват
+      активност в реално време.
+  recent-orders:
+    title: Последни поръчки
+    loading: Зареждане на последни поръчки...
+    no-orders: Няма поръчки за тази седмица
+    message-part-1: Няма поръчки тази седмица, започнете движение като
+    message-part-2: създадете нова поръчка
+    message-part-3: или позволите на вашите клиенти да подават поръчки чрез API.
+  transactions:
+    title: Последни транзакции
+    loading: Зареждане на последни транзакции...
+    no-transactions: Няма транзакции тази седмица
+    message: Когато поръчките преминават със сервизни тарифи, Fleetbase автоматично
+      проследява транзакциите.
+display-panel:
+  no-address: Няма {type} адрес!
+  no-address-message: Няма адрес!
+driver-card:
+  no-fleets: Няма флоти
+global-search:
+  search: Търсене по ключова дума...
+integrated-order-details:
+  order-id: ID на поръчка
+  quotation-id: ID на оферта
+  driver-id: ID на шофьор
+  link: Споделена връзка
+  price-breakdown: Разбивка на цената
+  metadata: Метаданни
+geofence:
+  prompts:
+    use-draw-controls-create-service-area: Използвайте контролите за рисуване вдясно,
+      за да начертаете зона на обслужване, завършете свързването на точките, за да
+      запазите зоната на обслужване.
+    use-draw-controls-create-zone: Използвайте контролите за рисуване вдясно, за да
+      начертаете зона в рамките на зоната на обслужване, завършете свързването на
+      точките, за да запазите зоната.
+    no-layer-found-for-resource: Не е намерен слой за този {resource}.
+    editing-enabled: Редактирането е разрешено — коригирайте върховете и след това
+      кликнете върху отметката за редакция, за да приложите.
+    resource-boundaries-updated: Границите на {resource} бяха успешно обновени.
+    edit-canceled: Редактирането е отменено.
+    failed-to-update-resource: Неуспешно обновяване на {resource}.
+live-map:
+  show-coordinates: Покажи координати
+  center-map: Центрирай картата тук
+  zoom-in: Увеличи
+  zoom-out: Намали
+  toggle-draw-controls: Превключване на контролите за рисуване
+  hide-draw: Скрий контролите за рисуване
+  enable-draw: Активирай контролите за рисуване
+  create-new-service: Създаване на нова обслужваща зона
+  focus-service: 'Фокус върху обслужваща зона: {serviceName}'
+  view-driver: 'Преглед на шофьор: {driverName}'
+  edit-driver: 'Редактиране на шофьор: {driverName}'
+  delete-driver: 'Изтриване на шофьор: {driverName}'
+  view-vehicle-for: 'Преглед на превозно средство за: {driverName}'
+  view-vehicle: 'Преглед на превозно средство: {vehicleName}'
+  edit-vehicle: 'Редактиране на превозно средство: {vehicleName}'
+  delete-vehicle: 'Изтриване на превозно средство: {vehicleName}'
+  edit-zone: 'Редактиране на зона: {zoneName}'
+  delete-zone: 'Изтриване на зона: {zoneName}'
+  assign-zone: 'Назначаване на автопарк към зона: {zoneName}'
+  blur-service: 'Скриване на обслужваща зона: {serviceName}'
+  create-zone: 'Създаване на зона в: {serviceName}'
+  assign-fleet: 'Назначаване на автопарк към обслужваща зона: {serviceName}'
+  edit-service: 'Редактиране на обслужваща зона: {serviceName}'
+  delete-service: 'Изтриване на обслужваща зона: {serviceName}'
+  service-area: Обслужваща зона
+  edit-boundaries: 'Редактиране на граници: {resource}'
+  zone: Зона
+order-config:
+  create-new-title: Създаване на нова конфигурация на поръчка
+  warning-message: Конфигурацията на поръчката изисква име
+  success-message: Нова конфигурация на поръчка беше успешно създадена.
+  no-order-warning: Не е избрана конфигурация на поръчка.
+  saved-success: Конфигурацията на поръчка {orderName} е запазена.
+  enter-name-title: Въведете име на клонираната конфигурация
+  no-config-warning: Не е въведено име на конфигурация.
+  cloned-success: Конфигурацията на поръчка беше успешно клонирана.
+  body: След изтриването на тази конфигурация на поръчка няма да можете да създавате
+    поръчки с нея. Сигурни ли сте?
+  uninstall-title: Деинсталиране на конфигурация
+  uninstall-success: Разширението {extensionName} е деинсталирано.
+  activity-flow-editor:
+    add-status: Добавяне на нов статус към потока
+    no-status: Не е въведен статус.
+    overwrite: Това ще презапише съществуващ статус!
+    overwrite-text: В този поток вече съществува статус {statusName}, ако продължите,
+      този статус ще бъде презаписан. Искате ли да презапишете предишния статус {statusName}?
+    overwrite-button: Да, презапиши!
+    remove: Премахване на статус
+    remove-text: Сигурни ли сте, че искате да изтриете този статус? Всички свързани
+      дейности и логика ще бъдат изтрити заедно със статуса.
+    delete-button: Да, изтрий
+    unable-warning: Статусът {status} трябва да бъде в този ред на последователност,
+      не може да бъде преместен.
+    order-warning: Създаденият статус винаги трябва да бъде първата последователност
+      в потока на поръчката.
+    title: Поток на дейностите
+    message: Конфигурацията на потока на дейностите ще ви позволи да дефинирате различните
+      типове статусни дейности за проследяване, които се прилагат за този тип поръчка.
+      Логиката на потока на дейностите също може да бъде конфигурирана.
+    order-flow: Поток на поръчката
+    waypoint-flow: Поток на междинна точка
+    new-activity: Нова дейност
+    activity-details: Детайли за дейността
+    logic-stack: Логически стек
+    add-logic: Добавяне на логическо условие
+    select-field: Изберете поле
+    select-operator: Изберете оператор
+    enter-value: Въведете стойност за сравнение
+    no-logic: Не са приложени логически условия
+  details-editor:
+    success: Инсталирано
+    key-text: Предайте този ключ във вашия тип поръчка, за да конфигурирате поръчката
+      с тази конфигурация.
+    namespace-text: Уникално пространство от имена за това разширение.
+    id: ID на разширението
+    id-text: Уникален идентификатор за това разширение.
+    version: Версия на разширението
+    version-text: Версия на това разширение.
+    clone: Клониране на конфигурацията
+    uninstall: Деинсталиране на конфигурацията
+    delete: Изтриване на конфигурацията
+  entities-editor:
+    warning-message: Не е въведено име на ключ за мета поле.
+    title: Субекти
+    message: Конфигурацията на субектите ще ви позволи да дефинирате различните типове
+      субекти, които трябва да бъдат избираеми за този тип поръчка. Те трябва да се
+      използват като шаблони за по-бързо ръчно създаване на поръчки.
+    type: Тип субект
+    add-meta: Добавяне на мета поле
+  fields-editor:
+    text-field: Текстово поле
+    boolean: Булево
+    boolean-text: Позволява на потребителя да превключва свойство вярно или невярно
+      чрез отметка
+    dropdown: Избор от падащо меню
+    dropdown-text: Позволява на потребителя да избира опция от падащо меню с опции
+    datetime: Избор на дата и час
+    datetime-text: Позволява на потребителя да избира дата и час
+    port: Избор на пристанище
+    port-text: Позволява на потребителя да избира пристанище
+    vessel: Избор на съд
+    vessel-text: Позволява на потребителя да избира съд
+    warning-message: Не е въведено име на група.
+    field-title: Мета полета
+    new-field: Ново персонализирано поле
+    new-custom-field: Нова група персонализирани полета
+    field-text: Конфигурацията на мета полетата ще ви позволи да дефинирате персонализирани
+      входни полета, които ще се прилагат към поръчките.
+    custom-field-group: Група персонализирани полета
+    default-field: По подразбиране полета
+    custom-field: Персонализирано поле
+    type: Тип поле
+    select-type: Изберете тип поле
+    add-option: Добавяне на опция
+  select-message: Изберете конфигурация на поръчка за промяна или кликнете върху "Нова
+    конфигурация", за да създадете нова конфигурация на поръчка.
+  new-config: Нова конфигурация
+  loading-configuration: Зареждане на вашите конфигурации на поръчки...
+  select-order: Изберете конфигурация на поръчка
+  save-changes: Запазване на промените
+  details: Подробности
+  fields: Персонализирани полета
+  flow: Поток на дейностите
+  entities: Субекти
+order-list-overlay:
+  search: Търсене на поръчки...
+  selected: Избрано
+  assign: Назначи на шофьор...
+  cancel: Отмени поръчки...
+  delete: Изтрий поръчки...
+  dispatch: Изпрати поръчки...
+  actions: Действия
+  create-order: Създай нова поръчка...
+  create-fleet: Създай нов автопарк...
+  active-orders: Активни поръчки
+  unassigned-orders: Неназначени поръчки
+route-list:
+  expand: Докоснете за разширяване
+  collapse: Докоснете за свиване
+  more-waypoints: още точки по маршрута
+settings:
+  custom-fields: Потребителски полета
+  notifications:
+    fleet-ops-notification-settings: Настройки за известия на автопарка
+    fleet-ops-notifications: Известия на автопарка
+    configure-notifications: Настройване на известия
+    select-notifiables: Изберете получатели на известия
+  routing:
+    fleet-ops-routing-settings: Настройки за маршрутизиране на автопарка
+    fleet-ops-routing: Маршрутизиране на автопарка
+    configure-routing: Настройване на маршрутизиране
+    select-routing-service: Изберете услуга за маршрутизиране
+    routing-service: Услуга за маршрутизиране
+    routing-service-help-text: Изберете услугата, която отговаря за изчисляването
+      и начертаването на маршрути на картата.
+    select-routing-distance-unit: Изберете мерна единица за разстояние при маршрутизиране
+    routing-distance-unit: Мерна единица за разстояние при маршрутизиране
+    routing-distance-unit-help-text: Единицата, използвана за изчисляване на разстояния
+      и маршрути.
+  navigator-app:
+    navigator-app-settings: Настройки на навигационното приложение
+  payments:
+    payments: Плащания
+    payment-settings: Настройки за плащания
+    account-not-setup-for-payments: Вашият акаунт все още не е настроен да приема
+      плащания.
+    to-accept-payments: За да приемате и обработвате плащания, трябва да завършите
+      процеса на регистрация чрез Stripe.
+    system-stripe-not-setup: Тази система в момента не може да приема или обработва
+      плащания, свържете се с администратора на системата за конфигуриране на плащания.
+    loading-settings: Зареждане на настройките за плащания...
+    onboard:
+      header-title: Регистрация за плащания
+      title-completed: Регистрацията беше успешно завършена!
+      title-incomplete: Завършете този процес на регистрация, за да приемате плащания.
+      subtitle-completed: Вашата регистрация беше успешна и вече можете да приемате
+        и получавате плащания от клиенти и трети страни.
+      subtitle-incomplete: Този процес на регистрация трябва да бъде завършен, за
+        да се приемат плащания за поръчки.
+      button-continue: Продължи
+      button-start: Започнете регистрацията сега
+      button-in-progress: Регистрацията е в процес
