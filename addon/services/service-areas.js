@@ -183,8 +183,8 @@ export default class ServiceAreasService extends Service {
             const angle = (i / numPoints) * 2 * Math.PI;
             const latOffset = radiusInDegrees * Math.sin(angle);
             const lngOffset = radiusInDegrees * Math.cos(angle);
-            // Convert generated point to [lng, lat] order
-            let point = [center.lng + lngOffset, center.lat + latOffset];
+            // Convert generated point to [lat, lng] order
+            let point = [center.lat + latOffset, center.lng + lngOffset];
             // Wrap the longitude of this point
             point = wrapCoordinates(point);
             latLngs.push(point);
