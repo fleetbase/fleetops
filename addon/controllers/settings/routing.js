@@ -28,7 +28,7 @@ export default class SettingsRoutingController extends Controller {
      */
     @task *saveSettings() {
         try {
-            yield this.fetch.post('fleet-ops/settings/routing-settings', { router: this.routerService });
+            yield this.fetch.post('fleet-ops/settings/routing-settings', { router: this.routerService, unit: this.routingUnit });
             yield this.performAdditionalSaveTasks();
             // Save in local memory too
             this.currentUser.setOption('routing', { router: this.routerService, unit: this.routingUnit });
