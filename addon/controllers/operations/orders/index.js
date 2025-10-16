@@ -63,57 +63,62 @@ export default class OperationsOrdersIndexController extends Controller {
     @tracked without_driver;
     @tracked status;
     @tracked type;
+    @tracked orderConfig;
     @tracked bulkSearchValue = '';
     @tracked bulk_query = '';
     @tracked layout = 'map';
 
     /** action buttons */
-    @tracked actionButtons = [
-        {
-            icon: 'refresh',
-            onClick: this.orderActions.refresh,
-            helpText: this.intl.t('common.refresh'),
-        },
-        {
-            text: this.intl.t('common.new'),
-            type: 'primary',
-            icon: 'plus',
-            onClick: this.orderActions.transition.create,
-        },
-        {
-            text: this.intl.t('common.export'),
-            icon: 'long-arrow-up',
-            iconClass: 'rotate-icon-45',
-            wrapperClass: 'hidden md:flex',
-            onClick: this.orderActions.export,
-        },
-    ];
+    get actionButtons() {
+        return [
+            {
+                icon: 'refresh',
+                onClick: this.orderActions.refresh,
+                helpText: this.intl.t('common.refresh'),
+            },
+            {
+                text: this.intl.t('common.new'),
+                type: 'primary',
+                icon: 'plus',
+                onClick: this.orderActions.transition.create,
+            },
+            {
+                text: this.intl.t('common.export'),
+                icon: 'long-arrow-up',
+                iconClass: 'rotate-icon-45',
+                wrapperClass: 'hidden md:flex',
+                onClick: this.orderActions.export,
+            },
+        ];
+    }
 
     /** bulk actions */
-    @tracked bulkActions = [
-        {
-            label: this.intl.t('common.cancel-resource', { resource: this.intl.t('resource.orders') }),
-            icon: 'ban',
-            fn: this.orderActions.bulkCancel,
-        },
-        {
-            label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.orders') }),
-            icon: 'trash',
-            class: 'text-red-500',
-            fn: this.orderActions.bulkDelete,
-        },
-        { separator: true },
-        {
-            label: this.intl.t('common.dispatch-orders'),
-            icon: 'rocket',
-            fn: this.orderActions.bulkDispatch,
-        },
-        {
-            label: this.intl.t('common.assign-driver'),
-            icon: 'user-plus',
-            fn: this.orderActions.bulkAssignDriver,
-        },
-    ];
+    get bulkActions() {
+        return [
+            {
+                label: this.intl.t('common.cancel-resource', { resource: this.intl.t('resource.orders') }),
+                icon: 'ban',
+                fn: this.orderActions.bulkCancel,
+            },
+            {
+                label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.orders') }),
+                icon: 'trash',
+                class: 'text-red-500',
+                fn: this.orderActions.bulkDelete,
+            },
+            { separator: true },
+            {
+                label: this.intl.t('common.dispatch-orders'),
+                icon: 'rocket',
+                fn: this.orderActions.bulkDispatch,
+            },
+            {
+                label: this.intl.t('common.assign-driver'),
+                icon: 'user-plus',
+                fn: this.orderActions.bulkAssignDriver,
+            },
+        ];
+    }
 
     /** columns */
     get columns() {
