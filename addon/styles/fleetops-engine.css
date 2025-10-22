@@ -1676,8 +1676,7 @@ main.console-fleet-ops-operations-orders-index-index section.next-view-section >
 main.console-fleet-ops-operations-orders-index-index section.next-view-section > .next-view-section-container > .next-view-section-body {
     flex: 1 1 auto;
     min-width: 0;
-    overflow-x: auto;
-    overflow-y: auto;
+    overflow: auto;
 }
 
 main.console-fleet-ops-operations-orders-index-index section.next-view-section > .next-view-section-container > .next-view-section-body > .kanban-board {

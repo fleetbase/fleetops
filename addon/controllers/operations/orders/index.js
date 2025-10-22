@@ -371,7 +371,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 ddButtonText: false,
                 ddButtonIcon: 'ellipsis-h',
                 ddButtonIconPrefix: 'fas',
-                ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.Order') }),
+                ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.order') }),
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
                 width: '12%',

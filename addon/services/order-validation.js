@@ -23,7 +23,7 @@ export default class OrderValidationService extends Service {
         const hasWaypoints = order.payload.waypoints.length >= 2;
         const hasPickup = isNotEmpty(order.payload.pickup);
         const hasDropoff = isNotEmpty(order.payload.dropoff);
-        const hasValidCustomFields = cfManager ? this.isCustomFieldsValid(cfManager) : false;
+        const hasValidCustomFields = cfManager ? this.isCustomFieldsValid(cfManager) : true;
 
         if (hasWaypoints) {
             return hasOrderConfig && hasOrderType && hasValidCustomFields;
@@ -37,13 +37,13 @@ export default class OrderValidationService extends Service {
     }
 
     validateCustomFields(cfManager) {
-        if (!cfManager) return false;
+        if (!cfManager) return true;
 
         return cfManager.validateRequired();
     }
 
     isCustomFieldsValid(cfManager) {
-        if (!cfManager) return false;
+        if (!cfManager) return true;
 
         const { isValid } = this.validateCustomFields(cfManager);
         return isValid;

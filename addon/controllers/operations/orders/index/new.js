@@ -66,8 +66,10 @@ export default class OperationsOrdersIndexNewController extends Controller {
             this.universe.trigger('fleet-ops.order.creating', order);
 
             // Save custom field values
-            const { created: customFieldValues } = yield order.cfManager.saveTo(order);
-            order.custom_field_values.pushObjects(customFieldValues);
+            if (order.cfManager) {
+                const { created: customFieldValues } = yield order.cfManager.saveTo(order);
+                order.custom_field_values.pushObjects(customFieldValues);
+            }
 
             // Save order
             const createdOrder = yield order.save();

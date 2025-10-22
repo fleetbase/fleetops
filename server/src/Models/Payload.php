@@ -368,7 +368,15 @@ class Payload extends Model
             ) {
                 $placeUuid = $attributes['place_uuid'];
 
-            // Path 2: public_id under "id" -> resolve to uuid
+            // Path 2: public_id under "uuid" -> resolve to uuid
+            } elseif (
+                is_array($attributes)
+                && isset($attributes['uuid'])
+                && ($resolvedUuid = Place::where('uuid', $attributes['uuid'])->value('uuid'))
+            ) {
+                $placeUuid = $resolvedUuid;
+
+            // Path 3: public_id under "id" -> resolve to uuid
             } elseif (
                 is_array($attributes)
                 && isset($attributes['id'])
@@ -376,9 +384,10 @@ class Payload extends Model
             ) {
                 $placeUuid = $resolvedUuid;
 
-            // Path 3: create from mixed payload
+            // Path 4: create from mixed payload
             } else {
                 $place = Place::createFromMixed($attributes);
+
 
                 // Store temp search UUID for traceability if present and different
                 if ($place instanceof Place && isset($attributes['uuid']) && $place->uuid !== $attributes['uuid']) {
@@ -420,7 +429,7 @@ class Payload extends Model
             // -------- Upsert Waypoint --------
             // Uniqueness: payload + place + order for deterministic row per position.
             $unique = [
-                'payload_uuid' => $this->payload_uuid,
+                'payload_uuid' => $this->uuid,
                 'place_uuid'   => $placeUuid,
                 'order'        => $index,
             ];
