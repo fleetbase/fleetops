@@ -774,55 +774,30 @@ class OrderController extends FleetOpsController
     }
 
     /**
-     * Retrieve all distinct order statuses for the authenticated company.
-     *
-     * This endpoint compiles:
-     * 1. All unique `status` values from the `orders` table for the current company.
-     * 2. Optionally, all `Activity` codes defined in `OrderConfig` records that are
-     *    actually referenced by existing orders (via `order_config_uuid`).
-     *
-     * ---
-     * ### Query Parameters
-     * - `include_order_config_activities` (bool, optional)
-     *   When true, includes `Activity` codes from relevant `OrderConfig` instances.
-     *
-     * - `order_config_key` (string, optional)
-     *   Restricts both `orders` and `order_configs` to a specific configuration key.
-     *
-     * ---
-     * ### Behavior
-     * - Only includes order configs that are actually used by orders.
-     * - Uses the `activities()` method on each `OrderConfig` to extract all activity codes.
-     * - Merges and deduplicates both order statuses and activity codes.
-     *
-     * ---
-     * ### Example Response
-     * ```json
-     * [
-     *   "created",
-     *   "dispatched",
-     *   "completed",
-     *   "canceled",
-     *   "pickup_ready",
-     *   "awaiting_payment"
-     * ]
-     * ```
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * Return distinct order statuses (and optionally activity codes) for a company,
+     * filtered by order_config_uuid or order_config_key if provided.
      */
     public function statuses(Request $request)
     {
-        $companyUuid = $request->user()->company_uuid ?? session('company');
-
+        $companyUuid       = $request->user()->company_uuid ?? session('company');
         $includeActivities = $request->boolean('include_order_config_activities', true);
-        $orderConfigKey    = trim((string) $request->string('order_config_key'));
 
-        // Get distinct statuses from orders
+        // Use input() + trim to get plain strings (Request::string() returns Stringable in newer Laravel)
+        $orderConfigKey = trim((string) $request->input('order_config_key', ''));
+        $orderConfigId  = trim((string) $request->input('order_config_uuid', ''));
+
+        // ---------------------------
+        // Build base orders query
+        // ---------------------------
         $ordersQuery = DB::table('orders')
             ->where('company_uuid', $companyUuid)
-            ->whereNotNull('status');
+            ->whereNotNull('status')
+            ->whereNull('deleted_at');
 
-        if ($orderConfigKey !== '') {
+        // Prefer filtering by UUID (most precise), else by key
+        if ($orderConfigId !== '') {
+            $ordersQuery->where('order_config_uuid', $orderConfigId);
+        } elseif ($orderConfigKey !== '') {
             $ordersQuery->whereExists(function ($q) use ($companyUuid, $orderConfigKey) {
                 $q->select(DB::raw(1))
                   ->from('order_configs as oc')
@@ -832,34 +807,38 @@ class OrderController extends FleetOpsController
             });
         }
 
+        // Distinct order statuses
         $orderStatuses = $ordersQuery->distinct()->pluck('status')->filter();
 
-        // Optionally include activity codes from used order configs
+        // ---------------------------------------
+        // Optionally include activity codes
+        // (must use the SAME target config set)
+        // ---------------------------------------
         $activityCodes = collect();
 
         if ($includeActivities) {
-            $configUuidsOnOrders = DB::table('orders')
-                ->where('company_uuid', $companyUuid)
-                ->when($orderConfigKey !== '', function ($q) use ($companyUuid, $orderConfigKey) {
-                    $q->whereExists(function ($sub) use ($companyUuid, $orderConfigKey) {
-                        $sub->select(DB::raw(1))
-                            ->from('order_configs as oc')
-                            ->whereColumn('oc.uuid', 'orders.order_config_uuid')
-                            ->where('oc.company_uuid', $companyUuid)
-                            ->where('oc.key', $orderConfigKey);
-                    });
-                })
-                ->whereNotNull('order_config_uuid')
-                ->distinct()
-                ->pluck('order_config_uuid')
-                ->filter();
+            // Determine target config UUIDs once, honoring UUID > key > all-on-company
+            if ($orderConfigId !== '') {
+                $targetConfigUuids = collect([$orderConfigId]);
+            } elseif ($orderConfigKey !== '') {
+                $targetConfigUuids = DB::table('order_configs')
+                    ->where('company_uuid', $companyUuid)
+                    ->where('key', $orderConfigKey)
+                    ->pluck('uuid');
+            } else {
+                // No filter given; derive from orders in this company
+                $targetConfigUuids = DB::table('orders')
+                    ->where('company_uuid', $companyUuid)
+                    ->whereNotNull('order_config_uuid')
+                    ->distinct()
+                    ->pluck('order_config_uuid');
+            }
 
-            if ($configUuidsOnOrders->isNotEmpty()) {
+            if ($targetConfigUuids->isNotEmpty()) {
                 $orderConfigs = OrderConfig::where('company_uuid', $companyUuid)
-                    ->whereIn('uuid', $configUuidsOnOrders)
+                    ->whereIn('uuid', $targetConfigUuids)
                     ->get();
 
-                /** @var OrderConfig $config */
                 foreach ($orderConfigs as $config) {
                     if (!method_exists($config, 'activities')) {
                         continue;
@@ -867,19 +846,22 @@ class OrderController extends FleetOpsController
 
                     $activities = $config->activities();
 
-                    if ($activities instanceof Collection) {
-                        $codes = $activities
-                            ->map(fn ($activity) => $activity->code ?? null)
-                            ->filter()
-                            ->values();
+                    // Handle Collection/array gracefully
+                    $codes = collect($activities)
+                        ->map(function ($activity) {
+                            return data_get($activity, 'code');
+                        })
+                        ->filter()
+                        ->values();
 
-                        $activityCodes = $activityCodes->merge($codes);
-                    }
+                    $activityCodes = $activityCodes->merge($codes);
                 }
             }
         }
 
-        // Merge & deduplicate everything
+        // ---------------------------------------
+        // Merge & return
+        // ---------------------------------------
         $result = $orderStatuses
             ->merge($activityCodes)
             ->unique()

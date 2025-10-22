@@ -1654,3 +1654,38 @@ button.fleetops-btn-xxs,
     padding-top: 0.2rem !important;
     padding-bottom: 0.2rem !important;
 }
+
+/** css fix for operations index/kanban */
+main.console-fleet-ops-operations-orders-index-index section.next-view-section {
+    max-width: 100vw;
+    min-width: 0;
+}
+
+main.console-fleet-ops-operations-orders-index-index section.next-view-section > .next-view-section-container {
+    display: flex;
+    flex-direction: column;
+    max-width: 100vw;
+    min-width: 0;
+}
+
+main.console-fleet-ops-operations-orders-index-index section.next-view-section > .next-view-section-container > .next-view-section-subheader {
+    flex: 0 0 auto;
+    width: 100%;
+}
+
+main.console-fleet-ops-operations-orders-index-index section.next-view-section > .next-view-section-container > .next-view-section-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: auto;
+}
+
+main.console-fleet-ops-operations-orders-index-index section.next-view-section > .next-view-section-container > .next-view-section-body > .kanban-board {
+    display: flex;
+}
+
+.next-view-section-subheader .next-view-section-subheader-actions .order-board-type-filter.ember-power-select-trigger.ember-basic-dropdown-trigger {
+    height: 2rem;
+    align-items: center;
+    padding-left: 0.5rem;
+    padding-right: 2rem;
+}

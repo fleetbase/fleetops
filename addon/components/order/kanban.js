@@ -6,6 +6,8 @@ import { isArray } from '@ember/array';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 import titleize from 'ember-cli-string-helpers/utils/titleize';
+import smartHumanize from '@fleetbase/ember-ui/utils/smart-humanize';
+import isUuid from '@fleetbase/ember-core/utils/is-uuid';
 
 export default class OrderKanbanComponent extends Component {
     @service fetch;
@@ -13,6 +15,7 @@ export default class OrderKanbanComponent extends Component {
     @service intl;
     @tracked statuses = [];
     @tracked orders = this.args.orders ?? [];
+    @tracked orderConfig = this.args.orderConfig ?? null;
 
     #defaultStatuses = {
         start: ['created', 'dispatched', 'started'],
@@ -48,7 +51,7 @@ export default class OrderKanbanComponent extends Component {
 
         return final.map((status, index) => ({
             id: status,
-            title: titleize(status),
+            title: titleize(smartHumanize(status)),
             position: index,
             cards: this.#getOrdersByStatus(status, this.orders),
         }));
@@ -96,13 +99,34 @@ export default class OrderKanbanComponent extends Component {
         }
     }
 
+    @action handleArgsChange(el, [orderConfig, orders = []]) {
+        if (isArray(orders)) {
+            this.orders = orders;
+        }
+
+        if (isUuid(orderConfig)) {
+            this.orderConfig = orderConfig;
+        } else {
+            this.orderConfig = null;
+        }
+        this.loadStatuses.perform();
+    }
+
     #getOrdersByStatus(status, orders = []) {
-        return orders.filter((order) => order.status === status);
+        let filteredOrders = orders.filter((order) => order.status === status);
+        if (this.orderConfig) {
+            filteredOrders = filteredOrders.filter((order) => order.order_config_uuid === this.orderConfig);
+        }
+
+        return filteredOrders;
     }
 
     @task *loadStatuses() {
+        const params = {};
+        if (this.orderConfig) params.order_config_uuid = this.orderConfig;
+
         try {
-            const statuses = yield this.fetch.get('orders/statuses');
+            const statuses = yield this.fetch.get('orders/statuses', params);
             this.statuses = isArray(statuses) ? statuses : [];
         } catch (err) {
             debug('Unable to load order statuses: ' + err.message);

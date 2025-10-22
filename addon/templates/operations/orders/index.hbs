@@ -53,9 +53,33 @@
 {{/if}}
 
 {{#if (eq this.layout "kanban")}}
-    <Layout::Section::Header @title={{t "menu.order-board"}} @actionsWrapperClass="space-x-1" />
+    <Layout::Section::Header @title={{t "menu.order-board"}} @subtitle={{@model.length}} @subtitleClass="text-xs text-center font-semibold ml-2 w-6 h-6 rounded-full bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100 flex items-center justify-center" @actionsWrapperClass="space-x-1">
+        <div class="flex flex-row items-center space-x-2">
+            <div class="w-64">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <ModelSelect
+                        @modelName="order-config"
+                        @selectedModel={{or this.orderConfig this.type}}
+                        @placeholder={{t "order.fields.order-type-placeholder"}}
+                        @triggerClass="form-select form-input order-board-type-filter"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
+                        @allowClear={{true}}
+                        @onChange={{fn (mut this.orderConfig)}}
+                        @onChangeId={{fn (mut this.type)}}
+                        as |orderConfig|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{orderConfig.name}}</div>
+                            <div class="hide-from-trigger">{{n-a orderConfig.description}}</div>
+                        </div>
+                    </ModelSelect>
+                </div>
+            </div>
+        </div>
+    </Layout::Section::Header>
     <Layout::Section::Body>
-        <Order::Kanban @orders={{@model}} @headerOffset={{160}} />
+        <Order::Kanban @orders={{@model}} @headerOffset={{160}} @orderConfig={{this.type}} />
     </Layout::Section::Body>
 {{/if}}
 

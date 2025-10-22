@@ -4,6 +4,8 @@ import { setOwner } from '@ember/application';
 import { debug } from '@ember/debug';
 
 export default function setupCustomerPortal(app, engine, universe) {
+    if (!customerPortalInstalled(app)) return;
+
     universe.afterBoot(function (u) {
         const portal = u.getEngineInstance('@fleetbase/customer-portal-engine');
         if (!portal) {
@@ -57,4 +59,9 @@ function createEngineBoundComponent(engineInstance, ComponentClass) {
             setOwner(this, engineInstance);
         }
     };
+}
+
+function customerPortalInstalled(app) {
+    const extensions = app.extensions ?? [];
+    return extensions.find(({ name }) => name === '@fleetbase/customer-portal-engine');
 }

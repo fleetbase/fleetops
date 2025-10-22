@@ -30,9 +30,6 @@ export default class OperationsOrdersIndexRoute extends Route {
         before: { refreshModel: true },
         type: { refreshModel: true },
         layout: { refreshModel: false },
-        drawerOpen: { refreshModel: false },
-        drawerTab: { refreshModel: false },
-        orderPanelOpen: { refreshModel: false },
     };
 
     model(params) {

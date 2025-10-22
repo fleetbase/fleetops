@@ -362,7 +362,11 @@ class Place extends Model
         $results = \Geocoder\Laravel\Facades\Geocoder::geocode($address)->get();
 
         if ($results->isEmpty() || !$results->first()) {
-            return (new static())->newInstance(['street1' => $address]);
+            $place = (new static())->newInstance(['street1' => $address, 'location' => new SpatialPoint(0, 0)]);
+            if ($saveInstance) {
+                $place->save();
+            }
+            return $place;
         }
 
         return static::createFromGoogleAddress($results->first(), $saveInstance);

@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Support\VehicleData;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Fleetbase\Models\Category;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -61,7 +63,7 @@ class Vehicle extends Model
      *
      * @var array
      */
-    protected $searchableColumns = ['make', 'model', 'year', 'plate_number', 'vin', 'public_id'];
+    protected $searchableColumns = ['name', 'description', 'make', 'model', 'trim', 'model_type', 'body_type', 'body_sub_type', 'year', 'plate_number', 'vin', 'call_sign', 'public_id'];
 
     /**
      * Attributes that is filterable on this model.
@@ -533,6 +535,34 @@ class Vehicle extends Model
         return ($isFirstPosition || $isPast50Meters) ? Position::create($positionData) : null;
     }
 
+    /**
+     * Creates a new position for the vehicle
+     *
+     * @param array $attributes
+     * @return Position|null
+     */
+    public function createPosition(array $attributes = [], Model|string|null $destination = null): ?Position
+    {
+        if (!isset($attributes['coordinates']) && isset($attributes['location'])) {
+            $attributes['coordinates'] = $attributes['location'];
+        }
+
+        if (!isset($attributes['coordinates']) && isset($attributes['latitude']) && isset($attributes['longitude'])) {
+            $attributes['coordinates'] = new SpatialPoint($attributes['latitude'], $attributes['longitude']);
+        }
+
+        // handle destination if set
+        $destinationUuid = Str::isUuid($destination) ? $destination : data_get($destination, 'uuid');
+
+        return Position::create([
+            ...Arr::only($attributes, ['coordinates', 'heading', 'bearing', 'speed', 'altitude']),
+            'subject_uuid' => $this->uuid,
+            'subject_type' => $this->getMorphClass(),
+            'company_uuid' => $this->company_uuid,
+            'destination_uuid' => $destinationUuid
+        ]);
+    }
+
     public static function createFromImport(array $row, bool $saveInstance = false): Vehicle
     {
         // Filter array for null key values
@@ -659,5 +689,81 @@ class Vehicle extends Model
         $this->details = $details;
 
         return $details;
+    }
+
+    /**
+     * Set or update a single key/value pair in the `specs` JSON column.
+     *
+     * Uses Laravel's `data_set` helper to allow dot notation for nested keys.
+     *
+     * @param string|array $key   the key (or array path) to set within the specs
+     * @param mixed        $value the value to assign to the given key
+     *
+     * @return array the updated specs array
+     */
+    public function setSpec(string|array $key, mixed $value): array
+    {
+        $specs = is_array($this->specs) ? $this->specs : (array) $this->specs;
+        data_set($specs, $key, $value);
+        $this->specs = $specs;
+
+        return $specs;
+    }
+
+    /**
+     * Merge multiple values into the `specs` JSON column.
+     *
+     * By default this performs a shallow merge (overwrites duplicate keys).
+     * Use `array_replace_recursive` if you need nested merges.
+     *
+     * @param array $newSpecs key/value pairs to merge into specs
+     *
+     * @return array the updated specs array
+     */
+    public function setSpecs(array $newSpecs = []): array
+    {
+        $specs       = is_array($this->specs) ? $this->specs : (array) $this->specs;
+        $specs       = array_merge($specs, $newSpecs);
+        $this->specs = $specs;
+
+        return $specs;
+    }
+
+    /**
+     * Set or update a single key/value pair in the `vin_data` JSON column.
+     *
+     * Uses Laravel's `data_set` helper to allow dot notation for nested keys.
+     *
+     * @param string|array $key   the key (or array path) to set within the VIN data
+     * @param mixed        $value the value to assign to the given key
+     *
+     * @return array the updated vin_data array
+     */
+    public function setVinData(string|array $key, mixed $value): array
+    {
+        $vinData = is_array($this->vin_data) ? $this->vin_data : (array) $this->vin_data;
+        data_set($vinData, $key, $value);
+        $this->vin_data = $vinData;
+
+        return $vinData;
+    }
+
+    /**
+     * Merge multiple values into the `vin_data` JSON column.
+     *
+     * By default this performs a shallow merge (overwrites duplicate keys).
+     * Use `array_replace_recursive` if you need nested merges.
+     *
+     * @param array $newVinData key/value pairs to merge into vin_data
+     *
+     * @return array the updated vin_data array
+     */
+    public function setVinDatas(array $newVinData = []): array
+    {
+        $vinData       = is_array($this->vin_data) ? $this->vin_data : (array) $this->vin_data;
+        $vinData       = array_merge($vinData, $newVinData);
+        $this->vin_data = $vinData;
+
+        return $vinData;
     }
 }

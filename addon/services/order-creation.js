@@ -1,6 +1,6 @@
 import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { later } from '@ember/runloop';
+import { next } from '@ember/runloop';
 
 export default class OrderCreationService extends Service {
     @service orderActions;
@@ -12,13 +12,9 @@ export default class OrderCreationService extends Service {
         const order = this.orderActions.createNewInstance(attrs);
         this.order = order;
 
-        later(
-            this,
-            () => {
-                this.addContext('order', order);
-            },
-            0
-        );
+        next(() => {
+            this.addContext('order', order);
+        });
 
         return order;
     }
