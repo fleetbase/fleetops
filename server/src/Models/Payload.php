@@ -388,7 +388,6 @@ class Payload extends Model
             } else {
                 $place = Place::createFromMixed($attributes);
 
-
                 // Store temp search UUID for traceability if present and different
                 if ($place instanceof Place && isset($attributes['uuid']) && $place->uuid !== $attributes['uuid']) {
                     $place->updateMeta('search_uuid', $attributes['uuid']);

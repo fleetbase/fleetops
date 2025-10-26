@@ -66,10 +66,11 @@
             {{/each}}
 
             {{#each this.vehicles as |vehicle|}}
-                <layers.marker
+                <layers.tracking-marker
                     @id={{vehicle.id}}
                     @publicId={{vehicle.public_id}}
                     @location={{point-to-coordinates vehicle.location}}
+                    @rotationAngle={{vehicle.heading}}
                     @icon={{icon iconUrl=vehicle.avatar_url iconSize=(array 24 24)}}
                     @onAdd={{fn this.trigger "onVehicleAdded" vehicle}}
                     @onClick={{fn this.trigger "onVehicleClicked" vehicle}}
@@ -83,6 +84,8 @@
                             </div>
                             <div class="flex-1">
                                 <div class="text-xs font-semibold">{{vehicle.displayName}}</div>
+                                <div class="text-xs">ID: {{n-a vehicle.public_id}}</div>
+                                <div class="text-xs">Serial No: {{n-a vehicle.serial_number vehicle.vin vehicle.internal_id vehicle.id}}</div>
                                 <div class="text-xs">Driver: {{n-a vehicle.driver_name}}</div>
                                 <div class="text-xs">Status: <span class="{{if vehicle.online 'text-green-500' 'text-red-400'}}">{{if vehicle.online "Online" "Offline"}}</span></div>
                                 <div class="text-xs truncate">Pos: {{point-coordinates vehicle.location}}</div>
@@ -95,9 +98,11 @@
                             <div>•</div>
                             <div class="text-xs {{if vehicle.online 'text-green-500' 'text-red-400'}}">{{if vehicle.online "Online" "Offline"}}</div>
                         </div>
+                        <div class="text-xs">ID: {{n-a vehicle.public_id}}</div>
+                        <div class="text-xs">Serial No: {{or vehicle.serial_number vehicle.vin vehicle.internal_id vehicle.id "-"}}</div>
                         <div class="text-xs truncate"><FaIcon @icon="location-dot" @size="xs" class="mr-0.5" />{{point-coordinates vehicle.location}}</div>
                     </marker.tooltip>
-                </layers.marker>
+                </layers.tracking-marker>
             {{/each}}
 
             {{#each this.places as |place|}}

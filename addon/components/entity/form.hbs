@@ -25,11 +25,7 @@
                 <InputGroup @name={{t "common.internal-id"}} @value={{@resource.internal_id}} @helpText={{t "modals.entity-form.id-text"}} />
                 <InputGroup @name={{t "modals.entity-form.sku"}} @value={{@resource.sku}} @helpText={{t "modals.entity-form.sku-text"}} />
                 <div></div>
-                <InputGroup
-                    @name={{t "modals.entity-form.description"}}
-                    @helpText={{t "modals.entity-form.description-text"}}
-                    @wrapperClass="col-span-2"
-                >
+                <InputGroup @name={{t "modals.entity-form.description"}} @helpText={{t "modals.entity-form.description-text"}} @wrapperClass="col-span-2">
                     <Textarea @value={{@resource.description}} type="text" class="w-full form-input" placeholder={{t "modals.entity-form.description"}} />
                 </InputGroup>
             </div>
@@ -83,4 +79,10 @@
             </div>
         </div>
     </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+    <RegistryYield @registry="fleet-ops:component:entity:form" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
 </div>

@@ -142,7 +142,7 @@ export default class OrderConfigManagerCustomFieldsComponent extends Component {
         });
 
         this.modalsManager.show('modals/custom-field-group-form', {
-            title: this.intl.t('fleet-ops.component.modals.new-custom-field-group.modal-title'),
+            title: this.intl.t('modals.new-custom-field-group.modal-title'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             declineButtonIcon: 'times',
