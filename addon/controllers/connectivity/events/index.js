@@ -4,6 +4,7 @@ import { tracked } from '@glimmer/tracking';
 
 export default class ConnectivityEventsIndexController extends Controller {
     @service deviceEventActions;
+    @service deviceActions;
     @service intl;
 
     /** query params */
@@ -29,18 +30,78 @@ export default class ConnectivityEventsIndexController extends Controller {
     /** columns */
     @tracked columns = [
         {
-            label: this.intl.t('column.name'),
-            valuePath: 'name',
-            width: '180px',
+            label: 'Event',
+            valuePath: 'event_type',
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
             action: this.deviceEventActions.transition.view,
             permission: 'fleet-ops view device-event',
-            hidden: true,
             resizable: true,
             sortable: true,
             filterable: true,
             filterParam: 'name',
+            filterComponent: 'filter/string',
+        },
+        {
+            label: 'Device',
+            valuePath: 'device.displayName',
+            cellComponent: 'table/cell/anchor',
+            action: this.deviceActions.transition.view,
+            permission: 'fleet-ops view device',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterComponent: 'filter/model',
+            filterComponentPlaceholder: 'Select device',
+            filterParam: 'device',
+            model: 'device',
+        },
+        {
+            label: 'Provider',
+            valuePath: 'provider',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterParam: 'provider',
+            filterComponent: 'filter/string',
+        },
+        {
+            label: 'Severity',
+            valuePath: 'severity',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterParam: 'severity',
+            filterComponent: 'filter/string',
+        },
+        {
+            label: 'IDENT',
+            valuePath: 'ident',
+            hidden: true,
+            resizable: true,
+            sortable: true,
+        },
+        {
+            label: 'Protocol',
+            valuePath: 'protocol',
+            hidden: true,
+            resizable: true,
+            sortable: true,
+        },
+        {
+            label: 'State',
+            valuePath: 'state',
+            hidden: true,
+            resizable: true,
+            sortable: true,
+        },
+        {
+            label: 'Code',
+            valuePath: 'code',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterParam: 'code',
             filterComponent: 'filter/string',
         },
         {
@@ -54,30 +115,18 @@ export default class ConnectivityEventsIndexController extends Controller {
             filterComponent: 'filter/date',
         },
         {
-            label: this.intl.t('column.updated-at'),
-            valuePath: 'updatedAt',
-            sortParam: 'updated_at',
-            width: '10%',
-            resizable: true,
-            sortable: true,
-            hidden: true,
-            filterable: true,
-            filterComponent: 'filter/date',
-        },
-
-        {
             label: '',
             cellComponent: 'table/cell/dropdown',
             ddButtonText: false,
             ddButtonIcon: 'ellipsis-h',
             ddButtonIconPrefix: 'fas',
-            ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.Device Event') }),
+            ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.device-event') }),
             cellClassNames: 'overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
             width: '10%',
             actions: [
                 {
-                    label: this.intl.t('column.view-details'),
+                    label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.device-event') }),
                     fn: this.deviceEventActions.transition.view,
                     permission: 'fleet-ops view device-event',
                 },

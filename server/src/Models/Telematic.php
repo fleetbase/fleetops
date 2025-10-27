@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -85,8 +86,8 @@ class Telematic extends Model
         'last_seen_at',
         'last_metrics',
         'config',
+        'credentials',
         'meta',
-        'slug',
     ];
 
     /**
@@ -94,7 +95,7 @@ class Telematic extends Model
      *
      * @var array
      */
-    protected $appends = ['warranty_name', 'is_online', 'signal_strength', 'last_location'];
+    protected $appends = ['warranty_name', 'is_online', 'signal_strength', 'last_location', 'provider_descriptor'];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -109,10 +110,97 @@ class Telematic extends Model
      * @var array
      */
     protected $casts = [
-        'last_seen_at' => 'datetime',
-        'last_metrics' => Json::class,
-        'config'       => Json::class,
-        'meta'         => Json::class,
+        'last_seen_at'      => 'datetime',
+        'last_metrics'      => Json::class,
+        'config'            => Json::class,
+        'credentials'       => Json::class,
+        'meta'              => Json::class,
+    ];
+
+    /**
+     * Telematic statuses.
+     *
+     * @var array
+     */
+    public static $statuses = [
+        [
+            'key'         => 'initialized',
+            'label'       => 'Initialized',
+            'description' => 'Provider entry has been created but not yet configured.',
+        ],
+        [
+            'key'         => 'configured',
+            'label'       => 'Configured',
+            'description' => 'Provider credentials and settings are valid but connection not yet tested.',
+        ],
+        [
+            'key'         => 'connecting',
+            'label'       => 'Connecting',
+            'description' => 'Attempting to establish a connection with provider API.',
+        ],
+        [
+            'key'         => 'connected',
+            'label'       => 'Connected',
+            'description' => 'Successfully authenticated and connected to provider API.',
+        ],
+        [
+            'key'         => 'synchronizing',
+            'label'       => 'Synchronizing',
+            'description' => 'Currently syncing data (devices, vehicles, positions, etc.) from provider.',
+        ],
+        [
+            'key'         => 'active',
+            'label'       => 'Active',
+            'description' => 'Integration is healthy and data syncs are occurring normally.',
+        ],
+        [
+            'key'         => 'degraded',
+            'label'       => 'Degraded',
+            'description' => 'Integration partially working; intermittent errors or missing data.',
+        ],
+        [
+            'key'         => 'disconnected',
+            'label'       => 'Disconnected',
+            'description' => 'Connection lost or failed authentication.',
+        ],
+        [
+            'key'         => 'error',
+            'label'       => 'Error',
+            'description' => 'Provider integration encountered a fatal issue.',
+        ],
+        [
+            'key'         => 'disabled',
+            'label'       => 'Disabled',
+            'description' => 'Manually disabled by the user.',
+        ],
+        [
+            'key'         => 'archived',
+            'label'       => 'Archived',
+            'description' => 'Deprecated or replaced integration, kept for record.',
+        ],
+    ];
+
+    /**
+     * Telematic health statuses.
+     *
+     * @var array
+     */
+    public static $healthStates = [
+        [
+            'key'         => 'healthy',
+            'label'       => 'Healthy',
+            'description' => 'Integration tested and stable.',
+        ],
+        [
+            'key'         => 'warning',
+            'label'       => 'Warning',
+            'description' => 'Minor issues detected (e.g., slow response, nearing quota).',
+        ],
+        [
+            'key'         => 'critical',
+            'label'       => 'Critical',
+            'description' => 'Persistent failure or no data received in X hours.',
+        ],
     ];
 
     /**
@@ -167,6 +255,20 @@ class Telematic extends Model
     public function assets(): HasMany
     {
         return $this->hasMany(Asset::class, 'telematic_uuid', 'uuid');
+    }
+
+    /**
+     * Get the provider config.
+     */
+    public function getProviderDescriptorAttribute(): array
+    {
+        $registry = app(TelematicProviderRegistry::class);
+        $provider = $registry->findByKey($this->provider);
+        if ($provider) {
+            return $provider->toArray();
+        }
+
+        return [];
     }
 
     /**
@@ -332,5 +434,13 @@ class Telematic extends Model
             ->log("Command '{$command}' sent to telematic device");
 
         return true;
+    }
+
+    /**
+     * Sets a default status if none input.
+     */
+    public function setStatusAttribute(?string $status = null): void
+    {
+        $this->attributes['status'] = $status ?? 'initialized';
     }
 }

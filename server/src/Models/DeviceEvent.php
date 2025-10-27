@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
 use Fleetbase\Models\Alert;
+use Fleetbase\Models\Company;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -67,6 +68,7 @@ class DeviceEvent extends Model
      * @var array
      */
     protected $fillable = [
+        'company_uuid',
         'device_uuid',
         'payload',
         'meta',
@@ -141,6 +143,11 @@ class DeviceEvent extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()->logAll();
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'company_uuid', 'uuid');
     }
 
     public function device(): BelongsTo

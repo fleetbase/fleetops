@@ -1,18 +1,21 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import fleetOpsOptions from '../../../utils/fleet-ops-options';
 
 export default class ConnectivityTelematicsIndexController extends Controller {
     @service telematicActions;
     @service intl;
 
     /** query params */
-    @tracked queryParams = ['name', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
+    @tracked queryParams = ['name', 'provider', 'status', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
     @tracked public_id;
     @tracked name;
+    @tracked provider;
+    @tracked status;
 
     /** action buttons */
     @tracked actionButtons = [
@@ -54,14 +57,12 @@ export default class ConnectivityTelematicsIndexController extends Controller {
     /** columns */
     @tracked columns = [
         {
-            label: this.intl.t('column.name'),
-            valuePath: 'name',
-            width: '180px',
+            label: 'Provider',
+            valuePath: 'provider',
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
             action: this.telematicActions.transition.view,
             permission: 'fleet-ops view telematic',
-            hidden: true,
             resizable: true,
             sortable: true,
             filterable: true,
@@ -69,10 +70,19 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
+            label: this.intl.t('column.status'),
+            valuePath: 'status',
+            cellComponent: 'table/cell/status',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterComponent: 'filter/multi-option',
+            filterOptions: fleetOpsOptions('telematicStatuses'),
+        },
+        {
             label: this.intl.t('column.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
-            width: '10%',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -82,7 +92,6 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             label: this.intl.t('column.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
-            width: '10%',
             resizable: true,
             sortable: true,
             hidden: true,
@@ -96,18 +105,18 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             ddButtonText: false,
             ddButtonIcon: 'ellipsis-h',
             ddButtonIconPrefix: 'fas',
-            ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.Telematic') }),
+            ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.telematic') }),
             cellClassNames: 'overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
             width: '10%',
             actions: [
                 {
-                    label: this.intl.t('column.view-details'),
+                    label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.telematic') }),
                     fn: this.telematicActions.transition.view,
                     permission: 'fleet-ops view telematic',
                 },
                 {
-                    label: this.intl.t('column.edit-place'),
+                    label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.telematic') }),
                     fn: this.telematicActions.transition.edit,
                     permission: 'fleet-ops update telematic',
                 },
@@ -115,7 +124,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
                     separator: true,
                 },
                 {
-                    label: this.intl.t('column.delete'),
+                    label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.telematic') }),
                     fn: this.telematicActions.delete,
                     permission: 'fleet-ops delete telematic',
                 },

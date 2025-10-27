@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Jobs;
 
+use Carbon\Carbon;
 use Fleetbase\FleetOps\Models\Position;
 use Fleetbase\Support\SocketCluster\SocketClusterService;
 use Illuminate\Bus\Queueable;
@@ -10,13 +11,15 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class ReplayPositions implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
-    /** @var \Illuminate\Support\Collection<int, \Fleetbase\FleetOps\Models\Position> */
+    /** @var \Illuminate\Support\Collection<int, Position> */
     protected $positions;
     protected string $channelId;
     protected float $speed;

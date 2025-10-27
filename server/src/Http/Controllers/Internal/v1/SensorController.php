@@ -12,4 +12,15 @@ class SensorController extends FleetOpsController
      * @var string
      */
     public $resource = 'sensor';
+
+    /**
+     * Query callback when querying record.
+     *
+     * @param \Illuminate\Database\Query\Builder $query
+     * @param Request                            $request
+     */
+    public static function onQueryRecord($query, $request): void
+    {
+        $query->with(['telematic', 'warranty']);
+    }
 }

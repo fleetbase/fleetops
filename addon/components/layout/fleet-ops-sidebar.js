@@ -171,14 +171,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 permission: 'fleet-ops list device-event',
                 visible: this.abilities.can('fleet-ops see device-event'),
             },
-            {
-                intl: 'menu.tracking',
-                title: this.intl.t('menu.tracking'),
-                icon: 'map-marked-alt',
-                route: 'connectivity.tracking',
-                permission: 'fleet-ops list device',
-                visible: this.abilities.can('fleet-ops see device'),
-            },
+            // {
+            //     intl: 'menu.tracking',
+            //     title: this.intl.t('menu.tracking'),
+            //     icon: 'map-marked-alt',
+            //     route: 'connectivity.tracking',
+            //     permission: 'fleet-ops list device',
+            //     visible: this.abilities.can('fleet-ops see device'),
+            // },
         ];
 
         const maintenanceItems = [

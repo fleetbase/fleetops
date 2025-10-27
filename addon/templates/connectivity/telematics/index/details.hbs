@@ -1,2 +1,14 @@
-
-{{outlet}}
+<Layout::Resource::Panel
+    @resource={{@model}}
+    @controller={{this}}
+    @headerTitle={{or @model.name @model.provider}}
+    @actionButtons={{this.actionButtons}}
+    @onPressCancel={{transition-to "connectivity.telematics.index"}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+    @headerClass="no-bottom-border"
+    @bodyClass="no-scroll"
+>
+    <TabNavigation @tabs={{this.tabs}} @contentClass="scrollable" @tablistClass="pl-2">
+        {{outlet}}
+    </TabNavigation>
+</Layout::Resource::Panel>

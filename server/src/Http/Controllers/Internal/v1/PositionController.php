@@ -3,8 +3,8 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
-use Fleetbase\FleetOps\Models\Position;
 use Fleetbase\FleetOps\Jobs\ReplayPositions;
+use Fleetbase\FleetOps\Models\Position;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Http\Request;
 

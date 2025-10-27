@@ -13,14 +13,17 @@ use Illuminate\Support\Facades\Log;
 
 class SendPositionReplay implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     protected string $channelId;
     protected Position $position;
     protected int $index;
     protected ?string $subjectUuid;
 
-    public $tries = 3;
+    public $tries   = 3;
     public $timeout = 60;
 
     public function __construct(string $channelId, Position $position, int $index, ?string $subjectUuid = null)

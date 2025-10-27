@@ -1,0 +1,84 @@
+<div class="positions-replay-component flex flex-row items-center justify-between w-full px-5 py-2 border-b border-gray-200 dark:border-gray-700">
+    <div class="flex flex-row items-center space-x-2">
+        <div>
+            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                <PowerSelect
+                    @options={{this.trackables}}
+                    @selected={{this.resource}}
+                    @onChange={{this.onResourceSelected}}
+                    @placeholder={{t "common.select-field" field="trackable"}}
+                    @triggerClass="form-select form-input form-input-sm w-48"
+                    as |option|
+                >
+                    <div class="flex flex-row items-center space-x-2">
+                        <div class="inline-block">
+                            <Image src={{or option.avatar_url option.photo_url}} class="w-4 h-4" />
+                        </div>
+                        <div class="inline-block text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{or option.name option.displayName option.public_id}}</div>
+                            <div class="hide-from-trigger">{{or option.email option.serial_number option.plate_number option.internal_id}}</div>
+                        </div>
+                    </div>
+                </PowerSelect>
+            </div>
+        </div>
+
+        <div class="w-48">
+            <DatePicker
+                @value={{this.dateFilter}}
+                @range={{true}}
+                @onSelect={{this.onDateRangeChanged}}
+                @autoClose={{true}}
+                @placeholder="Select date range"
+                class="w-full form-input form-input-sm"
+            />
+        </div>
+    </div>
+
+    <div class="replay-controls">
+        <div class="flex items-center justify-between space-x-2">
+            <div class="flex items-center space-x-2">
+                <Button @type="danger" @text="Stop" @icon="stop" @size="xs" @onClick={{this.stopReplay}} />
+                <Button
+                    @type="success"
+                    @text="Play"
+                    @icon="play"
+                    @size="xs"
+                    @isLoading={{this.isReplaying}}
+                    @disabled={{or this.replayPositions.isRunning (not this.hasPositions)}}
+                    @onClick={{this.startReplay}}
+                />
+
+                <div class="speed-control">
+                    <label class="text-xs uppercase tracking-wide font-medium text-gray-700 dark:text-gray-400 mr-1">
+                        Speed:
+                    </label>
+                    <Select
+                        @value={{this.replaySpeed}}
+                        @options={{this.speedOptions}}
+                        @optionValue="value"
+                        @optionLabel="label"
+                        @onSelect={{this.onSpeedChanged}}
+                        class="form-select speed-select"
+                    />
+                </div>
+            </div>
+
+            {{#if this.isReplaying}}
+                <div class="replay-progress flex items-center space-x-1">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                        {{this.currentReplayIndex}}/{{this.totalPositions}}
+                    </span>
+                    <div class="progress-bar w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div class="progress-fill h-full bg-blue-600 transition-all duration-300" style={{this.replayProgressWidth}}></div>
+                    </div>
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{this.replayProgress}}%
+                    </span>
+                </div>
+            {{/if}}
+        </div>
+    </div>
+</div>
+<Table @rows={{this.positions}} @columns={{this.columns}} />
+<Spacer @height="200px" />

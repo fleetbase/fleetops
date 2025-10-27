@@ -1,7 +1,7 @@
 <Layout::Resource::Panel
     @resource={{@model}}
     @controller={{this}}
-    @headerTitle={{concat "Edit: " @model.name}}
+    @headerTitle={{concat "Edit: " (or @model.name @model.provider)}}
     @actionButtons={{this.actionButtons}}
     @saveTask={{this.save}}
     @onPressCancel={{this.cancel}}

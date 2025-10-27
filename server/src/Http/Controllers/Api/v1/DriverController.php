@@ -344,12 +344,12 @@ class DriverController extends Controller
         $isGeocodable = Carbon::parse($driver->updated_at)->diffInMinutes(Carbon::now(), false) > 10 || empty($driver->country) || empty($driver->city);
 
         $positionData = [
-            'location' => new Point($latitude, $longitude),
-            'latitude' => $latitude,
+            'location'  => new Point($latitude, $longitude),
+            'latitude'  => $latitude,
             'longitude' => $longitude,
-            'altitude' => $altitude,
-            'heading'  => $heading,
-            'speed'    => $speed,
+            'altitude'  => $altitude,
+            'heading'   => $heading,
+            'speed'     => $speed,
         ];
 
         // Append current order to data if applicable
@@ -387,6 +387,7 @@ class DriverController extends Controller
         }
 
         broadcast(new DriverLocationChanged($driver));
+
         return new DriverResource($driver);
     }
 

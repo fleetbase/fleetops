@@ -403,7 +403,14 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                         $router->fleetbaseRoutes('devices');
                         $router->fleetbaseRoutes('device-events');
                         $router->fleetbaseRoutes('sensors');
-                        $router->fleetbaseRoutes('telematics');
+                        $router->fleetbaseRoutes('telematics', function ($router, $controller) {
+                            $router->get('providers', $controller('providers'));
+                            $router->get('devices', $controller('devices'));
+                            $router->post('link-device', $controller('linkDevice'));
+                            $router->post('discover', $controller('discover'));
+                            $router->post('{id}/test-connection', $controller('testConnection'));
+                            $router->post('{key}/test-credentials', $controller('testCredentials'));
+                        });
                         $router->fleetbaseRoutes('work-orders');
                         $router->fleetbaseRoutes('maintenance');
                         $router->fleetbaseRoutes('equipment');

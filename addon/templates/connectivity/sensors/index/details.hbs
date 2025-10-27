@@ -1,2 +1,15 @@
-
-{{outlet}}
+<Layout::Resource::Panel
+    @resource={{@model}}
+    @controller={{this}}
+    @headerComponent={{component "sensor/panel-header" resource=@model}}
+    @headerTitle={{or @model.name @model.serial_number}}
+    @actionButtons={{this.actionButtons}}
+    @onPressCancel={{transition-to "connectivity.sensors.index"}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+    @headerClass="no-bottom-border"
+    @bodyClass="no-scroll"
+>
+    <TabNavigation @tabs={{this.tabs}} @contentClass="scrollable" @tablistClass="pl-2">
+        {{outlet}}
+    </TabNavigation>
+</Layout::Resource::Panel>

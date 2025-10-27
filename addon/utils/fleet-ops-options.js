@@ -403,6 +403,95 @@ export const serviceAreaTypes = [
     { label: 'Continent', value: 'continent', description: 'A global landmass encompassing multiple countries (e.g., Asia, Europe, Africa).' },
 ];
 
+export const telematicStatuses = [
+    { value: 'initialized', label: 'Initialized', description: 'Provider entry has been created but not yet configured.' },
+    { value: 'configured', label: 'Configured', description: 'Provider credentials and settings are valid but connection not yet tested.' },
+    { value: 'connecting', label: 'Connecting', description: 'Attempting to establish a connection with provider API.' },
+    { value: 'connected', label: 'Connected', description: 'Successfully authenticated and connected to provider API.' },
+    { value: 'synchronizing', label: 'Synchronizing', description: 'Currently syncing data (devices, vehicles, positions, etc.) from provider.' },
+    { value: 'active', label: 'Active', description: 'Integration is healthy and data syncs are occurring normally.' },
+    { value: 'degraded', label: 'Degraded', description: 'Integration partially working; intermittent errors or missing data.' },
+    { value: 'disconnected', label: 'Disconnected', description: 'Connection lost or failed authentication.' },
+    { value: 'error', label: 'Error', description: 'Provider integration encountered a fatal issue.' },
+    { value: 'disabled', label: 'Disabled', description: 'Manually disabled by the user.' },
+    { value: 'archived', label: 'Archived', description: 'Deprecated or replaced integration, kept for record.' },
+];
+
+export const telematicHealthStates = [
+    { value: 'healthy', label: 'Healthy', description: 'Integration tested and stable.' },
+    { value: 'warning', label: 'Warning', description: 'Minor issues detected (e.g., slow response, nearing quota).' },
+    { value: 'critical', label: 'Critical', description: 'Persistent failure or no data received in X hours.' },
+];
+
+export const deviceTypes = [
+    { label: 'GPS Tracker', value: 'gps_tracker', description: 'Standalone GPS tracking device installed in vehicle or asset.' },
+    { label: 'OBD-II Plug-in Device', value: 'obd2_plugin', description: 'Plugs into vehicle OBD-II port; reads diagnostics, engine data, and transmits telematics.' },
+    { label: 'CAN Bus Module', value: 'can_bus_module', description: 'Hard-wired module connected to vehicle CAN bus for detailed vehicle subsystem data.' },
+    { label: 'Dash Camera Telematics Unit', value: 'dashcam_unit', description: 'Camera + integrated telematics module capturing video and vehicle data.' },
+    {
+        label: 'Battery-Powered Asset Tracker',
+        value: 'battery_asset_tracker',
+        description: 'Self-powered wireless device for tracking non-powered assets (trailers, containers, equipment).',
+    },
+    { label: 'Smartphone App Device', value: 'smartphone_app_device', description: 'Mobile device running telematics/tracking app using phone sensors and connectivity.' },
+    { label: 'Hard-wired Black Box Module', value: 'hardwired_black_box', description: 'Permanently installed telematics control unit wired to vehicle electrical system for fleet use.' },
+    { label: 'Mobile Edge / IoT Gateway', value: 'mobile_edge_gateway', description: 'Multi-sensor/IoT gateway installed in vehicle or asset to aggregate sensor data and telematics.' },
+    {
+        label: 'Trailer/Container Telematic Sensor Node',
+        value: 'trailer_container_node',
+        description: 'Specialised telematics node for trailers, containers, intermodal assets, tracking location and status.',
+    },
+];
+
+export const sensorTypes = [
+    { label: 'GPS / GNSS Receiver', value: 'gps_gnss', description: 'Global positioning sensor providing latitude/longitude, speed and time information.' },
+    { label: 'Accelerometer', value: 'accelerometer', description: 'Measures linear acceleration; used to detect harsh braking, rapid acceleration, and movement.' },
+    { label: 'Gyroscope / IMU', value: 'gyroscope_imu', description: 'Inertial Measurement Unit estimating orientation, yaw/pitch/roll of vehicle or asset.' },
+    { label: 'Fuel Level Sensor', value: 'fuel_level', description: 'Measures remaining fuel in tank; used for fuel monitoring and consumption tracking.' },
+    { label: 'Tire Pressure Sensor (TPMS)', value: 'tire_pressure', description: 'Measures pressure (and often temperature) in tires for safety and maintenance.' },
+    { label: 'Engine Diagnostic / OBD Sensor', value: 'engine_diagnostic', description: 'Reads engine fault codes, RPM, engine hours, and other diagnostics via OBD or CAN.' },
+    { label: 'Temperature Sensor', value: 'temperature', description: 'Monitors ambient or equipment temperature; used for refrigerated cargo, battery health etc.' },
+    { label: 'Humidity Sensor', value: 'humidity', description: 'Detects moisture/humidity levels in cargo or enclosed spaces for condition monitoring.' },
+    { label: 'Door / Hatch Sensor', value: 'door_hatch', description: 'Monitors open/close status of doors, hatches or compartments for security/tracking.' },
+    { label: 'Vibration / Shock Sensor', value: 'vibration_shock', description: 'Measures vibration or shock events; suitable for freight, containers or equipment stability monitoring.' },
+    { label: 'Battery Voltage Sensor', value: 'battery_voltage', description: 'Monitors battery or electrical system voltage to detect low power or charging issues.' },
+    { label: 'Geofence / Entry-Exit Event Sensor', value: 'geofence_event', description: 'Triggers when asset enters/exits defined geographic zone; used for location-based alerts.' },
+    { label: 'Idle Time Sensor', value: 'idle_time', description: 'Tracks engine on with vehicle stationary; used to measure idling and optimize fuel/usage.' },
+    { label: 'Driver Behavior Sensor', value: 'driver_behavior', description: 'Aggregates data (speed, braking, cornering) to score driving behavior and safety.' },
+];
+
+export const deviceStatuses = [
+    { label: 'Inactive', value: 'inactive', description: 'Device record exists but has not yet been activated or assigned.' },
+    { label: 'Active', value: 'active', description: 'Device is online and actively communicating with the platform.' },
+    { label: 'Online', value: 'online', description: 'Device is currently connected and transmitting live data.' },
+    { label: 'Offline', value: 'offline', description: 'Device is powered off or has not transmitted data within the expected interval.' },
+    { label: 'Sleeping', value: 'sleeping', description: 'Device in low-power mode awaiting wake event or scheduled reporting interval.' },
+    { label: 'Idle', value: 'idle', description: 'Device is powered and connected but not moving or transmitting new telemetry.' },
+    { label: 'Maintenance', value: 'maintenance', description: 'Device is undergoing repair, firmware update, or service maintenance.' },
+    { label: 'Degraded', value: 'degraded', description: 'Device is partially functional; intermittent connectivity or incomplete data.' },
+    { label: 'Error', value: 'error', description: 'Device reported fault, hardware issue, or repeated communication errors.' },
+    { label: 'Disconnected', value: 'disconnected', description: 'Device lost connection to network or telematic gateway.' },
+    { label: 'Decommissioned', value: 'decommissioned', description: 'Device permanently retired or removed from active fleet use.' },
+    { label: 'Disabled', value: 'disabled', description: 'Device manually disabled by user or admin; data not being accepted.' },
+    { label: 'Pending Activation', value: 'pending_activation', description: 'Device provisioned but not yet verified or linked to telematic source.' },
+    { label: 'Provisioning', value: 'provisioning', description: 'Device configuration or initialization is in progress.' },
+];
+
+export const sensorStatuses = [
+    { label: 'Active', value: 'active', description: 'Sensor is online and transmitting readings as expected.' },
+    { label: 'Inactive', value: 'inactive', description: 'Sensor exists but is not currently operational or reporting.' },
+    { label: 'Online', value: 'online', description: 'Sensor is connected and sending live data via its parent device.' },
+    { label: 'Offline', value: 'offline', description: 'Sensor has stopped sending data or is unreachable.' },
+    { label: 'Calibrating', value: 'calibrating', description: 'Sensor undergoing calibration or self-test to ensure measurement accuracy.' },
+    { label: 'Faulty', value: 'faulty', description: 'Sensor hardware failure or inconsistent readings detected.' },
+    { label: 'Degraded', value: 'degraded', description: 'Sensor partially functional; data irregularities or unstable connection.' },
+    { label: 'Maintenance', value: 'maintenance', description: 'Sensor temporarily disabled for maintenance, cleaning, or recalibration.' },
+    { label: 'Error', value: 'error', description: 'Critical failure or unrecoverable error reported by sensor or gateway.' },
+    { label: 'Disconnected', value: 'disconnected', description: 'Sensor communication link lost with device or telematic gateway.' },
+    { label: 'Disabled', value: 'disabled', description: 'Sensor manually disabled; no data being collected.' },
+    { label: 'Decommissioned', value: 'decommissioned', description: 'Sensor permanently retired, replaced, or removed from service.' },
+];
+
 export default function fleetOpsOptions(key) {
     const allOptions = {
         driverTypes,
@@ -434,6 +523,12 @@ export default function fleetOpsOptions(key) {
         dimensionUnits,
         weightUnits,
         serviceAreaTypes,
+        telematicStatuses,
+        telematicHealthStates,
+        deviceTypes,
+        sensorTypes,
+        deviceStatuses,
+        sensorStatuses,
     };
 
     return allOptions[key] ?? [];

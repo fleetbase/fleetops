@@ -10,12 +10,15 @@ export default class ManagementFleetsIndexEditController extends Controller {
     @service notifications;
     @service modalsManager;
     @tracked overlay;
-    @tracked actionButtons = [
-        {
-            icon: 'eye',
-            fn: this.view,
-        },
-    ];
+
+    get actionButtons() {
+        return [
+            {
+                icon: 'eye',
+                fn: this.view,
+            },
+        ];
+    }
 
     @task *save(fleet) {
         try {

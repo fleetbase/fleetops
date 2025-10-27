@@ -236,12 +236,12 @@ class VehicleController extends Controller
         }
 
         $positionData = [
-            'location' => new Point($latitude, $longitude),
-            'latitude' => $latitude,
+            'location'  => new Point($latitude, $longitude),
+            'latitude'  => $latitude,
             'longitude' => $longitude,
-            'altitude' => $altitude,
-            'heading'  => $heading,
-            'speed'    => $speed,
+            'altitude'  => $altitude,
+            'heading'   => $heading,
+            'speed'     => $speed,
         ];
 
         // Get vehicle driver
@@ -264,6 +264,7 @@ class VehicleController extends Controller
         $vehicle->createPosition($positionData);
 
         broadcast(new VehicleLocationChanged($vehicle));
+
         return new VehicleResource($vehicle);
     }
 }

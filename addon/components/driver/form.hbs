@@ -53,7 +53,7 @@
             <div class="flex items-center justify-start rounded-full">
                 <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
                 <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
-                    <InputInfo @text={{t "driver.fields.upload-new-photo"}} />
+                    <InputInfo @text={{t "common.upload-new-photo"}} />
                 </Attach::Tooltip>
             </div>
             <div>

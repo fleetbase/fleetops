@@ -1,0 +1,58 @@
+<div class="flex flex-row items-center justify-between w-full px-5 py-2 border-b border-gray-200 dark:border-gray-700">
+    <div class="flex flex-row items-center space-x-2">
+        <div>
+            <ModelSelect
+                @modelName="telematic"
+                @selectedModel={{this.telematic}}
+                @placeholder="Filter by Telematic"
+                @triggerClass="form-select form-input form-input-sm w-48"
+                @infiniteScroll={{false}}
+                @renderInPlace={{true}}
+                @onChange={{this.onTelematicSelected}}
+                as |model|
+            >
+                <div class="space-x-2 text-sm">
+                    <div class="inline-block align-top">
+                        <div class="hide-from-trigger h-1.5 w-full" />
+                        <Image src={{model.provider_descriptor.icon}} class="w-5 h-5" />
+                    </div>
+                    <div class="inline-block">
+                        <div class="font-semibold normalize-in-trigger">{{or model.name model.public_id}}</div>
+                        <div class="hide-from-trigger">{{n-a model.provider_descriptor.label (titleize model.provider)}}</div>
+                    </div>
+                </div>
+            </ModelSelect>
+        </div>
+
+        <div>
+            <ModelSelect
+                @modelName="device"
+                @selectedModel={{this.device}}
+                @placeholder="Filter by Device"
+                @triggerClass="form-select form-input form-input-sm w-48"
+                @infiniteScroll={{false}}
+                @renderInPlace={{true}}
+                @onChange={{this.onDeviceSelected}}
+                as |model|
+            >
+                <div class="text-sm">
+                    <div class="font-semibold normalize-in-trigger">{{model.name}}</div>
+                    <div class="hide-from-trigger">{{n-a model.serial_number}}</div>
+                </div>
+            </ModelSelect>
+        </div>
+
+        <div class="w-48">
+            <DatePicker
+                @value={{this.dateFilter}}
+                @range={{true}}
+                @onSelect={{this.onDateRangeChanged}}
+                @autoClose={{true}}
+                @placeholder="Select date range"
+                class="w-full form-input form-input-sm w-48"
+            />
+        </div>
+    </div>
+</div>
+<Table @rows={{this.events}} @columns={{this.columns}} />
+<Spacer @height="200px" />
