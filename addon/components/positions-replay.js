@@ -35,10 +35,6 @@ export default class PositionsReplayComponent extends Component {
     @tracked channelId = null;
 
     /** computed */
-    get isReplaying() {
-        return this.replayPositions.isRunning;
-    }
-
     get replayProgressWidth() {
         return htmlSafe(`width: ${this.replayProgress}%;`);
     }
@@ -366,8 +362,7 @@ export default class PositionsReplayComponent extends Component {
         }
     }
 
-    #setResourceLayer(model, layer, options = {}) {
-        const { hidden = false } = options;
+    #setResourceLayer(model, layer) {
         const type = getModelName(model);
 
         set(model, 'leafletLayer', layer);

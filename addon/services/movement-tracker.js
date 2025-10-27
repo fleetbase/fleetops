@@ -38,7 +38,6 @@ export class EventBuffer {
     }
 
     add(event) {
-        const sizeBefore = this.events.length;
         this.events = [...this.events, event];
     }
 
