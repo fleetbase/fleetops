@@ -536,10 +536,7 @@ class Vehicle extends Model
     }
 
     /**
-     * Creates a new position for the vehicle
-     *
-     * @param array $attributes
-     * @return Position|null
+     * Creates a new position for the vehicle.
      */
     public function createPosition(array $attributes = [], Model|string|null $destination = null): ?Position
     {
@@ -555,11 +552,11 @@ class Vehicle extends Model
         $destinationUuid = Str::isUuid($destination) ? $destination : data_get($destination, 'uuid');
 
         return Position::create([
-            ...Arr::only($attributes, ['coordinates', 'heading', 'bearing', 'speed', 'altitude']),
-            'subject_uuid' => $this->uuid,
-            'subject_type' => $this->getMorphClass(),
-            'company_uuid' => $this->company_uuid,
-            'destination_uuid' => $destinationUuid
+            ...Arr::only($attributes, ['coordinates', 'heading', 'bearing', 'speed', 'altitude', 'order_uuid']),
+            'subject_uuid'     => $this->uuid,
+            'subject_type'     => $this->getMorphClass(),
+            'company_uuid'     => $this->company_uuid,
+            'destination_uuid' => $destinationUuid,
         ]);
     }
 
@@ -760,8 +757,8 @@ class Vehicle extends Model
      */
     public function setVinDatas(array $newVinData = []): array
     {
-        $vinData       = is_array($this->vin_data) ? $this->vin_data : (array) $this->vin_data;
-        $vinData       = array_merge($vinData, $newVinData);
+        $vinData        = is_array($this->vin_data) ? $this->vin_data : (array) $this->vin_data;
+        $vinData        = array_merge($vinData, $newVinData);
         $this->vin_data = $vinData;
 
         return $vinData;

@@ -3,6 +3,10 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
+use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -15,6 +19,8 @@ use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
@@ -37,6 +43,7 @@ class Device extends Model
     use HasMetaAttributes;
     use Searchable;
     use HasCustomFields;
+    use SpatialTrait;
 
     /**
      * The database table used by the model.
@@ -57,7 +64,7 @@ class Device extends Model
      *
      * @var array
      */
-    protected $searchableColumns = ['name', 'model', 'serial_number', 'public_id'];
+    protected $searchableColumns = ['name', 'model', 'serial_number', 'manufacturer', 'public_id'];
 
     /**
      * The attributes that can be used for filtering.
@@ -75,14 +82,20 @@ class Device extends Model
         'company_uuid',
         'telematic_uuid',
         'warranty_uuid',
-        'device_type',
+        'photo_uuid',
+        'type',
         'device_id',
-        'device_provider',
-        'device_name',
-        'device_model',
-        'device_location',
+        'internal_id',
+        'imei',
+        'imsi',
+        'firmware_version',
+        'provider',
+        'name',
+        'model',
+        'location',
         'manufacturer',
         'serial_number',
+        'last_position',
         'installation_date',
         'last_maintenance_date',
         'meta',
@@ -110,6 +123,7 @@ class Device extends Model
         'is_online',
         'attached_to_name',
         'connection_status',
+        'photo_url',
     ];
 
     /**
@@ -117,7 +131,14 @@ class Device extends Model
      *
      * @var array
      */
-    protected $hidden = ['warranty', 'telematic', 'attachable'];
+    protected $hidden = [];
+
+    /**
+     * The attributes that are spatial columns.
+     *
+     * @var array
+     */
+    protected $spatialFields = ['last_position'];
 
     /**
      * The attributes that should be cast to native types.
@@ -125,9 +146,10 @@ class Device extends Model
      * @var array
      */
     protected $casts = [
-        'last_online_at' => 'datetime',
-        'meta'           => Json::class,
-        'options'        => Json::class,
+        'last_online_at'              => 'datetime',
+        'last_position'               => Point::class,
+        'meta'                        => Json::class,
+        'options'                     => Json::class,
     ];
 
     /**
@@ -202,6 +224,21 @@ class Device extends Model
     public function sensors(): HasMany
     {
         return $this->hasMany(Sensor::class, 'device_uuid', 'uuid');
+    }
+
+    public function photo(): BelongsTo
+    {
+        return $this->belongsTo(File::class);
+    }
+
+    /**
+     * Get photo URL attribute.
+     *
+     * @return string
+     */
+    public function getPhotoUrlAttribute()
+    {
+        return data_get($this, 'photo.url', 'https://flb-assets.s3.ap-southeast-1.amazonaws.com/static/image-file-icon.png');
     }
 
     /**
@@ -431,5 +468,30 @@ class Device extends Model
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
+    }
+
+    /**
+     * Creates a new position for the vehicle.
+     */
+    public function createPosition(array $attributes = [], Model|string|null $destination = null): ?Position
+    {
+        if (!isset($attributes['coordinates']) && isset($attributes['location'])) {
+            $attributes['coordinates'] = $attributes['location'];
+        }
+
+        if (!isset($attributes['coordinates']) && isset($attributes['latitude']) && isset($attributes['longitude'])) {
+            $attributes['coordinates'] = new SpatialPoint($attributes['latitude'], $attributes['longitude']);
+        }
+
+        // handle destination if set
+        $destinationUuid = Str::isUuid($destination) ? $destination : data_get($destination, 'uuid');
+
+        return Position::create([
+            ...Arr::only($attributes, ['coordinates', 'heading', 'bearing', 'speed', 'altitude', 'order_uuid']),
+            'subject_uuid'     => $this->uuid,
+            'subject_type'     => $this->getMorphClass(),
+            'company_uuid'     => $this->company_uuid,
+            'destination_uuid' => $destinationUuid,
+        ]);
     }
 }

@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Scopes\DriverScope;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Support\Utils as FleetOpsUtils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
@@ -24,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -645,7 +647,7 @@ class Driver extends Model
         $positionData = [
             'company_uuid'     => session('company', $this->company_uuid),
             'subject_uuid'     => $this->uuid,
-            'subject_type'     => get_class($this),
+            'subject_type'     => $this->getMorphClass(),
             'coordinates'      => $this->location,
             'altitude'         => $this->altitude,
             'heading'          => $this->heading,
@@ -659,6 +661,31 @@ class Driver extends Model
 
         // Create a position if it's the first one or the driver has moved significantly
         return ($isFirstPosition || $isPast50Meters) ? Position::create($positionData) : null;
+    }
+
+    /**
+     * Creates a new position for the vehicle.
+     */
+    public function createPosition(array $attributes = [], Model|string|null $destination = null): ?Position
+    {
+        if (!isset($attributes['coordinates']) && isset($attributes['location'])) {
+            $attributes['coordinates'] = $attributes['location'];
+        }
+
+        if (!isset($attributes['coordinates']) && isset($attributes['latitude']) && isset($attributes['longitude'])) {
+            $attributes['coordinates'] = new SpatialPoint($attributes['latitude'], $attributes['longitude']);
+        }
+
+        // handle destination if set
+        $destinationUuid = Str::isUuid($destination) ? $destination : data_get($destination, 'uuid');
+
+        return Position::create([
+            ...Arr::only($attributes, ['coordinates', 'heading', 'bearing', 'speed', 'altitude', 'order_uuid']),
+            'subject_uuid'     => $this->uuid,
+            'subject_type'     => $this->getMorphClass(),
+            'company_uuid'     => $this->company_uuid,
+            'destination_uuid' => $destinationUuid,
+        ]);
     }
 
     /**

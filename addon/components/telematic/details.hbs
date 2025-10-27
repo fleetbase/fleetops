@@ -1,16 +1,45 @@
 <div class="details-wrapper" ...attributes>
-    <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+    <ContentPanel @title="Telematics Provider" @open={{true}} @wrapperClass="bordered-top">
+        <div class="field-info-container">
+            <div class="field-name">Provider</div>
+            <div class="field-value">
+                <div class="flex flew-row space-x-2 text-sm">
+                    <div class="pt-1.5">
+                        <Image src={{@resource.provider_descriptor.icon}} class="w-5 h-5" />
+                    </div>
+                    <div>
+                        <div class="font-semibold">{{@resource.provider_descriptor.label}}</div>
+                        <div class="text-xs text-gray-400 dark:text-gray-500">{{n-a @resource.provider_descriptor.description}}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Integration Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="field-info-container">
-                <div class="field-name">Name</div>
+                <div class="field-name">Integration Name</div>
                 <div class="field-value">{{n-a @resource.name}}</div>
             </div>
 
-            <div class="field-info-container">
-                <div class="field-name">Provider</div>
-                <div class="field-value">{{n-a @resource.provider}}</div>
-            </div>
+            {{#if @resource.provider_descriptor.supportsWebhooks}}
+                <InputGroup @name="Webhook URL" @helpText={{concat "Configure the URL in your " @resource.provider_descriptor.label " dashboard to receive real-time updates."}}>
+                    <ClickToCopy @value={{@resource.provider_descriptor.webhook_url}}>
+                        <Input @value={{@resource.provider_descriptor.webhook_url}} class="form-input" readonly />
+                    </ClickToCopy>
+                    <small class="form-text text-muted">
+                        Configure this URL in your
+                        {{@resource.provider_descriptor.label}}
+                        dashboard to receive real-time updates.
+                    </small>
+                </InputGroup>
+            {{/if}}
+        </div>
+    </ContentPanel>
 
+    <ContentPanel @title="Telematic Blackbox" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
             <div class="field-info-container">
                 <div class="field-name">Model</div>
                 <div class="field-value">{{n-a @resource.model}}</div>
@@ -54,22 +83,17 @@
             </div>
 
             <div class="field-info-container">
-                <div class="field-name">Warranty</div>
-                <div class="field-value">{{n-a @resource.warranty_name}}</div>
-            </div>
-
-            <div class="field-info-container">
                 <div class="field-name">Last Seen</div>
-                <div class="field-value">{{format-date @resource.last_seen_at}}</div>
+                <div class="field-value">{{n-a (format-date @resource.last_seen_at)}}</div>
             </div>
 
             <div class="field-info-container">
                 <div class="field-name">Online Status</div>
                 <div class="field-value">
                     {{#if @resource.is_online}}
-                        <Badge @status="success">Online</Badge>
+                        <Badge @status="online">Online</Badge>
                     {{else}}
-                        <Badge @status="danger">Offline</Badge>
+                        <Badge @status="offline">Offline</Badge>
                     {{/if}}
                 </div>
             </div>

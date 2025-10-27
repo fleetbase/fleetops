@@ -12,4 +12,26 @@ class DeviceController extends FleetOpsController
      * @var string
      */
     public $resource = 'device';
+
+    /**
+     * Query callback when querying record.
+     *
+     * @param \Illuminate\Database\Query\Builder $query
+     * @param Request                            $request
+     */
+    public static function onQueryRecord($query, $request): void
+    {
+        $query->with(['telematic', 'warranty']);
+    }
+
+    /**
+     * Query callback when finding record.
+     *
+     * @param \Illuminate\Database\Query\Builder $query
+     * @param Request                            $request
+     */
+    public static function onFindRecord($query, $request): void
+    {
+        $query->with(['telematic', 'warranty']);
+    }
 }

@@ -908,7 +908,7 @@ class Utils extends FleetbaseUtils
 
     /**
      * Calculates the great-circle distance between two points, with
-     * the Vincenty formula. (Using over haversine tdue to antipodal point issues).
+     * the Vincenty formula. (Using over haversine due to antipodal point issues).
      *
      * https://en.wikipedia.org/wiki/Great-circle_distance#Formulas
      * https://en.wikipedia.org/wiki/Antipodal_point

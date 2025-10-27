@@ -366,6 +366,7 @@ class Place extends Model
             if ($saveInstance) {
                 $place->save();
             }
+
             return $place;
         }
 
@@ -554,8 +555,10 @@ class Place extends Model
             }
 
             // If has $attributes['address']
+            $address = $place['address'];
             if (!empty($place['address'])) {
-                return static::createFromGeocodingLookup($place['address'], $saveInstance);
+                // return static::createFromGeocodingLookup($place['address'], $saveInstance);
+                return static::create(array_merge($place, static::getValuesFromGeocodingLookup($address)));
             }
 
             // Perform google lookup to fill address

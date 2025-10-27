@@ -1,56 +1,29 @@
 <div class="form-wrapper" ...attributes>
-    <ContentPanel @title="Sensor Details" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title="Integration" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
-            <InputGroup @name="Name" @wrapperClass="col-span-2">
-                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder="Name" disabled={{cannot-write @resource}} />
-            </InputGroup>
-
-            <InputGroup @name="Sensor Type">
-                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                    <PowerSelect
-                        @options={{this.sensorTypeOptions}}
-                        @selected={{@resource.sensor_type}}
-                        @onChange={{fn (mut @resource.sensor_type)}}
-                        @placeholder="Select Sensor Type"
-                        @triggerClass="form-select form-input"
-                        @disabled={{cannot-write @resource}}
-                        as |type|
-                    >
-                        {{smart-humanize type}}
-                    </PowerSelect>
-                </div>
-            </InputGroup>
-
-            <InputGroup @name="Unit">
-                <Input @value={{@resource.unit}} @type="text" class="w-full form-input" placeholder="Unit (e.g., °C, PSI, %)" disabled={{cannot-write @resource}} />
-            </InputGroup>
-
-            <InputGroup @name="Minimum Threshold" @type="number">
-                <Input @value={{@resource.min_threshold}} @type="number" class="w-full form-input" placeholder="Minimum Threshold" disabled={{cannot-write @resource}} />
-            </InputGroup>
-
-            <InputGroup @name="Maximum Threshold" @type="number">
-                <Input @value={{@resource.max_threshold}} @type="number" class="w-full form-input" placeholder="Maximum Threshold" disabled={{cannot-write @resource}} />
-            </InputGroup>
-
-            <InputGroup @name="Report Frequency (seconds)" @type="number">
-                <Input @value={{@resource.report_frequency_sec}} @type="number" class="w-full form-input" placeholder="Report Frequency" disabled={{cannot-write @resource}} />
-            </InputGroup>
-
-            <InputGroup @name="Status">
-                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                    <PowerSelect
-                        @options={{this.statusOptions}}
-                        @selected={{@resource.status}}
-                        @onChange={{fn (mut @resource.status)}}
-                        @placeholder="Select Status"
-                        @triggerClass="form-select form-input"
-                        @disabled={{cannot-write @resource}}
-                        as |status|
-                    >
-                        {{smart-humanize status}}
-                    </PowerSelect>
-                </div>
+            <InputGroup @name={{t "device.fields.telematic"}}>
+                <ModelSelect
+                    @modelName="telematic"
+                    @selectedModel={{@resource.telematic}}
+                    @placeholder="Select Telematic"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{this.selectTelematic}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    <div class="space-x-2 text-sm">
+                        <div class="inline-block align-top">
+                            <div class="hide-from-trigger h-1.5 w-full" />
+                            <Image src={{model.provider_descriptor.icon}} class="w-5 h-5" />
+                        </div>
+                        <div class="inline-block">
+                            <div class="font-semibold normalize-in-trigger">{{or model.name model.public_id}}</div>
+                            <div class="hide-from-trigger">{{n-a model.provider_descriptor.label (titleize model.provider)}}</div>
+                        </div>
+                    </div>
+                </ModelSelect>
             </InputGroup>
 
             <InputGroup @name="Device">
@@ -66,8 +39,101 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.device_name}}
+                    <div class="text-sm">
+                        <div class="font-semibold normalize-in-trigger">{{model.name}}</div>
+                        <div class="hide-from-trigger">{{n-a model.serial_number}}</div>
+                    </div>
                 </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name="Report Frequency (Seconds)" @type="number">
+                <Input
+                    @value={{@resource.report_frequency_sec}}
+                    @type="number"
+                    class="w-full form-input"
+                    placeholder="Frequency of sensor reporting in seconds"
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Identity" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <InputGroup @name="Name" @value={{@resource.name}} @wrapperClass="col-span-2" disabled={{cannot-write @resource}} />
+            <InputGroup @name="Serial Number" @value={{@resource.serial_number}} @wrapperClass="col-span-2" disabled={{cannot-write @resource}} />
+            <InputGroup @name="Internal ID" @value={{@resource.internal_id}} disabled={{cannot-write @resource}} />
+            <InputGroup @name="Unit" @value={{@resource.unit}} disabled={{cannot-write @resource}} />
+            <InputGroup @name="Type" @wrapperClass="col-span-2"> 
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "sensorTypes"}}
+                        @selected={{find-by "value" @resource.type (get-fleet-ops-options "sensorTypes")}}
+                        @onChange={{set-model-attr @resource "type"}}
+                        @placeholder={{t "common.select-field" field=(t "common.type")}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{option.label}}</div>
+                            <div class="hide-from-trigger">{{option.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Threshold" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <InputGroup @name="Min Threshold" @type="number">
+                <Input
+                    @value={{@resource.min_threshold}}
+                    @type="number"
+                    class="w-full form-input"
+                    placeholder={{t "sensor.fields.min-threshold-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <InputGroup @name="Max Threshold" @type="number">
+                <Input
+                    @value={{@resource.max_threshold}}
+                    @type="number"
+                    class="w-full form-input"
+                    placeholder={{t "sensor.fields.max-threshold-placeholder"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+            <div class="col-span-2">
+                <div class="mt-2">
+                    <Checkbox @value={{@resource.threshold_inclusive}} @onChange={{fn (mut @resource.threshold_inclusive)}}>Threshold Inclusive</Checkbox>
+                </div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Warranty & Status" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <InputGroup @name={{t "common.status"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "sensorStatuses"}}
+                        @selected={{find-by "value" @resource.status (get-fleet-ops-options "sensorStatuses")}}
+                        @onChange={{set-model-attr @resource "status"}}
+                        @placeholder={{t "common.select-field" field=(t "common.status")}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{option.label}}</div>
+                            <div class="hide-from-trigger">{{option.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
             </InputGroup>
 
             <InputGroup @name="Warranty">
@@ -86,23 +152,6 @@
                     {{model.policy_number}} - {{model.provider}}
                 </ModelSelect>
             </InputGroup>
-
-            <div class="col-span-2">
-                <label class="flex items-center space-x-2">
-                    <input
-                        type="checkbox"
-                        checked={{@resource.threshold_inclusive}}
-                        {{on "change" (fn (mut @resource.threshold_inclusive) (not @resource.threshold_inclusive))}}
-                        disabled={{cannot-write @resource}}
-                        class="form-checkbox"
-                    />
-                    <span class="text-xs">Threshold Inclusive</span>
-                </label>
-            </div>
-
-            <RegistryYield @registry="fleet-ops:component:sensor:form:details" as |RegistryComponent|>
-                <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
-            </RegistryYield>
         </div>
     </ContentPanel>
 

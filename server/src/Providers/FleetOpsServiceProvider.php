@@ -59,6 +59,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\DebugOrderTracker::class,
         \Fleetbase\FleetOps\Console\Commands\PurgeUnpurchasedServiceQuotes::class,
         \Fleetbase\FleetOps\Console\Commands\SendDriverNotification::class,
+        \Fleetbase\FleetOps\Console\Commands\ReplayVehicleLocations::class,
     ];
 
     /**
@@ -103,6 +104,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->loadMigrationsFrom(__DIR__ . '/../../migrations');
         $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'fleetops');
         $this->mergeConfigFrom(__DIR__ . '/../../config/fleetops.php', 'fleetops');
+        $this->mergeConfigFrom(__DIR__ . '/../../config/telematics.php', 'telematics');
         $this->mergeConfigFrom(__DIR__ . '/../../config/api.php', 'api');
         $this->mergeConfigFrom(__DIR__ . '/../../config/cache.stores.php', 'cache.stores');
         $this->mergeConfigFrom(__DIR__ . '/../../config/geocoder.php', 'geocoder');

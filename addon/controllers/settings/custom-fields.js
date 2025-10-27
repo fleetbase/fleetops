@@ -34,6 +34,12 @@ export default class SettingsCustomFieldsController extends Controller {
                 groups: [],
             },
             {
+                model: 'entity',
+                type: 'fleet-ops:entity',
+                label: 'Entity',
+                groups: [],
+            },
+            {
                 model: 'fleet',
                 type: 'fleet-ops:fleet',
                 label: 'Fleet',

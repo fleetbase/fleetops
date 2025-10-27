@@ -1,5 +1,5 @@
 <ContentPanel @title={{t "order.fields.payload"}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
-    {{#if @resource.isMultiDropOrder}}
+    {{#if @resource.isMultiDrop}}
         <div class="space-y-2">
             {{#each @resource.entitiesByDestination as |group|}}
                 <div class="rounded-md border border-gray-200 dark:border-gray-900 p-3">
@@ -40,13 +40,15 @@
                                 <DropdownButton
                                     @triggerClass="mr-2"
                                     @iconClass="icon-text-height"
-                                    @buttonSize="sm"
+                                    @size="xs"
+                                    @buttonSize="xs"
                                     @icon="ellipsis-h"
                                     @iconPrefix="fas"
                                     @contentClass="dropdown-menu"
+                                    @renderInPlace={{true}}
                                     as |dd|
                                 >
-                                    <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
+                                    <div class="next-dd-menu mx-0 mt-0i" aria-labelledby="user-menu">
                                         <div class="px-1">
                                             <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-300">
                                                 {{t "order.fields.waypoint-actions"}}
@@ -72,7 +74,7 @@
                                     @icon="plus"
                                     @iconPrefix="fas"
                                     @text={{t "order.fields.add-item-button"}}
-                                    @size="sm"
+                                    @size="xs"
                                     @onClick={{perform this.addEntity group.waypoint}}
                                     @permission="fleet-ops update order"
                                 />

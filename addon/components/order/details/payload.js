@@ -13,6 +13,8 @@ export default class OrderDetailsPayloadComponent extends Component {
     @service intl;
 
     get actionButtons() {
+        if (this.args.resource.isMultiDrop) return [];
+
         return [
             {
                 type: 'default',

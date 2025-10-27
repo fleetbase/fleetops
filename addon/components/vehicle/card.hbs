@@ -1,7 +1,7 @@
 <Layout::Resource::Card ...attributes as |Card|>
     <Card.header class={{@headerClass}}>
         <div class="font-semibold">{{or @resource.name @resource.yearMakeModel}}</div>
-        <div class="text-gray-300 dark:text-gray-500 text-sm">{{or @resource.plate_number @resource.vin @resource.serial_number @resource.call_sign}}</div>
+        <div class="text-gray-300 dark:text-gray-500 text-sm">{{or @resource.plate_number @resource.vin @resource.serial_number @resource.call_sign @resource.public_id}}</div>
         {{#if (has-block "header")}}
             {{yield to="header"}}
         {{/if}}

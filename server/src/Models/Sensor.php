@@ -3,7 +3,11 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Fleetbase\Models\Alert;
+use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -16,6 +20,8 @@ use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
@@ -39,6 +45,7 @@ class Sensor extends Model
     use HasMetaAttributes;
     use Searchable;
     use HasCustomFields;
+    use SpatialTrait;
 
     /**
      * The database table used by the model.
@@ -77,8 +84,16 @@ class Sensor extends Model
         'company_uuid',
         'device_uuid',
         'warranty_uuid',
+        'telematic_uuid',
+        'photo_uuid',
         'name',
-        'sensor_type',
+        'type',
+        'internal_id',
+        'imei',
+        'imsi',
+        'firmware_version',
+        'serial_number',
+        'last_position',
         'unit',
         'min_threshold',
         'max_threshold',
@@ -100,12 +115,9 @@ class Sensor extends Model
      * @var array
      */
     protected $appends = [
-        'device_name',
-        'warranty_name',
-        'attached_to_name',
         'is_active',
         'threshold_status',
-        'last_reading_formatted',
+        'photo_url',
     ];
 
     /**
@@ -113,7 +125,14 @@ class Sensor extends Model
      *
      * @var array
      */
-    protected $hidden = ['device', 'warranty', 'sensorable'];
+    protected $hidden = [];
+
+    /**
+     * The attributes that are spatial columns.
+     *
+     * @var array
+     */
+    protected $spatialFields = ['last_position'];
 
     /**
      * The attributes that should be cast to native types.
@@ -121,13 +140,14 @@ class Sensor extends Model
      * @var array
      */
     protected $casts = [
-        'min_threshold'        => 'float',
-        'max_threshold'        => 'float',
-        'threshold_inclusive'  => 'boolean',
-        'last_reading_at'      => 'datetime',
-        'report_frequency_sec' => 'integer',
-        'calibration'          => Json::class,
-        'meta'                 => Json::class,
+        'min_threshold'               => 'float',
+        'max_threshold'               => 'float',
+        'threshold_inclusive'         => 'boolean',
+        'last_reading_at'             => 'datetime',
+        'report_frequency_sec'        => 'integer',
+        'last_position'               => Point::class,
+        'calibration'                 => Json::class,
+        'meta'                        => Json::class,
     ];
 
     /**
@@ -169,6 +189,11 @@ class Sensor extends Model
         return LogOptions::defaults()->logAll();
     }
 
+    public function telematic(): BelongsTo
+    {
+        return $this->belongsTo(Telematic::class, 'telematic_uuid', 'uuid');
+    }
+
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class, 'device_uuid', 'uuid');
@@ -194,10 +219,25 @@ class Sensor extends Model
         return $this->morphTo();
     }
 
+    public function photo(): BelongsTo
+    {
+        return $this->belongsTo(File::class);
+    }
+
     public function alerts(): HasMany
     {
         return $this->hasMany(Alert::class, 'subject_uuid', 'uuid')
             ->where('subject_type', static::class);
+    }
+
+    /**
+     * Get photo URL attribute.
+     *
+     * @return string
+     */
+    public function getPhotoUrlAttribute()
+    {
+        return data_get($this, 'photo.url', 'https://flb-assets.s3.ap-southeast-1.amazonaws.com/static/image-file-icon.png');
     }
 
     /**
@@ -506,5 +546,30 @@ class Sensor extends Model
                 'last'  => $this->last_value,
             ],
         ];
+    }
+
+    /**
+     * Creates a new position for the vehicle.
+     */
+    public function createPosition(array $attributes = [], Model|string|null $destination = null): ?Position
+    {
+        if (!isset($attributes['coordinates']) && isset($attributes['location'])) {
+            $attributes['coordinates'] = $attributes['location'];
+        }
+
+        if (!isset($attributes['coordinates']) && isset($attributes['latitude']) && isset($attributes['longitude'])) {
+            $attributes['coordinates'] = new SpatialPoint($attributes['latitude'], $attributes['longitude']);
+        }
+
+        // handle destination if set
+        $destinationUuid = Str::isUuid($destination) ? $destination : data_get($destination, 'uuid');
+
+        return Position::create([
+            ...Arr::only($attributes, ['coordinates', 'heading', 'bearing', 'speed', 'altitude', 'order_uuid']),
+            'subject_uuid'     => $this->uuid,
+            'subject_type'     => $this->getMorphClass(),
+            'company_uuid'     => $this->company_uuid,
+            'destination_uuid' => $destinationUuid,
+        ]);
     }
 }

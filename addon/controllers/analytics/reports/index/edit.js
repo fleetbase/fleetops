@@ -22,7 +22,7 @@ export default class AnalyticsReportsIndexEditController extends Controller {
             yield report.validate();
 
             try {
-                const result = yield report.executeQuery();
+                const result = yield report.execute();
                 report.fillResult(result);
 
                 yield report.save();
