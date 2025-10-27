@@ -10,11 +10,13 @@ import LeafletTrackingMarkerComponent from '../components/leaflet-tracking-marke
 export class EventBuffer {
     @tracked events = [];
     @tracked waitTime = 1000 * 3;
+    @tracked callback;
     @tracked intervalId;
     @tracked model;
 
-    constructor(model, waitTime = 1000 * 3) {
+    constructor(model, { callback = null, waitTime = 1000 * 3 }) {
         this.model = model;
+        this.callback = callback;
         this.waitTime = waitTime;
     }
 
@@ -103,6 +105,10 @@ export class EventBuffer {
                     marker.setLatLng(nextLatLng);
                 }
 
+                if (typeof this.callback === 'function') {
+                    this.callback(output, { nextLatLng, duration: durationMs, mps });
+                }
+
                 // Wait for animation to complete
                 yield timeout(durationMs + 50);
             } catch (err) {
@@ -129,10 +135,10 @@ export default class MovementTrackerService extends Service {
         return owner ?? window.Fleetbase ?? getOwner(this);
     }
 
-    #getBuffer(key, model) {
+    #getBuffer(key, model, opts = {}) {
         let buf = this.buffers.get(key);
         if (!buf) {
-            buf = new EventBuffer(model);
+            buf = new EventBuffer(model, opts);
             buf.start();
             this.buffers.set(key, buf);
         }
@@ -174,11 +180,16 @@ export default class MovementTrackerService extends Service {
         // Get model type and identifier
         const type = getModelName(model);
         const identifier = model.id;
-        debug(`Tracking movement started for ${type} with id ${identifier}`, model);
+
+        // Location events to listen for
+        const locationEvents = [`${type}.location_changed`, `${type}.simulated_location_changed`, 'position.changed', 'position.simulated'];
 
         // Listen on the specific channel
         const channelId = options?.channelId ?? `${type}.${identifier}`;
         const channel = socket.subscribe(channelId);
+
+        // Debug output
+        debug(`Tracking movement started for ${type} with id ${identifier}${options?.channelId ? ' on channel ' + channelId : ''}`, model);
 
         // Track the channel
         this.channels = [...this.channels, channel];
@@ -187,18 +198,15 @@ export default class MovementTrackerService extends Service {
         await channel.listener('subscribe').once();
 
         // Create event buffer for tracking model
-        const eventBuffer = this.#getBuffer(channelId, model);
+        const eventBuffer = this.#getBuffer(channelId, model, options);
 
         // Get incoming data and console out
         (async () => {
             for await (let output of channel) {
                 const { event } = output;
 
-                if (event === `${type}.location_changed` || event === `${type}.simulated_location_changed`) {
+                if (locationEvents.includes(event)) {
                     eventBuffer.add(output);
-                    if (typeof options?.callback === 'function') {
-                        options.callback(output);
-                    }
                     debug(`Socket Event : ${event} : Added to EventBuffer : ${JSON.stringify(output)}`);
                 }
             }

@@ -120,7 +120,7 @@ export default class ServiceRateActionsService extends ResourceActionService {
                 payload: serializePayload(order.payload),
                 distance: order.route.summary?.totalDistance,
                 time: order.route.summary?.totalTime,
-                service_type: order.facilitator ? (this.args.facilitator.get('service_types.firstObject.key') ?? order.type) : order.type,
+                service_type: order.facilitator ? this.args.facilitator.get('service_types.firstObject.key') ?? order.type : order.type,
                 facilitator: order.facilitator?.public_id,
                 scheduled_at: order.scheduled_at,
                 is_route_optimized: order.optimized,

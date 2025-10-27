@@ -41,7 +41,7 @@ class ReplayVehicleLocations extends Command
         $vehicleFilter   = $this->option('vehicle');
         $limit           = $this->option('limit') ? (int) $this->option('limit') : null;
         $skipSleep       = $this->option('skip-sleep');
-        $sleep       = $this->option('sleep') ? (int) $this->option('sleep') : null;
+        $sleep           = $this->option('sleep') ? (int) $this->option('sleep') : null;
 
         // Validate file exists
         if (!file_exists($filePath)) {
@@ -146,7 +146,7 @@ class ReplayVehicleLocations extends Command
                     if ($sleep) {
                         $this->info("[{$eventNumber}/{$totalEvents}] Waiting {$sleep}s (real: {$diffInSeconds}s)...");
                         sleep((int) $sleep);
-                    } else if ($sleepDuration > 0) {
+                    } elseif ($sleepDuration > 0) {
                         $this->info("[{$eventNumber}/{$totalEvents}] Waiting {$sleepDuration}s (real: {$diffInSeconds}s)...");
                         sleep((int) $sleepDuration);
 
@@ -163,8 +163,6 @@ class ReplayVehicleLocations extends Command
 
             // Update previous timestamp
             $previousTimestamp = $createdAt;
-
-
 
             // Prepare channel names
             $channels = ["vehicle.{$vehicleId}", "vehicle.{$vehicle->uuid}"];

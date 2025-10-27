@@ -7,6 +7,8 @@ use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Position extends Model
 {
@@ -48,7 +50,7 @@ class Position extends Model
      *
      * @var array
      */
-    protected $appends = [];
+    protected $appends = ['latitude', 'longitude'];
 
     /**
      * Get filter parameters for this model.
@@ -85,35 +87,33 @@ class Position extends Model
      */
     protected static $logName = 'position';
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function company()
+    public function company(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\Company::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function order()
+    public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function destination()
+    public function destination(): BelongsTo
     {
         return $this->belongsTo(Place::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
-     */
-    public function subject()
+    public function subject(): MorphTo
     {
         return $this->morphTo(__FUNCTION__, 'subject_type', 'subject_uuid')->withoutGlobalScopes();
+    }
+
+    public function getLongitudeAttribute(): float
+    {
+        return $this->coordinates?->getLng() ?? 0;
+    }
+
+    public function getLatitudeAttribute(): float
+    {
+        return $this->coordinates?->getLat() ?? 0;
     }
 }

@@ -343,23 +343,34 @@ class DriverController extends Controller
         // check if driver needs a geocoded update to set city and country they are currently in
         $isGeocodable = Carbon::parse($driver->updated_at)->diffInMinutes(Carbon::now(), false) > 10 || empty($driver->country) || empty($driver->city);
 
-        $driver->update([
+        $positionData = [
             'location' => new Point($latitude, $longitude),
+            'latitude' => $latitude,
+            'longitude' => $longitude,
             'altitude' => $altitude,
             'heading'  => $heading,
             'speed'    => $speed,
-        ]);
+        ];
+
+        // Append current order to data if applicable
+        $order = $driver->getCurrentOrder();
+        if ($order) {
+            $positionData['order_uuid'] = $order->uuid;
+            // Get destination
+            $destination  = $order->payload?->getPickupOrCurrentWaypoint();
+            if ($destination) {
+                $positionData['destination_uuid'] = $destination->uuid;
+            }
+        }
+
+        $driver->update($positionData);
+        $driver->createPosition($positionData);
 
         // If vehicle is assigned to driver load it and sync position data
         $driver->loadMissing('vehicle');
         if ($driver->vehicle) {
-            $driver->vehicle->update([
-                'location' => new Point($latitude, $longitude),
-                'altitude' => $altitude,
-                'heading'  => $heading,
-                'speed'    => $speed,
-            ]);
-            $driver->vehicle->createPositionWithOrderContext();
+            $driver->vehicle->update($positionData);
+            $driver->vehicle->createPosition($positionData);
             broadcast(new VehicleLocationChanged($driver->vehicle, ['driver' => $driver->public_id]));
         }
 
@@ -376,8 +387,6 @@ class DriverController extends Controller
         }
 
         broadcast(new DriverLocationChanged($driver));
-        $driver->createPositionWithOrderContext();
-
         return new DriverResource($driver);
     }
 

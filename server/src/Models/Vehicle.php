@@ -552,7 +552,7 @@ class Vehicle extends Model
         $destinationUuid = Str::isUuid($destination) ? $destination : data_get($destination, 'uuid');
 
         return Position::create([
-            ...Arr::only($attributes, ['coordinates', 'heading', 'bearing', 'speed', 'altitude']),
+            ...Arr::only($attributes, ['coordinates', 'heading', 'bearing', 'speed', 'altitude', 'order_uuid']),
             'subject_uuid'     => $this->uuid,
             'subject_type'     => $this->getMorphClass(),
             'company_uuid'     => $this->company_uuid,

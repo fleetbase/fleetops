@@ -235,16 +235,35 @@ class VehicleController extends Controller
             );
         }
 
-        $vehicle->update([
+        $positionData = [
             'location' => new Point($latitude, $longitude),
+            'latitude' => $latitude,
+            'longitude' => $longitude,
             'altitude' => $altitude,
             'heading'  => $heading,
             'speed'    => $speed,
-        ]);
+        ];
+
+        // Get vehicle driver
+        $vehicle->loadMissing('driver');
+        $driver = $vehicle->driver;
+        if ($driver) {
+            // Append current order to data if applicable
+            $order = $driver->getCurrentOrder();
+            if ($order) {
+                $positionData['order_uuid'] = $order->uuid;
+                // Get destination
+                $destination  = $order->payload?->getPickupOrCurrentWaypoint();
+                if ($destination) {
+                    $positionData['destination_uuid'] = $destination->uuid;
+                }
+            }
+        }
+
+        $vehicle->update($positionData);
+        $vehicle->createPosition($positionData);
 
         broadcast(new VehicleLocationChanged($vehicle));
-        $vehicle->createPositionWithOrderContext();
-
         return new VehicleResource($vehicle);
     }
 }

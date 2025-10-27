@@ -345,6 +345,10 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                         $router->fleetbaseRoutes('proofs');
                         $router->fleetbaseRoutes('purchase-rates');
                         $router->fleetbaseRoutes('routes');
+                        $router->fleetbaseRoutes('positions', function ($router, $controller) {
+                            $router->post('replay', $controller('replay'));
+                            $router->post('metrics', $controller('metrics'));
+                        });
                         $router->fleetbaseRoutes(
                             'service-areas',
                             function ($router, $controller) {

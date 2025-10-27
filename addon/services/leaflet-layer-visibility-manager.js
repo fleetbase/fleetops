@@ -203,7 +203,7 @@ export default class LeafletLayerVisibilityService extends Service {
             if (layer.setStyle) {
                 const base = { opacity: 1 };
                 // leaflets default fillOpacity if fill:true is ~0.2
-                base.fillOpacity = layer.options?.fill ? (layer.options?.fillOpacity ?? 0.2) : 0;
+                base.fillOpacity = layer.options?.fill ? layer.options?.fillOpacity ?? 0.2 : 0;
                 layer.setStyle(base);
             } else if (layer.setOpacity) {
                 layer.setOpacity(1);
