@@ -124,8 +124,7 @@ class TelematicWebhookController extends Controller
      */
     public function ingest(Request $request, string $id): JsonResponse
     {
-        $telematic = Telematic::where('uuid', $id)->firstOrFail();
-
+        $telematic = Telematic::where('uuid', $id)->orWhere('public_id', $id)->firstOrFail();
         $correlationId = Str::uuid()->toString();
 
         Log::info('Custom ingest received', [

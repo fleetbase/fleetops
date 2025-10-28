@@ -49,11 +49,11 @@
                 <InputGroup @value={{@resource.name}} @name="Integration Name" />
 
                 {{#if this.selectedProvider.supports_webhooks}}
-                    <InputGroup @name="Webhook URL" @helpText={{concat "Configure the URL in your " this.selectedProvider.label " dashboard to receive real-time updates."}}>
-                        <ClickToCopy @value={{this.selectedProvider.webhook_url}}>
-                            <Input @value={{this.selectedProvider.webhook_url}} class="form-input" readonly />
+                    <InputGroup @name="Webhook URL" @helpText={{concat "Configure the URL in your " this.selectedProvider.label " dashboard to receive real-time updates."}} @wrapperClass="col-span-2">
+                        <ClickToCopy @value={{this.selectedProvider.webhook_url}} class="w-full">
+                            <Input @value={{this.selectedProvider.webhook_url}} class="form-input w-full" readonly />
                         </ClickToCopy>
-                        <small class="form-text text-muted">
+                        <small class="form-text text-muted mt-1">
                             Configure this URL in your
                             {{this.selectedProvider.label}}
                             dashboard to receive real-time updates.

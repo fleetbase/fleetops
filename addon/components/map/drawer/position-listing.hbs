@@ -10,20 +10,24 @@
                     @triggerClass="form-select form-input form-input-sm w-48"
                     as |option|
                 >
-                    <div class="flex flex-row items-center space-x-2">
+                    <div class="flex flex-row items-start space-x-2">
                         <div class="inline-block">
-                            <Image src={{or option.avatar_url option.photo_url}} class="w-4 h-4" />
+                            {{#if (eq (get-model-name option) "driver")}}
+                                <Image src={{option.photo_url}} @fallbackSrc={{config "defaultValues.driverAvatar"}} class="w-4 h-4" />
+                            {{else}}
+                                <Image src={{option.avatar_url}} @fallbackSrc={{config "defaultValues.vehicleAvatar"}} class="w-4 h-4" />
+                            {{/if}}
                         </div>
-                        <div class="inline-block text-sm">
-                            <div class="font-semibold normalize-in-trigger">{{or option.name option.displayName option.public_id}}</div>
-                            <div class="hide-from-trigger">{{or option.email option.serial_number option.plate_number option.internal_id}}</div>
+                        <div class="inline-block text-sm truncate">
+                            <div class="font-semibold text-sm normalize-in-trigger">{{or option.name option.displayName option.public_id}}</div>
+                            <div class="hide-from-trigger text-xs">{{or option.email option.serial_number option.plate_number option.internal_id}}</div>
                         </div>
                     </div>
                 </PowerSelect>
             </div>
         </div>
 
-        <div class="w-48">
+        <div class="w-48 {{if this.isReplaying 'hidden' ''}}">
             <DatePicker
                 @value={{this.dateFilter}}
                 @range={{true}}
@@ -33,23 +37,35 @@
                 class="w-full form-input form-input-sm"
             />
         </div>
+
+        {{#if this.loadPositions.isRunning}}
+            <div>
+                <Spinner />
+            </div>
+        {{/if}}
     </div>
 
     <div class="replay-controls">
         <div class="flex items-center justify-between space-x-2">
             <div class="flex items-center space-x-2">
-                <Button @type="danger" @text="Stop" @icon="stop" @size="xs" @onClick={{this.stopReplay}} />
-                <Button
-                    @type="success"
-                    @text="Play"
-                    @icon="play"
-                    @size="xs"
-                    @isLoading={{this.isReplaying}}
-                    @disabled={{or this.replayPositions.isRunning (not this.hasPositions)}}
-                    @onClick={{this.startReplay}}
-                />
+                <Button @type="danger" @text="Stop" @icon="stop" @size="xs" @disabled={{not (or this.isReplaying this.isPaused)}} @onClick={{this.stopReplay}} />
 
-                <div class="speed-control">
+                {{#if (or this.isReplaying this.isPaused)}}
+                    {{#if this.isReplaying}}
+                        <Button @type="warning" @text="Pause" @icon="pause" @size="xs" @onClick={{this.pauseReplay}} />
+                    {{else}}
+                        <Button @type="success" @text="Resume" @icon="play" @size="xs" @onClick={{this.startReplay}} />
+                    {{/if}}
+                {{else}}
+                    <Button @type="success" @text="Play" @icon="play" @size="xs" @disabled={{not this.hasPositions}} @onClick={{this.startReplay}} />
+                {{/if}}
+
+                <div class="step-controls flex items-center space-x-1 border-l border-gray-300 dark:border-gray-700 pl-2 ml-2">
+                    <Button @type="default" @icon="backward-step" @size="xs" @disabled={{not this.hasPositions}} @onClick={{this.stepBackward}} title="Step backward" />
+                    <Button @type="default" @icon="forward-step" @size="xs" @disabled={{not this.hasPositions}} @onClick={{this.stepForward}} title="Step forward" />
+                </div>
+
+                <div class="speed-control border-l border-gray-300 dark:border-gray-700 pl-2 ml-2">
                     <label class="text-xs uppercase tracking-wide font-medium text-gray-700 dark:text-gray-400 mr-1">
                         Speed:
                     </label>
@@ -64,7 +80,7 @@
                 </div>
             </div>
 
-            {{#if this.isReplaying}}
+            {{#if (or this.isReplaying this.isPaused)}}
                 <div class="replay-progress flex items-center space-x-1">
                     <span class="text-sm text-gray-600 dark:text-gray-400">
                         {{this.currentReplayIndex}}/{{this.totalPositions}}
@@ -81,4 +97,4 @@
     </div>
 </div>
 <Table @rows={{this.positions}} @columns={{this.columns}} />
-<Spacer @height="200px" />
+<Spacer @height="400px" />

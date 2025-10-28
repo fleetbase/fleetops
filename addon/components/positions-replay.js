@@ -12,29 +12,38 @@ import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 export default class PositionsReplayComponent extends Component {
     @service store;
     @service fetch;
-    @service movementTracker;
+    @service positionPlayback;
     @service notifications;
     @service location;
 
     /** Component ID */
     id = guidFor(this);
 
-    /** Tracked properties */
+    /** Tracked properties - only what's NOT managed by service */
     @tracked positions = [];
     @tracked selectedOrder = null;
     @tracked dateFilter = [format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'), format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd')];
     @tracked map = null;
-    @tracked isReplaying = false;
     @tracked replaySpeed = '1';
-    @tracked currentReplayIndex = 0;
     @tracked metrics = null;
     @tracked latitude = this.args.resource.latitude || this.location.getLatitude();
     @tracked longitude = this.args.resource.longitude || this.location.getLongitude();
     @tracked zoom = 14;
     @tracked tileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-    @tracked channelId = null;
 
-    /** computed */
+    /** Computed properties - read state from service */
+    get isReplaying() {
+        return this.positionPlayback.isPlaying;
+    }
+
+    get isPaused() {
+        return this.positionPlayback.isPaused;
+    }
+
+    get currentReplayIndex() {
+        return this.positionPlayback.currentIndex;
+    }
+
     get replayProgressWidth() {
         return htmlSafe(`width: ${this.replayProgress}%;`);
     }
@@ -179,6 +188,13 @@ export default class PositionsReplayComponent extends Component {
         this.loadPositions.perform();
     }
 
+    willDestroy() {
+        super.willDestroy?.();
+
+        // Clean up replay tracker on component destroy
+        this.positionPlayback.reset();
+    }
+
     /** Actions */
     @action didLoadMap({ target: map }) {
         this.map = map;
@@ -210,6 +226,11 @@ export default class PositionsReplayComponent extends Component {
 
     @action onSpeedChanged(speed) {
         this.replaySpeed = speed;
+
+        // Update replay speed in real-time if currently playing
+        if (this.isReplaying) {
+            this.positionPlayback.setSpeed(parseFloat(speed));
+        }
     }
 
     @action startReplay() {
@@ -217,12 +238,47 @@ export default class PositionsReplayComponent extends Component {
             this.notifications.warning('No positions to replay');
             return;
         }
-        this.replayPositions.perform();
+
+        if (this.isReplaying && !this.isPaused) {
+            this.notifications.info('Replay is already running');
+            return;
+        }
+
+        // If paused, resume
+        if (this.isPaused) {
+            this.positionPlayback.play();
+            return;
+        }
+
+        // Start new replay
+        this.#initializeReplay();
+        this.positionPlayback.play();
+    }
+
+    @action pauseReplay() {
+        if (!this.isReplaying) {
+            return;
+        }
+
+        this.positionPlayback.pause();
     }
 
     @action stopReplay() {
-        this.isReplaying = false;
-        this.currentReplayIndex = 0;
+        this.positionPlayback.stop();
+    }
+
+    @action stepForward() {
+        if (this.isReplaying) {
+            this.pauseReplay();
+        }
+        this.positionPlayback.stepForward(1);
+    }
+
+    @action stepBackward() {
+        if (this.isReplaying) {
+            this.pauseReplay();
+        }
+        this.positionPlayback.stepBackward(1);
     }
 
     @action clearFilters() {
@@ -269,13 +325,19 @@ export default class PositionsReplayComponent extends Component {
             if (this.positions?.length) {
                 yield this.loadMetrics.perform();
 
-                const bounds = positions.map((pos) => pos.latLng).filter(Boolean);
+                const bounds = positions
+                    .filter(({ latitude, longitude }) => this.#isValidLatLng(latitude, longitude))
+                    .map((pos) => pos.latLng)
+                    .filter(Boolean);
                 const lastFiveBounds = bounds.slice(-5);
                 this.map.flyToBounds(lastFiveBounds, {
                     animate: true,
                     zoom: 16,
                 });
             }
+
+            // Reset replay state when positions change
+            this.stopReplay();
         } catch (error) {
             this.notifications.serverError(error);
         }
@@ -301,65 +363,36 @@ export default class PositionsReplayComponent extends Component {
         }
     }
 
-    @task *replayPositions() {
+    /**
+     * Initialize replay tracker with current positions and settings
+     * This replaces the socket-based backend replay approach
+     *
+     * @private
+     */
+    #initializeReplay() {
         if (!this.args.resource) {
             this.notifications.warning('No resource provided for replay');
             return;
         }
 
-        try {
-            this.isReplaying = true;
-            this.currentReplayIndex = 0;
-
-            const positionIds = this.positions.map((p) => p.id);
-
-            if (positionIds.length === 0) {
-                this.notifications.warning('No positions to replay');
-                this.isReplaying = false;
-                return;
-            }
-
-            // Generate unique channel ID for this replay session
-            this.channelId = `position.replay.${this.id}.${Date.now()}`;
-
-            // Start tracking on custom channel
-            yield this.movementTracker.track(this.resource, {
-                channelId: this.channelId,
-                callback: (output) => {
-                    const {
-                        data: { additionalData },
-                    } = output;
-
-                    const leafletLayer = this.resource.leafletLayer;
-                    if (leafletLayer) {
-                        const latlng = leafletLayer._slideToLatLng ?? leafletLayer.getLatLng();
-                        this.map.panTo(latlng, { animate: true });
-                    }
-
-                    if (additionalData && Number.isFinite(additionalData.index)) {
-                        this.currentReplayIndex = additionalData.index + 1;
-                        if (this.currentReplayIndex === this.totalPositions) {
-                            this.isReplaying = false;
-                        }
-                    }
-                },
-            });
-
-            // Trigger backend replay
-            const response = yield this.fetch.post('positions/replay', {
-                position_ids: positionIds,
-                channel_id: this.channelId,
-                speed: parseFloat(this.replaySpeed),
-                subject_uuid: this.args.resource.id,
-            });
-
-            if (response && response.status === 'ok') {
-                this.notifications.success('Replay started successfully');
-            }
-        } catch (error) {
-            this.notifications.serverError(error);
-            this.isReplaying = false;
+        if (this.positions.length === 0) {
+            this.notifications.warning('No positions to replay');
+            return;
         }
+
+        // Initialize replay tracker with positions
+        this.positionPlayback.initialize({
+            subject: this.resource,
+            positions: this.positions,
+            speed: parseFloat(this.replaySpeed),
+            map: this.map,
+            callback: (data) => {
+                if (data.type === 'complete') {
+                    // Replay completed
+                    this.notifications.success('Replay completed');
+                }
+            },
+        });
     }
 
     #setResourceLayer(model, layer) {
@@ -368,5 +401,9 @@ export default class PositionsReplayComponent extends Component {
         set(model, 'leafletLayer', layer);
         set(layer, 'record_id', model.id);
         set(layer, 'record_type', type);
+    }
+
+    #isValidLatLng(lat, lng) {
+        return Number.isFinite(lat) && Number.isFinite(lng) && lat <= 90 && lat >= -90 && lng <= 180 && lng >= -180 && lat !== 0 && lng !== 0;
     }
 }
