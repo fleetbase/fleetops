@@ -214,6 +214,18 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
         });
 
         /*
+         |--------------------------------------------------------------------------
+         | Webhook Integration Routes
+         |--------------------------------------------------------------------------
+         |
+         | End-user API routes, these are routes used for Webhook integrations.
+         */
+        $router->group(['prefix' => 'webhooks'], function () use ($router) {
+            $router->any('telematics/{providerKey}', 'TelematicWebhookController@handle');
+            $router->any('telematics/ingest/{id}', 'TelematicWebhookController@ingest');
+        });
+
+        /*
         |--------------------------------------------------------------------------
         | Internal FleetOps API Routes
         |--------------------------------------------------------------------------

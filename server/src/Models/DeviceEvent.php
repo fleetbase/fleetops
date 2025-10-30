@@ -83,6 +83,7 @@ class DeviceEvent extends Model
         'code',
         'reason',
         'comment',
+        'resolved_at',
         'slug',
     ];
 
@@ -111,9 +112,9 @@ class DeviceEvent extends Model
      * @var array
      */
     protected $casts = [
-        'data'         => Json::class,
-        'occurred_at'  => 'datetime',
-        'processed_at' => 'datetime',
+        'payload'         => Json::class,
+        'meta'            => Json::class,
+        'resolved_at'     => 'datetime',
     ];
 
     /**
@@ -504,5 +505,27 @@ class DeviceEvent extends Model
             'data'                     => $this->data,
             'created_at'               => $this->created_at?->toISOString(),
         ];
+    }
+
+    /**
+     * Create a Position for this event’s device attachable using position data.
+     *
+     * This delegates to the shared DeviceEventHelper utility.
+     */
+    public function createPosition(array $positionData = []): ?Position
+    {
+        if (empty($positionData)) {
+            return null;
+        }
+
+        // Ensure device and attachable are loaded
+        $this->loadMissing('device.attachable');
+        $attachable = $this->device?->attachable;
+
+        if ($attachable && method_exists($attachable, 'createPosition')) {
+            return $attachable->createPosition($positionData);
+        }
+
+        return null;
     }
 }

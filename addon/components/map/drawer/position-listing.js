@@ -8,23 +8,37 @@ import { htmlSafe } from '@ember/template';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 
+const L = window.leaflet || window.L;
+
 export default class MapDrawerPositionListingComponent extends Component {
     @service leafletMapManager;
     @service store;
     @service fetch;
-    @service movementTracker;
+    @service positionPlayback;
     @service hostRouter;
     @service notifications;
-
     @service intl;
+
+    /** Tracked properties - only what's NOT managed by service */
     @tracked positions = [];
     @tracked resource = null;
     @tracked selectedOrder = null;
     @tracked dateFilter = [format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'), format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd')];
-    @tracked isReplaying = false;
     @tracked replaySpeed = '1';
-    @tracked currentReplayIndex = 0;
-    @tracked channelId = null;
+    @tracked positionsLayer = null;
+
+    /** Computed properties - read state from service */
+    get isReplaying() {
+        return this.positionPlayback.isPlaying;
+    }
+
+    get isPaused() {
+        return this.positionPlayback.isPaused;
+    }
+
+    get currentReplayIndex() {
+        return this.positionPlayback.currentIndex;
+    }
 
     get trackables() {
         const vehicles = this.leafletMapManager._livemap?.vehicles ?? [];
@@ -107,19 +121,27 @@ export default class MapDrawerPositionListingComponent extends Component {
             {
                 label: '#',
                 valuePath: 'index',
-                width: '55px',
+                width: '80px',
+                cellComponent: 'table/cell/anchor',
+                onClick: this.onPositionClicked,
             },
             {
                 label: 'Timestamp',
                 valuePath: 'timestamp',
+                cellComponent: 'table/cell/anchor',
+                onClick: this.onPositionClicked,
             },
             {
                 label: 'Latitude',
                 valuePath: 'latitude',
+                cellComponent: 'table/cell/anchor',
+                onClick: this.onPositionClicked,
             },
             {
                 label: 'Longitude',
                 valuePath: 'longitude',
+                cellComponent: 'table/cell/anchor',
+                onClick: this.onPositionClicked,
             },
             {
                 label: 'Speed (km/h)',
@@ -141,8 +163,20 @@ export default class MapDrawerPositionListingComponent extends Component {
         this.loadPositions.perform();
     }
 
+    willDestroy() {
+        super.willDestroy?.();
+
+        // Clean up replay tracker
+        this.positionPlayback.reset();
+
+        // Remove our layer group from the map
+        this.#clearPositionsLayer(true);
+        this.positionsLayer = null;
+    }
+
     @action onResourceSelected(resource) {
         this.resource = resource;
+        this.focusResource(resource);
         this.loadPositions.perform();
     }
 
@@ -160,6 +194,11 @@ export default class MapDrawerPositionListingComponent extends Component {
 
     @action onSpeedChanged(speed) {
         this.replaySpeed = speed;
+
+        // Update replay speed in real-time if currently playing
+        if (this.isReplaying) {
+            this.positionPlayback.setSpeed(parseFloat(speed));
+        }
     }
 
     @action startReplay() {
@@ -167,12 +206,47 @@ export default class MapDrawerPositionListingComponent extends Component {
             this.notifications.warning('No positions to replay');
             return;
         }
-        this.replayPositions.perform();
+
+        if (this.isReplaying && !this.isPaused) {
+            this.notifications.info('Replay is already running');
+            return;
+        }
+
+        // If paused, resume
+        if (this.isPaused) {
+            this.positionPlayback.play();
+            return;
+        }
+
+        // Start new replay
+        this.#initializeReplay();
+        this.positionPlayback.play();
+    }
+
+    @action pauseReplay() {
+        if (!this.isReplaying) {
+            return;
+        }
+
+        this.positionPlayback.pause();
     }
 
     @action stopReplay() {
-        this.isReplaying = false;
-        this.currentReplayIndex = 0;
+        this.positionPlayback.stop();
+    }
+
+    @action stepForward() {
+        if (this.isReplaying) {
+            this.pauseReplay();
+        }
+        this.positionPlayback.stepForward(1);
+    }
+
+    @action stepBackward() {
+        if (this.isReplaying) {
+            this.pauseReplay();
+        }
+        this.positionPlayback.stepBackward(1);
     }
 
     @action clearFilters() {
@@ -183,7 +257,20 @@ export default class MapDrawerPositionListingComponent extends Component {
 
     @action onPositionClicked(position) {
         if (this.leafletMapManager.map && position.latitude && position.longitude) {
-            this.leafletMapManager.map.setView([position.latitude, position.longitude], this.zoom);
+            this.leafletMapManager.map.setView([position.latitude, position.longitude], 16);
+        }
+    }
+
+    @action focusResource(resource) {
+        const hasValidCoordinates = resource?.hasValidCoordinates || (Number.isFinite(resource?.latitude) && Number.isFinite(resource?.longitude));
+        if (hasValidCoordinates) {
+            const coordinates = [resource.latitude, resource.longitude];
+
+            // Use flyTo with a zoom level of 18 for a smooth animation
+            this.leafletMapManager.map.flyTo(coordinates, 18, {
+                animate: true,
+                duration: 0.8,
+            });
         }
     }
 
@@ -213,77 +300,156 @@ export default class MapDrawerPositionListingComponent extends Component {
                   })
                 : [];
 
-            if (this.positions?.length) {
-                const bounds = positions.map((pos) => pos.latLng).filter(Boolean);
-                const lastFiveBounds = bounds.slice(-5);
-                this.leafletMapManager.map.flyToBounds(lastFiveBounds, {
-                    animate: true,
-                    zoom: 16,
-                });
-            }
+            this.#renderPositionsOnMap({ fitLast: 5 });
+
+            // Reset replay state when positions change
+            this.stopReplay();
         } catch (error) {
             this.notifications.serverError(error);
         }
     }
 
-    @task *replayPositions() {
+    /**
+     * Initialize replay tracker with current positions and settings
+     * This replaces the socket-based backend replay approach
+     *
+     * @private
+     */
+    #initializeReplay() {
         if (!this.resource) {
             this.notifications.warning('No resource provided for replay');
             return;
         }
 
-        try {
-            this.isReplaying = true;
-            this.currentReplayIndex = 0;
-
-            const positionIds = this.positions.map((p) => p.id);
-
-            if (positionIds.length === 0) {
-                this.notifications.warning('No positions to replay');
-                this.isReplaying = false;
-                return;
-            }
-
-            // Generate unique channel ID for this replay session
-            this.channelId = `position.replay.${this.id}.${Date.now()}`;
-
-            // Start tracking on custom channel
-            yield this.movementTracker.track(this.resource, {
-                channelId: this.channelId,
-                callback: (output) => {
-                    const {
-                        data: { additionalData },
-                    } = output;
-
-                    const leafletLayer = this.resource.leafletLayer;
-                    if (leafletLayer) {
-                        const latlng = leafletLayer._slideToLatLng ?? leafletLayer.getLatLng();
-                        this.leafletMapManager.map.panTo(latlng, { animate: true });
-                    }
-
-                    if (additionalData && Number.isFinite(additionalData.index)) {
-                        this.currentReplayIndex = additionalData.index + 1;
-                        if (this.currentReplayIndex === this.totalPositions) {
-                            this.isReplaying = false;
-                        }
-                    }
-                },
-            });
-
-            // Trigger backend replay
-            const response = yield this.fetch.post('positions/replay', {
-                position_ids: positionIds,
-                channel_id: this.channelId,
-                speed: parseFloat(this.replaySpeed),
-                subject_uuid: this.resource.id,
-            });
-
-            if (response && response.status === 'ok') {
-                this.notifications.success('Replay started successfully');
-            }
-        } catch (error) {
-            this.notifications.serverError(error);
-            this.isReplaying = false;
+        if (this.positions.length === 0) {
+            this.notifications.warning('No positions to replay');
+            return;
         }
+
+        // Initialize replay tracker with positions
+        this.positionPlayback.initialize({
+            subject: this.resource,
+            positions: this.positions,
+            speed: parseFloat(this.replaySpeed),
+            map: this.leafletMapManager.map,
+            callback: (data) => {
+                if (data.type === 'complete') {
+                    // Replay completed
+                    this.notifications.success('Replay completed');
+                }
+            },
+        });
+    }
+
+    /** Position Rendering */
+    #ensurePositionsLayer() {
+        if (!this.leafletMapManager.map) return null;
+
+        if (!this.positionsLayer) {
+            this.positionsLayer = L.layerGroup();
+            this.positionsLayer.addTo(this.leafletMapManager.map);
+        }
+        return this.positionsLayer;
+    }
+
+    #clearPositionsLayer(removeFromMap = false) {
+        if (this.positionsLayer) {
+            this.positionsLayer.clearLayers();
+            if (removeFromMap && this.leafletMapManager.map) {
+                this.positionsLayer.removeFrom(this.leafletMapManager.map);
+            }
+        }
+    }
+
+    #addPositionMarker(pos, index) {
+        const lat = parseFloat(pos.latitude);
+        const lng = parseFloat(pos.longitude);
+        if (!this.#isValidLatLng(lat, lng)) return;
+
+        const marker = L.circleMarker([lat, lng], {
+            radius: 3,
+            color: '#3b82f6',
+            fillColor: '#3b82f6',
+            fillOpacity: 0.6,
+        });
+
+        // Popup content (mirrors your template)
+        const html = htmlSafe(`<div class="text-xs">
+        <div><strong>Position ${index + 1}</strong></div>
+        <div>Time: ${pos.timestamp ?? ''}</div>
+        <div>Speed: ${pos.speedKmh ?? 'N/A'} km/h</div>
+        <div>Heading: ${pos.heading ?? 'N/A'}°</div>
+        <div>Altitude: ${pos.altitude ?? 'N/A'} m</div>
+        </div>`);
+
+        marker.bindPopup(html);
+
+        // Click handler -> reuse your action
+        marker.on('click', () => this.onPositionClicked(pos));
+
+        marker.addTo(this.positionsLayer);
+    }
+
+    #isValidLatLng(lat, lng) {
+        return Number.isFinite(lat) && Number.isFinite(lng) && lat <= 90 && lat >= -90 && lng <= 180 && lng >= -180 && lat !== 0 && lng !== 0;
+    }
+
+    #renderPositionsOnMap({ fitLast = 0, minZoom = 15, maxZoom = 18 } = {}) {
+        if (!this.leafletMapManager.map || !this.positions?.length) {
+            this.#clearPositionsLayer(false);
+            return;
+        }
+
+        this.#ensurePositionsLayer();
+        this.positionsLayer.clearLayers();
+
+        const latlngs = [];
+        this.positions.forEach((pos, i) => {
+            const lat = parseFloat(pos.latitude);
+            const lng = parseFloat(pos.longitude);
+            if (this.#isValidLatLng(lat, lng)) {
+                this.#addPositionMarker(pos, i);
+                latlngs.push([lat, lng]);
+            }
+        });
+
+        if (!latlngs.length) return;
+
+        // choose subset (e.g., last 5 points) to bias the view local
+        const slice = fitLast > 0 ? latlngs.slice(-fitLast) : latlngs;
+
+        // Clamp zoom to neighborhood-level
+        this.#fitNeighborhood(slice, { zoom: 16, minZoom, maxZoom, padding: [24, 24], animate: true });
+    }
+
+    #fitNeighborhood(latlngs, { zoom = null, minZoom = 15, maxZoom = 18, padding = [16, 16], animate = true } = {}) {
+        if (!this.leafletMapManager.map || !latlngs?.length) return;
+
+        const map = this.leafletMapManager.map;
+
+        if (latlngs.length === 1) {
+            // Single point → center on it at minZoom
+            map.setView(latlngs[0], minZoom, { animate });
+            return;
+        }
+
+        const bounds = L.latLngBounds(latlngs);
+        // Compute the zoom that would fit the bounds, then clamp it
+        // Leaflet getBoundsZoom may be (bounds, inside, padding) depending on version
+        let targetZoom = zoom;
+        if (!zoom) {
+            try {
+                // Try newer signature
+                targetZoom = map.getBoundsZoom(bounds, true, padding);
+            } catch {
+                // Fallback without padding param
+                targetZoom = map.getBoundsZoom(bounds, true);
+            }
+            targetZoom = Math.max(minZoom, Math.min(maxZoom, targetZoom));
+        }
+
+        // Center on bounds center with clamped zoom
+        const center = bounds.getCenter();
+        map.setView(center, targetZoom, { animate });
     }
 }

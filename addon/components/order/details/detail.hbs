@@ -16,25 +16,7 @@
                     <span>{{t "order.fields.driver-assigned"}}</span>
                 </div>
                 <div class="field-value">
-                    <div>
-                        <a href="javascript:;" class="flex flex-row space-x-2" {{on "click" (fn this.focusOrderAssignedDriver @resource.driver_assigned)}}>
-                            <div class="relative shrink-0">
-                                <Image
-                                    src={{avatar-url @resource.driver_assigned.photo_url}}
-                                    @fallbackSrc={{config "defaultValues.driverImage"}}
-                                    width="28"
-                                    height="28"
-                                    class="w-7 h-7 rounded-full ring-2 ring-gray-800 dark:ring-gray-700 shadow transition-shadow hover:shadow-md focus:shadow-md"
-                                    alt={{@resource.driver_assigned.name}}
-                                />
-                                <FaIcon @icon="circle" @size="2xs" class="absolute left-0 top-0 h-2 w-2 {{if @resource.driver_assigned.online 'text-green-500' 'text-yellow-200'}}" />
-                            </div>
-                            <div>
-                                <div class="text-sm">{{n-a @resource.driver_assigned.name}}</div>
-                                <div class="text-xs text-gray-400 dark:text-gray-500">{{n-a @resource.driver_assigned.phone "No Phone"}}</div>
-                            </div>
-                        </a>
-                    </div>
+                    <Driver::Pill @driver={{@resource.driver_assigned}} @onClick={{this.focusOrderAssignedDriver}} />
                 </div>
             </div>
             <div class="field-info-container">
@@ -42,41 +24,7 @@
                     <span>{{t "order.fields.vehicle-assigned"}}</span>
                 </div>
                 <div class="field-value">
-                    <a href="javascript:;" class="flex flex-row space-x-2 shrink-0">
-                        <div class="relative shrink-0">
-                            <Image
-                                src={{@resource.vehicle_assigned.photo_url}}
-                                @fallbackSrc={{config "defaultValues.vehicleImage"}}
-                                width="28"
-                                height="28"
-                                class="w-7 h-7 rounded-full ring-2 ring-gray-800 dark:ring-gray-700 shadow transition-shadow hover:shadow-md focus:shadow-md"
-                                alt={{n-a @resource.vehicle_assigned.name @resource.vehicle_assigned.yearMakeModel}}
-                            />
-                            <FaIcon @icon="circle" @size="2xs" class="absolute left-0 top-0 h-2 w-2 {{if @resource.vehicle_assigned.online 'text-green-500' 'text-yellow-200'}}" />
-                        </div>
-                        <div>
-                            <div class="text-sm">{{n-a @resource.vehicle_assigned.name @resource.vehicle_assigned.yearMakeModel}}</div>
-                            <div class="text-xs text-gray-400 dark:text-gray-500">{{or
-                                    @resource.vehicle_assigned.plate_number
-                                    @resource.vehicle_assigned.vin
-                                    @resource.vehicle_assigned.serial_number
-                                    @resource.vehicle_assigned.call_sign
-                                }}</div>
-                        </div>
-                        <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
-                            <InputInfo>
-                                <div class="text-xs font-semibold">{{@resource.vehicle_assigned.name @resource.vehicle_assigned.yearMakeModel}}</div>
-                                <div class="text-xs">Driver: {{n-a @resource.vehicle_assigned.driver_name}}</div>
-                                <div class="text-xs">
-                                    <span>Status:</span>
-                                    <span class="{{if @resource.vehicle_assigned.online 'text-green-500' 'text-red-400'}}">
-                                        {{if @resource.vehicle_assigned.online "Online" "Offline"}}
-                                    </span>
-                                </div>
-                                <div class="text-xs truncate">Pos: {{point-coordinates @resource.vehicle_assigned.location}}</div>
-                            </InputInfo>
-                        </Attach::Tooltip>
-                    </a>
+                    <Vehicle::Pill @vehicle={{@resource.vehicle_assigned}} />
                 </div>
             </div>
             <div class="field-info-container">

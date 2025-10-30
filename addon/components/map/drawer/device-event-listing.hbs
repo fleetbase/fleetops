@@ -52,6 +52,12 @@
                 class="w-full form-input form-input-sm w-48"
             />
         </div>
+
+        {{#if this.loadEvents.isRunning}}
+            <div>
+                <Spinner />
+            </div>
+        {{/if}}
     </div>
 </div>
 <Table @rows={{this.events}} @columns={{this.columns}} />

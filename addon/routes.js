@@ -62,6 +62,7 @@ export default buildRoutes(function () {
                 this.route('new');
                 this.route('details', { path: '/:public_id' }, function () {
                     this.route('index', { path: '/' });
+                    this.route('positions');
                 });
                 this.route('edit', { path: '/edit/:public_id' });
             });
@@ -72,6 +73,8 @@ export default buildRoutes(function () {
                 this.route('details', { path: '/:public_id' }, function () {
                     this.route('index', { path: '/' });
                     this.route('positions');
+                    this.route('devices');
+                    this.route('equipment');
                 });
                 this.route('edit', { path: '/edit/:public_id' });
             });

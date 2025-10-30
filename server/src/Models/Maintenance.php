@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -122,18 +123,20 @@ class Maintenance extends Model
      * @var array
      */
     protected $casts = [
-        'scheduled_at' => 'datetime',
-        'started_at'   => 'datetime',
-        'completed_at' => 'datetime',
-        'odometer'     => 'integer',
-        'engine_hours' => 'integer',
-        'labor_cost'   => 'decimal:2',
-        'parts_cost'   => 'decimal:2',
-        'tax'          => 'decimal:2',
-        'total_cost'   => 'decimal:2',
-        'line_items'   => Json::class,
-        'attachments'  => Json::class,
-        'meta'         => Json::class,
+        'scheduled_at'      => 'datetime',
+        'started_at'        => 'datetime',
+        'completed_at'      => 'datetime',
+        'odometer'          => 'integer',
+        'engine_hours'      => 'integer',
+        'labor_cost'        => 'decimal:2',
+        'parts_cost'        => 'decimal:2',
+        'tax'               => 'decimal:2',
+        'total_cost'        => 'decimal:2',
+        'line_items'        => Json::class,
+        'attachments'       => Json::class,
+        'meta'              => Json::class,
+        'maintainable_type' => PolymorphicType::class,
+        'performed_by_type' => PolymorphicType::class,
     ];
 
     /**

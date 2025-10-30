@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\Models\Category;
 use Fleetbase\Models\File;
@@ -157,14 +158,15 @@ class Asset extends Model
      * @var array
      */
     protected $casts = [
-        'year'         => 'integer',
-        'odometer'     => 'integer',
-        'engine_hours' => 'integer',
-        'gvw'          => 'decimal:2',
-        'capacity'     => Json::class,
-        'specs'        => Json::class,
-        'attributes'   => Json::class,
-        'location'     => Point::class,
+        'year'             => 'integer',
+        'odometer'         => 'integer',
+        'engine_hours'     => 'integer',
+        'gvw'              => 'decimal:2',
+        'capacity'         => Json::class,
+        'specs'            => Json::class,
+        'attributes'       => Json::class,
+        'location'         => Point::class,
+        'assigned_to_type' => PolymorphicType::class,
     ];
 
     /**

@@ -84,7 +84,14 @@
                 <label class="block uppercase tracking-wide text-xs font-medium text-gray-700 dark:text-gray-400 mb-0.5">
                     Date Range
                 </label>
-                <DatePicker @value={{this.dateFilter}} @range={{true}} @onSelect={{this.onDateRangeChanged}} @autoClose={{true}} @placeholder="Select date range" class="w-full form-input form-input-sm" />
+                <DatePicker
+                    @value={{this.dateFilter}}
+                    @range={{true}}
+                    @onSelect={{this.onDateRangeChanged}}
+                    @autoClose={{true}}
+                    @placeholder="Select date range"
+                    class="w-full form-input form-input-sm"
+                />
             </div>
 
             <div class="filter-group">
@@ -110,7 +117,6 @@
             </div>
 
             <div class="filter-actions flex items-end space-x-2">
-                <Button @icon="search" @text={{t "common.search"}} @isLoading={{this.loadPositions.isRunning}} @onClick={{perform this.loadPositions}} />
                 <Button @type="danger" @icon="times" @text={{t "common.clear"}} @disabled={{this.loadPositions.isRunning}} @onClick={{this.clearFilters}} />
             </div>
         </div>
@@ -120,18 +126,24 @@
         <div class="replay-controls px-3 py-2">
             <div class="flex items-center justify-between space-x-2">
                 <div class="flex items-center space-x-2">
-                    <Button @type="danger" @text="Stop" @icon="stop" @size="xs" @onClick={{this.stopReplay}} />
-                    <Button
-                        @type="success"
-                        @text="Play"
-                        @icon="play"
-                        @size="xs"
-                        @isLoading={{this.isReplaying}}
-                        @disabled={{or this.replayPositions.isRunning (not this.hasPositions)}}
-                        @onClick={{this.startReplay}}
-                    />
+                    <Button @type="danger" @text="Stop" @icon="stop" @size="xs" @disabled={{not (or this.isReplaying this.isPaused)}} @onClick={{this.stopReplay}} />
 
-                    <div class="speed-control">
+                    {{#if (or this.isReplaying this.isPaused)}}
+                        {{#if this.isReplaying}}
+                            <Button @type="warning" @text="Pause" @icon="pause" @size="xs" @onClick={{this.pauseReplay}} />
+                        {{else}}
+                            <Button @type="success" @text="Resume" @icon="play" @size="xs" @onClick={{this.startReplay}} />
+                        {{/if}}
+                    {{else}}
+                        <Button @type="success" @text="Play" @icon="play" @size="xs" @disabled={{not this.hasPositions}} @onClick={{this.startReplay}} />
+                    {{/if}}
+
+                    <div class="step-controls flex items-center space-x-1 border-l border-gray-300 dark:border-gray-700 pl-2 ml-2">
+                        <Button @type="default" @icon="backward-step" @size="xs" @disabled={{not this.hasPositions}} @onClick={{this.stepBackward}} title="Step backward" />
+                        <Button @type="default" @icon="forward-step" @size="xs" @disabled={{not this.hasPositions}} @onClick={{this.stepForward}} title="Step forward" />
+                    </div>
+
+                    <div class="speed-control border-l border-gray-300 dark:border-gray-700 pl-2 ml-2">
                         <label class="text-xs uppercase tracking-wide font-medium text-gray-700 dark:text-gray-400 mr-1">
                             Speed:
                         </label>
@@ -146,7 +158,7 @@
                     </div>
                 </div>
 
-                {{#if this.isReplaying}}
+                {{#if (or this.isReplaying this.isPaused)}}
                     <div class="replay-progress flex items-center space-x-1">
                         <span class="text-sm text-gray-600 dark:text-gray-400">
                             {{this.currentReplayIndex}}/{{this.totalPositions}}
@@ -212,12 +224,6 @@
                     <div class="metric-label truncate text-xs text-gray-500 dark:text-gray-400">Acceleration Events</div>
                     <div class="metric-value font-semibold text-indigo-600 dark:text-indigo-400">
                         {{this.accelerationCount}}
-                    </div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label truncate text-xs text-gray-500 dark:text-gray-400">Total Positions</div>
-                    <div class="metric-value font-semibold text-gray-600 dark:text-gray-400">
-                        {{this.totalPositions}}
                     </div>
                 </div>
             </div>

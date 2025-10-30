@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Traits\Maintainable;
 use Fleetbase\Models\Alert;
 use Fleetbase\Models\File;
@@ -129,6 +130,7 @@ class Part extends Model
         'msrp'             => 'decimal:2',
         'specs'            => Json::class,
         'meta'             => Json::class,
+        'asset_type'       => PolymorphicType::class,
     ];
 
     /**

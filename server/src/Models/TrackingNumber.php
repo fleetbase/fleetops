@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Models;
 
+use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
@@ -66,7 +67,8 @@ class TrackingNumber extends Model
      * @var array
      */
     protected $casts = [
-        'location' => Point::class,
+        'location'   => Point::class,
+        'owner_type' => PolymorphicType::class,
     ];
 
     /**

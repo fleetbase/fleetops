@@ -36,7 +36,7 @@ class Position extends FleetbaseResource
             'altitude'                        => $this->altitude ?? 0,
             'latitude'                        => $this->latitude ?? 0,
             'longitude'                       => $this->longitude ?? 0,
-            'coordinates'                     => $this->location ?? new Point(0, 0),
+            'coordinates'                     => $this->coordinates ?? new Point(0, 0),
             'updated_at'                      => $this->updated_at,
             'created_at'                      => $this->created_at,
         ];
