@@ -1,5 +1,4 @@
 import Service, { inject as service } from '@ember/service';
-import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 
