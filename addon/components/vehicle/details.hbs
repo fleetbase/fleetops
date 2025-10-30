@@ -47,4 +47,8 @@
             </div>
         </div>
     </ContentPanel>
+
+    <ContentPanel @title={{t "common.metadata"}} @open={{true}} @actionButtons={{this.metadataButtons}} @wrapperClass="bordered-top" @panelBodyWrapperClass={{unless (is-object-empty @resource.meta) "px-0i" ""}}>
+        <MetadataViewer @metadata={{@resource.meta}} />
+    </ContentPanel>
 </div>

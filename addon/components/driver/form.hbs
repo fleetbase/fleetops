@@ -51,7 +51,14 @@
     <ContentPanel @title={{t "driver.fields.driver-details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="flex flex-row space-x-3 mb-3">
             <div class="flex items-center justify-start rounded-full">
-                <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
+                <Image
+                    src={{@resource.photo_url}}
+                    @fallbackSrc={{config "defaultValues.driverImage"}}
+                    alt={{@resource.name}}
+                    height="48"
+                    width="48"
+                    class="h-14 w-14 rounded-full shadow-sm"
+                />
                 <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                     <InputInfo @text={{t "common.upload-new-photo"}} />
                 </Attach::Tooltip>
@@ -133,7 +140,7 @@
             </InputGroup>
 
             <InputGroup @name={{t "common.status"}}>
-                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "driverStatuses"}}
                         @selected={{find-by "value" @resource.status (get-fleet-ops-options "driverStatuses")}}
@@ -167,5 +174,9 @@
 
     <ContentPanel @title={{t "avatar-picker.avatar"}} @open={{true}} @wrapperClass="bordered-top">
         <AvatarPicker @model={{@resource}} @defaultAvatar={{config "defaultValues.driverAvatar"}} />
+    </ContentPanel>
+
+    <ContentPanel @title={{t "common.metadata"}} @open={{true}} @wrapperClass="bordered-top">
+        <MetadataEditor @value={{@resource.meta}} @onChange={{fn (mut @resource.meta)}} />
     </ContentPanel>
 </div>

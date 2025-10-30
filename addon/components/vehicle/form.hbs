@@ -126,4 +126,8 @@
     <ContentPanel @title={{t "avatar-picker.avatar"}} @open={{true}} @wrapperClass="bordered-top">
         <AvatarPicker @model={{@resource}} @defaultAvatar={{config "defaultValues.vehicleAvatar"}} @disabled={{cannot-write @resource}} />
     </ContentPanel>
+
+    <ContentPanel @title={{t "common.metadata"}} @open={{true}} @wrapperClass="bordered-top">
+        <MetadataEditor @value={{@resource.meta}} @onChange={{fn (mut @resource.meta)}} />
+    </ContentPanel>
 </div>
