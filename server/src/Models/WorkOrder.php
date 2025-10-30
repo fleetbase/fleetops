@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
@@ -115,11 +116,13 @@ class WorkOrder extends Model
      * @var array
      */
     protected $casts = [
-        'opened_at' => 'datetime',
-        'due_at'    => 'datetime',
-        'closed_at' => 'datetime',
-        'checklist' => Json::class,
-        'meta'      => Json::class,
+        'opened_at'     => 'datetime',
+        'due_at'        => 'datetime',
+        'closed_at'     => 'datetime',
+        'checklist'     => Json::class,
+        'meta'          => Json::class,
+        'target_type'   => PolymorphicType::class,
+        'assignee_type' => PolymorphicType::class,
     ];
 
     /**

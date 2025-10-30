@@ -1,0 +1,34 @@
+{{#let (or @vehicle @resource) as |resource|}}
+    <Pill
+        @resource={{resource}}
+        @imageSrc={{resource.photo_url}}
+        @fallbackImageType="vehicleImage"
+        @showOnlineIndicator={{true}}
+        @onClick={{@onClick}}
+        @anchorClass={{@anchorClass}}
+        @imageClass={{@imageClass}}
+        @imageWrapperClass={{@imageWrapperClass}}
+        @contentWrapperClass={{@contentWrapperClass}}
+        @titleClass={{@titleClass}}
+        @subtitleClass={{@subtitleClass}}
+        ...attributes
+    >
+        <:default>
+            <div class="text-sm">{{n-a resource.name resource.yearMakeModel}}</div>
+            <div class="text-xs text-gray-400 dark:text-gray-500">{{or resource.plate_number resource.vin resource.serial_number resource.call_sign}}</div>
+        </:default>
+        <:tooltip>
+            <div>
+                <div class="text-xs font-semibold">{{resource.name resource.yearMakeModel}}</div>
+                <div class="text-xs">{{t "resource.driver"}}: {{n-a resource.driver_name}}</div>
+                <div class="text-xs">
+                    <span>{{t "common.status"}}:</span>
+                    <span class="{{if resource.online 'text-green-500' 'text-red-400'}}">
+                        {{if resource.online (t 'common.online') (t 'common.offline')}}
+                    </span>
+                </div>
+                <div class="text-xs truncate">Pos: {{point-coordinates resource.location}}</div>
+            </div>
+        </:tooltip>
+    </Pill>
+{{/let}}

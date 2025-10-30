@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Models;
 
+use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -51,6 +52,15 @@ class Position extends Model
      * @var array
      */
     protected $appends = ['latitude', 'longitude'];
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'subject_type' => PolymorphicType::class,
+    ];
 
     /**
      * Get filter parameters for this model.

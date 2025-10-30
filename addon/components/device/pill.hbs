@@ -1,0 +1,16 @@
+{{#let (or @device @resource) as |resource|}}
+    <Pill
+        @resource={{resource}}
+        @imageSrc={{resource.photo_url}}
+        @subtitle={{or resource.device_id resource.serial_number resource.imei resource.public_id}}
+        @showOnlineIndicator={{true}}
+        @onClick={{@onClick}}
+        @anchorClass={{@anchorClass}}
+        @imageClass={{@imageClass}}
+        @imageWrapperClass={{@imageWrapperClass}}
+        @contentWrapperClass={{@contentWrapperClass}}
+        @titleClass={{@titleClass}}
+        @subtitleClass={{@subtitleClass}}
+        ...attributes
+    />
+{{/let}}

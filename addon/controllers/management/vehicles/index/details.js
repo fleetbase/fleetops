@@ -14,8 +14,13 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
                 route: 'management.vehicles.index.details.positions',
                 label: 'Positions',
             },
+            {
+                route: 'management.vehicles.index.details.devices',
+                label: 'Devices',
+            },
         ];
     }
+
     get actionButtons() {
         return [
             {

@@ -1,0 +1,29 @@
+<div class="fleetops-device-manager" ...attributes>
+    <div class="flex flex-row items-center justify-between mb-4 px-3 pt-2">
+        <div></div>
+        <div>
+            <Button @icon="plus" @text="Attach device" @onClick={{this.addDevice}} @disabled={{not @resource}} />
+        </div>
+    </div>
+    <div>
+        {{#each this.devices as |device|}}
+            <div class="flex flex-row justify-between px-3 py-4 border-t border-gray-200 dark:border-gray-700">
+                <Device::Pill @device={{device}} />
+                <div>
+                    <Button @type="danger" @icon="times" @text="Detach" @size="xs" @onClick={{fn this.removeDevice device}} />
+                </div>
+            </div>
+        {{else}}
+            <div class="empty-state bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center">
+                <FaIcon @icon="hard-drive" @size="2x" class="text-gray-400 mb-2" />
+                <h3 class="text-base font-semibold text-gray-700 dark:text-gray-300">
+                    No Devices Attached
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Click Attach device above to start receiving telematic data for this
+                    {{get-model-name @resource}}
+                </p>
+            </div>
+        {{/each}}
+    </div>
+</div>

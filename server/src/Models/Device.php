@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
@@ -81,6 +82,8 @@ class Device extends Model
     protected $fillable = [
         'company_uuid',
         'telematic_uuid',
+        'attachable_uuid',
+        'attachable_type',
         'warranty_uuid',
         'photo_uuid',
         'type',
@@ -107,8 +110,6 @@ class Device extends Model
         'notes',
         'status',
         'last_online_at',
-        'attachable_type',
-        'attachable_uuid',
         'slug',
     ];
 
@@ -146,10 +147,14 @@ class Device extends Model
      * @var array
      */
     protected $casts = [
-        'last_online_at'              => 'datetime',
-        'last_position'               => Point::class,
-        'meta'                        => Json::class,
-        'options'                     => Json::class,
+        'installation_date'                  => 'date',
+        'last_maintenance_date'              => 'date',
+        'last_online_at'                     => 'datetime',
+        'last_position'                      => Point::class,
+        'meta'                               => Json::class,
+        'options'                            => Json::class,
+        'data'                               => Json::class,
+        'attachable_type'                    => PolymorphicType::class,
     ];
 
     /**
