@@ -87,7 +87,7 @@ class FixInvalidPolymorphicRelationTypeNamespaces extends Command
             }
 
             if ($record->isDirty()) {
-                $record->save();
+                $record->saveQuietly();
                 $this->info("Saved changes for $modelName ID {$record->public_id}.");
             }
         }

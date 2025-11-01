@@ -881,7 +881,7 @@ class Order extends Model
         $route = new Route($attributes);
         $route->save();
 
-        $this->update(['route_uuid' => $route->uuid]);
+        $this->updateQuietly(['route_uuid' => $route->uuid]);
 
         return $this;
     }
@@ -998,7 +998,7 @@ class Order extends Model
                 'meta'               => $meta,
             ]);
 
-            return $this->update([
+            return $this->updateQuietly([
                 'purchase_rate_uuid' => $purchasedRate->uuid,
             ]);
         }
@@ -1030,7 +1030,7 @@ class Order extends Model
                 'status'                 => 'success',
             ]);
 
-            $this->update(['transaction_uuid' => $transaction->uuid]);
+            $this->updateQuietly(['transaction_uuid' => $transaction->uuid]);
         } catch (\Throwable $e) {
         }
 
@@ -1518,7 +1518,7 @@ class Order extends Model
 
         $matrix = Utils::getPreliminaryDistanceMatrix($origin, $destination);
 
-        $this->update(['distance' => $matrix->distance, 'time' => $matrix->time]);
+        $this->updateQuietly(['distance' => $matrix->distance, 'time' => $matrix->time]);
 
         return $this;
     }
@@ -1538,7 +1538,7 @@ class Order extends Model
             return $this;
         }
 
-        $this->update(['distance' => $matrix->distance, 'time' => $matrix->time]);
+        $this->updateQuietly(['distance' => $matrix->distance, 'time' => $matrix->time]);
 
         return $this;
     }

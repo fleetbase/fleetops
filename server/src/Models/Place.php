@@ -555,14 +555,13 @@ class Place extends Model
             }
 
             // If has $attributes['address']
-            $address = $place['address'];
-            if (!empty($place['address'])) {
-                // return static::createFromGeocodingLookup($place['address'], $saveInstance);
+            $address = data_get($place, 'address');
+            if ($address) {
                 return static::create(array_merge($place, static::getValuesFromGeocodingLookup($address)));
             }
 
-            // Perform google lookup to fill address
-            $street1 = $place['street1'];
+            // Perform google lookup to fill street1
+            $street1 = data_get($place, 'street1');
             if ($street1) {
                 return static::create(array_merge($place, static::getValuesFromGeocodingLookup($street1)));
             }
