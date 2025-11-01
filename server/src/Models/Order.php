@@ -1529,16 +1529,28 @@ class Order extends Model
      *
      * @return Order the updated Order instance
      */
-    public function setDistanceAndTime($options = []): Order
+    public function setDistanceAndTime(array $options = []): self
     {
         $origin      = $this->getCurrentOriginPosition();
         $destination = $this->getDestinationPosition();
-        $matrix      = Utils::getDrivingDistanceAndTime($origin, $destination, $options);
-        if ($origin === null || $destination === null) {
+
+        if (!$origin || !$destination) {
             return $this;
         }
 
-        $this->updateQuietly(['distance' => $matrix->distance, 'time' => $matrix->time]);
+        // Fetch distance/time — bail early if external call fails
+        $matrix = Utils::getDrivingDistanceAndTime($origin, $destination, $options);
+        if (!$matrix || !isset($matrix->distance, $matrix->time)) {
+            return $this;
+        }
+
+        // Only update if values changed to prevent redundant writes
+        if ($this->distance !== $matrix->distance || $this->time !== $matrix->time) {
+            $this->updateQuietly([
+                'distance' => $matrix->distance,
+                'time'     => $matrix->time,
+            ]);
+        }
 
         return $this;
     }

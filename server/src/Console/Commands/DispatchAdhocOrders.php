@@ -48,11 +48,12 @@ class DispatchAdhocOrders extends Command
 
         if ($orders->isEmpty()) {
             $this->info('No dispatchable orders found in the given timeframe.');
+
             return;
         }
 
         $this->alert($orders->count() . ' orders found for ad-hoc dispatch. Current Time: ' . Carbon::now()->toDateTimeString());
-        $this->table(['Order', 'Dispatched At'], $orders->map(fn($order) => [$order->public_id, $order->dispatched_at]));
+        $this->table(['Order', 'Dispatched At'], $orders->map(fn ($order) => [$order->public_id, $order->dispatched_at]));
 
         foreach ($orders as $order) {
             $pickup   = $order->getPickupLocation();
@@ -83,7 +84,7 @@ class DispatchAdhocOrders extends Command
     /**
      * Retrieve a collection of dispatchable orders created or dispatched within the last N days.
      *
-     * @param int $days  Number of days to look back (default: 2)
+     * @param int $days            Number of days to look back (default: 2)
      * @param int $intervalMinutes Minimum age of the order in minutes to be considered dispatchable (default: 4)
      * @param int $expiryHours     Maximum dispatchable age in hours (default: 72)
      *
@@ -121,13 +122,6 @@ class DispatchAdhocOrders extends Command
 
     /**
      * Fetch nearby drivers for a given order.
-     *
-     * @param Order $order
-     * @param Point $pickup
-     * @param int   $distance
-     * @param bool  $testing
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
      */
     public function getNearbyDriversForOrder(Order $order, Point $pickup, int $distance, bool $testing = false): Collection
     {
@@ -135,7 +129,7 @@ class DispatchAdhocOrders extends Command
             ->where(['online' => 1])
             ->where(function ($q) use ($order) {
                 $q->where('company_uuid', $order->company_uuid)
-                    ->orWhereHas('user', fn($q) => $q->where('company_uuid', $order->company_uuid));
+                    ->orWhereHas('user', fn ($q) => $q->where('company_uuid', $order->company_uuid));
             })
             ->whereNull('deleted_at')
             ->withoutGlobalScopes();
