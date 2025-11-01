@@ -95,7 +95,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->scheduleCommands(function ($schedule) {
             $schedule->command('fleetops:dispatch-orders')->everyMinute()->withoutOverlapping()->storeOutputInDb();
             $schedule->command('fleetops:dispatch-adhoc')->everyMinute()->withoutOverlapping()->storeOutputInDb();
-            $schedule->command('fleetops:update-estimations')->everyFiveMinutes()->withoutOverlapping();
+            $schedule->command('fleetops:update-estimations')->everyTenMinutes()->withoutOverlapping();
             $schedule->command('fleetops:purge-service-quotes')->daily()->withoutOverlapping();
         });
         $this->registerNotifications();

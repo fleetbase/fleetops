@@ -881,7 +881,7 @@ class Order extends Model
         $route = new Route($attributes);
         $route->save();
 
-        $this->update(['route_uuid' => $route->uuid]);
+        $this->updateQuietly(['route_uuid' => $route->uuid]);
 
         return $this;
     }
@@ -998,7 +998,7 @@ class Order extends Model
                 'meta'               => $meta,
             ]);
 
-            return $this->update([
+            return $this->updateQuietly([
                 'purchase_rate_uuid' => $purchasedRate->uuid,
             ]);
         }
@@ -1030,7 +1030,7 @@ class Order extends Model
                 'status'                 => 'success',
             ]);
 
-            $this->update(['transaction_uuid' => $transaction->uuid]);
+            $this->updateQuietly(['transaction_uuid' => $transaction->uuid]);
         } catch (\Throwable $e) {
         }
 
@@ -1518,7 +1518,7 @@ class Order extends Model
 
         $matrix = Utils::getPreliminaryDistanceMatrix($origin, $destination);
 
-        $this->update(['distance' => $matrix->distance, 'time' => $matrix->time]);
+        $this->updateQuietly(['distance' => $matrix->distance, 'time' => $matrix->time]);
 
         return $this;
     }
@@ -1529,16 +1529,28 @@ class Order extends Model
      *
      * @return Order the updated Order instance
      */
-    public function setDistanceAndTime($options = []): Order
+    public function setDistanceAndTime(array $options = []): self
     {
         $origin      = $this->getCurrentOriginPosition();
         $destination = $this->getDestinationPosition();
-        $matrix      = Utils::getDrivingDistanceAndTime($origin, $destination, $options);
-        if ($origin === null || $destination === null) {
+
+        if (!$origin || !$destination) {
             return $this;
         }
 
-        $this->update(['distance' => $matrix->distance, 'time' => $matrix->time]);
+        // Fetch distance/time — bail early if external call fails
+        $matrix = Utils::getDrivingDistanceAndTime($origin, $destination, $options);
+        if (!$matrix || !isset($matrix->distance, $matrix->time)) {
+            return $this;
+        }
+
+        // Only update if values changed to prevent redundant writes
+        if ($this->distance !== $matrix->distance || $this->time !== $matrix->time) {
+            $this->updateQuietly([
+                'distance' => $matrix->distance,
+                'time'     => $matrix->time,
+            ]);
+        }
 
         return $this;
     }
