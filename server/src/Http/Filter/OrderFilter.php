@@ -52,13 +52,6 @@ class OrderFilter extends Filter
             'trackingStatuses',
             'driverAssigned',
         ]);
-
-        // clean duplicated where clauses if supported
-        if (method_exists($this, 'optimizeQuery')) {
-            $this->builder = $this->optimizeQuery($this->builder);
-        }
-
-        return $this->builder;
     }
 
     public function queryForPublic()
