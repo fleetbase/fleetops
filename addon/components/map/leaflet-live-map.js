@@ -34,7 +34,7 @@ export default class MapLeafletLiveMapComponent extends Component {
 
     /** tracked properties */
     @tracked ready = false;
-    @tracked zoom = this.args.zoom ?? 14;
+    @tracked zoom = this.getValidZoom();
     @tracked latitude = this.location.getLatitude();
     @tracked longitude = this.location.getLongitude();
     @tracked contextmenuItems = [];
@@ -44,6 +44,29 @@ export default class MapLeafletLiveMapComponent extends Component {
     @tracked drivers = [];
     @tracked vehicles = [];
     @tracked places = [];
+
+    constructor() {
+        super(...arguments);
+        
+        // Store bound function reference for proper cleanup
+        this._locationUpdateHandler = this.#handleLocationUpdate.bind(this);
+        
+        // Listen for location updates from the location service
+        this.universe.on('user.located', this._locationUpdateHandler);
+        
+        // Ensure we have valid coordinates on initialization
+        this.#updateCoordinatesFromLocation();
+    }
+
+    willDestroy() {
+        super.willDestroy();
+        
+        // Clean up event listener using stored reference
+        if (this._locationUpdateHandler) {
+            this.universe.off('user.located', this._locationUpdateHandler);
+            this._locationUpdateHandler = null;
+        }
+    }
 
     @action didLoad({ target: map }) {
         this.#setMap(map);
@@ -187,6 +210,46 @@ export default class MapLeafletLiveMapComponent extends Component {
 
     isReady() {
         return this.ready === true;
+    }
+
+    /**
+     * Get valid zoom level for map initialization
+     * @returns {number} Valid zoom level between 1-20
+     */
+    getValidZoom() {
+        const zoom = this.args.zoom;
+        // Validate zoom is a valid number within Leaflet bounds (1-20)
+        if (typeof zoom === 'number' && !isNaN(zoom) && zoom >= 1 && zoom <= 20) {
+            return zoom;
+        }
+        // Return default zoom of 14 if invalid
+        return 14;
+    }
+
+    /**
+     * Handles location updates from the location service
+     * @param {Object} coordinates - The new coordinates
+     */
+    #handleLocationUpdate(coordinates) {
+        if (coordinates && typeof coordinates.latitude === 'number' && typeof coordinates.longitude === 'number') {
+            this.latitude = coordinates.latitude;
+            this.longitude = coordinates.longitude;
+            
+            // Update map position if map is loaded
+            if (this.map && this.map.setView) {
+                this.map.setView([coordinates.latitude, coordinates.longitude], this.zoom);
+            }
+        }
+    }
+
+    /**
+     * Updates coordinates from location service on initialization
+     */
+    #updateCoordinatesFromLocation() {
+        // Initial coordinates are already set via tracked properties
+        // This method ensures we have the latest location service values
+        this.latitude = this.location.getLatitude();
+        this.longitude = this.location.getLongitude();
     }
 
     #setMap(map) {
@@ -415,6 +478,38 @@ export default class MapLeafletLiveMapComponent extends Component {
         this.universe.createRegistryEvent('fleet-ops:contextmenu:vehicle', 'created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
+    }
+
+    /**
+     * Safely gets a valid latitude value with fallback to default
+     * @returns {number} Valid latitude value
+     */
+    #getValidLatitude() {
+        const lat = this.location.getLatitude();
+        
+        // Validate latitude is a number and within valid range (-90 to 90)
+        if (typeof lat === 'number' && !isNaN(lat) && lat >= -90 && lat <= 90) {
+            return lat;
+        }
+        
+        // Fallback to default Singapore latitude
+        return 1.369;
+    }
+
+    /**
+     * Safely gets a valid longitude value with fallback to default
+     * @returns {number} Valid longitude value
+     */
+    #getValidLongitude() {
+        const lng = this.location.getLongitude();
+        
+        // Validate longitude is a number and within valid range (-180 to 180)
+        if (typeof lng === 'number' && !isNaN(lng) && lng >= -180 && lng <= 180) {
+            return lng;
+        }
+        
+        // Fallback to default Singapore longitude
+        return 103.8864;
     }
 
     #changeTileSource(source) {
