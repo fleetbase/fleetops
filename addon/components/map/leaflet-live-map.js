@@ -47,20 +47,20 @@ export default class MapLeafletLiveMapComponent extends Component {
 
     constructor() {
         super(...arguments);
-        
+
         // Store bound function reference for proper cleanup
         this._locationUpdateHandler = this.#handleLocationUpdate.bind(this);
-        
+
         // Listen for location updates from the location service
         this.universe.on('user.located', this._locationUpdateHandler);
-        
+
         // Ensure we have valid coordinates on initialization
         this.#updateCoordinatesFromLocation();
     }
 
     willDestroy() {
         super.willDestroy();
-        
+
         // Clean up event listener using stored reference
         if (this._locationUpdateHandler) {
             this.universe.off('user.located', this._locationUpdateHandler);
@@ -234,7 +234,7 @@ export default class MapLeafletLiveMapComponent extends Component {
         if (coordinates && typeof coordinates.latitude === 'number' && typeof coordinates.longitude === 'number') {
             this.latitude = coordinates.latitude;
             this.longitude = coordinates.longitude;
-            
+
             // Update map position if map is loaded
             if (this.map && this.map.setView) {
                 this.map.setView([coordinates.latitude, coordinates.longitude], this.zoom);
@@ -486,12 +486,12 @@ export default class MapLeafletLiveMapComponent extends Component {
      */
     #getValidLatitude() {
         const lat = this.location.getLatitude();
-        
+
         // Validate latitude is a number and within valid range (-90 to 90)
         if (typeof lat === 'number' && !isNaN(lat) && lat >= -90 && lat <= 90) {
             return lat;
         }
-        
+
         // Fallback to default Singapore latitude
         return 1.369;
     }
@@ -502,12 +502,12 @@ export default class MapLeafletLiveMapComponent extends Component {
      */
     #getValidLongitude() {
         const lng = this.location.getLongitude();
-        
+
         // Validate longitude is a number and within valid range (-180 to 180)
         if (typeof lng === 'number' && !isNaN(lng) && lng >= -180 && lng <= 180) {
             return lng;
         }
-        
+
         // Fallback to default Singapore longitude
         return 103.8864;
     }
