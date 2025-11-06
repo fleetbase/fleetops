@@ -227,12 +227,12 @@ class VehicleController extends Controller
         try {
             $vehicle = Vehicle::findRecordOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
-                [
-                    'error' => 'Vehicle resource not found.',
-                ],
-                404
-            );
+            return response()->apiError('Vehicle resource not found.', 404);
+        }
+
+        // If no lat/lng provided, maintain compatibility and just return existing driver resource
+        if (empty($latitude) && empty($longitude)) {
+            return new VehicleResource($vehicle);
         }
 
         $positionData = [
@@ -260,7 +260,7 @@ class VehicleController extends Controller
             }
         }
 
-        $vehicle->update($positionData);
+        $vehicle->updateQuietly($positionData);
         $vehicle->createPosition($positionData);
 
         broadcast(new VehicleLocationChanged($vehicle));

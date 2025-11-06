@@ -12,31 +12,46 @@ class OrderFilter extends Filter
 {
     public function queryForInternal()
     {
-        $this->builder
-            ->where('company_uuid', $this->request->session()->get('company'))
-            ->whereHas(
-                'payload',
-                function ($q) {
-                    $q->where(
-                        function ($q) {
-                            $q->whereHas('waypoints');
-                            $q->orWhereHas('pickup');
-                            $q->orWhereHas('dropoff');
-                        }
-                    );
-                    $q->with(['entities', 'waypoints', 'dropoff', 'pickup', 'return']);
-                }
-            )
-            ->whereHas('trackingNumber')
-            ->whereHas('trackingStatuses')
-            ->with(
-                [
-                    'payload',
-                    'trackingNumber',
-                    'trackingStatuses',
-                    'driverAssigned',
-                ]
-            );
+        $companyUuid = $this->request->session()->get('company');
+
+        // apply company scope first for indexed filtering
+        $this->builder->where('orders.company_uuid', $companyUuid);
+
+        // replace ambiguous whereRelation with qualified whereHas to avoid alias clashes
+        $this->builder->whereHas('payload', function ($payloadQuery) {
+            $payloadQuery->where(function ($q) {
+                $q->whereHas('waypoints', function ($w) {
+                    $w->whereNotNull('waypoints.uuid');
+                });
+                $q->orWhereHas('pickup', function ($p) {
+                    $p->whereNotNull('places.uuid');
+                });
+                $q->orWhereHas('dropoff', function ($d) {
+                    $d->whereNotNull('places.uuid');
+                });
+            });
+        });
+
+        // ensure associated tracking data exists
+        $this->builder->whereHas('trackingNumber', function ($q) {
+            $q->select('uuid');
+        });
+
+        $this->builder->whereHas('trackingStatuses', function ($q) {
+            $q->select('uuid');
+        });
+
+        // eager load main relationships to reduce N+1 overhead
+        $this->builder->with([
+            'payload.entities',
+            'payload.waypoints',
+            'payload.pickup',
+            'payload.dropoff',
+            'payload.return',
+            'trackingNumber',
+            'trackingStatuses',
+            'driverAssigned',
+        ]);
     }
 
     public function queryForPublic()
@@ -108,6 +123,8 @@ class OrderFilter extends Filter
             $this->builder->whereNotIn('status', ['created', 'completed', 'expired', 'order_canceled', 'canceled', 'pending']);
             // remove the searchBuilder where clause
             $this->builder->removeWhereFromQuery('status', 'active');
+
+            return;
         }
 
         $status = Utils::arrayFrom($status);

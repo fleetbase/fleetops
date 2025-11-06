@@ -332,15 +332,14 @@ class DriverController extends Controller
         try {
             $driver = Driver::findRecordOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
-                [
-                    'error' => 'Driver resource not found.',
-                ],
-                404
-            );
+            return response()->apiError('Driver resource not found.', 404);
         }
 
-        // check if driver needs a geocoded update to set city and country they are currently in
+        // If no lat/lng provided, maintain compatibility and just return existing driver resource
+        if (empty($latitude) && empty($longitude)) {
+            return new DriverResource($driver);
+        }
+
         $isGeocodable = Carbon::parse($driver->updated_at)->diffInMinutes(Carbon::now(), false) > 10 || empty($driver->country) || empty($driver->city);
 
         $positionData = [
@@ -352,37 +351,38 @@ class DriverController extends Controller
             'speed'     => $speed,
         ];
 
-        // Append current order to data if applicable
-        $order = $driver->getCurrentOrder();
-        if ($order) {
+        if ($order = $driver->getCurrentOrder()) {
             $positionData['order_uuid'] = $order->uuid;
-            // Get destination
-            $destination  = $order->payload?->getPickupOrCurrentWaypoint();
+            $destination                = $order->payload?->getPickupOrCurrentWaypoint();
+
             if ($destination) {
                 $positionData['destination_uuid'] = $destination->uuid;
             }
         }
 
-        $driver->update($positionData);
+        $driver->updateQuietly($positionData);
         $driver->createPosition($positionData);
 
-        // If vehicle is assigned to driver load it and sync position data
         $driver->loadMissing('vehicle');
-        if ($driver->vehicle) {
-            $driver->vehicle->update($positionData);
-            $driver->vehicle->createPosition($positionData);
-            broadcast(new VehicleLocationChanged($driver->vehicle, ['driver' => $driver->public_id]));
+        if ($vehicle = $driver->vehicle) {
+            $vehicle->updateQuietly($positionData);
+            $vehicle->createPosition($positionData);
+            broadcast(new VehicleLocationChanged($vehicle, ['driver' => $driver->public_id]));
         }
 
         if ($isGeocodable) {
-            // attempt to geocode and fill country and city
-            $geocoded = Geocoder::reverse($latitude, $longitude)->get()->first();
-
-            if ($geocoded) {
-                $driver->update([
-                    'city'    => $geocoded->getLocality(),
-                    'country' => $geocoded->getCountry()->getCode(),
-                ]);
+            try {
+                $geocoded = Geocoder::reverse($latitude, $longitude)->get()->first();
+                if ($geocoded) {
+                    $driver->updateQuietly([
+                        'city'    => $geocoded->getLocality(),
+                        'country' => $geocoded->getCountry()->getCode(),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                if (app()->bound('sentry')) {
+                    app('sentry')->captureException($e);
+                }
             }
         }
 

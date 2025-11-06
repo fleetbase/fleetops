@@ -27,7 +27,7 @@
             </div>
         </div>
 
-        <div class="w-48 {{if this.isReplaying 'hidden' ''}}">
+        <div class="w-48 {{if (or this.isReplaying this.isPaused) 'hidden' ''}}">
             <DatePicker
                 @value={{this.dateFilter}}
                 @range={{true}}

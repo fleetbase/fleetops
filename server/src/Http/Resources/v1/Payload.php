@@ -38,6 +38,7 @@ class Payload extends FleetbaseResource
             'cod_amount'            => $this->cod_amount ?? null,
             'cod_currency'          => $this->cod_currency ?? null,
             'cod_payment_method'    => $this->cod_payment_method ?? null,
+            'payment_method'        => $this->payment_method ?? null,
             'meta'                  => data_get($this, 'meta', Utils::createObject()),
             'updated_at'            => $this->updated_at,
             'created_at'            => $this->created_at,
