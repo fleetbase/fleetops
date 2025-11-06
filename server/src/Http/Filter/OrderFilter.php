@@ -123,6 +123,8 @@ class OrderFilter extends Filter
             $this->builder->whereNotIn('status', ['created', 'completed', 'expired', 'order_canceled', 'canceled', 'pending']);
             // remove the searchBuilder where clause
             $this->builder->removeWhereFromQuery('status', 'active');
+
+            return;
         }
 
         $status = Utils::arrayFrom($status);

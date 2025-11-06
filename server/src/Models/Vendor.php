@@ -70,7 +70,6 @@ class Vendor extends Model
         'meta',
         'callbacks',
         'phone',
-        'place_uuid',
         'country',
         'status',
         'notes',
