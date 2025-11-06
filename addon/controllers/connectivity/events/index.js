@@ -39,7 +39,6 @@ export default class ConnectivityEventsIndexController extends Controller {
             resizable: true,
             sortable: true,
             filterable: true,
-            filterParam: 'name',
             filterComponent: 'filter/string',
         },
         {
