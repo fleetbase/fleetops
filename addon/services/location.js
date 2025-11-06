@@ -69,7 +69,11 @@ export default class LocationService extends Service {
      * @returns {number} The current latitude.
      */
     getLatitude() {
-        return this.latitude;
+        // Ensure we always return a valid number within geographic bounds
+        if (typeof this.latitude === 'number' && !isNaN(this.latitude) && this.latitude >= -90 && this.latitude <= 90) {
+            return this.latitude;
+        }
+        return this.constructor.DEFAULT_LATITUDE;
     }
 
     /**
@@ -77,7 +81,11 @@ export default class LocationService extends Service {
      * @returns {number} The current longitude.
      */
     getLongitude() {
-        return this.longitude;
+        // Ensure we always return a valid number within geographic bounds
+        if (typeof this.longitude === 'number' && !isNaN(this.longitude) && this.longitude >= -180 && this.longitude <= 180) {
+            return this.longitude;
+        }
+        return this.constructor.DEFAULT_LONGITUDE;
     }
 
     /**
