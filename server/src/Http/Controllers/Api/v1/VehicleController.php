@@ -218,8 +218,8 @@ class VehicleController extends Controller
      */
     public function track(string $id, Request $request)
     {
-        $latitude  = $request->input('latitude');
-        $longitude = $request->input('longitude');
+        $latitude  = (float) $request->input('latitude');
+        $longitude = (float) $request->input('longitude');
         $altitude  = $request->input('altitude');
         $heading   = $request->input('heading');
         $speed     = $request->input('speed');

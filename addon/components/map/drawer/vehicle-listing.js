@@ -12,6 +12,7 @@ export default class MapDrawerVehicleListingComponent extends Component {
 
     get filteredVehicles() {
         const vehicles = this.leafletMapManager._livemap?.vehicles ?? [];
+        console.log('[vehicles]', vehicles);
         const query = this.query?.toLowerCase();
         if (!query) {
             return vehicles;

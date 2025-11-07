@@ -323,8 +323,8 @@ class DriverController extends Controller
      */
     public function track(string $id, Request $request)
     {
-        $latitude  = $request->input('latitude');
-        $longitude = $request->input('longitude');
+        $latitude  = (float) $request->input('latitude');
+        $longitude = (float) $request->input('longitude');
         $altitude  = $request->input('altitude');
         $heading   = $request->input('heading');
         $speed     = $request->input('speed');
@@ -365,7 +365,11 @@ class DriverController extends Controller
 
         $driver->loadMissing('vehicle');
         if ($vehicle = $driver->vehicle) {
-            $vehicle->updateQuietly($positionData);
+            $vehicleUpdateData = [...$positionData];
+            if ($vehicle->online !== $driver->online) {
+                $vehicleUpdateData['online'] = $driver->online;
+            }
+            $vehicle->updateQuietly($vehicleUpdateData);
             $vehicle->createPosition($positionData);
             broadcast(new VehicleLocationChanged($vehicle, ['driver' => $driver->public_id]));
         }
@@ -420,7 +424,13 @@ class DriverController extends Controller
         $onlineValue = is_null($onlineParam) ? !$driver->online : Utils::castBoolean($onlineParam);
 
         // Perform a single update call
-        $driver->update(['online' => $onlineValue]);
+        $driver->updateQuietly(['online' => $onlineValue]);
+
+        // Update vehicle online too
+        $driver->loadMissing('vehicle');
+        if ($vehicle = $driver->vehicle) {
+            $vehicle->updateQuietly(['online' => $onlineValue]);
+        }
 
         // Return the updated resource
         return new DriverResource($driver);
