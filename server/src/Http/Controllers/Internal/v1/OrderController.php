@@ -168,9 +168,6 @@ class OrderController extends FleetOpsController
                     // Check dispatch flag with backward compatibility (default true)
                     $shouldDispatch = isset($input['dispatched']) ? (bool)$input['dispatched'] : true;
 
-                    logger()->warning(
-                                'should dispatch ?: ' . $shouldDispatch
-                            );
 
                     // set driving distance and time
                     $order->setPreliminaryDistanceAndTime();
