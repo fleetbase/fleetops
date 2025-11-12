@@ -168,13 +168,6 @@ class OrderController extends FleetOpsController
                     // Check dispatch flag with backward compatibility (default true)
                     $shouldDispatch = isset($input['dispatched']) ? (bool)$input['dispatched'] : true;
 
-
-                    // set driving distance and time
-                    $order->setPreliminaryDistanceAndTime();
-
-                    // if service quote attached purchase
-                    $order->purchaseServiceQuote($serviceQuote);
-
                     // dispatch if flagged true, otherwise ensure order stays in created state
                     if ($shouldDispatch) {
                         $order->firstDispatchWithActivity();
@@ -186,6 +179,13 @@ class OrderController extends FleetOpsController
                             'status' => 'created'
                         ]);
                     }
+
+                    // set driving distance and time
+                    $order->setPreliminaryDistanceAndTime();
+
+                    // if service quote attached purchase
+                    $order->purchaseServiceQuote($serviceQuote);
+
 
                     // Run background processes on queue
                     dispatch(function () use ($order): void {
