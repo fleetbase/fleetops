@@ -4,14 +4,47 @@ This module implements driver scheduling with Hours of Service (HOS) compliance 
 
 ## Features
 
+- **Fleet-Wide Scheduler**: Manage all drivers' schedules in a single calendar view
 - **Driver Schedule Management**: Create, edit, and manage driver shifts
 - **HOS Compliance**: Real-time validation against FMCSA regulations
 - **Calendar View**: Visual schedule management with drag-and-drop
+- **Resource Timeline**: View multiple drivers' schedules simultaneously
 - **Individual Driver Schedules**: Dedicated schedule view on driver detail pages
 - **Availability Management**: Track driver availability and time-off requests
 - **Conflict Detection**: Automatic detection of scheduling conflicts
+- **Dual View Modes**: Toggle between order scheduling and driver scheduling
 
 ## Components
+
+### Operations/Scheduler (Fleet-Wide View)
+
+The main scheduler view at `operations/scheduler` now supports both order scheduling and driver scheduling.
+
+**Location**: `addon/controllers/operations/scheduler/index.js`
+
+**Features**:
+- **View Mode Toggle**: Switch between "Orders" and "Driver Schedules" modes
+- **Resource Timeline**: In driver mode, shows all drivers as resources with their shifts
+- **Drag-and-Drop**: Drag shifts between drivers or reschedule by dragging
+- **Add Shift**: Quick action button to create new driver shifts
+- **Real-Time Updates**: Calendar updates automatically when shifts are modified
+- **Status Colors**: Visual indicators for shift status (pending, confirmed, etc.)
+
+**View Modes**:
+1. **Orders Mode** (default):
+   - Month calendar view
+   - Drag unscheduled orders to calendar
+   - Manage order scheduling
+
+2. **Driver Schedules Mode**:
+   - Resource timeline view (week view with drivers as resources)
+   - View all drivers' shifts simultaneously
+   - Drag shifts between drivers
+   - Reschedule shifts by dragging
+   - Click shifts to view/edit details
+
+**Usage**:
+Navigate to Operations → Scheduler, then toggle between "Orders" and "Driver Schedules" using the header buttons.
 
 ### Driver::Schedule
 
@@ -118,7 +151,6 @@ FleetOps uses the core scheduling module with driver-specific customizations:
 ## Future Enhancements
 
 - **Automatic Schedule Generation**: AI-powered schedule optimization
-- **Multi-Driver View**: Fleet-wide scheduler with resource timeline
 - **ELD Integration**: Sync with Electronic Logging Devices
 - **Predictive HOS**: Forecast HOS availability for future dates
 - **Mobile App**: Driver-facing mobile app for schedule viewing

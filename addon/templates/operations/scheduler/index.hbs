@@ -1,4 +1,30 @@
-<Layout::Section::Header @title={{t "menu.scheduler"}} />
+<Layout::Section::Header @title={{t "menu.scheduler"}}>
+    <div class="flex items-center gap-2">
+        <Button
+            @type={{if (eq this.viewMode "orders") "primary" "default"}}
+            @text="Orders"
+            @icon="box"
+            @onClick={{fn this.switchViewMode "orders"}}
+            @size="sm"
+        />
+        <Button
+            @type={{if (eq this.viewMode "drivers") "primary" "default"}}
+            @text="Driver Schedules"
+            @icon="id-card"
+            @onClick={{fn this.switchViewMode "drivers"}}
+            @size="sm"
+        />
+        {{#if (eq this.viewMode "drivers")}}
+            <Button
+                @type="success"
+                @text="Add Shift"
+                @icon="plus"
+                @onClick={{this.addDriverShift}}
+                @size="sm"
+            />
+        {{/if}}
+    </div>
+</Layout::Section::Header>
 
 <Layout::Section::Body>
     <div id="fleet-ops-scheduler-container">
@@ -46,15 +72,27 @@
                         </div>
                     </div>
                 {{/if}}
-                <FullCalendar
-                    @events={{this.events}}
-                    @editable={{true}}
-                    @onDrop={{this.scheduleEventFromDrop}}
-                    @onEventReceive={{this.receivedEvent}}
-                    @onEventDrop={{this.rescheduleEventFromDrag}}
-                    @onEventClick={{this.viewOrderAsEvent}}
-                    @onInit={{this.setCalendarApi}}
-                />
+                {{#if (eq this.viewMode "drivers")}}
+                    <FullCalendar
+                        @events={{this.events}}
+                        @resources={{this.calendarResources}}
+                        @editable={{true}}
+                        @onEventDrop={{this.rescheduleEventFromDrag}}
+                        @onEventClick={{this.viewOrderAsEvent}}
+                        @onInit={{this.setCalendarApi}}
+                        @schedulerLicenseKey="GPL-My-Project-Is-Open-Source"
+                    />
+                {{else}}
+                    <FullCalendar
+                        @events={{this.events}}
+                        @editable={{true}}
+                        @onDrop={{this.scheduleEventFromDrop}}
+                        @onEventReceive={{this.receivedEvent}}
+                        @onEventDrop={{this.rescheduleEventFromDrag}}
+                        @onEventClick={{this.viewOrderAsEvent}}
+                        @onInit={{this.setCalendarApi}}
+                    />
+                {{/if}}
                 <Spacer @height="200px" />
             </div>
         </div>
