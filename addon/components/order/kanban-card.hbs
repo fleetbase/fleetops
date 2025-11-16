@@ -47,7 +47,7 @@
         <div class="flex flex-row">
             <div class="flex-1">
                 <div class="flex flex-row space-x-2">
-                    <div class="resource-assigned-photo">
+                    <div class="resource-assigned-photo relative">
                         <Image
                             src={{avatar-url @card.customer.photo_url}}
                             @fallbackSrc={{config "defaultValues.contactImage"}}
@@ -64,7 +64,7 @@
             </div>
             <div class="flex-1">
                 <div class="flex flex-row space-x-2">
-                    <div class="resource-assigned-photo">
+                    <div class="resource-assigned-photo relative">
                         <Image
                             src={{avatar-url @card.driver_assigned.photo_url}}
                             @fallbackSrc={{config "defaultValues.driverImage"}}
