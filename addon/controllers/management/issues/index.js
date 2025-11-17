@@ -88,12 +88,12 @@ export default class ManagementIssuesIndexController extends Controller {
     get columns() {
         return [
             {
+                sticky: true,
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
                 cellComponent: 'table/cell/anchor',
                 action: this.issueActions.transition.view,
                 permission: 'fleet-ops view issue',
-                width: '110px',
                 resizable: true,
                 sortable: true,
             },
@@ -101,7 +101,6 @@ export default class ManagementIssuesIndexController extends Controller {
                 label: this.intl.t('column.priority'),
                 valuePath: 'priority',
                 cellComponent: 'table/cell/status',
-                width: '100px',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -111,7 +110,6 @@ export default class ManagementIssuesIndexController extends Controller {
             {
                 label: this.intl.t('column.type'),
                 valuePath: 'type',
-                width: '100px',
                 humanize: true,
                 resizable: true,
                 sortable: true,
@@ -125,7 +123,6 @@ export default class ManagementIssuesIndexController extends Controller {
             {
                 label: this.intl.t('column.category'),
                 valuePath: 'category',
-                width: '120px',
                 humanize: true,
                 resizable: true,
                 sortable: true,
@@ -139,7 +136,6 @@ export default class ManagementIssuesIndexController extends Controller {
             {
                 label: this.intl.t('column.reporter'),
                 valuePath: 'reporter_name',
-                width: '100px',
                 permission: 'iam view user',
                 resizable: true,
                 sortable: true,
@@ -153,7 +149,6 @@ export default class ManagementIssuesIndexController extends Controller {
             {
                 label: this.intl.t('column.assignee'),
                 valuePath: 'assignee_name',
-                width: '100px',
                 permission: 'iam view user',
                 hidden: true,
                 resizable: true,
@@ -167,7 +162,6 @@ export default class ManagementIssuesIndexController extends Controller {
             {
                 label: this.intl.t('column.driver'),
                 valuePath: 'driver_name',
-                width: '100px',
                 cellComponent: 'table/cell/anchor',
                 permission: 'fleet-ops view driver',
                 onClick: this.issueActions.viewDriver,
@@ -182,7 +176,6 @@ export default class ManagementIssuesIndexController extends Controller {
             {
                 label: this.intl.t('column.vehicle'),
                 valuePath: 'vehicle_name',
-                width: '100px',
                 cellComponent: 'table/cell/anchor',
                 permission: 'fleet-ops view vehicle',
                 onClick: this.issueActions.viewVehicle,
@@ -199,7 +192,6 @@ export default class ManagementIssuesIndexController extends Controller {
                 label: this.intl.t('column.status'),
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
-                width: '120px',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -210,7 +202,6 @@ export default class ManagementIssuesIndexController extends Controller {
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
-                width: '120px',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -220,7 +211,6 @@ export default class ManagementIssuesIndexController extends Controller {
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
-                width: '120px',
                 resizable: true,
                 sortable: true,
                 hidden: true,
@@ -236,7 +226,8 @@ export default class ManagementIssuesIndexController extends Controller {
                 ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.issue') }),
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
-                width: '10%',
+                sticky: 'right',
+                width: 60,
                 actions: [
                     {
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.issue') }),

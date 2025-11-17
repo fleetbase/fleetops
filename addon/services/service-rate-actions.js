@@ -1,5 +1,6 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import { task } from 'ember-concurrency';
+import { isNone } from '@ember/utils';
 import serializePayload from '../utils/serialize-payload';
 
 export default class ServiceRateActionsService extends ResourceActionService {
@@ -115,12 +116,15 @@ export default class ServiceRateActionsService extends ResourceActionService {
     @task *getServiceQuotes(serviceRate, order) {
         if (order.payload.payloadCoordinates.length < 2) return;
 
+        const hasFacilitator = !isNone(order.facilitator);
+        const facilitatorServiceType = order.facilitator?.get('service_types.firstObject.key') ?? order.type;
+
         try {
             const serviceQuotes = yield this.fetch.post('service-quotes/preliminary', {
                 payload: serializePayload(order.payload),
                 distance: order.route.summary?.totalDistance,
                 time: order.route.summary?.totalTime,
-                service_type: order.facilitator ? (this.args.facilitator.get('service_types.firstObject.key') ?? order.type) : order.type,
+                service_type: hasFacilitator ? facilitatorServiceType : order.type,
                 facilitator: order.facilitator?.public_id,
                 scheduled_at: order.scheduled_at,
                 is_route_optimized: order.optimized,

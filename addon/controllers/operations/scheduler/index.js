@@ -49,7 +49,7 @@ export default class OperationsSchedulerIndexController extends Controller {
     @tracked scheduleItems = [];
     @tracked viewMode = 'orders'; // 'orders' or 'drivers'
 
-    @computed('scheduledOrders.[]', 'scheduleItems.[]', 'viewMode') get events() {
+    @computed('drivers', 'scheduleItems.[]', 'scheduledOrders.[]', 'viewMode') get events() {
         if (this.viewMode === 'drivers') {
             return this.scheduleItems.map((item) => {
                 const driver = this.drivers.find((d) => d.id === item.assignee_uuid);

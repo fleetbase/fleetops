@@ -57,6 +57,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
     /** columns */
     @tracked columns = [
         {
+            sticky: true,
             label: 'Provider',
             valuePath: 'provider',
             cellComponent: 'table/cell/anchor',
@@ -108,7 +109,8 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.telematic') }),
             cellClassNames: 'overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
-            width: '10%',
+            sticky: 'right',
+            width: 60,
             actions: [
                 {
                     label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.telematic') }),

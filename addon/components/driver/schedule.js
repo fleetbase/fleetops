@@ -6,25 +6,63 @@ import { task } from 'ember-concurrency';
 
 /**
  * Driver::Schedule Component
- * 
+ *
  * Displays and manages a driver's schedule from their detail page.
  * Includes HOS compliance tracking, upcoming shifts, and availability management.
- * 
+ *
  * @example
- * <Driver::Schedule @driver={{@model}} />
+ * <Driver::Schedule @resource={{@model}} />
  */
 export default class DriverScheduleComponent extends Component {
-    @service scheduling;
+    @service driverScheduling;
     @service notifications;
     @service modalsManager;
     @service store;
-
     @tracked scheduleItems = [];
     @tracked upcomingShifts = [];
     @tracked hosStatus = null;
     @tracked availability = [];
     @tracked timeOffRequests = [];
     @tracked selectedItem = null;
+
+    get scheduleActionButtons() {
+        return [
+            {
+                type: 'default',
+                text: 'Request Time Off',
+                icon: 'calendar-times',
+                iconPrefix: 'fas',
+                permission: 'fleet-ops update driver',
+                onClick: this.requestTimeOff,
+            },
+        ];
+    }
+
+    get shiftActionButtons() {
+        return [
+            {
+                type: 'default',
+                text: 'Add Shift',
+                icon: 'plus',
+                iconPrefix: 'fas',
+                permission: 'fleet-ops update driver',
+                onClick: this.addShift,
+            },
+        ];
+    }
+
+    get availabilityActionButtons() {
+        return [
+            {
+                type: 'default',
+                text: 'Set Availability',
+                icon: 'clock',
+                iconPrefix: 'fas',
+                permission: 'fleet-ops update driver',
+                onClick: this.setAvailability,
+            },
+        ];
+    }
 
     constructor() {
         super(...arguments);
@@ -38,19 +76,13 @@ export default class DriverScheduleComponent extends Component {
      */
     @task *loadDriverSchedule() {
         try {
-            const items = yield this.scheduling.getScheduleItemsForAssignee.perform(
-                'driver',
-                this.args.driver.id,
-                {
-                    start_at: this.startDate,
-                    end_at: this.endDate,
-                }
-            );
+            const items = yield this.driverScheduling.getScheduleItemsForAssignee.perform('driver', this.args.resource.id, {
+                start_at: this.startDate,
+                end_at: this.endDate,
+            });
 
             this.scheduleItems = items.toArray();
-            this.upcomingShifts = this.scheduleItems
-                .filter((item) => new Date(item.start_at) > new Date())
-                .slice(0, 5);
+            this.upcomingShifts = this.scheduleItems.filter((item) => new Date(item.start_at) > new Date()).slice(0, 5);
         } catch (error) {
             console.error('Failed to load driver schedule:', error);
         }
@@ -61,7 +93,7 @@ export default class DriverScheduleComponent extends Component {
      */
     @task *loadHOSStatus() {
         try {
-            const response = yield this.fetch.get(`drivers/${this.args.driver.id}/hos-status`);
+            const response = yield this.fetch.get(`drivers/${this.args.resource.id}/hos-status`);
             this.hosStatus = response;
         } catch (error) {
             console.error('Failed to load HOS status:', error);
@@ -75,7 +107,7 @@ export default class DriverScheduleComponent extends Component {
         try {
             const availability = yield this.store.query('schedule-availability', {
                 subject_type: 'driver',
-                subject_uuid: this.args.driver.id,
+                subject_uuid: this.args.resource.id,
                 start_at: this.startDate,
                 end_at: this.endDate,
             });
@@ -144,7 +176,7 @@ export default class DriverScheduleComponent extends Component {
     @action
     addShift() {
         this.modalsManager.show('modals/add-shift', {
-            driver: this.args.driver,
+            driver: this.args.resource,
             onSave: this.handleShiftAdded,
         });
     }
@@ -156,7 +188,7 @@ export default class DriverScheduleComponent extends Component {
     async editScheduleItem(item) {
         this.modalsManager.show('modals/edit-shift', {
             item,
-            driver: this.args.driver,
+            driver: this.args.resource,
             onSave: this.handleShiftUpdated,
         });
     }
@@ -168,7 +200,7 @@ export default class DriverScheduleComponent extends Component {
     async deleteScheduleItem(item) {
         if (confirm('Are you sure you want to delete this shift?')) {
             try {
-                await this.scheduling.deleteScheduleItem.perform(item);
+                await this.driverScheduling.deleteScheduleItem.perform(item);
                 await this.loadDriverSchedule.perform();
             } catch (error) {
                 console.error('Failed to delete shift:', error);
@@ -200,7 +232,7 @@ export default class DriverScheduleComponent extends Component {
     @action
     requestTimeOff() {
         this.modalsManager.show('modals/request-time-off', {
-            driver: this.args.driver,
+            driver: this.args.resource,
             onSave: this.handleTimeOffRequested,
         });
     }
@@ -220,7 +252,7 @@ export default class DriverScheduleComponent extends Component {
     @action
     setAvailability() {
         this.modalsManager.show('modals/set-availability', {
-            driver: this.args.driver,
+            driver: this.args.resource,
             onSave: this.handleAvailabilitySet,
         });
     }

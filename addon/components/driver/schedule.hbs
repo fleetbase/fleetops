@@ -1,13 +1,6 @@
 <div class="driver-schedule-container" ...attributes>
-    {{!-- HOS Compliance Dashboard --}}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
-        <h3 class="text-lg font-semibold mb-3">Hours of Service Status</h3>
-        
-        {{#if this.loadHOSStatus.isRunning}}
-            <div class="text-center py-4">
-                <Spinner />
-            </div>
-        {{else if this.hosStatus}}
+    <ContentPanel @title="Hours of Service Status" @open={{true}} @isLoading={{this.loadHOSStatus.isRunning}} @wrapperClass="bordered-top">
+        {{#if this.hosStatus}}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
                     <div>
@@ -32,63 +25,34 @@
                 <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
                     <div>
                         <div class="text-sm text-gray-500 dark:text-gray-400">Compliance Status</div>
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{this.hosComplianceBadge.color}}-100 text-{{this.hosComplianceBadge.color}}-800">
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{this.hosComplianceBadge.color}}-100 text-{{this.hosComplianceBadge.color}}-800"
+                        >
                             {{this.hosComplianceBadge.text}}
                         </span>
                     </div>
                 </div>
             </div>
         {{/if}}
-    </div>
+    </ContentPanel>
+    <ContentPanel @title="Schedule Calendar" @open={{true}} @isLoading={{this.loadDriverSchedule.isRunning}} @actionButtons={{this.scheduleActionButtons}} @wrapperClass="bordered-top">
+        <ScheduleCalendar @items={{this.scheduleItems}} @view="timeGridWeek" @onItemClick={{this.handleItemClick}}>
+            <:item as |ctx|>
+                <div class="schedule-item-content">
+                    <div class="font-medium">{{ctx.item.title}}</div>
+                    <div class="text-xs">{{ctx.item.duration}} min</div>
+                </div>
+            </:item>
+        </ScheduleCalendar>
+    </ContentPanel>
 
-    {{!-- Quick Actions --}}
-    <div class="flex gap-2 mb-4">
-        <Button @type="primary" @icon="plus" @text="Add Shift" @onClick={{this.addShift}} />
-        <Button @type="default" @icon="calendar-times" @text="Request Time Off" @onClick={{this.requestTimeOff}} />
-        <Button @type="default" @icon="clock" @text="Set Availability" @onClick={{this.setAvailability}} />
-    </div>
-
-    {{!-- Calendar View --}}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
-        <h3 class="text-lg font-semibold mb-3">Schedule Calendar</h3>
-        
-        {{#if this.loadDriverSchedule.isRunning}}
-            <div class="text-center py-8">
-                <Spinner />
-            </div>
-        {{else}}
-            <ScheduleCalendar
-                @items={{this.scheduleItems}}
-                @view="timeGridWeek"
-                @onItemClick={{this.handleItemClick}}
-            >
-                <:item as |ctx|>
-                    <div class="schedule-item-content">
-                        <div class="font-medium">{{ctx.item.title}}</div>
-                        <div class="text-xs">{{ctx.item.duration}} min</div>
-                    </div>
-                </:item>
-            </ScheduleCalendar>
-        {{/if}}
-    </div>
-
-    {{!-- Upcoming Shifts --}}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
-        <h3 class="text-lg font-semibold mb-3">Upcoming Shifts</h3>
-        
+    <ContentPanel @title="Upcoming Shifts" @open={{true}} @actionButtons={{this.shiftActionButtons}} @wrapperClass="bordered-top">
         {{#if this.upcomingShifts.length}}
             <div class="space-y-2">
                 {{#each this.upcomingShifts as |shift|}}
-                    <ScheduleItemCard
-                        @item={{shift}}
-                        @onClick={{this.handleItemClick}}
-                    >
+                    <ScheduleItemCard @item={{shift}} @onClick={{this.handleItemClick}}>
                         <:actions>
-                            <button
-                                type="button"
-                                class="text-blue-600 hover:text-blue-800 text-sm"
-                                {{on "click" (fn this.editScheduleItem shift)}}
-                            >
+                            <button type="button" class="text-blue-600 hover:text-blue-800 text-sm" {{on "click" (fn this.editScheduleItem shift)}}>
                                 Edit
                             </button>
                         </:actions>
@@ -100,12 +64,9 @@
                 No upcoming shifts scheduled
             </div>
         {{/if}}
-    </div>
+    </ContentPanel>
 
-    {{!-- Availability & Time Off --}}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-        <h3 class="text-lg font-semibold mb-3">Availability & Time Off</h3>
-        
+    <ContentPanel @title="Availability & Time Off" @open={{true}} @actionButtons={{this.availabilityActionButtons}} @wrapperClass="bordered-top">
         {{#if this.availability.length}}
             <div class="space-y-2">
                 {{#each this.availability as |avail|}}
@@ -119,7 +80,9 @@
                                 {{/if}}
                             </div>
                             <div class="text-sm text-gray-500">
-                                {{moment-format avail.start_at "MMM DD, YYYY"}} - {{moment-format avail.end_at "MMM DD, YYYY"}}
+                                {{format-date-fns avail.start_at "MMM DD, YYYY"}}
+                                -
+                                {{format-date-fns avail.end_at "MMM DD, YYYY"}}
                             </div>
                             {{#if avail.reason}}
                                 <div class="text-xs text-gray-400">{{avail.reason}}</div>
@@ -133,5 +96,5 @@
                 No availability restrictions set
             </div>
         {{/if}}
-    </div>
+    </ContentPanel>
 </div>

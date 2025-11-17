@@ -8,9 +8,10 @@ export default class ManagementContactsCustomersController extends ManagementCon
     get columns() {
         return [
             {
+                sticky: true,
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
-                width: '140px',
+
                 cellComponent: 'table/cell/media-name',
                 action: this.contactActions.transition.view,
                 permission: 'fleet-ops view contact',
@@ -23,7 +24,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
                 cellComponent: 'click-to-copy',
-                width: '120px',
+
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -33,7 +34,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 label: this.intl.t('column.internal-id'),
                 valuePath: 'internal_id',
                 cellComponent: 'click-to-copy',
-                width: '100px',
+
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -43,7 +44,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 label: this.intl.t('column.title'),
                 valuePath: 'title',
                 cellComponent: 'click-to-copy',
-                width: '80px',
+
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -54,7 +55,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 label: this.intl.t('column.email'),
                 valuePath: 'email',
                 cellComponent: 'click-to-copy',
-                width: '150px',
+
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -64,7 +65,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 label: this.intl.t('column.phone'),
                 valuePath: 'phone',
                 cellComponent: 'click-to-copy',
-                width: '130px',
+
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -75,7 +76,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 valuePath: 'address',
                 cellComponent: 'table/cell/anchor',
                 action: this.contactActions.viewPlace,
-                width: '170px',
+
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -86,7 +87,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 label: this.intl.t('column.created'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
-                width: '160px',
+
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -96,7 +97,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 label: this.intl.t('column.updated'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
-                width: '130px',
+
                 resizable: true,
                 sortable: true,
                 hidden: true,
@@ -112,7 +113,8 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.customer') }),
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
-                width: '9%',
+                sticky: 'right',
+                width: 60,
                 actions: [
                     {
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.customer') }),

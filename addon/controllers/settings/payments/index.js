@@ -19,35 +19,29 @@ export default class SettingsPaymentsIndexController extends Controller {
             label: 'Purchase Rate ID',
             valuePath: 'public_id',
             cellComponent: 'click-to-copy',
-            width: '20%',
         },
         {
             label: 'Service Quote',
             valuePath: 'service_quote_id',
             cellComponent: 'click-to-copy',
-            width: '20%',
         },
         {
             label: 'Order',
             valuePath: 'order_id',
             cellComponent: 'click-to-copy',
-            width: '20%',
         },
         {
             label: 'Customer',
             valuePath: 'customer.name',
-            width: '20%',
         },
         {
             label: 'Amount',
             valuePath: 'amount',
             cellComponent: 'table/cell/currency',
-            width: '20%',
         },
         {
             label: 'Date',
             valuePath: 'created_at',
-            width: '20%',
         },
     ];
 

@@ -69,11 +69,11 @@ export default class ManagementFuelReportsIndexController extends Controller {
     get columns() {
         return [
             {
+                sticky: true,
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
                 cellComponent: 'table/cell/anchor',
                 action: this.fuelReportActions.transition.view,
-                width: '130px',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -83,7 +83,6 @@ export default class ManagementFuelReportsIndexController extends Controller {
             {
                 label: this.intl.t('column.reporter'),
                 valuePath: 'reporter_name',
-                width: '100px',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -95,7 +94,6 @@ export default class ManagementFuelReportsIndexController extends Controller {
             {
                 label: this.intl.t('column.driver'),
                 valuePath: 'driver_name',
-                width: '120px',
                 cellComponent: 'table/cell/anchor',
                 permission: 'fleet-ops view driver',
                 onClick: this.fuelReportActions.viewDriver,
@@ -110,7 +108,6 @@ export default class ManagementFuelReportsIndexController extends Controller {
             {
                 label: this.intl.t('column.vehicle'),
                 valuePath: 'vehicle_name',
-                width: '100px',
                 cellComponent: 'table/cell/anchor',
                 permission: 'fleet-ops view vehicle',
                 onClick: this.fuelReportActions.viewVehicle,
@@ -127,7 +124,6 @@ export default class ManagementFuelReportsIndexController extends Controller {
                 label: this.intl.t('column.status'),
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
-                width: '100px',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -137,7 +133,6 @@ export default class ManagementFuelReportsIndexController extends Controller {
             {
                 label: this.intl.t('column.volume'),
                 valuePath: 'volume',
-                width: '130px',
                 cellComponent: 'click-to-copy',
                 resizable: true,
                 sortable: true,
@@ -148,7 +143,6 @@ export default class ManagementFuelReportsIndexController extends Controller {
             {
                 label: this.intl.t('column.odometer'),
                 valuePath: 'odometer',
-                width: '130px',
                 cellComponent: 'click-to-copy',
                 resizable: true,
                 sortable: true,
@@ -160,7 +154,6 @@ export default class ManagementFuelReportsIndexController extends Controller {
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
-                width: '120px',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -170,7 +163,6 @@ export default class ManagementFuelReportsIndexController extends Controller {
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
-                width: '120px',
                 resizable: true,
                 sortable: true,
                 hidden: true,
@@ -186,7 +178,8 @@ export default class ManagementFuelReportsIndexController extends Controller {
                 ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.fuel-report') }),
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
-                width: '10%',
+                sticky: 'right',
+                width: 60,
                 actions: [
                     {
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.fuel-report') }),

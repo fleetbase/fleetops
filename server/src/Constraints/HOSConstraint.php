@@ -7,10 +7,10 @@ use Fleetbase\Support\Scheduling\ConstraintResult;
 use Illuminate\Support\Carbon;
 
 /**
- * Hours of Service (HOS) Constraint
- * 
+ * Hours of Service (HOS) Constraint.
+ *
  * Validates schedule items against FMCSA Hours of Service regulations.
- * 
+ *
  * Key Regulations:
  * - 11-hour driving limit: May drive a maximum of 11 hours after 10 consecutive hours off duty
  * - 14-hour duty window: May not drive beyond the 14th consecutive hour after coming on duty
@@ -21,10 +21,6 @@ class HOSConstraint
 {
     /**
      * Validate a schedule item against HOS regulations.
-     *
-     * @param ScheduleItem $item
-     *
-     * @return ConstraintResult
      */
     public function validate(ScheduleItem $item): ConstraintResult
     {
@@ -37,8 +33,8 @@ class HOSConstraint
         if (!$this->check11HourDrivingLimit($item, $recentItems)) {
             $violations[] = [
                 'constraint_key' => 'hos_11_hour_driving_limit',
-                'message' => 'Exceeds 11-hour driving limit. Driver must have 10 consecutive hours off duty.',
-                'severity' => 'critical',
+                'message'        => 'Exceeds 11-hour driving limit. Driver must have 10 consecutive hours off duty.',
+                'severity'       => 'critical',
             ];
         }
 
@@ -46,8 +42,8 @@ class HOSConstraint
         if (!$this->check14HourDutyWindow($item, $recentItems)) {
             $violations[] = [
                 'constraint_key' => 'hos_14_hour_duty_window',
-                'message' => 'Exceeds 14-hour duty window. Driver cannot drive beyond 14 hours after coming on duty.',
-                'severity' => 'critical',
+                'message'        => 'Exceeds 14-hour duty window. Driver cannot drive beyond 14 hours after coming on duty.',
+                'severity'       => 'critical',
             ];
         }
 
@@ -55,8 +51,8 @@ class HOSConstraint
         if (!$this->check60_70HourWeeklyLimit($item, $recentItems)) {
             $violations[] = [
                 'constraint_key' => 'hos_60_70_hour_weekly_limit',
-                'message' => 'Exceeds 60/70-hour weekly limit. Driver has exceeded maximum hours in 7/8 consecutive days.',
-                'severity' => 'critical',
+                'message'        => 'Exceeds 60/70-hour weekly limit. Driver has exceeded maximum hours in 7/8 consecutive days.',
+                'severity'       => 'critical',
             ];
         }
 
@@ -64,8 +60,8 @@ class HOSConstraint
         if (!$this->check30MinuteBreak($item, $recentItems)) {
             $violations[] = [
                 'constraint_key' => 'hos_30_minute_break',
-                'message' => 'Missing required 30-minute break after 8 cumulative hours of driving.',
-                'severity' => 'warning',
+                'message'        => 'Missing required 30-minute break after 8 cumulative hours of driving.',
+                'severity'       => 'warning',
             ];
         }
 
@@ -78,8 +74,6 @@ class HOSConstraint
 
     /**
      * Get recent schedule items for the driver.
-     *
-     * @param ScheduleItem $item
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
@@ -98,10 +92,7 @@ class HOSConstraint
     /**
      * Check 11-hour driving limit.
      *
-     * @param ScheduleItem                                $item
      * @param \Illuminate\Database\Eloquent\Collection $recentItems
-     *
-     * @return bool
      */
     protected function check11HourDrivingLimit(ScheduleItem $item, $recentItems): bool
     {
@@ -124,10 +115,7 @@ class HOSConstraint
     /**
      * Check 14-hour duty window.
      *
-     * @param ScheduleItem                                $item
      * @param \Illuminate\Database\Eloquent\Collection $recentItems
-     *
-     * @return bool
      */
     protected function check14HourDutyWindow(ScheduleItem $item, $recentItems): bool
     {
@@ -138,7 +126,7 @@ class HOSConstraint
         }
 
         $dutyStart = Carbon::parse($lastOffDutyPeriod);
-        $itemEnd = Carbon::parse($item->end_at);
+        $itemEnd   = Carbon::parse($item->end_at);
 
         $hoursSinceDutyStart = $dutyStart->diffInHours($itemEnd);
 
@@ -148,18 +136,15 @@ class HOSConstraint
     /**
      * Check 60/70-hour weekly limit.
      *
-     * @param ScheduleItem                                $item
      * @param \Illuminate\Database\Eloquent\Collection $recentItems
-     *
-     * @return bool
      */
     protected function check60_70HourWeeklyLimit(ScheduleItem $item, $recentItems): bool
     {
         // Use 70-hour/8-day limit as default (can be configured)
         $limit = 70;
-        $days = 8;
+        $days  = 8;
 
-        $startDate = Carbon::parse($item->start_at)->subDays($days);
+        $startDate  = Carbon::parse($item->start_at)->subDays($days);
         $totalHours = 0;
 
         foreach ($recentItems as $recentItem) {
@@ -177,22 +162,19 @@ class HOSConstraint
     /**
      * Check 30-minute break requirement.
      *
-     * @param ScheduleItem                                $item
      * @param \Illuminate\Database\Eloquent\Collection $recentItems
-     *
-     * @return bool
      */
     protected function check30MinuteBreak(ScheduleItem $item, $recentItems): bool
     {
         // Get driving hours in the current duty period
         $drivingHours = 0;
-        $lastBreak = null;
+        $lastBreak    = null;
 
         foreach ($recentItems as $recentItem) {
             if ($recentItem->break_start_at && $recentItem->break_end_at) {
                 $breakDuration = Carbon::parse($recentItem->break_start_at)->diffInMinutes($recentItem->break_end_at);
                 if ($breakDuration >= 30) {
-                    $lastBreak = $recentItem->break_end_at;
+                    $lastBreak    = $recentItem->break_end_at;
                     $drivingHours = 0; // Reset driving hours after break
                 }
             }
@@ -205,8 +187,8 @@ class HOSConstraint
 
         // If more than 8 hours of driving, require a 30-minute break
         if ($drivingHours > 8) {
-            return $item->break_start_at && $item->break_end_at &&
-                   Carbon::parse($item->break_start_at)->diffInMinutes($item->break_end_at) >= 30;
+            return $item->break_start_at && $item->break_end_at
+                   && Carbon::parse($item->break_start_at)->diffInMinutes($item->break_end_at) >= 30;
         }
 
         return true;
@@ -215,11 +197,7 @@ class HOSConstraint
     /**
      * Get the last off-duty period of specified duration.
      *
-     * @param ScheduleItem                                $item
      * @param \Illuminate\Database\Eloquent\Collection $recentItems
-     * @param int                                         $hours
-     *
-     * @return Carbon|null
      */
     protected function getLastOffDutyPeriod(ScheduleItem $item, $recentItems, int $hours): ?Carbon
     {
@@ -231,10 +209,7 @@ class HOSConstraint
     /**
      * Calculate total driving hours.
      *
-     * @param ScheduleItem                                $item
      * @param \Illuminate\Database\Eloquent\Collection $recentItems
-     *
-     * @return float
      */
     protected function calculateTotalDrivingHours(ScheduleItem $item, $recentItems): float
     {
@@ -250,11 +225,7 @@ class HOSConstraint
     /**
      * Calculate driving hours since a specific time.
      *
-     * @param ScheduleItem                                $item
      * @param \Illuminate\Database\Eloquent\Collection $recentItems
-     * @param Carbon                                      $since
-     *
-     * @return float
      */
     protected function calculateDrivingHoursSince(ScheduleItem $item, $recentItems, Carbon $since): float
     {

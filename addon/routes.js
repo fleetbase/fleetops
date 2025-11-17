@@ -63,6 +63,7 @@ export default buildRoutes(function () {
                 this.route('details', { path: '/:public_id' }, function () {
                     this.route('index', { path: '/' });
                     this.route('positions');
+                    this.route('schedule');
                 });
                 this.route('edit', { path: '/edit/:public_id' });
             });
