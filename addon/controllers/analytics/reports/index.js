@@ -46,6 +46,7 @@ export default class AnalyticsReportsIndexController extends Controller {
     get columns() {
         return [
             {
+                sticky: true,
                 label: 'Title',
                 valuePath: 'title',
                 cellComponent: 'table/cell/anchor',
@@ -58,7 +59,6 @@ export default class AnalyticsReportsIndexController extends Controller {
             {
                 label: 'ID',
                 valuePath: 'public_id',
-                width: '130px',
                 cellComponent: 'click-to-copy',
                 resizable: true,
                 sortable: true,
@@ -75,7 +75,8 @@ export default class AnalyticsReportsIndexController extends Controller {
                 ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.Driver') }),
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
-                width: '10%',
+                sticky: 'right',
+                width: 60,
                 actions: [
                     {
                         label: 'View report...',

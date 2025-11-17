@@ -57,9 +57,9 @@ export default class ConnectivitySensorsIndexController extends Controller {
     /** columns */
     @tracked columns = [
         {
+            sticky: true,
             label: this.intl.t('column.name'),
             valuePath: 'displayName',
-            width: '180px',
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
             action: this.sensorActions.transition.view,
@@ -121,7 +121,6 @@ export default class ConnectivitySensorsIndexController extends Controller {
             label: this.intl.t('column.status'),
             valuePath: 'status',
             cellComponent: 'table/cell/status',
-            width: '10%',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -132,7 +131,6 @@ export default class ConnectivitySensorsIndexController extends Controller {
             label: this.intl.t('column.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
-            width: '10%',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -142,7 +140,6 @@ export default class ConnectivitySensorsIndexController extends Controller {
             label: this.intl.t('column.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
-            width: '10%',
             resizable: true,
             sortable: true,
             hidden: true,
@@ -159,7 +156,8 @@ export default class ConnectivitySensorsIndexController extends Controller {
             ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.sensor') }),
             cellClassNames: 'overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
-            width: '10%',
+            sticky: 'right',
+            width: 60,
             actions: [
                 {
                     label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.sensor') }),

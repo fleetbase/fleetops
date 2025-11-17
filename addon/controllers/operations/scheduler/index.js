@@ -1,11 +1,40 @@
 import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
+import { action, computed } from '@ember/object';
+import { later } from '@ember/runloop';
+import { task } from 'ember-concurrency';
 import { format, isValid as isValidDate } from 'date-fns';
 import isObject from '@fleetbase/ember-core/utils/is-object';
 import isJson from '@fleetbase/ember-core/utils/is-json';
 import createFullCalendarEventFromOrder, { createOrderEventTitle } from '../../../utils/create-full-calendar-event-from-order';
+
+function createFullCalendarEventFromScheduleItem(item, driver) {
+    return {
+        id: item.id,
+        resourceId: driver.id,
+        title: `${driver.name} - Shift`,
+        start: item.start_at,
+        end: item.end_at,
+        backgroundColor: getScheduleItemColor(item),
+        extendedProps: {
+            scheduleItem: item,
+            driver: driver,
+        },
+    };
+}
+
+function getScheduleItemColor(item) {
+    const statusColors = {
+        pending: '#FFA500',
+        confirmed: '#4CAF50',
+        in_progress: '#2196F3',
+        completed: '#9E9E9E',
+        cancelled: '#F44336',
+        no_show: '#FF5722',
+    };
+    return statusColors[item.status] || '#4CAF50';
+}
 
 export default class OperationsSchedulerIndexController extends Controller {
     @service modalsManager;
@@ -13,9 +42,64 @@ export default class OperationsSchedulerIndexController extends Controller {
     @service store;
     @service intl;
     @service hostRouter;
+    @service scheduling;
     @tracked scheduledOrders = [];
     @tracked unscheduledOrders = [];
-    @tracked events = [];
+    @tracked drivers = [];
+    @tracked scheduleItems = [];
+    @tracked viewMode = 'orders'; // 'orders' or 'drivers'
+
+    @computed('drivers', 'scheduleItems.[]', 'scheduledOrders.[]', 'viewMode') get events() {
+        if (this.viewMode === 'drivers') {
+            return this.scheduleItems.map((item) => {
+                const driver = this.drivers.find((d) => d.id === item.assignee_uuid);
+                return createFullCalendarEventFromScheduleItem(item, driver);
+            });
+        }
+        return this.scheduledOrders.map(createFullCalendarEventFromOrder);
+    }
+
+    @computed('drivers.[]') get calendarResources() {
+        return this.drivers.map((driver) => ({
+            id: driver.id,
+            title: driver.name,
+            extendedProps: { driver },
+        }));
+    }
+
+    get calendarStartDate() {
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const diff = now.getDate() - dayOfWeek;
+        return new Date(now.setDate(diff)).toISOString();
+    }
+
+    get calendarEndDate() {
+        const now = new Date();
+        return new Date(now.setDate(now.getDate() + 28)).toISOString();
+    }
+
+    @task *loadDrivers() {
+        try {
+            const drivers = yield this.store.query('driver', { limit: 100 });
+            this.drivers = drivers.toArray();
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    @task *loadScheduleItems() {
+        try {
+            const items = yield this.store.query('schedule-item', {
+                assignee_type: 'driver',
+                start_at_after: this.calendarStartDate,
+                end_at_before: this.calendarEndDate,
+            });
+            this.scheduleItems = items.toArray();
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
 
     @action setCalendarApi(calendar) {
         this.calendar = calendar;
@@ -79,11 +163,68 @@ export default class OperationsSchedulerIndexController extends Controller {
         });
     }
 
+    @action async switchViewMode(mode) {
+        this.viewMode = mode;
+        if (mode === 'drivers') {
+            await this.loadDrivers.perform();
+            await this.loadScheduleItems.perform();
+            later(() => {
+                if (this.calendar) {
+                    this.calendar.changeView('resourceTimelineWeek');
+                }
+            }, 100);
+        } else {
+            later(() => {
+                if (this.calendar) {
+                    this.calendar.changeView('dayGridMonth');
+                }
+            }, 100);
+        }
+    }
+
     @action viewOrderAsEvent(eventClickInfo) {
         const { event } = eventClickInfo;
+        if (event.extendedProps && event.extendedProps.scheduleItem) {
+            return this.viewScheduleItem(event.extendedProps.scheduleItem, event.extendedProps.driver);
+        }
         const order = this.store.peekRecord('order', event.id);
-
         this.viewEvent(order, eventClickInfo);
+    }
+
+    @action viewScheduleItem(scheduleItem, driver) {
+        this.modalsManager.show('modals/driver-shift', {
+            title: `${driver.name} - Shift Details`,
+            acceptButtonText: 'Save Changes',
+            acceptButtonIcon: 'save',
+            scheduleItem,
+            driver,
+            confirm: async (modal) => {
+                modal.startLoading();
+                try {
+                    await scheduleItem.save();
+                    this.notifications.success('Shift updated successfully');
+                    await this.loadScheduleItems.perform();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            delete: async (modal) => {
+                if (confirm('Are you sure you want to delete this shift?')) {
+                    modal.startLoading();
+                    try {
+                        await scheduleItem.destroyRecord();
+                        this.notifications.success('Shift deleted successfully');
+                        await this.loadScheduleItems.perform();
+                        modal.done();
+                    } catch (error) {
+                        this.notifications.serverError(error);
+                        modal.stopLoading();
+                    }
+                }
+            },
+        });
     }
 
     @action async scheduleEventFromDrop(dropInfo) {
@@ -112,22 +253,70 @@ export default class OperationsSchedulerIndexController extends Controller {
 
     @action async rescheduleEventFromDrag(eventDropInfo) {
         const { event } = eventDropInfo;
-        const { start } = event;
+        const { start, end } = event;
+
+        if (event.extendedProps && event.extendedProps.scheduleItem) {
+            const scheduleItem = event.extendedProps.scheduleItem;
+            const newResourceId = event.getResources()[0]?.id;
+            try {
+                scheduleItem.set('start_at', start);
+                scheduleItem.set('end_at', end || start);
+                if (newResourceId && newResourceId !== scheduleItem.assignee_uuid) {
+                    scheduleItem.set('assignee_uuid', newResourceId);
+                }
+                await scheduleItem.save();
+                this.notifications.success('Shift rescheduled successfully');
+                await this.loadScheduleItems.perform();
+            } catch (error) {
+                this.notifications.serverError(error);
+                eventDropInfo.revert();
+            }
+            return;
+        }
+
         const order = this.store.peekRecord('order', event.id);
         const scheduledTime = order.scheduledAtTime;
         const newDate = new Date(`${format(start, 'PP')} ${scheduledTime}`);
 
         try {
-            // set and save order props
             order.set('scheduled_at', isValidDate(newDate) ? newDate : start);
             await order.save();
             this.setEventProperty(event, 'title', createOrderEventTitle(order));
-
             return this.hostRouter.refresh();
         } catch (error) {
             this.notifications.serverError(error);
             this.removeEvent(event);
         }
+    }
+
+    @action async addDriverShift() {
+        this.modalsManager.show('modals/add-driver-shift', {
+            title: 'Add Driver Shift',
+            acceptButtonText: 'Create Shift',
+            acceptButtonIcon: 'plus',
+            drivers: this.drivers,
+            confirm: async (modal) => {
+                modal.startLoading();
+                const { driver, startAt, endAt, duration } = modal.getOptions();
+                try {
+                    const scheduleItem = this.store.createRecord('schedule-item', {
+                        assignee_type: 'driver',
+                        assignee_uuid: driver.id,
+                        start_at: startAt,
+                        end_at: endAt,
+                        duration: duration,
+                        status: 'pending',
+                    });
+                    await scheduleItem.save();
+                    this.notifications.success('Shift created successfully');
+                    await this.loadScheduleItems.perform();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+        });
     }
 
     removeEvent(event) {

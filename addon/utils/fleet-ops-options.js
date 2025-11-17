@@ -492,6 +492,83 @@ export const sensorStatuses = [
     { label: 'Decommissioned', value: 'decommissioned', description: 'Sensor permanently retired, replaced, or removed from service.' },
 ];
 
+export const measurementSystems = [
+    { label: 'Metric System', value: 'metric', description: 'Internationally adopted system based on meters, liters, and kilograms; used by most countries.' },
+    { label: 'Imperial System', value: 'imperial', description: 'Traditional British system using miles, gallons, and pounds; still widely used in the United States.' },
+];
+
+export const fuelVolumeUnits = [
+    { label: 'Liters (L)', value: 'liters', description: 'Metric unit for measuring liquid fuel; standard in most of the world.' },
+    { label: 'Gallons (US gal)', value: 'gallons_us', description: 'US customary gallon, equal to 3.785 liters; commonly used in the United States.' },
+    { label: 'Gallons (Imperial gal)', value: 'gallons_imperial', description: 'UK Imperial gallon, equal to 4.546 liters; historically used in the UK and some Commonwealth countries.' },
+];
+
+export const fuelTypes = [
+    { label: 'Petrol (Gasoline)', value: 'petrol', description: 'Traditional internal combustion engine fuel, widely available.' },
+    { label: 'Diesel', value: 'diesel', description: 'Fuel for compression ignition engines, offering higher efficiency and torque.' },
+    { label: 'Electric', value: 'electric', description: 'Battery-powered vehicles producing zero tailpipe emissions.' },
+    { label: 'Hybrid', value: 'hybrid', description: 'Combines petrol/diesel engine with an electric motor for better fuel economy.' },
+    { label: 'Liquefied Petroleum Gas (LPG)', value: 'lpg', description: 'Alternative fuel derived from propane or butane, lower emissions.' },
+    { label: 'Compressed Natural Gas (CNG)', value: 'cng', description: 'Fuel stored at high pressure, cleaner than petrol or diesel.' },
+];
+
+export const vehicleUsageTypes = [
+    { label: 'Commercial', value: 'commercial', description: 'Used for business operations such as deliveries, services, or company activities.' },
+    { label: 'Personal', value: 'personal', description: 'Used by an individual for private, non-business purposes.' },
+    { label: 'Mixed', value: 'mixed', description: 'Used for both business and personal purposes.' },
+    { label: 'Rental', value: 'rental', description: 'Provided for short or long-term rental to third parties.' },
+    { label: 'Fleet', value: 'fleet', description: 'Part of a company-managed group of vehicles or assets for organizational use.' },
+    { label: 'Operational', value: 'operational', description: 'Vehicles actively in use for company operations or service delivery.' },
+    { label: 'Standby', value: 'standby', description: 'Assets kept on standby for future or emergency use.' },
+    { label: 'Under Maintenance', value: 'under_maintenance', description: 'Vehicles currently undergoing repair, inspection, or service.' },
+    { label: 'Decommissioned', value: 'decommissioned', description: 'Retired assets no longer part of active operations.' },
+    { label: 'In Transit', value: 'in_transit', description: 'Assets currently being transported between locations.' },
+    { label: 'On Loan', value: 'on_loan', description: 'Assets temporarily loaned to another department or client.' },
+];
+
+export const vehicleOwnershipTypes = [
+    { label: 'Company Owned', value: 'company_owned', description: 'Vehicles fully owned and managed by the company.' },
+    { label: 'Leased', value: 'leased', description: 'Vehicles leased from a third-party vendor or lessor under contract.' },
+    { label: 'Rented', value: 'rented', description: 'Short-term rental assets used for temporary fleet expansion or projects.' },
+    { label: 'Financed', value: 'financed', description: 'Vehicles purchased through financing or loan agreements.' },
+    { label: 'Vendor Supplied', value: 'vendor_supplied', description: 'Assets provided and maintained by external vendors.' },
+    { label: 'Customer Owned', value: 'customer_owned', description: 'Assets owned by a customer but operated or tracked within the system.' },
+];
+
+export const vehicleBodyTypes = [
+    { label: 'Sedan', value: 'sedan', description: 'Standard passenger car body with a fixed roof and trunk.' },
+    { label: 'SUV', value: 'suv', description: 'Sport utility vehicle designed for passenger and cargo versatility.' },
+    { label: 'Pickup Truck', value: 'pickup_truck', description: 'Truck with an open cargo area and enclosed cab.' },
+    { label: 'Van', value: 'van', description: 'Multi-purpose vehicle for transporting passengers or goods.' },
+    { label: 'Box Truck', value: 'box_truck', description: 'Enclosed cargo truck for logistics or delivery operations.' },
+    { label: 'Flatbed', value: 'flatbed', description: 'Truck with a flat, open platform for hauling oversized loads.' },
+    { label: 'Trailer', value: 'trailer', description: 'Unpowered vehicle towed for freight transport.' },
+    { label: 'Bus', value: 'bus', description: 'Passenger transport vehicle with multiple seating rows.' },
+];
+
+export const vehicleBodySubTypes = [
+    { label: 'Refrigerated Truck', value: 'refrigerated_truck', description: 'Temperature-controlled truck for transporting perishable goods.' },
+    { label: 'Tanker', value: 'tanker', description: 'Vehicle designed for transporting liquids such as fuel or water.' },
+    { label: 'Tipper Truck', value: 'tipper_truck', description: 'Truck equipped with a hydraulic bed for dumping bulk materials.' },
+    { label: 'Car Carrier', value: 'car_carrier', description: 'Trailer or truck configured for vehicle transport.' },
+    { label: 'Mini Van', value: 'mini_van', description: 'Compact van suitable for urban transport or light cargo.' },
+    { label: 'Panel Van', value: 'panel_van', description: 'Enclosed van used for deliveries or small logistics operations.' },
+    { label: 'Chassis Cab', value: 'chassis_cab', description: 'Truck base with customizable rear body configurations.' },
+    { label: 'Electric Bus', value: 'electric_bus', description: 'Battery-powered bus used for sustainable public or private transport.' },
+    { label: 'Motorbike', value: 'motorbike', description: 'Two-wheeled asset for rapid, lightweight transportation.' },
+];
+
+export const transmissionTypes = [
+    { label: 'Manual', value: 'manual', description: 'Vehicles requiring manual gear shifting by the driver.' },
+    { label: 'Automatic', value: 'automatic', description: 'Vehicles equipped with fully automatic transmission systems.' },
+    { label: 'Semi-Automatic', value: 'semi_automatic', description: 'Combines manual control with automatic clutch operation.' },
+    { label: 'CVT (Continuously Variable Transmission)', value: 'cvt', description: 'Uses a belt and pulley system for seamless gear ratio transitions.' },
+    { label: 'Dual-Clutch', value: 'dual_clutch', description: 'High-performance transmission with two clutches for faster shifting.' },
+    { label: 'Electric Drive', value: 'electric_drive', description: 'Single-speed transmission system used in electric vehicles (EVs).' },
+];
+
+export const odometerUnits = [...distanceUnits, { label: 'Hours', value: 'hours', description: 'Unit of time measurement, commonly used worldwide.' }];
+
 export default function fleetOpsOptions(key) {
     const allOptions = {
         driverTypes,
@@ -529,6 +606,15 @@ export default function fleetOpsOptions(key) {
         sensorTypes,
         deviceStatuses,
         sensorStatuses,
+        fuelTypes,
+        fuelVolumeUnits,
+        vehicleUsageTypes,
+        vehicleOwnershipTypes,
+        vehicleBodyTypes,
+        vehicleBodySubTypes,
+        transmissionTypes,
+        odometerUnits,
+        measurementSystems,
     };
 
     return allOptions[key] ?? [];

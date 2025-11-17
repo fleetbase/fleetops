@@ -519,19 +519,23 @@ class Driver extends Model
     }
 
     /**
-     * Unassigns the current order from the driver if a driver is assigned.
+     * Alias for `unassignCurrentJob`: Unassigns the current order from the driver.
      *
      * @return bool True if the driver was unassigned and the changes were saved, false otherwise
      */
-    public function unassignCurrentOrder()
+    public function unassignCurrentOrder(): bool
     {
-        if (!empty($this->driver_assigned_uuid)) {
-            $this->driver_assigned_uuid = null;
+        return $this->unassignCurrentJob();
+    }
 
-            return $this->save();
-        }
-
-        return false;
+    /**
+     * Unassigns the current order from the driver.
+     *
+     * @return bool True if the driver was unassigned and the changes were saved, false otherwise
+     */
+    public function unassignCurrentJob(): bool
+    {
+        return $this->update(['current_job_uuid' => null]);
     }
 
     /**

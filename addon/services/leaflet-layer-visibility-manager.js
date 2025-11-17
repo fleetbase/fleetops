@@ -1,5 +1,6 @@
 import Service, { inject as service } from '@ember/service';
 import { next } from '@ember/runloop';
+import { isNone } from '@ember/utils';
 
 const L = window.L || window.leaflet;
 export default class LeafletLayerVisibilityService extends Service {
@@ -203,7 +204,9 @@ export default class LeafletLayerVisibilityService extends Service {
             if (layer.setStyle) {
                 const base = { opacity: 1 };
                 // leaflets default fillOpacity if fill:true is ~0.2
-                base.fillOpacity = layer.options?.fill ? (layer.options?.fillOpacity ?? 0.2) : 0;
+                const fillOpacity = layer.options?.fillOpacity ?? 0.2;
+                const hasFillOpacity = !isNone(layer.options?.fill);
+                base.fillOpacity = hasFillOpacity ? fillOpacity : 0;
                 layer.setStyle(base);
             } else if (layer.setOpacity) {
                 layer.setOpacity(1);

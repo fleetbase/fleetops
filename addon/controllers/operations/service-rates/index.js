@@ -14,43 +14,47 @@ export default class OperationsServiceRatesIndexController extends Controller {
     @tracked sort = '-created_at';
 
     /** action buttons */
-    @tracked actionButtons = [
-        {
-            icon: 'refresh',
-            onClick: this.serviceRateActions.refresh,
-            helpText: this.intl.t('common.refresh'),
-        },
-        {
-            text: this.intl.t('common.new'),
-            type: 'primary',
-            icon: 'plus',
-            onClick: this.serviceRateActions.transition.create,
-        },
-        {
-            text: this.intl.t('common.export'),
-            icon: 'long-arrow-up',
-            iconClass: 'rotate-icon-45',
-            wrapperClass: 'hidden md:flex',
-            onClick: this.serviceRateActions.export,
-        },
-    ];
+    get actionButtons() {
+        return [
+            {
+                icon: 'refresh',
+                onClick: this.serviceRateActions.refresh,
+                helpText: this.intl.t('common.refresh'),
+            },
+            {
+                text: this.intl.t('common.new'),
+                type: 'primary',
+                icon: 'plus',
+                onClick: this.serviceRateActions.transition.create,
+            },
+            {
+                text: this.intl.t('common.export'),
+                icon: 'long-arrow-up',
+                iconClass: 'rotate-icon-45',
+                wrapperClass: 'hidden md:flex',
+                onClick: this.serviceRateActions.export,
+            },
+        ];
+    }
 
     /** bulk action buttons */
-    @tracked bulkActions = [
-        {
-            label: 'Delete selected...',
-            class: 'text-red-500',
-            fn: this.serviceRateActions.bulkDelete,
-        },
-    ];
+    get bulkActions() {
+        return [
+            {
+                label: 'Delete selected...',
+                class: 'text-red-500',
+                fn: this.serviceRateActions.bulkDelete,
+            },
+        ];
+    }
 
     /** columns **/
     get columns() {
         return [
             {
+                sticky: true,
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
-                width: '150px',
                 cellComponent: 'table/cell/anchor',
                 permission: 'fleet-ops view service-rate',
                 onClick: this.serviceRateActions.transition.view,
@@ -63,7 +67,6 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 label: this.intl.t('column.service'),
                 valuePath: 'service_name',
                 cellComponent: 'table/cell/base',
-                width: '125px',
                 resizable: true,
                 sortable: true,
                 filterable: false,
@@ -72,7 +75,6 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 label: this.intl.t('column.service-area'),
                 valuePath: 'service_area.name',
                 cellComponent: 'table/cell/base',
-                width: '125px',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -85,7 +87,6 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 label: this.intl.t('column.zone'),
                 valuePath: 'zone.name',
                 cellComponent: 'table/cell/base',
-                width: '125px',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -98,7 +99,6 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
-                width: '125px',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -108,7 +108,6 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
-                width: '125px',
                 resizable: true,
                 sortable: true,
                 hidden: true,
@@ -123,7 +122,8 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 ddButtonIconPrefix: 'fas',
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
-                width: '10%',
+                sticky: 'right',
+                width: 60,
                 actions: [
                     {
                         label: this.intl.t('column.edit-service'),

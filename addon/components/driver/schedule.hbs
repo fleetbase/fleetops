@@ -1,0 +1,100 @@
+<div class="driver-schedule-container" ...attributes>
+    <ContentPanel @title="Hours of Service Status" @open={{true}} @isLoading={{this.loadHOSStatus.isRunning}} @wrapperClass="bordered-top">
+        {{#if this.hosStatus}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                    <div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">Daily Driving Hours</div>
+                        <div class="text-2xl font-bold">{{this.hosStatus.daily_hours}}/11</div>
+                    </div>
+                    <div class="w-16 h-16">
+                        <CircularProgress @value={{this.hosStatus.daily_hours}} @max={{11}} />
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                    <div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">Weekly Hours</div>
+                        <div class="text-2xl font-bold">{{this.hosStatus.weekly_hours}}/70</div>
+                    </div>
+                    <div class="w-16 h-16">
+                        <CircularProgress @value={{this.hosStatus.weekly_hours}} @max={{70}} />
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                    <div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">Compliance Status</div>
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{this.hosComplianceBadge.color}}-100 text-{{this.hosComplianceBadge.color}}-800"
+                        >
+                            {{this.hosComplianceBadge.text}}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        {{/if}}
+    </ContentPanel>
+    <ContentPanel @title="Schedule Calendar" @open={{true}} @isLoading={{this.loadDriverSchedule.isRunning}} @actionButtons={{this.scheduleActionButtons}} @wrapperClass="bordered-top">
+        <ScheduleCalendar @items={{this.scheduleItems}} @view="timeGridWeek" @onItemClick={{this.handleItemClick}}>
+            <:item as |ctx|>
+                <div class="schedule-item-content">
+                    <div class="font-medium">{{ctx.item.title}}</div>
+                    <div class="text-xs">{{ctx.item.duration}} min</div>
+                </div>
+            </:item>
+        </ScheduleCalendar>
+    </ContentPanel>
+
+    <ContentPanel @title="Upcoming Shifts" @open={{true}} @actionButtons={{this.shiftActionButtons}} @wrapperClass="bordered-top">
+        {{#if this.upcomingShifts.length}}
+            <div class="space-y-2">
+                {{#each this.upcomingShifts as |shift|}}
+                    <ScheduleItemCard @item={{shift}} @onClick={{this.handleItemClick}}>
+                        <:actions>
+                            <button type="button" class="text-blue-600 hover:text-blue-800 text-sm" {{on "click" (fn this.editScheduleItem shift)}}>
+                                Edit
+                            </button>
+                        </:actions>
+                    </ScheduleItemCard>
+                {{/each}}
+            </div>
+        {{else}}
+            <div class="text-center py-4 text-gray-500 dark:text-gray-400">
+                No upcoming shifts scheduled
+            </div>
+        {{/if}}
+    </ContentPanel>
+
+    <ContentPanel @title="Availability & Time Off" @open={{true}} @actionButtons={{this.availabilityActionButtons}} @wrapperClass="bordered-top">
+        {{#if this.availability.length}}
+            <div class="space-y-2">
+                {{#each this.availability as |avail|}}
+                    <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                        <div>
+                            <div class="font-medium">
+                                {{#if avail.is_available}}
+                                    <span class="text-green-600">Available</span>
+                                {{else}}
+                                    <span class="text-red-600">Unavailable</span>
+                                {{/if}}
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                {{format-date-fns avail.start_at "MMM DD, YYYY"}}
+                                -
+                                {{format-date-fns avail.end_at "MMM DD, YYYY"}}
+                            </div>
+                            {{#if avail.reason}}
+                                <div class="text-xs text-gray-400">{{avail.reason}}</div>
+                            {{/if}}
+                        </div>
+                    </div>
+                {{/each}}
+            </div>
+        {{else}}
+            <div class="text-center py-4 text-gray-500 dark:text-gray-400">
+                No availability restrictions set
+            </div>
+        {{/if}}
+    </ContentPanel>
+</div>

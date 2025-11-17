@@ -1060,7 +1060,7 @@ class OrderController extends Controller
         // Handle order completion
         if (Utils::isActivity($activity) && $activity->completesOrder()) {
             // unset from driver current job
-            $order->driverAssigned->unassignCurrentOrder();
+            $order->driverAssigned->unassignCurrentJob();
             $order->complete();
         }
 

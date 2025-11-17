@@ -56,7 +56,7 @@ export default class MaintenanceEquipmentIndexController extends Controller {
         {
             label: this.intl.t('column.name'),
             valuePath: 'name',
-            width: '180px',
+
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
             action: this.equipmentActions.transition.view,
@@ -72,7 +72,7 @@ export default class MaintenanceEquipmentIndexController extends Controller {
             label: this.intl.t('column.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
-            width: '10%',
+
             resizable: true,
             sortable: true,
             filterable: true,
@@ -82,7 +82,7 @@ export default class MaintenanceEquipmentIndexController extends Controller {
             label: this.intl.t('column.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
-            width: '10%',
+
             resizable: true,
             sortable: true,
             hidden: true,
@@ -99,7 +99,7 @@ export default class MaintenanceEquipmentIndexController extends Controller {
             ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.equipment') }),
             cellClassNames: 'overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
-            width: '10%',
+
             actions: [
                 {
                     label: this.intl.t('column.view-details'),

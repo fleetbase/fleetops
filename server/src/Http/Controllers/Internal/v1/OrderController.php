@@ -165,8 +165,13 @@ class OrderController extends FleetOpsController
                         );
                     }
 
-                    // dispatch if flagged true
-                    $order->firstDispatchWithActivity();
+                    // Check dispatch flag with backward compatibility (default true)
+                    $shouldDispatch = isset($input['dispatched']) ? (bool) $input['dispatched'] : true;
+
+                    // dispatch if flagged true, otherwise ensure order stays in created state
+                    if ($shouldDispatch) {
+                        $order->firstDispatchWithActivity();
+                    }
 
                     // set driving distance and time
                     $order->setPreliminaryDistanceAndTime();
@@ -190,7 +195,7 @@ class OrderController extends FleetOpsController
 
             return ['order' => new $this->resource($record)];
         } catch (QueryException $e) {
-            return response()->error(env('DEBUG') ? $e->getMessage() : 'Error occurred while trying to create a ' . $this->resourceSingularlName);
+            return response()->error(app()->hasDebugModeEnabled() ? $e->getMessage() : 'Error occurred while trying to create a ' . $this->resourceSingularlName);
         } catch (FleetbaseRequestValidationException $e) {
             return response()->error($e->getErrors());
         } catch (\Exception $e) {
