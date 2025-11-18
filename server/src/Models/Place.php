@@ -301,7 +301,7 @@ class Place extends Model
      */
     public static function getGoogleAddressArray(?\Geocoder\Provider\GoogleMaps\Model\GoogleAddress $address): array
     {
-        $attributes = [];
+        $attributes = ['location' => new SpatialPoint(0, 0)];
 
         if (!$address instanceof \Geocoder\Provider\GoogleMaps\Model\GoogleAddress) {
             return $attributes;
@@ -383,7 +383,7 @@ class Place extends Model
         $results = \Geocoder\Laravel\Facades\Geocoder::geocode($address)->get();
 
         if ($results->isEmpty() || !$results->first()) {
-            return ['street1' => $address];
+            return ['street1' => $address, 'location' => new SpatialPoint(0, 0)];
         }
 
         return static::getGoogleAddressArray($results->first());
