@@ -122,7 +122,7 @@ export default class ManagementVehiclesIndexController extends Controller {
             {
                 sticky: true,
                 label: this.intl.t('column.name'),
-                valuePath: 'display_name',
+                valuePath: 'displayName',
                 photoPath: 'avatar_url',
                 cellComponent: 'table/cell/vehicle-name',
                 permission: 'fleet-ops view vehicle',
@@ -131,7 +131,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 sortable: true,
                 filterable: true,
                 filterComponent: 'filter/string',
-                filterParam: 'display_name',
+                filterParam: 'name',
                 showOnlineIndicator: true,
             },
             {
