@@ -23,11 +23,15 @@ export default class FleetOpsEngine extends Engine {
         externalRoutes,
     };
     setupExtension = function (app, engine, universe) {
+        const menuService = universe.getService('universe/menu-service');
+        const widgetService = universe.getService('universe/widget-service');
+        const registryService = universe.getService('universe/registry-service');
+
         // register menu item in header
-        universe.registerHeaderMenuItem('Fleet-Ops', 'console.fleet-ops', { icon: 'route', priority: 0 });
+        menuService.registerHeaderMenuItem('Fleet-Ops', 'console.fleet-ops', { icon: 'route', priority: 0 });
 
         // register admin settings -- create a fleet-ops menu panel with it's own setting options
-        universe.registerAdminMenuPanel(
+        menuService.registerAdminMenuPanel(
             'Fleet-Ops Config',
             [
                 {
@@ -47,7 +51,7 @@ export default class FleetOpsEngine extends Engine {
         );
 
         // register menu item for tracking order
-        universe.registerMenuItem('auth:login', 'Track Order', {
+        menuService.registerMenuItem('auth:login', 'Track Order', {
             route: 'virtual',
             slug: 'track-order',
             icon: 'barcode',
@@ -96,11 +100,11 @@ export default class FleetOpsEngine extends Engine {
         };
 
         // register widgets
-        universe.registerDefaultDashboardWidgets([KeyMetricsWidgetDefinition]);
-        universe.registerDashboardWidgets([KeyMetricsWidgetDefinition]);
+        widgetService.registerDefaultWidgets('dashboard', [KeyMetricsWidgetDefinition]);
+        widgetService.registerWidgets('dashboard', [KeyMetricsWidgetDefinition]);
 
         // create all registries necessary
-        universe.createRegistries([
+        registryService.createRegistries([
             'engine:fleet-ops',
             'fleet-ops:component:live-map-drawer',
             'fleet-ops:component:vehicle:details',

@@ -28,6 +28,7 @@ export default class MapLeafletLiveMapComponent extends Component {
     @service abilities;
     @service intl;
     @service universe;
+    @service('universe/registry-service') registryService;
 
     /** properties */
     id = guidFor(this);
@@ -315,7 +316,7 @@ export default class MapLeafletLiveMapComponent extends Component {
         ].filter(Boolean);
 
         const registry = this.leafletContextmenuManager.createContextMenu('map', map, items);
-        this.universe.createRegistryEvent('fleet-ops:contextmenu:map', 'created', registry, this.leafletContextmenuManager);
+        this.universe.trigger('fleet-ops:contextmenu:map:created', registry, this.leafletContextmenuManager);
 
         return registry;
     }
@@ -341,7 +342,7 @@ export default class MapLeafletLiveMapComponent extends Component {
 
         // create contextmenu registry
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`zone:${zone.public_id}`, layer, items, { zone });
-        this.universe.createRegistryEvent('fleet-ops:contextmenu:zone', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+        this.universe.trigger('fleet-ops:contextmenu:zone:created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
     }
@@ -375,7 +376,7 @@ export default class MapLeafletLiveMapComponent extends Component {
 
         // create contextmenu registry
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`service-area:${serviceArea.public_id}`, layer, items, { serviceArea });
-        this.universe.createRegistryEvent('fleet-ops:contextmenu:service-area', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+        this.universe.trigger('fleet-ops:contextmenu:service-area:created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
     }
@@ -404,7 +405,7 @@ export default class MapLeafletLiveMapComponent extends Component {
         ];
 
         // append items from universe registry
-        const registeredContextMenuItems = this.universe.getMenuItemsFromRegistry('fleet-ops:contextmenu:driver');
+        const registeredContextMenuItems = this.registryService.getRegistry('fleet-ops:contextmenu:driver');
         if (isArray(registeredContextMenuItems)) {
             items = [
                 ...items,
@@ -427,7 +428,7 @@ export default class MapLeafletLiveMapComponent extends Component {
 
         // create contextmenu registry
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`driver:${driver.public_id}`, layer, items, { driver });
-        this.universe.createRegistryEvent('fleet-ops:contextmenu:driver', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+        this.universe.trigger('fleet-ops:contextmenu:driver:created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
     }
@@ -452,7 +453,7 @@ export default class MapLeafletLiveMapComponent extends Component {
         ];
 
         // append items from universe registry
-        const registeredContextMenuItems = this.universe.getMenuItemsFromRegistry('fleet-ops:contextmenu:vehicle');
+        const registeredContextMenuItems = this.registryService.getRegistry('fleet-ops:contextmenu:vehicle');
         if (isArray(registeredContextMenuItems)) {
             items = [
                 ...items,
@@ -475,7 +476,7 @@ export default class MapLeafletLiveMapComponent extends Component {
 
         // create contextmenu registry
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`vehicle:${vehicle.public_id}`, layer, items, { vehicle });
-        this.universe.createRegistryEvent('fleet-ops:contextmenu:vehicle', 'created', contextmenuRegistry, this.leafletContextmenuManager);
+        this.universe.trigger('fleet-ops:contextmenu:vehicle:created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
     }
