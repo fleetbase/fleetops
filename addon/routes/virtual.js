@@ -3,7 +3,7 @@ import { inject as service } from '@ember/service';
 
 export default class VirtualRoute extends Route {
     @service universe;
-    @service('universe/registry-service') registryService;
+    @service('universe/menu-service') menuService;
 
     queryParams = {
         view: {
@@ -13,12 +13,6 @@ export default class VirtualRoute extends Route {
 
     model({ section = null, slug }, transition) {
         const view = this.universe.getViewFromTransition(transition);
-        const items = this.registryService.getRegistry('engine:fleet-ops');
-        return items.find(item => {
-            const slugMatch = item.slug === slug;
-            const viewMatch = !view || item.view === view;
-            const sectionMatch = !section || item.section === section;
-            return slugMatch && viewMatch && sectionMatch;
-        });
+        return this.menuService.lookupMenuItem('engine:fleet-ops', slug, view, section);
     }
 }

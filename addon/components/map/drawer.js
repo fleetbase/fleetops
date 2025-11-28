@@ -6,10 +6,10 @@ import { isArray } from '@ember/array';
 export default class MapDrawerComponent extends Component {
     @service mapDrawer;
     @service universe;
-    @service('universe/registry-service') registryService;
+    @service('universe/menu-service') menuService;
 
     get tabs() {
-        const registeredTabs = this.registryService.getRegistry('fleet-ops:component:map:drawer');
+        const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:map:drawer');
         return [
             this.universe._createMenuItem('Vehicles', null, { icon: 'car', component: 'map/drawer/vehicle-listing' }),
             this.universe._createMenuItem('Drivers', null, { icon: 'id-card', component: 'map/drawer/driver-listing' }),

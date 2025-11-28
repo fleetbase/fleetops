@@ -7,7 +7,7 @@ import DriverListingComponent from './fleet-ops-sidebar/driver-listing';
 
 export default class LayoutFleetOpsSidebarComponent extends Component {
     @service universe;
-    @service('universe/registry-service') registryService;
+    @service('universe/menu-service') menuService;
     @service store;
     @service intl;
     @service abilities;
@@ -25,8 +25,8 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     }
 
     createMenuItemsFromUniverseRegistry() {
-        const registeredMenuItems = this.registryService.getRegistry('engine:fleet-ops');
-        this.universeMenuPanels = this.registryService.getRegistry('engine:fleet-ops:panels');
+        const registeredMenuItems = this.menuService.getMenuItems('engine:fleet-ops');
+        this.universeMenuPanels = this.menuService.getMenuPanels('engine:fleet-ops');
         this.universeMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === undefined);
         this.universeSettingsMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'settings');
     }

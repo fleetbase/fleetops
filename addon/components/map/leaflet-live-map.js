@@ -28,7 +28,7 @@ export default class MapLeafletLiveMapComponent extends Component {
     @service abilities;
     @service intl;
     @service universe;
-    @service('universe/registry-service') registryService;
+    @service('universe/menu-service') menuService;
 
     /** properties */
     id = guidFor(this);
@@ -405,7 +405,7 @@ export default class MapLeafletLiveMapComponent extends Component {
         ];
 
         // append items from universe registry
-        const registeredContextMenuItems = this.registryService.getRegistry('fleet-ops:contextmenu:driver');
+        const registeredContextMenuItems = this.menuService.getMenuItems('fleet-ops:contextmenu:driver');
         if (isArray(registeredContextMenuItems)) {
             items = [
                 ...items,
@@ -453,7 +453,7 @@ export default class MapLeafletLiveMapComponent extends Component {
         ];
 
         // append items from universe registry
-        const registeredContextMenuItems = this.registryService.getRegistry('fleet-ops:contextmenu:vehicle');
+        const registeredContextMenuItems = this.menuService.getMenuItems('fleet-ops:contextmenu:vehicle');
         if (isArray(registeredContextMenuItems)) {
             items = [
                 ...items,
