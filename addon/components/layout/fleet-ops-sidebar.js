@@ -25,8 +25,13 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     }
 
     createMenuItemsFromUniverseRegistry() {
+<<<<<<< HEAD
         const registeredMenuItems = this.registryService.getMenuItems('engine:fleet-ops');
         this.universeMenuPanels = this.registryService.getMenuPanels('engine:fleet-ops');
+=======
+        const registeredMenuItems = this.registryService.getRegistry('engine:fleet-ops');
+        this.universeMenuPanels = this.registryService.getRegistry('engine:fleet-ops:panels');
+>>>>>>> 623fa0c66165ea9b466e06f811d9477f1a8f2380
         this.universeMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === undefined);
         this.universeSettingsMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'settings');
     }

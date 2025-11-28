@@ -13,6 +13,12 @@ export default class VirtualRoute extends Route {
 
     model({ section = null, slug }, transition) {
         const view = this.universe.getViewFromTransition(transition);
-        return this.registryService.lookupMenuItem('engine:fleet-ops', slug, view, section);
+        const items = this.registryService.getRegistry('engine:fleet-ops');
+        return items.find(item => {
+            const slugMatch = item.slug === slug;
+            const viewMatch = !view || item.view === view;
+            const sectionMatch = !section || item.section === section;
+            return slugMatch && viewMatch && sectionMatch;
+        });
     }
 }

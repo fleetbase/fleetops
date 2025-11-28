@@ -3,9 +3,6 @@ import { MenuItem, MenuPanel, Widget, ExtensionComponent, Hook } from '@fleetbas
 export default function (app, universe) {
     console.log('[FleetOps] Setting up extension...');
 
-    // Get the menuService from the universe facade
-    const menuService = universe.getService('menuService');
-    
-    // Register header menu item using menuService
+    const menuService = universe.getService('universe/menu-service');
     menuService.registerHeaderMenuItem('Fleet-Ops', 'console.fleet-ops', { icon: 'route', priority: 0 });
 }

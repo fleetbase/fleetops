@@ -6,10 +6,7 @@ import { debug } from '@ember/debug';
 export default function setupCustomerPortal(app, engine, universe) {
     if (!customerPortalInstalled(app)) return;
 
-    // Get extensionManager from universe facade
-    const extensionManager = universe.getService('extensionManager');
-    const menuService = universe.getService('menuService');
-
+    const extensionManager = universe.getService('universe/extension-manager');
     extensionManager.afterBoot(function (u) {
         const portal = u.getEngineInstance('@fleetbase/customer-portal-engine');
         if (!portal) {
@@ -21,14 +18,19 @@ export default function setupCustomerPortal(app, engine, universe) {
         createServiceAlias(engine, portal, ['leaflet-map-manager', 'location', 'movement-tracker', 'leaflet-routing-control', 'order-config-actions', 'order-creation', 'order-validation']);
 
         // Now it's safe to wire menus + renderables that might use those services
-        menuService.registerMenuItems('customer-portal:sidebar', [
+        const menuService = u.getService('universe/menu-service');
+        const registryService = u.getService('universe/registry-service');
+        
+        // Register menu items
+        const menuItems = [
             u._createMenuItem('Orders', 'customer-portal.portal.virtual', {
                 icon: 'boxes-packing',
                 component: createEngineBoundComponent(portal, CustomerOrdersComponent),
             }),
-        ]);
+        ];
+        menuItems.forEach(item => menuService.registerMenuItem('customer-portal:sidebar', item.title, item.route, item));
 
-        u.registerRenderableComponent('@fleetbase/customer-portal-engine', 'customer-portal:admin-settings', CustomerAdminSettingsComponent);
+        registryService.register('customer-portal:admin-settings', '@fleetbase/customer-portal-engine', CustomerAdminSettingsComponent);
     });
 }
 

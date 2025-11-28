@@ -40,7 +40,7 @@ export default class OrderConfigManagerComponent extends Component {
      * @type {Array}
      */
     get tabs() {
-        const registeredTabs = this.registryService.getMenuItems('fleet-ops:component:order-config-manager');
+        const registeredTabs = this.registryService.getRegistry('fleet-ops:component:order-config-manager');
         const defaultTabs = [
             this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.details'), null, { icon: 'circle-info', component: OrderConfigManagerDetailsComponent }),
             this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.custom-fields'), null, { icon: 'rectangle-list', component: OrderConfigManagerCustomFieldsComponent }),

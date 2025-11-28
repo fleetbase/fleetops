@@ -23,10 +23,9 @@ export default class FleetOpsEngine extends Engine {
         externalRoutes,
     };
     setupExtension = function (app, engine, universe) {
-        // Get refactored services from universe facade
-        const menuService = universe.getService('menuService');
-        const widgetService = universe.getService('widgetService');
-        const registryService = universe.getService('registryService');
+        const menuService = universe.getService('universe/menu-service');
+        const widgetService = universe.getService('universe/widget-service');
+        const registryService = universe.getService('universe/registry-service');
 
         // register menu item in header
         menuService.registerHeaderMenuItem('Fleet-Ops', 'console.fleet-ops', { icon: 'route', priority: 0 });
