@@ -376,11 +376,7 @@ export default class MapLeafletLiveMapComponent extends Component {
 
         // create contextmenu registry
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`service-area:${serviceArea.public_id}`, layer, items, { serviceArea });
-<<<<<<< HEAD
-        this.registryService.createEvent('fleet-ops:contextmenu:service-area', 'created', contextmenuRegistry, this.leafletContextmenuManager);
-=======
         this.universe.trigger('fleet-ops:contextmenu:service-area:created', contextmenuRegistry, this.leafletContextmenuManager);
->>>>>>> 623fa0c66165ea9b466e06f811d9477f1a8f2380
 
         return contextmenuRegistry;
     }
@@ -432,11 +428,7 @@ export default class MapLeafletLiveMapComponent extends Component {
 
         // create contextmenu registry
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`driver:${driver.public_id}`, layer, items, { driver });
-<<<<<<< HEAD
-        this.registryService.createEvent('fleet-ops:contextmenu:driver', 'created', contextmenuRegistry, this.leafletContextmenuManager);
-=======
         this.universe.trigger('fleet-ops:contextmenu:driver:created', contextmenuRegistry, this.leafletContextmenuManager);
->>>>>>> 623fa0c66165ea9b466e06f811d9477f1a8f2380
 
         return contextmenuRegistry;
     }
