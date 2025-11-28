@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 
 export default class VirtualRoute extends Route {
     @service universe;
+    @service('universe/registry-service') registryService;
 
     queryParams = {
         view: {
@@ -12,6 +13,6 @@ export default class VirtualRoute extends Route {
 
     model({ section = null, slug }, transition) {
         const view = this.universe.getViewFromTransition(transition);
-        return this.universe.lookupMenuItemFromRegistry('engine:fleet-ops', slug, view, section);
+        return this.registryService.lookupMenuItem('engine:fleet-ops', slug, view, section);
     }
 }

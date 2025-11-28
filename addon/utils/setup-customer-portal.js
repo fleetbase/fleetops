@@ -6,7 +6,11 @@ import { debug } from '@ember/debug';
 export default function setupCustomerPortal(app, engine, universe) {
     if (!customerPortalInstalled(app)) return;
 
-    universe.afterBoot(function (u) {
+    // Get extensionManager from universe facade
+    const extensionManager = universe.getService('extensionManager');
+    const menuService = universe.getService('menuService');
+
+    extensionManager.afterBoot(function (u) {
         const portal = u.getEngineInstance('@fleetbase/customer-portal-engine');
         if (!portal) {
             debug('Could not resolve @fleetbase/customer-portal-engine');
@@ -16,8 +20,8 @@ export default function setupCustomerPortal(app, engine, universe) {
         // Alias FleetOps services into Customer Portal before rendering
         createServiceAlias(engine, portal, ['leaflet-map-manager', 'location', 'movement-tracker', 'leaflet-routing-control', 'order-config-actions', 'order-creation', 'order-validation']);
 
-        // Now it’s safe to wire menus + renderables that might use those services
-        u.registerMenuItems('customer-portal:sidebar', [
+        // Now it's safe to wire menus + renderables that might use those services
+        menuService.registerMenuItems('customer-portal:sidebar', [
             u._createMenuItem('Orders', 'customer-portal.portal.virtual', {
                 icon: 'boxes-packing',
                 component: createEngineBoundComponent(portal, CustomerOrdersComponent),
