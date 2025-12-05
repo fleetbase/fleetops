@@ -36,40 +36,38 @@ export default class AdminAvatarManagementComponent extends Component {
     @tracked currentCategory;
 
     /**
+     * Selectable categories for avatar management.
+     *
+     * @memberof AdminAvatarManagementComponent
+     */
+    @tracked categories = [
+        {
+            name: this.intl.t('resource.vehicles'),
+            icon: 'car',
+            type: 'vehicle',
+            avatars: [],
+        },
+        {
+            name: this.intl.t('resource.places'),
+            icon: 'building',
+            type: 'place',
+            avatars: [],
+        },
+        {
+            name: this.intl.t('resource.drivers'),
+            icon: 'id-card',
+            type: 'driver',
+            avatars: [],
+        },
+    ];
+
+    /**
      * The only acceptable file types for avatars, png or svg.
      *
      * @memberof AdminAvatarManagementComponent
      */
     get acceptedFileTypes() {
         return ['image/svg+xml', 'image/png'];
-    }
-
-    /**
-     * Selectable categories for avatar management.
-     *
-     * @memberof AdminAvatarManagementComponent
-     */
-    get categories() {
-        return [
-            {
-                name: this.intl.t('resource.vehicles'),
-                icon: 'car',
-                type: 'vehicle',
-                avatars: [],
-            },
-            {
-                name: this.intl.t('resource.places'),
-                icon: 'building',
-                type: 'place',
-                avatars: [],
-            },
-            {
-                name: this.intl.t('resource.drivers'),
-                icon: 'id-card',
-                type: 'driver',
-                avatars: [],
-            },
-        ];
     }
 
     /**

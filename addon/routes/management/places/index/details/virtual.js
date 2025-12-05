@@ -1,0 +1,23 @@
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+
+export default class ManagementPlacesIndexDetailsVirtualRoute extends Route {
+    @service universe;
+    @service('universe/menu-service') menuService;
+
+    queryParams = {
+        view: {
+            refreshModel: true,
+        },
+    };
+
+    model({ section = null, slug }, transition) {
+        const view = this.universe.getViewFromTransition(transition);
+        return this.menuService.lookupMenuItem('fleet-ops:component:place:details', slug, view, section);
+    }
+
+    setupController(controller) {
+        super.setupController(...arguments);
+        controller.resource = this.modelFor('management.places.index.details');
+    }
+}

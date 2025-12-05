@@ -111,7 +111,7 @@
                                 <div>
                                     <Input @value={{entity.sku}} @type="text" class="w-full form-input form-input-sm" placeholder={{t "order.fields.sku"}} />
                                 </div>
-                                <RegistryYield @registry="fleet-ops:template:operations:orders:new:entities-input:entity" as |RegistryComponent|>
+                                <RegistryYield @registry="fleet-ops:component:order:form:payload:entity:form" as |RegistryComponent|>
                                     <RegistryComponent @entity={{entity}} @order={{@resource}} @controller={{this}} />
                                 </RegistryYield>
                                 {{#if @resource.payload.waypoints.length}}

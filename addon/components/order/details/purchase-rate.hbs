@@ -1,10 +1,10 @@
 {{#if @resource.purchase_rate}}
-    <ContentPanel @title={{t "order.fields.purchase-rate-panel-title"}} @isLoading={{@isLoading}} @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "order.fields.purchase-rate-panel-title"}} @isLoading={{@isLoading}} @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="px-0i">
         <div class="order-view-purchase-rate-table-wrapper next-table-wrapper no-scroll h-auto table-fluid rounded-b-md">
             <table id="order-view-purchase-rate-table" class="table table-fixed flex-1">
                 <thead>
                     <tr>
-                        <th class="text-left">{{t "fleet-ops.operations.orders.index.new.breakdown"}}</th>
+                        <th class="text-left">{{t "order.fields.breakdown"}}</th>
                         <th>
                             <div class="flex flex-row items-center justify-end">{{@resource.purchase_rate.service_quote.currency}}</div>
                         </th>

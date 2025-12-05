@@ -1,10 +1,13 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
+import { isArray } from '@ember/array';
 
 export default class ManagementFleetsIndexDetailsController extends Controller {
+    @service('universe/menu-service') menuService;
     @service hostRouter;
 
     get tabs() {
+        const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:place:details');
         return [
             {
                 route: 'management.fleets.index.details.index',
@@ -18,6 +21,7 @@ export default class ManagementFleetsIndexDetailsController extends Controller {
                 route: 'management.fleets.index.details.drivers',
                 label: 'Drivers',
             },
+            ...(isArray(registeredTabs) ? registeredTabs : []),
         ];
     }
 

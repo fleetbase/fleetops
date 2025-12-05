@@ -3,7 +3,7 @@
 <Layout::Section::Body id="fleetops-virtual-body" class="overflow-y-scroll h-full">
     <div id="fleetops-virtual-container" class="container mx-auto h-screen">
         <div id="fleetops-virtual-wrapper" class="max-w-3xl my-10 mx-auto">
-            {{component @model.component params=@model.componentParams}}
+            {{component (lazy-engine-component @model.component) params=@model.componentParams}}
         </div>
     </div>
     <Spacer @height="300px" />

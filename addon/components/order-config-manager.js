@@ -20,6 +20,7 @@ import findActiveTab from '../utils/find-active-tab';
 const configManagerContext = EmberObject.extend(Evented);
 export default class OrderConfigManagerComponent extends Component {
     @service universe;
+    @service('universe/menu-service') menuService;
     @service notifications;
     @service modalsManager;
     @service store;
@@ -39,7 +40,7 @@ export default class OrderConfigManagerComponent extends Component {
      * @type {Array}
      */
     get tabs() {
-        const registeredTabs = this.universe.getMenuItemsFromRegistry('fleet-ops:component:order-config-manager');
+        const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:order-config-manager');
         const defaultTabs = [
             this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.details'), null, { icon: 'circle-info', component: OrderConfigManagerDetailsComponent }),
             this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.custom-fields'), null, { icon: 'rectangle-list', component: OrderConfigManagerCustomFieldsComponent }),

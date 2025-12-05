@@ -23,10 +23,6 @@ export default class ManagementVehiclesIndexDetailsRoute extends Route {
         }
     }
 
-    queryParams = {
-        view: { refreshModel: false },
-    };
-
     model(params) {
         return this.store.findRecord('vehicle', params.public_id);
     }

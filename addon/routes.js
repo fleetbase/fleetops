@@ -37,6 +37,7 @@ export default buildRoutes(function () {
                     this.route('index', { path: '/' });
                     this.route('vehicles');
                     this.route('drivers');
+                    this.route('virtual', { path: '/:slug' });
                 });
                 this.route('edit', { path: '/edit/:public_id' });
             });
@@ -64,6 +65,7 @@ export default buildRoutes(function () {
                     this.route('index', { path: '/' });
                     this.route('positions');
                     this.route('schedule');
+                    this.route('virtual', { path: '/:slug' });
                 });
                 this.route('edit', { path: '/edit/:public_id' });
             });
@@ -76,6 +78,7 @@ export default buildRoutes(function () {
                     this.route('positions');
                     this.route('devices');
                     this.route('equipment');
+                    this.route('virtual', { path: '/:slug' });
                 });
                 this.route('edit', { path: '/edit/:public_id' });
             });
@@ -92,6 +95,7 @@ export default buildRoutes(function () {
                     this.route('comments');
                     this.route('documents');
                     this.route('rules');
+                    this.route('virtual', { path: '/:slug' });
                 });
                 this.route('edit', { path: '/edit/:public_id' });
             });
@@ -152,6 +156,7 @@ export default buildRoutes(function () {
                 this.route('details', { path: '/:public_id' }, function () {
                     this.route('index', { path: '/' });
                     this.route('events');
+                    this.route('virtual', { path: '/:slug' });
                 });
             });
         });
@@ -162,6 +167,7 @@ export default buildRoutes(function () {
                 this.route('edit', { path: '/edit/:public_id' });
                 this.route('details', { path: '/:public_id' }, function () {
                     this.route('index', { path: '/' });
+                    this.route('virtual', { path: '/:slug' });
                 });
             });
         });
