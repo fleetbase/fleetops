@@ -1846,3 +1846,8 @@ body[data-theme='dark'] .positions-replay-component .metric-card:hover {
     justify-content: center;
     min-height: 400px;
 }
+
+#map-topbar-container {
+    height: 40px;
+    flex-shrink: 0;
+}

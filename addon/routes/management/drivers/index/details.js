@@ -23,10 +23,6 @@ export default class ManagementDriversIndexDetailsRoute extends Route {
         }
     }
 
-    queryParams = {
-        view: { refreshModel: false },
-    };
-
     model({ public_id }) {
         return this.store.findRecord('driver', public_id);
     }

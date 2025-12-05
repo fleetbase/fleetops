@@ -629,6 +629,10 @@
         </div>
     </ContentPanel>
 
+    <RegistryYield @registry="fleet-ops:component:vehicle:details" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+
     {{! METADATA }}
     <ContentPanel
         @title={{t "common.metadata"}}
