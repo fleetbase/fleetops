@@ -12,11 +12,11 @@ importers:
         specifier: ^7.23.2
         version: 7.27.1
       '@fleetbase/ember-core':
-        specifier: ^0.3.7
-        version: 0.3.7(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)
+        specifier: ^0.3.8
+        version: 0.3.8(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)
       '@fleetbase/ember-ui':
-        specifier: ^0.3.12
-        version: 0.3.12(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(@glimmer/component@1.1.2(@babel/core@7.27.1))(@glimmer/tracking@1.1.2)(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(postcss@8.5.3)(rollup@2.79.2)(tracked-built-ins@3.4.0(@babel/core@7.27.1))(webpack@5.99.8)
+        specifier: ^0.3.14
+        version: 0.3.14(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(@glimmer/component@1.1.2(@babel/core@7.27.1))(@glimmer/tracking@1.1.2)(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(postcss@8.5.3)(rollup@2.79.2)(tracked-built-ins@3.4.0(@babel/core@7.27.1))(webpack@5.99.8)
       '@fleetbase/fleetops-data':
         specifier: ^0.1.23
         version: 0.1.23(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)
@@ -1493,12 +1493,12 @@ packages:
     peerDependencies:
       ember-source: '>= 4.0.0'
 
-  '@fleetbase/ember-core@0.3.7':
-    resolution: {integrity: sha512-hpnJeJAAVyn7BUqqRU05Clm70z7OorIHKKXk2asv9qFtS3nFjm6Ct2vk9/dT6rsJZnnAk7CP5Auq8Wa034hHNg==}
+  '@fleetbase/ember-core@0.3.8':
+    resolution: {integrity: sha512-lakUs/gG8k4GbJprXlrz1KIZDr5254qjVfhXU5kcaKyS9VBzgsNsWKXIA8+821lcwufGIlioE12D4+qEb4GZNA==}
     engines: {node: '>= 18'}
 
-  '@fleetbase/ember-ui@0.3.12':
-    resolution: {integrity: sha512-HKJ5at1tj3eNvw8HrzPR/J9wxSeW0lZJ27mtq5vWko/AZ30HhFlssZLmLdsmKXKtSep026goVpdowiX1GRAFEw==}
+  '@fleetbase/ember-ui@0.3.14':
+    resolution: {integrity: sha512-w0IcDsANw3Vmi/ha1a6fHexIV2beb3wupB9j3dNs43lvQp6D+zoAtMrW9q6DD6ICNCbxikmD0AMUIbjO5gJYDg==}
     engines: {node: '>= 18'}
 
   '@fleetbase/fleetops-data@0.1.23':
@@ -2743,8 +2743,8 @@ packages:
     resolution: {integrity: sha512-5T6P4xPgpp0YDFvSWwEZ4NoE3aM4QBQXDzmVbraCkFj8zHM+mba8SyqB5DbZWyR7mYHo6Y7BdQo3MoA4m0TeQg==}
     engines: {node: '>=0.10.0'}
 
-  baseline-browser-mapping@2.9.2:
-    resolution: {integrity: sha512-PxSsosKQjI38iXkmb3d0Y32efqyA0uW4s41u4IVBsLlWLhCiYNpH/AfNOVWRqCQBlD8TFJTz6OUWNd4DFJCnmw==}
+  baseline-browser-mapping@2.9.3:
+    resolution: {integrity: sha512-8QdH6czo+G7uBsNo0GiUfouPN1lRzKdJTGnKXwe12gkFbnnOUaUKGN55dMkfy+mnxmvjwl9zcI4VncczcVXDhA==}
     hasBin: true
 
   basic-auth@2.0.1:
@@ -3936,8 +3936,8 @@ packages:
   electron-to-chromium@1.5.155:
     resolution: {integrity: sha512-ps5KcGGmwL8VaeJlvlDlu4fORQpv3+GIcF5I3f9tUKUlJ/wsysh6HU8P5L1XWRYeXfA0oJd4PyM8ds8zTFf6Ng==}
 
-  electron-to-chromium@1.5.265:
-    resolution: {integrity: sha512-B7IkLR1/AE+9jR2LtVF/1/6PFhY5TlnEHnlrKmGk7PvkJibg5jr+mLXLLzq3QYl6PA1T/vLDthQPqIPAlS/PPA==}
+  electron-to-chromium@1.5.266:
+    resolution: {integrity: sha512-kgWEglXvkEfMH7rxP5OSZZwnaDWT7J9EoZCujhnpLbfi0bbNtRkgdX2E3gt0Uer11c61qCYktB3hwkAS325sJg==}
 
   element-closest@3.0.2:
     resolution: {integrity: sha512-JxKQiJKX0Zr5Q2/bCaTx8P+UbfyMET1OQd61qu5xQFeWr1km3fGaxelSJtnfT27XQ5Uoztn2yIyeamAc/VX13g==}
@@ -11079,7 +11079,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@fleetbase/ember-core@0.3.7(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)':
+  '@fleetbase/ember-core@0.3.8(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)':
     dependencies:
       '@babel/core': 7.27.1
       compress-json: 3.4.0
@@ -11112,7 +11112,7 @@ snapshots:
       - utf-8-validate
       - webpack
 
-  '@fleetbase/ember-ui@0.3.12(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(@glimmer/component@1.1.2(@babel/core@7.27.1))(@glimmer/tracking@1.1.2)(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(postcss@8.5.3)(rollup@2.79.2)(tracked-built-ins@3.4.0(@babel/core@7.27.1))(webpack@5.99.8)':
+  '@fleetbase/ember-ui@0.3.14(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(@glimmer/component@1.1.2(@babel/core@7.27.1))(@glimmer/tracking@1.1.2)(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(postcss@8.5.3)(rollup@2.79.2)(tracked-built-ins@3.4.0(@babel/core@7.27.1))(webpack@5.99.8)':
     dependencies:
       '@babel/core': 7.27.1
       '@ember/render-modifiers': 2.1.0(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))
@@ -11218,7 +11218,7 @@ snapshots:
   '@fleetbase/fleetops-data@0.1.23(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)':
     dependencies:
       '@babel/core': 7.27.1
-      '@fleetbase/ember-core': 0.3.7(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)
+      '@fleetbase/ember-core': 0.3.8(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)
       date-fns: 2.30.0
       ember-cli-babel: 8.2.0(@babel/core@7.27.1)
       ember-cli-htmlbars: 6.3.0
@@ -12842,7 +12842,7 @@ snapshots:
       mixin-deep: 1.3.2
       pascalcase: 0.1.1
 
-  baseline-browser-mapping@2.9.2: {}
+  baseline-browser-mapping@2.9.3: {}
 
   basic-auth@2.0.1:
     dependencies:
@@ -13533,9 +13533,9 @@ snapshots:
 
   browserslist@4.28.1:
     dependencies:
-      baseline-browser-mapping: 2.9.2
+      baseline-browser-mapping: 2.9.3
       caniuse-lite: 1.0.30001759
-      electron-to-chromium: 1.5.265
+      electron-to-chromium: 1.5.266
       node-releases: 2.0.27
       update-browserslist-db: 1.2.2(browserslist@4.28.1)
 
@@ -14341,7 +14341,7 @@ snapshots:
 
   electron-to-chromium@1.5.155: {}
 
-  electron-to-chromium@1.5.265: {}
+  electron-to-chromium@1.5.266: {}
 
   element-closest@3.0.2: {}
 
