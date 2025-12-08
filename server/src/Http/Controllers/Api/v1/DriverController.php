@@ -551,6 +551,7 @@ class DriverController extends Controller
         // generate verification token
         try {
             VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
+                'company_uuid'    => $company->uuid,
                 'messageCallback' => function ($verification) use ($company) {
                     return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
                 },
@@ -566,6 +567,7 @@ class DriverController extends Controller
             if ($user->email) {
                 try {
                     VerificationCode::generateEmailVerificationFor($user, 'driver_login', [
+                        'company_uuid'    => $company->uuid,
                         'messageCallback' => function ($verification) use ($company) {
                             return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
                         },
