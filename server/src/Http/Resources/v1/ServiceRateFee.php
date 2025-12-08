@@ -17,18 +17,18 @@ class ServiceRateFee extends FleetbaseResource
     public function toArray($request)
     {
         return [
-            'id'              => $this->when(Http::isInternalRequest(), $this->id),
-            'uuid'            => $this->when(Http::isInternalRequest(), $this->uuid),
-            'fee'             => $this->fee,
-            'currency'        => $this->currency,
-            'size'            => $this->size,
-            'length'          => $this->length,
-            'height'          => $this->height,
-            'dimensions_unit' => $this->dimensions_unit,
-            'weight'          => $this->weight,
-            'weight_unit'     => $this->weight_unit,
-            'updated_at'      => $this->updated_at,
-            'created_at'      => $this->created_at,
+            'id'                      => $this->when(Http::isInternalRequest(), $this->id),
+            'uuid'                    => $this->when(Http::isInternalRequest(), $this->uuid),
+            'service_rate_uuid'       => $this->when(Http::isInternalRequest(), $this->service_rate_uuid),
+            'fee'                     => $this->fee,
+            'currency'                => $this->currency,
+            'min'                     => $this->min,
+            'max'                     => $this->max,
+            'unit'                    => $this->unit,
+            'distance'                => $this->distance,
+            'distance_unit'           => $this->distance_unit,
+            'updated_at'              => $this->updated_at,
+            'created_at'              => $this->created_at,
         ];
     }
 
