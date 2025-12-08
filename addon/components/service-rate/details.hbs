@@ -47,8 +47,8 @@
     </ContentPanel>
 
     {{#if @resource.isFixedRate}}
-        <ContentPanel @title={{t "service-rate.fields.fixed-meter"}} @open={{true}} @wrapperClass="bordered-top">
-            <div class="mb-3">
+        <ContentPanel @title={{t "service-rate.fields.fixed-meter"}} @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="p-0i">
+            <div class="mb-3 px-3">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
                     <div class="field-info-container">
                         <div class="field-name">{{t "service-rate.fields.maximum-distance"}}</div>
@@ -70,31 +70,33 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table class="table table-fixed w-full">
-                    <thead>
-                        <tr>
-                            <th>{{t "service-rate.fields.distance"}}</th>
-                            <th>{{t "service-rate.fields.fee"}}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{#each @resource.rateFees as |rateFee|}}
+                <div class="next-table-wrapper h-auto table-fluid rounded-none overflow-x-auto">
+                    <table class="table table-fixed w-full">
+                        <thead>
                             <tr>
-                                <td>{{rateFee.distance}}-{{add rateFee.distance 1}} {{@resource.max_distance_unit}}</td>
-                                <td>{{format-currency rateFee.fee @resource.currency}}</td>
+                                <th>{{t "service-rate.fields.distance"}}</th>
+                                <th>{{t "service-rate.fields.fee"}}</th>
                             </tr>
-                        {{else}}
-                            <tr>
-                                <td colspan="2" class="text-center text-gray-500">No rate fees defined</td>
-                            </tr>
-                        {{/each}}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {{#each @resource.rate_fees as |rateFee|}}
+                                <tr>
+                                    <td>{{rateFee.distance}}-{{add rateFee.distance 1}} {{@resource.max_distance_unit}}</td>
+                                    <td>{{format-currency rateFee.fee @resource.currency}}</td>
+                                </tr>
+                            {{else}}
+                                <tr>
+                                    <td colspan="2" class="text-center text-gray-500">No rate fees defined</td>
+                                </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </ContentPanel>
     {{else if @resource.isPerDrop}}
-        <ContentPanel @title={{t "service-rate.fields.per-drop-off-title"}} @open={{true}} @wrapperClass="bordered-top">
-            <div class="overflow-x-auto">
+        <ContentPanel @title={{t "service-rate.fields.per-drop-off-title"}} @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="p-0i">
+            <div class="next-table-wrapper h-auto table-fluid rounded-none overflow-x-auto">
                 <table class="table table-fixed w-full">
                     <thead>
                         <tr>
@@ -104,7 +106,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {{#each @resource.perDropFees as |rateFee|}}
+                        {{#each @resource.rate_fees as |rateFee|}}
                             <tr>
                                 <td>{{n-a rateFee.min}}</td>
                                 <td>{{n-a rateFee.max}}</td>
