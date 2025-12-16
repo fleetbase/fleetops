@@ -33,7 +33,7 @@ class Waypoint extends FleetbaseResource
             'public_id'              => $this->when(Http::isInternalRequest(), $this->public_id),
             'waypoint_public_id'     => $this->when(Http::isInternalRequest(), $waypoint->public_id),
             'customer_uuid'          => $this->when(Http::isInternalRequest(), $waypoint->customer_uuid),
-            'customer_type'          => $this->when(Http::isInternalRequest(), $waypoint->customer_type),
+            'customer_type'          => $this->when(Http::isInternalRequest(), $waypoint->customer_type ? Utils::toEmberResourceType($waypoint->customer_type) : null),
             'order'                  => $waypoint->order,
             'tracking'               => $waypoint->tracking,
             'status'                 => $waypoint->status,
