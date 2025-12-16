@@ -13,6 +13,7 @@ use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasPublicId;
@@ -43,6 +44,7 @@ class Driver extends Model
     use HasInternalId;
     use TracksApiCredential;
     use HasApiModelBehavior;
+    use HasApiModelCache;
     use Notifiable;
     use SendsWebhooks;
     use SpatialTrait;

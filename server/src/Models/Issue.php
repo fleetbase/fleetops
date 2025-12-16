@@ -9,6 +9,7 @@ use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -22,6 +23,7 @@ class Issue extends Model
     use TracksApiCredential;
     use SpatialTrait;
     use HasApiModelBehavior;
+    use HasApiModelCache;
     use HasCustomFields;
 
     /**

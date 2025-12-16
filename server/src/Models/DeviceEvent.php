@@ -8,6 +8,7 @@ use Fleetbase\Models\Company;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -30,6 +31,7 @@ class DeviceEvent extends Model
     use HasPublicId;
     use TracksApiCredential;
     use HasApiModelBehavior;
+    use HasApiModelCache;
     use LogsActivity;
     use HasMetaAttributes;
     use Searchable;

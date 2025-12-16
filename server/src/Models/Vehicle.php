@@ -13,6 +13,7 @@ use Fleetbase\Models\Category;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
@@ -37,6 +38,7 @@ class Vehicle extends Model
     use HasPublicId;
     use TracksApiCredential;
     use HasApiModelBehavior;
+    use HasApiModelCache;
     use SpatialTrait;
     use Searchable;
     use HasSlug;

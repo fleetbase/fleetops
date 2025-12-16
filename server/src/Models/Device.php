@@ -11,6 +11,7 @@ use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
@@ -39,6 +40,7 @@ class Device extends Model
     use HasPublicId;
     use TracksApiCredential;
     use HasApiModelBehavior;
+    use HasApiModelCache;
     use HasSlug;
     use LogsActivity;
     use HasMetaAttributes;

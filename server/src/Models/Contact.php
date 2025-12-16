@@ -10,6 +10,7 @@ use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Notifications\UserInvited;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -34,6 +35,7 @@ class Contact extends Model
     use HasUuid;
     use HasPublicId;
     use HasApiModelBehavior;
+    use HasApiModelCache;
     use HasMetaAttributes;
     use HasInternalId;
     use TracksApiCredential;
