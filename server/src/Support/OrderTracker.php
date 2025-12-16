@@ -522,16 +522,50 @@ class OrderTracker
 
         // Return cached data if available
         return Cache::remember($cacheKey, 60, function () {
+            // Early return for completed orders - skip expensive OSRM calls
+            if (in_array($this->order->status, ['completed', 'canceled'])) {
+                return [
+                    'driver_current_location'             => null,
+                    'progress_percentage'                 => 100,
+                    'total_distance'                      => 0,
+                    'completed_distance'                  => 0,
+                    'current_destination_eta'             => 0,
+                    'completion_eta'                      => 0,
+                    'estimated_completion_time'           => null,
+                    'estimated_completion_time_formatted' => null,
+                    'start_time'                          => $this->getOrderStartTime(),
+                    'completion_time'                     => $this->getOrderCompletionTime(),
+                    'current_destination'                 => null,
+                    'next_destination'                    => null,
+                    'first_waypoint_completed'            => true,
+                    'last_waypoint_completed'             => true,
+                ];
+            }
+            
+            // Wrap OSRM-dependent calculations in try-catch for graceful degradation
+            try {
+                $totalDistance = $this->getTotalDistance();
+                $completedDistance = $this->getCompletedDistance();
+                $currentDestinationEta = $this->getCurrentDestinationETA();
+                $completionEta = $this->getCompletionETA();
+            } catch (\Exception $e) {
+                Log::warning('OrderTracker: Failed to calculate distances/ETAs', ['error' => $e->getMessage()]);
+                $totalDistance = 0;
+                $completedDistance = 0;
+                $currentDestinationEta = 0;
+                $completionEta = 0;
+            }
+            
             $estimatedCompletionTime = $this->getEstimatedCompletionTime();
             $orderProgressPercentage = $this->getOrderProgressPercentage();
 
             return [
                 'driver_current_location'             => $this->getDriverCurrentLocation(),
                 'progress_percentage'                 => $orderProgressPercentage,
-                'total_distance'                      => $this->getTotalDistance(),
-                'completed_distance'                  => $this->getCompletedDistance(),
-                'current_destination_eta'             => $this->getCurrentDestinationETA(),
-                'completion_eta'                      => $this->getCompletionETA(),
+                'total_distance'                      => $totalDistance,
+                'completed_distance'                  => $completedDistance,
+                'current_destination_eta'             => $currentDestinationEta,
+                'completion_eta'                      => $completionEta,
                 'estimated_completion_time'           => $estimatedCompletionTime,
                 'estimated_completion_time_formatted' => $estimatedCompletionTime instanceof Carbon ? $estimatedCompletionTime->format('M jS, Y H:i') : null,
                 'start_time'                          => $this->getOrderStartTime(),

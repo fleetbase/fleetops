@@ -89,7 +89,7 @@ class OSRM
         
         try {
             $url         = self::$baseUrl . "/route/v1/driving/{$coordinates}";
-            $response    = Http::timeout(3)->get($url, $queryParameters);
+            $response    = Http::timeout(1)->get($url, $queryParameters);
             $data        = $response->json();
 
             // Check for the presence of the encoded polyline in each route and decode it if found
@@ -130,7 +130,7 @@ class OSRM
 
         $coordinates = "{$location->getLng()},{$location->getLat()}";
         $url         = self::$baseUrl . "/nearest/v1/driving/{$coordinates}";
-        $response    = Http::timeout(3)->get($url, $queryParameters);
+        $response    = Http::timeout(1)->get($url, $queryParameters);
         $result      = $response->json();
 
         Cache::put($cacheKey, $result, 60 * 60);
@@ -162,7 +162,7 @@ class OSRM
         }, $points));
 
         $url      = self::$baseUrl . "/table/v1/driving/{$coordinates}";
-        $response = Http::timeout(3)->get($url, $queryParameters);
+        $response = Http::timeout(1)->get($url, $queryParameters);
         $result   = $response->json();
 
         Cache::put($cacheKey, $result, 60 * 60);
@@ -194,7 +194,7 @@ class OSRM
         }, $points));
 
         $url      = self::$baseUrl . "/trip/v1/driving/{$coordinates}";
-        $response = Http::timeout(3)->get($url, $queryParameters);
+        $response = Http::timeout(1)->get($url, $queryParameters);
         $data     = $response->json();
 
         Cache::put($cacheKey, $data, 60 * 60);
@@ -220,7 +220,7 @@ class OSRM
         }, $points));
         $url = self::$baseUrl . "/match/v1/driving/{$coordinates}";
 
-        $response = Http::timeout(3)->get($url, $queryParameters);
+        $response = Http::timeout(1)->get($url, $queryParameters);
 
         return $response->json();
     }
@@ -239,7 +239,7 @@ class OSRM
     {
         $url = self::$baseUrl . "/tile/v1/car/{$z}/{$x}/{$y}.mvt";
 
-        $response = Http::timeout(3)->get($url, $queryParameters);
+        $response = Http::timeout(1)->get($url, $queryParameters);
 
         return $response->body();
     }
