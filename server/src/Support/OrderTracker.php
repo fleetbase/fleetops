@@ -211,6 +211,11 @@ class OrderTracker
 
         $start              = $this->getDriverCurrentLocation();
         $end                = $waypoint->location;
+        
+        // Ensure $end is a Point object, not a SpatialExpression
+        if (!$end instanceof Point) {
+            $end = Utils::getPointFromMixed($end);
+        }
 
         try {
             $response           = OSRM::getRoute($start, $end);
