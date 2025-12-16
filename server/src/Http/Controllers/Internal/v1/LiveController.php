@@ -144,9 +144,9 @@ class LiveController extends Controller
 
             $orders = $query->get();
 
-            // Load tracker data if requested
+            // Load tracker data if requested (limit to first 30 orders for performance)
             if ($withTracker) {
-                $orders->each(function ($order) {
+                $orders->take(30)->each(function ($order) {
                     $order->tracker_data = $order->tracker()->toArray();
                     $order->eta          = $order->tracker()->eta();
                 });
