@@ -16,18 +16,50 @@ class LiveCacheService
 
     /**
      * Generate a cache key for a specific endpoint and parameters.
+     * Includes version number for automatic invalidation.
      *
      * @param string $endpoint The endpoint name (e.g., 'orders', 'drivers')
      * @param array  $params   Request parameters to include in the key
      *
-     * @return string The generated cache key
+     * @return string The generated cache key with version
      */
     public static function getCacheKey(string $endpoint, array $params = []): string
     {
         $company = session('company');
+        $version = static::getVersion($endpoint);
         $paramsHash = md5(json_encode($params));
 
-        return "live:{$company}:{$endpoint}:{$paramsHash}";
+        return "live:{$company}:{$endpoint}:v{$version}:{$paramsHash}";
+    }
+
+    /**
+     * Get the current version number for an endpoint.
+     *
+     * @param string $endpoint The endpoint name
+     *
+     * @return int The current version number
+     */
+    public static function getVersion(string $endpoint): int
+    {
+        $company = session('company');
+        $versionKey = "live:{$company}:{$endpoint}:version";
+
+        return (int) Cache::get($versionKey, 0);
+    }
+
+    /**
+     * Increment the version number for an endpoint to invalidate all caches.
+     *
+     * @param string $endpoint The endpoint name
+     *
+     * @return int The new version number
+     */
+    public static function incrementVersion(string $endpoint): int
+    {
+        $company = session('company');
+        $versionKey = "live:{$company}:{$endpoint}:version";
+
+        return Cache::increment($versionKey);
     }
 
     /**
@@ -58,15 +90,35 @@ class LiveCacheService
 
     /**
      * Invalidate cache for a specific endpoint or all live endpoints.
+     * Uses version increment for cache driver compatibility.
      *
      * @param string|null $endpoint The endpoint to invalidate, or null for all
      */
     public static function invalidate(?string $endpoint = null): void
     {
         if ($endpoint) {
-            Cache::tags(static::getEndpointTags($endpoint))->flush();
+            // Increment version to invalidate all caches for this endpoint
+            static::incrementVersion($endpoint);
+            
+            // Also flush tags if supported (Redis/Memcached)
+            try {
+                Cache::tags(static::getEndpointTags($endpoint))->flush();
+            } catch (\Exception $e) {
+                // Tags not supported, version increment is sufficient
+            }
         } else {
-            Cache::tags(static::getTags())->flush();
+            // Invalidate all endpoints
+            $endpoints = ['orders', 'routes', 'coordinates', 'drivers', 'vehicles', 'places'];
+            foreach ($endpoints as $ep) {
+                static::incrementVersion($ep);
+            }
+            
+            // Also flush tags if supported
+            try {
+                Cache::tags(static::getTags())->flush();
+            } catch (\Exception $e) {
+                // Tags not supported, version increment is sufficient
+            }
         }
     }
 
@@ -77,8 +129,18 @@ class LiveCacheService
      */
     public static function invalidateMultiple(array $endpoints): void
     {
+        // Increment versions for all endpoints
         foreach ($endpoints as $endpoint) {
-            static::invalidate($endpoint);
+            static::incrementVersion($endpoint);
+        }
+        
+        // Also flush tags if supported
+        try {
+            foreach ($endpoints as $endpoint) {
+                Cache::tags(static::getEndpointTags($endpoint))->flush();
+            }
+        } catch (\Exception $e) {
+            // Tags not supported, version increment is sufficient
         }
     }
 
