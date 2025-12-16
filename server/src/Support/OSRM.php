@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Support\Encoding\Polyline;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -61,7 +62,12 @@ class OSRM
         }
 
         // Convert the array of Point objects into an OSRM-compatible string
-        $coordinates = array_map(function (Point $point) {
+        // Ensure all points are Point objects, not SpatialExpression
+        $coordinates = array_map(function ($point) {
+            // Convert to Point if it's a SpatialExpression or other type
+            if (!$point instanceof Point) {
+                $point = Utils::getPointFromMixed($point);
+            }
             return "{$point->getLng()},{$point->getLat()}";
         }, $points);
 
@@ -148,7 +154,10 @@ class OSRM
             return Cache::get($cacheKey);
         }
 
-        $coordinates = implode(';', array_map(function (Point $point) {
+        $coordinates = implode(';', array_map(function ($point) {
+            if (!$point instanceof Point) {
+                $point = Utils::getPointFromMixed($point);
+            }
             return "{$point->getLng()},{$point->getLat()}";
         }, $points));
 
@@ -177,7 +186,10 @@ class OSRM
             return Cache::get($cacheKey);
         }
 
-        $coordinates = implode(';', array_map(function (Point $point) {
+        $coordinates = implode(';', array_map(function ($point) {
+            if (!$point instanceof Point) {
+                $point = Utils::getPointFromMixed($point);
+            }
             return "{$point->getLng()},{$point->getLat()}";
         }, $points));
 
@@ -200,7 +212,10 @@ class OSRM
      */
     public static function getMatch(array $points, array $queryParameters = [])
     {
-        $coordinates = implode(';', array_map(function (Point $point) {
+        $coordinates = implode(';', array_map(function ($point) {
+            if (!$point instanceof Point) {
+                $point = Utils::getPointFromMixed($point);
+            }
             return "{$point->getLng()},{$point->getLat()}";
         }, $points));
         $url = self::$baseUrl . "/match/v1/driving/{$coordinates}";
