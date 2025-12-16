@@ -1,17 +1,15 @@
-{{#let (or @driver @resource) as |resource|}}
-    <Pill
-        @resource={{resource}}
-        @imageSrc={{avatar-url resource.photo_url}}
-        @subtitle={{n-a resource.phone "No Phone"}}
-        @fallbackImageType="driverImage"
-        @showOnlineIndicator={{true}}
-        @onClick={{@onClick}}
-        @anchorClass={{@anchorClass}}
-        @imageClass={{@imageClass}}
-        @imageWrapperClass={{@imageWrapperClass}}
-        @contentWrapperClass={{@contentWrapperClass}}
-        @titleClass={{@titleClass}}
-        @subtitleClass={{@subtitleClass}}
-        ...attributes
-    />
-{{/let}}
+<Pill
+    @resource={{this.resource}}
+    @imageSrc={{avatar-url this.resource.photo_url}}
+    @subtitle={{n-a this.resource.phone "No Phone"}}
+    @fallbackImageType="driverImage"
+    @showOnlineIndicator={{true}}
+    @onClick={{@onClick}}
+    @anchorClass={{@anchorClass}}
+    @imageClass={{@imageClass}}
+    @imageWrapperClass={{@imageWrapperClass}}
+    @contentWrapperClass={{@contentWrapperClass}}
+    @titleClass={{@titleClass}}
+    @subtitleClass={{@subtitleClass}}
+    ...attributes
+/>
