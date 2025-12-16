@@ -49,8 +49,6 @@ class OrderObserver
 
     /**
      * Invalidate relevant cache tags for live endpoints.
-     *
-     * @return void
      */
     protected function invalidateCache(): void
     {

@@ -3,7 +3,6 @@
 namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Support\Encoding\Polyline;
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -68,6 +67,7 @@ class OSRM
             if (!$point instanceof Point) {
                 $point = Utils::getPointFromMixed($point);
             }
+
             return "{$point->getLng()},{$point->getLat()}";
         }, $points);
 
@@ -86,7 +86,7 @@ class OSRM
     public static function getRouteFromCoordinatesString(string $coordinates, array $queryParameters = [])
     {
         $cacheKey    = 'getRouteFromCoordinatesString:' . md5($coordinates . serialize($queryParameters));
-        
+
         try {
             $url         = self::$baseUrl . "/route/v1/driving/{$coordinates}";
             $response    = Http::timeout(1)->get($url, $queryParameters);
@@ -107,6 +107,7 @@ class OSRM
             return $data;
         } catch (\Exception $e) {
             Log::warning('OSRM request timeout or error', ['error' => $e->getMessage(), 'coordinates' => $coordinates]);
+
             // Return empty response structure on error
             return ['code' => 'Error', 'routes' => []];
         }
@@ -158,6 +159,7 @@ class OSRM
             if (!$point instanceof Point) {
                 $point = Utils::getPointFromMixed($point);
             }
+
             return "{$point->getLng()},{$point->getLat()}";
         }, $points));
 
@@ -190,6 +192,7 @@ class OSRM
             if (!$point instanceof Point) {
                 $point = Utils::getPointFromMixed($point);
             }
+
             return "{$point->getLng()},{$point->getLat()}";
         }, $points));
 
@@ -216,6 +219,7 @@ class OSRM
             if (!$point instanceof Point) {
                 $point = Utils::getPointFromMixed($point);
             }
+
             return "{$point->getLng()},{$point->getLat()}";
         }, $points));
         $url = self::$baseUrl . "/match/v1/driving/{$coordinates}";

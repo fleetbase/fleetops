@@ -211,7 +211,7 @@ class OrderTracker
 
         $start              = $this->getDriverCurrentLocation();
         $end                = $waypoint->location;
-        
+
         // Ensure $end is a Point object, not a SpatialExpression
         if (!$end instanceof Point) {
             $end = Utils::getPointFromMixed($end);
@@ -541,21 +541,21 @@ class OrderTracker
                     'last_waypoint_completed'             => true,
                 ];
             }
-            
+
             // Wrap OSRM-dependent calculations in try-catch for graceful degradation
             try {
-                $totalDistance = $this->getTotalDistance();
-                $completedDistance = $this->getCompletedDistance();
+                $totalDistance         = $this->getTotalDistance();
+                $completedDistance     = $this->getCompletedDistance();
                 $currentDestinationEta = $this->getCurrentDestinationETA();
-                $completionEta = $this->getCompletionETA();
+                $completionEta         = $this->getCompletionETA();
             } catch (\Exception $e) {
                 Log::warning('OrderTracker: Failed to calculate distances/ETAs', ['error' => $e->getMessage()]);
-                $totalDistance = 0;
-                $completedDistance = 0;
+                $totalDistance         = 0;
+                $completedDistance     = 0;
                 $currentDestinationEta = 0;
-                $completionEta = 0;
+                $completionEta         = 0;
             }
-            
+
             $estimatedCompletionTime = $this->getEstimatedCompletionTime();
             $orderProgressPercentage = $this->getOrderProgressPercentage();
 

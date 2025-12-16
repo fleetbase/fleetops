@@ -91,20 +91,20 @@ class LiveController extends Controller
      */
     public function orders(Request $request)
     {
-        $exclude    = $request->array('exclude');
-        $active     = $request->boolean('active');
-        $unassigned = $request->boolean('unassigned');
+        $exclude     = $request->array('exclude');
+        $active      = $request->boolean('active');
+        $unassigned  = $request->boolean('unassigned');
         $withTracker = $request->has('with_tracker_data');
 
         // Cache key includes all parameters that affect the query
         $cacheParams = [
-            'exclude' => $exclude,
-            'active' => $active,
-            'unassigned' => $unassigned,
+            'exclude'      => $exclude,
+            'active'       => $active,
+            'unassigned'   => $unassigned,
             'with_tracker' => $withTracker,
         ];
 
-        return LiveCacheService::remember('orders', $cacheParams, function () use ($request, $exclude, $active, $unassigned, $withTracker) {
+        return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned, $withTracker) {
             $query = Order::where('company_uuid', session('company'))
             ->whereHas('payload', function ($query) {
                 $query->where(
@@ -134,13 +134,13 @@ class LiveController extends Controller
                 'facilitator',
             ]);
 
-        if ($active) {
-            $query->whereHas('driverAssigned');
-        }
+            if ($active) {
+                $query->whereHas('driverAssigned');
+            }
 
-        if ($unassigned) {
-            $query->whereNull('driver_assigned_uuid');
-        }
+            if ($unassigned) {
+                $query->whereNull('driver_assigned_uuid');
+            }
 
             $orders = $query->get();
 

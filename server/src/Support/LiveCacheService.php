@@ -12,7 +12,7 @@ class LiveCacheService
     /**
      * Default cache TTL in seconds (30 seconds).
      */
-    const DEFAULT_TTL = 30;
+    public const DEFAULT_TTL = 30;
 
     /**
      * Generate a cache key for a specific endpoint and parameters.
@@ -25,8 +25,8 @@ class LiveCacheService
      */
     public static function getCacheKey(string $endpoint, array $params = []): string
     {
-        $company = session('company');
-        $version = static::getVersion($endpoint);
+        $company    = session('company');
+        $version    = static::getVersion($endpoint);
         $paramsHash = md5(json_encode($params));
 
         return "live:{$company}:{$endpoint}:v{$version}:{$paramsHash}";
@@ -41,7 +41,7 @@ class LiveCacheService
      */
     public static function getVersion(string $endpoint): int
     {
-        $company = session('company');
+        $company    = session('company');
         $versionKey = "live:{$company}:{$endpoint}:version";
 
         return (int) Cache::get($versionKey, 0);
@@ -56,7 +56,7 @@ class LiveCacheService
      */
     public static function incrementVersion(string $endpoint): int
     {
-        $company = session('company');
+        $company    = session('company');
         $versionKey = "live:{$company}:{$endpoint}:version";
 
         return Cache::increment($versionKey);
@@ -99,7 +99,7 @@ class LiveCacheService
         if ($endpoint) {
             // Increment version to invalidate all caches for this endpoint
             static::incrementVersion($endpoint);
-            
+
             // Also flush tags if supported (Redis/Memcached)
             try {
                 Cache::tags(static::getEndpointTags($endpoint))->flush();
@@ -112,7 +112,7 @@ class LiveCacheService
             foreach ($endpoints as $ep) {
                 static::incrementVersion($ep);
             }
-            
+
             // Also flush tags if supported
             try {
                 Cache::tags(static::getTags())->flush();
@@ -133,7 +133,7 @@ class LiveCacheService
         foreach ($endpoints as $endpoint) {
             static::incrementVersion($endpoint);
         }
-        
+
         // Also flush tags if supported
         try {
             foreach ($endpoints as $endpoint) {
@@ -157,8 +157,8 @@ class LiveCacheService
     public static function remember(string $endpoint, array $params, \Closure $callback, ?int $ttl = null)
     {
         $cacheKey = static::getCacheKey($endpoint, $params);
-        $tags = static::getEndpointTags($endpoint);
-        $ttl = $ttl ?? static::DEFAULT_TTL;
+        $tags     = static::getEndpointTags($endpoint);
+        $ttl      = $ttl ?? static::DEFAULT_TTL;
 
         return Cache::tags($tags)->remember($cacheKey, $ttl, $callback);
     }
