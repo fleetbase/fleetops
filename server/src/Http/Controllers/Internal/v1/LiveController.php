@@ -12,6 +12,7 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Route;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\LiveCacheService;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -27,20 +28,23 @@ class LiveController extends Controller
      */
     public function coordinates()
     {
-        $coordinates = [];
+        return LiveCacheService::remember('coordinates', [], function () {
+            $coordinates = [];
 
-        // Fetch active orders for the current company
-        $orders = Order::where('company_uuid', session('company'))
-            ->whereNotIn('status', ['canceled', 'completed'])
-            ->applyDirectivesForPermissions('fleet-ops list order')
-            ->get();
+            // Fetch active orders for the current company
+            $orders = Order::where('company_uuid', session('company'))
+                ->whereNotIn('status', ['canceled', 'completed'])
+                ->with(['payload.dropoff', 'payload.pickup'])
+                ->applyDirectivesForPermissions('fleet-ops list order')
+                ->get();
 
-        // Loop through each order to get its current destination location
-        foreach ($orders as $order) {
-            $coordinates[] = $order->getCurrentDestinationLocation();
-        }
+            // Loop through each order to get its current destination location
+            foreach ($orders as $order) {
+                $coordinates[] = $order->getCurrentDestinationLocation();
+            }
 
-        return response()->json($coordinates);
+            return response()->json($coordinates);
+        });
     }
 
     /**
@@ -50,31 +54,34 @@ class LiveController extends Controller
      */
     public function routes()
     {
-        // Fetch routes that are not canceled or completed and have an assigned driver
-        $routes = Route::where('company_uuid', session('company'))
-            ->whereHas(
-                'order',
-                function ($q) {
-                    $q->whereNotIn('status', ['canceled', 'completed', 'expired']);
-                    $q->whereNotNull('driver_assigned_uuid');
-                    $q->whereNull('deleted_at');
-                    $q->whereHas('trackingNumber');
-                    $q->whereHas('trackingStatuses');
-                    $q->whereHas('payload', function ($query) {
-                        $query->where(
-                            function ($q) {
-                                $q->whereHas('waypoints');
-                                $q->orWhereHas('pickup');
-                                $q->orWhereHas('dropoff');
-                            }
-                        );
-                    });
-                }
-            )
-            ->applyDirectivesForPermissions('fleet-ops list route')
-            ->get();
+        return LiveCacheService::remember('routes', [], function () {
+            // Fetch routes that are not canceled or completed and have an assigned driver
+            $routes = Route::where('company_uuid', session('company'))
+                ->whereHas(
+                    'order',
+                    function ($q) {
+                        $q->whereNotIn('status', ['canceled', 'completed', 'expired']);
+                        $q->whereNotNull('driver_assigned_uuid');
+                        $q->whereNull('deleted_at');
+                        $q->whereHas('trackingNumber');
+                        $q->whereHas('trackingStatuses');
+                        $q->whereHas('payload', function ($query) {
+                            $query->where(
+                                function ($q) {
+                                    $q->whereHas('waypoints');
+                                    $q->orWhereHas('pickup');
+                                    $q->orWhereHas('dropoff');
+                                }
+                            );
+                        });
+                    }
+                )
+                ->with(['order.payload', 'order.trackingNumber', 'order.trackingStatuses', 'order.driverAssigned'])
+                ->applyDirectivesForPermissions('fleet-ops list route')
+                ->get();
 
-        return response()->json($routes);
+            return response()->json($routes);
+        });
     }
 
     /**
@@ -87,8 +94,18 @@ class LiveController extends Controller
         $exclude    = $request->array('exclude');
         $active     = $request->boolean('active');
         $unassigned = $request->boolean('unassigned');
+        $withTracker = $request->has('with_tracker_data');
 
-        $query = Order::where('company_uuid', session('company'))
+        // Cache key includes all parameters that affect the query
+        $cacheParams = [
+            'exclude' => $exclude,
+            'active' => $active,
+            'unassigned' => $unassigned,
+            'with_tracker' => $withTracker,
+        ];
+
+        return LiveCacheService::remember('orders', $cacheParams, function () use ($request, $exclude, $active, $unassigned, $withTracker) {
+            $query = Order::where('company_uuid', session('company'))
             ->whereHas('payload', function ($query) {
                 $query->where(
                     function ($q) {
@@ -97,7 +114,6 @@ class LiveController extends Controller
                         $q->orWhereHas('dropoff');
                     }
                 );
-                $query->with(['entities', 'waypoints', 'dropoff', 'pickup', 'return']);
             })
             ->whereNotIn('status', ['canceled', 'completed', 'expired'])
             ->whereHas('trackingNumber')
@@ -105,7 +121,18 @@ class LiveController extends Controller
             ->whereNotIn('public_id', $exclude)
             ->whereNull('deleted_at')
             ->applyDirectivesForPermissions('fleet-ops list order')
-            ->with(['payload', 'trackingNumber', 'trackingStatuses']);
+            ->with([
+                'payload.entities',
+                'payload.waypoints',
+                'payload.dropoff',
+                'payload.pickup',
+                'payload.return',
+                'trackingNumber',
+                'trackingStatuses',
+                'driverAssigned',
+                'customer',
+                'facilitator',
+            ]);
 
         if ($active) {
             $query->whereHas('driverAssigned');
@@ -115,25 +142,18 @@ class LiveController extends Controller
             $query->whereNull('driver_assigned_uuid');
         }
 
-        $orders = $query->get();
+            $orders = $query->get();
 
-        // Get additional data or load missing if necessary
-        $orders->map(
-            function ($order) use ($request) {
-                // load required relations
-                $order->loadMissing(['trackingNumber', 'payload', 'trackingStatuses']);
-
-                // load tracker data
-                if ($request->has('with_tracker_data')) {
+            // Load tracker data if requested
+            if ($withTracker) {
+                $orders->each(function ($order) {
                     $order->tracker_data = $order->tracker()->toArray();
                     $order->eta          = $order->tracker()->eta();
-                }
-
-                return $order;
+                });
             }
-        );
 
-        return OrderResource::collection($orders);
+            return OrderResource::collection($orders);
+        });
     }
 
     /**
@@ -143,11 +163,14 @@ class LiveController extends Controller
      */
     public function drivers()
     {
-        $drivers = Driver::where(['company_uuid' => session('company')])
-            ->applyDirectivesForPermissions('fleet-ops list driver')
-            ->get();
+        return LiveCacheService::remember('drivers', [], function () {
+            $drivers = Driver::where(['company_uuid' => session('company')])
+                ->with(['user', 'vehicle', 'currentJob'])
+                ->applyDirectivesForPermissions('fleet-ops list driver')
+                ->get();
 
-        return DriverResource::collection($drivers);
+            return DriverResource::collection($drivers);
+        });
     }
 
     /**
@@ -157,13 +180,15 @@ class LiveController extends Controller
      */
     public function vehicles()
     {
-        // Fetch vehicles that are online
-        $vehicles = Vehicle::where(['company_uuid' => session('company')])
-            ->with(['devices'])
-            ->applyDirectivesForPermissions('fleet-ops list vehicle')
-            ->get();
+        return LiveCacheService::remember('vehicles', [], function () {
+            // Fetch vehicles that are online
+            $vehicles = Vehicle::where(['company_uuid' => session('company')])
+                ->with(['devices', 'driver'])
+                ->applyDirectivesForPermissions('fleet-ops list vehicle')
+                ->get();
 
-        return VehicleResource::collection($vehicles);
+            return VehicleResource::collection($vehicles);
+        });
     }
 
     /**
@@ -173,12 +198,17 @@ class LiveController extends Controller
      */
     public function places(Request $request)
     {
-        // Query places based on filters
-        $places = Place::where(['company_uuid' => session('company')])
-            ->filter(new PlaceFilter($request))
-            ->applyDirectivesForPermissions('fleet-ops list place')
-            ->get();
+        // Cache key includes filter parameters
+        $cacheParams = $request->only(['query', 'type', 'country', 'limit']);
 
-        return PlaceResource::collection($places);
+        return LiveCacheService::remember('places', $cacheParams, function () use ($request) {
+            // Query places based on filters
+            $places = Place::where(['company_uuid' => session('company')])
+                ->filter(new PlaceFilter($request))
+                ->applyDirectivesForPermissions('fleet-ops list place')
+                ->get();
+
+            return PlaceResource::collection($places);
+        });
     }
 }

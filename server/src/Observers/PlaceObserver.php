@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Observers;
 
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Support\LiveCacheService;
 
 class PlaceObserver
 {
@@ -22,5 +23,35 @@ class PlaceObserver
                 $place->{$attribute} = strtoupper($place->{$attribute});
             }
         }
+    }
+
+    /**
+     * Handle the Place "created" event.
+     *
+     * @return void
+     */
+    public function created(Place $place)
+    {
+        LiveCacheService::invalidate('places');
+    }
+
+    /**
+     * Handle the Place "updated" event.
+     *
+     * @return void
+     */
+    public function updated(Place $place)
+    {
+        LiveCacheService::invalidate('places');
+    }
+
+    /**
+     * Handle the Place "deleted" event.
+     *
+     * @return void
+     */
+    public function deleted(Place $place)
+    {
+        LiveCacheService::invalidate('places');
     }
 }
