@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Support\Encoding\Polyline;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Class OSRM
@@ -79,23 +80,30 @@ class OSRM
     public static function getRouteFromCoordinatesString(string $coordinates, array $queryParameters = [])
     {
         $cacheKey    = 'getRouteFromCoordinatesString:' . md5($coordinates . serialize($queryParameters));
-        $url         = self::$baseUrl . "/route/v1/driving/{$coordinates}";
-        $response    = Http::get($url, $queryParameters);
-        $data        = $response->json();
+        
+        try {
+            $url         = self::$baseUrl . "/route/v1/driving/{$coordinates}";
+            $response    = Http::timeout(3)->get($url, $queryParameters);
+            $data        = $response->json();
 
-        // Check for the presence of the encoded polyline in each route and decode it if found
-        if (isset($data['routes']) && is_array($data['routes'])) {
-            foreach ($data['routes'] as &$route) {
-                if (isset($route['geometry'])) {
-                    $route['waypoints'] = self::decodePolyline($route['geometry']);
+            // Check for the presence of the encoded polyline in each route and decode it if found
+            if (isset($data['routes']) && is_array($data['routes'])) {
+                foreach ($data['routes'] as &$route) {
+                    if (isset($route['geometry'])) {
+                        $route['waypoints'] = self::decodePolyline($route['geometry']);
+                    }
                 }
             }
+
+            // Store the result in the cache for 60 minutes
+            Cache::put($cacheKey, $data, 60 * 60);
+
+            return $data;
+        } catch (\Exception $e) {
+            Log::warning('OSRM request timeout or error', ['error' => $e->getMessage(), 'coordinates' => $coordinates]);
+            // Return empty response structure on error
+            return ['code' => 'Error', 'routes' => []];
         }
-
-        // Store the result in the cache for 60 minutes
-        Cache::put($cacheKey, $data, 60 * 60);
-
-        return $data;
     }
 
     /**
@@ -116,7 +124,7 @@ class OSRM
 
         $coordinates = "{$location->getLng()},{$location->getLat()}";
         $url         = self::$baseUrl . "/nearest/v1/driving/{$coordinates}";
-        $response    = Http::get($url, $queryParameters);
+        $response    = Http::timeout(3)->get($url, $queryParameters);
         $result      = $response->json();
 
         Cache::put($cacheKey, $result, 60 * 60);
@@ -145,7 +153,7 @@ class OSRM
         }, $points));
 
         $url      = self::$baseUrl . "/table/v1/driving/{$coordinates}";
-        $response = Http::get($url, $queryParameters);
+        $response = Http::timeout(3)->get($url, $queryParameters);
         $result   = $response->json();
 
         Cache::put($cacheKey, $result, 60 * 60);
@@ -174,7 +182,7 @@ class OSRM
         }, $points));
 
         $url      = self::$baseUrl . "/trip/v1/driving/{$coordinates}";
-        $response = Http::get($url, $queryParameters);
+        $response = Http::timeout(3)->get($url, $queryParameters);
         $data     = $response->json();
 
         Cache::put($cacheKey, $data, 60 * 60);
@@ -197,7 +205,7 @@ class OSRM
         }, $points));
         $url = self::$baseUrl . "/match/v1/driving/{$coordinates}";
 
-        $response = Http::get($url, $queryParameters);
+        $response = Http::timeout(3)->get($url, $queryParameters);
 
         return $response->json();
     }
@@ -216,7 +224,7 @@ class OSRM
     {
         $url = self::$baseUrl . "/tile/v1/car/{$z}/{$x}/{$y}.mvt";
 
-        $response = Http::get($url, $queryParameters);
+        $response = Http::timeout(3)->get($url, $queryParameters);
 
         return $response->body();
     }
