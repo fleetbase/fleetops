@@ -164,11 +164,17 @@ export default class MapLeafletLiveMapComponent extends Component {
     /** load resources and wait for stuff here and trigger map ready **/
     @task *load() {
         try {
+            // Get initial map bounds for spatial filtering
+            const bounds = this.map ? this.map.getBounds() : null;
+            const params = bounds ? {
+                bounds: [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()],
+            } : {};
+
             const data = yield all([
                 this.loadResource.perform('routes'),
-                this.loadResource.perform('vehicles'),
-                this.loadResource.perform('drivers'),
-                this.loadResource.perform('places'),
+                this.loadResource.perform('vehicles', { params }),
+                this.loadResource.perform('drivers', { params }),
+                this.loadResource.perform('places', { params }),
                 this.loadResource.perform('service-areas'),
             ]);
 
