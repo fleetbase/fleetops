@@ -85,10 +85,9 @@ class Order extends FleetbaseResource
                 return new Vehicle($this->vehicleAssigned);
             }),
 
-            // Tracking number with QR code and barcode for display
+            // Tracking number with QR code for display
             'tracking'             => $this->when($isInternal, $this->trackingNumber ? $this->trackingNumber->tracking_number : null),
             'qr_code'              => $this->when($isInternal, $this->trackingNumber ? $this->trackingNumber->qr_code : null),
-            'barcode'              => $this->when($isInternal, $this->trackingNumber ? $this->trackingNumber->barcode : null),
 
             // Latest status only, not full array
             'latest_status'        => $this->whenLoaded('trackingStatuses', function () {
