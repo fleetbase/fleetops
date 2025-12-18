@@ -185,6 +185,14 @@ class OrderTracker
             return -1;
         }
 
+        // Convert SpatialExpression to Point objects
+        $start = Utils::getPointFromMixed($start);
+        $end   = Utils::getPointFromMixed($end);
+
+        if (!$start || !$end) {
+            return -1;
+        }
+
         try {
             $response = OSRM::getRoute($start, $end);
             if (isset($response['code']) && $response['code'] === 'Ok') {
