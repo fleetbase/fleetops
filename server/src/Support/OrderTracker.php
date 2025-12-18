@@ -220,9 +220,12 @@ class OrderTracker
         $start              = $this->getDriverCurrentLocation();
         $end                = $waypoint->location;
 
-        // Ensure $end is a Point object, not a SpatialExpression
-        if (!$end instanceof Point) {
-            $end = Utils::getPointFromMixed($end);
+        // Convert SpatialExpression to Point objects
+        $start = Utils::getPointFromMixed($start);
+        $end   = Utils::getPointFromMixed($end);
+
+        if (!$start || !$end) {
+            return -1;
         }
 
         try {
@@ -251,6 +254,14 @@ class OrderTracker
     {
         $start    = $this->getDriverCurrentLocation();
         $end      = $this->payload->getDropoffOrLastWaypoint()->location;
+
+        // Convert SpatialExpression to Point objects
+        $start = Utils::getPointFromMixed($start);
+        $end   = Utils::getPointFromMixed($end);
+
+        if (!$start || !$end) {
+            return -1;
+        }
 
         try {
             $response = OSRM::getRoute($start, $end);
