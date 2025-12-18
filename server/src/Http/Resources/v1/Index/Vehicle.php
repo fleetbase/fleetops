@@ -40,6 +40,11 @@ class Vehicle extends FleetbaseResource
             'altitude'        => (int) data_get($this, 'altitude', 0),
             'speed'           => (int) data_get($this, 'speed', 0),
             'online'          => (bool) data_get($this, 'online', false),
+
+            // Meta flag to indicate this is an index resource
+            'meta'            => [
+                '_index_resource' => true,
+            ],
         ];
     }
 }

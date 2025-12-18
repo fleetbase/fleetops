@@ -5,6 +5,8 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 use Fleetbase\FleetOps\Http\Filter\PlaceFilter;
 use Fleetbase\FleetOps\Http\Resources\v1\Driver as DriverResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as OrderIndexResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Place as PlaceIndexResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Vehicle as VehicleIndexResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Vehicle as VehicleResource;
 use Fleetbase\FleetOps\Models\Driver;
@@ -243,7 +245,7 @@ class LiveController extends Controller
             
             $vehicles = $query->get();
 
-            return VehicleResource::collection($vehicles);
+            return VehicleIndexResource::collection($vehicles);
         });
     }
 
@@ -286,7 +288,7 @@ class LiveController extends Controller
             
             $places = $query->get();
 
-            return PlaceResource::collection($places);
+            return PlaceIndexResource::collection($places);
         });
     }
 }
