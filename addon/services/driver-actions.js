@@ -29,7 +29,11 @@ export default class DriverActionsService extends ResourceActionService {
                 ...options,
             });
         },
-        edit: (driver, options = {}) => {
+        edit: async (driver, options = {}) => {
+            if (driver?.meta?._index_resource) {
+                await driver.reload();
+            }
+
             return this.resourceContextPanel.open({
                 content: 'driver/form',
                 title: this.intl.t('common.edit-resource-name', { resourceName: driver.name }),
@@ -47,7 +51,11 @@ export default class DriverActionsService extends ResourceActionService {
                 ...options,
             });
         },
-        view: (driver, options = {}) => {
+        view: async (driver, options = {}) => {
+            if (driver?.meta?._index_resource) {
+                await driver.reload();
+            }
+
             return this.resourceContextPanel.open({
                 driver,
                 header: 'driver/panel-header',
@@ -83,7 +91,11 @@ export default class DriverActionsService extends ResourceActionService {
                 ...options,
             });
         },
-        edit: (driver, options = {}, saveOptions = {}) => {
+        edit: async (driver, options = {}, saveOptions = {}) => {
+            if (driver?.meta?._index_resource) {
+                await driver.reload();
+            }
+
             return this.modalsManager.show('modals/resource', {
                 resource: driver,
                 title: this.intl.t('common.edit-resource-name', { resourceName: driver.name }),
@@ -94,7 +106,11 @@ export default class DriverActionsService extends ResourceActionService {
                 ...options,
             });
         },
-        view: (driver, options = {}) => {
+        view: async (driver, options = {}) => {
+            if (driver?.meta?._index_resource) {
+                await driver.reload();
+            }
+
             return this.modalsManager.show('modals/resource', {
                 resource: driver,
                 title: driver.name,

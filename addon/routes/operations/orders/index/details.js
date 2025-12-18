@@ -61,7 +61,7 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
 
     async afterModel(order) {
         await order.loadTrackingActivity();
-        if (order.meta._index_resource) {
+        if (order.meta?._index_resource) {
             await order.reload();
         }
     }

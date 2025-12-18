@@ -7,7 +7,8 @@ common:
   bulk-dispatch: Bulk Dispatch
   dispatch-orders: Dispatch Orders
   dispatch-order: Dispatch Order
-  assign-driver: Dispatch Orders
+  assign-driver: Assign Driver
+  assign-drivers: Assign Drivers
   no-driver-assigned: No driver assigned
   details: Details
   name: Name
@@ -604,6 +605,7 @@ order:
     tracking-number: Tracking Number
     vehicle-assigned: Vehicle Assigned
     view-activity: View Activity
+    no-order-activity: No order activity
     waypoint-actions: Waypoint Actions
     documents-files: Documents & Files
     order-metadata: Order Metadata

@@ -29,7 +29,11 @@ export default class VehicleActionsService extends ResourceActionService {
                 ...options,
             });
         },
-        edit: (vehicle, options = {}) => {
+        edit: async (vehicle, options = {}) => {
+            if (vehicle?.meta?._index_resource) {
+                await vehicle.reload();
+            }
+
             return this.resourceContextPanel.open({
                 content: 'vehicle/form',
                 title: this.intl.t('common.edit-resource-name', { resourceName: vehicle.name }),
@@ -47,7 +51,11 @@ export default class VehicleActionsService extends ResourceActionService {
                 ...options,
             });
         },
-        view: (vehicle, options = {}) => {
+        view: async (vehicle, options = {}) => {
+            if (vehicle?.meta?._index_resource) {
+                await vehicle.reload();
+            }
+
             return this.resourceContextPanel.open({
                 vehicle,
                 header: 'vehicle/panel-header',
@@ -83,7 +91,11 @@ export default class VehicleActionsService extends ResourceActionService {
                 ...options,
             });
         },
-        edit: (vehicle, options = {}, saveOptions = {}) => {
+        edit: async (vehicle, options = {}, saveOptions = {}) => {
+            if (vehicle?.meta?._index_resource) {
+                await vehicle.reload();
+            }
+
             return this.modalsManager.show('modals/resource', {
                 resource: vehicle,
                 title: this.intl.t('common.edit-resource-name', { resourceName: vehicle.name }),
@@ -94,7 +106,11 @@ export default class VehicleActionsService extends ResourceActionService {
                 ...options,
             });
         },
-        view: (vehicle, options = {}) => {
+        view: async (vehicle, options = {}) => {
+            if (vehicle?.meta?._index_resource) {
+                await vehicle.reload();
+            }
+            
             return this.modalsManager.show('modals/resource', {
                 resource: vehicle,
                 title: vehicle.name,

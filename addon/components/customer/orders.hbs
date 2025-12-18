@@ -155,7 +155,7 @@
                                                         </div>
                                                     {{else}}
                                                         <div class="px-10 py-2 flex items-center justify-center">
-                                                            <p class="text-red-600 dark:text-red-100">{{t "fleet-ops.operations.orders.index.view.no-order-activity"}}</p>
+                                                            <p class="text-red-600 dark:text-red-100">{{t "order.fields.no-order-activity"}}</p>
                                                         </div>
                                                     {{/each}}
                                                 </div>
@@ -179,7 +179,7 @@
                                                                             @value={{group.waypoint.tracking}}
                                                                             class="rounded-md bg-yellow-300 text-yellow-900 px-2 py-0.5 text-xs flex-grow-0 truncate"
                                                                         >
-                                                                            <span>{{t "fleet-ops.operations.orders.index.view.tracking"}}</span>
+                                                                            <span>{{t "order.fields.tracking"}}</span>
                                                                             <span>{{group.waypoint.tracking}}</span>
                                                                         </ClickToCopy>
                                                                         <Badge @status={{group.waypoint.status_code}} />
