@@ -32,6 +32,7 @@ class Place extends FleetbaseResource
             'street1'      => $this->street1,
             'city'         => $this->city,
             'country'      => $this->country,
+            'avatar_url'   => $this->avatar_url,
             'location'     => Utils::getPointFromMixed($this->location),
         ];
     }
