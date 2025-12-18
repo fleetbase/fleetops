@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Resources\v1\Index;
 
 use Fleetbase\Http\Resources\FleetbaseResource;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
 
 /**
@@ -28,6 +29,11 @@ class Driver extends FleetbaseResource
             'phone'      => $this->phone,
             'photo_url'  => $this->photo_url,
             'status'     => $this->status,
+            'location'   => $this->wasRecentlyCreated ? new Point(0, 0) : data_get($this, 'location', new Point(0, 0)),
+            'heading'    => (int) data_get($this, 'heading', 0),
+            'altitude'   => (int) data_get($this, 'altitude', 0),
+            'speed'      => (int) data_get($this, 'speed', 0),
+            'online'     => data_get($this, 'online', false),
         ];
     }
 }
