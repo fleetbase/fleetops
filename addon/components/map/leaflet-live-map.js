@@ -74,6 +74,10 @@ export default class MapLeafletLiveMapComponent extends Component {
         this.#createMapContextMenu(map);
         this.trigger('onLoad', ...arguments);
         this.load.perform();
+
+        // Listen for map move/zoom events to trigger viewport-based resource reload
+        map.on('moveend', () => this.reloadResourcesInViewport.perform());
+        map.on('zoomend', () => this.reloadResourcesInViewport.perform());
     }
 
     @action trigger(name, ...rest) {
@@ -173,6 +177,30 @@ export default class MapLeafletLiveMapComponent extends Component {
             this.ready = true;
         } catch (err) {
             debug('Failed to load live map: ' + err.message);
+        }
+    }
+
+    @task({ restartable: true }) *reloadResourcesInViewport() {
+        if (!this.map) {
+            return;
+        }
+
+        // Get current map bounds
+        const bounds = this.map.getBounds();
+        const params = {
+            bounds: [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()],
+        };
+
+        // Reload spatially-filtered resources (drivers, vehicles, places)
+        // Orders, routes, and service-areas are not spatially filtered
+        try {
+            yield all([
+                this.loadResource.perform('vehicles', { params }),
+                this.loadResource.perform('drivers', { params }),
+                this.loadResource.perform('places', { params }),
+            ]);
+        } catch (err) {
+            debug('Failed to reload resources in viewport: ' + err.message);
         }
     }
 
