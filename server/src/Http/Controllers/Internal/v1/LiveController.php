@@ -179,6 +179,14 @@ class LiveController extends Controller
                 ->with(['user', 'vehicle', 'currentJob'])
                 ->applyDirectivesForPermissions('fleet-ops list driver');
             
+            // Filter out drivers with invalid coordinates
+            $query->whereNotNull('location')
+                ->whereRaw('
+                    ST_Y(location) BETWEEN -90 AND 90
+                    AND ST_X(location) BETWEEN -180 AND 180
+                    AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+                ');
+            
             // Apply spatial filtering if bounds are provided
             if ($bounds && is_array($bounds) && count($bounds) === 4) {
                 [$south, $west, $north, $east] = $bounds;
@@ -213,6 +221,14 @@ class LiveController extends Controller
                 ->with(['devices', 'driver'])
                 ->applyDirectivesForPermissions('fleet-ops list vehicle');
             
+            // Filter out vehicles with invalid coordinates
+            $query->whereNotNull('location')
+                ->whereRaw('
+                    ST_Y(location) BETWEEN -90 AND 90
+                    AND ST_X(location) BETWEEN -180 AND 180
+                    AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+                ');
+            
             // Apply spatial filtering if bounds are provided
             if ($bounds && is_array($bounds) && count($bounds) === 4) {
                 [$south, $west, $north, $east] = $bounds;
@@ -246,6 +262,14 @@ class LiveController extends Controller
             $query = Place::where(['company_uuid' => session('company')])
                 ->filter(new PlaceFilter($request))
                 ->applyDirectivesForPermissions('fleet-ops list place');
+            
+            // Filter out places with invalid coordinates
+            $query->whereNotNull('location')
+                ->whereRaw('
+                    ST_Y(location) BETWEEN -90 AND 90
+                    AND ST_X(location) BETWEEN -180 AND 180
+                    AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+                ');
             
             // Apply spatial filtering if bounds are provided
             $bounds = $request->input('bounds');
