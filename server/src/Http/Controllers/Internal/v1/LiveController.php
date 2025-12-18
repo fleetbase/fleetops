@@ -183,8 +183,12 @@ class LiveController extends Controller
             if ($bounds && is_array($bounds) && count($bounds) === 4) {
                 [$south, $west, $north, $east] = $bounds;
                 
-                $query->whereBetween('latitude', [$south, $north])
-                      ->whereBetween('longitude', [$west, $east]);
+                // Use MySQL spatial functions for POINT column
+                // ST_Within checks if location is within the bounding box
+                $query->whereRaw(
+                    'ST_Within(location, ST_MakeEnvelope(POINT(?, ?), POINT(?, ?)))',
+                    [$west, $south, $east, $north]
+                );
             }
             
             $drivers = $query->get();
@@ -213,8 +217,12 @@ class LiveController extends Controller
             if ($bounds && is_array($bounds) && count($bounds) === 4) {
                 [$south, $west, $north, $east] = $bounds;
                 
-                $query->whereBetween('latitude', [$south, $north])
-                      ->whereBetween('longitude', [$west, $east]);
+                // Use MySQL spatial functions for POINT column
+                // ST_Within checks if location is within the bounding box
+                $query->whereRaw(
+                    'ST_Within(location, ST_MakeEnvelope(POINT(?, ?), POINT(?, ?)))',
+                    [$west, $south, $east, $north]
+                );
             }
             
             $vehicles = $query->get();
@@ -244,8 +252,12 @@ class LiveController extends Controller
             if ($bounds && is_array($bounds) && count($bounds) === 4) {
                 [$south, $west, $north, $east] = $bounds;
                 
-                $query->whereBetween('latitude', [$south, $north])
-                      ->whereBetween('longitude', [$west, $east]);
+                // Use MySQL spatial functions for POINT column
+                // ST_Within checks if location is within the bounding box
+                $query->whereRaw(
+                    'ST_Within(location, ST_MakeEnvelope(POINT(?, ?), POINT(?, ?)))',
+                    [$west, $south, $east, $north]
+                );
             }
             
             $places = $query->get();
