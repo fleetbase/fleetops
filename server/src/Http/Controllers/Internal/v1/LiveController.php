@@ -154,12 +154,21 @@ class LiveController extends Controller
 
             $orders = $query->get();
 
-            // Load tracker data if requested (limit to first 20 orders for performance)
+            // Load tracker data if requested (limit to first 60 trackable orders for performance)
             if ($withTracker) {
-                $orders->take(20)->each(function ($order) {
-                    $order->tracker_data = $order->tracker()->toArray();
-                    $order->eta          = $order->tracker()->eta();
-                });
+                $orders
+                    ->filter(function ($order) {
+                        // Only include orders that have the required data for tracking
+                        return $order->driver_assigned_uuid 
+                            && $order->driverAssigned 
+                            && $order->driverAssigned->location
+                            && !in_array($order->status, ['completed', 'canceled']);
+                    })
+                    ->take(60)
+                    ->each(function ($order) {
+                        $order->tracker_data = $order->tracker()->toArray();
+                        $order->eta          = $order->tracker()->eta();
+                    });
             }
 
             return OrderIndexResource::collection($orders);
