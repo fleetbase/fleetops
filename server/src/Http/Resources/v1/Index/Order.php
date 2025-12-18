@@ -85,9 +85,10 @@ class Order extends FleetbaseResource
                 return new Vehicle($this->vehicleAssigned);
             }),
 
-            // Tracking number with QR code for display
-            'tracking'             => $this->when($isInternal, $this->trackingNumber ? $this->trackingNumber->tracking_number : null),
-            'qr_code'              => $this->when($isInternal, $this->trackingNumber ? $this->trackingNumber->qr_code : null),
+            // Lightweight tracking number with QR code
+            'tracking_number'      => $this->whenLoaded('trackingNumber', function () {
+                return new TrackingNumber($this->trackingNumber);
+            }),
 
             // Latest status only, not full array
             'latest_status'        => $this->whenLoaded('trackingStatuses', function () {
@@ -115,6 +116,11 @@ class Order extends FleetbaseResource
             'started_at'           => $this->started_at,
             'created_at'           => $this->created_at,
             'updated_at'           => $this->updated_at,
+
+            // Meta flag to indicate this is an index resource
+            'meta'                 => [
+                '_index_resource' => true,
+            ],
         ];
     }
 }
