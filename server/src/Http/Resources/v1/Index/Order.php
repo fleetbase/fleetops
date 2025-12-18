@@ -37,6 +37,7 @@ class Order extends FleetbaseResource
             'facilitator_type'     => $this->when($isInternal, $this->facilitator_type),
             'tracking_number_uuid' => $this->when($isInternal, $this->tracking_number_uuid),
             'order_config_uuid'    => $this->when($isInternal, $this->order_config_uuid),
+            'tracking'             => $this->trackingNumber ? $this->trackingNumber->tracking_number : null,
 
             // Minimal order config - only essential fields
             'order_config'         => $this->when(
