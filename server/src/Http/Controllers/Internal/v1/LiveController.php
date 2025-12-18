@@ -95,6 +95,7 @@ class LiveController extends Controller
         $active      = $request->boolean('active');
         $unassigned  = $request->boolean('unassigned');
         $withTracker = $request->has('with_tracker_data');
+        $bounds      = $request->input('bounds'); // Map viewport bounds: [south, west, north, east]
 
         // Cache key includes all parameters that affect the query
         $cacheParams = [
@@ -102,9 +103,10 @@ class LiveController extends Controller
             'active'       => $active,
             'unassigned'   => $unassigned,
             'with_tracker' => $withTracker,
+            'bounds'       => $bounds,
         ];
 
-        return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned) {
+        return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned, $bounds) {
             $query = Order::where('company_uuid', session('company'))
             ->whereHas('payload', function ($query) {
                 $query->where(
@@ -147,6 +149,34 @@ class LiveController extends Controller
                 $query->whereNull('driver_assigned_uuid');
             }
 
+            // Apply spatial filtering if bounds are provided
+            if ($bounds && is_array($bounds) && count($bounds) === 4) {
+                [$south, $west, $north, $east] = $bounds;
+                
+                $query->whereHas('payload', function ($q) use ($south, $west, $north, $east) {
+                    // Filter by pickup, dropoff, or waypoint locations within bounds
+                    $q->where(function ($query) use ($south, $west, $north, $east) {
+                        // Check pickup location
+                        $query->orWhereHas('pickup', function ($q) use ($south, $west, $north, $east) {
+                            $q->whereBetween('latitude', [$south, $north])
+                              ->whereBetween('longitude', [$west, $east]);
+                        });
+                        
+                        // Check dropoff location
+                        $query->orWhereHas('dropoff', function ($q) use ($south, $west, $north, $east) {
+                            $q->whereBetween('latitude', [$south, $north])
+                              ->whereBetween('longitude', [$west, $east]);
+                        });
+                        
+                        // Check waypoint locations
+                        $query->orWhereHas('waypoints', function ($q) use ($south, $west, $north, $east) {
+                            $q->whereBetween('latitude', [$south, $north])
+                              ->whereBetween('longitude', [$west, $east]);
+                        });
+                    });
+                });
+            }
+
             $query->limit(60); // max 60 latest
             $query->latest();
 
@@ -169,13 +199,25 @@ class LiveController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function drivers()
+    public function drivers(Request $request)
     {
-        return LiveCacheService::remember('drivers', [], function () {
-            $drivers = Driver::where(['company_uuid' => session('company')])
+        $bounds = $request->input('bounds'); // Map viewport bounds: [south, west, north, east]
+        $cacheParams = ['bounds' => $bounds];
+        
+        return LiveCacheService::remember('drivers', $cacheParams, function () use ($bounds) {
+            $query = Driver::where(['company_uuid' => session('company')])
                 ->with(['user', 'vehicle', 'currentJob'])
-                ->applyDirectivesForPermissions('fleet-ops list driver')
-                ->get();
+                ->applyDirectivesForPermissions('fleet-ops list driver');
+            
+            // Apply spatial filtering if bounds are provided
+            if ($bounds && is_array($bounds) && count($bounds) === 4) {
+                [$south, $west, $north, $east] = $bounds;
+                
+                $query->whereBetween('latitude', [$south, $north])
+                      ->whereBetween('longitude', [$west, $east]);
+            }
+            
+            $drivers = $query->get();
 
             return DriverResource::collection($drivers);
         });
@@ -186,14 +228,26 @@ class LiveController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function vehicles()
+    public function vehicles(Request $request)
     {
-        return LiveCacheService::remember('vehicles', [], function () {
+        $bounds = $request->input('bounds'); // Map viewport bounds: [south, west, north, east]
+        $cacheParams = ['bounds' => $bounds];
+        
+        return LiveCacheService::remember('vehicles', $cacheParams, function () use ($bounds) {
             // Fetch vehicles that are online
-            $vehicles = Vehicle::where(['company_uuid' => session('company')])
+            $query = Vehicle::where(['company_uuid' => session('company')])
                 ->with(['devices', 'driver'])
-                ->applyDirectivesForPermissions('fleet-ops list vehicle')
-                ->get();
+                ->applyDirectivesForPermissions('fleet-ops list vehicle');
+            
+            // Apply spatial filtering if bounds are provided
+            if ($bounds && is_array($bounds) && count($bounds) === 4) {
+                [$south, $west, $north, $east] = $bounds;
+                
+                $query->whereBetween('latitude', [$south, $north])
+                      ->whereBetween('longitude', [$west, $east]);
+            }
+            
+            $vehicles = $query->get();
 
             return VehicleResource::collection($vehicles);
         });
@@ -207,14 +261,24 @@ class LiveController extends Controller
     public function places(Request $request)
     {
         // Cache key includes filter parameters
-        $cacheParams = $request->only(['query', 'type', 'country', 'limit']);
+        $cacheParams = $request->only(['query', 'type', 'country', 'limit', 'bounds']);
 
         return LiveCacheService::remember('places', $cacheParams, function () use ($request) {
             // Query places based on filters
-            $places = Place::where(['company_uuid' => session('company')])
+            $query = Place::where(['company_uuid' => session('company')])
                 ->filter(new PlaceFilter($request))
-                ->applyDirectivesForPermissions('fleet-ops list place')
-                ->get();
+                ->applyDirectivesForPermissions('fleet-ops list place');
+            
+            // Apply spatial filtering if bounds are provided
+            $bounds = $request->input('bounds');
+            if ($bounds && is_array($bounds) && count($bounds) === 4) {
+                [$south, $west, $north, $east] = $bounds;
+                
+                $query->whereBetween('latitude', [$south, $north])
+                      ->whereBetween('longitude', [$west, $east]);
+            }
+            
+            $places = $query->get();
 
             return PlaceResource::collection($places);
         });
