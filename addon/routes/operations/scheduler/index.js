@@ -40,7 +40,7 @@ export default class OperationsSchedulerIndexRoute extends Route {
         // set scheduled orders
         controller.scheduledOrders = orders.filter(getScheduledOrder);
 
-        // create events from scheduledOrders
-        controller.events = controller.scheduledOrders.map(createFullCalendarEventFromOrder);
+        // // create events from scheduledOrders
+        // controller.events = controller.scheduledOrders.map(createFullCalendarEventFromOrder);
     }
 }

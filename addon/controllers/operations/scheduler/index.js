@@ -42,7 +42,7 @@ export default class OperationsSchedulerIndexController extends Controller {
     @service store;
     @service intl;
     @service hostRouter;
-    @service scheduling;
+    // @service scheduling;
     @tracked scheduledOrders = [];
     @tracked unscheduledOrders = [];
     @tracked drivers = [];
