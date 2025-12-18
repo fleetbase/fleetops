@@ -29,6 +29,7 @@ class Place extends FleetbaseResource
             'owner_uuid'   => $this->when($isInternal, $this->owner_uuid),
             'owner_type'   => $this->when($isInternal, $this->owner_type),
             'name'         => $this->name,
+            'address'      => $this->address,
             'street1'      => $this->street1,
             'city'         => $this->city,
             'country'      => $this->country,
