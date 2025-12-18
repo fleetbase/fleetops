@@ -19,7 +19,6 @@ class Order extends FleetbaseResource
     public function toArray($request): array
     {
         $isInternal = Http::isInternalRequest();
-        $isPublic   = Http::isPublicRequest();
 
         // Precompute expensive bits safely
         $orderConfigPublicId = data_get($this->orderConfig, 'public_id');
@@ -57,31 +56,19 @@ class Order extends FleetbaseResource
                 }),
                 $orderConfigPublicId
             ),
-            'customer'             => $this->when(
-                $this->relationLoaded('customer'),
-                function () {
-                    return $this->setCustomerType($this->transformMorphResource($this->customer));
-                }
-            ),
+            'customer'             => $this->whenLoaded('customer', function () {
+                return $this->setCustomerType($this->transformMorphResource($this->customer));
+            }),
             'payload'              => new Payload($this->payload),
-            'facilitator'          => $this->when(
-                $this->relationLoaded('facilitator'),
-                function () {
-                    return $this->setFacilitatorType($this->transformMorphResource($this->facilitator));
-                }
-            ),
-            'driver_assigned'      => $this->when(
-                $this->relationLoaded('driverAssigned'),
-                function () {
-                    return new Driver($this->driverAssigned);
-                }
-            ),
-            'vehicle_assigned'     => $this->when(
-                $this->relationLoaded('vehicleAssigned'),
-                function () {
-                    return new Vehicle($this->vehicleAssigned);
-                }
-            ),
+            'facilitator'          => $this->whenLoaded('facilitator', function () {
+                return $this->setFacilitatorType($this->transformMorphResource($this->facilitator));
+            }),
+            'driver_assigned'      => $this->whenLoaded('driverAssigned', function () {
+                return new Driver($this->driverAssigned);
+            }),
+            'vehicle_assigned'     => $this->whenLoaded('vehicleAssigned', function () {
+                return new Vehicle($this->vehicleAssigned);
+            }),
             'tracking_number'      => new TrackingNumber($this->trackingNumber),
             'tracking_statuses'    => $this->whenLoaded('trackingStatuses', function () {
                 return TrackingStatus::collection($this->trackingStatuses);
