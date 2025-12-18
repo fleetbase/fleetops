@@ -28,6 +28,7 @@ use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
+use Illuminate\Support\Facades\Cache;
 use Fleetbase\Http\Requests\Internal\BulkActionRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\Models\File;
@@ -768,7 +769,11 @@ class OrderController extends FleetOpsController
             return response()->error('No order found.');
         }
 
-        $trackerInfo = $order->tracker()->toArray();
+        // Cache tracker data for 30 seconds with order-specific key
+        $cacheKey = "order:{$order->uuid}:tracker";
+        $trackerInfo = Cache::remember($cacheKey, 30, function () use ($order) {
+            return $order->tracker()->toArray();
+        });
 
         return response()->json($trackerInfo);
     }
