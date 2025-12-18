@@ -95,7 +95,6 @@ class LiveController extends Controller
         $active      = $request->boolean('active');
         $unassigned  = $request->boolean('unassigned');
         $withTracker = $request->has('with_tracker_data');
-        $bounds      = $request->input('bounds'); // Map viewport bounds: [south, west, north, east]
 
         // Cache key includes all parameters that affect the query
         $cacheParams = [
@@ -103,10 +102,9 @@ class LiveController extends Controller
             'active'       => $active,
             'unassigned'   => $unassigned,
             'with_tracker' => $withTracker,
-            'bounds'       => $bounds,
         ];
 
-        return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned, $bounds) {
+        return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned) {
             $query = Order::where('company_uuid', session('company'))
             ->whereHas('payload', function ($query) {
                 $query->where(
@@ -147,34 +145,6 @@ class LiveController extends Controller
 
             if ($unassigned) {
                 $query->whereNull('driver_assigned_uuid');
-            }
-
-            // Apply spatial filtering if bounds are provided
-            if ($bounds && is_array($bounds) && count($bounds) === 4) {
-                [$south, $west, $north, $east] = $bounds;
-                
-                $query->whereHas('payload', function ($q) use ($south, $west, $north, $east) {
-                    // Filter by pickup, dropoff, or waypoint locations within bounds
-                    $q->where(function ($query) use ($south, $west, $north, $east) {
-                        // Check pickup location
-                        $query->orWhereHas('pickup', function ($q) use ($south, $west, $north, $east) {
-                            $q->whereBetween('latitude', [$south, $north])
-                              ->whereBetween('longitude', [$west, $east]);
-                        });
-                        
-                        // Check dropoff location
-                        $query->orWhereHas('dropoff', function ($q) use ($south, $west, $north, $east) {
-                            $q->whereBetween('latitude', [$south, $north])
-                              ->whereBetween('longitude', [$west, $east]);
-                        });
-                        
-                        // Check waypoint locations
-                        $query->orWhereHas('waypoints', function ($q) use ($south, $west, $north, $east) {
-                            $q->whereBetween('latitude', [$south, $north])
-                              ->whereBetween('longitude', [$west, $east]);
-                        });
-                    });
-                });
             }
 
             $query->limit(60); // max 60 latest
