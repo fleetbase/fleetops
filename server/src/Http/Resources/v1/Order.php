@@ -7,7 +7,6 @@ use Fleetbase\Http\Resources\Comment;
 use Fleetbase\Http\Resources\File;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
-use Fleetbase\Support\Resolve;
 
 class Order extends FleetbaseResource
 {

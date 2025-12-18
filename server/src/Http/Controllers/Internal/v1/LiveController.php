@@ -4,7 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Filter\PlaceFilter;
 use Fleetbase\FleetOps\Http\Resources\v1\Driver as DriverResource;
-use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as OrderIndexResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Vehicle as VehicleResource;
 use Fleetbase\FleetOps\Models\Driver;
@@ -104,7 +104,7 @@ class LiveController extends Controller
             'with_tracker' => $withTracker,
         ];
 
-        return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned, $withTracker) {
+        return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned) {
             $query = Order::where('company_uuid', session('company'))
             ->whereHas('payload', function ($query) {
                 $query->where(
@@ -147,17 +147,20 @@ class LiveController extends Controller
                 $query->whereNull('driver_assigned_uuid');
             }
 
+            $query->limit(60); // max 60 latest
+            $query->latest();
+
             $orders = $query->get();
 
-            // Load tracker data if requested (limit to first 30 orders for performance)
-            if ($withTracker) {
-                $orders->take(30)->each(function ($order) {
-                    $order->tracker_data = $order->tracker()->toArray();
-                    $order->eta          = $order->tracker()->eta();
-                });
-            }
+            // // Load tracker data if requested (limit to first 20 orders for performance)
+            // if ($withTracker) {
+            //     $orders->take(20)->each(function ($order) {
+            //         $order->tracker_data = $order->tracker()->toArray();
+            //         $order->eta          = $order->tracker()->eta();
+            //     });
+            // }
 
-            return OrderResource::collection($orders);
+            return OrderIndexResource::collection($orders);
         });
     }
 

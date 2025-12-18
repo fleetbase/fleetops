@@ -22,17 +22,17 @@ class Place extends FleetbaseResource
         $isInternal = Http::isInternalRequest();
 
         return [
-            'id'         => $this->when($isInternal, $this->id, $this->public_id),
-            'uuid'       => $this->when($isInternal, $this->uuid),
-            'public_id'  => $this->when($isInternal, $this->public_id),
+            'id'           => $this->when($isInternal, $this->id, $this->public_id),
+            'uuid'         => $this->when($isInternal, $this->uuid),
+            'public_id'    => $this->when($isInternal, $this->public_id),
             'company_uuid' => $this->when($isInternal, $this->company_uuid),
             'owner_uuid'   => $this->when($isInternal, $this->owner_uuid),
             'owner_type'   => $this->when($isInternal, $this->owner_type),
-            'name'       => $this->name,
-            'street1'    => $this->street1,
-            'city'       => $this->city,
-            'country'    => $this->country,
-            'location'   => Utils::getPointFromMixed($this->location),
+            'name'         => $this->name,
+            'street1'      => $this->street1,
+            'city'         => $this->city,
+            'country'      => $this->country,
+            'location'     => Utils::getPointFromMixed($this->location),
         ];
     }
 }

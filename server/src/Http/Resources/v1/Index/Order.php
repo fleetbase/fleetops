@@ -37,7 +37,7 @@ class Order extends FleetbaseResource
             'facilitator_type'     => $this->when($isInternal, $this->facilitator_type),
             'tracking_number_uuid' => $this->when($isInternal, $this->tracking_number_uuid),
             'order_config_uuid'    => $this->when($isInternal, $this->order_config_uuid),
-            
+
             // Minimal order config - only essential fields
             'order_config'         => $this->when(
                 $isInternal,
@@ -49,53 +49,57 @@ class Order extends FleetbaseResource
                     ];
                 })
             ),
-            
+
             // Lightweight customer
             'customer'             => $this->whenLoaded('customer', function () {
                 $resource = new Customer($this->customer);
-                $data = $resource->resolve();
+                $data     = $resource->resolve();
                 data_set($data, 'type', 'customer');
                 data_set($data, 'customer_type', 'customer-' . Utils::toEmberResourceType($this->customer_type));
+
                 return $data;
             }),
-            
+
             // Lightweight payload
             'payload'              => $this->whenLoaded('payload', function () {
                 return new Payload($this->payload);
             }),
-            
+
             // Lightweight facilitator
             'facilitator'          => $this->whenLoaded('facilitator', function () {
                 $resource = new Facilitator($this->facilitator);
-                $data = $resource->resolve();
+                $data     = $resource->resolve();
                 data_set($data, 'type', 'facilitator');
                 data_set($data, 'facilitator_type', 'facilitator-' . Utils::toEmberResourceType($this->facilitator_type));
+
                 return $data;
             }),
-            
+
             // Lightweight driver
             'driver_assigned'      => $this->whenLoaded('driverAssigned', function () {
                 return new Driver($this->driverAssigned);
             }),
-            
+
             // Lightweight vehicle
             'vehicle_assigned'     => $this->whenLoaded('vehicleAssigned', function () {
                 return new Vehicle($this->vehicleAssigned);
             }),
-            
+
             // Only tracking number string, not full object
             'tracking'             => $this->when($isInternal, $this->trackingNumber ? $this->trackingNumber->tracking_number : null),
-            
+
             // Latest status only, not full array
             'latest_status'        => $this->whenLoaded('trackingStatuses', function () {
                 $latest = $this->trackingStatuses->first();
+
                 return $latest ? $latest->status : 'created';
             }),
             'latest_status_code'   => $this->whenLoaded('trackingStatuses', function () {
                 $latest = $this->trackingStatuses->first();
+
                 return $latest ? $latest->code : null;
             }),
-            
+
             // Essential scalar fields
             'type'                 => $this->type,
             'status'               => $this->status,
@@ -103,7 +107,7 @@ class Order extends FleetbaseResource
             'dispatched'           => (bool) data_get($this, 'dispatched', false),
             'has_driver_assigned'  => $this->when($isInternal, $this->has_driver_assigned),
             'is_scheduled'         => $this->when($isInternal, $this->is_scheduled),
-            
+
             // Timestamps
             'scheduled_at'         => $this->scheduled_at,
             'dispatched_at'        => $this->dispatched_at,

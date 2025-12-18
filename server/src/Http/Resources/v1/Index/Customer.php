@@ -21,13 +21,13 @@ class Customer extends FleetbaseResource
         $isInternal = Http::isInternalRequest();
 
         return [
-            'id'         => $this->when($isInternal, $this->id, $this->public_id),
-            'uuid'       => $this->when($isInternal, $this->uuid),
-            'public_id'  => $this->when($isInternal, $this->public_id),
+            'id'           => $this->when($isInternal, $this->id, $this->public_id),
+            'uuid'         => $this->when($isInternal, $this->uuid),
+            'public_id'    => $this->when($isInternal, $this->public_id),
             'company_uuid' => $this->when($isInternal, $this->company_uuid),
-            'name'       => $this->name,
-            'phone'      => $this->phone ?? null,
-            'email'      => $this->email ?? null,
+            'name'         => $this->name,
+            'phone'        => $this->phone ?? null,
+            'email'        => $this->email ?? null,
         ];
     }
 }
