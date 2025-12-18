@@ -56,7 +56,7 @@ export default class LeafletRoutingControlService extends Service {
             // Fallback to OSRM default router
             router = this.registry.routers.osrm;
         }
-        
+
         return router;
     }
 

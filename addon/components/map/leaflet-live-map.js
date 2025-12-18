@@ -166,9 +166,11 @@ export default class MapLeafletLiveMapComponent extends Component {
         try {
             // Get initial map bounds for spatial filtering
             const bounds = this.map ? this.map.getBounds() : null;
-            const params = bounds ? {
-                bounds: [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()],
-            } : {};
+            const params = bounds
+                ? {
+                      bounds: [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()],
+                  }
+                : {};
 
             const data = yield all([
                 this.loadResource.perform('routes'),
@@ -200,11 +202,7 @@ export default class MapLeafletLiveMapComponent extends Component {
         // Reload spatially-filtered resources (drivers, vehicles, places)
         // Orders, routes, and service-areas are not spatially filtered
         try {
-            yield all([
-                this.loadResource.perform('vehicles', { params }),
-                this.loadResource.perform('drivers', { params }),
-                this.loadResource.perform('places', { params }),
-            ]);
+            yield all([this.loadResource.perform('vehicles', { params }), this.loadResource.perform('drivers', { params }), this.loadResource.perform('places', { params })]);
         } catch (err) {
             debug('Failed to reload resources in viewport: ' + err.message);
         }

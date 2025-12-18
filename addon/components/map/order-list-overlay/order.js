@@ -58,7 +58,7 @@ export default class MapOrderListOverlayOrderComponent extends Component {
 
     loadTrackerData() {
         const { order } = this.args;
-        
+
         if (order && typeof order.loadTrackerData === 'function' && !this.trackerDataLoaded) {
             this.trackerDataLoaded = true;
             order.loadTrackerData();
@@ -67,7 +67,7 @@ export default class MapOrderListOverlayOrderComponent extends Component {
 
     willDestroy() {
         super.willDestroy(...arguments);
-        
+
         // Clean up observer
         if (this.observer) {
             this.observer.disconnect();

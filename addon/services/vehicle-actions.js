@@ -110,7 +110,7 @@ export default class VehicleActionsService extends ResourceActionService {
             if (vehicle?.meta?._index_resource) {
                 await vehicle.reload();
             }
-            
+
             return this.modalsManager.show('modals/resource', {
                 resource: vehicle,
                 title: vehicle.name,
