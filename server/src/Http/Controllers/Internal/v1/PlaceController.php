@@ -56,6 +56,11 @@ class PlaceController extends FleetOpsController
 
         if ($latitude && $longitude) {
             $point = new Point($latitude, $longitude);
+            $query->whereNotNull('location')->whereRaw('
+                ST_Y(location) BETWEEN -90 AND 90
+                AND ST_X(location) BETWEEN -180 AND 180
+                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+            ');
             $query->orderByDistanceSphere('location', $point, 'asc');
         } else {
             $query->orderBy('name', 'desc');
