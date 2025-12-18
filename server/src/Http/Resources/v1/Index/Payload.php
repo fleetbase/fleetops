@@ -25,6 +25,10 @@ class Payload extends FleetbaseResource
             'id'         => $this->when($isInternal, $this->id, $this->public_id),
             'uuid'       => $this->when($isInternal, $this->uuid),
             'public_id'  => $this->when($isInternal, $this->public_id),
+            'company_uuid' => $this->when($isInternal, $this->company_uuid),
+            'pickup_uuid'  => $this->when($isInternal, $this->pickup_uuid),
+            'dropoff_uuid' => $this->when($isInternal, $this->dropoff_uuid),
+            'return_uuid'  => $this->when($isInternal, $this->return_uuid),
             
             // Minimal pickup - only what's displayed in the table
             'pickup'     => $this->whenLoaded('pickup', function () {

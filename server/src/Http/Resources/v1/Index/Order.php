@@ -28,6 +28,15 @@ class Order extends FleetbaseResource
             'public_id'            => $this->when($isInternal, $this->public_id),
             'internal_id'          => $this->internal_id,
             'company_uuid'         => $this->when($isInternal, $this->company_uuid),
+            'payload_uuid'         => $this->when($isInternal, $this->payload_uuid),
+            'driver_assigned_uuid' => $this->when($isInternal, $this->driver_assigned_uuid),
+            'vehicle_assigned_uuid'=> $this->when($isInternal, $this->vehicle_assigned_uuid),
+            'customer_uuid'        => $this->when($isInternal, $this->customer_uuid),
+            'customer_type'        => $this->when($isInternal, $this->customer_type),
+            'facilitator_uuid'     => $this->when($isInternal, $this->facilitator_uuid),
+            'facilitator_type'     => $this->when($isInternal, $this->facilitator_type),
+            'tracking_number_uuid' => $this->when($isInternal, $this->tracking_number_uuid),
+            'order_config_uuid'    => $this->when($isInternal, $this->order_config_uuid),
             
             // Minimal order config - only essential fields
             'order_config'         => $this->when(

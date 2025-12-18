@@ -22,10 +22,16 @@ class Driver extends FleetbaseResource
         $isInternal = Http::isInternalRequest();
 
         return [
-            'id'         => $this->when($isInternal, $this->id, $this->public_id),
-            'uuid'       => $this->when($isInternal, $this->uuid),
-            'public_id'  => $this->when($isInternal, $this->public_id),
-            'name'       => $this->name,
+            'id'              => $this->when($isInternal, $this->id, $this->public_id),
+            'uuid'            => $this->when($isInternal, $this->uuid),
+            'public_id'       => $this->when($isInternal, $this->public_id),
+            'company_uuid'    => $this->when($isInternal, $this->company_uuid),
+            'user_uuid'       => $this->when($isInternal, $this->user_uuid),
+            'vehicle_uuid'    => $this->when($isInternal, $this->vehicle_uuid),
+            'vendor_uuid'     => $this->when($isInternal, $this->vendor_uuid),
+            'current_job_uuid'=> $this->when($isInternal, $this->current_job_uuid),
+            'name'            => $this->name,
+            'vehicle_name'    => $this->when($isInternal, $this->vehicle_name),
             'phone'      => $this->phone,
             'photo_url'  => $this->photo_url,
             'status'     => $this->status,

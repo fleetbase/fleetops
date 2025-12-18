@@ -24,6 +24,7 @@ class Customer extends FleetbaseResource
             'id'         => $this->when($isInternal, $this->id, $this->public_id),
             'uuid'       => $this->when($isInternal, $this->uuid),
             'public_id'  => $this->when($isInternal, $this->public_id),
+            'company_uuid' => $this->when($isInternal, $this->company_uuid),
             'name'       => $this->name,
             'phone'      => $this->phone ?? null,
             'email'      => $this->email ?? null,
