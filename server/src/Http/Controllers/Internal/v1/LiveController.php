@@ -96,17 +96,15 @@ class LiveController extends Controller
         $exclude     = $request->array('exclude');
         $active      = $request->boolean('active');
         $unassigned  = $request->boolean('unassigned');
-        $withTracker = $request->has('with_tracker_data');
 
         // Cache key includes all parameters that affect the query
         $cacheParams = [
             'exclude'      => $exclude,
             'active'       => $active,
             'unassigned'   => $unassigned,
-            'with_tracker' => $withTracker,
         ];
 
-        return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned, $withTracker) {
+        return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned) {
             $query = Order::where('company_uuid', session('company'))
             ->whereHas('payload', function ($query) {
                 $query->where(
@@ -153,23 +151,6 @@ class LiveController extends Controller
             $query->latest();
 
             $orders = $query->get();
-
-            // Load tracker data if requested (limit to first 60 trackable orders for performance)
-            if ($withTracker) {
-                $orders
-                    ->filter(function ($order) {
-                        // Only include orders that have the required data for tracking
-                        return $order->driver_assigned_uuid 
-                            && $order->driverAssigned 
-                            && $order->driverAssigned->location
-                            && !in_array($order->status, ['completed', 'canceled']);
-                    })
-                    ->take(60)
-                    ->each(function ($order) {
-                        $order->tracker_data = $order->tracker()->toArray();
-                        $order->eta          = $order->tracker()->eta();
-                    });
-            }
 
             return OrderIndexResource::collection($orders);
         });

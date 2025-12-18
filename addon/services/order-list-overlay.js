@@ -150,7 +150,6 @@ export default class OrderListOverlayService extends Service {
                 'fleet-ops/live/orders',
                 {
                     active: 1,
-                    with_tracker_data: 1,
                     exclude: excludeOrderIds,
                 },
                 {

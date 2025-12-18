@@ -5,6 +5,7 @@
     {{on "dblclick" (fn this.onDoubleClick @order)}}
     {{on "mouseenter" (fn this.onMouseEnter @order)}}
     {{on "mouseleave" (fn this.onMouseLeave @order)}}
+    {{did-insert this.setupIntersectionObserver}}
     ...attributes
 >
     <div class="order-listing-row">
