@@ -13,6 +13,7 @@ use Fleetbase\FleetOps\Http\Requests\BulkDispatchRequest;
 use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as OrderIndexResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
 use Fleetbase\FleetOps\Imports\OrdersImport;
 use Fleetbase\FleetOps\Models\Driver;
@@ -49,6 +50,13 @@ class OrderController extends FleetOpsController
      * @var string
      */
     public $resource = 'order';
+
+    /**
+     * The lightweight resource for index/list views.
+     *
+     * @var string
+     */
+    public $indexResource = OrderIndexResource::class;
 
     /**
      * Handle order waypoint changes if any.
