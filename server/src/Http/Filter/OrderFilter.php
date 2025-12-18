@@ -50,7 +50,14 @@ class OrderFilter extends Filter
             'payload.return',
             'trackingNumber',
             'trackingStatuses',
-            'driverAssigned',
+            'driverAssigned' => function ($query) {
+                $query->without(['jobs', 'currentJob']);
+            },
+            'vehicleAssigned' => function ($query) {
+                $query->without(['fleets', 'vendor']);
+            },
+            'customer',
+            'facilitator',
         ]);
     }
 
