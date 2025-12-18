@@ -106,7 +106,7 @@ class LiveController extends Controller
             'with_tracker' => $withTracker,
         ];
 
-        return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned) {
+        return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned, $withTracker) {
             $query = Order::where('company_uuid', session('company'))
             ->whereHas('payload', function ($query) {
                 $query->where(
@@ -154,13 +154,13 @@ class LiveController extends Controller
 
             $orders = $query->get();
 
-            // // Load tracker data if requested (limit to first 20 orders for performance)
-            // if ($withTracker) {
-            //     $orders->take(20)->each(function ($order) {
-            //         $order->tracker_data = $order->tracker()->toArray();
-            //         $order->eta          = $order->tracker()->eta();
-            //     });
-            // }
+            // Load tracker data if requested (limit to first 20 orders for performance)
+            if ($withTracker) {
+                $orders->take(20)->each(function ($order) {
+                    $order->tracker_data = $order->tracker()->toArray();
+                    $order->eta          = $order->tracker()->eta();
+                });
+            }
 
             return OrderIndexResource::collection($orders);
         });

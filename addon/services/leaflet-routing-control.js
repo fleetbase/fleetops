@@ -51,7 +51,13 @@ export default class LeafletRoutingControlService extends Service {
 
     get(name) {
         name = name ?? this.getRouter();
-        return this.registry.routers[underscore(name)];
+        let router = this.registry.routers[underscore(name)];
+        if (!router) {
+            // Fallback to OSRM default router
+            router = this.registry.routers.osrm;
+        }
+        
+        return router;
     }
 
     getRouter(fallback = 'osrm') {

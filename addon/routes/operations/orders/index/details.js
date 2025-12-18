@@ -58,4 +58,11 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
             with: ['payload', 'driverAssigned', 'orderConfig', 'customer', 'facilitator', 'trackingStatuses', 'trackingNumber', 'purchaseRate', 'comments', 'files'],
         });
     }
+
+    async afterModel(order) {
+        await order.loadTrackingActivity();
+        if (order.meta._index_resource) {
+            await order.reload();
+        }
+    }
 }
