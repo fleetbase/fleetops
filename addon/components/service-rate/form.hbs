@@ -191,7 +191,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {{#each @resource.perDropFees as |rateFee index|}}
+                            {{#each @resource.rate_fees as |rateFee|}}
                                 <tr>
                                     <td>
                                         <Input
@@ -215,7 +215,7 @@
                                         <MoneyInput class="w-full" @currency={{@resource.currency}} @value={{rateFee.fee}} disabled={{cannot-write @resource}} />
                                     </td>
                                     <td>
-                                        <Button @type="danger" @icon="trash" @onClick={{fn @resource.removePerDropFee index}} />
+                                        <Button @type="danger" @icon="trash" @onClick={{fn @resource.removePerDropFee rateFee}} />
                                     </td>
                                 </tr>
                             {{/each}}
