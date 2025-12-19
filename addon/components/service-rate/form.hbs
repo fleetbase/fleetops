@@ -107,6 +107,7 @@
                         @name={{t "service-rate.fields.maximum-distance"}}
                         @type="number"
                         @value={{@resource.max_distance}}
+                        @onChange={{this.onMaxDistanceChange}}
                         @placeholder={{t "service-rate.fields.maximum-distance"}}
                         @disabled={{cannot-write @resource}}
                         @helpText={{t "service-rate.fields.maximum-distance-help-text"}}
