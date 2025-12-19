@@ -15,6 +15,12 @@ export default class OperationsServiceRatesIndexNewController extends Controller
     @task *save(serviceRate) {
         try {
             yield serviceRate.save();
+            
+            // Clean up any duplicate unsaved records after save
+            if (serviceRate.isFixedRate) {
+                this.serviceRateActions.cleanupDuplicateRateFees(serviceRate);
+            }
+            
             this.overlay?.close();
 
             yield this.hostRouter.refresh();
