@@ -16,7 +16,7 @@
                         @options={{this.orderConfigActions.allOrderConfigs}}
                         @selected={{@resource.order_config}}
                         @onChange={{this.selectOrderConfig}}
-                        @placeholder={{t "order.fields.select-order-type"}}
+                        @placeholder={{t "service-rate.fields.select-order-type"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |orderConfig|
@@ -567,7 +567,7 @@
         </InputGroup>
 
         {{#if @resource.serviceArea}}
-            <InputGroup @name={{t "service-rate.fields.zone-label"}} @helpText={{t "service-rate.fields.zone-help-text"}}>
+            <InputGroup @name={{t "service-rate.fields.zone-label"}} @helpText={{t "service-rate.fields.zone-help-text"}} @wrapperClass="mt-2">
                 <ModelSelect
                     @modelName="zone"
                     @selectedModel={{@resource.zone}}
