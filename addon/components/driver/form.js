@@ -8,6 +8,7 @@ export default class DriverFormComponent extends Component {
     @service currentUser;
     @service notifications;
     @service modalsManager;
+    @service extensionManager;
 
     get userAccountActionButtons() {
         return [
@@ -15,7 +16,10 @@ export default class DriverFormComponent extends Component {
                 icon: 'user-plus',
                 size: 'xs',
                 permission: 'iam create user',
-                onClick: () => {
+                onClick: async () => {
+                    // Load IAM engine for user-form modal component
+                    await this.extensionManager.ensureEngineLoaded('@fleetbase/iam-engine');
+
                     const user = this.store.createRecord('user', {
                         status: 'pending',
                         type: 'user',
