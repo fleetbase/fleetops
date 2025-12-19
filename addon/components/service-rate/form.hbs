@@ -151,7 +151,7 @@
                                         {{@resource.max_distance_unit}}
                                     </td>
                                     <td>
-                                        <MoneyInput class="w-full" @currency={{@resource.currency}} @value={{rateFee.fee}} disabled={{cannot-write @resource}} />
+                                        <MoneyInput class="w-full" @currency={{@resource.currency}} @value={{rateFee.fee}} @onChange={{fn (mut rateFee.fee)}} disabled={{cannot-write @resource}} />
                                     </td>
                                 </tr>
                             {{/each}}
@@ -213,7 +213,7 @@
                                         />
                                     </td>
                                     <td>
-                                        <MoneyInput class="w-full" @currency={{@resource.currency}} @value={{rateFee.fee}} disabled={{cannot-write @resource}} />
+                                        <MoneyInput class="w-full" @currency={{@resource.currency}} @value={{rateFee.fee}} @onChange={{fn (mut rateFee.fee)}} disabled={{cannot-write @resource}} />
                                     </td>
                                     <td>
                                         <Button @type="danger" @icon="trash" @onClick={{fn @resource.removePerDropFee rateFee}} />
