@@ -13,11 +13,6 @@ export default class OperationsServiceRatesIndexNewController extends Controller
     @tracked serviceRate = this.serviceRateActions.createNewInstance();
 
     @task *save(serviceRate) {
-        // Generate fixed rate fees before save
-        if (serviceRate.isFixedRate) {
-            this.serviceRateActions.generateFixedRateFees(serviceRate);
-        }
-
         try {
             yield serviceRate.save();
             this.overlay?.close();
