@@ -5,7 +5,6 @@ import { action, computed } from '@ember/object';
 import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 import { format, isValid as isValidDate } from 'date-fns';
-import { computePosition, offset } from '@floating-ui/dom';
 import { Tooltip } from '@fleetbase/ember-ui/utils/floating';
 import isObject from '@fleetbase/ember-core/utils/is-object';
 import isJson from '@fleetbase/ember-core/utils/is-json';

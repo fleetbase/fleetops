@@ -170,7 +170,6 @@
                 {{#each @resource.parcel_fees as |parcelFee|}}
                     <div class="dark:text-gray-100">
                         <div class="grid grid-cols-7">
-                            <!-- Parcel size -->
                             <div class="flex flex-col items-start justify-start pt-3">
                                 <img src="/engines-dist/images/boxes/{{parcelFee.size}}.png" alt="parcel size {{parcelFee.size}}" width="44" class="w-11" />
                                 <div class="mt-2 text-sm font-medium">
@@ -178,11 +177,8 @@
                                 </div>
                             </div>
 
-                            <!-- Parcel details -->
                             <div class="col-span-6 dimensions-box space-x-2">
                                 <div class="grid grid-cols-4 gap-2 px-2">
-
-                                    <!-- Length -->
                                     <div class="field-info-container">
                                         <div class="field-name">
                                             {{t "service-rate.fields.length-label"}}
@@ -193,7 +189,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- Width -->
                                     <div class="field-info-container">
                                         <div class="field-name">
                                             {{t "service-rate.fields.width-label"}}
@@ -204,7 +199,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- Height -->
                                     <div class="field-info-container">
                                         <div class="field-name">
                                             {{t "service-rate.fields.height-label"}}
@@ -215,7 +209,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- Weight -->
                                     <div class="field-info-container">
                                         <div class="field-name">
                                             {{t "service-rate.fields.weight-label"}}
@@ -226,7 +219,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- Dimensions unit -->
                                     <div class="field-info-container">
                                         <div class="field-name">
                                             {{t "service-rate.fields.deminsions-unit"}}
@@ -236,7 +228,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- Weight unit -->
                                     <div class="field-info-container">
                                         <div class="field-name">
                                             {{t "service-rate.fields.weight-unit"}}
@@ -246,7 +237,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- Additional fee -->
                                     <div class="field-info-container col-span-2">
                                         <div class="field-name">
                                             {{t "service-rate.fields.additional-fee"}}

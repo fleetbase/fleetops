@@ -2,7 +2,7 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { isValid as isValidDate } from 'date-fns';
 import { isNone } from '@ember/utils';
-import createFullCalendarEventFromOrder from '../../../utils/create-full-calendar-event-from-order';
+// import createFullCalendarEventFromOrder from '../../../utils/create-full-calendar-event-from-order';
 
 const getUnscheduledOrder = (order) => {
     return isNone(order.scheduled_at);
