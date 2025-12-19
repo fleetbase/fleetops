@@ -28,7 +28,6 @@ use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
-use Illuminate\Support\Facades\Cache;
 use Fleetbase\Http\Requests\Internal\BulkActionRequest;
 use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\Models\File;
@@ -38,6 +37,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -770,7 +770,7 @@ class OrderController extends FleetOpsController
         }
 
         // Cache tracker data for 30 seconds with order-specific key
-        $cacheKey = "order:{$order->uuid}:tracker";
+        $cacheKey    = "order:{$order->uuid}:tracker";
         $trackerInfo = Cache::remember($cacheKey, 30, function () use ($order) {
             return $order->tracker()->toArray();
         });

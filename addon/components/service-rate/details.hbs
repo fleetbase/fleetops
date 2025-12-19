@@ -86,7 +86,7 @@
                                 </tr>
                             {{else}}
                                 <tr>
-                                    <td colspan="2" class="text-center text-gray-500">No rate fees defined</td>
+                                    <td colspan="2" class="text-center text-gray-500 italic">No rate fees defined</td>
                                 </tr>
                             {{/each}}
                         </tbody>
@@ -114,7 +114,7 @@
                             </tr>
                         {{else}}
                             <tr>
-                                <td colspan="3" class="text-center text-gray-500">No per drop fees defined</td>
+                                <td colspan="3" class="text-center text-gray-500 italic">No per drop fees defined</td>
                             </tr>
                         {{/each}}
                     </tbody>
@@ -164,59 +164,109 @@
         </ContentPanel>
     {{/if}}
 
-    <ContentPanel @title={{t "service-rate.fields.percel-fee-title"}} @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
-            {{#if @resource.hasParcelFees}}
-                <div class="field-info-container">
-                    <div class="field-name">{{t "service-rate.fields.cod-fee-label"}}</div>
-                    <div class="field-value">
-                        {{#if @resource.cod_calculation_method}}
-                            {{#let (find-by "value" @resource.cod_calculation_method (get-fleet-ops-options "serviceRateCodCalculationMethods")) as |method|}}
-                                {{#if method}}
-                                    {{method.label}}:
-                                    {{#if @resource.hasCodFlatFee}}
-                                        {{format-currency @resource.cod_flat_fee @resource.currency}}
-                                    {{else if @resource.hasCodPercentageFee}}
-                                        {{@resource.cod_percent}}%
-                                    {{/if}}
-                                {{else}}
-                                    {{n-a @resource.cod_calculation_method}}
-                                {{/if}}
-                            {{/let}}
-                        {{else}}
-                            N/A
-                        {{/if}}
-                    </div>
-                </div>
+    {{#if @resource.isParcelService}}
+        <ContentPanel @title={{t "service-rate.fields.percel-fee-title"}} @open={{true}} @wrapperClass="bordered-top">
+            <div class="space-y-2">
+                {{#each @resource.parcel_fees as |parcelFee|}}
+                    <div class="dark:text-gray-100">
+                        <div class="grid grid-cols-7">
+                            <!-- Parcel size -->
+                            <div class="flex flex-col items-start justify-start pt-3">
+                                <img src="/engines-dist/images/boxes/{{parcelFee.size}}.png" alt="parcel size {{parcelFee.size}}" width="44" class="w-11" />
+                                <div class="mt-2 text-sm font-medium">
+                                    {{humanize parcelFee.size}}
+                                </div>
+                            </div>
 
-                <div class="field-info-container">
-                    <div class="field-name">{{t "service-rate.fields.peak-hours-fee-label"}}</div>
-                    <div class="field-value">
-                        {{#if @resource.peak_hours_calculation_method}}
-                            {{#let (find-by "value" @resource.peak_hours_calculation_method (get-fleet-ops-options "serviceRatePeakHourCalculationMethods")) as |method|}}
-                                {{#if method}}
-                                    {{method.label}}:
-                                    {{#if @resource.hasPeakHoursFlatFee}}
-                                        {{format-currency @resource.peak_hours_flat_fee @resource.currency}}
-                                    {{else if @resource.hasPeakHoursPercentageFee}}
-                                        {{@resource.peak_hours_percent}}%
-                                    {{/if}}
-                                {{else}}
-                                    {{n-a @resource.peak_hours_calculation_method}}
-                                {{/if}}
-                            {{/let}}
-                        {{else}}
-                            N/A
-                        {{/if}}
+                            <!-- Parcel details -->
+                            <div class="col-span-6 dimensions-box space-x-2">
+                                <div class="grid grid-cols-4 gap-2 px-2">
+
+                                    <!-- Length -->
+                                    <div class="field-info-container">
+                                        <div class="field-name">
+                                            {{t "service-rate.fields.length-label"}}
+                                        </div>
+                                        <div class="field-value">
+                                            {{n-a parcelFee.length}}
+                                            {{parcelFee.dimensions_unit}}
+                                        </div>
+                                    </div>
+
+                                    <!-- Width -->
+                                    <div class="field-info-container">
+                                        <div class="field-name">
+                                            {{t "service-rate.fields.width-label"}}
+                                        </div>
+                                        <div class="field-value">
+                                            {{n-a parcelFee.width}}
+                                            {{parcelFee.dimensions_unit}}
+                                        </div>
+                                    </div>
+
+                                    <!-- Height -->
+                                    <div class="field-info-container">
+                                        <div class="field-name">
+                                            {{t "service-rate.fields.height-label"}}
+                                        </div>
+                                        <div class="field-value">
+                                            {{n-a parcelFee.height}}
+                                            {{parcelFee.dimensions_unit}}
+                                        </div>
+                                    </div>
+
+                                    <!-- Weight -->
+                                    <div class="field-info-container">
+                                        <div class="field-name">
+                                            {{t "service-rate.fields.weight-label"}}
+                                        </div>
+                                        <div class="field-value">
+                                            {{n-a parcelFee.weight}}
+                                            {{parcelFee.weight_unit}}
+                                        </div>
+                                    </div>
+
+                                    <!-- Dimensions unit -->
+                                    <div class="field-info-container">
+                                        <div class="field-name">
+                                            {{t "service-rate.fields.deminsions-unit"}}
+                                        </div>
+                                        <div class="field-value">
+                                            {{n-a (get-fleet-ops-option-label "dimensionUnits" parcelFee.dimensions_unit)}}
+                                        </div>
+                                    </div>
+
+                                    <!-- Weight unit -->
+                                    <div class="field-info-container">
+                                        <div class="field-name">
+                                            {{t "service-rate.fields.weight-unit"}}
+                                        </div>
+                                        <div class="field-value">
+                                            {{n-a (get-fleet-ops-option-label "weightUnits" parcelFee.weight_unit)}}
+                                        </div>
+                                    </div>
+
+                                    <!-- Additional fee -->
+                                    <div class="field-info-container col-span-2">
+                                        <div class="field-name">
+                                            {{t "service-rate.fields.additional-fee"}}
+                                        </div>
+                                        <div class="field-value">
+                                            {{n-a (format-currency parcelFee.fee @resource.currency)}}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            {{else}}
-                <div class="field-info-container col-span-2">
-                    <div class="field-value text-gray-500">No parcel fees configured</div>
-                </div>
-            {{/if}}
-        </div>
-    </ContentPanel>
+                {{else}}
+                    <div class="col-span-2">
+                        <span class="text-gray-500 text-sm italic">No parcel fees configured</span>
+                    </div>
+                {{/each}}
+            </div>
+        </ContentPanel>
+    {{/if}}
 
     <ContentPanel @title={{t "service-rate.fields.restrict-service-title"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">

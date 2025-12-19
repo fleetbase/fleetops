@@ -561,6 +561,7 @@
                 @onChange={{fn (mut @resource.serviceArea)}}
                 @onChangeId={{fn (mut @resource.service_area_uuid)}}
                 @disabled={{cannot-write @resource}}
+                @allowClear={{true}}
                 as |model|
             >
                 {{model.name}}
@@ -580,6 +581,7 @@
                     @onChange={{fn (mut @resource.zone)}}
                     @onChangeId={{fn (mut @resource.zone_uuid)}}
                     @disabled={{cannot-write @resource}}
+                    @allowClear={{true}}
                     as |model|
                 >
                     {{model.name}}

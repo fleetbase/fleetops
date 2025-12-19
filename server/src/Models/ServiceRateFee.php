@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Models;
 
+use Fleetbase\Casts\Money;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasUuid;
@@ -41,7 +42,7 @@ class ServiceRateFee extends Model
     protected $casts = [
         'min'      => 'integer',
         'max'      => 'integer',
-        'fee'      => 'integer',
+        'fee'      => Money::class,
         'distance' => 'integer',
     ];
 
@@ -61,7 +62,7 @@ class ServiceRateFee extends Model
 
     public static function onRowInsert($row)
     {
-        $row['fee']      = Utils::numbersOnly($row['fee'] ?? null);
+        $row['fee']      = Money::apply($row['fee'] ?? 0);
         $row['distance'] = Utils::numbersOnly($row['distance'] ?? null);
         $row['min']      = Utils::numbersOnly($row['min'] ?? null);
         $row['max']      = Utils::numbersOnly($row['max'] ?? null);
@@ -69,21 +70,6 @@ class ServiceRateFee extends Model
         return $row;
     }
 
-    /**
-     * Set the fee as only numbers.
-     *
-     * @void
-     */
-    public function setFeeAttribute($value)
-    {
-        $this->attributes['fee'] = Utils::numbersOnly($value);
-    }
-
-    /**
-     * Set the distance as numbers only.
-     *
-     * @void
-     */
     public function setDistanceAttribute($value)
     {
         $this->attributes['distance'] = Utils::numbersOnly($value);

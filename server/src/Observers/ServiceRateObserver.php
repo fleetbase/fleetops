@@ -8,24 +8,6 @@ use Fleetbase\FleetOps\Support\Utils;
 class ServiceRateObserver
 {
     /**
-     * Handle the ServiceRate "creating" event.
-     *
-     * @return void
-     */
-    public function creating(ServiceRate $serviceRate)
-    {
-        // convert these attributes to numbers only
-        $toNumbers = ['base_fee', 'per_km_flat_rate_fee', 'peak_hours_flat_fee', 'peak_hours_percent', 'cod_flat_fee', 'cod_percent'];
-
-        // convert to numbers for all attributes above
-        foreach ($toNumbers as $attribute) {
-            if (isset($serviceRate->{$attribute})) {
-                $serviceRate->{$attribute} = Utils::numbersOnly($serviceRate->{$attribute});
-            }
-        }
-    }
-
-    /**
      * Handle the ServiceRate "created" event.
      *
      * @return void

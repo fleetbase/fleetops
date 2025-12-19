@@ -56,7 +56,7 @@ class OrderObserver
     protected function invalidateCache(?Order $order = null): void
     {
         LiveCacheService::invalidateMultiple(['orders', 'routes', 'coordinates']);
-        
+
         // Invalidate order-specific tracker cache if order is provided
         if ($order && $order->uuid) {
             Cache::forget("order:{$order->uuid}:tracker");

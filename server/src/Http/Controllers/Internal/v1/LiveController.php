@@ -7,8 +7,6 @@ use Fleetbase\FleetOps\Http\Resources\v1\Driver as DriverResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as OrderIndexResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Place as PlaceIndexResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Vehicle as VehicleIndexResource;
-use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
-use Fleetbase\FleetOps\Http\Resources\v1\Vehicle as VehicleResource;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
@@ -163,14 +161,14 @@ class LiveController extends Controller
      */
     public function drivers(Request $request)
     {
-        $bounds = $request->input('bounds'); // Map viewport bounds: [south, west, north, east]
+        $bounds      = $request->input('bounds'); // Map viewport bounds: [south, west, north, east]
         $cacheParams = ['bounds' => $bounds];
-        
+
         return LiveCacheService::remember('drivers', $cacheParams, function () use ($bounds) {
             $query = Driver::where(['company_uuid' => session('company')])
                 ->with(['user', 'vehicle', 'currentJob'])
                 ->applyDirectivesForPermissions('fleet-ops list driver');
-            
+
             // Filter out drivers with invalid coordinates
             $query->whereNotNull('location')
                 ->whereRaw('
@@ -178,11 +176,11 @@ class LiveController extends Controller
                     AND ST_X(location) BETWEEN -180 AND 180
                     AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
                 ');
-            
+
             // Apply spatial filtering if bounds are provided
             if ($bounds && is_array($bounds) && count($bounds) === 4) {
                 [$south, $west, $north, $east] = $bounds;
-                
+
                 // Use MySQL spatial functions for POINT column
                 // ST_Within checks if location is within the bounding box
                 $query->whereRaw(
@@ -190,7 +188,7 @@ class LiveController extends Controller
                     [$west, $south, $east, $north]
                 );
             }
-            
+
             $drivers = $query->get();
 
             return DriverResource::collection($drivers);
@@ -204,15 +202,15 @@ class LiveController extends Controller
      */
     public function vehicles(Request $request)
     {
-        $bounds = $request->input('bounds'); // Map viewport bounds: [south, west, north, east]
+        $bounds      = $request->input('bounds'); // Map viewport bounds: [south, west, north, east]
         $cacheParams = ['bounds' => $bounds];
-        
+
         return LiveCacheService::remember('vehicles', $cacheParams, function () use ($bounds) {
             // Fetch vehicles that are online
             $query = Vehicle::where(['company_uuid' => session('company')])
                 ->with(['devices', 'driver'])
                 ->applyDirectivesForPermissions('fleet-ops list vehicle');
-            
+
             // Filter out vehicles with invalid coordinates
             $query->whereNotNull('location')
                 ->whereRaw('
@@ -220,11 +218,11 @@ class LiveController extends Controller
                     AND ST_X(location) BETWEEN -180 AND 180
                     AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
                 ');
-            
+
             // Apply spatial filtering if bounds are provided
             if ($bounds && is_array($bounds) && count($bounds) === 4) {
                 [$south, $west, $north, $east] = $bounds;
-                
+
                 // Use MySQL spatial functions for POINT column
                 // ST_Within checks if location is within the bounding box
                 $query->whereRaw(
@@ -232,7 +230,7 @@ class LiveController extends Controller
                     [$west, $south, $east, $north]
                 );
             }
-            
+
             $vehicles = $query->get();
 
             return VehicleIndexResource::collection($vehicles);
@@ -254,7 +252,7 @@ class LiveController extends Controller
             $query = Place::where(['company_uuid' => session('company')])
                 ->filter(new PlaceFilter($request))
                 ->applyDirectivesForPermissions('fleet-ops list place');
-            
+
             // Filter out places with invalid coordinates
             $query->whereNotNull('location')
                 ->whereRaw('
@@ -262,12 +260,12 @@ class LiveController extends Controller
                     AND ST_X(location) BETWEEN -180 AND 180
                     AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
                 ');
-            
+
             // Apply spatial filtering if bounds are provided
             $bounds = $request->input('bounds');
             if ($bounds && is_array($bounds) && count($bounds) === 4) {
                 [$south, $west, $north, $east] = $bounds;
-                
+
                 // Use MySQL spatial functions for POINT column
                 // ST_Within checks if location is within the bounding box
                 $query->whereRaw(
@@ -275,7 +273,7 @@ class LiveController extends Controller
                     [$west, $south, $east, $north]
                 );
             }
-            
+
             $places = $query->get();
 
             return PlaceIndexResource::collection($places);

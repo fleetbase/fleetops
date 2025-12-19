@@ -238,7 +238,7 @@ class ServiceRate extends Model
      */
     public function isParcelService(): bool
     {
-        return $this->service_type === 'parcel';
+        return $this->rate_calculation_method === 'parcel';
     }
 
     /**
