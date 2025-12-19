@@ -138,24 +138,6 @@ export default class ServiceRateActionsService extends ResourceActionService {
         }
     }
 
-    cleanupDuplicateRateFees(serviceRate) {
-        // After save, remove any unsaved records that are duplicates of saved records
-        const existing = serviceRate.rate_fees.toArray();
-        const saved = existing.filter(f => !f.isNew);
-        const unsaved = existing.filter(f => f.isNew);
-        
-        // Create a map of saved fees by distance
-        const savedByDistance = new Map(saved.map(f => [f.distance, f]));
-        
-        // Remove unsaved fees that have the same distance as saved fees
-        unsaved.forEach(fee => {
-            if (savedByDistance.has(fee.distance)) {
-                serviceRate.rate_fees.removeObject(fee);
-                fee.unloadRecord();
-            }
-        });
-    }
-
     generateFixedRateFees(serviceRate) {
         if (!serviceRate.isFixedRate) return;
         

@@ -21,12 +21,6 @@ export default class OperationsServiceRatesIndexEditController extends Controlle
     @task *save(serviceRate) {
         try {
             yield serviceRate.save();
-            
-            // Clean up any duplicate unsaved records after save
-            if (serviceRate.isFixedRate) {
-                this.serviceRateActions.cleanupDuplicateRateFees(serviceRate);
-            }
-            
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.operations.service-rates.index.details', serviceRate);
