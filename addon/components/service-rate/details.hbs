@@ -79,7 +79,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {{#each @resource.rate_fees as |rateFee|}}
+                            {{#each @resource.rateFees as |rateFee|}}
                                 <tr>
                                     <td>{{rateFee.distance}}-{{add rateFee.distance 1}} {{@resource.max_distance_unit}}</td>
                                     <td>{{format-currency rateFee.fee @resource.currency}}</td>
