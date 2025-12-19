@@ -107,12 +107,12 @@
                         @name={{t "service-rate.fields.maximum-distance"}}
                         @type="number"
                         @value={{@resource.max_distance}}
-                        @onChange={{this.onMaxDistanceChange}}
                         @placeholder={{t "service-rate.fields.maximum-distance"}}
                         @disabled={{cannot-write @resource}}
                         @helpText={{t "service-rate.fields.maximum-distance-help-text"}}
                         @required={{true}}
                         min={{1}}
+                        {{on "change" this.onMaxDistanceChange}}
                     />
                     <InputGroup @name="Max Distance Unit" @helpText="Select the maximum distance this service rate supports" @required={{true}}>
                         <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
