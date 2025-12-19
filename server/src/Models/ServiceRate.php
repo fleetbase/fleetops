@@ -339,6 +339,8 @@ class ServiceRate extends Model
                 $updateableAttributes = collect($serviceRateFees[$i])->except(['uuid', 'created_at', 'updated_at'])->toArray();
 
                 if ($updateableAttributes) {
+                    // Apply casts before update
+                    $updateableAttributes = ServiceRateFee::onRowInsert($updateableAttributes);
                     ServiceRateFee::where('uuid', $id)->update($updateableAttributes);
                 }
 
@@ -349,7 +351,13 @@ class ServiceRate extends Model
             $serviceRateFees[$i]['service_rate_uuid'] = $this->uuid;
         }
 
-        $serviceRateFees = collect($serviceRateFees)->filter()->values()->toArray();
+        // Apply casts to all rows before bulk insert
+        $serviceRateFees = collect($serviceRateFees)
+            ->filter()
+            ->map(fn($row) => ServiceRateFee::onRowInsert($row))
+            ->values()
+            ->toArray();
+
         ServiceRateFee::bulkInsert($serviceRateFees);
 
         return $this;
@@ -377,6 +385,8 @@ class ServiceRate extends Model
                 $updateableAttributes = collect($serviceRateParcelFees[$i])->except(['uuid', 'created_at', 'updated_at'])->toArray();
 
                 if ($updateableAttributes) {
+                    // Apply casts before update
+                    $updateableAttributes = ServiceRateParcelFee::onRowInsert($updateableAttributes);
                     ServiceRateParcelFee::where('uuid', $id)->update($updateableAttributes);
                 }
 
@@ -387,7 +397,13 @@ class ServiceRate extends Model
             $serviceRateParcelFees[$i]['service_rate_uuid'] = $this->uuid;
         }
 
-        $serviceRateParcelFees = collect($serviceRateParcelFees)->filter()->values()->toArray();
+        // Apply casts to all rows before bulk insert
+        $serviceRateParcelFees = collect($serviceRateParcelFees)
+            ->filter()
+            ->map(fn($row) => ServiceRateParcelFee::onRowInsert($row))
+            ->values()
+            ->toArray();
+
         ServiceRateParcelFee::bulkInsert($serviceRateParcelFees);
 
         return $this;
