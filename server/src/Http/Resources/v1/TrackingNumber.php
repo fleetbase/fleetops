@@ -23,7 +23,7 @@ class TrackingNumber extends FleetbaseResource
             'public_id'       => $this->when(Http::isInternalRequest(), $this->public_id),
             'status_uuid'     => $this->when(Http::isInternalRequest(), $this->status_uuid),
             'owner_uuid'      => $this->when(Http::isInternalRequest(), $this->owner_uuid),
-            'owner_type'      => $this->when(Http::isInternalRequest(), $this->owner_type),
+            'owner_type'      => $this->when(Http::isInternalRequest(), $this->owner_type ? Utils::toEmberResourceType($this->owner_type) : null),
             'tracking_number' => $this->tracking_number,
             'subject'         => Utils::get($this->owner, 'public_id'),
             'region'          => $this->region,

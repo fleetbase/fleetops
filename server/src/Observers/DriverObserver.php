@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Observers;
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\LiveCacheService;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\User;
 
@@ -20,6 +21,26 @@ class DriverObserver
         if (empty($driver->location)) {
             $driver->location = new Point(0, 0);
         }
+    }
+
+    /**
+     * Handle the Driver "created" event.
+     *
+     * @return void
+     */
+    public function created(Driver $driver)
+    {
+        LiveCacheService::invalidate('drivers');
+    }
+
+    /**
+     * Handle the Driver "updated" event.
+     *
+     * @return void
+     */
+    public function updated(Driver $driver)
+    {
+        LiveCacheService::invalidate('drivers');
     }
 
     /**
@@ -48,5 +69,7 @@ class DriverObserver
         if ($user && $user->hasRole('Driver')) {
             $user->delete();
         }
+
+        LiveCacheService::invalidate('drivers');
     }
 }

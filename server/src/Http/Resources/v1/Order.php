@@ -7,7 +7,6 @@ use Fleetbase\Http\Resources\Comment;
 use Fleetbase\Http\Resources\File;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
-use Fleetbase\Support\Resolve;
 
 class Order extends FleetbaseResource
 {
@@ -19,14 +18,9 @@ class Order extends FleetbaseResource
     public function toArray($request): array
     {
         $isInternal = Http::isInternalRequest();
-        $isPublic   = Http::isPublicRequest();
 
         // Precompute expensive bits safely
         $orderConfigPublicId = data_get($this->orderConfig, 'public_id');
-
-        // Driver / vehicle relations (prevent eager noise)
-        $driverAssignedModel  = $this->driverAssigned()->without(['jobs', 'currentJob'])->first();
-        $vehicleAssignedModel = $this->vehicleAssigned()->without(['fleets', 'vendor'])->first();
 
         // Tracker helpers (avoid calling ->tracker() twice)
         $withTrackerData = $request->has('with_tracker_data') || !empty($this->resource->tracker_data);
@@ -41,9 +35,9 @@ class Order extends FleetbaseResource
             'company_uuid'         => $this->when($isInternal, $this->company_uuid),
             'transaction_uuid'     => $this->when($isInternal, $this->transaction_uuid),
             'customer_uuid'        => $this->when($isInternal, $this->customer_uuid),
-            'customer_type'        => $this->when($isInternal, $this->customer_type),
+            'customer_type'        => $this->when($isInternal, $this->customer_type ? Utils::toEmberResourceType($this->customer_type) : null),
             'facilitator_uuid'     => $this->when($isInternal, $this->facilitator_uuid),
-            'facilitator_type'     => $this->when($isInternal, $this->facilitator_type),
+            'facilitator_type'     => $this->when($isInternal, $this->facilitator_type ? Utils::toEmberResourceType($this->facilitator_type) : null),
             'payload_uuid'         => $this->when($isInternal, $this->payload_uuid),
             'route_uuid'           => $this->when($isInternal, $this->route_uuid),
             'purchase_rate_uuid'   => $this->when($isInternal, $this->purchase_rate_uuid),
@@ -61,11 +55,19 @@ class Order extends FleetbaseResource
                 }),
                 $orderConfigPublicId
             ),
-            'customer'             => $this->setCustomerType(Resolve::resourceForMorph($this->customer_type, $this->customer_uuid)),
+            'customer'             => $this->whenLoaded('customer', function () {
+                return $this->setCustomerType($this->transformMorphResource($this->customer));
+            }),
             'payload'              => new Payload($this->payload),
-            'facilitator'          => $this->setFacilitatorType(Resolve::resourceForMorph($this->facilitator_type, $this->facilitator_uuid)),
-            'driver_assigned'      => new Driver($driverAssignedModel),
-            'vehicle_assigned'     => new Vehicle($vehicleAssignedModel),
+            'facilitator'          => $this->whenLoaded('facilitator', function () {
+                return $this->setFacilitatorType($this->transformMorphResource($this->facilitator));
+            }),
+            'driver_assigned'      => $this->whenLoaded('driverAssigned', function () {
+                return new Driver($this->driverAssigned);
+            }),
+            'vehicle_assigned'     => $this->whenLoaded('vehicleAssigned', function () {
+                return new Vehicle($this->vehicleAssigned);
+            }),
             'tracking_number'      => new TrackingNumber($this->trackingNumber),
             'tracking_statuses'    => $this->whenLoaded('trackingStatuses', function () {
                 return TrackingStatus::collection($this->trackingStatuses);
@@ -140,6 +142,31 @@ class Order extends FleetbaseResource
     }
 
     /**
+     * Transform a polymorphic relationship into its appropriate resource.
+     * This method dynamically resolves the resource class based on the model type.
+     *
+     * @param \Illuminate\Database\Eloquent\Model|null $model
+     *
+     * @return array|null
+     */
+    protected function transformMorphResource($model)
+    {
+        if (!$model) {
+            return null;
+        }
+
+        // Use Find to get the appropriate resource class for this model
+        $resourceClass = \Fleetbase\Support\Find::httpResourceForModel($model);
+
+        if ($resourceClass) {
+            return (new $resourceClass($model))->resolve();
+        }
+
+        // Fallback to generic resource
+        return (new \Illuminate\Http\Resources\Json\JsonResource($model))->resolve();
+    }
+
+    /**
      * Transform the resource into an webhook payload.
      *
      * @return array
@@ -149,9 +176,9 @@ class Order extends FleetbaseResource
         return [
             'id'              => $this->public_id,
             'internal_id'     => $this->internal_id,
-            'customer'        => Resolve::resourceForMorph($this->customer_type, $this->customer_uuid),
+            'customer'        => $this->transformMorphResource($this->customer),
             'payload'         => new Payload($this->payload),
-            'facilitator'     => Resolve::resourceForMorph($this->facilitator_type, $this->facilitator_uuid),
+            'facilitator'     => $this->transformMorphResource($this->facilitator),
             'driver_assigned' => new Driver($this->driverAssigned),
             'tracking_number' => new TrackingNumber($this->trackingNumber),
             'purchase_rate'   => new PurchaseRate($this->purchaseRate),

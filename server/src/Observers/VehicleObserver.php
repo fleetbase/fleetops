@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Observers;
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\LiveCacheService;
 
 class VehicleObserver
 {
@@ -28,6 +29,8 @@ class VehicleObserver
                 $vehicle->setRelation('driver', $driver);
             }
         }
+
+        LiveCacheService::invalidate('vehicles');
     }
 
     /**
@@ -51,6 +54,8 @@ class VehicleObserver
                 $vehicle->setRelation('driver', $driver);
             }
         }
+
+        LiveCacheService::invalidate('vehicles');
     }
 
     /**
@@ -62,5 +67,7 @@ class VehicleObserver
     {
         // Unassign the deleted vehicle from matching driver/(s)
         Driver::where(['vehicle_uuid' => $vehicle->uuid])->delete();
+
+        LiveCacheService::invalidate('vehicles');
     }
 }

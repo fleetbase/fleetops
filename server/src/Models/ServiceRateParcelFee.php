@@ -3,7 +3,6 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Money;
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasUuid;
 use PhpUnitsOfMeasure\PhysicalQuantity\Length;
@@ -59,19 +58,9 @@ class ServiceRateParcelFee extends Model
 
     public static function onRowInsert($row)
     {
-        $row['fee'] = Utils::numbersOnly($row['fee']);
+        $row['fee'] = Money::apply($row['fee'] ?? 0);
 
         return $row;
-    }
-
-    /**
-     * Set the fee as only numbers.
-     *
-     * @void
-     */
-    public function setFeeAttribute($value)
-    {
-        $this->attributes['fee'] = Utils::numbersOnly($value);
     }
 
     /**

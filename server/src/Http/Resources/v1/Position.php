@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
@@ -26,7 +27,7 @@ class Position extends FleetbaseResource
             'company_uuid'                    => $this->when(Http::isInternalRequest(), $this->company_uuid),
             'destination_uuid'                => $this->when(Http::isInternalRequest(), $this->destination_uuid),
             'subject_uuid'                    => $this->when(Http::isInternalRequest(), $this->subject_uuid),
-            'subject_type'                    => $this->subject_type,
+            'subject_type'                    => $this->subject_type ? Utils::toEmberResourceType($this->subject_type) : null,
             'subject'                         => $this->whenLoaded('subject', fn () => Resolve::httpResourceForModel($this->subject)),
             'order'                           => $this->whenLoaded('order', fn () => new Order($this->order)),
             'destination'                     => $this->whenLoaded('destination', fn () => new Place($this->destination)),

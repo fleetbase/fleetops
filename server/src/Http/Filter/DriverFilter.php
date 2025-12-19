@@ -169,6 +169,11 @@ class DriverFilter extends Filter
         if (Utils::isCoordinates($nearby)) {
             $location = Utils::getPointFromMixed($nearby);
 
+            $this->builder->whereNotNull('location')->whereRaw('
+                ST_Y(location) BETWEEN -90 AND 90
+                AND ST_X(location) BETWEEN -180 AND 180
+                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+            ');
             $this->builder->distanceSphere('location', $location, $distance);
             $this->builder->distanceSphereValue('location', $location);
 
@@ -181,6 +186,11 @@ class DriverFilter extends Filter
             $place = Place::createFromMixed($nearby, [], false);
 
             if ($nearby instanceof Place) {
+                $this->builder->whereNotNull('location')->whereRaw('
+                ST_Y(location) BETWEEN -90 AND 90
+                AND ST_X(location) BETWEEN -180 AND 180
+                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+            ');
                 $this->builder->distanceSphere('location', $place->location, $distance);
                 $this->builder->distanceSphereValue('location', $place->location);
 

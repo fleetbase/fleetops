@@ -17,6 +17,7 @@ use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\Transaction;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -45,6 +46,7 @@ class Order extends Model
     use HasInternalId;
     use SendsWebhooks;
     use HasApiModelBehavior;
+    use HasApiModelCache;
     use HasOptionsAttributes;
     use HasMetaAttributes;
     use TracksApiCredential;
@@ -492,7 +494,7 @@ class Order extends Model
      */
     public function getFacilitatorIsVendorAttribute()
     {
-        return $this->facilitator_type === 'Fleetbase\\FleetOps\\Models\\Vendor';
+        return $this->facilitator_type === Vendor::class;
     }
 
     /**
@@ -502,7 +504,7 @@ class Order extends Model
      */
     public function getFacilitatorIsIntegratedVendorAttribute()
     {
-        return $this->facilitator_type === 'Fleetbase\\FleetOps\\Models\\IntegratedVendor';
+        return $this->facilitator_type === IntegratedVendor::class;
     }
 
     /**
@@ -512,7 +514,7 @@ class Order extends Model
      */
     public function getFacilitatorIsContactAttribute()
     {
-        return $this->facilitator_type === 'Fleetbase\\FleetOps\\Models\\Contact';
+        return $this->facilitator_type === Contact::class;
     }
 
     /**
@@ -522,7 +524,7 @@ class Order extends Model
      */
     public function getCustomerIsVendorAttribute()
     {
-        return $this->customer_type === 'Fleetbase\\FleetOps\\Models\\Vendor';
+        return $this->customer_type === Vendor::class;
     }
 
     /**
@@ -532,7 +534,7 @@ class Order extends Model
      */
     public function getCustomerIsContactAttribute()
     {
-        return $this->customer_type === 'Fleetbase\\FleetOps\\Models\\Contact';
+        return $this->customer_type === Contact::class;
     }
 
     /**
@@ -1830,6 +1832,11 @@ class Order extends Model
                 });
             })
             ->whereNull('deleted_at')
+            ->whereNotNull('location')->whereRaw('
+                ST_Y(location) BETWEEN -90 AND 90
+                AND ST_X(location) BETWEEN -180 AND 180
+                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+            ')
             ->distanceSphere('location', $pickup, $distance)
             ->distanceSphereValue('location', $pickup)
             ->withoutGlobalScopes()

@@ -29,7 +29,7 @@ export default class OrderDetailsNotesComponent extends Component {
     @task *save() {
         try {
             yield this.args.resource.persistProperty('notes', this.args.resource.notes);
-            this.notifications.success(this.intl.t('fleet-ops.operations.orders.index.view.order-notes-updated'));
+            this.notifications.success(this.intl.t('order.fields.order-notes-updated'));
             this.isEditing = false;
         } catch (error) {
             this.notifications.serverError(error);

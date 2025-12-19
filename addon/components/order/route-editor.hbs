@@ -11,11 +11,11 @@
                     <Button
                         @type="magic"
                         @icon="magic"
-                        @text={{t "fleet-ops.operations.orders.index.new.optimize-route"}}
+                        @text={{t "order.fields.optimize-route"}}
                         @size="sm"
                         @onClick={{perform this.optimizeRoute}}
                         @permission="fleet-ops optimize order"
-                        @helpText={{t "fleet-ops.operations.orders.index.new.optimize-route-help-text"}}
+                        @helpText={{t "order.fields.optimize-route-help-text"}}
                         @disabled={{lt @resource.payload.waypoints.length 3}}
                         @isLoading={{this.optimizeRoute.isRunning}}
                     />
@@ -46,7 +46,7 @@
                         <ModelSelect
                             @modelName="place"
                             @selectedModel={{waypoint}}
-                            @placeholder={{concat (t "fleet-ops.operations.orders.index.new.select-waypoint-placeholder") " " (add index 1)}}
+                            @placeholder={{concat (t "order.fields.select-waypoint") " " (add index 1)}}
                             @triggerClass="form-select form-input truncate max-w-300px"
                             @infiniteScroll={{false}}
                             @customSearchEndpoint="places/search"

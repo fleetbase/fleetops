@@ -9,6 +9,7 @@ use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -21,6 +22,7 @@ class FuelReport extends Model
     use TracksApiCredential;
     use HasPublicId;
     use HasApiModelBehavior;
+    use HasApiModelCache;
     use SpatialTrait;
     use Searchable;
     use HasCustomFields;

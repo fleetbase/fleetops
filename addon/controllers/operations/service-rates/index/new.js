@@ -13,13 +13,6 @@ export default class OperationsServiceRatesIndexNewController extends Controller
     @tracked serviceRate = this.serviceRateActions.createNewInstance();
 
     @task *save(serviceRate) {
-        if (typeof serviceRate.syncServiceRateFees === 'function') {
-            serviceRate.syncServiceRateFees();
-        }
-        if (typeof serviceRate.syncPerDropFees === 'function') {
-            serviceRate.syncPerDropFees();
-        }
-
         try {
             yield serviceRate.save();
             this.overlay?.close();

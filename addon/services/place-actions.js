@@ -30,7 +30,11 @@ export default class PlaceActionsService extends ResourceActionService {
                 place,
             });
         },
-        edit: (place) => {
+        edit: async (place) => {
+            if (place?.meta?._index_resource) {
+                await place.reload();
+            }
+
             return this.resourceContextPanel.open({
                 content: 'place/form',
                 title: this.intl.t('common.edit-resource-name', { resourceName: place.address }),
@@ -40,7 +44,11 @@ export default class PlaceActionsService extends ResourceActionService {
                 place,
             });
         },
-        view: (place) => {
+        view: async (place) => {
+            if (place?.meta?._index_resource) {
+                await place.reload();
+            }
+
             return this.resourceContextPanel.open({
                 place,
                 tabs: [
@@ -65,7 +73,11 @@ export default class PlaceActionsService extends ResourceActionService {
                 ...options,
             });
         },
-        edit: (place, options = {}, saveOptions = {}) => {
+        edit: async (place, options = {}, saveOptions = {}) => {
+            if (place?.meta?._index_resource) {
+                await place.reload();
+            }
+
             return this.modalsManager.show('modals/resource', {
                 resource: place,
                 title: this.intl.t('common.edit-resource-name', { resourceName: place.address }),
@@ -76,7 +88,11 @@ export default class PlaceActionsService extends ResourceActionService {
                 ...options,
             });
         },
-        view: (place, options = {}) => {
+        view: async (place, options = {}) => {
+            if (place?.meta?._index_resource) {
+                await place.reload();
+            }
+
             return this.modalsManager.show('modals/resource', {
                 resource: place,
                 title: place.displayName,

@@ -5,6 +5,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
 export default class OperationsServiceRatesIndexEditController extends Controller {
+    @service serviceRateActions;
     @service hostRouter;
     @service intl;
     @service notifications;
@@ -18,13 +19,6 @@ export default class OperationsServiceRatesIndexEditController extends Controlle
     ];
 
     @task *save(serviceRate) {
-        if (typeof serviceRate.syncServiceRateFees === 'function') {
-            serviceRate.syncServiceRateFees();
-        }
-        if (typeof serviceRate.syncPerDropFees === 'function') {
-            serviceRate.syncPerDropFees();
-        }
-
         try {
             yield serviceRate.save();
             this.overlay?.close();

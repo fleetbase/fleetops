@@ -11,6 +11,7 @@ use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\LaravelMysqlSpatial\Types\Polygon;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -30,6 +31,7 @@ class ServiceArea extends Model
     use TracksApiCredential;
     use SpatialTrait;
     use HasApiModelBehavior;
+    use HasApiModelCache;
     use HasCustomFields;
 
     /**

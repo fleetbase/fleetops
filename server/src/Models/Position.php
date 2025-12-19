@@ -6,6 +6,7 @@ use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,7 @@ class Position extends Model
     use HasUuid;
     use TracksApiCredential;
     use HasApiModelBehavior;
+    use HasApiModelCache;
     use SpatialTrait;
 
     /**

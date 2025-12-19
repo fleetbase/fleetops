@@ -238,7 +238,7 @@ class ServiceRate extends Model
      */
     public function isParcelService(): bool
     {
-        return $this->service_type === 'parcel';
+        return $this->rate_calculation_method === 'parcel';
     }
 
     /**
@@ -339,6 +339,8 @@ class ServiceRate extends Model
                 $updateableAttributes = collect($serviceRateFees[$i])->except(['uuid', 'created_at', 'updated_at'])->toArray();
 
                 if ($updateableAttributes) {
+                    // Apply casts before update
+                    $updateableAttributes = ServiceRateFee::onRowInsert($updateableAttributes);
                     ServiceRateFee::where('uuid', $id)->update($updateableAttributes);
                 }
 
@@ -377,6 +379,8 @@ class ServiceRate extends Model
                 $updateableAttributes = collect($serviceRateParcelFees[$i])->except(['uuid', 'created_at', 'updated_at'])->toArray();
 
                 if ($updateableAttributes) {
+                    // Apply casts before update
+                    $updateableAttributes = ServiceRateParcelFee::onRowInsert($updateableAttributes);
                     ServiceRateParcelFee::where('uuid', $id)->update($updateableAttributes);
                 }
 

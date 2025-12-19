@@ -79,6 +79,11 @@ class HandleOrderDispatched implements ShouldQueue
                     });
                 })
                 ->whereNull('deleted_at')
+                ->whereNotNull('location')->whereRaw('
+                ST_Y(location) BETWEEN -90 AND 90
+                AND ST_X(location) BETWEEN -180 AND 180
+                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+            ')
                 ->distanceSphere('location', $pickup, $distance)
                 ->distanceSphereValue('location', $pickup)
                 ->withoutGlobalScopes()

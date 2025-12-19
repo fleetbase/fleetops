@@ -126,12 +126,20 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 width: 60,
                 actions: [
                     {
-                        label: this.intl.t('column.edit-service'),
+                        label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.service-rate') }),
+                        icon: 'eye',
+                        fn: this.serviceRateActions.transition.view,
+                        permission: 'fleet-ops view service-rate',
+                    },
+                    {
+                        label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.service-rate') }),
+                        icon: 'pencil',
                         fn: this.serviceRateActions.transition.edit,
                         permission: 'fleet-ops view service-rate',
                     },
                     {
-                        label: this.intl.t('column.delete-service'),
+                        label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.service-rate') }),
+                        icon: 'trash',
                         fn: this.serviceRateActions.delete,
                         permission: 'fleet-ops delete service-rate',
                     },

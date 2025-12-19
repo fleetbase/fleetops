@@ -11,6 +11,7 @@ use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -184,6 +185,14 @@ class OrderTracker
             return -1;
         }
 
+        // Convert SpatialExpression to Point objects
+        $start = Utils::getPointFromMixed($start);
+        $end   = Utils::getPointFromMixed($end);
+
+        if (!$start || !$end) {
+            return -1;
+        }
+
         try {
             $response = OSRM::getRoute($start, $end);
             if (isset($response['code']) && $response['code'] === 'Ok') {
@@ -211,6 +220,14 @@ class OrderTracker
         $start              = $this->getDriverCurrentLocation();
         $end                = $waypoint->location;
 
+        // Convert SpatialExpression to Point objects
+        $start = Utils::getPointFromMixed($start);
+        $end   = Utils::getPointFromMixed($end);
+
+        if (!$start || !$end) {
+            return -1;
+        }
+
         try {
             $response           = OSRM::getRoute($start, $end);
             if (isset($response['code']) && $response['code'] === 'Ok') {
@@ -237,6 +254,14 @@ class OrderTracker
     {
         $start    = $this->getDriverCurrentLocation();
         $end      = $this->payload->getDropoffOrLastWaypoint()->location;
+
+        // Convert SpatialExpression to Point objects
+        $start = Utils::getPointFromMixed($start);
+        $end   = Utils::getPointFromMixed($end);
+
+        if (!$start || !$end) {
+            return -1;
+        }
 
         try {
             $response = OSRM::getRoute($start, $end);
@@ -487,41 +512,88 @@ class OrderTracker
 
     public function eta(): array
     {
-        // Load missing waypoints and places
-        $waypoints = $this->payload->getAllStops();
+        // Generate cache key based on order UUID and updated_at timestamp
+        $cacheKey = 'order_eta:' . $this->order->uuid . ':' . optional($this->order->updated_at)->timestamp;
 
-        // ETA's
-        $eta = [];
-        foreach ($waypoints as $waypoint) {
-            $eta[$waypoint->uuid] = $this->getWaypointETA($waypoint);
-        }
+        // Return cached data if available
+        return Cache::remember($cacheKey, 60, function () {
+            // Load missing waypoints and places
+            $waypoints = $this->payload->getAllStops();
 
-        return $eta;
+            // ETA's
+            $eta = [];
+            foreach ($waypoints as $waypoint) {
+                $eta[$waypoint->uuid] = $this->getWaypointETA($waypoint);
+            }
+
+            return $eta;
+        });
     }
 
     /**
      * Get all key tracker information as an array.
+     * Cached for 60 seconds to avoid repeated OSRM calls.
      */
     public function toArray(): array
     {
-        $estimatedCompletionTime = $this->getEstimatedCompletionTime();
-        $orderProgressPercentage = $this->getOrderProgressPercentage();
+        // Generate cache key based on order UUID and updated_at timestamp
+        $cacheKey = 'order_tracker:' . $this->order->uuid . ':' . optional($this->order->updated_at)->timestamp;
 
-        return [
-            'driver_current_location'             => $this->getDriverCurrentLocation(),
-            'progress_percentage'                 => $orderProgressPercentage,
-            'total_distance'                      => $this->getTotalDistance(),
-            'completed_distance'                  => $this->getCompletedDistance(),
-            'current_destination_eta'             => $this->getCurrentDestinationETA(),
-            'completion_eta'                      => $this->getCompletionETA(),
-            'estimated_completion_time'           => $estimatedCompletionTime,
-            'estimated_completion_time_formatted' => $estimatedCompletionTime instanceof Carbon ? $estimatedCompletionTime->format('M jS, Y H:i') : null,
-            'start_time'                          => $this->getOrderStartTime(),
-            'completion_time'                     => $this->getOrderCompletionTime(),
-            'current_destination'                 => $this->getCurrentDestination(),
-            'next_destination'                    => $this->getNextDestination(),
-            'first_waypoint_completed'            => $orderProgressPercentage > 10,
-            'last_waypoint_completed'             => $orderProgressPercentage === 100 || $this->order->status === 'completed',
-        ];
+        // Return cached data if available
+        return Cache::remember($cacheKey, 60, function () {
+            // Early return for completed orders - skip expensive OSRM calls
+            if (in_array($this->order->status, ['completed', 'canceled'])) {
+                return [
+                    'driver_current_location'             => null,
+                    'progress_percentage'                 => 100,
+                    'total_distance'                      => 0,
+                    'completed_distance'                  => 0,
+                    'current_destination_eta'             => 0,
+                    'completion_eta'                      => 0,
+                    'estimated_completion_time'           => null,
+                    'estimated_completion_time_formatted' => null,
+                    'start_time'                          => $this->getOrderStartTime(),
+                    'completion_time'                     => $this->getOrderCompletionTime(),
+                    'current_destination'                 => null,
+                    'next_destination'                    => null,
+                    'first_waypoint_completed'            => true,
+                    'last_waypoint_completed'             => true,
+                ];
+            }
+
+            // Wrap OSRM-dependent calculations in try-catch for graceful degradation
+            try {
+                $totalDistance         = $this->getTotalDistance();
+                $completedDistance     = $this->getCompletedDistance();
+                $currentDestinationEta = $this->getCurrentDestinationETA();
+                $completionEta         = $this->getCompletionETA();
+            } catch (\Exception $e) {
+                Log::warning('OrderTracker: Failed to calculate distances/ETAs', ['error' => $e->getMessage()]);
+                $totalDistance         = 0;
+                $completedDistance     = 0;
+                $currentDestinationEta = 0;
+                $completionEta         = 0;
+            }
+
+            $estimatedCompletionTime = $this->getEstimatedCompletionTime();
+            $orderProgressPercentage = $this->getOrderProgressPercentage();
+
+            return [
+                'driver_current_location'             => $this->getDriverCurrentLocation(),
+                'progress_percentage'                 => $orderProgressPercentage,
+                'total_distance'                      => $totalDistance,
+                'completed_distance'                  => $completedDistance,
+                'current_destination_eta'             => $currentDestinationEta,
+                'completion_eta'                      => $completionEta,
+                'estimated_completion_time'           => $estimatedCompletionTime,
+                'estimated_completion_time_formatted' => $estimatedCompletionTime instanceof Carbon ? $estimatedCompletionTime->format('M jS, Y H:i') : null,
+                'start_time'                          => $this->getOrderStartTime(),
+                'completion_time'                     => $this->getOrderCompletionTime(),
+                'current_destination'                 => $this->getCurrentDestination(),
+                'next_destination'                    => $this->getNextDestination(),
+                'first_waypoint_completed'            => $orderProgressPercentage > 10,
+                'last_waypoint_completed'             => $orderProgressPercentage === 100 || $this->order->status === 'completed',
+            ];
+        });
     }
 }

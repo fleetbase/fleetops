@@ -12,6 +12,7 @@ use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Requests\BulkDispatchRequest;
 use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as OrderIndexResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
 use Fleetbase\FleetOps\Imports\OrdersImport;
@@ -36,6 +37,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -49,6 +51,13 @@ class OrderController extends FleetOpsController
      * @var string
      */
     public $resource = 'order';
+
+    /**
+     * The lightweight resource for index/list views.
+     *
+     * @var string
+     */
+    public $indexResource = OrderIndexResource::class;
 
     /**
      * Handle order waypoint changes if any.
@@ -760,7 +769,11 @@ class OrderController extends FleetOpsController
             return response()->error('No order found.');
         }
 
-        $trackerInfo = $order->tracker()->toArray();
+        // Cache tracker data for 30 seconds with order-specific key
+        $cacheKey    = "order:{$order->uuid}:tracker";
+        $trackerInfo = Cache::remember($cacheKey, 30, function () use ($order) {
+            return $order->tracker()->toArray();
+        });
 
         return response()->json($trackerInfo);
     }

@@ -4,14 +4,15 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Filter\PlaceFilter;
 use Fleetbase\FleetOps\Http\Resources\v1\Driver as DriverResource;
-use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
-use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
-use Fleetbase\FleetOps\Http\Resources\v1\Vehicle as VehicleResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as OrderIndexResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Place as PlaceIndexResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Vehicle as VehicleIndexResource;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Route;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\LiveCacheService;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -27,20 +28,23 @@ class LiveController extends Controller
      */
     public function coordinates()
     {
-        $coordinates = [];
+        return LiveCacheService::remember('coordinates', [], function () {
+            $coordinates = [];
 
-        // Fetch active orders for the current company
-        $orders = Order::where('company_uuid', session('company'))
-            ->whereNotIn('status', ['canceled', 'completed'])
-            ->applyDirectivesForPermissions('fleet-ops list order')
-            ->get();
+            // Fetch active orders for the current company
+            $orders = Order::where('company_uuid', session('company'))
+                ->whereNotIn('status', ['canceled', 'completed'])
+                ->with(['payload.dropoff', 'payload.pickup'])
+                ->applyDirectivesForPermissions('fleet-ops list order')
+                ->get();
 
-        // Loop through each order to get its current destination location
-        foreach ($orders as $order) {
-            $coordinates[] = $order->getCurrentDestinationLocation();
-        }
+            // Loop through each order to get its current destination location
+            foreach ($orders as $order) {
+                $coordinates[] = $order->getCurrentDestinationLocation();
+            }
 
-        return response()->json($coordinates);
+            return response()->json($coordinates);
+        });
     }
 
     /**
@@ -50,31 +54,34 @@ class LiveController extends Controller
      */
     public function routes()
     {
-        // Fetch routes that are not canceled or completed and have an assigned driver
-        $routes = Route::where('company_uuid', session('company'))
-            ->whereHas(
-                'order',
-                function ($q) {
-                    $q->whereNotIn('status', ['canceled', 'completed', 'expired']);
-                    $q->whereNotNull('driver_assigned_uuid');
-                    $q->whereNull('deleted_at');
-                    $q->whereHas('trackingNumber');
-                    $q->whereHas('trackingStatuses');
-                    $q->whereHas('payload', function ($query) {
-                        $query->where(
-                            function ($q) {
-                                $q->whereHas('waypoints');
-                                $q->orWhereHas('pickup');
-                                $q->orWhereHas('dropoff');
-                            }
-                        );
-                    });
-                }
-            )
-            ->applyDirectivesForPermissions('fleet-ops list route')
-            ->get();
+        return LiveCacheService::remember('routes', [], function () {
+            // Fetch routes that are not canceled or completed and have an assigned driver
+            $routes = Route::where('company_uuid', session('company'))
+                ->whereHas(
+                    'order',
+                    function ($q) {
+                        $q->whereNotIn('status', ['canceled', 'completed', 'expired']);
+                        $q->whereNotNull('driver_assigned_uuid');
+                        $q->whereNull('deleted_at');
+                        $q->whereHas('trackingNumber');
+                        $q->whereHas('trackingStatuses');
+                        $q->whereHas('payload', function ($query) {
+                            $query->where(
+                                function ($q) {
+                                    $q->whereHas('waypoints');
+                                    $q->orWhereHas('pickup');
+                                    $q->orWhereHas('dropoff');
+                                }
+                            );
+                        });
+                    }
+                )
+                ->with(['order.payload', 'order.trackingNumber', 'order.trackingStatuses', 'order.driverAssigned'])
+                ->applyDirectivesForPermissions('fleet-ops list route')
+                ->get();
 
-        return response()->json($routes);
+            return response()->json($routes);
+        });
     }
 
     /**
@@ -84,11 +91,19 @@ class LiveController extends Controller
      */
     public function orders(Request $request)
     {
-        $exclude    = $request->array('exclude');
-        $active     = $request->boolean('active');
-        $unassigned = $request->boolean('unassigned');
+        $exclude     = $request->array('exclude');
+        $active      = $request->boolean('active');
+        $unassigned  = $request->boolean('unassigned');
 
-        $query = Order::where('company_uuid', session('company'))
+        // Cache key includes all parameters that affect the query
+        $cacheParams = [
+            'exclude'      => $exclude,
+            'active'       => $active,
+            'unassigned'   => $unassigned,
+        ];
+
+        return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned) {
+            $query = Order::where('company_uuid', session('company'))
             ->whereHas('payload', function ($query) {
                 $query->where(
                     function ($q) {
@@ -97,7 +112,6 @@ class LiveController extends Controller
                         $q->orWhereHas('dropoff');
                     }
                 );
-                $query->with(['entities', 'waypoints', 'dropoff', 'pickup', 'return']);
             })
             ->whereNotIn('status', ['canceled', 'completed', 'expired'])
             ->whereHas('trackingNumber')
@@ -105,35 +119,39 @@ class LiveController extends Controller
             ->whereNotIn('public_id', $exclude)
             ->whereNull('deleted_at')
             ->applyDirectivesForPermissions('fleet-ops list order')
-            ->with(['payload', 'trackingNumber', 'trackingStatuses']);
+            ->with([
+                'payload.entities',
+                'payload.waypoints',
+                'payload.dropoff',
+                'payload.pickup',
+                'payload.return',
+                'trackingNumber',
+                'trackingStatuses',
+                'driverAssigned' => function ($query) {
+                    $query->without(['jobs', 'currentJob']);
+                },
+                'vehicleAssigned' => function ($query) {
+                    $query->without(['fleets', 'vendor']);
+                },
+                'customer',
+                'facilitator',
+            ]);
 
-        if ($active) {
-            $query->whereHas('driverAssigned');
-        }
-
-        if ($unassigned) {
-            $query->whereNull('driver_assigned_uuid');
-        }
-
-        $orders = $query->get();
-
-        // Get additional data or load missing if necessary
-        $orders->map(
-            function ($order) use ($request) {
-                // load required relations
-                $order->loadMissing(['trackingNumber', 'payload', 'trackingStatuses']);
-
-                // load tracker data
-                if ($request->has('with_tracker_data')) {
-                    $order->tracker_data = $order->tracker()->toArray();
-                    $order->eta          = $order->tracker()->eta();
-                }
-
-                return $order;
+            if ($active) {
+                $query->whereHas('driverAssigned');
             }
-        );
 
-        return OrderResource::collection($orders);
+            if ($unassigned) {
+                $query->whereNull('driver_assigned_uuid');
+            }
+
+            $query->limit(60); // max 60 latest
+            $query->latest();
+
+            $orders = $query->get();
+
+            return OrderIndexResource::collection($orders);
+        });
     }
 
     /**
@@ -141,13 +159,40 @@ class LiveController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function drivers()
+    public function drivers(Request $request)
     {
-        $drivers = Driver::where(['company_uuid' => session('company')])
-            ->applyDirectivesForPermissions('fleet-ops list driver')
-            ->get();
+        $bounds      = $request->input('bounds'); // Map viewport bounds: [south, west, north, east]
+        $cacheParams = ['bounds' => $bounds];
 
-        return DriverResource::collection($drivers);
+        return LiveCacheService::remember('drivers', $cacheParams, function () use ($bounds) {
+            $query = Driver::where(['company_uuid' => session('company')])
+                ->with(['user', 'vehicle', 'currentJob'])
+                ->applyDirectivesForPermissions('fleet-ops list driver');
+
+            // Filter out drivers with invalid coordinates
+            $query->whereNotNull('location')
+                ->whereRaw('
+                    ST_Y(location) BETWEEN -90 AND 90
+                    AND ST_X(location) BETWEEN -180 AND 180
+                    AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+                ');
+
+            // Apply spatial filtering if bounds are provided
+            if ($bounds && is_array($bounds) && count($bounds) === 4) {
+                [$south, $west, $north, $east] = $bounds;
+
+                // Use MySQL spatial functions for POINT column
+                // ST_Within checks if location is within the bounding box
+                $query->whereRaw(
+                    'ST_Within(location, ST_MakeEnvelope(POINT(?, ?), POINT(?, ?)))',
+                    [$west, $south, $east, $north]
+                );
+            }
+
+            $drivers = $query->get();
+
+            return DriverResource::collection($drivers);
+        });
     }
 
     /**
@@ -155,15 +200,41 @@ class LiveController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function vehicles()
+    public function vehicles(Request $request)
     {
-        // Fetch vehicles that are online
-        $vehicles = Vehicle::where(['company_uuid' => session('company')])
-            ->with(['devices'])
-            ->applyDirectivesForPermissions('fleet-ops list vehicle')
-            ->get();
+        $bounds      = $request->input('bounds'); // Map viewport bounds: [south, west, north, east]
+        $cacheParams = ['bounds' => $bounds];
 
-        return VehicleResource::collection($vehicles);
+        return LiveCacheService::remember('vehicles', $cacheParams, function () use ($bounds) {
+            // Fetch vehicles that are online
+            $query = Vehicle::where(['company_uuid' => session('company')])
+                ->with(['devices', 'driver'])
+                ->applyDirectivesForPermissions('fleet-ops list vehicle');
+
+            // Filter out vehicles with invalid coordinates
+            $query->whereNotNull('location')
+                ->whereRaw('
+                    ST_Y(location) BETWEEN -90 AND 90
+                    AND ST_X(location) BETWEEN -180 AND 180
+                    AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+                ');
+
+            // Apply spatial filtering if bounds are provided
+            if ($bounds && is_array($bounds) && count($bounds) === 4) {
+                [$south, $west, $north, $east] = $bounds;
+
+                // Use MySQL spatial functions for POINT column
+                // ST_Within checks if location is within the bounding box
+                $query->whereRaw(
+                    'ST_Within(location, ST_MakeEnvelope(POINT(?, ?), POINT(?, ?)))',
+                    [$west, $south, $east, $north]
+                );
+            }
+
+            $vehicles = $query->get();
+
+            return VehicleIndexResource::collection($vehicles);
+        });
     }
 
     /**
@@ -173,12 +244,39 @@ class LiveController extends Controller
      */
     public function places(Request $request)
     {
-        // Query places based on filters
-        $places = Place::where(['company_uuid' => session('company')])
-            ->filter(new PlaceFilter($request))
-            ->applyDirectivesForPermissions('fleet-ops list place')
-            ->get();
+        // Cache key includes filter parameters
+        $cacheParams = $request->only(['query', 'type', 'country', 'limit', 'bounds']);
 
-        return PlaceResource::collection($places);
+        return LiveCacheService::remember('places', $cacheParams, function () use ($request) {
+            // Query places based on filters
+            $query = Place::where(['company_uuid' => session('company')])
+                ->filter(new PlaceFilter($request))
+                ->applyDirectivesForPermissions('fleet-ops list place');
+
+            // Filter out places with invalid coordinates
+            $query->whereNotNull('location')
+                ->whereRaw('
+                    ST_Y(location) BETWEEN -90 AND 90
+                    AND ST_X(location) BETWEEN -180 AND 180
+                    AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+                ');
+
+            // Apply spatial filtering if bounds are provided
+            $bounds = $request->input('bounds');
+            if ($bounds && is_array($bounds) && count($bounds) === 4) {
+                [$south, $west, $north, $east] = $bounds;
+
+                // Use MySQL spatial functions for POINT column
+                // ST_Within checks if location is within the bounding box
+                $query->whereRaw(
+                    'ST_Within(location, ST_MakeEnvelope(POINT(?, ?), POINT(?, ?)))',
+                    [$west, $south, $east, $north]
+                );
+            }
+
+            $places = $query->get();
+
+            return PlaceIndexResource::collection($places);
+        });
     }
 }

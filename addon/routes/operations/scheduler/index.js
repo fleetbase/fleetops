@@ -2,7 +2,7 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { isValid as isValidDate } from 'date-fns';
 import { isNone } from '@ember/utils';
-import createFullCalendarEventFromOrder from '../../../utils/create-full-calendar-event-from-order';
+// import createFullCalendarEventFromOrder from '../../../utils/create-full-calendar-event-from-order';
 
 const getUnscheduledOrder = (order) => {
     return isNone(order.scheduled_at);
@@ -40,7 +40,7 @@ export default class OperationsSchedulerIndexRoute extends Route {
         // set scheduled orders
         controller.scheduledOrders = orders.filter(getScheduledOrder);
 
-        // create events from scheduledOrders
-        controller.events = controller.scheduledOrders.map(createFullCalendarEventFromOrder);
+        // // create events from scheduledOrders
+        // controller.events = controller.scheduledOrders.map(createFullCalendarEventFromOrder);
     }
 }

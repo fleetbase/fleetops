@@ -24,7 +24,7 @@ class Entity extends FleetbaseResource
             'photo_uuid'        => $this->when(Http::isInternalRequest(), $this->photo_uuid),
             'public_id'         => $this->when(Http::isInternalRequest(), $this->public_id),
             'customer_uuid'     => $this->when(Http::isInternalRequest(), $this->customer_uuid),
-            'customer_type'     => $this->when(Http::isInternalRequest(), $this->customer_type),
+            'customer_type'     => $this->when(Http::isInternalRequest(), $this->customer_type ? Utils::toEmberResourceType($this->customer_type) : null),
             'supplier_uuid'     => $this->when(Http::isInternalRequest(), $this->supplier_uuid),
             'destination_uuid'  => $this->when(Http::isInternalRequest(), $this->destination_uuid),
             'payload_uuid'      => $this->when(Http::isInternalRequest(), $this->payload_uuid),

@@ -5,9 +5,10 @@ import { action, computed } from '@ember/object';
 import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 import { format, isValid as isValidDate } from 'date-fns';
+import { Tooltip } from '@fleetbase/ember-ui/utils/floating';
 import isObject from '@fleetbase/ember-core/utils/is-object';
 import isJson from '@fleetbase/ember-core/utils/is-json';
-import createFullCalendarEventFromOrder, { createOrderEventTitle } from '../../../utils/create-full-calendar-event-from-order';
+import createFullCalendarEventFromOrder, { createOrderEventTitle, createOrderEventDescription } from '../../../utils/create-full-calendar-event-from-order';
 
 function createFullCalendarEventFromScheduleItem(item, driver) {
     return {
@@ -42,7 +43,7 @@ export default class OperationsSchedulerIndexController extends Controller {
     @service store;
     @service intl;
     @service hostRouter;
-    @service scheduling;
+    // @service scheduling;
     @tracked scheduledOrders = [];
     @tracked unscheduledOrders = [];
     @tracked drivers = [];
@@ -105,6 +106,17 @@ export default class OperationsSchedulerIndexController extends Controller {
         this.calendar = calendar;
         // setup some custom post initialization stuff here
         // calendar.setOption('height', 800);
+        calendar.setOption('eventDidMount', (info) => {
+            if (!info.event.extendedProps.description) return;
+
+            info.tooltip = new Tooltip(info.el, {
+                text: info.event.extendedProps.description,
+            });
+        });
+
+        calendar.setOption('eventWillUnmount', (info) => {
+            info.tooltip?.destroy();
+        });
     }
 
     @action viewEvent(order) {
@@ -152,6 +164,7 @@ export default class OperationsSchedulerIndexController extends Controller {
 
                     // update event props
                     this.setEventProperty(event, 'title', createOrderEventTitle(order));
+                    this.setEventProperty(event, 'description', createOrderEventDescription(order));
 
                     // refresh route
                     return this.hostRouter.refresh();
@@ -249,6 +262,7 @@ export default class OperationsSchedulerIndexController extends Controller {
         const order = this.store.peekRecord('order', event.id);
 
         this.setEventProperty(event, 'title', createOrderEventTitle(order));
+        this.setEventProperty(event, 'description', createOrderEventDescription(order));
     }
 
     @action async rescheduleEventFromDrag(eventDropInfo) {
@@ -282,6 +296,7 @@ export default class OperationsSchedulerIndexController extends Controller {
             order.set('scheduled_at', isValidDate(newDate) ? newDate : start);
             await order.save();
             this.setEventProperty(event, 'title', createOrderEventTitle(order));
+            this.setEventProperty(event, 'description', createOrderEventDescription(order));
             return this.hostRouter.refresh();
         } catch (error) {
             this.notifications.serverError(error);

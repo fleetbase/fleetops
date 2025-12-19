@@ -6,6 +6,7 @@ use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasInternalId;
 use Fleetbase\Traits\HasPublicId;
@@ -27,6 +28,7 @@ class Vendor extends Model
     use HasUuid;
     use HasPublicId;
     use HasApiModelBehavior;
+    use HasApiModelCache;
     use HasInternalId;
     use TracksApiCredential;
     use Searchable;

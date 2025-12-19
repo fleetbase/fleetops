@@ -1,11 +1,11 @@
 <Modals::BulkActionModel @options={{@options}} @onConfirm={{@onConfirm}} @onDecline={{@onDecline}} as |options|>
     <div>
-        <InputGroup @name={{t "common.select-driver"}} @helpText={{t "fleet-ops.operations.orders.index.bulk-assign-driver-helptext"}}>
+        <InputGroup @name={{t "common.select-field" field=(t "resource.driver")}} @helpText={{t "fleet-ops.operations.orders.index.bulk-assign-driver-helptext"}}>
             <ModelSelect
                 @modelName="driver"
                 @selectedModel={{options.driverAssigned}}
                 @query={{options.driversQuery}}
-                @placeholder={{t "fleet-ops.operations.orders.index.new.assign-driver-placeholder"}}
+                @placeholder={{t "order.fields.assign-driver-placeholder"}}
                 @triggerClass="form-select form-input"
                 @infiniteScroll={{false}}
                 @renderInPlace={{true}}

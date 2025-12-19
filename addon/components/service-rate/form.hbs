@@ -16,7 +16,7 @@
                         @options={{this.orderConfigActions.allOrderConfigs}}
                         @selected={{@resource.order_config}}
                         @onChange={{this.selectOrderConfig}}
-                        @placeholder={{t "fleet-ops.operations.orders.index.new.select-order-type"}}
+                        @placeholder={{t "service-rate.fields.select-order-type"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |orderConfig|
@@ -112,6 +112,7 @@
                         @helpText={{t "service-rate.fields.maximum-distance-help-text"}}
                         @required={{true}}
                         min={{1}}
+                        {{on "change" this.onMaxDistanceChange}}
                     />
                     <InputGroup @name="Max Distance Unit" @helpText="Select the maximum distance this service rate supports" @required={{true}}>
                         <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
@@ -191,7 +192,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {{#each @resource.perDropFees as |rateFee index|}}
+                            {{#each @resource.rate_fees as |rateFee|}}
                                 <tr>
                                     <td>
                                         <Input
@@ -215,7 +216,7 @@
                                         <MoneyInput class="w-full" @currency={{@resource.currency}} @value={{rateFee.fee}} disabled={{cannot-write @resource}} />
                                     </td>
                                     <td>
-                                        <Button @type="danger" @icon="trash" @onClick={{fn @resource.removePerDropFee index}} />
+                                        <Button @type="danger" @icon="trash" @onClick={{fn @resource.removePerDropFee rateFee}} />
                                     </td>
                                 </tr>
                             {{/each}}
@@ -560,6 +561,7 @@
                 @onChange={{fn (mut @resource.serviceArea)}}
                 @onChangeId={{fn (mut @resource.service_area_uuid)}}
                 @disabled={{cannot-write @resource}}
+                @allowClear={{true}}
                 as |model|
             >
                 {{model.name}}
@@ -567,7 +569,7 @@
         </InputGroup>
 
         {{#if @resource.serviceArea}}
-            <InputGroup @name={{t "service-rate.fields.zone-label"}} @helpText={{t "service-rate.fields.zone-help-text"}}>
+            <InputGroup @name={{t "service-rate.fields.zone-label"}} @helpText={{t "service-rate.fields.zone-help-text"}} @wrapperClass="mt-2">
                 <ModelSelect
                     @modelName="zone"
                     @selectedModel={{@resource.zone}}
@@ -579,6 +581,7 @@
                     @onChange={{fn (mut @resource.zone)}}
                     @onChangeId={{fn (mut @resource.zone_uuid)}}
                     @disabled={{cannot-write @resource}}
+                    @allowClear={{true}}
                     as |model|
                 >
                     {{model.name}}

@@ -629,9 +629,19 @@ class OrderController extends Controller
 
                     $query->whereHas('payload', function ($q) use ($location, $distance) {
                         $q->whereHas('pickup', function ($q) use ($location, $distance) {
+                            $q->whereNotNull('location')->whereRaw('
+                                ST_Y(location) BETWEEN -90 AND 90
+                                AND ST_X(location) BETWEEN -180 AND 180
+                                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+                            ');
                             $q->distanceSphere('location', $location, $distance);
                             $q->distanceSphereValue('location', $location);
                         })->orWhereHas('waypoints', function ($q) use ($location, $distance) {
+                            $q->whereNotNull('location')->whereRaw('
+                                ST_Y(location) BETWEEN -90 AND 90
+                                AND ST_X(location) BETWEEN -180 AND 180
+                                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+                            ');
                             $q->distanceSphere('location', $location, $distance);
                             $q->distanceSphereValue('location', $location);
                         });
@@ -648,9 +658,19 @@ class OrderController extends Controller
                     if ($driver) {
                         $query->whereHas('payload', function ($q) use ($driver, $distance) {
                             $q->whereHas('pickup', function ($q) use ($driver, $distance) {
+                                $q->whereNotNull('location')->whereRaw('
+                                    ST_Y(location) BETWEEN -90 AND 90
+                                    AND ST_X(location) BETWEEN -180 AND 180
+                                    AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+                                ');
                                 $q->distanceSphere('location', $driver->location, $distance);
                                 $q->distanceSphereValue('location', $driver->location);
                             })->orWhereHas('waypoints', function ($q) use ($driver, $distance) {
+                                $q->whereNotNull('location')->whereRaw('
+                                    ST_Y(location) BETWEEN -90 AND 90
+                                    AND ST_X(location) BETWEEN -180 AND 180
+                                    AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+                                ');
                                 $q->distanceSphere('location', $driver->location, $distance);
                                 $q->distanceSphereValue('location', $driver->location);
                             });
@@ -668,9 +688,19 @@ class OrderController extends Controller
                     if ($nearby instanceof Place) {
                         $query->whereHas('payload', function ($q) use ($nearby, $distance) {
                             $q->whereHas('pickup', function ($q) use ($nearby, $distance) {
+                                $q->whereNotNull('location')->whereRaw('
+                ST_Y(location) BETWEEN -90 AND 90
+                AND ST_X(location) BETWEEN -180 AND 180
+                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+            ');
                                 $q->distanceSphere('location', $nearby->location, $distance);
                                 $q->distanceSphereValue('location', $nearby->location);
                             })->orWhereHas('waypoints', function ($q) use ($nearby, $distance) {
+                                $q->whereNotNull('location')->whereRaw('
+                ST_Y(location) BETWEEN -90 AND 90
+                AND ST_X(location) BETWEEN -180 AND 180
+                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+            ');
                                 $q->distanceSphere('location', $nearby->location, $distance);
                                 $q->distanceSphereValue('location', $nearby->location);
                             });

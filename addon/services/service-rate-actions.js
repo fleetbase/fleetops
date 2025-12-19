@@ -138,6 +138,37 @@ export default class ServiceRateActionsService extends ResourceActionService {
         }
     }
 
+    generateFixedRateFees(serviceRate) {
+        if (!serviceRate.isFixedRate) return;
+
+        const maxDistance = Number(serviceRate.max_distance) || 0;
+        const existing = serviceRate.rate_fees.toArray();
+        const byDistance = new Map(existing.map((f) => [f.distance, f]));
+
+        // Remove fees beyond max_distance
+        existing.forEach((fee) => {
+            if (fee.distance >= maxDistance) {
+                serviceRate.rate_fees.removeObject(fee);
+                if (!fee.isNew) {
+                    fee.deleteRecord();
+                }
+            }
+        });
+
+        // Add missing fees
+        for (let d = 0; d < maxDistance; d++) {
+            if (!byDistance.has(d)) {
+                const fee = this.store.createRecord('service-rate-fee', {
+                    distance: d,
+                    distance_unit: serviceRate.max_distance_unit,
+                    fee: 0,
+                    currency: serviceRate.currency,
+                });
+                serviceRate.rate_fees.pushObject(fee);
+            }
+        }
+    }
+
     #getDefaultParcelFees() {
         const defaults = [
             {

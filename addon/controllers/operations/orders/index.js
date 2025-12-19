@@ -113,7 +113,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 fn: this.orderActions.bulkDispatch,
             },
             {
-                label: this.intl.t('common.assign-driver'),
+                label: this.intl.t('common.assign-drivers'),
                 icon: 'user-plus',
                 fn: this.orderActions.bulkAssignDriver,
             },

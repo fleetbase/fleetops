@@ -135,8 +135,13 @@ class DispatchAdhocOrders extends Command
             ->withoutGlobalScopes();
 
         if (!$testing) {
-            $driverQuery->distanceSphere('location', $pickup, $distance)
-                ->distanceSphereValue('location', $pickup);
+            $driverQuery->whereNotNull('location')->whereRaw('
+                ST_Y(location) BETWEEN -90 AND 90
+                AND ST_X(location) BETWEEN -180 AND 180
+                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+            ');
+            $driverQuery->distanceSphere('location', $pickup, $distance);
+            $driverQuery->distanceSphereValue('location', $pickup);
         }
 
         return $driverQuery->get();

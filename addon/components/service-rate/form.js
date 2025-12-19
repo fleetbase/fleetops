@@ -22,6 +22,12 @@ export default class ServiceRateFormComponent extends Component {
 
         if (rateCalculationMethod === 'per_drop') {
             this.args.resource.resetPerDropFees();
+        } else if (rateCalculationMethod === 'fixed_meter' || rateCalculationMethod === 'fixed_rate') {
+            this.serviceRateActions.generateFixedRateFees(this.args.resource);
         }
+    }
+
+    @action onMaxDistanceChange() {
+        this.serviceRateActions.generateFixedRateFees(this.args.resource);
     }
 }
