@@ -351,13 +351,7 @@ class ServiceRate extends Model
             $serviceRateFees[$i]['service_rate_uuid'] = $this->uuid;
         }
 
-        // Apply casts to all rows before bulk insert
-        $serviceRateFees = collect($serviceRateFees)
-            ->filter()
-            ->map(fn($row) => ServiceRateFee::onRowInsert($row))
-            ->values()
-            ->toArray();
-
+        $serviceRateFees = collect($serviceRateFees)->filter()->values()->toArray();
         ServiceRateFee::bulkInsert($serviceRateFees);
 
         return $this;
@@ -397,13 +391,7 @@ class ServiceRate extends Model
             $serviceRateParcelFees[$i]['service_rate_uuid'] = $this->uuid;
         }
 
-        // Apply casts to all rows before bulk insert
-        $serviceRateParcelFees = collect($serviceRateParcelFees)
-            ->filter()
-            ->map(fn($row) => ServiceRateParcelFee::onRowInsert($row))
-            ->values()
-            ->toArray();
-
+        $serviceRateParcelFees = collect($serviceRateParcelFees)->filter()->values()->toArray();
         ServiceRateParcelFee::bulkInsert($serviceRateParcelFees);
 
         return $this;
