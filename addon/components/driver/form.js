@@ -8,7 +8,7 @@ export default class DriverFormComponent extends Component {
     @service currentUser;
     @service notifications;
     @service modalsManager;
-    @service extensionManager;
+    @service('universe/extension-manager') extensionManager;
 
     get userAccountActionButtons() {
         return [
