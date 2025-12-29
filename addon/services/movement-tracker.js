@@ -122,6 +122,7 @@ export class EventBuffer {
 
 export default class MovementTrackerService extends Service {
     @service socket;
+    @service universe;
     @tracked channels = [];
     @tracked buffers = new Map();
 
@@ -131,7 +132,7 @@ export default class MovementTrackerService extends Service {
     }
 
     #getOwner(owner = null) {
-        return owner ?? window.Fleetbase ?? getOwner(this);
+        return owner ?? this.universe.getApplicationInstance() ?? getOwner(this);
     }
 
     #getBuffer(key, model, opts = {}) {

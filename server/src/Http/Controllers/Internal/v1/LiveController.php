@@ -139,6 +139,7 @@ class LiveController extends Controller
 
             if ($active) {
                 $query->whereHas('driverAssigned');
+                $query->whereNotIn('status', ['created', 'completed', 'expired', 'order_canceled', 'canceled', 'pending']);
             }
 
             if ($unassigned) {
@@ -166,7 +167,7 @@ class LiveController extends Controller
 
         return LiveCacheService::remember('drivers', $cacheParams, function () use ($bounds) {
             $query = Driver::where(['company_uuid' => session('company')])
-                ->with(['user', 'vehicle', 'currentJob'])
+                ->with(['user', 'vehicle'])
                 ->applyDirectivesForPermissions('fleet-ops list driver');
 
             // Filter out drivers with invalid coordinates

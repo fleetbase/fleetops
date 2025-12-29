@@ -262,12 +262,12 @@ class Driver extends Model
 
     public function currentJob(): BelongsTo|Builder
     {
-        return $this->belongsTo(Order::class)->select(['id', 'uuid', 'public_id', 'payload_uuid', 'driver_assigned_uuid'])->without(['driver']);
+        return $this->belongsTo(Order::class)->without(['driver']);
     }
 
     public function currentOrder(): BelongsTo|Builder
     {
-        return $this->belongsTo(Order::class, 'current_job_uuid')->select(['id', 'uuid', 'public_id', 'payload_uuid', 'driver_assigned_uuid'])->without(['driver']);
+        return $this->belongsTo(Order::class, 'current_job_uuid')->without(['driver']);
     }
 
     public function jobs(): HasMany|Builder

@@ -42,7 +42,7 @@ export default class CustomerOrdersComponent extends Component {
 
     get modalsManager() {
         const owner = getOwner(this);
-        const application = typeof this.universe.getApplicationInstance === 'function' ? this.universe.getApplicationInstance() : window.Fleetbase;
+        const application = this.universe.getApplicationInstance();
         const modalsManager = application ? application.lookup('service:modals-manager') : owner.lookup('service:modals-manager');
         return modalsManager;
     }
