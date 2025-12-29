@@ -18,8 +18,8 @@ importers:
         specifier: ^0.3.17
         version: 0.3.17(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(@glimmer/component@1.1.2(@babel/core@7.27.1))(@glimmer/tracking@1.1.2)(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(postcss@8.5.3)(rollup@2.79.2)(tracked-built-ins@3.4.0(@babel/core@7.27.1))(webpack@5.99.8)
       '@fleetbase/fleetops-data':
-        specifier: ^0.1.24
-        version: 0.1.24(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)
+        specifier: ^0.1.25
+        version: 0.1.25(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)
       '@fleetbase/leaflet-routing-machine':
         specifier: ^3.2.17
         version: 3.2.17
@@ -1369,8 +1369,8 @@ packages:
     resolution: {integrity: sha512-hRPa+QAo/Sx7oDmyzw2AGmNw6T4GBJnAe4/bJ3O/ZCm/nsdhsmre4CuY+sK3CagC4cYWii3iOtEf4AHNEB86Og==}
     engines: {node: '>= 18'}
 
-  '@fleetbase/fleetops-data@0.1.24':
-    resolution: {integrity: sha512-cSK4FXIIO7yidQ6j44oZzmHt1vlTinz3RMvK0vYrXoKehKWy/8LDsT+lrfCEeGeYB0sTnVfnNsSZVkUPLsMxPg==}
+  '@fleetbase/fleetops-data@0.1.25':
+    resolution: {integrity: sha512-uCX/qB4ANDGNN+EM1vdsVc4inprGEwj1dT0G5OTYKsFaHL3CWOeXsOg8qSa5EDClqxIodadx6stB+dSwrhYowg==}
     engines: {node: '>= 18'}
 
   '@fleetbase/intl-lint@0.0.1':
@@ -10809,7 +10809,7 @@ snapshots:
       - webpack-command
       - yaml
 
-  '@fleetbase/fleetops-data@0.1.24(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)':
+  '@fleetbase/fleetops-data@0.1.25(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)':
     dependencies:
       '@babel/core': 7.27.1
       '@fleetbase/ember-core': 0.3.10(@ember/string@3.1.1)(@ember/test-helpers@3.3.1(@babel/core@7.27.1)(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(webpack@5.99.8))(ember-resolver@11.0.1(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8)))(ember-source@5.4.1(@babel/core@7.27.1)(@glimmer/component@1.1.2(@babel/core@7.27.1))(rsvp@4.8.5)(webpack@5.99.8))(eslint@8.57.1)(webpack@5.99.8)
