@@ -9,7 +9,6 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
-use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -83,36 +82,6 @@ class VendorController extends FleetOpsController
         $fileName     = trim(Str::slug('vendors-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new VendorExport($selections), $fileName);
-    }
-
-    /**
-     * Bulk delete resources.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function bulkDelete(BulkDeleteRequest $request)
-    {
-        $ids = $request->input('ids', []);
-
-        if (!$ids) {
-            return response()->error('Nothing to delete.');
-        }
-
-        /** @var \Fleetbase\Models\Vendor */
-        $count   = Vendor::whereIn('uuid', $ids)->count();
-        $deleted = Vendor::whereIn('uuid', $ids)->delete();
-
-        if (!$deleted) {
-            return response()->error('Failed to bulk delete vendors.');
-        }
-
-        return response()->json(
-            [
-                'status'  => 'OK',
-                'message' => 'Deleted ' . $count . ' vendors',
-            ],
-            200
-        );
     }
 
     /**

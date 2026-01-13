@@ -29,14 +29,12 @@ use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\Internal\BulkActionRequest;
-use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
 use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -326,36 +324,6 @@ class OrderController extends FleetOpsController
             [
                 'entities' => $entities,
                 'places'   => $places,
-            ]
-        );
-    }
-
-    /**
-     * Updates a order to canceled and updates order activity.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function bulkDelete(BulkDeleteRequest $request)
-    {
-        $ids = $request->input('ids', []);
-
-        if (!$ids) {
-            return response()->error('Nothing to delete.');
-        }
-
-        /** @var Order */
-        $count   = Order::whereIn('uuid', $ids)->count();
-        $deleted = Order::whereIn('uuid', $ids)->delete();
-
-        if (!$deleted) {
-            return response()->error('Failed to bulk delete orders.');
-        }
-
-        return response()->json(
-            [
-                'status'  => 'OK',
-                'message' => 'Deleted ' . $count . ' orders',
-                'count'   => $count,
             ]
         );
     }

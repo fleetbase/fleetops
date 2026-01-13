@@ -27,18 +27,20 @@ class CreateDriverRequest extends CreateDriverApiRequest
     public function rules()
     {
         $isCreating = $this->isMethod('POST');
+        $isCreatingWithUser = $this->filled('driver.user_uuid');
+        $shouldValidateUserAttributes = $isCreating && !$isCreatingWithUser;
 
         return [
             // Required fields for driver creation
-            'name'                   => [Rule::requiredIf($isCreating), 'string', 'max:255'],
+            'name'                   => [Rule::requiredIf($shouldValidateUserAttributes), 'nullable', 'string', 'max:255'],
             'email'                  => [
-                Rule::requiredIf($isCreating),
+                Rule::requiredIf($shouldValidateUserAttributes),
                 Rule::when($this->filled('email'), ['email']),
-                Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])
+                Rule::when($shouldValidateUserAttributes, [Rule::unique('users')->whereNull('deleted_at')])
             ],
             'phone'                  => [
-                Rule::requiredIf($isCreating),
-                Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])
+                Rule::requiredIf($shouldValidateUserAttributes),
+                Rule::when($shouldValidateUserAttributes, [Rule::unique('users')->whereNull('deleted_at')])
             ],
             
             // Optional fields
