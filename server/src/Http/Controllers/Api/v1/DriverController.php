@@ -62,7 +62,7 @@ class DriverController extends Controller
         // Apply user infos
         $userDetails = User::applyUserInfoFromRequest($request, $userDetails);
 
-        // Set company_uuid before creating user (required for billing resource tracking)
+        // Set company_uuid before creating user
         $userDetails['company_uuid'] = $company->uuid;
 
         // create user account for driver
