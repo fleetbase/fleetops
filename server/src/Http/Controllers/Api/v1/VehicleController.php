@@ -30,9 +30,6 @@ class VehicleController extends Controller
         // make sure company is set
         $input['company_uuid'] = session('company');
 
-        // create instance of vehicle model
-        $vehicle = new Vehicle();
-
         // set default online
         if (!isset($input['online'])) {
             $input['online'] = 0;
@@ -51,11 +48,8 @@ class VehicleController extends Controller
             $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
         }
 
-        // apply user input to vehicle
-        $vehicle = $vehicle->fill($input);
-
-        // save the vehicle
-        $vehicle->save();
+        // create the vehicle (fires 'created' event for billing resource tracking)
+        $vehicle = Vehicle::create($input);
 
         // driver assignment
         if ($request->has('driver')) {
