@@ -4,6 +4,8 @@ namespace Fleetbase\FleetOps\Console\Commands;
 
 use Fleetbase\FleetOps\Mail\CustomerCredentialsMail;
 use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\Models\Company;
+use Fleetbase\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 
@@ -64,6 +66,18 @@ class TestEmail extends Command
      */
     private function sendCustomerCredentialsEmail(string $email): void
     {
+        // Create a mock user
+        $user = new User([
+            'name' => 'Test Customer',
+            'email' => $email,
+        ]);
+
+        // Create a mock company
+        $company = new Company([
+            'name' => 'Test Company',
+            'public_id' => 'test_company_123',
+        ]);
+
         // Create a mock customer
         $customer = new Contact([
             'name' => 'Test Customer',
@@ -71,17 +85,9 @@ class TestEmail extends Command
             'phone' => '+1234567890',
         ]);
 
-        // Set company relation with mock data
-        $customer->setRelation('company', (object)[
-            'name' => 'Test Company',
-            'public_id' => 'test_company_123',
-        ]);
-
-        // Set user relation with mock data
-        $customer->setRelation('user', (object)[
-            'email' => $email,
-            'name' => 'Test Customer',
-        ]);
+        // Set relations
+        $customer->setRelation('company', $company);
+        $customer->setRelation('user', $user);
 
         // Mock password
         $plaintextPassword = 'TestPassword123!';
