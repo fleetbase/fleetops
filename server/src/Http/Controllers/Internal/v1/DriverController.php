@@ -136,7 +136,37 @@ class DriverController extends FleetOpsController
 
                     if ($input->has('user_uuid')) {
                         $user = User::where('uuid', $input->get('user_uuid'))->first();
-                        if ($user && $input->has('photo_uuid')) {
+                        
+                        // If user doesn't exist with provided UUID, create new user
+                        if (!$user) {
+                            $userInput = $input
+                                ->only(['name', 'password', 'email', 'phone', 'status', 'avatar_uuid'])
+                                ->filter()
+                                ->toArray();
+
+                            // handle `photo_uuid`
+                            if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
+                                $userInput['avatar_uuid'] = $input['photo_uuid'];
+                            }
+
+                            // Make sure password is set
+                            if (empty($userInput['password'])) {
+                                $userInput['password'] = Str::random(14);
+                            }
+
+                            // Set user company
+                            $userInput['company_uuid'] = session('company', $company->uuid);
+
+                            // Apply user infos
+                            $userInput = User::applyUserInfoFromRequest($request, $userInput);
+
+                            // Create user account
+                            $user = User::create($userInput);
+
+                            // Set the user type to driver
+                            $user->setType('driver');
+                        } elseif ($input->has('photo_uuid')) {
+                            // Update existing user's avatar if photo provided
                             $user->update(['avatar_uuid' => $input->get('photo_uuid')]);
                         }
                     } else {

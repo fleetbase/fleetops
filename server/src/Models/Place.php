@@ -333,6 +333,28 @@ class Place extends Model
     {
         $instance = (new static())->fillWithGoogleAddress($address);
 
+        // Before saving or returning this instance check the database for a duplicate address
+        // it cannot have any owner, and must belong to this session
+        if ($companyUuid = session('company')) {
+            $duplicate = static::where([
+                'company_uuid' => $companyUuid,
+                'street1'      => $instance->street1,
+                'city'         => $instance->city,
+                'country'      => $instance->country,
+            ])
+            ->when(
+                $instance->postal_code !== null,
+                fn ($q) => $q->where('postal_code', $instance->postal_code),
+                fn ($q) => $q->whereNull('postal_code')
+            )
+            ->whereNull('owner_uuid')
+            ->first();
+
+            if ($duplicate) {
+                return $duplicate;
+            }
+        }
+
         if ($saveInstance) {
             $instance->save();
         }

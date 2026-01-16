@@ -10,7 +10,6 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
-use Fleetbase\Http\Requests\Internal\BulkDeleteRequest;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -148,38 +147,6 @@ class PlaceController extends FleetOpsController
         $fileName     = trim(Str::slug('places-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new PlaceExport($selections), $fileName);
-    }
-
-    /**
-     * Bulk deletes resources.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function bulkDelete(BulkDeleteRequest $request)
-    {
-        $ids = $request->input('ids', []);
-
-        if (!$ids) {
-            return response()->error('Nothing to delete.');
-        }
-
-        /**
-         * @var \Fleetbase\Models\Place
-         */
-        $count   = Place::whereIn('uuid', $ids)->applyDirectivesForPermissions('fleet-ops list place')->count();
-        $deleted = Place::whereIn('uuid', $ids)->applyDirectivesForPermissions('fleet-ops list place')->delete();
-
-        if (!$deleted) {
-            return response()->error('Failed to bulk delete places.');
-        }
-
-        return response()->json(
-            [
-                'status'  => 'OK',
-                'message' => 'Deleted ' . $count . ' places',
-            ],
-            200
-        );
     }
 
     /**
