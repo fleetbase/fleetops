@@ -36,8 +36,8 @@ class CreateServiceRateRequest extends FleetbaseRequest
             'base_fee'                      => ['numeric'],
             'per_meter_unit'                => ['required_if:rate_calculation_method,per_meter', 'string', 'in:km,m'],
             'per_meter_flat_rate_fee'       => ['required_if:rate_calculation_method,per_meter', 'numeric'],
-            'meter_fees'                    => [Rule::requiredIf(function ($input) {
-                return in_array($input->rate_calculation_method, ['fixed_meter', 'fixed_rate']);
+            'meter_fees'                    => [Rule::requiredIf(function () {
+                return in_array($this->input('rate_calculation_method'), ['fixed_meter', 'fixed_rate']);
             }), 'array'],
             'meter_fees.*.distance'         => ['numeric'],
             'meter_fees.*.fee'              => ['numeric'],

@@ -27,11 +27,9 @@ class VehicleController extends Controller
     {
         // get request input
         $input = $request->only(['status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin', 'meta', 'online', 'location', 'altitude', 'heading', 'speed']);
+        
         // make sure company is set
         $input['company_uuid'] = session('company');
-
-        // create instance of vehicle model
-        $vehicle = new Vehicle();
 
         // set default online
         if (!isset($input['online'])) {
@@ -51,11 +49,8 @@ class VehicleController extends Controller
             $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
         }
 
-        // apply user input to vehicle
-        $vehicle = $vehicle->fill($input);
-
-        // save the vehicle
-        $vehicle->save();
+        // create the vehicle (fires 'created' event for billing resource tracking)
+        $vehicle = Vehicle::create($input);
 
         // driver assignment
         if ($request->has('driver')) {

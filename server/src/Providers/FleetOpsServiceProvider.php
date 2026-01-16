@@ -60,6 +60,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\PurgeUnpurchasedServiceQuotes::class,
         \Fleetbase\FleetOps\Console\Commands\SendDriverNotification::class,
         \Fleetbase\FleetOps\Console\Commands\ReplayVehicleLocations::class,
+        \Fleetbase\FleetOps\Console\Commands\TestEmail::class,
     ];
 
     /**
