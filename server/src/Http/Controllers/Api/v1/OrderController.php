@@ -532,6 +532,7 @@ class OrderController extends Controller
         set_time_limit(180);
 
         $results = Order::queryWithRequest($request, function (&$query, $request) {
+            $query->with('driverAssigned');
             $query->where('company_uuid', session('company'));
             $query->whereNotNull('payload_uuid');
 
@@ -726,6 +727,7 @@ class OrderController extends Controller
         // find for the order
         try {
             $order = Order::findRecordOrFail($id);
+            $order->load('driverAssigned');
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -1226,7 +1228,7 @@ class OrderController extends Controller
         }
 
         // Load required relations
-        $order->loadMissing(['payload.waypoints', 'payload.pickup', 'payload.dropoff']);
+        $order->loadMissing(['payload.waypoints', 'payload.pickup', 'payload.dropoff', 'driverAssigned']);
 
         // Get the order payload
         $payload = $order->payload;
