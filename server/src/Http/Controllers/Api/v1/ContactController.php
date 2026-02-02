@@ -29,24 +29,13 @@ class ContactController extends Controller
         $input['phone'] = is_string($input['phone']) ? Utils::formatPhoneNumber($input['phone']) : $input['phone'];
         $input['type']  = empty($input['type']) ? 'contact' : $input['type'];
 
-        // Handle photo as either file id/ or base64 data string
-        $photo = $request->input('photo');
-        if ($photo) {
-            // Handle photo being a file id
-            if (Utils::isPublicId($photo)) {
-                $file = File::where('public_id', $photo)->first();
-                if ($file) {
-                    $input['photo_uuid'] = $file->uuid;
-                }
-            }
+        // Handle photo upload using FileResolverService
+        if ($request->has('photo')) {
+            $path = 'uploads/' . session('company') . '/contacts';
+            $file = app(\Fleetbase\Services\FileResolverService::class)->resolve($request->input('photo'), $path);
 
-            // Handle the photo being base64 data string
-            if (Utils::isBase64String($photo)) {
-                $path = implode('/', ['uploads', session('company'), 'contacts']);
-                $file = File::createFromBase64($photo, null, $path);
-                if ($file) {
-                    $input['photo_uuid'] = $file->uuid;
-                }
+            if ($file) {
+                $input['photo_uuid'] = $file->uuid;
             }
         }
 
@@ -101,29 +90,20 @@ class ContactController extends Controller
             ]);
         }
 
-        // Handle photo as either file id/ or base64 data string
-        $photo = $request->input('photo');
-        if ($photo) {
-            // Handle photo being a file id
-            if (Utils::isPublicId($photo)) {
-                $file = File::where('public_id', $photo)->first();
-                if ($file) {
-                    $input['photo_uuid'] = $file->uuid;
-                }
-            }
-
-            // Handle the photo being base64 data string
-            if (Utils::isBase64String($photo)) {
-                $path = implode('/', ['uploads', session('company'), 'customers']);
-                $file = File::createFromBase64($photo, null, $path);
-                if ($file) {
-                    $input['photo_uuid'] = $file->uuid;
-                }
-            }
+        // Handle photo upload using FileResolverService
+        if ($request->has('photo')) {
+            $photo = $request->input('photo');
 
             // Handle removal key
             if ($photo === 'REMOVE') {
                 $input['photo_uuid'] = null;
+            } else {
+                $path = 'uploads/' . session('company') . '/contacts';
+                $file = app(\Fleetbase\Services\FileResolverService::class)->resolve($photo, $path);
+
+                if ($file) {
+                    $input['photo_uuid'] = $file->uuid;
+                }
             }
         }
 
