@@ -352,7 +352,7 @@ class OrderController extends Controller
 
         // find for the order
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = Order::findRecordOrFail($id, ['trackingNumber', 'driverAssigned', 'purchaseRate', 'customer', 'facilitator']);
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -517,6 +517,9 @@ class OrderController extends Controller
         // update the order
         $order->update($input);
         $order->flushAttributesCache();
+
+        // load required relations
+        $order->load(['trackingNumber', 'driverAssigned', 'purchaseRate', 'customer', 'facilitator']);
 
         // response the order resource
         return new OrderResource($order);
@@ -725,7 +728,7 @@ class OrderController extends Controller
     {
         // find for the order
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = Order::findRecordOrFail($id, ['trackingNumber', 'driverAssigned', 'purchaseRate', 'customer', 'facilitator']);
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -805,7 +808,7 @@ class OrderController extends Controller
     public function dispatchOrder(string $id)
     {
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = Order::findRecordOrFail($id, ['trackingNumber', 'driverAssigned', 'purchaseRate', 'customer', 'facilitator']);
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -887,7 +890,7 @@ class OrderController extends Controller
         $assignAdhocDriver = $request->input('assign');
 
         try {
-            $order = Order::findRecordOrFail($id, ['payload.waypoints'], []);
+            $order = Order::findRecordOrFail($id, ['payload.waypoints', 'driverAssigned'], []);
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -1220,13 +1223,10 @@ class OrderController extends Controller
     public function setDestination(string $id, string $placeId)
     {
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = Order::findRecordOrFail($id, ['payload.waypoints', 'payload.pickup', 'payload.dropoff', 'driverAssigned']);
         } catch (ModelNotFoundException $exception) {
             return response()->apiError('Order resource not found.', 404);
         }
-
-        // Load required relations
-        $order->loadMissing(['payload.waypoints', 'payload.pickup', 'payload.dropoff']);
 
         // Get the order payload
         $payload = $order->payload;
