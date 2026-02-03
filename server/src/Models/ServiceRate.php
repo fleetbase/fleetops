@@ -12,7 +12,6 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
-use Illuminate\Support\Facades\DB;
 
 class ServiceRate extends Model
 {
@@ -469,12 +468,11 @@ class ServiceRate extends Model
      */
     public static function getServicableForPlaces($places = [], $service = null, $currency = null, ?\Closure $queryCallback = null): array
     {
-        $reader                 = new GeoJSONReader();
-        $applicableServiceRates = [];
-        $serviceRatesQuery      = static::with(['zone', 'serviceArea', 'rateFees', 'parcelFees']);
+        $reader            = new GeoJSONReader();
+        $serviceRatesQuery = static::with(['zone', 'serviceArea', 'rateFees', 'parcelFees']);
 
         if ($currency) {
-            $serviceRatesQuery->where(DB::raw('lower(currency)'), strtolower($currency));
+            $serviceRatesQuery->whereRaw('lower(currency) = ?', [strtolower($currency)]);
         }
 
         if ($service) {
@@ -487,44 +485,115 @@ class ServiceRate extends Model
 
         $serviceRates = $serviceRatesQuery->get();
 
-        $waypoints = collect($places)->map(function ($place) {
-            $place = Place::createFromMixed($place);
+        $waypoints = collect($places)
+            ->map(function ($place) {
+                $place = Place::createFromMixed($place);
 
-            if ($place instanceof Place) {
+                if (!$place instanceof Place) {
+                    return null;
+                }
+
                 $point = $place->getLocationAsPoint();
 
-                // Conver to brick gis point
-                return \Brick\Geo\Point::fromText(sprintf('POINT (%F %F)', $point->getLng(), $point->getLat()), 4326);
+                // Brick point: X=lng, Y=lat (WKT order)
+                return \Brick\Geo\Point::fromText(
+                    sprintf('POINT (%F %F)', $point->getLng(), $point->getLat()),
+                    4326
+                );
+            })
+            ->filter()
+            ->values();
+
+        if ($waypoints->isEmpty()) {
+            return [];
+        }
+
+        /**
+         * Convert a casted spatial geometry (Zone::border / ServiceArea::border)
+         * into a Brick geometry using GeoJSONReader.
+         */
+        $toBrickGeometry = function ($spatialGeometry) use ($reader) {
+            if (!$spatialGeometry) {
+                return null;
             }
-        });
 
-        foreach ($serviceRates as $serviceRate) {
-            if ($serviceRate->hasServiceArea()) {
-                // make sure all waypoints fall within the service area
-                foreach ($serviceRate->serviceArea->border as $polygon) {
-                    $polygon = $reader->read($polygon->toJson());
+            // Most Fleetbase spatial casts/types implement toJson()
+            if (is_object($spatialGeometry) && method_exists($spatialGeometry, 'toJson')) {
+                $json = $spatialGeometry->toJson();
+                $json = is_string($json) ? trim($json) : null;
 
-                    /** @var \Brick\Geo\Point $waypoint */
-                    foreach ($waypoints as $waypoint) {
-                        if (!$polygon->contains($waypoint)) {
-                            // waypoint outside of service area, not applicable to route
-                            continue;
-                        }
-                    }
+                if ($json) {
+                    return $reader->read($json);
+                }
+
+                return null;
+            }
+
+            // Fallback if the cast ever returns array/object
+            if (is_array($spatialGeometry) || is_object($spatialGeometry)) {
+                $json = json_encode($spatialGeometry, JSON_UNESCAPED_UNICODE);
+                if ($json && $json !== 'null') {
+                    return $reader->read($json);
                 }
             }
 
-            if ($serviceRate->hasZone()) {
-                // make sure all waypoints fall within the service area
-                foreach ($serviceRate->zone->border as $polygon) {
-                    $polygon = $reader->read($polygon->toJson());
+            // Fallback if it’s a raw JSON string
+            if (is_string($spatialGeometry) && trim($spatialGeometry) !== '') {
+                return $reader->read($spatialGeometry);
+            }
 
-                    foreach ($waypoints as $waypoint) {
-                        if (!$polygon->contains($waypoint)) {
-                            // waypoint outside of zone, not applicable to route
-                            continue;
-                        }
-                    }
+            return null;
+        };
+
+        /**
+         * Ensure ALL waypoints are inside the given Brick geometry.
+         */
+        $containsAllWaypoints = function ($brickGeometry) use ($waypoints): bool {
+            if (!$brickGeometry) {
+                return false;
+            }
+
+            foreach ($waypoints as $waypoint) {
+                if (!$brickGeometry->contains($waypoint)) {
+                    return false;
+                }
+            }
+
+            return true;
+        };
+
+        $applicableServiceRates = [];
+
+        foreach ($serviceRates as $serviceRate) {
+            // If a service area exists, all waypoints must be inside its border
+            if ($serviceRate->hasServiceArea()) {
+                $serviceAreaBorder = $serviceRate->serviceArea?->border;
+
+                $serviceAreaGeom = null;
+                try {
+                    $serviceAreaGeom = $toBrickGeometry($serviceAreaBorder);
+                } catch (\Throwable $e) {
+                    continue; // invalid geojson / geometry -> reject this rate
+                }
+
+                if (!$containsAllWaypoints($serviceAreaGeom)) {
+                    continue;
+                }
+            }
+
+            // If a zone exists, all waypoints must be inside its border
+            if ($serviceRate->hasZone()) {
+                $zoneBorder = $serviceRate->zone?->border;
+
+                $zoneGeom = null;
+                try {
+                    $zoneGeom = $toBrickGeometry($zoneBorder);
+                } catch (\Throwable $e) {
+                    continue;
+                }
+
+                if (!$containsAllWaypoints($zoneGeom)) {
+                    continue;
                 }
             }
 

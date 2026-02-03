@@ -20,7 +20,6 @@ use Fleetbase\Http\Resources\Organization;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\CompanyUser;
-use Fleetbase\Models\File;
 use Fleetbase\Models\User;
 use Fleetbase\Models\UserDevice;
 use Fleetbase\Models\VerificationCode;

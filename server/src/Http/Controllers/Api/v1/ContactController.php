@@ -8,7 +8,6 @@ use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\Http\Controllers\Controller;
-use Fleetbase\Models\File;
 use Fleetbase\Models\User;
 use Fleetbase\Support\Utils;
 use Illuminate\Http\Request;
