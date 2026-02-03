@@ -1002,29 +1002,23 @@ class ServiceRate extends Model
      */
     public function findServiceRateFeeByDistance(int $totalDistance): ?ServiceRateFee
     {
-        $this->load('rateFees');
+        $this->loadMissing('rateFees');
 
-        $distanceInKms = round($totalDistance / 1000);
-        $distanceFee   = null;
+        // Convert meters to kilometers WITHOUT rounding up
+        $distanceInKm = $totalDistance / 1000;
 
-        foreach ($this->rateFees as $rateFee) {
-            $previousRateFee = $rateFee;
+        // Ensure predictable order
+        $rateFees = $this->rateFees->sortBy('distance');
 
-            if ($distanceInKms > $rateFee->distance) {
-                continue;
-            } elseif ($rateFee->distance > $distanceInKms) {
-                $distanceFee = $previousRateFee;
-            } else {
-                $distanceFee = $rateFee;
+        // Find the first tier that covers the distance
+        foreach ($rateFees as $rateFee) {
+            if ($distanceInKm <= $rateFee->distance) {
+                return $rateFee;
             }
         }
 
-        // if no distance fee use the last
-        if ($distanceFee === null) {
-            $distanceFee = $this->rateFees->sortByDesc('distance')->first();
-        }
-
-        return $distanceFee;
+        // If distance exceeds all tiers, use the largest tier
+        return $rateFees->last();
     }
 
     /**
