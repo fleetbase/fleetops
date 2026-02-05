@@ -245,6 +245,19 @@ class Payload extends Model
                 }
             }
 
+            // Handle entity photo upload
+            if (isset($attributes['photo'])) {
+                $path = 'uploads/' . session('company') . '/entities';
+                $file = app(\Fleetbase\Services\FileResolverService::class)->resolve($attributes['photo'], $path);
+
+                if ($file) {
+                    $attributes['photo_uuid'] = $file->uuid;
+                }
+
+                // Clean up raw photo data
+                unset($attributes['photo']);
+            }
+
             $entity = new Entity($attributes);
             $this->entities()->save($entity);
         }
@@ -284,6 +297,19 @@ class Payload extends Model
                 if ($validDestination) {
                     $attributes['destination_uuid'] = $validDestination->uuid;
                 }
+            }
+
+            // Handle entity photo upload
+            if (isset($attributes['photo'])) {
+                $path = 'uploads/' . session('company') . '/entities';
+                $file = app(\Fleetbase\Services\FileResolverService::class)->resolve($attributes['photo'], $path);
+
+                if ($file) {
+                    $attributes['photo_uuid'] = $file->uuid;
+                }
+
+                // Clean up raw photo data
+                unset($attributes['photo']);
             }
 
             Entity::insertGetUuid($attributes, $this);

@@ -335,6 +335,24 @@ class Utils extends FleetbaseUtils
     }
 
     /**
+     * Always return spatial point.
+     *
+     * @param [type] $mixed
+     *
+     * @return void
+     */
+    public static function castPoint($mixed)
+    {
+        try {
+            $point = static::getPointFromMixed($mixed);
+
+            return $point;
+        } catch (\Throwable $e) {
+            return new Point(0, 0);
+        }
+    }
+
+    /**
      * Determines if the given coordinates strictly represent a Point object.
      * These will explude resolvable coordinates from records.
      *

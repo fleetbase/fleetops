@@ -28,7 +28,7 @@ class Place extends FleetbaseResource
             'owner_uuid'            => $this->when(Http::isInternalRequest(), $this->owner_uuid),
             'owner_type'            => $this->when(Http::isInternalRequest(), $this->owner_type ? Utils::toEmberResourceType($this->owner_type) : null),
             'name'                  => $this->name,
-            'location'              => Utils::getPointFromMixed($this->location),
+            'location'              => Utils::castPoint($this->location),
             'address'               => $this->address,
             'address_html'          => $this->when(Http::isInternalRequest(), $this->address_html),
             'avatar_url'            => $this->avatar_url,

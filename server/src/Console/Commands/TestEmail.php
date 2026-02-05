@@ -33,7 +33,7 @@ class TestEmail extends Command
     public function handle()
     {
         $email = $this->argument('email');
-        $type = $this->option('type');
+        $type  = $this->option('type');
 
         $this->info('Sending test email...');
         $this->info("Type: {$type}");
@@ -47,40 +47,40 @@ class TestEmail extends Command
 
                 default:
                     $this->error("Unknown email type: {$type}");
+
                     return Command::FAILURE;
             }
 
             $this->info('✓ Test email sent successfully!');
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
             $this->error('Failed to send test email: ' . $e->getMessage());
+
             return Command::FAILURE;
         }
     }
 
     /**
      * Send a test customer credentials email.
-     *
-     * @param string $email
-     * @return void
      */
     private function sendCustomerCredentialsEmail(string $email): void
     {
         // Create a mock user
         $user = new User([
-            'name' => 'Test Customer',
+            'name'  => 'Test Customer',
             'email' => $email,
         ]);
 
         // Create a mock company
         $company = new Company([
-            'name' => 'Test Company',
+            'name'      => 'Test Company',
             'public_id' => 'test_company_123',
         ]);
 
         // Create a mock customer
         $customer = new Contact([
-            'name' => 'Test Customer',
+            'name'  => 'Test Customer',
             'email' => $email,
             'phone' => '+1234567890',
         ]);

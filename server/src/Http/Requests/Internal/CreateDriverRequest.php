@@ -26,8 +26,8 @@ class CreateDriverRequest extends CreateDriverApiRequest
      */
     public function rules()
     {
-        $isCreating = $this->isMethod('POST');
-        $isCreatingWithUser = $this->filled('driver.user_uuid');
+        $isCreating                   = $this->isMethod('POST');
+        $isCreatingWithUser           = $this->filled('driver.user_uuid');
         $shouldValidateUserAttributes = $isCreating && !$isCreatingWithUser;
 
         return [
@@ -36,13 +36,13 @@ class CreateDriverRequest extends CreateDriverApiRequest
             'email'                  => [
                 Rule::requiredIf($shouldValidateUserAttributes),
                 Rule::when($this->filled('email'), ['email']),
-                Rule::when($shouldValidateUserAttributes, [Rule::unique('users')->whereNull('deleted_at')])
+                Rule::when($shouldValidateUserAttributes, [Rule::unique('users')->whereNull('deleted_at')]),
             ],
             'phone'                  => [
                 Rule::requiredIf($shouldValidateUserAttributes),
-                Rule::when($shouldValidateUserAttributes, [Rule::unique('users')->whereNull('deleted_at')])
+                Rule::when($shouldValidateUserAttributes, [Rule::unique('users')->whereNull('deleted_at')]),
             ],
-            
+
             // Optional fields
             'password'               => 'nullable|string|min:8',
             'drivers_license_number' => 'nullable|string|max:255',
@@ -56,7 +56,7 @@ class CreateDriverRequest extends CreateDriverApiRequest
             'location'               => ['nullable', new ResolvablePoint()],
             'latitude'               => ['nullable', 'required_with:longitude', 'numeric'],
             'longitude'              => ['nullable', 'required_with:latitude', 'numeric'],
-            
+
             // Photo/avatar
             'photo_uuid'             => 'nullable|exists:files,uuid',
             'avatar_uuid'            => 'nullable|exists:files,uuid',

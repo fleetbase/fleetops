@@ -34,7 +34,7 @@ class Place extends FleetbaseResource
             'city'         => $this->city,
             'country'      => $this->country,
             'avatar_url'   => $this->avatar_url,
-            'location'     => Utils::getPointFromMixed($this->location),
+            'location'     => Utils::castPoint($this->location),
 
             // Meta flag to indicate this is an index resource
             'meta'         => [

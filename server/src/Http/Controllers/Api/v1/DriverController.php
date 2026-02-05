@@ -20,7 +20,6 @@ use Fleetbase\Http\Resources\Organization;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\CompanyUser;
-use Fleetbase\Models\File;
 use Fleetbase\Models\User;
 use Fleetbase\Models\UserDevice;
 use Fleetbase\Models\VerificationCode;
@@ -124,20 +123,10 @@ class DriverController extends Controller
         // create the driver
         $driver = Driver::create($input);
 
-        // Handle photo as either file id/ or base64 data string
-        $photo = $request->input('photo');
-        if ($photo) {
-            $file = null;
-            // Handle photo being a file id
-            if (Utils::isPublicId($photo)) {
-                $file = File::where('public_id', $photo)->first();
-            }
-
-            // Handle the photo being base64 data string
-            if (Utils::isBase64String($photo)) {
-                $path = implode('/', ['uploads', session('company'), 'drivers']);
-                $file = File::createFromBase64($photo, null, $path);
-            }
+        // Handle photo upload using FileResolverService
+        if ($request->has('photo')) {
+            $path = 'uploads/' . $company->uuid . '/drivers';
+            $file = app(\Fleetbase\Services\FileResolverService::class)->resolve($request->input('photo'), $path);
 
             if ($file) {
                 $user->update(['photo_uuid' => $file->uuid]);
@@ -218,20 +207,10 @@ class DriverController extends Controller
         $driver->update($input);
         $driver->flushAttributesCache();
 
-        // Handle photo as either file id/ or base64 data string
-        $photo = $request->input('photo');
-        if ($photo) {
-            $file = null;
-            // Handle photo being a file id
-            if (Utils::isPublicId($photo)) {
-                $file = File::where('public_id', $photo)->first();
-            }
-
-            // Handle the photo being base64 data string
-            if (Utils::isBase64String($photo)) {
-                $path = implode('/', ['uploads', session('company'), 'drivers']);
-                $file = File::createFromBase64($photo, null, $path);
-            }
+        // Handle photo upload using FileResolverService
+        if ($request->has('photo')) {
+            $path = 'uploads/' . session('company') . '/drivers';
+            $file = app(\Fleetbase\Services\FileResolverService::class)->resolve($request->input('photo'), $path);
 
             if ($file) {
                 $driver->user->update(['photo_uuid' => $file->uuid]);
