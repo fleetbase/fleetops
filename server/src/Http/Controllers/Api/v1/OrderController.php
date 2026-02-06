@@ -308,7 +308,7 @@ class OrderController extends Controller
         }
 
         // load required relations
-        $order->load(['trackingNumber', 'driverAssigned', 'purchaseRate', 'customer', 'facilitator']);
+        $order->load(['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate', 'customer', 'facilitator']);
 
         // Determine if order should be dispatched on creation
         $shouldDispatch = $request->boolean('dispatch') && $integratedVendorOrder === null;
@@ -519,7 +519,7 @@ class OrderController extends Controller
         $order->flushAttributesCache();
 
         // load required relations
-        $order->load(['trackingNumber', 'driverAssigned', 'purchaseRate', 'customer', 'facilitator']);
+        $order->load(['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate', 'customer', 'facilitator']);
 
         // response the order resource
         return new OrderResource($order);
@@ -535,6 +535,7 @@ class OrderController extends Controller
         set_time_limit(180);
 
         $results = Order::queryWithRequest($request, function (&$query, $request) {
+            $query->with(['trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'customer', 'facilitator']);
             $query->where('company_uuid', session('company'));
             $query->whereNotNull('payload_uuid');
 
@@ -728,7 +729,7 @@ class OrderController extends Controller
     {
         // find for the order
         try {
-            $order = Order::findRecordOrFail($id, ['trackingNumber', 'driverAssigned', 'purchaseRate', 'customer', 'facilitator']);
+            $order = Order::findRecordOrFail($id, ['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate', 'customer', 'facilitator']);
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -808,7 +809,7 @@ class OrderController extends Controller
     public function dispatchOrder(string $id)
     {
         try {
-            $order = Order::findRecordOrFail($id, ['trackingNumber', 'driverAssigned', 'purchaseRate', 'customer', 'facilitator']);
+            $order = Order::findRecordOrFail($id, ['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate', 'customer', 'facilitator']);
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -1223,7 +1224,7 @@ class OrderController extends Controller
     public function setDestination(string $id, string $placeId)
     {
         try {
-            $order = Order::findRecordOrFail($id, ['payload.waypoints', 'payload.pickup', 'payload.dropoff', 'driverAssigned']);
+            $order = Order::findRecordOrFail($id, ['payload.waypoints', 'payload.pickup', 'payload.dropoff', 'driverAssigned', 'vehicleAssigned', 'customer', 'facilitator']);
         } catch (ModelNotFoundException $exception) {
             return response()->apiError('Order resource not found.', 404);
         }
@@ -1567,12 +1568,8 @@ class OrderController extends Controller
      *
      * @return \Feetbase\Models\File
      */
-    protected function storeProofPhoto(
-        Proof $proof,
-        UploadedFile|string $photo,
-        string $disk,
-        string $bucket,
-    ): File {
+    protected function storeProofPhoto(Proof $proof, UploadedFile|string $photo, string $disk, string $bucket): File
+    {
         $isFile      = $photo instanceof UploadedFile;
         $contents    = $isFile
             ? file_get_contents($photo->getRealPath())
