@@ -9,12 +9,14 @@ export default class ConnectivityTelematicsIndexNewController extends Controller
     @service hostRouter;
     @service intl;
     @service notifications;
+    @service events;
     @tracked overlay;
     @tracked telematic = this.telematicActions.createNewInstance();
 
     @task *save(telematic) {
         try {
             yield telematic.save();
+            this.events.trackResourceCreated(telematic);
             this.overlay?.close();
 
             yield this.hostRouter.refresh();

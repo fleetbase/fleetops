@@ -9,6 +9,7 @@ export default class ConnectivityTelematicsIndexEditController extends Controlle
     @service intl;
     @service notifications;
     @service modalsManager;
+    @service events;
     @tracked overlay;
 
     get actionButtons() {
@@ -23,6 +24,7 @@ export default class ConnectivityTelematicsIndexEditController extends Controlle
     @task *save(telematic) {
         try {
             yield telematic.save();
+            this.events.trackResourceUpdated(telematic);
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.connectivity.telematics.index.details', telematic);

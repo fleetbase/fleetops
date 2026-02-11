@@ -9,6 +9,7 @@ export default class ManagementIssuesIndexEditController extends Controller {
     @service intl;
     @service notifications;
     @service modalsManager;
+    @service events;
     @tracked overlay;
     @tracked actionButtons = [
         {
@@ -20,6 +21,7 @@ export default class ManagementIssuesIndexEditController extends Controller {
     @task *save(issue) {
         try {
             yield issue.save();
+            this.events.trackResourceUpdated(issue);
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.issues.index.details', issue);

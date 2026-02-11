@@ -9,12 +9,14 @@ export default class ConnectivitySensorsIndexNewController extends Controller {
     @service hostRouter;
     @service intl;
     @service notifications;
+    @service events;
     @tracked overlay;
     @tracked sensor = this.sensorActions.createNewInstance();
 
     @task *save(sensor) {
         try {
             yield sensor.save();
+            this.events.trackResourceCreated(sensor);
             this.overlay?.close();
 
             yield this.hostRouter.refresh();

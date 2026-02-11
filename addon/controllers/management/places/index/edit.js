@@ -9,6 +9,7 @@ export default class ManagementPlacesIndexEditController extends Controller {
     @service intl;
     @service notifications;
     @service modalsManager;
+    @service events;
     @tracked overlay;
     @tracked actionButtons = [
         {
@@ -20,6 +21,7 @@ export default class ManagementPlacesIndexEditController extends Controller {
     @task *save(place) {
         try {
             yield place.save();
+            this.events.trackResourceUpdated(place);
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.places.index.details', place);

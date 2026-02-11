@@ -19,6 +19,7 @@ export default class OperationsOrdersIndexNewController extends Controller {
     @service orderImport;
     @service orderCreation;
     @service orderValidation;
+    @service events;
     @tracked order = this.orderCreation.newOrder();
     @tracked overlay;
 
@@ -73,6 +74,7 @@ export default class OperationsOrdersIndexNewController extends Controller {
 
             // Save order
             const createdOrder = yield order.save();
+            this.events.trackResourceCreated(order);
 
             // Trigger created event
             this.universe.trigger('fleet-ops.order.created', createdOrder);

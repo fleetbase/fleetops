@@ -9,6 +9,7 @@ export default class ConnectivityDevicesIndexEditController extends Controller {
     @service intl;
     @service notifications;
     @service modalsManager;
+    @service events;
     @tracked overlay;
 
     get actionButtons() {
@@ -23,6 +24,7 @@ export default class ConnectivityDevicesIndexEditController extends Controller {
     @task *save(device) {
         try {
             yield device.save();
+            this.events.trackResourceUpdated(device);
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.connectivity.devices.index.details', device);

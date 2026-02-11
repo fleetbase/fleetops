@@ -9,12 +9,14 @@ export default class ManagementDriversIndexNewController extends Controller {
     @service hostRouter;
     @service intl;
     @service notifications;
+    @service events;
     @tracked overlay;
     @tracked driver = this.driverActions.createNewInstance();
 
     @task *save(driver) {
         try {
             yield driver.save();
+            this.events.trackResourceCreated(driver);
             this.overlay?.close();
 
             yield this.hostRouter.refresh();

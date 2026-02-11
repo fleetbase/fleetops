@@ -9,12 +9,14 @@ export default class OperationsServiceRatesIndexNewController extends Controller
     @service hostRouter;
     @service intl;
     @service notifications;
+    @service events;
     @tracked overlay;
     @tracked serviceRate = this.serviceRateActions.createNewInstance();
 
     @task *save(serviceRate) {
         try {
             yield serviceRate.save();
+            this.events.trackResourceCreated(serviceRate);
             this.overlay?.close();
 
             yield this.hostRouter.refresh();
