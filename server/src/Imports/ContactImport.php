@@ -10,6 +10,12 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 class ContactImport implements ToCollection, WithHeadingRow
 {
     /**
+     * Counter for successfully imported rows.
+     *
+     * @var int
+     */
+    public int $imported = 0;
+    /**
      * @return Collection
      */
     public function collection(Collection $rows)
@@ -20,6 +26,7 @@ class ContactImport implements ToCollection, WithHeadingRow
             }
 
             Contact::createFromImport($row, true);
+            $this->imported++;
         }
     }
 }

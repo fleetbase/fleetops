@@ -10,6 +10,13 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 class PlaceImport implements ToCollection, WithHeadingRow
 {
     /**
+     * Counter for successfully imported rows.
+     *
+     * @var int
+     */
+    public int $imported = 0;
+
+    /**
      * @return Collection
      */
     public function collection(Collection $rows)
@@ -20,6 +27,7 @@ class PlaceImport implements ToCollection, WithHeadingRow
             }
 
             Place::createFromImport($row, true);
+            $this->imported++;
         }
     }
 }
