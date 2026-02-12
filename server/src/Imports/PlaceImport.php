@@ -11,8 +11,6 @@ class PlaceImport implements ToCollection, WithHeadingRow
 {
     /**
      * Counter for successfully imported rows.
-     *
-     * @var int
      */
     public int $imported = 0;
 

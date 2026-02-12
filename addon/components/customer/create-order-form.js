@@ -195,10 +195,10 @@ export default class CustomerCreateOrderFormComponent extends Component {
 
         try {
             yield order.save();
-            
+
             // Track with standard events service
             this.events.trackResourceCreated(order);
-            
+
             // trigger event that fleet-ops created an order
             this.universe.trigger('fleet-ops.order.created', order);
 

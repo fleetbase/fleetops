@@ -23,7 +23,7 @@ export default class AnalyticsReportsIndexNewController extends Controller {
                 report.fillResult(result);
 
                 yield report.save();
-            this.events.trackResourceCreated(report);
+                this.events.trackResourceCreated(report);
                 this.overlay?.close();
 
                 yield this.hostRouter.refresh();

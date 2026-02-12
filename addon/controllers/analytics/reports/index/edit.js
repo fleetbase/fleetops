@@ -27,7 +27,7 @@ export default class AnalyticsReportsIndexEditController extends Controller {
                 report.fillResult(result);
 
                 yield report.save();
-            this.events.trackResourceUpdated(report);
+                this.events.trackResourceUpdated(report);
                 this.overlay?.close();
 
                 yield this.hostRouter.transitionTo('console.fleet-ops.analytics.reports.index.details', report);
