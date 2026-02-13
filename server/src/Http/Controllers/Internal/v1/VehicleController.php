@@ -59,7 +59,9 @@ class VehicleController extends FleetOpsController
      */
     public function avatars()
     {
-        $options = Vehicle::getAvatarOptions();
+        $options = Vehicle::getAvatarOptions(function ($query) {
+            $query->where('company_uuid', session('company'));
+        });
 
         return response()->json($options);
     }

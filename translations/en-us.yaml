@@ -77,6 +77,7 @@ menu:
   routing: Routing
   custom-fields: Custom Fields
   order-board: Order Board
+  avatars: Avatars
 
 resource:
   asset: Asset
@@ -1680,6 +1681,7 @@ route-list:
   more-waypoints: more waypoints
 
 settings:
+  avatar-management: Avatar Management
   custom-fields: Custom Fields
   notifications:
     fleet-ops-notification-settings: Fleet-Ops Notification Settings

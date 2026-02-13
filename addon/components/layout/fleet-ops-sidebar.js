@@ -261,6 +261,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 permission: 'fleet-ops view custom-field',
                 visible: this.abilities.can('fleet-ops see custom-field'),
             },
+            {
+                intl: 'menu.avatars',
+                title: this.intl.t('menu.avatars'),
+                icon: 'icons',
+                route: 'settings.avatars',
+                permission: 'fleet-ops view avatar',
+                visible: this.abilities.can('fleet-ops see avatar'),
+            },
         ];
 
         const createPanel = (intl, routePrefix, items = [], options = {}) => ({

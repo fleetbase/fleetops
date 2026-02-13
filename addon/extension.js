@@ -17,12 +17,7 @@ export default {
                     title: 'Navigator App',
                     icon: 'location-arrow',
                     component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/navigator-app'),
-                }),
-                new MenuItem({
-                    title: 'Avatar Managemenet',
-                    icon: 'images',
-                    component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/avatar-management'),
-                }),
+                })
             ],
             {
                 slug: 'fleet-ops',

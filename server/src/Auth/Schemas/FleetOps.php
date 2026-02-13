@@ -118,6 +118,10 @@ class FleetOps
             'actions' => [],
         ],
         [
+            'name'    => 'avatar',
+            'actions' => [],
+        ],
+        [
             'name'           => 'navigator-settings', // the navigator mobile app used by drivers
             'action'         => [],
             'remove_actions' => ['delete', 'export', 'list', 'create'],

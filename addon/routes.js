@@ -225,6 +225,7 @@ export default buildRoutes(function () {
         this.route('navigator-app');
         this.route('notifications');
         this.route('custom-fields');
+        this.route('avatars');
         this.route('routing');
         this.route('payments', function () {
             this.route('index', { path: '/' });
