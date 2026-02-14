@@ -17,7 +17,7 @@ export default {
                     title: 'Navigator App',
                     icon: 'location-arrow',
                     component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/navigator-app'),
-                })
+                }),
             ],
             {
                 slug: 'fleet-ops',
