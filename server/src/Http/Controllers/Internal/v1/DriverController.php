@@ -137,6 +137,14 @@ class DriverController extends FleetOpsController
                     if ($input->has('user_uuid')) {
                         $user = User::where('uuid', $input->get('user_uuid'))->first();
 
+                        // Check if a driver profile already exists for this user in the current company
+                        if ($user) {
+                            $existingDriver = Driver::where(['user_uuid' => $user->uuid, 'company_uuid' => session('company')])->first();
+                            if ($existingDriver) {
+                                return response()->error('This user account already belongs to a driver.');
+                            }
+                        }
+
                         // If user doesn't exist with provided UUID, create new user
                         if (!$user) {
                             $userInput = $input
