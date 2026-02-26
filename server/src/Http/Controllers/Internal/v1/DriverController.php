@@ -141,7 +141,7 @@ class DriverController extends FleetOpsController
                         if ($user) {
                             $existingDriver = Driver::where(['user_uuid' => $user->uuid, 'company_uuid' => session('company')])->first();
                             if ($existingDriver) {
-                                return response()->error('This user account already belongs to a driver.');
+                                throw new \Exception('This user account already belongs to a driver.');
                             }
                         }
 
