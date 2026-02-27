@@ -9,12 +9,14 @@ export default class ConnectivityDevicesIndexNewController extends Controller {
     @service hostRouter;
     @service intl;
     @service notifications;
+    @service events;
     @tracked overlay;
     @tracked device = this.deviceActions.createNewInstance();
 
     @task *save(device) {
         try {
             yield device.save();
+            this.events.trackResourceCreated(device);
             this.overlay?.close();
 
             yield this.hostRouter.refresh();

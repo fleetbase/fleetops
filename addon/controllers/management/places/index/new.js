@@ -9,12 +9,14 @@ export default class ManagementPlacesIndexNewController extends Controller {
     @service hostRouter;
     @service intl;
     @service notifications;
+    @service events;
     @tracked overlay;
     @tracked place = this.placeActions.createNewInstance();
 
     @task *save(place) {
         try {
             yield place.save();
+            this.events.trackResourceCreated(place);
             this.overlay?.close();
 
             yield this.hostRouter.refresh();

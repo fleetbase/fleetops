@@ -9,6 +9,7 @@ export default class ManagementVendorsIndexEditController extends Controller {
     @service intl;
     @service notifications;
     @service modalsManager;
+    @service events;
     @tracked overlay;
     @tracked actionButtons = [
         {
@@ -20,6 +21,7 @@ export default class ManagementVendorsIndexEditController extends Controller {
     @task *save(vendor) {
         try {
             yield vendor.save();
+            this.events.trackResourceUpdated(vendor);
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.vendors.index.details', vendor);

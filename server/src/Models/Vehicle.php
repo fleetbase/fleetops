@@ -507,7 +507,7 @@ class Vehicle extends Model
      *
      * @return \Illuminate\Support\Collection
      */
-    public static function getAvatarOptions()
+    public static function getAvatarOptions(?callable $customQueryCallback = null)
     {
         $options = [
             '2_door_truck.svg',
@@ -540,8 +540,15 @@ class Vehicle extends Model
             'taxi.svg',
         ];
 
+        // Query for custom avatars
+        $customAvatarsQuery = File::where('type', 'vehicle-avatar');
+        if (is_callable($customQueryCallback)) {
+            $customQueryCallback($customAvatarsQuery);
+        }
+        $customAvatars = $customAvatarsQuery->get();
+
         // Get custom avatars
-        $customAvatars = collect(File::where('type', 'vehicle-avatar')->get()->mapWithKeys(
+        $customAvatars = collect($customAvatars->mapWithKeys(
             function ($file) {
                 $key = str_replace(['.svg', '.png'], '', 'Custom: ' . $file->original_filename);
 

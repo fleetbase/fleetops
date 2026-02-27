@@ -47,7 +47,7 @@ class FleetOpsReportSchema implements ReportSchema
             ->description('Delivery and service orders')
             ->category('Operations')
             ->extension('fleet-ops')
-            ->excludeColumns(['uuid', 'deleted_at', 'meta']) // Hide foreign keys and system columns
+            ->excludeColumns(['uuid', 'deleted_at']) // Hide foreign keys and system columns
             ->maxRows(50000)
             ->cacheTtl(3600)
             ->columns([
@@ -157,6 +157,12 @@ class FleetOpsReportSchema implements ReportSchema
                     ->description('When the order was last updated')
                     ->filterable()
                     ->sortable(),
+
+                Column::make('meta', 'json')
+                    ->label('Metadata')
+                    ->description('Order metadata and custom fields')
+                    ->searchable()
+                    ->filterable(),
             ])
             ->computedColumns([
                 Column::count('total_orders', 'id')
@@ -178,6 +184,18 @@ class FleetOpsReportSchema implements ReportSchema
                 Column::avg('average_time', 'time')
                     ->label('Average Time')
                     ->description('Average duration per order'),
+
+                Column::sum('total_transaction_amount', 'amount')
+                    ->label('Total Transaction Amount')
+                    ->description('Sum of all transaction amounts'),
+
+                Column::avg('average_transaction_amount', 'amount')
+                    ->label('Average Transaction Amount')
+                    ->description('Average transaction amount per order'),
+
+                Column::count('orders_with_transactions', 'transaction_uuid')
+                    ->label('Orders with Transactions')
+                    ->description('Count of orders that have transactions'),
             ])
             ->relationships([
                 // Auto-join relationships for seamless access
@@ -271,6 +289,116 @@ class FleetOpsReportSchema implements ReportSchema
                         Column::make('email', 'string')->label('Email'),
                         Column::make('phone', 'string')->label('Phone'),
                         Column::make('type', 'string')->label('Type'),
+                    ]),
+
+                Relationship::hasAutoJoin('transaction', 'transactions')
+                    ->label('Transaction')
+                    ->localKey('transaction_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('public_id', 'string')
+                            ->label('Transaction ID')
+                            ->description('Public transaction identifier')
+                            ->searchable()
+                            ->filterable()
+                            ->sortable(),
+
+                        Column::make('gateway_transaction_id', 'string')
+                            ->label('Gateway Transaction ID')
+                            ->description('Transaction ID from payment gateway')
+                            ->searchable()
+                            ->filterable()
+                            ->sortable(),
+
+                        Column::make('gateway', 'string')
+                            ->label('Payment Gateway')
+                            ->description('Payment gateway used for transaction')
+                            ->filterable()
+                            ->aggregatable(),
+
+                        Column::make('amount', 'integer')
+                            ->label('Amount')
+                            ->description('Transaction amount (in cents)')
+                            ->aggregatable()
+                            ->sortable()
+                            ->transformer(function ($value) {
+                                // Convert cents to dollars with 2 decimal places
+                                return number_format($value / 100, 2);
+                            }),
+
+                        Column::make('currency', 'string')
+                            ->label('Currency')
+                            ->description('Transaction currency code')
+                            ->filterable()
+                            ->aggregatable(),
+
+                        Column::make('description', 'string')
+                            ->label('Description')
+                            ->description('Transaction description')
+                            ->searchable()
+                            ->filterable(),
+
+                        Column::make('type', 'string')
+                            ->label('Transaction Type')
+                            ->description('Type of transaction')
+                            ->filterable()
+                            ->aggregatable(),
+
+                        Column::make('status', 'string')
+                            ->label('Transaction Status')
+                            ->description('Current transaction status')
+                            ->filterable()
+                            ->aggregatable()
+                            ->transformer(function ($value) {
+                                $labels = [
+                                    'pending'   => 'Pending',
+                                    'completed' => 'Completed',
+                                    'failed'    => 'Failed',
+                                    'refunded'  => 'Refunded',
+                                    'canceled'  => 'Canceled',
+                                ];
+
+                                return $labels[$value] ?? ucfirst($value);
+                            }),
+
+                        Column::make('created_at', 'datetime')
+                            ->label('Transaction Date')
+                            ->description('When the transaction was created')
+                            ->filterable()
+                            ->sortable()
+                            ->aggregatable(),
+                    ])
+                    ->with([
+                        // Nested relationship for transaction items
+                        Relationship::hasAutoJoin('items', 'transaction_items')
+                            ->label('Transaction Items')
+                            ->localKey('uuid')
+                            ->foreignKey('transaction_uuid')
+                            ->columns([
+                                Column::make('amount', 'string')
+                                    ->label('Item Amount')
+                                    ->description('Line item amount')
+                                    ->aggregatable()
+                                    ->sortable(),
+
+                                Column::make('currency', 'string')
+                                    ->label('Item Currency')
+                                    ->description('Line item currency code')
+                                    ->filterable(),
+
+                                Column::make('details', 'string')
+                                    ->label('Item Details')
+                                    ->description('Detailed description of the line item')
+                                    ->searchable()
+                                    ->filterable(),
+
+                                Column::make('code', 'string')
+                                    ->label('Item Code')
+                                    ->description('Item or SKU code')
+                                    ->searchable()
+                                    ->filterable()
+                                    ->sortable(),
+                            ]),
                     ]),
             ]);
     }

@@ -9,12 +9,14 @@ export default class ManagementContactsCustomersNewController extends Controller
     @service hostRouter;
     @service intl;
     @service notifications;
+    @service events;
     @tracked overlay;
     @tracked customer = this.customerActions.createNewInstance();
 
     @task *save(customer) {
         try {
             yield customer.save();
+            this.events.trackResourceCreated(customer);
             this.overlay?.close();
 
             yield this.hostRouter.refresh();

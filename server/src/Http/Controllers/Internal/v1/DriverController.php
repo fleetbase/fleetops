@@ -137,6 +137,14 @@ class DriverController extends FleetOpsController
                     if ($input->has('user_uuid')) {
                         $user = User::where('uuid', $input->get('user_uuid'))->first();
 
+                        // Check if a driver profile already exists for this user in the current company
+                        if ($user) {
+                            $existingDriver = Driver::where(['user_uuid' => $user->uuid, 'company_uuid' => session('company')])->first();
+                            if ($existingDriver) {
+                                throw new \Exception('This user account already belongs to a driver.');
+                            }
+                        }
+
                         // If user doesn't exist with provided UUID, create new user
                         if (!$user) {
                             $userInput = $input
@@ -513,15 +521,18 @@ class DriverController extends FleetOpsController
     {
         $disk           = $request->input('disk', config('filesystems.default'));
         $files          = $request->resolveFilesFromIds();
+        $importedCount  = 0;
 
         foreach ($files as $file) {
             try {
-                Excel::import(new DriverImport(), $file->path, $disk);
+                $import = new DriverImport();
+                Excel::import($import, $file->path, $disk);
+                $importedCount += $import->imported;
             } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to proccess.');
             }
         }
 
-        return response()->json(['status' => 'ok', 'message' => 'Import completed']);
+        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
     }
 }

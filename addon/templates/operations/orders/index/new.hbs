@@ -9,6 +9,7 @@
     @onOverlayReady={{fn (mut this.overlay)}}
     @width="530px"
     @onOpen={{this.setup}}
+    class="new-order-panel"
 >
     <Order::Form @resource={{this.order}} @controller={{this}} />
     <Spacer @height="300px" />

@@ -10,6 +10,7 @@ export default class OperationsServiceRatesIndexEditController extends Controlle
     @service intl;
     @service notifications;
     @service modalsManager;
+    @service events;
     @tracked overlay;
     @tracked actionButtons = [
         {
@@ -21,6 +22,7 @@ export default class OperationsServiceRatesIndexEditController extends Controlle
     @task *save(serviceRate) {
         try {
             yield serviceRate.save();
+            this.events.trackResourceUpdated(serviceRate);
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.operations.service-rates.index.details', serviceRate);

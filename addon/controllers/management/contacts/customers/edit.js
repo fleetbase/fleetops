@@ -9,6 +9,7 @@ export default class ManagementContactsCustomersEditController extends Controlle
     @service intl;
     @service notifications;
     @service modalsManager;
+    @service events;
     @tracked overlay;
     @tracked actionButtons = [
         {
@@ -20,6 +21,7 @@ export default class ManagementContactsCustomersEditController extends Controlle
     @task *save(customer) {
         try {
             yield customer.save();
+            this.events.trackResourceUpdated(customer);
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.contacts.customers.details', customer);

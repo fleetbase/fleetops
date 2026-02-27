@@ -9,6 +9,7 @@ export default class ManagementDriversIndexEditController extends Controller {
     @service intl;
     @service notifications;
     @service modalsManager;
+    @service events;
     @tracked overlay;
     @tracked actionButtons = [
         {
@@ -20,6 +21,7 @@ export default class ManagementDriversIndexEditController extends Controller {
     @task *save(driver) {
         try {
             yield driver.save();
+            this.events.trackResourceUpdated(driver);
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.drivers.index.details', driver);

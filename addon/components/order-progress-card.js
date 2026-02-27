@@ -34,7 +34,7 @@ export default class OrderProgressCardComponent extends Component {
     }
 
     @task *loadTrackerData() {
-        if (!isBlank(this.order.tracker_data)) {
+        if (!isBlank(this.order.tracker_data) || !this.order || !this.order.isNew) {
             return;
         }
 

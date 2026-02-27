@@ -11,12 +11,14 @@ export default class ManagementVehiclesIndexNewController extends Controller {
     @service hostRouter;
     @service intl;
     @service notifications;
+    @service events;
     @tracked overlay;
     @tracked vehicle = this.store.createRecord('vehicle', DEFAULT_PROPERTIES);
 
     @task *save(vehicle) {
         try {
             yield vehicle.save();
+            this.events.trackResourceCreated(vehicle);
             this.overlay?.close();
 
             yield this.hostRouter.refresh();

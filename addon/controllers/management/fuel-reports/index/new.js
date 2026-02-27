@@ -10,12 +10,14 @@ export default class ManagementFuelReportsIndexNewController extends Controller 
     @service hostRouter;
     @service intl;
     @service notifications;
+    @service events;
     @tracked overlay;
     @tracked fuelReport = this.fuelReportActions.createNewInstance({ reporter: this.currentUser.user });
 
     @task *save(fuelReport) {
         try {
             yield fuelReport.save();
+            this.events.trackResourceCreated(fuelReport);
             this.overlay?.close();
 
             yield this.hostRouter.refresh();

@@ -9,6 +9,7 @@ export default class ManagementVehiclesIndexEditController extends Controller {
     @service intl;
     @service notifications;
     @service modalsManager;
+    @service events;
     @tracked overlay;
     @tracked actionButtons = [
         {
@@ -20,6 +21,7 @@ export default class ManagementVehiclesIndexEditController extends Controller {
     @task *save(vehicle) {
         try {
             yield vehicle.save();
+            this.events.trackResourceUpdated(vehicle);
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details', vehicle);

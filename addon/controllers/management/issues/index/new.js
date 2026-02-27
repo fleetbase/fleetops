@@ -10,12 +10,14 @@ export default class ManagementIssuesIndexNewController extends Controller {
     @service intl;
     @service currentUser;
     @service notifications;
+    @service events;
     @tracked overlay;
     @tracked issue = this.issueActions.createNewInstance({ reporter: this.currentUser.user });
 
     @task *save(issue) {
         try {
             yield issue.save();
+            this.events.trackResourceCreated(issue);
             this.overlay?.close();
 
             yield this.hostRouter.refresh();

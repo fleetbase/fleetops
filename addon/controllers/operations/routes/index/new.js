@@ -6,6 +6,7 @@ import { task } from 'ember-concurrency';
 
 export default class OperationsRoutesIndexNewController extends Controller {
     @service store;
+    @service events;
     @tracked panel;
     @tracked selectedOrders = '';
     @tracked waypoints = [];

@@ -221,15 +221,18 @@ class FleetController extends FleetOpsController
     {
         $disk           = $request->input('disk', config('filesystems.default'));
         $files          = $request->resolveFilesFromIds();
+        $importedCount  = 0;
 
         foreach ($files as $file) {
             try {
-                Excel::import(new FleetImport(), $file->path, $disk);
+                $import = new FleetImport();
+                Excel::import($import, $file->path, $disk);
+                $importedCount += $import->imported;
             } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to proccess.');
             }
         }
 
-        return response()->json(['status' => 'ok', 'message' => 'Import completed']);
+        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
     }
 }

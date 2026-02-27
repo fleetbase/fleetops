@@ -9,6 +9,7 @@ export default class ManagementVendorsIndexNewController extends Controller {
     @service hostRouter;
     @service intl;
     @service notifications;
+    @service events;
     @tracked overlay;
     @tracked vendor = this.vendorActions.createNewInstance();
     @tracked integratedVendor;
@@ -18,6 +19,7 @@ export default class ManagementVendorsIndexNewController extends Controller {
 
         try {
             yield vendor.save();
+            this.events.trackResourceCreated(vendor);
             this.overlay?.close();
 
             yield this.hostRouter.refresh();

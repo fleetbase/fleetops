@@ -10,6 +10,11 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 class DriverImport implements ToCollection, WithHeadingRow
 {
     /**
+     * Counter for successfully imported rows.
+     */
+    public int $imported = 0;
+
+    /**
      * @return Collection
      */
     public function collection(Collection $rows)
@@ -20,6 +25,7 @@ class DriverImport implements ToCollection, WithHeadingRow
             }
 
             Driver::createFromImport($row, true);
+            $this->imported++;
         }
     }
 }

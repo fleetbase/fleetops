@@ -9,6 +9,7 @@ export default class ManagementFuelReportsIndexEditController extends Controller
     @service intl;
     @service notifications;
     @service modalsManager;
+    @service events;
     @tracked overlay;
     @tracked actionButtons = [
         {
@@ -20,6 +21,7 @@ export default class ManagementFuelReportsIndexEditController extends Controller
     @task *save(fuelReport) {
         try {
             yield fuelReport.save();
+            this.events.trackResourceUpdated(fuelReport);
             this.overlay?.close();
 
             yield this.hostRouter.transitionTo('console.fleet-ops.management.fuel-reports.index.details', fuelReport);

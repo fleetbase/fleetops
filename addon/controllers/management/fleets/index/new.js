@@ -9,12 +9,14 @@ export default class ManagementFleetsIndexNewController extends Controller {
     @service hostRouter;
     @service intl;
     @service notifications;
+    @service events;
     @tracked overlay;
     @tracked fleet = this.fleetActions.createNewInstance();
 
     @task *save(fleet) {
         try {
             yield fleet.save();
+            this.events.trackResourceCreated(fleet);
             this.overlay?.close();
 
             yield this.hostRouter.refresh();
