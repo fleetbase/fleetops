@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Requests;
 
 use Fleetbase\FleetOps\Rules\ResolvablePoint;
+use Fleetbase\FleetOps\Rules\ResolvableVehicle;
 use Fleetbase\Http\Requests\FleetbaseRequest;
 use Illuminate\Validation\Rule;
 
@@ -34,7 +35,7 @@ class CreateDriverRequest extends FleetbaseRequest
             'password'  => 'nullable|string',
             'country'   => 'nullable|size:2',
             'city'      => 'nullable|string',
-            'vehicle'   => 'nullable|string|starts_with:vehicle_|exists:vehicles,public_id',
+            'vehicle'   => ['nullable', new ResolvableVehicle()],
             'status'    => 'nullable|string|in:active,inactive',
             'vendor'    => 'nullable|exists:vendors,public_id',
             'job'       => 'nullable|exists:orders,public_id',
