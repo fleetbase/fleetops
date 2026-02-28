@@ -10,8 +10,6 @@ class ResolvableVehicle implements Rule
 {
     /**
      * The resolved vehicle instance, if found.
-     *
-     * @var Vehicle|null
      */
     protected ?Vehicle $resolved = null;
 
@@ -24,7 +22,6 @@ class ResolvableVehicle implements Rule
      *  - An array/object containing an "id", "public_id", or "uuid" key
      *
      * @param string $attribute
-     * @param mixed  $value
      *
      * @return bool
      */
@@ -59,10 +56,6 @@ class ResolvableVehicle implements Rule
      * Extract a string identifier from the given value.
      *
      * Handles a plain string, an associative array, or a stdClass object.
-     *
-     * @param mixed $value
-     *
-     * @return string|null
      */
     protected function extractIdentifier($value): ?string
     {
@@ -89,8 +82,6 @@ class ResolvableVehicle implements Rule
 
     /**
      * Get the resolved Vehicle model instance after validation passes.
-     *
-     * @return Vehicle|null
      */
     public function getResolved(): ?Vehicle
     {

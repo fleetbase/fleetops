@@ -285,7 +285,7 @@ class DriverController extends FleetOpsController
         }
 
         // create validation request
-        $updateDriverRequest = UpdateDriverRequest::createFrom($request);;
+        $updateDriverRequest = UpdateDriverRequest::createFrom($request);
         $rules               = $updateDriverRequest->rules();
 
         // manually validate request
