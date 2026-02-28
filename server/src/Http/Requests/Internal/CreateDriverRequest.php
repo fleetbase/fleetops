@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Requests\Internal;
 
 use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest as CreateDriverApiRequest;
 use Fleetbase\FleetOps\Rules\ResolvablePoint;
+use Fleetbase\FleetOps\Rules\ResolvableVehicle;
 use Fleetbase\Support\Auth;
 use Illuminate\Validation\Rule;
 
@@ -49,7 +50,7 @@ class CreateDriverRequest extends CreateDriverApiRequest
             'internal_id'            => 'nullable|string|max:255',
             'country'                => 'nullable|string|size:2',
             'city'                   => 'nullable|string|max:255',
-            'vehicle'                => 'nullable|string|starts_with:vehicle_|exists:vehicles,public_id',
+            'vehicle'                => ['nullable', new ResolvableVehicle()],
             'status'                 => 'nullable|string|in:active,inactive',
             'vendor'                 => 'nullable|exists:vendors,public_id',
             'job'                    => 'nullable|exists:orders,public_id',
