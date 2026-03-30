@@ -11,6 +11,9 @@ use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
+use Fleetbase\Models\Schedule;
+use Fleetbase\Models\ScheduleAvailability;
+use Fleetbase\Models\ScheduleItem;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasApiModelCache;
@@ -25,6 +28,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -298,6 +302,48 @@ class Driver extends Model
     public function devices(): HasMany
     {
         return $this->hasMany(\Fleetbase\Models\UserDevice::class, 'user_uuid', 'user_uuid');
+    }
+
+    /**
+     * Get all schedules assigned to this driver.
+     * The driver acts as the polymorphic `subject` on the Schedule model.
+     */
+    public function schedules(): MorphMany
+    {
+        return $this->morphMany(Schedule::class, 'subject');
+    }
+
+    /**
+     * Get all individual schedule items (shifts) assigned to this driver.
+     * The driver acts as the polymorphic `assignee` on the ScheduleItem model.
+     */
+    public function scheduleItems(): MorphMany
+    {
+        return $this->morphMany(ScheduleItem::class, 'assignee');
+    }
+
+    /**
+     * Get the active schedule item (shift) for a given date.
+     * Used by AllocationPayloadBuilder to inject time_window constraints.
+     */
+    public function activeShiftFor(\DateTimeInterface $date = null): ?ScheduleItem
+    {
+        $date = $date ?? now();
+
+        return $this->scheduleItems()
+            ->whereDate('start_at', $date)
+            ->whereIn('status', ['pending', 'active'])
+            ->orderBy('start_at')
+            ->first();
+    }
+
+    /**
+     * Get all availability records (time-off, preferred hours) for this driver.
+     * The driver acts as the polymorphic `subject` on the ScheduleAvailability model.
+     */
+    public function availabilities(): MorphMany
+    {
+        return $this->morphMany(ScheduleAvailability::class, 'subject');
     }
 
     /**
