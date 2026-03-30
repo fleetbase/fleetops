@@ -1,0 +1,200 @@
+{{! Dispatcher Workbench — Intelligent Order Allocation Engine }}
+<div class="order-allocation-workbench flex flex-col h-full">
+
+    {{! ── Toolbar ── }}
+    <div class="workbench-toolbar flex items-center justify-between px-4 py-3 border-b dark:border-gray-700">
+        <div class="flex items-center space-x-2">
+            <h2 class="text-sm font-semibold dark:text-white">{{t "allocation.workbench-title"}}</h2>
+            {{#if this.hasProposedPlan}}
+                <Badge @status="info" @label={{t "allocation.plan-ready"}} />
+            {{/if}}
+        </div>
+        <div class="flex items-center space-x-2">
+            {{#if this.hasProposedPlan}}
+                <Button
+                    @icon="check"
+                    @text={{t "allocation.commit-plan"}}
+                    @type="success"
+                    @size="sm"
+                    @isLoading={{this.commitPlan.isRunning}}
+                    {{on "click" (perform this.commitPlan)}}
+                />
+                <Button
+                    @icon="times"
+                    @text={{t "allocation.discard-plan"}}
+                    @type="default"
+                    @size="sm"
+                    {{on "click" this.discardPlan}}
+                />
+            {{else}}
+                <Button
+                    @icon="bolt"
+                    @text={{t "allocation.run-allocation"}}
+                    @type="primary"
+                    @size="sm"
+                    @isLoading={{this.runAllocation.isRunning}}
+                    {{on "click" (perform this.runAllocation)}}
+                />
+            {{/if}}
+            <Button
+                @icon="sync"
+                @text={{t "common.refresh"}}
+                @type="default"
+                @size="sm"
+                @isLoading={{this.loadData.isRunning}}
+                {{on "click" (perform this.loadData)}}
+            />
+        </div>
+    </div>
+
+    {{! ── Main Content ── }}
+    <div class="workbench-body flex flex-1 overflow-hidden">
+
+        {{! ── Left Panel: Order Bucket ── }}
+        <div class="order-bucket w-72 flex-shrink-0 border-r dark:border-gray-700 overflow-y-auto">
+            <div class="px-3 py-2 border-b dark:border-gray-700">
+                <span class="text-xs font-medium uppercase tracking-wide dark:text-gray-400">
+                    {{t "allocation.unassigned-orders"}} ({{this.unassignedOrders.length}})
+                </span>
+            </div>
+            {{#if this.loadUnassignedOrders.isRunning}}
+                <div class="flex justify-center py-8"><Spinner /></div>
+            {{else if this.unassignedOrders.length}}
+                {{#each this.unassignedOrders as |order|}}
+                    <div
+                        class="order-card mx-2 my-1 px-3 py-2 rounded border dark:border-gray-600 dark:bg-gray-800 cursor-grab text-xs"
+                        draggable="true"
+                        data-order-id={{order.public_id}}
+                    >
+                        <div class="font-medium dark:text-white truncate">{{order.public_id}}</div>
+                        <div class="text-gray-400 truncate">{{order.payload.dropoff.address}}</div>
+                        {{#if order.scheduled_at}}
+                            <div class="text-blue-400 mt-0.5">
+                                <FaIcon @icon="clock" @size="xs" /> {{format-date order.scheduled_at "HH:mm"}}
+                            </div>
+                        {{/if}}
+                    </div>
+                {{/each}}
+            {{else}}
+                <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
+                    <FaIcon @icon="check-circle" @size="2x" class="mb-2 text-green-400" />
+                    {{t "allocation.no-unassigned-orders"}}
+                </div>
+            {{/if}}
+        </div>
+
+        {{! ── Centre Panel: Proposed Plan / Vehicle Bucket ── }}
+        <div class="plan-panel flex-1 overflow-y-auto">
+            {{#if this.runAllocation.isRunning}}
+                <div class="flex flex-col items-center justify-center h-full text-gray-400">
+                    <Spinner @size="lg" class="mb-3" />
+                    <span class="text-sm">{{t "allocation.running"}}</span>
+                </div>
+            {{else if this.hasProposedPlan}}
+
+                {{! Unassigned warning banner }}
+                {{#if this.hasUnassigned}}
+                    <div class="mx-4 mt-3 px-3 py-2 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-400 text-xs">
+                        <FaIcon @icon="exclamation-triangle" />
+                        {{t "allocation.unassigned-warning" count=this.unassignedAfterRun.length}}
+                    </div>
+                {{/if}}
+
+                {{! Per-vehicle route cards }}
+                {{#each this.planByVehicle as |group|}}
+                    <div
+                        class="vehicle-route-card mx-4 my-3 rounded border dark:border-gray-600 dark:bg-gray-800"
+                        data-vehicle-id={{group.vehicle.public_id}}
+                        data-driver-id={{group.driver.public_id}}
+                    >
+                        {{! Vehicle header }}
+                        <div class="flex items-center px-3 py-2 border-b dark:border-gray-700">
+                            <FaIcon @icon="truck" class="text-blue-400 mr-2" />
+                            <span class="text-xs font-semibold dark:text-white flex-1">
+                                {{group.vehicle.display_name}}
+                            </span>
+                            {{#if group.driver}}
+                                <span class="text-xs text-gray-400">
+                                    <FaIcon @icon="user" class="mr-1" />{{group.driver.name}}
+                                </span>
+                            {{/if}}
+                            {{#if group.driver.activeShift}}
+                                <Badge
+                                    @status="success"
+                                    @label={{t "allocation.on-shift"}}
+                                    class="ml-2"
+                                />
+                            {{/if}}
+                        </div>
+
+                        {{! Assigned orders list (drag target) }}
+                        <div
+                            class="vehicle-drop-zone px-2 py-1 min-h-12"
+                            data-vehicle-id={{group.vehicle.public_id}}
+                            data-driver-id={{group.driver.public_id}}
+                        >
+                            {{#each group.orders as |item|}}
+                                <div
+                                    class="assigned-order flex items-center px-2 py-1.5 my-0.5 rounded text-xs
+                                           {{if item._overridden "border border-dashed border-orange-400 bg-orange-900/20" "dark:bg-gray-700"}}"
+                                    draggable="true"
+                                    data-order-id={{item.order.public_id}}
+                                >
+                                    <span class="text-gray-400 w-5 text-center mr-2">{{item.sequence}}</span>
+                                    <span class="flex-1 dark:text-white truncate">{{item.order.public_id}}</span>
+                                    {{#if item._overridden}}
+                                        <Badge @status="warning" @label={{t "allocation.overridden"}} />
+                                    {{/if}}
+                                </div>
+                            {{/each}}
+                        </div>
+                    </div>
+                {{/each}}
+
+            {{else}}
+
+                {{! Empty state — no plan yet }}
+                <div class="flex flex-col items-center justify-center h-full text-gray-400">
+                    <FaIcon @icon="route" @size="3x" class="mb-4 opacity-30" />
+                    <p class="text-sm font-medium mb-1">{{t "allocation.empty-state-title"}}</p>
+                    <p class="text-xs text-center max-w-xs">{{t "allocation.empty-state-body"}}</p>
+                </div>
+
+            {{/if}}
+        </div>
+
+        {{! ── Right Panel: Vehicle Bucket ── }}
+        <div class="vehicle-bucket w-72 flex-shrink-0 border-l dark:border-gray-700 overflow-y-auto">
+            <div class="px-3 py-2 border-b dark:border-gray-700">
+                <span class="text-xs font-medium uppercase tracking-wide dark:text-gray-400">
+                    {{t "allocation.available-vehicles"}} ({{this.availableVehicles.length}})
+                </span>
+            </div>
+            {{#if this.loadAvailableVehicles.isRunning}}
+                <div class="flex justify-center py-8"><Spinner /></div>
+            {{else if this.availableVehicles.length}}
+                {{#each this.availableVehicles as |vehicle|}}
+                    <div class="vehicle-card mx-2 my-1 px-3 py-2 rounded border dark:border-gray-600 dark:bg-gray-800 text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium dark:text-white truncate">{{vehicle.display_name}}</span>
+                            {{#if vehicle.driver.online}}
+                                <Badge @status="success" @label={{t "common.online"}} />
+                            {{/if}}
+                        </div>
+                        {{#if vehicle.driver}}
+                            <div class="text-gray-400 mt-0.5 truncate">
+                                <FaIcon @icon="user" class="mr-1" />{{vehicle.driver.name}}
+                            </div>
+                        {{/if}}
+                    </div>
+                {{/each}}
+            {{else}}
+                <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
+                    <FaIcon @icon="truck" @size="2x" class="mb-2 opacity-40" />
+                    {{t "allocation.no-available-vehicles"}}
+                </div>
+            {{/if}}
+        </div>
+
+    </div>
+</div>

@@ -15,6 +15,7 @@ export default buildRoutes(function () {
             });
         });
         this.route('scheduler', function () {});
+        this.route('allocation', function () {});
         this.route('orders', { path: '/' }, function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');
@@ -229,6 +230,7 @@ export default buildRoutes(function () {
         this.route('custom-fields');
         this.route('avatars');
         this.route('routing');
+        this.route('order-allocation');
         this.route('payments', function () {
             this.route('index', { path: '/' });
             this.route('onboard');

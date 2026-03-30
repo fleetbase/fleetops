@@ -511,6 +511,17 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->get('/', 'MetricsController@all');
                                     }
                                 );
+                                $router->group(
+                                    ['prefix' => 'allocation'],
+                                    function ($router) {
+                                        $router->post('run', 'AllocationController@run');
+                                        $router->post('commit', 'AllocationController@commit');
+                                        $router->get('preview', 'AllocationController@preview');
+                                        $router->get('engines', 'AllocationController@engines');
+                                        $router->get('settings', 'AllocationController@getSettings');
+                                        $router->patch('settings', 'AllocationController@saveSettings');
+                                    }
+                                );
                             }
                         );
                     }

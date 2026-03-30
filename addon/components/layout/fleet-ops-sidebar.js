@@ -66,6 +66,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 permission: 'fleet-ops list order-config',
                 visible: this.abilities.can('fleet-ops see order-config'),
             },
+            {
+                intl: 'menu.allocation',
+                title: this.intl.t('menu.allocation'),
+                icon: 'circle-nodes',
+                route: 'operations.allocation',
+                permission: 'fleet-ops list order',
+                visible: this.abilities.can('fleet-ops see order'),
+            },
         ];
 
         const resourcesItems = [
@@ -268,6 +276,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 route: 'settings.avatars',
                 permission: 'fleet-ops view avatar',
                 visible: this.abilities.can('fleet-ops see avatar'),
+            },
+            {
+                intl: 'menu.order-allocation',
+                title: this.intl.t('menu.order-allocation'),
+                icon: 'circle-nodes',
+                route: 'settings.order-allocation',
+                permission: 'fleet-ops view routing-settings',
+                visible: this.abilities.can('fleet-ops see routing-settings'),
             },
         ];
 
