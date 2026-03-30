@@ -1,0 +1,49 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="grid grid-cols-1 gap-2 text-xs dark:text-gray-100">
+
+            {{! Shift Title }}
+            <InputGroup @name={{t "scheduler.shift-title"}}>
+                <Input
+                    @value={{this.title}}
+                    @type="text"
+                    placeholder={{t "scheduler.shift-title-placeholder"}}
+                    class="form-input"
+                    {{on "change" (fn this.updateTitle this.title)}}
+                />
+            </InputGroup>
+
+            {{! Start Date/Time }}
+            <InputGroup @name={{t "scheduler.shift-start"}}>
+                <DateTimeInput
+                    @value={{this.startAt}}
+                    @onChange={{this.updateStartAt}}
+                    placeholder={{t "scheduler.select-start-datetime"}}
+                    class="form-input"
+                />
+            </InputGroup>
+
+            {{! End Date/Time }}
+            <InputGroup @name={{t "scheduler.shift-end"}}>
+                <DateTimeInput
+                    @value={{this.endAt}}
+                    @onChange={{this.updateEndAt}}
+                    placeholder={{t "scheduler.select-end-datetime"}}
+                    class="form-input"
+                />
+            </InputGroup>
+
+            {{! Notes }}
+            <InputGroup @name={{t "common.notes"}}>
+                <Textarea
+                    @value={{this.notes}}
+                    placeholder={{t "scheduler.shift-notes-placeholder"}}
+                    class="form-input"
+                    rows="2"
+                    {{on "input" (fn this.updateNotes this.notes)}}
+                />
+            </InputGroup>
+
+        </div>
+    </div>
+</Modal::Default>

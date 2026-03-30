@@ -3,46 +3,83 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
+import { startOfWeek, endOfWeek, addWeeks, formatISO } from 'date-fns';
 
 /**
  * Driver::Schedule Component
  *
- * Displays and manages a driver's schedule from their detail page.
- * Includes HOS compliance tracking, upcoming shifts, and availability management.
+ * Displays and manages a driver's schedule from their detail panel.
+ * Renders upcoming shifts in a list view and provides actions to add shifts,
+ * request time off, and manage availability windows.
+ *
+ * Wires directly to the core-api scheduling system via the driverScheduling
+ * service. The schedule_items relationship on the Driver model uses
+ * assignee_type='driver' and assignee_uuid=driver.id as the polymorphic key.
  *
  * @example
- * <Driver::Schedule @resource={{@model}} />
+ * <Driver::Schedule @resource={{@driver}} />
  */
 export default class DriverScheduleComponent extends Component {
     @service driverScheduling;
     @service notifications;
     @service modalsManager;
     @service store;
+    @service fetch;
+    @service intl;
+
     @tracked scheduleItems = [];
     @tracked upcomingShifts = [];
-    @tracked hosStatus = null;
     @tracked availability = [];
-    @tracked timeOffRequests = [];
-    @tracked selectedItem = null;
+    @tracked hosStatus = null;
+    @tracked isLoadingSchedule = false;
+    @tracked isLoadingAvailability = false;
 
-    get scheduleActionButtons() {
-        return [
-            {
-                type: 'default',
-                text: 'Request Time Off',
-                icon: 'calendar-times',
-                iconPrefix: 'fas',
-                permission: 'fleet-ops update driver',
-                onClick: this.requestTimeOff,
-            },
-        ];
+    constructor() {
+        super(...arguments);
+        this.loadDriverSchedule.perform();
+        this.loadAvailability.perform();
+        this.loadHOSStatus.perform();
     }
 
+    /**
+     * Start of the current week — used as the lower bound for schedule queries.
+     */
+    get startDate() {
+        return formatISO(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    }
+
+    /**
+     * Four weeks from now — used as the upper bound for schedule queries.
+     */
+    get endDate() {
+        return formatISO(addWeeks(endOfWeek(new Date(), { weekStartsOn: 1 }), 4));
+    }
+
+    /**
+     * Derive a color-coded HOS compliance badge from the loaded hosStatus.
+     */
+    get hosComplianceBadge() {
+        if (!this.hosStatus) {
+            return { color: 'gray', label: 'Unknown' };
+        }
+        const { daily_hours, weekly_hours } = this.hosStatus;
+        if (daily_hours >= 11 || weekly_hours >= 70) {
+            return { color: 'red', label: 'At Limit' };
+        }
+        if (daily_hours >= 9 || weekly_hours >= 60) {
+            return { color: 'yellow', label: 'Approaching Limit' };
+        }
+        return { color: 'green', label: 'Compliant' };
+    }
+
+    /**
+     * Action buttons rendered in the Upcoming Shifts ContentPanel header.
+     */
     get shiftActionButtons() {
         return [
             {
                 type: 'default',
-                text: 'Add Shift',
+                text: this.intl.t('scheduler.add-shift'),
                 icon: 'plus',
                 iconPrefix: 'fas',
                 permission: 'fleet-ops update driver',
@@ -51,217 +88,271 @@ export default class DriverScheduleComponent extends Component {
         ];
     }
 
+    /**
+     * Action buttons rendered in the Availability ContentPanel header.
+     */
     get availabilityActionButtons() {
         return [
             {
                 type: 'default',
-                text: 'Set Availability',
+                text: this.intl.t('scheduler.set-availability'),
                 icon: 'clock',
                 iconPrefix: 'fas',
                 permission: 'fleet-ops update driver',
                 onClick: this.setAvailability,
             },
+            {
+                type: 'default',
+                text: this.intl.t('scheduler.request-time-off'),
+                icon: 'calendar-times',
+                iconPrefix: 'fas',
+                permission: 'fleet-ops update driver',
+                onClick: this.requestTimeOff,
+            },
         ];
     }
 
-    constructor() {
-        super(...arguments);
-        this.loadDriverSchedule.perform();
-        this.loadHOSStatus.perform();
-        this.loadAvailability.perform();
-    }
-
     /**
-     * Load driver schedule items
+     * Load all schedule items (shifts) for this driver within the 4-week window.
+     * Uses the driverScheduling service which calls the core-api schedule-items endpoint
+     * with assignee_type=driver and assignee_uuid=driver.id.
      */
     @task *loadDriverSchedule() {
+        this.isLoadingSchedule = true;
         try {
             const items = yield this.driverScheduling.getScheduleItemsForAssignee.perform('driver', this.args.resource.id, {
                 start_at: this.startDate,
                 end_at: this.endDate,
             });
-
             this.scheduleItems = items.toArray();
-            this.upcomingShifts = this.scheduleItems.filter((item) => new Date(item.start_at) > new Date()).slice(0, 5);
+            this.upcomingShifts = this.scheduleItems
+                .filter((item) => new Date(item.start_at) >= new Date())
+                .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
         } catch (error) {
-            console.error('Failed to load driver schedule:', error);
+            this.notifications.serverError(error);
+        } finally {
+            this.isLoadingSchedule = false;
         }
     }
 
     /**
-     * Load HOS status for the driver
-     */
-    @task *loadHOSStatus() {
-        try {
-            const response = yield this.fetch.get(`drivers/${this.args.resource.id}/hos-status`);
-            this.hosStatus = response;
-        } catch (error) {
-            console.error('Failed to load HOS status:', error);
-        }
-    }
-
-    /**
-     * Load driver availability
+     * Load availability records (time-off, preferred hours) for this driver.
+     * Uses the core-api schedule-availability endpoint with subject_type=driver.
      */
     @task *loadAvailability() {
+        this.isLoadingAvailability = true;
         try {
             const availability = yield this.store.query('schedule-availability', {
                 subject_type: 'driver',
                 subject_uuid: this.args.resource.id,
-                start_at: this.startDate,
-                end_at: this.endDate,
             });
-
             this.availability = availability.toArray();
         } catch (error) {
-            console.error('Failed to load availability:', error);
+            this.notifications.serverError(error);
+        } finally {
+            this.isLoadingAvailability = false;
         }
     }
 
     /**
-     * Get start date for schedule query (current week)
+     * Load HOS (Hours of Service) status from the FleetOps driver endpoint.
+     * This is a best-effort load — if the endpoint is not yet implemented,
+     * the hosStatus will remain null and the HOS panel will be hidden.
      */
-    get startDate() {
-        const now = new Date();
-        const dayOfWeek = now.getDay();
-        const diff = now.getDate() - dayOfWeek;
-        return new Date(now.setDate(diff)).toISOString();
-    }
-
-    /**
-     * Get end date for schedule query (4 weeks out)
-     */
-    get endDate() {
-        const now = new Date();
-        return new Date(now.setDate(now.getDate() + 28)).toISOString();
-    }
-
-    /**
-     * Get HOS compliance badge color
-     */
-    get hosComplianceBadge() {
-        if (!this.hosStatus) {
-            return { color: 'gray', text: 'Unknown' };
+    @task *loadHOSStatus() {
+        try {
+            const response = yield this.fetch.get(`fleet-ops/drivers/${this.args.resource.id}/hos-status`);
+            this.hosStatus = response;
+        } catch {
+            // HOS endpoint not yet implemented — suppress error silently
+            this.hosStatus = null;
         }
-
-        const { daily_hours, weekly_hours } = this.hosStatus;
-
-        if (daily_hours >= 11 || weekly_hours >= 70) {
-            return { color: 'red', text: 'At Limit' };
-        }
-
-        if (daily_hours >= 9 || weekly_hours >= 60) {
-            return { color: 'yellow', text: 'Approaching Limit' };
-        }
-
-        return { color: 'green', text: 'Compliant' };
     }
 
     /**
-     * Handle item click
-     */
-    @action
-    handleItemClick(item) {
-        this.selectedItem = item;
-        this.modalsManager.show('modals/schedule-item-details', {
-            item,
-            onEdit: this.editScheduleItem,
-            onDelete: this.deleteScheduleItem,
-        });
-    }
-
-    /**
-     * Add new shift
+     * Open the Add Shift modal. Uses the same modalsManager pattern as the
+     * global scheduler's addDriverShift() action, reusing modals/add-driver-shift.
      */
     @action
     addShift() {
-        this.modalsManager.show('modals/add-shift', {
-            driver: this.args.resource,
-            onSave: this.handleShiftAdded,
+        this.modalsManager.show('modals/add-driver-shift', {
+            title: this.intl.t('scheduler.add-shift'),
+            acceptButtonText: this.intl.t('scheduler.create-shift'),
+            acceptButtonIcon: 'plus',
+            drivers: [this.args.resource],
+            selectedDriver: this.args.resource,
+            confirm: async (modal) => {
+                modal.startLoading();
+                const { startAt, endAt, duration } = modal.getOptions();
+                try {
+                    const scheduleItem = this.store.createRecord('schedule-item', {
+                        assignee_type: 'driver',
+                        assignee_uuid: this.args.resource.id,
+                        start_at: startAt,
+                        end_at: endAt,
+                        duration: duration,
+                        status: 'pending',
+                    });
+                    yield scheduleItem.save();
+                    this.notifications.success(this.intl.t('scheduler.shift-created'));
+                    yield this.loadDriverSchedule.perform();
+                    yield this.loadHOSStatus.perform();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
         });
     }
 
     /**
-     * Edit schedule item
+     * Open the Edit Shift modal for an existing schedule item.
      */
     @action
-    async editScheduleItem(item) {
-        this.modalsManager.show('modals/edit-shift', {
+    editShift(item) {
+        this.modalsManager.show('modals/driver-shift', {
+            title: this.intl.t('scheduler.edit-shift'),
+            acceptButtonText: this.intl.t('common.save-changes'),
+            acceptButtonIcon: 'save',
             item,
-            driver: this.args.resource,
-            onSave: this.handleShiftUpdated,
+            confirm: async (modal) => {
+                modal.startLoading();
+                const { startAt, endAt } = modal.getOptions();
+                try {
+                    item.setProperties({ start_at: startAt, end_at: endAt });
+                    yield item.save();
+                    this.notifications.success(this.intl.t('scheduler.shift-updated'));
+                    yield this.loadDriverSchedule.perform();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
         });
     }
 
     /**
-     * Delete schedule item
+     * Delete a shift after inline confirmation via modalsManager.
      */
     @action
-    async deleteScheduleItem(item) {
-        if (confirm('Are you sure you want to delete this shift?')) {
-            try {
-                await this.driverScheduling.deleteScheduleItem.perform(item);
-                await this.loadDriverSchedule.perform();
-            } catch (error) {
-                console.error('Failed to delete shift:', error);
-            }
-        }
-    }
-
-    /**
-     * Handle shift added
-     */
-    @action
-    async handleShiftAdded() {
-        await this.loadDriverSchedule.perform();
-        await this.loadHOSStatus.perform();
-    }
-
-    /**
-     * Handle shift updated
-     */
-    @action
-    async handleShiftUpdated() {
-        await this.loadDriverSchedule.perform();
-        await this.loadHOSStatus.perform();
-    }
-
-    /**
-     * Request time off
-     */
-    @action
-    requestTimeOff() {
-        this.modalsManager.show('modals/request-time-off', {
-            driver: this.args.resource,
-            onSave: this.handleTimeOffRequested,
+    deleteShift(item) {
+        this.modalsManager.confirm({
+            title: this.intl.t('scheduler.delete-shift'),
+            body: this.intl.t('scheduler.delete-shift-confirm'),
+            acceptButtonText: this.intl.t('common.delete'),
+            acceptButtonScheme: 'danger',
+            confirm: async (modal) => {
+                modal.startLoading();
+                try {
+                    yield this.driverScheduling.deleteScheduleItem.perform(item);
+                    yield this.loadDriverSchedule.perform();
+                    yield this.loadHOSStatus.perform();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
         });
     }
 
     /**
-     * Handle time off requested
-     */
-    @action
-    async handleTimeOffRequested() {
-        await this.loadAvailability.perform();
-        await this.loadDriverSchedule.perform();
-    }
-
-    /**
-     * Set availability
+     * Open the Set Availability modal to record preferred working hours.
      */
     @action
     setAvailability() {
-        this.modalsManager.show('modals/set-availability', {
+        this.modalsManager.show('modals/set-driver-availability', {
+            title: this.intl.t('scheduler.set-availability'),
+            acceptButtonText: this.intl.t('common.save'),
+            acceptButtonIcon: 'check',
             driver: this.args.resource,
-            onSave: this.handleAvailabilitySet,
+            isAvailable: true,
+            confirm: async (modal) => {
+                modal.startLoading();
+                const { startAt, endAt, isAvailable, reason, notes } = modal.getOptions();
+                try {
+                    const availability = this.store.createRecord('schedule-availability', {
+                        subject_type: 'driver',
+                        subject_uuid: this.args.resource.id,
+                        start_at: startAt,
+                        end_at: endAt,
+                        is_available: isAvailable,
+                        reason,
+                        notes,
+                    });
+                    yield availability.save();
+                    this.notifications.success(this.intl.t('scheduler.availability-set'));
+                    yield this.loadAvailability.perform();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
         });
     }
 
     /**
-     * Handle availability set
+     * Open the Request Time Off modal. Creates a schedule-availability record
+     * with is_available=false to mark the driver as unavailable.
      */
     @action
-    async handleAvailabilitySet() {
-        await this.loadAvailability.perform();
+    requestTimeOff() {
+        this.modalsManager.show('modals/set-driver-availability', {
+            title: this.intl.t('scheduler.request-time-off'),
+            acceptButtonText: this.intl.t('scheduler.submit-request'),
+            acceptButtonIcon: 'calendar-times',
+            driver: this.args.resource,
+            isAvailable: false,
+            confirm: async (modal) => {
+                modal.startLoading();
+                const { startAt, endAt, reason, notes } = modal.getOptions();
+                try {
+                    const availability = this.store.createRecord('schedule-availability', {
+                        subject_type: 'driver',
+                        subject_uuid: this.args.resource.id,
+                        start_at: startAt,
+                        end_at: endAt,
+                        is_available: false,
+                        reason,
+                        notes,
+                    });
+                    yield availability.save();
+                    this.notifications.success(this.intl.t('scheduler.time-off-requested'));
+                    yield this.loadAvailability.perform();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+        });
+    }
+
+    /**
+     * Delete an availability record.
+     */
+    @action
+    deleteAvailability(avail) {
+        this.modalsManager.confirm({
+            title: this.intl.t('scheduler.delete-availability'),
+            body: this.intl.t('scheduler.delete-availability-confirm'),
+            acceptButtonText: this.intl.t('common.delete'),
+            acceptButtonScheme: 'danger',
+            confirm: async (modal) => {
+                modal.startLoading();
+                try {
+                    yield avail.destroyRecord();
+                    this.notifications.success(this.intl.t('scheduler.availability-deleted'));
+                    yield this.loadAvailability.perform();
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+        });
     }
 }

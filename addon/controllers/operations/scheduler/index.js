@@ -48,14 +48,29 @@ export default class OperationsSchedulerIndexController extends Controller {
     @tracked unscheduledOrders = [];
     @tracked drivers = [];
     @tracked scheduleItems = [];
+    @tracked driverAvailabilities = [];
     @tracked viewMode = 'orders'; // 'orders' or 'drivers'
 
-    @computed('drivers', 'scheduleItems.[]', 'scheduledOrders.[]', 'viewMode') get events() {
+    @computed('drivers', 'scheduleItems.[]', 'driverAvailabilities.[]', 'scheduledOrders.[]', 'viewMode') get events() {
         if (this.viewMode === 'drivers') {
-            return this.scheduleItems.map((item) => {
+            const shiftEvents = this.scheduleItems.map((item) => {
                 const driver = this.drivers.find((d) => d.id === item.assignee_uuid);
                 return createFullCalendarEventFromScheduleItem(item, driver);
             });
+            // Render availability restrictions as background events so dispatchers
+            // can see time-off blocks and unavailable windows at a glance.
+            const availabilityEvents = this.driverAvailabilities
+                .filter((avail) => !avail.is_available)
+                .map((avail) => ({
+                    id: `avail-${avail.id}`,
+                    resourceId: avail.subject_uuid,
+                    start: avail.start_at,
+                    end: avail.end_at,
+                    display: 'background',
+                    backgroundColor: '#FCA5A5', // red-300 — unavailable/time-off
+                    extendedProps: { availability: avail },
+                }));
+            return [...shiftEvents, ...availabilityEvents];
         }
         return this.scheduledOrders.map(createFullCalendarEventFromOrder);
     }
@@ -99,6 +114,25 @@ export default class OperationsSchedulerIndexController extends Controller {
             this.scheduleItems = items.toArray();
         } catch (error) {
             this.notifications.serverError(error);
+        }
+    }
+
+    /**
+     * Load all driver availability records within the calendar window.
+     * Unavailable records are rendered as red background events on the calendar
+     * to prevent dispatchers from scheduling shifts during time-off periods.
+     */
+    @task *loadDriverAvailabilities() {
+        try {
+            const availabilities = yield this.store.query('schedule-availability', {
+                subject_type: 'driver',
+                start_at_after: this.calendarStartDate,
+                end_at_before: this.calendarEndDate,
+            });
+            this.driverAvailabilities = availabilities.toArray();
+        } catch (error) {
+            // Non-critical — suppress and continue
+            this.driverAvailabilities = [];
         }
     }
 
@@ -181,6 +215,7 @@ export default class OperationsSchedulerIndexController extends Controller {
         if (mode === 'drivers') {
             await this.loadDrivers.perform();
             await this.loadScheduleItems.perform();
+            await this.loadDriverAvailabilities.perform();
             later(() => {
                 if (this.calendar) {
                     this.calendar.changeView('resourceTimelineWeek');
@@ -306,8 +341,8 @@ export default class OperationsSchedulerIndexController extends Controller {
 
     @action async addDriverShift() {
         this.modalsManager.show('modals/add-driver-shift', {
-            title: 'Add Driver Shift',
-            acceptButtonText: 'Create Shift',
+            title: this.intl.t('scheduler.add-shift'),
+            acceptButtonText: this.intl.t('scheduler.create-shift'),
             acceptButtonIcon: 'plus',
             drivers: this.drivers,
             confirm: async (modal) => {

@@ -1,0 +1,72 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="grid grid-cols-1 gap-2 text-xs dark:text-gray-100">
+
+            {{! Availability Toggle }}
+            <InputGroup @name={{t "scheduler.availability-type"}}>
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center space-x-1 cursor-pointer">
+                        <input
+                            type="radio"
+                            name="availability_type"
+                            checked={{this.isAvailable}}
+                            {{on "change" (fn this.toggleAvailability true)}}
+                        />
+                        <span class="text-green-600 dark:text-green-400">{{t "scheduler.available"}}</span>
+                    </label>
+                    <label class="flex items-center space-x-1 cursor-pointer">
+                        <input
+                            type="radio"
+                            name="availability_type"
+                            checked={{not this.isAvailable}}
+                            {{on "change" (fn this.toggleAvailability false)}}
+                        />
+                        <span class="text-red-600 dark:text-red-400">{{t "scheduler.unavailable-time-off"}}</span>
+                    </label>
+                </div>
+            </InputGroup>
+
+            {{! Date Range }}
+            <InputGroup @name={{t "scheduler.start-date"}}>
+                <DateTimeInput
+                    @value={{this.startAt}}
+                    @onChange={{this.updateStartAt}}
+                    placeholder={{t "scheduler.select-start-date"}}
+                    class="form-input"
+                />
+            </InputGroup>
+
+            <InputGroup @name={{t "scheduler.end-date"}}>
+                <DateTimeInput
+                    @value={{this.endAt}}
+                    @onChange={{this.updateEndAt}}
+                    placeholder={{t "scheduler.select-end-date"}}
+                    class="form-input"
+                />
+            </InputGroup>
+
+            {{! Reason }}
+            <InputGroup @name={{t "scheduler.reason"}}>
+                <Input
+                    @value={{this.reason}}
+                    @type="text"
+                    placeholder={{t "scheduler.reason-placeholder"}}
+                    class="form-input"
+                    {{on "input" (fn this.updateReason this.reason)}}
+                />
+            </InputGroup>
+
+            {{! Notes }}
+            <InputGroup @name={{t "common.notes"}}>
+                <Textarea
+                    @value={{this.notes}}
+                    placeholder={{t "scheduler.notes-placeholder"}}
+                    class="form-input"
+                    rows="3"
+                    {{on "input" (fn this.updateNotes this.notes)}}
+                />
+            </InputGroup>
+
+        </div>
+    </div>
+</Modal::Default>
