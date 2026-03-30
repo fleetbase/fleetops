@@ -364,7 +364,7 @@ class Driver extends Model
             function ($option) {
                 $key = str_replace(['.svg', '.png'], '', $option);
 
-                return [$key => Utils::assetFromS3('static/driver-icons/' . $option)];
+                return [$key => Utils::assetFromFleetbase('static/driver-icons/' . $option)];
             }
         );
 
