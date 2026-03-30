@@ -181,6 +181,16 @@ export default buildRoutes(function () {
         this.route('tracking');
     });
     this.route('maintenance', function () {
+        this.route('maintenances', function () {
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                });
+            });
+        });
+
         this.route('work-orders', function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');

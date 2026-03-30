@@ -19,16 +19,14 @@ export default class MaintenanceActionsService extends ResourceActionService {
                 content: 'maintenance/form',
                 title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.maintenance')?.toLowerCase() }),
                 useDefaultSaveTask: true,
-                saveOptions: {
-                    callback: this.refresh,
-                },
+                saveOptions: { callback: this.refresh },
                 maintenance,
             });
         },
         edit: (maintenance) => {
             return this.resourceContextPanel.open({
                 content: 'maintenance/form',
-                title: this.intl.t('common.edit-resource-name', { resourceName: maintenance.name }),
+                title: this.intl.t('common.edit-resource-name', { resourceName: maintenance.summary }),
                 useDefaultSaveTask: true,
                 maintenance,
             });
@@ -36,12 +34,7 @@ export default class MaintenanceActionsService extends ResourceActionService {
         view: (maintenance) => {
             return this.resourceContextPanel.open({
                 maintenance,
-                tabs: [
-                    {
-                        label: this.intl.t('common.overview'),
-                        component: 'maintenance/details',
-                    },
-                ],
+                tabs: [{ label: this.intl.t('common.overview'), component: 'maintenance/details' }],
             });
         },
     };
@@ -61,7 +54,7 @@ export default class MaintenanceActionsService extends ResourceActionService {
         edit: (maintenance, options = {}, saveOptions = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: maintenance,
-                title: this.intl.t('common.edit-resource-name', { resourceName: maintenance.name }),
+                title: this.intl.t('common.edit-resource-name', { resourceName: maintenance.summary }),
                 acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
                 component: 'maintenance/form',
@@ -72,7 +65,7 @@ export default class MaintenanceActionsService extends ResourceActionService {
         view: (maintenance, options = {}) => {
             return this.modalsManager.show('modals/resource', {
                 resource: maintenance,
-                title: maintenance.name,
+                title: maintenance.summary,
                 component: 'maintenance/details',
                 ...options,
             });
