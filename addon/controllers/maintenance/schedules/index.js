@@ -71,7 +71,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
-            label: 'Next Due',
+            label: this.intl.t('column.next-due'),
             valuePath: 'nextDueDate',
             sortParam: 'next_due_date',
             resizable: true,

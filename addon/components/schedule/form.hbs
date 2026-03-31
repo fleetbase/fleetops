@@ -77,12 +77,17 @@
                 <InputGroup @name="Asset">
                     <ModelSelect
                         @modelName={{this.subjectModelName}}
-                        @selected={{@resource.subject}}
+                        @selectedModel={{@resource.subject}}
                         @placeholder="Select Asset"
                         @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
                         @onChange={{this.assignSubject}}
                         @disabled={{cannot-write @resource}}
-                    />
+                        as |model|
+                    >
+                        {{or model.displayName model.name model.public_id}}
+                    </ModelSelect>
                 </InputGroup>
             {{/if}}
 
@@ -94,81 +99,116 @@
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
 
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
-                Time-Based Interval
+                How should this maintenance be triggered?
             </div>
 
-            <InputGroup @name="Every (Value)">
-                <Input
-                    @value={{@resource.interval_value}}
-                    @type="number"
-                    class="w-full form-input"
-                    placeholder="e.g. 3"
-                    disabled={{cannot-write @resource}}
-                />
-            </InputGroup>
-
-            <InputGroup @name="Unit">
+            {{! Interval method selector — drives which fields are shown below }}
+            <InputGroup @name="Interval Method" @wrapperClass="col-span-2">
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
-                        @options={{this.intervalUnitOptions}}
-                        @selected={{@resource.interval_unit}}
-                        @onChange={{fn (mut @resource.interval_unit)}}
-                        @placeholder="Select Unit"
+                        @options={{this.intervalMethodOptions}}
+                        @selected={{this.selectedIntervalMethod}}
+                        @onChange={{this.onIntervalMethodChange}}
+                        @placeholder="Select interval method"
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
-                        as |unit|
+                        as |option|
                     >
-                        {{smart-humanize unit}}
+                        {{option.label}}
                     </PowerSelect>
                 </div>
             </InputGroup>
 
-            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
-                Distance-Based Interval
-            </div>
+            {{! TIME-BASED fields }}
+            {{#if this.isTimeBased}}
+                <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                    Time-Based Interval
+                </div>
+                <InputGroup @name="Every">
+                    <Input
+                        @value={{@resource.interval_value}}
+                        @type="number"
+                        class="w-full form-input"
+                        placeholder="e.g. 3"
+                        disabled={{cannot-write @resource}}
+                    />
+                </InputGroup>
+                <InputGroup @name="Unit">
+                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                        <PowerSelect
+                            @options={{this.intervalUnitOptions}}
+                            @selected={{@resource.interval_unit}}
+                            @onChange={{fn (mut @resource.interval_unit)}}
+                            @placeholder="Select unit"
+                            @triggerClass="form-select form-input"
+                            @disabled={{cannot-write @resource}}
+                            as |unit|
+                        >
+                            {{smart-humanize unit}}
+                        </PowerSelect>
+                    </div>
+                </InputGroup>
+                <InputGroup @name="Next Due Date" @wrapperClass="col-span-2">
+                    <DateTimeInput
+                        class="form-input"
+                        @value={{@resource.next_due_date}}
+                        @minDate={{format-date-fns (now) "yyyy-MM-dd"}}
+                        @minTime={{format-date-fns (now) "HH:mm"}}
+                        @onUpdate={{fn (mut @resource.next_due_date)}}
+                        @disabled={{cannot-write @resource}}
+                    />
+                </InputGroup>
+            {{/if}}
 
-            <InputGroup @name="Every (km)">
-                <Input
-                    @value={{@resource.interval_distance}}
-                    @type="number"
-                    class="w-full form-input"
-                    placeholder="e.g. 5000"
-                    disabled={{cannot-write @resource}}
-                />
-            </InputGroup>
+            {{! DISTANCE-BASED fields }}
+            {{#if this.isDistanceBased}}
+                <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                    Distance-Based Interval
+                </div>
+                <InputGroup @name="Every (km)">
+                    <Input
+                        @value={{@resource.interval_distance}}
+                        @type="number"
+                        class="w-full form-input"
+                        placeholder="e.g. 5000"
+                        disabled={{cannot-write @resource}}
+                    />
+                </InputGroup>
+                <InputGroup @name="Next Due Odometer (km)">
+                    <Input
+                        @value={{@resource.next_due_odometer}}
+                        @type="number"
+                        class="w-full form-input"
+                        placeholder="e.g. 47000"
+                        disabled={{cannot-write @resource}}
+                    />
+                </InputGroup>
+            {{/if}}
 
-            <InputGroup @name="Every (Engine Hours)">
-                <Input
-                    @value={{@resource.interval_engine_hours}}
-                    @type="number"
-                    class="w-full form-input"
-                    placeholder="e.g. 250"
-                    disabled={{cannot-write @resource}}
-                />
-            </InputGroup>
-
-            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
-                Next Due Thresholds (override computed values)
-            </div>
-
-            <InputGroup @name="Next Due Date">
-                <DateTimeInput
-                    @value={{@resource.next_due_date}}
-                    @onChange={{fn (mut @resource.next_due_date)}}
-                    @disabled={{cannot-write @resource}}
-                    class="w-full"
-                />
-            </InputGroup>
-
-            <InputGroup @name="Next Due Odometer (km)">
-                <Input
-                    @value={{@resource.next_due_odometer}}
-                    @type="number"
-                    class="w-full form-input"
-                    placeholder="e.g. 47000"
-                    disabled={{cannot-write @resource}}
-                />
-            </InputGroup>
+            {{! ENGINE HOURS-BASED fields }}
+            {{#if this.isEngineHoursBased}}
+                <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                    Engine Hours-Based Interval
+                </div>
+                <InputGroup @name="Every (Engine Hours)">
+                    <Input
+                        @value={{@resource.interval_engine_hours}}
+                        @type="number"
+                        class="w-full form-input"
+                        placeholder="e.g. 250"
+                        disabled={{cannot-write @resource}}
+                    />
+                </InputGroup>
+                <InputGroup @name="Next Due Engine Hours">
+                    <Input
+                        @value={{@resource.next_due_engine_hours}}
+                        @type="number"
+                        class="w-full form-input"
+                        placeholder="e.g. 1250"
+                        disabled={{cannot-write @resource}}
+                    />
+                </InputGroup>
+            {{/if}}
 
         </div>
     </ContentPanel>
@@ -217,12 +257,17 @@
                 <InputGroup @name="Default Assignee" @wrapperClass="col-span-2">
                     <ModelSelect
                         @modelName={{this.assigneeModelName}}
-                        @selected={{@resource.defaultAssignee}}
+                        @selectedModel={{@resource.defaultAssignee}}
                         @placeholder="Select Default Assignee"
                         @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
                         @onChange={{this.assignDefaultAssignee}}
                         @disabled={{cannot-write @resource}}
-                    />
+                        as |model|
+                    >
+                        {{or model.displayName model.name model.public_id}}
+                    </ModelSelect>
                 </InputGroup>
             {{/if}}
 

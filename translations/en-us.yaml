@@ -260,6 +260,10 @@ column:
   quantity-on-hand: Quantity on Hand
   quantity: Quantity
   unit-cost: Unit Cost
+  code: Code
+  interval: Interval
+  next-due: Next Due
+  asset: Asset
 
 map:
   visibility-controls:
