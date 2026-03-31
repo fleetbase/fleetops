@@ -14,6 +14,7 @@ return new class extends Migration {
             $table->increments('id');
             $table->uuid('uuid')->index();
             $table->string('_key')->nullable()->index();
+            $table->string('public_id', 191)->nullable()->unique()->index();
             $table->foreignUuid('company_uuid')->constrained('companies', 'uuid')->cascadeOnDelete();
 
             // The asset this schedule applies to (vehicle, equipment, etc.)
@@ -26,7 +27,8 @@ return new class extends Migration {
             $table->string('status')->default('active')->index(); // active, paused, completed
 
             // Interval definition — one or more can be set; whichever triggers first wins
-            $table->string('interval_type')->nullable()->index(); // time, distance, engine_hours, or combined
+            $table->string('interval_method')->nullable()->index(); // time, distance, engine_hours — the user-selected method
+            $table->string('interval_type')->nullable()->index();   // time, distance, engine_hours, or combined (legacy/computed)
             $table->unsignedInteger('interval_value')->nullable();  // e.g. 5000
             $table->string('interval_unit')->nullable();            // km, miles, days, months
 

@@ -59,7 +59,7 @@ class MaintenanceSchedule extends Model
      *
      * @var array
      */
-    protected $filterParams = ['status', 'type', 'interval_type', 'subject_type', 'subject_uuid'];
+    protected $filterParams = ['status', 'type', 'interval_method', 'interval_type', 'subject_type', 'subject_uuid'];
 
     /**
      * The attributes that are mass assignable.
@@ -73,6 +73,7 @@ class MaintenanceSchedule extends Model
         'name',
         'type',
         'status',
+        'interval_method',
         'interval_type',
         'interval_value',
         'interval_unit',
