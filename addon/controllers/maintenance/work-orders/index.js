@@ -26,7 +26,7 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
         { label: this.intl.t('column.code'), valuePath: 'code', cellComponent: 'table/cell/anchor', cellClassNames: 'uppercase', action: this.workOrderActions.transition.view, permission: 'fleet-ops view work-order', resizable: true, sortable: true, filterable: true, filterParam: 'code', filterComponent: 'filter/string' },
         { label: this.intl.t('column.subject'), valuePath: 'subject', resizable: true, sortable: true, filterable: true, filterParam: 'subject', filterComponent: 'filter/string' },
         { label: this.intl.t('column.status'), valuePath: 'status', cellComponent: 'table/cell/status', resizable: true, sortable: true, filterable: true, filterParam: 'status', filterComponent: 'filter/string' },
-        { label: this.intl.t('column.priority'), valuePath: 'priority', cellComponent: 'table/cell/humanize', resizable: true, sortable: true, filterable: true, filterParam: 'priority', filterComponent: 'filter/string' },
+        { label: this.intl.t('column.priority'), valuePath: 'priority', cellComponent: 'table/cell/base', resizable: true, sortable: true, filterable: true, filterParam: 'priority', filterComponent: 'filter/string' },
         { label: this.intl.t('column.assignee'), valuePath: 'assignee_name', resizable: true, sortable: false },
         { label: this.intl.t('column.due-at'), valuePath: 'dueAt', sortParam: 'due_at', resizable: true, sortable: true, filterable: true, filterComponent: 'filter/date' },
         { label: this.intl.t('column.created-at'), valuePath: 'createdAt', sortParam: 'created_at', resizable: true, sortable: true, filterable: true, filterComponent: 'filter/date' },

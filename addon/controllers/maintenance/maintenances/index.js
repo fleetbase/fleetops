@@ -65,7 +65,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
         {
             label: this.intl.t('column.type'),
             valuePath: 'type',
-            cellComponent: 'table/cell/humanize',
+            cellComponent: 'table/cell/base',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -85,7 +85,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
         {
             label: this.intl.t('column.priority'),
             valuePath: 'priority',
-            cellComponent: 'table/cell/humanize',
+            cellComponent: 'table/cell/base',
             resizable: true,
             sortable: true,
             filterable: true,

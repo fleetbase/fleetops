@@ -58,7 +58,7 @@ export default class MaintenanceEquipmentIndexController extends Controller {
     @tracked columns = [
         { label: this.intl.t('column.name'), valuePath: 'name', cellComponent: 'table/cell/anchor', cellClassNames: 'uppercase', action: this.equipmentActions.transition.view, permission: 'fleet-ops view equipment', resizable: true, sortable: true, filterable: true, filterParam: 'name', filterComponent: 'filter/string' },
         { label: this.intl.t('column.code'), valuePath: 'code', resizable: true, sortable: true, filterable: true, filterParam: 'code', filterComponent: 'filter/string' },
-        { label: this.intl.t('column.type'), valuePath: 'type', cellComponent: 'table/cell/humanize', resizable: true, sortable: true, filterable: true, filterParam: 'type', filterComponent: 'filter/string' },
+        { label: this.intl.t('column.type'), valuePath: 'type', cellComponent: 'table/cell/base', resizable: true, sortable: true, filterable: true, filterParam: 'type', filterComponent: 'filter/string' },
         { label: this.intl.t('column.status'), valuePath: 'status', cellComponent: 'table/cell/status', resizable: true, sortable: true, filterable: true, filterParam: 'status', filterComponent: 'filter/string' },
         { label: this.intl.t('column.serial-number'), valuePath: 'serial_number', resizable: true, sortable: true },
         { label: this.intl.t('column.manufacturer'), valuePath: 'manufacturer', resizable: true, sortable: true },
