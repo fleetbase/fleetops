@@ -1,6 +1,18 @@
 {{! ===== COST PANEL — invoice-style line items ===== }}
 <ContentPanel @title="Costs" @open={{true}} @wrapperClass="bordered-top">
 
+    {{! ── Currency selector (single, shared by all money fields) ── }}
+    <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs mb-2">
+        <InputGroup @name="Currency">
+            <CurrencySelect
+                @currency={{@resource.currency}}
+                @onCurrencyChange={{fn (mut @resource.currency)}}
+                @triggerClass="w-full form-select"
+                @disabled={{this.isDisabled}}
+            />
+        </InputGroup>
+    </div>
+
     {{! ── Labour & Tax inputs (always editable on the form) ── }}
     <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs mb-4">
         <InputGroup @name="Labour Cost">
@@ -8,8 +20,6 @@
                 class="w-full"
                 @value={{@resource.labor_cost}}
                 @currency={{this.currency}}
-                @canSelectCurrency={{true}}
-                @onCurrencyChange={{fn (mut @resource.currency)}}
                 @disabled={{this.isDisabled}}
             />
         </InputGroup>
@@ -18,7 +28,6 @@
                 class="w-full"
                 @value={{@resource.tax}}
                 @currency={{this.currency}}
-                @canSelectCurrency={{false}}
                 @disabled={{this.isDisabled}}
             />
         </InputGroup>
@@ -66,7 +75,6 @@
                                 class="w-full"
                                 @value={{this.draftUnitCost}}
                                 @currency={{this.currency}}
-                                @canSelectCurrency={{false}}
                             />
                         </td>
                         <td class="py-1 pr-2 text-right text-gray-500 dark:text-gray-400">
@@ -155,7 +163,6 @@
                             class="w-full"
                             @value={{this.draftUnitCost}}
                             @currency={{this.currency}}
-                            @canSelectCurrency={{false}}
                         />
                     </td>
                     <td class="py-1 pr-2 text-right text-gray-500 dark:text-gray-400">

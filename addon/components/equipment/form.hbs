@@ -168,13 +168,19 @@
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Purchase Information
             </div>
+            <InputGroup @name="Currency">
+                <CurrencySelect
+                    @currency={{@resource.currency}}
+                    @onCurrencyChange={{fn (mut @resource.currency)}}
+                    @triggerClass="w-full form-select"
+                    @disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
             <InputGroup @name="Purchase Price">
                 <MoneyInput
                     class="w-full"
                     @value={{@resource.purchase_price}}
                     @currency={{or @resource.currency "USD"}}
-                    @canSelectCurrency={{true}}
-                    @onCurrencyChange={{fn (mut @resource.currency)}}
                     @disabled={{cannot-write @resource}}
                 />
             </InputGroup>
