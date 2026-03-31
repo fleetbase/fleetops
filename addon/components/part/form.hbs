@@ -1,27 +1,40 @@
 <div class="part-form" ...attributes>
 
-    {{! ===== PHOTO ===== }}
-    <ContentPanel @title="Photo" @open={{true}}>
-        <div class="flex items-center justify-center p-4">
-            <div class="flex flex-col items-center space-y-3">
-                {{#if @resource.photo_url}}
-                    <img src={{@resource.photo_url}} alt="Part Photo" class="w-24 h-24 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
-                {{else}}
-                    <div class="w-24 h-24 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center border border-dashed border-gray-300 dark:border-gray-600">
-                        <FaIcon @icon="image" class="text-gray-400 text-3xl" />
-                    </div>
-                {{/if}}
-                <FileUpload @name="photo" @accept="image/*" @onUpload={{this.handlePhotoUpload}} @disabled={{cannot-write @resource}}>
-                    <a class="text-xs text-blue-500 hover:underline cursor-pointer">Upload Photo</a>
-                </FileUpload>
-                <span class="text-gray-300 dark:text-gray-600 text-xs">Supports JPG, PNG, GIF</span>
+    {{! ===== IDENTIFICATION (includes photo, matching vehicle/form convention) ===== }}
+    <ContentPanel @title="Identification" @open={{true}} @wrapperClass="bordered-top">
+        {{! Photo row — identical structure to vehicle/form UploadButton pattern }}
+        <div class="flex flex-row space-x-3 mb-3">
+            <div class="flex items-center justify-start rounded-full">
+                <Image
+                    src={{@resource.photo_url}}
+                    @fallbackSrc={{config "defaultValues.partImage"}}
+                    alt={{@resource.name}}
+                    height="48"
+                    width="48"
+                    class="h-14 w-14 rounded-full shadow-sm"
+                />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                    <InputInfo @text="Upload a new photo" />
+                </Attach::Tooltip>
+            </div>
+            <div>
+                <UploadButton
+                    @name="Photos"
+                    @accept="image/*"
+                    @onFileAdded={{perform this.handlePhotoUpload}}
+                    @icon="upload"
+                    @size="xs"
+                    @buttonText="Upload Image"
+                    @disabled={{cannot-write @resource}}
+                />
+                <div class="px-1">
+                    <span class="text-gray-300 dark:text-gray-600 text-xs">Supports JPG, PNG, GIF up to 10 MB</span>
+                </div>
             </div>
         </div>
-    </ContentPanel>
 
-    {{! ===== IDENTIFICATION ===== }}
-    <ContentPanel @title="Identification" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            {{! Part Identification }}
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Part Details
             </div>
@@ -179,14 +192,14 @@
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.assetTypeOptions}}
-                        @selected={{@resource.asset_type}}
+                        @selected={{this.selectedAssetType}}
                         @onChange={{this.onAssetTypeChange}}
                         @placeholder="Select compatible asset type"
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
-                        as |type|
+                        as |option|
                     >
-                        {{smart-humanize type}}
+                        {{option.label}}
                     </PowerSelect>
                 </div>
             </InputGroup>

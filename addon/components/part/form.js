@@ -41,17 +41,27 @@ export default class PartFormComponent extends Component {
     /** Status options for parts. */
     statusOptions = ['in_stock', 'low_stock', 'out_of_stock', 'discontinued', 'on_order'];
 
-    /** Polymorphic asset type options — the asset this part is compatible with. */
-    assetTypeOptions = ['fleet-ops:vehicle', 'fleet-ops:equipment'];
+    /**
+     * Polymorphic asset type options — the asset this part is compatible with.
+     * Each entry has a `value` (stored on the model) and a `label` (displayed in the UI).
+     */
+    assetTypeOptions = [
+        { value: 'fleet-ops:vehicle', label: 'Vehicle' },
+        { value: 'fleet-ops:equipment', label: 'Equipment' },
+    ];
 
     /** Derived Ember Data model name for the currently selected asset type. */
     @tracked assetModelName = null;
+
+    /** The currently selected asset type option object (drives the PowerSelect trigger label). */
+    @tracked selectedAssetType = null;
 
     constructor(owner, args) {
         super(owner, args);
         const { resource } = args;
         if (resource?.asset_type) {
             this.assetModelName = TYPE_TO_MODEL[resource.asset_type] ?? null;
+            this.selectedAssetType = this.assetTypeOptions.find((o) => o.value === resource.asset_type) ?? null;
         }
     }
 
@@ -59,11 +69,12 @@ export default class PartFormComponent extends Component {
      * Handles a change to the asset type selector. Resets the asset
      * relationship so a stale association is not persisted.
      */
-    @action onAssetTypeChange(type) {
-        this.args.resource.asset_type = type;
+    @action onAssetTypeChange(option) {
+        this.selectedAssetType = option;
+        this.args.resource.asset_type = option.value;
         this.args.resource.asset_uuid = null;
         this.args.resource.asset = null;
-        this.assetModelName = TYPE_TO_MODEL[type] ?? null;
+        this.assetModelName = TYPE_TO_MODEL[option.value] ?? null;
     }
 
     /** Assigns the selected asset model to the resource. */
