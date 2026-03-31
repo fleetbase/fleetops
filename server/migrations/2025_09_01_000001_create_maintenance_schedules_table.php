@@ -48,7 +48,7 @@ return new class extends Migration {
             $table->string('default_priority')->default('normal'); // low, normal, high, critical
             $table->string('default_assignee_type')->nullable();
             $table->uuid('default_assignee_uuid')->nullable();
-            $table->index(['default_assignee_type', 'default_assignee_uuid']);
+            $table->index(['default_assignee_type', 'default_assignee_uuid'], 'ms_default_assignee_idx');
 
             $table->text('instructions')->nullable();
             $table->json('meta')->nullable();
