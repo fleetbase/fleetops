@@ -2,7 +2,7 @@ import ResourceActionService from '@fleetbase/ember-core/services/resource-actio
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 
-export default class ScheduleActionsService extends ResourceActionService {
+export default class MaintenanceScheduleActionsService extends ResourceActionService {
     @service fetch;
     @service notifications;
     @service intl;

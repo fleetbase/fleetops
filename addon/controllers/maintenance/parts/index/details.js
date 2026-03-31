@@ -8,7 +8,7 @@ export default class MaintenancePartsIndexDetailsController extends Controller {
     @service partActions;
     @service hostRouter;
     @service intl;
-    @service menuService;
+    @service('universe/menu-service') menuService;
 
     @tracked overlay;
 

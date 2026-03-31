@@ -8,7 +8,7 @@ export default class MaintenanceEquipmentIndexDetailsController extends Controll
     @service equipmentActions;
     @service hostRouter;
     @service intl;
-    @service menuService;
+    @service('universe/menu-service') menuService;
 
     @tracked overlay;
 

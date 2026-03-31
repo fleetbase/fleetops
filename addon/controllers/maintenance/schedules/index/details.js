@@ -5,11 +5,11 @@ import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 
 export default class MaintenanceSchedulesIndexDetailsController extends Controller {
-    @service scheduleActions;
+    @service('maintenance-schedule-actions') maintenanceScheduleActions;
     @service hostRouter;
     @service intl;
     @service abilities;
-    @service menuService;
+    @service('universe/menu-service') menuService;
 
     @tracked overlay;
 
@@ -34,11 +34,11 @@ export default class MaintenanceSchedulesIndexDetailsController extends Controll
     }
 
     @action triggerNow() {
-        return this.scheduleActions.triggerNow(this.model);
+        return this.maintenanceScheduleActions.triggerNow(this.model);
     }
 
     @action delete() {
-        return this.scheduleActions.delete(this.model, {
+        return this.maintenanceScheduleActions.delete(this.model, {
             onConfirm: () => {
                 this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index');
             },

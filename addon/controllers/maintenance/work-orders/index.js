@@ -14,15 +14,19 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
     @tracked status;
     @tracked priority;
 
-    @tracked actionButtons = [
+    get actionButtons() {
+        return [
         { icon: 'refresh', onClick: this.workOrderActions.refresh, helpText: this.intl.t('common.refresh') },
         { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.workOrderActions.transition.create },
         { text: this.intl.t('common.export'), icon: 'long-arrow-up', iconClass: 'rotate-icon-45', wrapperClass: 'hidden md:flex', onClick: this.workOrderActions.export },
-    ];
+        ];
+    }
 
-    @tracked bulkActions = [{ label: 'Delete selected...', class: 'text-red-500', fn: this.workOrderActions.bulkDelete }];
+    get bulkActions() {
+        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.workOrderActions.bulkDelete }];
 
-    @tracked columns = [
+    get columns() {
+        return [
         { label: this.intl.t('column.code'), valuePath: 'code', cellComponent: 'table/cell/anchor', cellClassNames: 'uppercase', action: this.workOrderActions.transition.view, permission: 'fleet-ops view work-order', resizable: true, sortable: true, filterable: true, filterParam: 'code', filterComponent: 'filter/string' },
         { label: this.intl.t('column.subject'), valuePath: 'subject', resizable: true, sortable: true, filterable: true, filterParam: 'subject', filterComponent: 'filter/string' },
         { label: this.intl.t('column.status'), valuePath: 'status', cellComponent: 'table/cell/status', resizable: true, sortable: true, filterable: true, filterParam: 'status', filterComponent: 'filter/string' },
@@ -51,5 +55,6 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
             resizable: false,
             searchable: false,
         },
-    ];
+        ];
+    }
 }

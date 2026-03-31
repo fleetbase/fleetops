@@ -17,7 +17,8 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
     @tracked priority;
 
     /** action buttons */
-    @tracked actionButtons = [
+    get actionButtons() {
+        return [
         {
             icon: 'refresh',
             onClick: this.maintenanceActions.refresh,
@@ -39,7 +40,8 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
     ];
 
     /** bulk action buttons */
-    @tracked bulkActions = [
+    get bulkActions() {
+        return [
         {
             label: 'Delete selected...',
             class: 'text-red-500',
@@ -48,7 +50,8 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
     ];
 
     /** columns */
-    @tracked columns = [
+    get columns() {
+        return [
         {
             label: this.intl.t('column.summary'),
             valuePath: 'summary',
@@ -161,5 +164,6 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
             resizable: false,
             searchable: false,
         },
-    ];
+        ];
+    }
 }

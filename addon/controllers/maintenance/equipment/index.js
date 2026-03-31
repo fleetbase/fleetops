@@ -55,7 +55,8 @@ export default class MaintenanceEquipmentIndexController extends Controller {
         return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.equipmentActions.bulkDelete }];
     }
 
-    @tracked columns = [
+    get columns() {
+        return [
         { label: this.intl.t('column.name'), valuePath: 'name', cellComponent: 'table/cell/anchor', cellClassNames: 'uppercase', action: this.equipmentActions.transition.view, permission: 'fleet-ops view equipment', resizable: true, sortable: true, filterable: true, filterParam: 'name', filterComponent: 'filter/string' },
         { label: this.intl.t('column.code'), valuePath: 'code', resizable: true, sortable: true, filterable: true, filterParam: 'code', filterComponent: 'filter/string' },
         { label: this.intl.t('column.type'), valuePath: 'type', cellComponent: 'table/cell/base', resizable: true, sortable: true, filterable: true, filterParam: 'type', filterComponent: 'filter/string' },
@@ -81,5 +82,6 @@ export default class MaintenanceEquipmentIndexController extends Controller {
             ],
             sortable: false, filterable: false, resizable: false, searchable: false,
         },
-    ];
+        ];
+    }
 }

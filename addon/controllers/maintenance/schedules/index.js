@@ -3,7 +3,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
 export default class MaintenanceSchedulesIndexController extends Controller {
-    @service scheduleActions;
+    @service('maintenance-schedule-actions') maintenanceScheduleActions;
     @service intl;
 
     @tracked queryParams = ['status', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
@@ -13,21 +13,24 @@ export default class MaintenanceSchedulesIndexController extends Controller {
     @tracked public_id;
     @tracked status;
 
-    @tracked actionButtons = [
-        { icon: 'refresh', onClick: this.scheduleActions.refresh, helpText: this.intl.t('common.refresh') },
-        { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.scheduleActions.transition.create },
-        { text: this.intl.t('common.export'), icon: 'long-arrow-up', iconClass: 'rotate-icon-45', wrapperClass: 'hidden md:flex', onClick: this.scheduleActions.export },
-    ];
-
-    @tracked bulkActions = [{ label: 'Delete selected...', class: 'text-red-500', fn: this.scheduleActions.bulkDelete }];
-
-    @tracked columns = [
+    get actionButtons() {
+        return [
+        { icon: 'refresh', onClick: this.maintenanceScheduleActions.refresh, helpText: this.intl.t('common.refresh') },
+        { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.maintenanceScheduleActions.transition.create },
+        { text: this.intl.t('common.export'), icon: 'long-arrow-up', iconClass: 'rotate-icon-45', wrapperClass: 'hidden md:flex', onClick: this.maintenanceScheduleActions.export },
+        ];
+    }
+    get bulkActions() {
+        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.maintenanceScheduleActions.bulkDelete }];
+    }
+    get columns() {
+        return [
         {
             label: this.intl.t('column.id'),
             valuePath: 'public_id',
             cellComponent: 'table/cell/anchor',
             cellClassNames: 'uppercase',
-            action: this.scheduleActions.transition.view,
+            action: this.maintenanceScheduleActions.transition.view,
             permission: 'fleet-ops view maintenance-schedule',
             resizable: true,
             sortable: true,
@@ -98,19 +101,20 @@ export default class MaintenanceSchedulesIndexController extends Controller {
             cellClassNames: 'overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
             actions: [
-                { label: 'View Details', fn: this.scheduleActions.transition.view, permission: 'fleet-ops view maintenance-schedule' },
-                { label: 'Edit Schedule', fn: this.scheduleActions.transition.edit, permission: 'fleet-ops update maintenance-schedule' },
-                { label: 'Trigger Work Order Now', fn: this.scheduleActions.triggerNow, permission: 'fleet-ops update maintenance-schedule' },
+                { label: 'View Details', fn: this.maintenanceScheduleActions.transition.view, permission: 'fleet-ops view maintenance-schedule' },
+                { label: 'Edit Schedule', fn: this.maintenanceScheduleActions.transition.edit, permission: 'fleet-ops update maintenance-schedule' },
+                { label: 'Trigger Work Order Now', fn: this.maintenanceScheduleActions.triggerNow, permission: 'fleet-ops update maintenance-schedule' },
                 { separator: true },
-                { label: 'Pause Schedule', fn: this.scheduleActions.pause, permission: 'fleet-ops update maintenance-schedule' },
-                { label: 'Resume Schedule', fn: this.scheduleActions.resume, permission: 'fleet-ops update maintenance-schedule' },
+                { label: 'Pause Schedule', fn: this.maintenanceScheduleActions.pause, permission: 'fleet-ops update maintenance-schedule' },
+                { label: 'Resume Schedule', fn: this.maintenanceScheduleActions.resume, permission: 'fleet-ops update maintenance-schedule' },
                 { separator: true },
-                { label: this.intl.t('column.delete'), fn: this.scheduleActions.delete, permission: 'fleet-ops delete maintenance-schedule' },
+                { label: this.intl.t('column.delete'), fn: this.maintenanceScheduleActions.delete, permission: 'fleet-ops delete maintenance-schedule' },
             ],
             sortable: false,
             filterable: false,
             resizable: false,
             searchable: false,
         },
-    ];
+        ];
+    }
 }

@@ -31,7 +31,7 @@ const INTERVAL_METHOD_OPTIONS = [
     { label: 'Engine Hours-Based', value: 'engine_hours' },
 ];
 
-export default class ScheduleFormComponent extends Component {
+export default class MaintenanceScheduleFormComponent extends Component {
     @tracked selectedSubjectType = null;
     @tracked selectedAssigneeType = null;
     @tracked subjectModelName = null;

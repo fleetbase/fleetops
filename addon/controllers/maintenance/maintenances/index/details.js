@@ -9,7 +9,7 @@ export default class MaintenanceMaintenancesIndexDetailsController extends Contr
     @service hostRouter;
     @service intl;
     @service abilities;
-    @service menuService;
+    @service('universe/menu-service') menuService;
 
     @tracked overlay;
 

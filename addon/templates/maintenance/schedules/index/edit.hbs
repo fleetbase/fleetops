@@ -7,6 +7,6 @@
     @onPressCancel={{this.cancel}}
     @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <Schedule::Form @resource={{@model}} @controller={{this}} />
+    <MaintenanceSchedule::Form @resource={{@model}} @controller={{this}} />
     <Spacer @height="200px" />
 </Layout::Resource::Panel>
