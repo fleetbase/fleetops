@@ -77,14 +77,14 @@
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.maintainableTypeOptions}}
-                        @selected={{@resource.maintainable_type}}
+                        @selected={{this.selectedMaintainableType}}
                         @onChange={{this.onMaintainableTypeChange}}
                         @placeholder="Select asset type (Vehicle, Equipment…)"
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
-                        as |type|
+                        as |option|
                     >
-                        {{smart-humanize type}}
+                        {{option.label}}
                     </PowerSelect>
                 </div>
             </InputGroup>
@@ -113,14 +113,14 @@
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.performedByTypeOptions}}
-                        @selected={{@resource.performed_by_type}}
+                        @selected={{this.selectedPerformedByType}}
                         @onChange={{this.onPerformedByTypeChange}}
-                        @placeholder="Select performer type (Driver, User…)"
+                        @placeholder="Select performer type (Vendor, Driver, User…)"
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
-                        as |type|
+                        as |option|
                     >
-                        {{smart-humanize type}}
+                        {{option.label}}
                     </PowerSelect>
                 </div>
             </InputGroup>
