@@ -1,13 +1,12 @@
-<Overlay
-    @title={{t "common.edit-resource-name" resourceName=@model.name}}
-    @onClose={{transition-to "maintenance.schedules.index"}}
-    @width="500px"
+<Layout::Resource::Panel
+    @resource={{@model}}
+    @controller={{this}}
+    @headerTitle={{t "common.edit-resource-name" resourceName=@model.name}}
+    @actionButtons={{this.actionButtons}}
+    @saveTask={{this.save}}
+    @onPressCancel={{this.cancel}}
+    @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <Overlay::Body>
-        <Schedule::Form @resource={{@model}} />
-    </Overlay::Body>
-    <Overlay::Footer>
-        <Button @type="primary" @text={{t "common.save-changes"}} @onClick={{perform this.scheduleActions.saveTask @model}} />
-        <Button @text={{t "common.cancel"}} @onClick={{transition-to "maintenance.schedules.index"}} />
-    </Overlay::Footer>
-</Overlay>
+    <Schedule::Form @resource={{@model}} @controller={{this}} />
+    <Spacer @height="200px" />
+</Layout::Resource::Panel>

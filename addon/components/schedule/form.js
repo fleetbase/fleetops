@@ -2,20 +2,27 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
+/**
+ * Maps a polymorphic type string to the Ember Data model name used by ModelSelect.
+ * Uses colon separator to match the convention in work-order/form.js.
+ */
 const TYPE_TO_MODEL = {
-    'fleet-ops/vehicle': 'vehicle',
-    'fleet-ops/equipment': 'equipment',
+    'fleet-ops:vehicle': 'vehicle',
+    'fleet-ops:equipment': 'equipment',
+    'fleet-ops:vendor': 'vendor',
+    'fleet-ops:contact': 'contact',
+    'fleet-ops:driver': 'driver',
 };
 
 const SUBJECT_TYPE_OPTIONS = [
-    { label: 'Vehicle', value: 'fleet-ops/vehicle' },
-    { label: 'Equipment', value: 'fleet-ops/equipment' },
+    { label: 'Vehicle', value: 'fleet-ops:vehicle' },
+    { label: 'Equipment', value: 'fleet-ops:equipment' },
 ];
 
 const ASSIGNEE_TYPE_OPTIONS = [
-    { label: 'Vendor', value: 'fleet-ops/vendor' },
-    { label: 'Contact', value: 'fleet-ops/contact' },
-    { label: 'Driver', value: 'fleet-ops/driver' },
+    { label: 'Vendor', value: 'fleet-ops:vendor' },
+    { label: 'Contact', value: 'fleet-ops:contact' },
+    { label: 'Driver', value: 'fleet-ops:driver' },
 ];
 
 export default class ScheduleFormComponent extends Component {
