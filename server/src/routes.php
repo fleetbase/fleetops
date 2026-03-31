@@ -423,6 +423,11 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             $router->post('{id}/test-connection', $controller('testConnection'));
                             $router->post('{key}/test-credentials', $controller('testCredentials'));
                         });
+                        $router->fleetbaseRoutes('maintenance-schedules', function ($router, $controller) {
+                            $router->post('{id}/pause', $controller('pause'));
+                            $router->post('{id}/resume', $controller('resume'));
+                            $router->post('{id}/trigger', $controller('trigger'));
+                        });
                         $router->fleetbaseRoutes('work-orders');
                         $router->fleetbaseRoutes('maintenances', function ($router, $controller) {
                             $router->post('{id}/line-items', $controller('addLineItem'));
