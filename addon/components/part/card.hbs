@@ -1,0 +1,49 @@
+<Layout::Resource::Card ...attributes as |Card|>
+    <Card.header class="{{@headerClass}} truncate">
+        <div class="font-semibold truncate">{{or @resource.name @resource.public_id}}</div>
+        <div class="text-gray-300 dark:text-gray-500 text-sm truncate">{{or @resource.part_number @resource.sku @resource.public_id}}</div>
+        {{#if (has-block "header")}}
+            {{yield to="header"}}
+        {{/if}}
+    </Card.header>
+    <Card.body class={{@bodyClass}}>
+        <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.partImage"}} class="card-img-lg" />
+        <div class="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+            {{#if @resource.type}}
+                <div class="flex items-center space-x-1">
+                    <FaIcon @icon="tag" @size="xs" class="text-gray-400" />
+                    <span>{{humanize @resource.type}}</span>
+                </div>
+            {{/if}}
+            {{#if @resource.quantity_on_hand}}
+                <div class="flex items-center space-x-1">
+                    <FaIcon @icon="boxes-stacked" @size="xs" class="text-gray-400" />
+                    <span>Qty: {{@resource.quantity_on_hand}}</span>
+                </div>
+            {{/if}}
+            {{#if @resource.unit_cost}}
+                <div class="flex items-center space-x-1">
+                    <FaIcon @icon="dollar-sign" @size="xs" class="text-gray-400" />
+                    <span>{{format-currency @resource.unit_cost @resource.currency}}</span>
+                </div>
+            {{/if}}
+        </div>
+        {{#if (has-block "body")}}
+            {{yield to="body"}}
+        {{/if}}
+    </Card.body>
+    <Card.footer class={{@footerClass}}>
+        <div class="flex flex-row items-center space-x-1">
+            <Button @icon="eye" @size="xs" @onClick={{fn this.partActions.transition.view @resource}} />
+            <Button @icon="pencil" @size="xs" @onClick={{fn this.partActions.transition.edit @resource}} />
+            <Button @icon="trash" @size="xs" @type="danger" @onClick={{fn this.partActions.delete @resource}} />
+        </div>
+        {{#if (has-block "footer")}}
+            {{yield to="footer"}}
+        {{/if}}
+        <div class="mt-1">
+            <div class="text-gray-300 dark:text-gray-500 text-xs">Last Modified: {{@resource.updatedAt}}</div>
+        </div>
+    </Card.footer>
+</Layout::Resource::Card>
+{{yield}}

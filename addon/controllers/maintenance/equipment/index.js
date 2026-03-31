@@ -5,6 +5,7 @@ import { tracked } from '@glimmer/tracking';
 export default class MaintenanceEquipmentIndexController extends Controller {
     @service equipmentActions;
     @service intl;
+    @service appCache;
 
     @tracked queryParams = ['type', 'status', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
     @tracked page = 1;
@@ -13,14 +14,46 @@ export default class MaintenanceEquipmentIndexController extends Controller {
     @tracked public_id;
     @tracked type;
     @tracked status;
+    @tracked table;
+    @tracked layout = this.appCache.get('fleetops:equipment:layout', 'table');
 
-    @tracked actionButtons = [
-        { icon: 'refresh', onClick: this.equipmentActions.refresh, helpText: this.intl.t('common.refresh') },
-        { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.equipmentActions.transition.create },
-        { text: this.intl.t('common.export'), icon: 'long-arrow-up', iconClass: 'rotate-icon-45', wrapperClass: 'hidden md:flex', onClick: this.equipmentActions.export },
-    ];
+    /* eslint-disable ember/no-side-effects */
+    get actionButtons() {
+        return [
+            {
+                component: 'dropdown-button',
+                icon: 'display',
+                size: 'xs',
+                items: [
+                    {
+                        label: this.intl.t('common.table-view'),
+                        icon: 'table-list',
+                        onClick: () => {
+                            this.layout = 'table';
+                            this.appCache.set('fleetops:equipment:layout', 'table');
+                        },
+                    },
+                    {
+                        label: this.intl.t('common.grid-view'),
+                        icon: 'grip',
+                        onClick: () => {
+                            this.layout = 'grid';
+                            this.appCache.set('fleetops:equipment:layout', 'grid');
+                        },
+                    },
+                ],
+                renderInPlace: true,
+                helpText: 'Change the layout',
+            },
+            { icon: 'refresh', onClick: this.equipmentActions.refresh, helpText: this.intl.t('common.refresh') },
+            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.equipmentActions.transition.create },
+            { text: this.intl.t('common.export'), icon: 'long-arrow-up', iconClass: 'rotate-icon-45', wrapperClass: 'hidden md:flex', onClick: this.equipmentActions.export },
+        ];
+    }
 
-    @tracked bulkActions = [{ label: 'Delete selected...', class: 'text-red-500', fn: this.equipmentActions.bulkDelete }];
+    get bulkActions() {
+        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.equipmentActions.bulkDelete }];
+    }
 
     @tracked columns = [
         { label: this.intl.t('column.name'), valuePath: 'name', cellComponent: 'table/cell/anchor', cellClassNames: 'uppercase', action: this.equipmentActions.transition.view, permission: 'fleet-ops view equipment', resizable: true, sortable: true, filterable: true, filterParam: 'name', filterComponent: 'filter/string' },
