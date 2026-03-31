@@ -1,0 +1,13 @@
+<Overlay
+    @title={{t "common.create-a-new-resource" resource=(t "resource.maintenance-schedule")}}
+    @onClose={{transition-to "maintenance.schedules.index"}}
+    @width="500px"
+>
+    <Overlay::Body>
+        <Schedule::Form @resource={{@model}} />
+    </Overlay::Body>
+    <Overlay::Footer>
+        <Button @type="primary" @text={{t "common.save"}} @onClick={{perform this.scheduleActions.saveTask @model}} />
+        <Button @text={{t "common.cancel"}} @onClick={{transition-to "maintenance.schedules.index"}} />
+    </Overlay::Footer>
+</Overlay>

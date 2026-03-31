@@ -52,6 +52,23 @@ export default class WorkOrderFormComponent extends Component {
     /** The currently selected assignee type option object. */
     @tracked selectedAssigneeType = null;
 
+    /** Completion data fields — only used when status is being set to closed. */
+    @tracked completionOdometer = null;
+    @tracked completionEngineHours = null;
+    @tracked completionLaborCost = null;
+    @tracked completionPartsCost = null;
+    @tracked completionTax = null;
+    @tracked completionNotes = null;
+
+    /**
+     * Returns true when the work order status is set to 'closed', which
+     * reveals the Completion Details panel and seeds the auto-generated
+     * Maintenance History record via the WorkOrderObserver on save.
+     */
+    get isCompleting() {
+        return this.args.resource?.status === 'closed';
+    }
+
     constructor(owner, args) {
         super(owner, args);
         const { resource } = args;

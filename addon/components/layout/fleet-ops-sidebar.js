@@ -184,12 +184,12 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
         const maintenanceItems = [
             {
-                intl: 'menu.maintenances',
-                title: this.intl.t('menu.maintenances'),
-                icon: 'wrench',
-                route: 'maintenance.maintenances',
-                permission: 'fleet-ops list maintenance',
-                visible: this.abilities.can('fleet-ops see maintenance'),
+                intl: 'menu.schedules',
+                title: this.intl.t('menu.schedules'),
+                icon: 'calendar-alt',
+                route: 'maintenance.schedules',
+                permission: 'fleet-ops list maintenance-schedule',
+                visible: this.abilities.can('fleet-ops see maintenance-schedule'),
             },
             {
                 intl: 'menu.work-orders',
@@ -198,6 +198,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 route: 'maintenance.work-orders',
                 permission: 'fleet-ops list work-order',
                 visible: this.abilities.can('fleet-ops see work-order'),
+            },
+            {
+                intl: 'menu.maintenance-history',
+                title: this.intl.t('menu.maintenance-history'),
+                icon: 'history',
+                route: 'maintenance.maintenances',
+                permission: 'fleet-ops list maintenance',
+                visible: this.abilities.can('fleet-ops see maintenance'),
             },
             {
                 intl: 'menu.equipment',

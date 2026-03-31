@@ -1,0 +1,87 @@
+<div class="schedule-details" ...attributes>
+
+    <ContentPanel @title="Schedule Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-2 gap-2 text-xs no-input-group-padding">
+
+            <InputGroup @name="ID">
+                <p class="form-input-static">{{@resource.public_id}}</p>
+            </InputGroup>
+
+            <InputGroup @name="Name">
+                <p class="form-input-static">{{@resource.name}}</p>
+            </InputGroup>
+
+            <InputGroup @name="Type">
+                <p class="form-input-static">{{smart-humanize @resource.type}}</p>
+            </InputGroup>
+
+            <InputGroup @name="Status">
+                <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
+            </InputGroup>
+
+            <InputGroup @name="Asset">
+                <p class="form-input-static">{{@resource.subject_name}}</p>
+            </InputGroup>
+
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Interval" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-2 gap-2 text-xs no-input-group-padding">
+
+            {{#if @resource.interval_value}}
+                <InputGroup @name="Time Interval">
+                    <p class="form-input-static">Every {{@resource.interval_value}} {{@resource.interval_unit}}</p>
+                </InputGroup>
+            {{/if}}
+
+            {{#if @resource.interval_distance}}
+                <InputGroup @name="Distance Interval">
+                    <p class="form-input-static">Every {{@resource.interval_distance}} km</p>
+                </InputGroup>
+            {{/if}}
+
+            {{#if @resource.interval_engine_hours}}
+                <InputGroup @name="Engine Hours Interval">
+                    <p class="form-input-static">Every {{@resource.interval_engine_hours}} hours</p>
+                </InputGroup>
+            {{/if}}
+
+            {{#if @resource.next_due_date}}
+                <InputGroup @name="Next Due Date">
+                    <p class="form-input-static">{{format-date @resource.next_due_date "MMM d, yyyy"}}</p>
+                </InputGroup>
+            {{/if}}
+
+            {{#if @resource.next_due_odometer}}
+                <InputGroup @name="Next Due Odometer">
+                    <p class="form-input-static">{{@resource.next_due_odometer}} km</p>
+                </InputGroup>
+            {{/if}}
+
+            {{#if @resource.last_service_date}}
+                <InputGroup @name="Last Service Date">
+                    <p class="form-input-static">{{format-date @resource.last_service_date "MMM d, yyyy"}}</p>
+                </InputGroup>
+            {{/if}}
+
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Work Order Defaults" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-2 gap-2 text-xs no-input-group-padding">
+
+            <InputGroup @name="Default Priority">
+                <p class="form-input-static">{{smart-humanize @resource.default_priority}}</p>
+            </InputGroup>
+
+            {{#if @resource.instructions}}
+                <InputGroup @name="Instructions" @wrapperClass="col-span-2">
+                    <p class="form-input-static whitespace-pre-wrap">{{@resource.instructions}}</p>
+                </InputGroup>
+            {{/if}}
+
+        </div>
+    </ContentPanel>
+
+</div>

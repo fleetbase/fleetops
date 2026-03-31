@@ -1,0 +1,11 @@
+<Overlay
+    @title={{@model.name}}
+    @onClose={{transition-to "maintenance.schedules.index"}}
+    @actionButtons={{this.actionButtons}}
+    @width="600px"
+>
+    <Overlay::Body>
+        <Schedule::Details @resource={{@model}} />
+    </Overlay::Body>
+</Overlay>
+{{outlet}}
