@@ -112,7 +112,7 @@ class MaintenanceSchedule extends Model
      *
      * @var array
      */
-    protected $appends = ['public_id'];
+    protected $appends = [];
 
     /**
      * Activity log options.
