@@ -1,10 +1,34 @@
-<div class="form-wrapper" ...attributes>
-    <ContentPanel @title="Work Order Details" @open={{true}} @wrapperClass="bordered-top">
+<div class="work-order-form" ...attributes>
+
+    {{! ===== IDENTIFICATION ===== }}
+    <ContentPanel @title="Identification" @open={{true}} @wrapperClass="mb-4 px-4">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Work Order Details
+            </div>
             <InputGroup @name="Code">
-                <Input @value={{@resource.code}} @type="text" class="w-full form-input" placeholder="Work Order Code" disabled={{cannot-write @resource}} />
+                <Input
+                    @value={{@resource.code}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder="Auto-generated if left blank"
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+            <InputGroup @name="Subject" @wrapperClass="col-span-2">
+                <Input
+                    @value={{@resource.subject}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder="Brief description of the work order"
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
 
+            {{! Status & Priority }}
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Status & Priority
+            </div>
             <InputGroup @name="Status">
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
@@ -20,11 +44,6 @@
                     </PowerSelect>
                 </div>
             </InputGroup>
-
-            <InputGroup @name="Subject" @wrapperClass="col-span-2">
-                <Input @value={{@resource.subject}} @type="text" class="w-full form-input" placeholder="Subject" disabled={{cannot-write @resource}} />
-            </InputGroup>
-
             <InputGroup @name="Priority">
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
@@ -40,74 +59,144 @@
                     </PowerSelect>
                 </div>
             </InputGroup>
+        </div>
+    </ContentPanel>
 
-            <InputGroup @name="Assignee">
-                <ModelSelect
-                    @modelName="user"
-                    @selectedModel={{@resource.assignee}}
-                    @placeholder="Select Assignee"
-                    @triggerClass="form-select form-input"
-                    @infiniteScroll={{false}}
-                    @renderInPlace={{true}}
-                    @onChange={{fn (mut @resource.assignee)}}
-                    @onChangeId={{fn (mut @resource.assignee_uuid)}}
-                    @disabled={{cannot-write @resource}}
-                    as |model|
-                >
-                    {{model.name}}
-                </ModelSelect>
+    {{! ===== ASSIGNMENT ===== }}
+    <ContentPanel @title="Assignment" @open={{true}} @wrapperClass="bordered-top px-4">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Target Asset
+            </div>
+            <InputGroup @name="Target Type">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.targetTypeOptions}}
+                        @selected={{@resource.target_type}}
+                        @onChange={{this.onTargetTypeChange}}
+                        @placeholder="Select target type"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |type|
+                    >
+                        {{smart-humanize type}}
+                    </PowerSelect>
+                </div>
             </InputGroup>
+            {{#if this.targetModelName}}
+                <InputGroup @name="Target">
+                    <ModelSelect
+                        @modelName={{this.targetModelName}}
+                        @selectedModel={{@resource.target}}
+                        @placeholder="Select target asset"
+                        @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
+                        @onChange={{this.assignTarget}}
+                        @disabled={{cannot-write @resource}}
+                        as |model|
+                    >
+                        {{or model.name model.subject model.public_id}}
+                    </ModelSelect>
+                </InputGroup>
+            {{/if}}
 
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Assignee
+            </div>
+            <InputGroup @name="Assignee Type">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.assigneeTypeOptions}}
+                        @selected={{@resource.assignee_type}}
+                        @onChange={{this.onAssigneeTypeChange}}
+                        @placeholder="Select assignee type"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |type|
+                    >
+                        {{smart-humanize type}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+            {{#if this.assigneeModelName}}
+                <InputGroup @name="Assignee">
+                    <ModelSelect
+                        @modelName={{this.assigneeModelName}}
+                        @selectedModel={{@resource.assignee}}
+                        @placeholder="Select assignee"
+                        @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
+                        @onChange={{this.assignAssignee}}
+                        @disabled={{cannot-write @resource}}
+                        as |model|
+                    >
+                        {{or model.name model.public_id}}
+                    </ModelSelect>
+                </InputGroup>
+            {{/if}}
+        </div>
+    </ContentPanel>
+
+    {{! ===== SCHEDULING ===== }}
+    <ContentPanel @title="Scheduling" @open={{true}} @wrapperClass="bordered-top px-4">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Dates
+            </div>
             <InputGroup @name="Opened At">
                 <DatePicker
-                    @value={{@resource.opened_at}}
+                    @value={{or (format-date-fns @resource.opened_at "dd-MM-yyyy") null}}
                     @onChange={{fn (mut @resource.opened_at)}}
-                    @placeholder="Select Opened Date"
-                    @disabled={{cannot-write @resource}}
-                    class="w-full form-input"
+                    @placeholder="DD-MM-YYYY"
+                    class="filter-date-input w-full flex-1"
                 />
             </InputGroup>
-
             <InputGroup @name="Due At">
                 <DatePicker
-                    @value={{@resource.due_at}}
+                    @value={{or (format-date-fns @resource.due_at "dd-MM-yyyy") null}}
                     @onChange={{fn (mut @resource.due_at)}}
-                    @placeholder="Select Due Date"
-                    @disabled={{cannot-write @resource}}
-                    class="w-full form-input"
+                    @placeholder="DD-MM-YYYY"
+                    class="filter-date-input w-full flex-1"
                 />
             </InputGroup>
-
             <InputGroup @name="Closed At">
                 <DatePicker
-                    @value={{@resource.closed_at}}
+                    @value={{or (format-date-fns @resource.closed_at "dd-MM-yyyy") null}}
                     @onChange={{fn (mut @resource.closed_at)}}
-                    @placeholder="Select Closed Date"
-                    @disabled={{cannot-write @resource}}
-                    class="w-full form-input"
+                    @placeholder="DD-MM-YYYY"
+                    class="filter-date-input w-full flex-1"
                 />
             </InputGroup>
+        </div>
+    </ContentPanel>
 
-            <InputGroup @name="Instructions" @wrapperClass="col-span-2">
+    {{! ===== INSTRUCTIONS ===== }}
+    <ContentPanel @title="Instructions" @open={{true}} @wrapperClass="bordered-top px-4">
+        <div class="grid grid-cols-1 gap-2 no-input-group-padding text-xs">
+            <InputGroup @name="Instructions">
                 <Textarea
                     @value={{@resource.instructions}}
                     aria-label="Instructions"
                     class="w-full form-input"
                     disabled={{cannot-write @resource}}
-                    placeholder="Instructions"
+                    placeholder="Step-by-step instructions for the technician"
                     rows={{5}}
                 />
             </InputGroup>
-
-            <RegistryYield @registry="fleet-ops:component:work-order:form:details" as |RegistryComponent|>
-                <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
-            </RegistryYield>
         </div>
     </ContentPanel>
 
+    {{! ===== REGISTRY & METADATA ===== }}
+    <RegistryYield @registry="fleet-ops:component:work-order:form:details" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
     <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
-
     <RegistryYield @registry="fleet-ops:component:work-order:form" as |RegistryComponent|>
         <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
     </RegistryYield>
+    <ContentPanel @title="Metadata" @open={{false}} @wrapperClass="bordered-top">
+        <MetadataEditor @value={{@resource.meta}} @onChange={{fn (mut @resource.meta)}} />
+    </ContentPanel>
 </div>
