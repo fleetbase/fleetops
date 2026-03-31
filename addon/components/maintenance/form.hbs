@@ -220,50 +220,7 @@
     </ContentPanel>
 
     {{! ===== COSTS ===== }}
-    <ContentPanel @title="Costs" @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
-            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
-                Cost Breakdown
-            </div>
-            <InputGroup @name="Labour Cost">
-                <MoneyInput
-                    class="w-full"
-                    @value={{@resource.labor_cost}}
-                    @currency={{or @resource.currency "USD"}}
-                    @canSelectCurrency={{true}}
-                    @onCurrencyChange={{fn (mut @resource.currency)}}
-                    @disabled={{cannot-write @resource}}
-                />
-            </InputGroup>
-            <InputGroup @name="Parts Cost">
-                <MoneyInput
-                    class="w-full"
-                    @value={{@resource.parts_cost}}
-                    @currency={{or @resource.currency "USD"}}
-                    @canSelectCurrency={{true}}
-                    @disabled={{cannot-write @resource}}
-                />
-            </InputGroup>
-            <InputGroup @name="Tax">
-                <MoneyInput
-                    class="w-full"
-                    @value={{@resource.tax}}
-                    @currency={{or @resource.currency "USD"}}
-                    @canSelectCurrency={{true}}
-                    @disabled={{cannot-write @resource}}
-                />
-            </InputGroup>
-            <InputGroup @name="Total Cost">
-                <MoneyInput
-                    class="w-full"
-                    @value={{@resource.total_cost}}
-                    @currency={{or @resource.currency "USD"}}
-                    @canSelectCurrency={{true}}
-                    @disabled={{cannot-write @resource}}
-                />
-            </InputGroup>
-        </div>
-    </ContentPanel>
+    <Maintenance::CostPanel @resource={{@resource}} @disabled={{cannot-write @resource}} />
 
     {{! ===== NOTES ===== }}
     <ContentPanel @title="Notes" @open={{true}} @wrapperClass="bordered-top">
