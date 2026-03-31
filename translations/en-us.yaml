@@ -78,6 +78,7 @@ menu:
   custom-fields: Custom Fields
   order-board: Order Board
   avatars: Avatars
+  maintenances: Maintenances
 
 resource:
   asset: Asset
@@ -245,6 +246,16 @@ column:
   current-job: Current Job
   last-seen: Last Seen
   place: Place
+  subject: Subject
+  summary: Summary
+  total-cost: Total Cost
+  due-at: Due At
+  serial-number: Serial Number
+  manufacturer: Manufacturer
+  part-number: Part Number
+  quantity-on-hand: Quantity on Hand
+  quantity: Quantity
+  unit-cost: Unit Cost
 
 map:
   visibility-controls:

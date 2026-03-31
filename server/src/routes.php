@@ -424,7 +424,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             $router->post('{key}/test-credentials', $controller('testCredentials'));
                         });
                         $router->fleetbaseRoutes('work-orders');
-                        $router->fleetbaseRoutes('maintenance');
+                        $router->fleetbaseRoutes('maintenances');
                         $router->fleetbaseRoutes('equipment');
                         $router->fleetbaseRoutes('parts');
                         $router->fleetbaseRoutes('warranties');
