@@ -38,6 +38,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
             onClick: this.maintenanceActions.export,
         },
     ];
+    }
 
     /** bulk action buttons */
     get bulkActions() {
@@ -48,6 +49,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
             fn: this.maintenanceActions.bulkDelete,
         },
     ];
+    }
 
     /** columns */
     get columns() {

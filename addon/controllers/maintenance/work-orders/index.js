@@ -24,6 +24,7 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
 
     get bulkActions() {
         return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.workOrderActions.bulkDelete }];
+    }
 
     get columns() {
         return [
