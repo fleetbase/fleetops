@@ -8,8 +8,9 @@ import { action } from '@ember/object';
  */
 const TYPE_TO_MODEL = {
     'fleet-ops:vehicle': 'vehicle',
-    'fleet-ops:driver': 'driver',
     'fleet-ops:equipment': 'equipment',
+    'fleet-ops:vendor': 'vendor',
+    'fleet-ops:contact': 'contact',
     'Auth:User': 'user',
 };
 
@@ -20,11 +21,24 @@ export default class WorkOrderFormComponent extends Component {
     /** Priority options for work orders. */
     priorityOptions = ['low', 'medium', 'high', 'critical'];
 
-    /** Polymorphic target type options — assets a work order can be raised against. */
-    targetTypeOptions = ['fleet-ops:vehicle', 'fleet-ops:driver', 'fleet-ops:equipment'];
+    /**
+     * Polymorphic target type options — the asset a work order is raised against.
+     * Each entry has a `value` (stored on the model) and a `label` (displayed in the UI).
+     */
+    targetTypeOptions = [
+        { value: 'fleet-ops:vehicle', label: 'Vehicle' },
+        { value: 'fleet-ops:equipment', label: 'Equipment' },
+    ];
 
-    /** Polymorphic assignee type options — who is responsible for the work order. */
-    assigneeTypeOptions = ['fleet-ops:driver', 'Auth:User'];
+    /**
+     * Polymorphic assignee type options — who is responsible for completing
+     * the work order.
+     */
+    assigneeTypeOptions = [
+        { value: 'fleet-ops:vendor', label: 'Vendor' },
+        { value: 'fleet-ops:contact', label: 'Contact' },
+        { value: 'Auth:User', label: 'User' },
+    ];
 
     /** Derived Ember Data model name for the currently selected target type. */
     @tracked targetModelName = null;
@@ -32,14 +46,22 @@ export default class WorkOrderFormComponent extends Component {
     /** Derived Ember Data model name for the currently selected assignee type. */
     @tracked assigneeModelName = null;
 
+    /** The currently selected target type option object (drives the PowerSelect trigger label). */
+    @tracked selectedTargetType = null;
+
+    /** The currently selected assignee type option object. */
+    @tracked selectedAssigneeType = null;
+
     constructor(owner, args) {
         super(owner, args);
         const { resource } = args;
         if (resource?.target_type) {
             this.targetModelName = TYPE_TO_MODEL[resource.target_type] ?? null;
+            this.selectedTargetType = this.targetTypeOptions.find((o) => o.value === resource.target_type) ?? null;
         }
         if (resource?.assignee_type) {
             this.assigneeModelName = TYPE_TO_MODEL[resource.assignee_type] ?? null;
+            this.selectedAssigneeType = this.assigneeTypeOptions.find((o) => o.value === resource.assignee_type) ?? null;
         }
     }
 
@@ -47,11 +69,12 @@ export default class WorkOrderFormComponent extends Component {
      * Handles a change to the target type selector. Resets the target
      * relationship so a stale association is not persisted.
      */
-    @action onTargetTypeChange(type) {
-        this.args.resource.target_type = type;
+    @action onTargetTypeChange(option) {
+        this.selectedTargetType = option;
+        this.args.resource.target_type = option.value;
         this.args.resource.target_uuid = null;
         this.args.resource.target = null;
-        this.targetModelName = TYPE_TO_MODEL[type] ?? null;
+        this.targetModelName = TYPE_TO_MODEL[option.value] ?? null;
     }
 
     /** Assigns the selected target model to the resource. */
@@ -64,11 +87,12 @@ export default class WorkOrderFormComponent extends Component {
      * Handles a change to the assignee type selector. Resets the assignee
      * relationship so a stale association is not persisted.
      */
-    @action onAssigneeTypeChange(type) {
-        this.args.resource.assignee_type = type;
+    @action onAssigneeTypeChange(option) {
+        this.selectedAssigneeType = option;
+        this.args.resource.assignee_type = option.value;
         this.args.resource.assignee_uuid = null;
         this.args.resource.assignee = null;
-        this.assigneeModelName = TYPE_TO_MODEL[type] ?? null;
+        this.assigneeModelName = TYPE_TO_MODEL[option.value] ?? null;
     }
 
     /** Assigns the selected assignee model to the resource. */

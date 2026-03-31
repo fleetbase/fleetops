@@ -1,7 +1,7 @@
 <div class="work-order-form" ...attributes>
 
     {{! ===== IDENTIFICATION ===== }}
-    <ContentPanel @title="Identification" @open={{true}} @wrapperClass="mb-4 px-4">
+    <ContentPanel @title="Identification" @open={{true}}>
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Work Order Details
@@ -63,7 +63,7 @@
     </ContentPanel>
 
     {{! ===== ASSIGNMENT ===== }}
-    <ContentPanel @title="Assignment" @open={{true}} @wrapperClass="bordered-top px-4">
+    <ContentPanel @title="Assignment" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Target Asset
@@ -72,14 +72,14 @@
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.targetTypeOptions}}
-                        @selected={{@resource.target_type}}
+                        @selected={{this.selectedTargetType}}
                         @onChange={{this.onTargetTypeChange}}
                         @placeholder="Select target type"
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
-                        as |type|
+                        as |option|
                     >
-                        {{smart-humanize type}}
+                        {{option.label}}
                     </PowerSelect>
                 </div>
             </InputGroup>
@@ -108,14 +108,14 @@
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.assigneeTypeOptions}}
-                        @selected={{@resource.assignee_type}}
+                        @selected={{this.selectedAssigneeType}}
                         @onChange={{this.onAssigneeTypeChange}}
                         @placeholder="Select assignee type"
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
-                        as |type|
+                        as |option|
                     >
-                        {{smart-humanize type}}
+                        {{option.label}}
                     </PowerSelect>
                 </div>
             </InputGroup>
@@ -140,7 +140,7 @@
     </ContentPanel>
 
     {{! ===== SCHEDULING ===== }}
-    <ContentPanel @title="Scheduling" @open={{true}} @wrapperClass="bordered-top px-4">
+    <ContentPanel @title="Scheduling" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Dates
@@ -173,7 +173,7 @@
     </ContentPanel>
 
     {{! ===== INSTRUCTIONS ===== }}
-    <ContentPanel @title="Instructions" @open={{true}} @wrapperClass="bordered-top px-4">
+    <ContentPanel @title="Instructions" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 no-input-group-padding text-xs">
             <InputGroup @name="Instructions">
                 <Textarea

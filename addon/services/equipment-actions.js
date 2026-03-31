@@ -7,9 +7,9 @@ export default class EquipmentActionsService extends ResourceActionService {
     }
 
     transition = {
-        view: (equipment) => this.transitionTo('maintenance.equipments.index.details', equipment),
-        edit: (equipment) => this.transitionTo('maintenance.equipments.index.edit', equipment),
-        create: () => this.transitionTo('maintenance.equipments.index.new'),
+        view: (equipment) => this.transitionTo('maintenance.equipment.index.details', equipment),
+        edit: (equipment) => this.transitionTo('maintenance.equipment.index.edit', equipment),
+        create: () => this.transitionTo('maintenance.equipment.index.new'),
     };
 
     panel = {

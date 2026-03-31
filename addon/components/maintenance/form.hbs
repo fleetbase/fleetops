@@ -1,7 +1,7 @@
 <div class="maintenance-form" ...attributes>
 
     {{! ===== IDENTIFICATION ===== }}
-    <ContentPanel @title="Identification" @open={{true}} @wrapperClass="mb-4 px-4">
+    <ContentPanel @title="Identification" @open={{true}}>
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Maintenance Details
@@ -68,7 +68,7 @@
     </ContentPanel>
 
     {{! ===== ASSET & WORK ORDER ===== }}
-    <ContentPanel @title="Asset & Work Order" @open={{true}} @wrapperClass="bordered-top px-4">
+    <ContentPanel @title="Asset & Work Order" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Maintainable Asset
@@ -165,7 +165,7 @@
     </ContentPanel>
 
     {{! ===== SCHEDULING & READINGS ===== }}
-    <ContentPanel @title="Scheduling & Readings" @open={{true}} @wrapperClass="bordered-top px-4">
+    <ContentPanel @title="Scheduling & Readings" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Dates
@@ -220,7 +220,7 @@
     </ContentPanel>
 
     {{! ===== COSTS ===== }}
-    <ContentPanel @title="Costs" @open={{true}} @wrapperClass="bordered-top px-4">
+    <ContentPanel @title="Costs" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Cost Breakdown
@@ -266,7 +266,7 @@
     </ContentPanel>
 
     {{! ===== NOTES ===== }}
-    <ContentPanel @title="Notes" @open={{true}} @wrapperClass="bordered-top px-4">
+    <ContentPanel @title="Notes" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 no-input-group-padding text-xs">
             <InputGroup @name="Notes">
                 <Textarea

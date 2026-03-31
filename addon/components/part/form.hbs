@@ -1,7 +1,7 @@
 <div class="part-form" ...attributes>
 
     {{! ===== PHOTO ===== }}
-    <ContentPanel @title="Photo" @open={{true}} @wrapperClass="mb-4 px-4">
+    <ContentPanel @title="Photo" @open={{true}}>
         <div class="flex items-center justify-center p-4">
             <div class="flex flex-col items-center space-y-3">
                 {{#if @resource.photo_url}}
@@ -20,7 +20,7 @@
     </ContentPanel>
 
     {{! ===== IDENTIFICATION ===== }}
-    <ContentPanel @title="Identification" @open={{true}} @wrapperClass="bordered-top px-4">
+    <ContentPanel @title="Identification" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Part Details
@@ -129,7 +129,7 @@
     </ContentPanel>
 
     {{! ===== INVENTORY ===== }}
-    <ContentPanel @title="Inventory" @open={{true}} @wrapperClass="bordered-top px-4">
+    <ContentPanel @title="Inventory" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Stock Levels
@@ -170,7 +170,7 @@
     </ContentPanel>
 
     {{! ===== COMPATIBILITY ===== }}
-    <ContentPanel @title="Compatibility" @open={{true}} @wrapperClass="bordered-top px-4">
+    <ContentPanel @title="Compatibility" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Compatible Asset
@@ -211,7 +211,7 @@
     </ContentPanel>
 
     {{! ===== VENDOR & WARRANTY ===== }}
-    <ContentPanel @title="Vendor & Warranty" @open={{true}} @wrapperClass="bordered-top px-4">
+    <ContentPanel @title="Vendor & Warranty" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
                 Supplier
