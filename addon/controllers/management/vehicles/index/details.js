@@ -21,6 +21,18 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
                 route: 'management.vehicles.index.details.devices',
                 label: 'Devices',
             },
+            {
+                route: 'management.vehicles.index.details.schedules',
+                label: 'Schedules',
+            },
+            {
+                route: 'management.vehicles.index.details.work-orders',
+                label: 'Work Orders',
+            },
+            {
+                route: 'management.vehicles.index.details.maintenance-history',
+                label: 'Maintenance History',
+            },
             ...(isArray(registeredTabs) ? registeredTabs : []),
         ];
     }

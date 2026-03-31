@@ -80,6 +80,9 @@ export default buildRoutes(function () {
                     this.route('positions');
                     this.route('devices');
                     this.route('equipment');
+                    this.route('schedules');
+                    this.route('work-orders');
+                    this.route('maintenance-history');
                     this.route('virtual', { path: '/:slug' });
                 });
                 this.route('edit', { path: '/edit/:public_id' });
@@ -181,6 +184,16 @@ export default buildRoutes(function () {
         this.route('tracking');
     });
     this.route('maintenance', function () {
+        this.route('schedules', function () {
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                });
+            });
+        });
+
         this.route('maintenances', function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');

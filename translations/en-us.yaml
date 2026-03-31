@@ -59,9 +59,11 @@ menu:
   fuel-reports: Fuel Reports
   issues: Issues
   maintenance: Maintenance
+  schedules: Schedules
   work-orders: Work Orders
   equipment: Equipment
   parts: Parts
+  maintenance-history: Maintenance History
   connectivity: Connectivity
   telematics: Telematics
   devices: Devices
@@ -127,6 +129,8 @@ resource:
   issues: Issues
   maintenance: Maintenance
   maintenances: Maintenances
+  maintenance-schedule: Maintenance Schedule
+  maintenance-schedules: Maintenance Schedules
   order-config: Order Config
   order-configs: Order Configs
   order: Order
@@ -915,6 +919,9 @@ vehicle:
     year: Year
   actions:
     locate-vehicle: Locate Vehicle on Map
+    schedule-maintenance: Schedule Maintenance
+    create-work-order: Create Work Order
+    log-maintenance: Log Maintenance
 
 vendor:
   fields:
