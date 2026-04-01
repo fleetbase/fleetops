@@ -200,8 +200,8 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see work-order'),
             },
             {
-                intl: 'menu.maintenance-history',
-                title: this.intl.t('menu.maintenance-history'),
+                intl: 'menu.maintenances',
+                title: this.intl.t('menu.maintenances'),
                 icon: 'history',
                 route: 'maintenance.maintenances',
                 permission: 'fleet-ops list maintenance',
