@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\Money;
 use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
@@ -90,6 +91,7 @@ class Maintenance extends Model
         'parts_cost',
         'tax',
         'total_cost',
+        'currency',
         'attachments',
         'meta',
         'slug',
@@ -128,10 +130,11 @@ class Maintenance extends Model
         'completed_at'      => 'datetime',
         'odometer'          => 'integer',
         'engine_hours'      => 'integer',
-        'labor_cost'        => 'decimal:2',
-        'parts_cost'        => 'decimal:2',
-        'tax'               => 'decimal:2',
-        'total_cost'        => 'decimal:2',
+        // Money values
+        'labor_cost'        => Money::class,
+        'parts_cost'        => Money::class,
+        'tax'               => Money::class,
+        'total_cost'        => Money::class,
         'line_items'        => Json::class,
         'attachments'       => Json::class,
         'meta'              => Json::class,

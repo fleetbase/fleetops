@@ -173,6 +173,7 @@
                     class="w-full"
                     @value={{@resource.unit_cost}}
                     @currency={{or @resource.currency "USD"}}
+                    @onChange={{fn (mut @resource.unit_cost)}}
                     @disabled={{cannot-write @resource}}
                 />
             </InputGroup>
@@ -181,6 +182,7 @@
                     class="w-full"
                     @value={{@resource.msrp}}
                     @currency={{or @resource.currency "USD"}}
+                    @onChange={{fn (mut @resource.msrp)}}
                     @disabled={{cannot-write @resource}}
                 />
             </InputGroup>

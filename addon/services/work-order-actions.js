@@ -48,7 +48,11 @@ export default class WorkOrderActionsService extends ResourceActionService {
 
     /**
      * Packs completion data into workOrder.meta.completion_data before saving.
-     * All monetary values are converted to cents (integer) for storage.
+     *
+     * Monetary values (laborCost, partsCost, tax) come from the MoneyInput
+     * component's @onChange callback, which already emits **cents** (integers).
+     * No further conversion is needed — values are stored as-is.
+     *
      * Called by the edit/new controllers before workOrder.save().
      *
      * @param {WorkOrderModel} workOrder
@@ -59,14 +63,16 @@ export default class WorkOrderActionsService extends ResourceActionService {
             return;
         }
 
-        const toCents = (value) => {
-            const parsed = parseFloat(value);
-            return isNaN(parsed) ? null : Math.round(parsed * 100);
+        // Ensure values are integers (MoneyInput emits cents already)
+        const toIntCents = (value) => {
+            if (value === null || value === undefined) return null;
+            const parsed = parseInt(value, 10);
+            return isNaN(parsed) ? null : parsed;
         };
 
-        const laborCostCents = toCents(completionData.laborCost);
-        const partsCostCents = toCents(completionData.partsCost);
-        const taxCents = toCents(completionData.tax);
+        const laborCostCents = toIntCents(completionData.laborCost);
+        const partsCostCents = toIntCents(completionData.partsCost);
+        const taxCents = toIntCents(completionData.tax);
         const totalCostCents =
             laborCostCents !== null || partsCostCents !== null || taxCents !== null
                 ? (laborCostCents ?? 0) + (partsCostCents ?? 0) + (taxCents ?? 0)

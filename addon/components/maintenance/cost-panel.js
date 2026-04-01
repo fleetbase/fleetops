@@ -13,6 +13,12 @@ import { isArray } from '@ember/array';
  * Line items are stored in the `line_items` JSON column on the maintenance
  * record. Each item has: { description, quantity, unit_cost, currency }.
  *
+ * All monetary values (unit_cost, labor_cost, tax, parts_cost, total_cost)
+ * are stored as **cents** (integers) on the backend via the Money::class cast.
+ * The `MoneyInput` component handles the cents ↔ display conversion internally:
+ *   - `@value` receives cents (e.g. 1000 = $10.00)
+ *   - `@onChange` emits cents (e.g. 1000 = $10.00)
+ *
  * Parts cost and total cost are recomputed server-side after every mutation;
  * the component reflects the updated values returned in the API response.
  *
@@ -30,7 +36,11 @@ export default class MaintenanceCostPanelComponent extends Component {
     /** Tracks which line item index is currently being edited (null = none) */
     @tracked editingIndex = null;
 
-    /** Draft values for the add/edit form row */
+    /**
+     * Draft values for the add/edit form row.
+     * `draftUnitCost` is stored in **cents** (integer) to match the backend
+     * Money::class cast and the MoneyInput component's expected input/output format.
+     */
     @tracked draftDescription = '';
     @tracked draftQuantity = 1;
     @tracked draftUnitCost = 0;
@@ -61,12 +71,26 @@ export default class MaintenanceCostPanelComponent extends Component {
         return this.laborCost + this.partsCost + this.tax;
     }
 
+    /**
+     * Live preview of the draft line total (in cents).
+     * Displayed via `format-currency` which also expects cents.
+     */
     get draftLineTotal() {
         return (this.draftQuantity ?? 0) * (this.draftUnitCost ?? 0);
     }
 
     get isDisabled() {
         return this.args.disabled ?? false;
+    }
+
+    // ─── Draft unit cost setter ───────────────────────────────────────────────
+
+    /**
+     * Called by MoneyInput's `@onChange`. The value is already in cents.
+     */
+    @action
+    setDraftUnitCost(cents) {
+        this.draftUnitCost = cents ?? 0;
     }
 
     // ─── Add item ────────────────────────────────────────────────────────────
@@ -119,6 +143,7 @@ export default class MaintenanceCostPanelComponent extends Component {
         this.isAddingItem = false;
         this.draftDescription = item.description ?? '';
         this.draftQuantity = item.quantity ?? 1;
+        // unit_cost from the API is already in cents (Money::class cast)
         this.draftUnitCost = item.unit_cost ?? 0;
     }
 
@@ -172,6 +197,7 @@ export default class MaintenanceCostPanelComponent extends Component {
 
     /**
      * Returns the line total for a single item (quantity × unit_cost).
+     * Both values are in cents, so the result is also in cents.
      * Used in the template as (this.lineTotal item).
      */
     @action

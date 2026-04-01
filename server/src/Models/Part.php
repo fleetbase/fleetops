@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\Money;
 use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Traits\Maintainable;
 use Fleetbase\Models\Alert;
@@ -88,6 +89,7 @@ class Part extends Model
         'quantity_on_hand',
         'unit_cost',
         'msrp',
+        'currency',
         'asset_type',
         'asset_uuid',
         'type',
@@ -126,8 +128,9 @@ class Part extends Model
      */
     protected $casts = [
         'quantity_on_hand' => 'integer',
-        'unit_cost'        => 'decimal:2',
-        'msrp'             => 'decimal:2',
+        // Money values
+        'unit_cost'        => Money::class,
+        'msrp'             => Money::class,
         'specs'            => Json::class,
         'meta'             => Json::class,
         'asset_type'       => PolymorphicType::class,

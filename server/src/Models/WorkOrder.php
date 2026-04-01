@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\Money;
 use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
@@ -85,6 +86,13 @@ class WorkOrder extends Model
         'closed_at',
         'instructions',
         'checklist',
+        'estimated_cost',
+        'approved_budget',
+        'actual_cost',
+        'currency',
+        'cost_breakdown',
+        'cost_center',
+        'budget_code',
         'meta',
         'slug',
     ];
@@ -119,10 +127,15 @@ class WorkOrder extends Model
         'opened_at'     => 'datetime',
         'due_at'        => 'datetime',
         'closed_at'     => 'datetime',
-        'checklist'     => Json::class,
-        'meta'          => Json::class,
-        'target_type'   => PolymorphicType::class,
-        'assignee_type' => PolymorphicType::class,
+        'checklist'        => Json::class,
+        'cost_breakdown'   => Json::class,
+        'meta'             => Json::class,
+        'target_type'      => PolymorphicType::class,
+        'assignee_type'    => PolymorphicType::class,
+        // Money values
+        'estimated_cost'   => Money::class,
+        'approved_budget'  => Money::class,
+        'actual_cost'      => Money::class,
     ];
 
     /**

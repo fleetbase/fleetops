@@ -181,6 +181,7 @@
                     class="w-full"
                     @value={{@resource.purchase_price}}
                     @currency={{or @resource.currency "USD"}}
+                    @onChange={{fn (mut @resource.purchase_price)}}
                     @disabled={{cannot-write @resource}}
                 />
             </InputGroup>

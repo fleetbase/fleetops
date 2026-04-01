@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\Money;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
@@ -87,6 +88,7 @@ class Equipment extends Model
         'equipable_uuid',
         'purchased_at',
         'purchase_price',
+        'currency',
         'meta',
         'slug',
     ];
@@ -119,7 +121,8 @@ class Equipment extends Model
      */
     protected $casts = [
         'purchased_at'   => 'date',
-        'purchase_price' => 'decimal:2',
+        // Money values
+        'purchase_price' => Money::class,
         'meta'           => Json::class,
     ];
 
