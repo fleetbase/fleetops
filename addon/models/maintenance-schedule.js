@@ -1,5 +1,12 @@
 import Model, { attr, belongsTo } from '@ember-data/model';
 
+/**
+ * Local maintenance-schedule model used by the fleetops engine.
+ * The canonical model with full computed properties lives in fleetops-data.
+ * This local copy adds the polymorphic @belongsTo relationships so the
+ * engine's form and details components can use relationship accessors
+ * directly instead of raw _type / _uuid attrs.
+ */
 export default class MaintenanceScheduleModel extends Model {
     // Identification
     @attr('string') public_id;
@@ -7,12 +14,14 @@ export default class MaintenanceScheduleModel extends Model {
     @attr('string') type;
     @attr('string') status;
 
-    // Subject (polymorphic asset)
-    @attr('string') subject_type;
-    @attr('string') subject_uuid;
-    @attr('string') subject_name; // computed/serialized on the server
+    // Polymorphic subject (the asset this schedule applies to)
+    @belongsTo('maintenance-subject', { polymorphic: true, async: false }) subject;
+
+    // Polymorphic default_assignee (who should be assigned to generated work orders)
+    @belongsTo('facilitator', { polymorphic: true, async: false }) default_assignee;
 
     // Interval definition
+    @attr('string') interval_method;
     @attr('string') interval_type;
     @attr('number') interval_value;
     @attr('string') interval_unit;
@@ -31,9 +40,6 @@ export default class MaintenanceScheduleModel extends Model {
 
     // Work order defaults
     @attr('string') default_priority;
-    @attr('string') default_assignee_type;
-    @attr('string') default_assignee_uuid;
-
     @attr('string') instructions;
     @attr() meta;
 

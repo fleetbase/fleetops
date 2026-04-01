@@ -126,15 +126,15 @@ export default class VehicleActionsService extends ResourceActionService {
     };
 
     @action scheduleMaintenance(vehicle) {
-        this.maintenanceScheduleActions.modal.create({ subject_type: 'fleet-ops:vehicle', subject_uuid: vehicle.id, subject: vehicle });
+        this.maintenanceScheduleActions.modal.create({ subject: vehicle });
     }
 
     @action createWorkOrder(vehicle) {
-        this.workOrderActions.modal.create({ target_type: 'fleet-ops:vehicle', target_uuid: vehicle.id, target: vehicle });
+        this.workOrderActions.modal.create({ target: vehicle });
     }
 
     @action logMaintenance(vehicle) {
-        this.maintenanceActions.modal.create({ maintainable_type: 'fleet-ops:vehicle', maintainable_uuid: vehicle.id, maintainable: vehicle });
+        this.maintenanceActions.modal.create({ maintainable: vehicle });
     }
 
     @action locate(vehicle, options = {}) {

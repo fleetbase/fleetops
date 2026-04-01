@@ -13,6 +13,32 @@ const TYPE_TO_MODEL = {
     'Auth:User': 'user',
 };
 
+/**
+ * Maps a concrete Ember Data model name back to the backend polymorphic type string.
+ * Used to restore the type selector when editing an existing record that has a
+ * loaded @belongsTo('maintenance-subject', {polymorphic: true}) relationship.
+ */
+const MAINTAINABLE_MODEL_TO_TYPE = {
+    'maintenance-subject-vehicle': 'fleet-ops:vehicle',
+    'maintenance-subject-equipment': 'fleet-ops:equipment',
+    // Fall-through for raw models passed from vehicle-actions.js
+    vehicle: 'fleet-ops:vehicle',
+    equipment: 'fleet-ops:equipment',
+};
+
+/**
+ * Maps a concrete Ember Data model name back to the backend polymorphic type string
+ * for the performed_by relationship.
+ */
+const PERFORMED_BY_MODEL_TO_TYPE = {
+    'facilitator-vendor': 'fleet-ops:vendor',
+    'facilitator-contact': 'fleet-ops:contact',
+    'facilitator-integrated-vendor': 'fleet-ops:vendor',
+    vendor: 'fleet-ops:vendor',
+    driver: 'fleet-ops:driver',
+    user: 'Auth:User',
+};
+
 export default class MaintenanceFormComponent extends Component {
     /** Maintenance type options — the category of maintenance activity. */
     maintenanceTypeOptions = ['preventive', 'corrective', 'predictive', 'routine', 'emergency', 'inspection', 'repair', 'replacement', 'calibration'];
@@ -59,13 +85,27 @@ export default class MaintenanceFormComponent extends Component {
     constructor(owner, args) {
         super(owner, args);
         const { resource } = args;
-        if (resource?.maintainable_type) {
-            this.selectedMaintainableType = this.maintainableTypeOptions.find((o) => o.value === resource.maintainable_type) ?? null;
-            this.maintainableModelName = TYPE_TO_MODEL[resource.maintainable_type] ?? null;
+        // Restore maintainable type selection from the polymorphic relationship.
+        // When editing an existing record, resource.maintainable is a loaded MaintenanceSubject model.
+        // When creating from vehicle-actions.js, resource.maintainable may be a raw vehicle/equipment model.
+        const maintainable = resource?.maintainable;
+        if (maintainable) {
+            const modelName = maintainable.constructor?.modelName ?? maintainable.modelName;
+            const typeValue = MAINTAINABLE_MODEL_TO_TYPE[modelName] ?? null;
+            if (typeValue) {
+                this.selectedMaintainableType = this.maintainableTypeOptions.find((o) => o.value === typeValue) ?? null;
+                this.maintainableModelName = TYPE_TO_MODEL[typeValue] ?? null;
+            }
         }
-        if (resource?.performed_by_type) {
-            this.selectedPerformedByType = this.performedByTypeOptions.find((o) => o.value === resource.performed_by_type) ?? null;
-            this.performedByModelName = TYPE_TO_MODEL[resource.performed_by_type] ?? null;
+        // Restore performed_by type selection from the polymorphic relationship.
+        const performedBy = resource?.performed_by;
+        if (performedBy) {
+            const modelName = performedBy.constructor?.modelName ?? performedBy.modelName;
+            const typeValue = PERFORMED_BY_MODEL_TO_TYPE[modelName] ?? null;
+            if (typeValue) {
+                this.selectedPerformedByType = this.performedByTypeOptions.find((o) => o.value === typeValue) ?? null;
+                this.performedByModelName = TYPE_TO_MODEL[typeValue] ?? null;
+            }
         }
     }
 
@@ -75,8 +115,7 @@ export default class MaintenanceFormComponent extends Component {
      */
     @action onMaintainableTypeChange(option) {
         this.selectedMaintainableType = option;
-        this.args.resource.maintainable_type = option?.value ?? null;
-        this.args.resource.maintainable_uuid = null;
+        // Clear the maintainable relationship — user must re-select the asset
         this.args.resource.maintainable = null;
         this.maintainableModelName = TYPE_TO_MODEL[option?.value] ?? null;
     }
@@ -84,7 +123,6 @@ export default class MaintenanceFormComponent extends Component {
     /** Assigns the selected maintainable model to the resource. */
     @action assignMaintainable(model) {
         this.args.resource.maintainable = model;
-        this.args.resource.maintainable_uuid = model?.id ?? null;
     }
 
     /**
@@ -93,15 +131,13 @@ export default class MaintenanceFormComponent extends Component {
      */
     @action onPerformedByTypeChange(option) {
         this.selectedPerformedByType = option;
-        this.args.resource.performed_by_type = option?.value ?? null;
-        this.args.resource.performed_by_uuid = null;
-        this.args.resource.performedBy = null;
+        // Clear the performed_by relationship — user must re-select
+        this.args.resource.performed_by = null;
         this.performedByModelName = TYPE_TO_MODEL[option?.value] ?? null;
     }
 
     /** Assigns the selected performer model to the resource. */
     @action assignPerformedBy(model) {
-        this.args.resource.performedBy = model;
-        this.args.resource.performed_by_uuid = model?.id ?? null;
+        this.args.resource.performed_by = model;
     }
 }
