@@ -25,13 +25,13 @@ export default class MaintenancePartsIndexDetailsController extends Controller {
     }
 
     @action edit() {
-        return this.hostRouter.transitionTo('maintenance.parts.index.edit', this.model);
+        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.parts.index.edit', this.model);
     }
 
     @action delete() {
         return this.partActions.delete(this.model, {
             onConfirm: () => {
-                this.hostRouter.transitionTo('maintenance.parts.index');
+                this.hostRouter.transitionTo('console.fleet-ops.maintenance.parts.index');
             },
         });
     }

@@ -80,6 +80,7 @@ class MaintenanceSchedule extends FleetbaseResource
         }
         data_set($resolved, 'type', 'maintenance-subject');
         data_set($resolved, 'subject_type', 'maintenance-subject-' . Utils::toEmberResourceType($this->subject_type));
+
         return $resolved;
     }
 
@@ -94,6 +95,7 @@ class MaintenanceSchedule extends FleetbaseResource
         }
         data_set($resolved, 'type', 'facilitator');
         data_set($resolved, 'facilitator_type', 'facilitator-' . Utils::toEmberResourceType($this->default_assignee_type));
+
         return $resolved;
     }
 

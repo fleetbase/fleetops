@@ -20,7 +20,7 @@ export default class MaintenanceSchedulesIndexEditController extends Controller 
             yield schedule.save();
             this.overlay?.close();
             yield this.hostRouter.refresh();
-            yield this.hostRouter.transitionTo('maintenance.schedules.index.details', schedule);
+            yield this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index.details', schedule);
             this.notifications.success(this.intl.t('common.resource-updated-success', { resource: this.intl.t('resource.maintenance-schedule') }));
         } catch (err) {
             this.notifications.serverError(err);

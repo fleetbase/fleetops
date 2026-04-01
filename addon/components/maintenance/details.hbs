@@ -148,7 +148,7 @@
                                 {{format-currency item.unit_cost (or item.currency @resource.currency)}}
                             </td>
                             <td class="py-1.5 px-4 text-right text-gray-700 dark:text-gray-200 font-medium">
-                                {{format-currency (multiply item.quantity item.unit_cost) (or item.currency @resource.currency)}}
+                                {{format-currency (mult item.quantity item.unit_cost) (or item.currency @resource.currency)}}
                             </td>
                         </tr>
                     {{/each}}

@@ -38,6 +38,15 @@ class MaintenanceController extends FleetOpsController
     }
 
     /**
+     * Eager-load polymorphic relationships when finding record so they appear in the API response.
+     * Called automatically by HasApiControllerBehavior::findRecord() via getControllerCallback.
+     */
+    public function onFindRecord($builder, $request): void
+    {
+        $builder->load(['maintainable', 'performedBy']);
+    }
+
+    /**
      * Add a cost line item to a maintenance record.
      * POST /maintenances/{id}/line-items.
      */

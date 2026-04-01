@@ -14,9 +14,6 @@ class MaintenanceImport implements ToCollection, WithHeadingRow
      */
     public int $imported = 0;
 
-    /**
-     * @param Collection $rows
-     */
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {

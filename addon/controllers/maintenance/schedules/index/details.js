@@ -30,7 +30,7 @@ export default class MaintenanceSchedulesIndexDetailsController extends Controll
     }
 
     @action edit() {
-        return this.hostRouter.transitionTo('maintenance.schedules.index.edit', this.model);
+        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index.edit', this.model);
     }
 
     @action triggerNow() {
@@ -40,7 +40,7 @@ export default class MaintenanceSchedulesIndexDetailsController extends Controll
     @action delete() {
         return this.maintenanceScheduleActions.delete(this.model, {
             onConfirm: () => {
-                this.hostRouter.transitionTo('maintenance.schedules.index');
+                this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index');
             },
         });
     }

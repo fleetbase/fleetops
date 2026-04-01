@@ -30,13 +30,13 @@ export default class MaintenanceWorkOrdersIndexDetailsController extends Control
     }
 
     @action edit() {
-        return this.hostRouter.transitionTo('maintenance.work-orders.index.edit', this.model);
+        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.work-orders.index.edit', this.model);
     }
 
     @action delete() {
         return this.workOrderActions.delete(this.model, {
             onConfirm: () => {
-                this.hostRouter.transitionTo('maintenance.work-orders.index');
+                this.hostRouter.transitionTo('console.fleet-ops.maintenance.work-orders.index');
             },
         });
     }

@@ -50,6 +50,7 @@ class Maintenance extends FleetbaseResource
             'parts_cost'              => $this->parts_cost,
             'tax'                     => $this->tax,
             'total_cost'              => $this->total_cost,
+            'currency'                => $this->currency,
             'attachments'             => data_get($this, 'attachments', []),
             'meta'                    => data_get($this, 'meta', (object) []),
             'slug'                    => $this->slug,
@@ -81,6 +82,7 @@ class Maintenance extends FleetbaseResource
         }
         data_set($resolved, 'type', 'maintenance-subject');
         data_set($resolved, 'subject_type', 'maintenance-subject-' . Utils::toEmberResourceType($this->maintainable_type));
+
         return $resolved;
     }
 
@@ -95,6 +97,7 @@ class Maintenance extends FleetbaseResource
         }
         data_set($resolved, 'type', 'facilitator');
         data_set($resolved, 'facilitator_type', 'facilitator-' . Utils::toEmberResourceType($this->performed_by_type));
+
         return $resolved;
     }
 

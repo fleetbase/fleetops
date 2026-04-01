@@ -653,6 +653,7 @@ class Maintenance extends Model
 
         if (!is_array($value)) {
             $this->attributes['line_items'] = json_encode([]);
+
             return;
         }
 
@@ -660,6 +661,7 @@ class Maintenance extends Model
             if (isset($item['unit_cost'])) {
                 $item['unit_cost'] = Money::apply($item['unit_cost']);
             }
+
             return $item;
         }, $value);
 

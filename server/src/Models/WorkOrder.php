@@ -139,9 +139,9 @@ class WorkOrder extends Model
      * @var array
      */
     protected $casts = [
-        'opened_at'     => 'datetime',
-        'due_at'        => 'datetime',
-        'closed_at'     => 'datetime',
+        'opened_at'        => 'datetime',
+        'due_at'           => 'datetime',
+        'closed_at'        => 'datetime',
         'checklist'        => Json::class,
         'cost_breakdown'   => Json::class,
         'meta'             => Json::class,

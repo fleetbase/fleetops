@@ -72,6 +72,7 @@ class WorkOrder extends FleetbaseResource
         }
         data_set($resolved, 'type', 'maintenance-subject');
         data_set($resolved, 'subject_type', 'maintenance-subject-' . Utils::toEmberResourceType($this->target_type));
+
         return $resolved;
     }
 
@@ -86,6 +87,7 @@ class WorkOrder extends FleetbaseResource
         }
         data_set($resolved, 'type', 'facilitator');
         data_set($resolved, 'facilitator_type', 'facilitator-' . Utils::toEmberResourceType($this->assignee_type));
+
         return $resolved;
     }
 

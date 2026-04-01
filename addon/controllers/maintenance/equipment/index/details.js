@@ -25,13 +25,13 @@ export default class MaintenanceEquipmentIndexDetailsController extends Controll
     }
 
     @action edit() {
-        return this.hostRouter.transitionTo('maintenance.equipment.index.edit', this.model);
+        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.equipment.index.edit', this.model);
     }
 
     @action delete() {
         return this.equipmentActions.delete(this.model, {
             onConfirm: () => {
-                this.hostRouter.transitionTo('maintenance.equipment.index');
+                this.hostRouter.transitionTo('console.fleet-ops.maintenance.equipment.index');
             },
         });
     }

@@ -20,7 +20,7 @@ export default class MaintenancePartsIndexNewController extends Controller {
             this.events.trackResourceCreated(part);
             this.overlay?.close();
             yield this.hostRouter.refresh();
-            yield this.hostRouter.transitionTo('maintenance.parts.index.details', part);
+            yield this.hostRouter.transitionTo('console.fleet-ops.maintenance.parts.index.details', part);
             this.notifications.success(this.intl.t('common.resource-created-success', { resource: this.intl.t('resource.part') }));
             this.resetForm();
         } catch (err) {
