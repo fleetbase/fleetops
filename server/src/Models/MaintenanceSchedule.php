@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
+use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -32,6 +33,7 @@ class MaintenanceSchedule extends Model
     use LogsActivity;
     use HasMetaAttributes;
     use Searchable;
+    use HasCustomFields;
 
     /**
      * The database table used by the model.
