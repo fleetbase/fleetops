@@ -14,6 +14,7 @@ return new class extends Migration {
             $table->increments('id');
             $table->uuid('uuid')->index();
             $table->string('_key')->nullable()->index();
+            $table->string('public_id', 191)->nullable()->unique()->index();
             $table->foreignUuid('company_uuid')->constrained('companies', 'uuid')->cascadeOnDelete();
             $table->foreignUuid('category_uuid')->nullable()->constrained('categories', 'uuid')->nullOnDelete();
 
@@ -30,8 +31,8 @@ return new class extends Migration {
             $table->foreignUuid('vendor_uuid')->nullable()->constrained('vendors', 'uuid')->nullOnDelete();
 
             $table->integer('quantity_on_hand')->default(0);
-            $table->decimal('unit_cost', 12, 2)->nullable();
-            $table->decimal('msrp', 12, 2)->nullable();
+            $table->bigInteger('unit_cost')->nullable(); // stored in cents
+            $table->bigInteger('msrp')->nullable();       // stored in cents
             $table->integer('reorder_point')->default(5);
             $table->integer('reorder_quantity')->default(10);
             $table->integer('max_stock_level')->nullable();

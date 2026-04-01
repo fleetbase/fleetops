@@ -95,7 +95,6 @@ class Maintenance extends Model
         'currency',
         'attachments',
         'meta',
-        'slug',
     ];
 
     /**

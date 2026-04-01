@@ -18,12 +18,19 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('parts', function (Blueprint $table) {
-            // Convert decimal monetary columns to integer (cents)
-            $table->integer('unit_cost')->nullable()->change();
-            $table->integer('msrp')->nullable()->change();
+            // Convert decimal monetary columns to integer (cents) — only needed on
+            // existing installs where the original migration used decimal(12,2).
+            // Fresh installs already have bigInteger from the updated create migration.
+            $columnType = Schema::getColumnType('parts', 'unit_cost');
+            if (in_array($columnType, ['decimal', 'float', 'double'])) {
+                $table->bigInteger('unit_cost')->nullable()->change();
+                $table->bigInteger('msrp')->nullable()->change();
+            }
 
-            // Add currency column for internationalisation
-            $table->string('currency')->nullable()->after('msrp');
+            // Add currency column for internationalisation if it doesn't exist yet
+            if (!Schema::hasColumn('parts', 'currency')) {
+                $table->string('currency')->nullable()->after('msrp');
+            }
         });
     }
 
