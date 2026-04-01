@@ -10,7 +10,6 @@ export default class MaintenanceWorkOrdersIndexEditController extends Controller
     @service notifications;
     @service modalsManager;
     @service events;
-
     @tracked overlay;
 
     get actionButtons() {

@@ -15,17 +15,7 @@ const TYPE_TO_MODEL = {
 
 export default class MaintenanceFormComponent extends Component {
     /** Maintenance type options — the category of maintenance activity. */
-    maintenanceTypeOptions = [
-        'preventive',
-        'corrective',
-        'predictive',
-        'routine',
-        'emergency',
-        'inspection',
-        'repair',
-        'replacement',
-        'calibration',
-    ];
+    maintenanceTypeOptions = ['preventive', 'corrective', 'predictive', 'routine', 'emergency', 'inspection', 'repair', 'replacement', 'calibration'];
 
     /** Status options for a maintenance record. */
     statusOptions = ['scheduled', 'in_progress', 'completed', 'cancelled', 'on_hold'];

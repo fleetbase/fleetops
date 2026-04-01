@@ -160,9 +160,9 @@ class MaintenanceSchedule extends Model
      * Determine whether this schedule is currently due based on the given
      * asset readings.
      *
-     * @param int|null   $currentOdometer     Current odometer reading in base unit
-     * @param int|null   $currentEngineHours  Current engine hours
-     * @param \Carbon\Carbon|null $asOf        Date to check against (defaults to now)
+     * @param int|null            $currentOdometer    Current odometer reading in base unit
+     * @param int|null            $currentEngineHours Current engine hours
+     * @param \Carbon\Carbon|null $asOf               Date to check against (defaults to now)
      */
     public function isDue(?int $currentOdometer = null, ?int $currentEngineHours = null, ?\Carbon\Carbon $asOf = null): bool
     {
@@ -193,15 +193,11 @@ class MaintenanceSchedule extends Model
     /**
      * Reset the schedule's next-due thresholds after a work order has been completed.
      * Called by the WorkOrderObserver when a work order linked to this schedule is closed.
-     *
-     * @param int|null   $completedOdometer
-     * @param int|null   $completedEngineHours
-     * @param \Carbon\Carbon|null $completedAt
      */
     public function resetAfterCompletion(
         ?int $completedOdometer = null,
         ?int $completedEngineHours = null,
-        ?\Carbon\Carbon $completedAt = null
+        ?\Carbon\Carbon $completedAt = null,
     ): bool {
         $completedAt = $completedAt ?? now();
 
@@ -213,7 +209,7 @@ class MaintenanceSchedule extends Model
 
         // Recompute next_due_date
         if ($this->interval_value && $this->interval_unit) {
-            $unit = $this->interval_unit; // days, months, weeks, years
+            $unit                    = $this->interval_unit; // days, months, weeks, years
             $update['next_due_date'] = $completedAt->copy()->add($this->interval_value . ' ' . $unit);
         }
 

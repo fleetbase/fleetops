@@ -14,10 +14,7 @@ export default class MaintenanceEquipmentIndexDetailsController extends Controll
 
     get tabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:equipment:details');
-        return [
-            { route: 'console.fleet-ops.maintenance.equipment.index.details.index', label: this.intl.t('common.overview') },
-            ...(isArray(registeredTabs) ? registeredTabs : []),
-        ];
+        return [{ route: 'console.fleet-ops.maintenance.equipment.index.details.index', label: this.intl.t('common.overview') }, ...(isArray(registeredTabs) ? registeredTabs : [])];
     }
 
     get actionButtons() {

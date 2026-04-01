@@ -20,19 +20,7 @@ export default class EquipmentFormComponent extends Component {
     @service notifications;
 
     /** Equipment type options. */
-    equipmentTypeOptions = [
-        'ppe',
-        'refrigeration_unit',
-        'tool',
-        'liftgate',
-        'ramp',
-        'container',
-        'pallet_jack',
-        'forklift',
-        'safety_equipment',
-        'communication_device',
-        'other',
-    ];
+    equipmentTypeOptions = ['ppe', 'refrigeration_unit', 'tool', 'liftgate', 'ramp', 'container', 'pallet_jack', 'forklift', 'safety_equipment', 'communication_device', 'other'];
 
     /** Status options for equipment. */
     statusOptions = ['available', 'in_use', 'maintenance', 'retired', 'lost', 'damaged'];

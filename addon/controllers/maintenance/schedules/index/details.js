@@ -5,27 +5,23 @@ import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 
 export default class MaintenanceSchedulesIndexDetailsController extends Controller {
-    @service('maintenance-schedule-actions') maintenanceScheduleActions;
+    @service maintenanceScheduleActions;
     @service hostRouter;
     @service intl;
     @service abilities;
     @service('universe/menu-service') menuService;
-
     @tracked overlay;
 
     get tabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:schedule:details');
-        return [
-            { route: 'console.fleet-ops.maintenance.schedules.index.details.index', label: this.intl.t('common.overview') },
-            ...(isArray(registeredTabs) ? registeredTabs : []),
-        ];
+        return [{ route: 'maintenance.schedules.index.details.index', label: this.intl.t('common.overview') }, ...(isArray(registeredTabs) ? registeredTabs : [])];
     }
 
     get actionButtons() {
         return [
             { icon: 'edit', fn: this.edit, permission: 'fleet-ops update maintenance-schedule' },
             { icon: 'play', helpText: 'Trigger Work Order Now', fn: this.triggerNow, permission: 'fleet-ops update maintenance-schedule' },
-            { icon: 'trash', fn: this.delete, permission: 'fleet-ops delete maintenance-schedule' },
+            { icon: 'trash', fn: this.delete, permission: 'fleet-ops delete maintenance-schedule', type: 'danger' },
         ];
     }
 

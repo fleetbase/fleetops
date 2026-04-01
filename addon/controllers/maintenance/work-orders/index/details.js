@@ -10,15 +10,11 @@ export default class MaintenanceWorkOrdersIndexDetailsController extends Control
     @service intl;
     @service abilities;
     @service('universe/menu-service') menuService;
-
     @tracked overlay;
 
     get tabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:work-order:details');
-        return [
-            { route: 'console.fleet-ops.maintenance.work-orders.index.details.index', label: this.intl.t('common.overview') },
-            ...(isArray(registeredTabs) ? registeredTabs : []),
-        ];
+        return [{ route: 'maintenance.work-orders.index.details.index', label: this.intl.t('common.overview') }, ...(isArray(registeredTabs) ? registeredTabs : [])];
     }
 
     get actionButtons() {

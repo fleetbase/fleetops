@@ -22,7 +22,7 @@ export default class MaintenanceScheduleActionsService extends ResourceActionSer
         create: (attributes = {}) => {
             const schedule = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
-                content: 'schedule/form',
+                content: 'maintenance-schedule/form',
                 title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.maintenance-schedule')?.toLowerCase() }),
                 useDefaultSaveTask: true,
                 saveOptions: {
@@ -33,7 +33,7 @@ export default class MaintenanceScheduleActionsService extends ResourceActionSer
         },
         edit: (schedule) => {
             return this.resourceContextPanel.open({
-                content: 'schedule/form',
+                content: 'maintenance-schedule/form',
                 title: this.intl.t('common.edit-resource-name', { resourceName: schedule.name }),
                 useDefaultSaveTask: true,
                 schedule,
@@ -45,7 +45,7 @@ export default class MaintenanceScheduleActionsService extends ResourceActionSer
                 tabs: [
                     {
                         label: this.intl.t('common.overview'),
-                        component: 'schedule/details',
+                        component: 'maintenance-schedule/details',
                     },
                 ],
             });
@@ -59,7 +59,7 @@ export default class MaintenanceScheduleActionsService extends ResourceActionSer
                 resource: schedule,
                 title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.maintenance-schedule')?.toLowerCase() }),
                 acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.maintenance-schedule') }),
-                component: 'schedule/form',
+                component: 'maintenance-schedule/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', schedule, { refresh: true, ...saveOptions }),
                 ...options,
             });
@@ -70,7 +70,7 @@ export default class MaintenanceScheduleActionsService extends ResourceActionSer
                 title: this.intl.t('common.edit-resource-name', { resourceName: schedule.name }),
                 acceptButtonText: this.intl.t('common.save-changes'),
                 saveButtonIcon: 'save',
-                component: 'schedule/form',
+                component: 'maintenance-schedule/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', schedule, { refresh: true, ...saveOptions }),
                 ...options,
             });
@@ -82,7 +82,7 @@ export default class MaintenanceScheduleActionsService extends ResourceActionSer
      */
     @action async pause(schedule) {
         try {
-            await this.fetch.post(`fleet-ops/maintenance-schedules/${schedule.id}/pause`);
+            await this.fetch.post(`maintenance-schedules/${schedule.id}/pause`);
             schedule.set('status', 'paused');
             this.notifications.success('Schedule paused successfully.');
         } catch (error) {
@@ -95,7 +95,7 @@ export default class MaintenanceScheduleActionsService extends ResourceActionSer
      */
     @action async resume(schedule) {
         try {
-            await this.fetch.post(`fleet-ops/maintenance-schedules/${schedule.id}/resume`);
+            await this.fetch.post(`maintenance-schedules/${schedule.id}/resume`);
             schedule.set('status', 'active');
             this.notifications.success('Schedule resumed successfully.');
         } catch (error) {
@@ -108,7 +108,7 @@ export default class MaintenanceScheduleActionsService extends ResourceActionSer
      */
     @action async triggerNow(schedule) {
         try {
-            const response = await this.fetch.post(`fleet-ops/maintenance-schedules/${schedule.id}/trigger`);
+            const response = await this.fetch.post(`maintenance-schedules/${schedule.id}/trigger`);
             this.notifications.success(`Work order ${response?.work_order?.public_id ?? ''} created from schedule.`);
             this.refresh();
         } catch (error) {

@@ -13,11 +13,20 @@ function computeOccurrences(nextDueDate, intervalValue, intervalUnit, count = 12
     for (let i = 0; i < count; i++) {
         occurrences.push(new Date(cursor));
         switch (intervalUnit) {
-            case 'days':   cursor.setDate(cursor.getDate() + intervalValue); break;
-            case 'weeks':  cursor.setDate(cursor.getDate() + intervalValue * 7); break;
-            case 'months': cursor.setMonth(cursor.getMonth() + intervalValue); break;
-            case 'years':  cursor.setFullYear(cursor.getFullYear() + intervalValue); break;
-            default:       cursor.setDate(cursor.getDate() + intervalValue);
+            case 'days':
+                cursor.setDate(cursor.getDate() + intervalValue);
+                break;
+            case 'weeks':
+                cursor.setDate(cursor.getDate() + intervalValue * 7);
+                break;
+            case 'months':
+                cursor.setMonth(cursor.getMonth() + intervalValue);
+                break;
+            case 'years':
+                cursor.setFullYear(cursor.getFullYear() + intervalValue);
+                break;
+            default:
+                cursor.setDate(cursor.getDate() + intervalValue);
         }
     }
     return occurrences;
@@ -47,8 +56,8 @@ function buildCalendarGrid(year, month, scheduledDates) {
     return weeks;
 }
 
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default class MaintenanceScheduleDetailsComponent extends Component {
     @tracked calendarYear;
@@ -61,7 +70,9 @@ export default class MaintenanceScheduleDetailsComponent extends Component {
         this.calendarMonth = seed.getMonth();
     }
 
-    get resource() { return this.args.resource; }
+    get resource() {
+        return this.args.resource;
+    }
 
     get occurrences() {
         const r = this.resource;
@@ -69,8 +80,12 @@ export default class MaintenanceScheduleDetailsComponent extends Component {
         return computeOccurrences(r.next_due_date, r.interval_value, r.interval_unit, 12);
     }
 
-    get calendarMonthName() { return `${MONTH_NAMES[this.calendarMonth]} ${this.calendarYear}`; }
-    get dayNames() { return DAY_NAMES; }
+    get calendarMonthName() {
+        return `${MONTH_NAMES[this.calendarMonth]} ${this.calendarYear}`;
+    }
+    get dayNames() {
+        return DAY_NAMES;
+    }
 
     get calendarWeeks() {
         return buildCalendarGrid(this.calendarYear, this.calendarMonth, this.occurrences);
@@ -87,12 +102,20 @@ export default class MaintenanceScheduleDetailsComponent extends Component {
     }
 
     @action prevMonth() {
-        if (this.calendarMonth === 0) { this.calendarMonth = 11; this.calendarYear = this.calendarYear - 1; }
-        else { this.calendarMonth = this.calendarMonth - 1; }
+        if (this.calendarMonth === 0) {
+            this.calendarMonth = 11;
+            this.calendarYear = this.calendarYear - 1;
+        } else {
+            this.calendarMonth = this.calendarMonth - 1;
+        }
     }
 
     @action nextMonth() {
-        if (this.calendarMonth === 11) { this.calendarMonth = 0; this.calendarYear = this.calendarYear + 1; }
-        else { this.calendarMonth = this.calendarMonth + 1; }
+        if (this.calendarMonth === 11) {
+            this.calendarMonth = 0;
+            this.calendarYear = this.calendarYear + 1;
+        } else {
+            this.calendarMonth = this.calendarMonth + 1;
+        }
     }
 }

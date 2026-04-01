@@ -10,7 +10,6 @@ export default class MaintenanceWorkOrdersIndexNewController extends Controller 
     @service intl;
     @service notifications;
     @service events;
-
     @tracked overlay;
     @tracked workOrder = this.workOrderActions.createNewInstance();
 

@@ -18,7 +18,7 @@ class MaintenanceController extends FleetOpsController
 
     /**
      * Add a cost line item to a maintenance record.
-     * POST /maintenances/{id}/line-items
+     * POST /maintenances/{id}/line-items.
      */
     public function addLineItem(string $id, Request $request): JsonResponse
     {
@@ -46,7 +46,7 @@ class MaintenanceController extends FleetOpsController
 
     /**
      * Update a cost line item on a maintenance record.
-     * PUT /maintenances/{id}/line-items/{index}
+     * PUT /maintenances/{id}/line-items/{index}.
      */
     public function updateLineItem(string $id, int $index, Request $request): JsonResponse
     {
@@ -84,7 +84,7 @@ class MaintenanceController extends FleetOpsController
 
     /**
      * Remove a cost line item from a maintenance record.
-     * DELETE /maintenances/{id}/line-items/{index}
+     * DELETE /maintenances/{id}/line-items/{index}.
      */
     public function removeLineItem(string $id, int $index): JsonResponse
     {

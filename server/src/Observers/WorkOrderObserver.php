@@ -7,7 +7,7 @@ use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\WorkOrder;
 
 /**
- * WorkOrderObserver
+ * WorkOrderObserver.
  *
  * Listens for status transitions on WorkOrder records. When a work order is
  * closed (completed), this observer:

@@ -5,7 +5,7 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 
 export default class VehicleActionsService extends ResourceActionService {
-    @service scheduleActions;
+    @service maintenanceScheduleActions;
     @service workOrderActions;
     @service maintenanceActions;
 
@@ -126,7 +126,7 @@ export default class VehicleActionsService extends ResourceActionService {
     };
 
     @action scheduleMaintenance(vehicle) {
-        this.scheduleActions.modal.create({ subject_type: 'vehicle', subject_uuid: vehicle.id, subject: vehicle });
+        this.maintenanceScheduleActions.modal.create({ subject_type: 'vehicle', subject_uuid: vehicle.id, subject: vehicle });
     }
 
     @action createWorkOrder(vehicle) {

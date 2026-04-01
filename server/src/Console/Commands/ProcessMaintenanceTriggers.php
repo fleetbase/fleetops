@@ -9,7 +9,7 @@ use Fleetbase\FleetOps\Models\WorkOrder;
 use Illuminate\Console\Command;
 
 /**
- * ProcessMaintenanceTriggers
+ * ProcessMaintenanceTriggers.
  *
  * Scans all active MaintenanceSchedule records and determines whether a
  * preventive maintenance work order should be created based on:
@@ -111,7 +111,7 @@ class ProcessMaintenanceTriggers extends Command
                     ->exists();
 
                 if ($existingOpen) {
-                    $this->line("  → Skipped: open work order already exists for this schedule.");
+                    $this->line('  → Skipped: open work order already exists for this schedule.');
                     continue;
                 }
 

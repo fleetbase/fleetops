@@ -5,17 +5,14 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
 export default class MaintenanceSchedulesIndexEditController extends Controller {
-    @service scheduleActions;
+    @service maintenanceScheduleActions;
     @service hostRouter;
     @service intl;
     @service notifications;
-
     @tracked overlay;
 
     get actionButtons() {
-        return [
-            { icon: 'trash', fn: this.delete, permission: 'fleet-ops delete maintenance-schedule' },
-        ];
+        return [{ icon: 'trash', fn: this.delete, permission: 'fleet-ops delete maintenance-schedule' }];
     }
 
     @task *save(schedule) {
@@ -35,7 +32,7 @@ export default class MaintenanceSchedulesIndexEditController extends Controller 
     }
 
     @action delete() {
-        return this.scheduleActions.delete(this.model, {
+        return this.maintenanceScheduleActions.delete(this.model, {
             onConfirm: () => {
                 this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index');
             },

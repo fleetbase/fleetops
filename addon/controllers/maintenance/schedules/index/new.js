@@ -5,14 +5,13 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
 export default class MaintenanceSchedulesIndexNewController extends Controller {
-    @service scheduleActions;
+    @service maintenanceScheduleActions;
     @service hostRouter;
     @service intl;
     @service notifications;
     @service events;
-
     @tracked overlay;
-    @tracked schedule = this.scheduleActions.createNewInstance();
+    @tracked schedule = this.maintenanceScheduleActions.createNewInstance();
 
     @task *save(schedule) {
         try {
@@ -29,6 +28,6 @@ export default class MaintenanceSchedulesIndexNewController extends Controller {
     }
 
     @action resetForm() {
-        this.schedule = this.scheduleActions.createNewInstance();
+        this.schedule = this.maintenanceScheduleActions.createNewInstance();
     }
 }

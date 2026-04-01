@@ -1,14 +1,12 @@
 <div class="maintenance-schedule-details" ...attributes>
-
     <ContentPanel @title="Schedule Details" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-2 gap-2 text-xs no-input-group-padding">
-
             <InputGroup @name="ID">
                 <p class="form-input-static">{{@resource.public_id}}</p>
             </InputGroup>
 
             <InputGroup @name="Name">
-                <p class="form-input-static">{{@resource.name}}</p>
+                <p class="form-input-static">{{n-a @resource.name}}</p>
             </InputGroup>
 
             <InputGroup @name="Type">
@@ -20,15 +18,13 @@
             </InputGroup>
 
             <InputGroup @name="Asset">
-                <p class="form-input-static">{{@resource.subject_name}}</p>
+                <p class="form-input-static">{{n-a @resource.subject_name}}</p>
             </InputGroup>
-
         </div>
     </ContentPanel>
 
     <ContentPanel @title="Interval" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-2 gap-2 text-xs no-input-group-padding">
-
             {{#if @resource.interval_value}}
                 <InputGroup @name="Time Interval">
                     <p class="form-input-static">Every {{@resource.interval_value}} {{@resource.interval_unit}}</p>
@@ -49,7 +45,7 @@
 
             {{#if @resource.next_due_date}}
                 <InputGroup @name="Next Due Date">
-                    <p class="form-input-static">{{format-date @resource.next_due_date "MMM d, yyyy"}}</p>
+                    <p class="form-input-static">{{format-date-fns @resource.next_due_date "MMM d, yyyy"}}</p>
                 </InputGroup>
             {{/if}}
 
@@ -61,18 +57,16 @@
 
             {{#if @resource.last_service_date}}
                 <InputGroup @name="Last Service Date">
-                    <p class="form-input-static">{{format-date @resource.last_service_date "MMM d, yyyy"}}</p>
+                    <p class="form-input-static">{{format-date-fns @resource.last_service_date "MMM d, yyyy"}}</p>
                 </InputGroup>
             {{/if}}
-
         </div>
     </ContentPanel>
 
     <ContentPanel @title="Work Order Defaults" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-2 gap-2 text-xs no-input-group-padding">
-
             <InputGroup @name="Default Priority">
-                <p class="form-input-static">{{smart-humanize @resource.default_priority}}</p>
+                <p class="form-input-static">{{n-a (smart-humanize @resource.default_priority)}}</p>
             </InputGroup>
 
             {{#if @resource.instructions}}
@@ -80,51 +74,43 @@
                     <p class="form-input-static whitespace-pre-wrap">{{@resource.instructions}}</p>
                 </InputGroup>
             {{/if}}
-
         </div>
     </ContentPanel>
 
     {{! ===== Schedule Calendar (time-based schedules only) ===== }}
     {{#if this.isTimeBased}}
-        <ContentPanel @title="Upcoming Schedule" @open={{true}} @wrapperClass="bordered-top">
+        <ContentPanel @title="Upcoming Schedule" @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="px-0i">
             {{! Calendar header }}
-            <div class="flex items-center justify-between px-3 py-2">
-                <button
-                    type="button"
-                    class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
-                    {{on "click" this.prevMonth}}
-                >
+            <div class="flex items-center justify-between px-6 pb-2">
+                <button type="button" class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" {{on "click" this.prevMonth}}>
                     <FaIcon @icon="chevron-left" @size="xs" />
                 </button>
                 <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">{{this.calendarMonthName}}</span>
-                <button
-                    type="button"
-                    class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
-                    {{on "click" this.nextMonth}}
-                >
+                <button type="button" class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" {{on "click" this.nextMonth}}>
                     <FaIcon @icon="chevron-right" @size="xs" />
                 </button>
             </div>
 
             {{! Day-of-week header row }}
-            <div class="grid grid-cols-7 text-center px-2 pb-1">
+            <div class="grid grid-cols-7 text-center pb-1">
                 {{#each this.dayNames as |dayName|}}
                     <div class="text-xs font-medium text-gray-400 dark:text-gray-500 py-1">{{dayName}}</div>
                 {{/each}}
             </div>
 
             {{! Calendar grid }}
-            <div class="px-2 pb-2">
+            <div class="pb-4">
                 {{#each this.calendarWeeks as |week|}}
                     <div class="grid grid-cols-7 text-center">
                         {{#each week as |cell|}}
                             <div class="py-1">
-                                <span class="
-                                    inline-flex items-center justify-center w-6 h-6 rounded-full text-xs
-                                    {{if cell.isScheduled 'bg-blue-500 text-white font-semibold'}}
-                                    {{if cell.isToday (if cell.isScheduled 'ring-2 ring-offset-1 ring-blue-400' 'ring-2 ring-blue-400 text-blue-600 dark:text-blue-400 font-semibold')}}
-                                    {{unless cell.isCurrentMonth 'text-gray-300 dark:text-gray-600'}}
-                                ">
+                                <span
+                                    class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs
+                                        {{if cell.isScheduled 'bg-blue-500 text-white font-semibold'}}
+                                        {{if cell.isToday (if cell.isScheduled 'ring-2 ring-offset-1 ring-blue-400' 'ring-2 ring-blue-400 text-blue-600 dark:text-blue-400 font-semibold')}}
+                                        {{unless cell.isCurrentMonth 'text-gray-300 dark:text-gray-600'}}
+                                        "
+                                >
                                     {{cell.day}}
                                 </span>
                             </div>
@@ -134,7 +120,7 @@
             </div>
 
             {{! Legend }}
-            <div class="flex items-center gap-4 px-3 pb-2 pt-1 border-t border-gray-100 dark:border-gray-700">
+            <div class="flex items-center gap-4 px-3 py-2 border-t border-gray-100 dark:border-gray-700">
                 <div class="flex items-center gap-1.5">
                     <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-xs">1</span>
                     <span class="text-xs text-gray-500 dark:text-gray-400">Scheduled service</span>
@@ -148,15 +134,19 @@
             {{! Upcoming occurrences list }}
             {{#if this.upcomingOccurrences.length}}
                 <div class="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-700">
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Next occurrences</p>
-                    <div class="space-y-1">
+                    <div class="py-2">
+                        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Next occurrences</p>
+                    </div>
+                    <div class="space-y-1 pl-4">
                         {{#each this.upcomingOccurrences as |occurrence index|}}
                             <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 text-xs font-semibold flex-shrink-0">
+                                <span
+                                    class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 text-xs font-semibold flex-shrink-0"
+                                >
                                     {{add index 1}}
                                 </span>
                                 <span class="text-xs text-gray-700 dark:text-gray-200">
-                                    {{format-date occurrence "EEEE, MMMM d, yyyy"}}
+                                    {{format-date-fns occurrence "EEEE, MMMM d, yyyy"}}
                                 </span>
                             </div>
                         {{/each}}
@@ -165,5 +155,5 @@
             {{/if}}
         </ContentPanel>
     {{/if}}
-
+    <Spacer @height="200px" />
 </div>

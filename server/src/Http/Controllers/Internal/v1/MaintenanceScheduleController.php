@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
+use Fleetbase\FleetOps\Models\WorkOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,7 +19,7 @@ class MaintenanceScheduleController extends FleetOpsController
 
     /**
      * Pause a maintenance schedule.
-     * POST /maintenance-schedules/{id}/pause
+     * POST /maintenance-schedules/{id}/pause.
      */
     public function pause(string $id): JsonResponse
     {
@@ -37,7 +38,7 @@ class MaintenanceScheduleController extends FleetOpsController
 
     /**
      * Resume a paused maintenance schedule.
-     * POST /maintenance-schedules/{id}/resume
+     * POST /maintenance-schedules/{id}/resume.
      */
     public function resume(string $id): JsonResponse
     {
@@ -56,7 +57,7 @@ class MaintenanceScheduleController extends FleetOpsController
 
     /**
      * Manually trigger a work order from a schedule.
-     * POST /maintenance-schedules/{id}/trigger
+     * POST /maintenance-schedules/{id}/trigger.
      */
     public function trigger(string $id, Request $request): JsonResponse
     {
@@ -64,7 +65,7 @@ class MaintenanceScheduleController extends FleetOpsController
             ->orWhere('public_id', $id)
             ->firstOrFail();
 
-        $workOrder = \Fleetbase\FleetOps\Models\WorkOrder::create([
+        $workOrder = WorkOrder::create([
             'company_uuid'    => $schedule->company_uuid,
             'schedule_uuid'   => $schedule->uuid,
             'subject'         => $schedule->name,
@@ -76,7 +77,7 @@ class MaintenanceScheduleController extends FleetOpsController
             'assignee_uuid'   => $schedule->default_assignee_uuid,
             'instructions'    => $schedule->instructions,
             'due_at'          => $schedule->next_due_date,
-            'created_by_uuid' => auth()->id(),
+            'created_by_uuid' => session('user'),
         ]);
 
         return response()->json([
