@@ -104,11 +104,11 @@ class WorkOrder extends Model
     ];
 
     /**
-     * The attributes excluded from the model's JSON form.
+     * Relationships to always eager load.
      *
      * @var array
      */
-    protected $hidden = ['target', 'assignee'];
+    protected $with = ['target', 'assignee'];
 
     /**
      * The attributes that should be cast to native types.

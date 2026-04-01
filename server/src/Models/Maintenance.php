@@ -111,11 +111,11 @@ class Maintenance extends Model
     ];
 
     /**
-     * The attributes excluded from the model's JSON form.
+     * Relationships to always eager load.
      *
      * @var array
      */
-    protected $hidden = ['maintainable', 'workOrder', 'performedBy'];
+    protected $with = ['maintainable', 'performedBy'];
 
     /**
      * The attributes that should be cast to native types.

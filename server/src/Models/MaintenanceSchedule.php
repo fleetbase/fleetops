@@ -115,6 +115,13 @@ class MaintenanceSchedule extends Model
     protected $appends = [];
 
     /**
+     * Relationships to always eager load.
+     *
+     * @var array
+     */
+    protected $with = ['subject', 'defaultAssignee'];
+
+    /**
      * Activity log options.
      */
     public function getActivitylogOptions(): LogOptions
