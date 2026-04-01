@@ -17,11 +17,11 @@ const TYPE_TO_MODEL = {
 /**
  * Maps a concrete Ember Data model name back to the backend polymorphic type string.
  * Used to restore the type selector when editing an existing record that has a
- * loaded @belongsTo('work-order-target', {polymorphic: true}) relationship.
+ * loaded @belongsTo('maintenance-subject', {polymorphic: true}) relationship.
  */
 const TARGET_MODEL_TO_TYPE = {
-    'work-order-target-vehicle': 'fleet-ops:vehicle',
-    'work-order-target-equipment': 'fleet-ops:equipment',
+    'maintenance-subject-vehicle': 'fleet-ops:vehicle',
+    'maintenance-subject-equipment': 'fleet-ops:equipment',
     // Fall-through for raw models passed from vehicle-actions.js
     vehicle: 'fleet-ops:vehicle',
     equipment: 'fleet-ops:equipment',
@@ -49,7 +49,6 @@ export default class WorkOrderFormComponent extends Component {
 
     /**
      * Polymorphic target type options — the asset a work order is raised against.
-     * Each entry has a `value` (stored on the model) and a `label` (displayed in the UI).
      */
     targetTypeOptions = [
         { value: 'fleet-ops:vehicle', label: 'Vehicle' },
@@ -78,7 +77,12 @@ export default class WorkOrderFormComponent extends Component {
     /** The currently selected assignee type option object. */
     @tracked selectedAssigneeType = null;
 
-    /** Completion data fields — only used when status is being set to closed. */
+    /**
+     * Completion data fields — only used when status is being set to 'closed'.
+     * These are pure UI state; they are never persisted directly. Instead, the
+     * controller reads them via the @onCompletionChange callback and passes them
+     * to workOrderActions.prepareForSave() before calling workOrder.save().
+     */
     @tracked completionOdometer = null;
     @tracked completionEngineHours = null;
     @tracked completionLaborCost = null;
@@ -88,8 +92,7 @@ export default class WorkOrderFormComponent extends Component {
 
     /**
      * Returns true when the work order status is set to 'closed', which
-     * reveals the Completion Details panel and seeds the auto-generated
-     * Maintenance History record via the WorkOrderObserver on save.
+     * reveals the Completion Details panel.
      */
     get isCompleting() {
         return this.args.resource?.status === 'closed';
@@ -98,9 +101,8 @@ export default class WorkOrderFormComponent extends Component {
     constructor(owner, args) {
         super(owner, args);
         const { resource } = args;
+
         // Restore target type selection from the polymorphic relationship.
-        // When editing an existing record, resource.target is a loaded WorkOrderTarget model.
-        // When creating from vehicle-actions.js, resource.target may be a raw vehicle/equipment model.
         const target = resource?.target;
         if (target) {
             const modelName = target.constructor?.modelName ?? target.modelName;
@@ -110,6 +112,7 @@ export default class WorkOrderFormComponent extends Component {
                 this.selectedTargetType = this.targetTypeOptions.find((o) => o.value === typeValue) ?? null;
             }
         }
+
         // Restore assignee type selection from the polymorphic relationship.
         const assignee = resource?.assignee;
         if (assignee) {
@@ -128,7 +131,6 @@ export default class WorkOrderFormComponent extends Component {
      */
     @action onTargetTypeChange(option) {
         this.selectedTargetType = option;
-        // Clear the target relationship — user must re-select the asset
         this.args.resource.target = null;
         this.targetModelName = TYPE_TO_MODEL[option.value] ?? null;
     }
@@ -144,7 +146,6 @@ export default class WorkOrderFormComponent extends Component {
      */
     @action onAssigneeTypeChange(option) {
         this.selectedAssigneeType = option;
-        // Clear the assignee relationship — user must re-select
         this.args.resource.assignee = null;
         this.assigneeModelName = TYPE_TO_MODEL[option.value] ?? null;
     }
@@ -155,41 +156,51 @@ export default class WorkOrderFormComponent extends Component {
     }
 
     /**
-     * Packs the completion data fields into @resource.meta.completion_data
-     * so the WorkOrderObserver can read them when the record is saved.
-     * Called by the controller's save task before workOrder.save().
+     * Notifies the parent (controller) of the current completion field values
+     * whenever any completion input changes. The controller stores this plain
+     * object and passes it to workOrderActions.prepareForSave() before saving —
+     * no component reference is ever held by the controller.
      */
-    @action prepareForSave() {
-        if (!this.isCompleting) {
-            return;
+    _notifyCompletionChange() {
+        if (typeof this.args.onCompletionChange === 'function') {
+            this.args.onCompletionChange({
+                odometer: this.completionOdometer,
+                engineHours: this.completionEngineHours,
+                laborCost: this.completionLaborCost,
+                partsCost: this.completionPartsCost,
+                tax: this.completionTax,
+                notes: this.completionNotes,
+            });
         }
-        const resource = this.args.resource;
-        const existing = resource.meta ?? {};
-        const laborCost = parseFloat(this.completionLaborCost) || 0;
-        const partsCost = parseFloat(this.completionPartsCost) || 0;
-        const tax = parseFloat(this.completionTax) || 0;
-        resource.meta = {
-            ...existing,
-            completion_data: {
-                odometer: this.completionOdometer ? parseFloat(this.completionOdometer) : null,
-                engine_hours: this.completionEngineHours ? parseFloat(this.completionEngineHours) : null,
-                labor_cost: laborCost || null,
-                parts_cost: partsCost || null,
-                tax: tax || null,
-                total_cost: (laborCost + partsCost + tax) || null,
-                currency: resource.currency ?? 'USD',
-                notes: this.completionNotes ?? null,
-            },
-        };
     }
 
-    /**
-     * Registers this component instance with the parent controller so the
-     * controller's save task can call prepareForSave() before persisting.
-     */
-    @action registerWithController() {
-        if (typeof this.args.onRegisterForm === 'function') {
-            this.args.onRegisterForm(this);
-        }
+    @action setCompletionOdometer(value) {
+        this.completionOdometer = value;
+        this._notifyCompletionChange();
+    }
+
+    @action setCompletionEngineHours(value) {
+        this.completionEngineHours = value;
+        this._notifyCompletionChange();
+    }
+
+    @action setCompletionLaborCost(value) {
+        this.completionLaborCost = value;
+        this._notifyCompletionChange();
+    }
+
+    @action setCompletionPartsCost(value) {
+        this.completionPartsCost = value;
+        this._notifyCompletionChange();
+    }
+
+    @action setCompletionTax(value) {
+        this.completionTax = value;
+        this._notifyCompletionChange();
+    }
+
+    @action setCompletionNotes(value) {
+        this.completionNotes = value;
+        this._notifyCompletionChange();
     }
 }

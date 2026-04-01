@@ -114,10 +114,22 @@ export default class MaintenanceEquipmentIndexController extends Controller {
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
                 actions: [
-                    { label: this.intl.t('column.view-details'), fn: this.equipmentActions.transition.view, permission: 'fleet-ops view equipment' },
-                    { label: this.intl.t('column.edit-place'), fn: this.equipmentActions.transition.edit, permission: 'fleet-ops update equipment' },
+                    {
+                        label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.equipment') }),
+                        fn: this.equipmentActions.transition.view,
+                        permission: 'fleet-ops view equipment',
+                    },
+                    {
+                        label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.equipment') }),
+                        fn: this.equipmentActions.transition.edit,
+                        permission: 'fleet-ops update equipment',
+                    },
                     { separator: true },
-                    { label: this.intl.t('column.delete'), fn: this.equipmentActions.delete, permission: 'fleet-ops delete equipment' },
+                    {
+                        label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.equipment') }),
+                        fn: this.equipmentActions.delete,
+                        permission: 'fleet-ops delete equipment',
+                    },
                 ],
                 sortable: false,
                 filterable: false,

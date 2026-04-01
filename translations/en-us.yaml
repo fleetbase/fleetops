@@ -1738,3 +1738,28 @@ settings:
       button-continue: Continue
       button-start: Start onboard now
       button-in-progress: Onboard in progress
+maintenance-schedule:
+  actions:
+    trigger-now: Trigger Work Order Now
+    pause: Pause Schedule
+    resume: Resume Schedule
+work-order:
+  actions:
+    view: View Work Order
+    edit: Edit Work Order
+    delete: Delete Work Order
+maintenance:
+  actions:
+    view: View Maintenance Record
+    edit: Edit Maintenance Record
+    delete: Delete Maintenance Record
+equipment:
+  actions:
+    view: View Equipment
+    edit: Edit Equipment
+    delete: Delete Equipment
+part:
+  actions:
+    view: View Part
+    edit: Edit Part
+    delete: Delete Part

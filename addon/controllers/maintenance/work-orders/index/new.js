@@ -11,15 +11,21 @@ export default class MaintenanceWorkOrdersIndexNewController extends Controller 
     @service notifications;
     @service events;
     @tracked overlay;
-    @tracked formComponent = null;
     @tracked workOrder = this.workOrderActions.createNewInstance();
+
+    /**
+     * Holds the latest completion field values emitted by the form component
+     * via its @onCompletionChange arg. No component reference is ever stored.
+     */
+    @tracked completionData = {};
+
+    @action onCompletionChange(data) {
+        this.completionData = data;
+    }
 
     @task *save(workOrder) {
         try {
-            // Pack completion data into meta before persisting
-            if (this.formComponent?.prepareForSave) {
-                this.formComponent.prepareForSave();
-            }
+            this.workOrderActions.prepareForSave(workOrder, this.completionData);
             yield workOrder.save();
             this.events.trackResourceCreated(workOrder);
             this.overlay?.close();
@@ -34,6 +40,6 @@ export default class MaintenanceWorkOrdersIndexNewController extends Controller 
 
     @action resetForm() {
         this.workOrder = this.workOrderActions.createNewInstance();
-        this.formComponent = null;
+        this.completionData = {};
     }
 }

@@ -9,20 +9,27 @@ export default class MaintenanceWorkOrdersIndexEditController extends Controller
     @service intl;
     @service notifications;
     @service modalsManager;
+    @service workOrderActions;
     @service events;
     @tracked overlay;
-    @tracked formComponent = null;
+
+    /**
+     * Holds the latest completion field values emitted by the form component
+     * via its @onCompletionChange arg. No component reference is ever stored.
+     */
+    @tracked completionData = {};
 
     get actionButtons() {
         return [{ icon: 'eye', fn: this.view }];
     }
 
+    @action onCompletionChange(data) {
+        this.completionData = data;
+    }
+
     @task *save(workOrder) {
         try {
-            // Pack completion data into meta before persisting
-            if (this.formComponent?.prepareForSave) {
-                this.formComponent.prepareForSave();
-            }
+            this.workOrderActions.prepareForSave(workOrder, this.completionData);
             yield workOrder.save();
             this.events.trackResourceUpdated(workOrder);
             this.overlay?.close();
