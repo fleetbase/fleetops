@@ -14,7 +14,7 @@ class MaintenanceSchedule extends FleetbaseResource
      *
      * @return array
      */
-    public function toArray($request): array
+    public function toArray($request)
     {
         return $this->withCustomFields([
             'id'                          => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
