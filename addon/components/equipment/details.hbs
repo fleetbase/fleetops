@@ -1,63 +1,75 @@
-<div class="details-wrapper" ...attributes>
-    <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+<div class="next-content-panel-wrapper" ...attributes>
+
+    {{! ===== OVERVIEW ===== }}
+    <ContentPanel @title="Overview" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+
+            {{! — Photo — }}
+            {{#if (or @resource.photo_url (config "defaultValues.equipmentImage"))}}
+                <div class="col-span-2 flex items-center gap-3 pb-2 border-b border-gray-100 dark:border-gray-700 mb-1">
+                    <div class="border border-dashed border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-600 rounded-lg flex items-center justify-center w-16 h-16 flex-shrink-0">
+                        <Image
+                            alt={{@resource.name}}
+                            src={{or @resource.photo_url (config "defaultValues.equipmentImage")}}
+                            @fallbackSrc={{config "defaultValues.equipmentImage"}}
+                            class="w-12 h-12 object-contain"
+                        />
+                    </div>
+                    <div>
+                        <p class="font-semibold text-sm text-gray-800 dark:text-gray-100">{{n-a @resource.name}}</p>
+                        <p class="text-[11px] text-gray-400 dark:text-gray-500 font-mono">{{n-a @resource.public_id}}</p>
+                    </div>
+                </div>
+            {{/if}}
+
+            {{! — Identity & Classification — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Identity & Classification
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">ID</div>
+                <ClickToCopy @value={{@resource.public_id}} class="field-value font-mono">{{n-a @resource.public_id}}</ClickToCopy>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Code</div>
+                <ClickToCopy @value={{@resource.code}} class="field-value font-mono">{{n-a @resource.code}}</ClickToCopy>
+            </div>
             <div class="field-info-container">
                 <div class="field-name">Name</div>
                 <div class="field-value">{{n-a @resource.name}}</div>
             </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Code</div>
-                <div class="field-value">{{n-a @resource.code}}</div>
-            </div>
-
             <div class="field-info-container">
                 <div class="field-name">Type</div>
-                <div class="field-value">{{smart-humanize @resource.type}}</div>
+                <div class="field-value">{{n-a (smart-humanize @resource.type)}}</div>
             </div>
-
             <div class="field-info-container">
                 <div class="field-name">Status</div>
                 <div class="field-value">
                     <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
                 </div>
             </div>
-
             <div class="field-info-container">
                 <div class="field-name">Serial Number</div>
-                <div class="field-value">{{n-a @resource.serial_number}}</div>
+                <div class="field-value font-mono">{{n-a @resource.serial_number}}</div>
             </div>
 
+            {{! — Make & Model — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Make & Model
+            </div>
             <div class="field-info-container">
                 <div class="field-name">Manufacturer</div>
                 <div class="field-value">{{n-a @resource.manufacturer}}</div>
             </div>
-
             <div class="field-info-container">
                 <div class="field-name">Model</div>
                 <div class="field-value">{{n-a @resource.model}}</div>
             </div>
 
-            <div class="field-info-container">
-                <div class="field-name">Purchased At</div>
-                <div class="field-value">{{format-date @resource.purchased_at}}</div>
+            {{! — Assignment — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Assignment
             </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Purchase Price</div>
-                <div class="field-value">{{format-currency @resource.purchase_price}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Warranty</div>
-                <div class="field-value">{{n-a @resource.warranty_name}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Equipped To</div>
-                <div class="field-value">{{n-a @resource.equipped_to_name}}</div>
-            </div>
-
             <div class="field-info-container">
                 <div class="field-name">Equipped Status</div>
                 <div class="field-value">
@@ -68,28 +80,55 @@
                     {{/if}}
                 </div>
             </div>
+            {{#if @resource.is_equipped}}
+                <div class="field-info-container">
+                    <div class="field-name">Equipped To</div>
+                    <div class="field-value">{{n-a @resource.equipped_to_name}}</div>
+                </div>
+            {{/if}}
+        </div>
+    </ContentPanel>
 
+    {{! ===== FINANCIALS ===== }}
+    <ContentPanel @title="Financials" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">Purchase Price</div>
+                <div class="field-value">{{format-currency @resource.purchase_price @resource.currency}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Purchased At</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.purchased_at "dd MMM yyyy")}}</div>
+            </div>
             <div class="field-info-container">
                 <div class="field-name">Age</div>
                 <div class="field-value">{{n-a @resource.age_in_days}} days</div>
             </div>
-
             <div class="field-info-container">
                 <div class="field-name">Depreciated Value</div>
-                <div class="field-value">{{format-currency @resource.depreciated_value}}</div>
+                <div class="field-value">{{format-currency @resource.depreciated_value @resource.currency}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Currency</div>
+                <div class="field-value">{{n-a @resource.currency}}</div>
             </div>
         </div>
     </ContentPanel>
 
-    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
-
-    <ContentPanel @title="Photo" @open={{true}} @wrapperClass="bordered-top">
-        <div class="flex px-1">
-            <div class="border border-dashed border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-600 rounded-lg flex items-center justify-center">
-                <div class="flex items-center justify-center h-20 w-24">
-                    <Image alt={{@resource.name}} src={{or @resource.photo_url (config "defaultValues.equipmentImage")}} @fallbackSrc={{config "defaultValues.equipmentImage"}} class="w-12 h-12" />
+    {{! ===== WARRANTY ===== }}
+    {{#if @resource.warranty_name}}
+        <ContentPanel @title="Warranty" @open={{true}} @wrapperClass="bordered-top">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+                <div class="field-info-container">
+                    <div class="field-name">Warranty</div>
+                    <div class="field-value">{{n-a @resource.warranty_name}}</div>
                 </div>
             </div>
-        </div>
-    </ContentPanel>
+        </ContentPanel>
+    {{/if}}
+
+    {{! ===== CUSTOM FIELDS ===== }}
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+
+    <Spacer @height="200px" />
 </div>
