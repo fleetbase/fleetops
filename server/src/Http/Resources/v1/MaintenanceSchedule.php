@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 
@@ -23,18 +24,17 @@ class MaintenanceSchedule extends FleetbaseResource
             'company_uuid'                => $this->when(Http::isInternalRequest(), $this->company_uuid),
             'created_by_uuid'             => $this->when(Http::isInternalRequest(), $this->created_by_uuid),
             'updated_by_uuid'             => $this->when(Http::isInternalRequest(), $this->updated_by_uuid),
-            // Polymorphic subject — raw PHP class name preserved so the frontend
-            // serializer's normalizePolymorphicType map can convert it correctly.
+            // Polymorphic subject
             'subject_uuid'                => $this->when(Http::isInternalRequest(), $this->subject_uuid),
-            'subject_type'                => $this->when(Http::isInternalRequest(), $this->getRawOriginal('subject_type')),
+            'subject_type'                => $this->when(Http::isInternalRequest(), $this->subject_type ? Utils::toEmberResourceType($this->subject_type) : null),
             'subject'                     => $this->whenLoaded('subject', function () {
-                return $this->transformMorphResource($this->subject);
+                return $this->setSubjectType($this->transformMorphResource($this->subject));
             }),
             // Polymorphic default assignee
             'default_assignee_uuid'       => $this->when(Http::isInternalRequest(), $this->default_assignee_uuid),
-            'default_assignee_type'       => $this->when(Http::isInternalRequest(), $this->getRawOriginal('default_assignee_type')),
+            'default_assignee_type'       => $this->when(Http::isInternalRequest(), $this->default_assignee_type ? Utils::toEmberResourceType($this->default_assignee_type) : null),
             'default_assignee'            => $this->whenLoaded('defaultAssignee', function () {
-                return $this->transformMorphResource($this->defaultAssignee);
+                return $this->setAssigneeType($this->transformMorphResource($this->defaultAssignee));
             }),
             // Core attributes
             'name'                        => $this->name,
@@ -59,11 +59,42 @@ class MaintenanceSchedule extends FleetbaseResource
             'instructions'                => $this->instructions,
             'meta'                        => data_get($this, 'meta', (object) []),
             'slug'                        => $this->slug,
+            // Convenience name attrs
+            'subject_name'                => $this->subject_name,
+            'default_assignee_name'       => $this->default_assignee_name,
             // Dates
             'last_triggered_at'           => $this->last_triggered_at,
             'updated_at'                  => $this->updated_at,
             'created_at'                  => $this->created_at,
         ]);
+    }
+
+    /**
+     * Inject the abstract 'maintenance-subject' type into the embedded subject object
+     * so Ember Data can resolve the correct polymorphic model.
+     */
+    protected function setSubjectType(?array $resolved): ?array
+    {
+        if (empty($resolved)) {
+            return $resolved;
+        }
+        data_set($resolved, 'type', 'maintenance-subject');
+        data_set($resolved, 'subject_type', 'maintenance-subject-' . Utils::toEmberResourceType($this->subject_type));
+        return $resolved;
+    }
+
+    /**
+     * Inject the abstract 'facilitator' type into the embedded default_assignee object
+     * so Ember Data can resolve the correct polymorphic model.
+     */
+    protected function setAssigneeType(?array $resolved): ?array
+    {
+        if (empty($resolved)) {
+            return $resolved;
+        }
+        data_set($resolved, 'type', 'facilitator');
+        data_set($resolved, 'facilitator_type', 'facilitator-' . Utils::toEmberResourceType($this->default_assignee_type));
+        return $resolved;
     }
 
     /**

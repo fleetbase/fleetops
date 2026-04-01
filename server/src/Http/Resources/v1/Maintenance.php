@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 
@@ -24,18 +25,17 @@ class Maintenance extends FleetbaseResource
             'work_order_uuid'         => $this->when(Http::isInternalRequest(), $this->work_order_uuid),
             'created_by_uuid'         => $this->when(Http::isInternalRequest(), $this->created_by_uuid),
             'updated_by_uuid'         => $this->when(Http::isInternalRequest(), $this->updated_by_uuid),
-            // Polymorphic maintainable — raw PHP class name preserved so the frontend
-            // serializer's normalizePolymorphicType map can convert it correctly.
+            // Polymorphic maintainable
             'maintainable_uuid'       => $this->when(Http::isInternalRequest(), $this->maintainable_uuid),
-            'maintainable_type'       => $this->when(Http::isInternalRequest(), $this->getRawOriginal('maintainable_type')),
+            'maintainable_type'       => $this->when(Http::isInternalRequest(), $this->maintainable_type ? Utils::toEmberResourceType($this->maintainable_type) : null),
             'maintainable'            => $this->whenLoaded('maintainable', function () {
-                return $this->transformMorphResource($this->maintainable);
+                return $this->setMaintainableType($this->transformMorphResource($this->maintainable));
             }),
             // Polymorphic performed_by
             'performed_by_uuid'       => $this->when(Http::isInternalRequest(), $this->performed_by_uuid),
-            'performed_by_type'       => $this->when(Http::isInternalRequest(), $this->getRawOriginal('performed_by_type')),
+            'performed_by_type'       => $this->when(Http::isInternalRequest(), $this->performed_by_type ? Utils::toEmberResourceType($this->performed_by_type) : null),
             'performed_by'            => $this->whenLoaded('performedBy', function () {
-                return $this->transformMorphResource($this->performedBy);
+                return $this->setPerformedByType($this->transformMorphResource($this->performedBy));
             }),
             // Core attributes
             'type'                    => $this->type,
@@ -68,6 +68,34 @@ class Maintenance extends FleetbaseResource
             'updated_at'              => $this->updated_at,
             'created_at'              => $this->created_at,
         ]);
+    }
+
+    /**
+     * Inject the abstract 'maintenance-subject' type into the embedded maintainable object
+     * so Ember Data can resolve the correct polymorphic model.
+     */
+    protected function setMaintainableType(?array $resolved): ?array
+    {
+        if (empty($resolved)) {
+            return $resolved;
+        }
+        data_set($resolved, 'type', 'maintenance-subject');
+        data_set($resolved, 'subject_type', 'maintenance-subject-' . Utils::toEmberResourceType($this->maintainable_type));
+        return $resolved;
+    }
+
+    /**
+     * Inject the abstract 'facilitator' type into the embedded performed_by object
+     * so Ember Data can resolve the correct polymorphic model.
+     */
+    protected function setPerformedByType(?array $resolved): ?array
+    {
+        if (empty($resolved)) {
+            return $resolved;
+        }
+        data_set($resolved, 'type', 'facilitator');
+        data_set($resolved, 'facilitator_type', 'facilitator-' . Utils::toEmberResourceType($this->performed_by_type));
+        return $resolved;
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 
@@ -24,18 +25,17 @@ class WorkOrder extends FleetbaseResource
             'schedule_uuid'           => $this->when(Http::isInternalRequest(), $this->schedule_uuid),
             'created_by_uuid'         => $this->when(Http::isInternalRequest(), $this->created_by_uuid),
             'updated_by_uuid'         => $this->when(Http::isInternalRequest(), $this->updated_by_uuid),
-            // Polymorphic target — raw PHP class name preserved so the frontend
-            // serializer's normalizePolymorphicType map can convert it correctly.
+            // Polymorphic target
             'target_uuid'             => $this->when(Http::isInternalRequest(), $this->target_uuid),
-            'target_type'             => $this->when(Http::isInternalRequest(), $this->getRawOriginal('target_type')),
+            'target_type'             => $this->when(Http::isInternalRequest(), $this->target_type ? Utils::toEmberResourceType($this->target_type) : null),
             'target'                  => $this->whenLoaded('target', function () {
-                return $this->transformMorphResource($this->target);
+                return $this->setTargetType($this->transformMorphResource($this->target));
             }),
             // Polymorphic assignee
             'assignee_uuid'           => $this->when(Http::isInternalRequest(), $this->assignee_uuid),
-            'assignee_type'           => $this->when(Http::isInternalRequest(), $this->getRawOriginal('assignee_type')),
+            'assignee_type'           => $this->when(Http::isInternalRequest(), $this->assignee_type ? Utils::toEmberResourceType($this->assignee_type) : null),
             'assignee'                => $this->whenLoaded('assignee', function () {
-                return $this->transformMorphResource($this->assignee);
+                return $this->setAssigneeType($this->transformMorphResource($this->assignee));
             }),
             // Core attributes
             'code'                    => $this->code,
@@ -59,6 +59,34 @@ class WorkOrder extends FleetbaseResource
             'updated_at'              => $this->updated_at,
             'created_at'              => $this->created_at,
         ]);
+    }
+
+    /**
+     * Inject the abstract 'maintenance-subject' type into the embedded target object
+     * so Ember Data can resolve the correct polymorphic model.
+     */
+    protected function setTargetType(?array $resolved): ?array
+    {
+        if (empty($resolved)) {
+            return $resolved;
+        }
+        data_set($resolved, 'type', 'maintenance-subject');
+        data_set($resolved, 'subject_type', 'maintenance-subject-' . Utils::toEmberResourceType($this->target_type));
+        return $resolved;
+    }
+
+    /**
+     * Inject the abstract 'facilitator' type into the embedded assignee object
+     * so Ember Data can resolve the correct polymorphic model.
+     */
+    protected function setAssigneeType(?array $resolved): ?array
+    {
+        if (empty($resolved)) {
+            return $resolved;
+        }
+        data_set($resolved, 'type', 'facilitator');
+        data_set($resolved, 'facilitator_type', 'facilitator-' . Utils::toEmberResourceType($this->assignee_type));
+        return $resolved;
     }
 
     /**
