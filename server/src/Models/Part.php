@@ -79,6 +79,7 @@ class Part extends Model
         'company_uuid',
         'vendor_uuid',
         'warranty_uuid',
+        'photo_uuid',
         'sku',
         'name',
         'manufacturer',

@@ -77,6 +77,7 @@ class Equipment extends Model
     protected $fillable = [
         'company_uuid',
         'warranty_uuid',
+        'photo_uuid',
         'name',
         'code',
         'type',
