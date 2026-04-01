@@ -122,10 +122,22 @@ export default class MaintenancePartsIndexController extends Controller {
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
                 actions: [
-                    { label: this.intl.t('column.view-details'), fn: this.partActions.transition.view, permission: 'fleet-ops view part' },
-                    { label: this.intl.t('column.edit-place'), fn: this.partActions.transition.edit, permission: 'fleet-ops update part' },
+                    {
+                        label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.part') }),
+                        fn: this.partActions.transition.view,
+                        permission: 'fleet-ops view part',
+                    },
+                    {
+                        label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.part') }),
+                        fn: this.partActions.transition.edit,
+                        permission: 'fleet-ops update part',
+                    },
                     { separator: true },
-                    { label: this.intl.t('column.delete'), fn: this.partActions.delete, permission: 'fleet-ops delete part' },
+                    {
+                        label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.part') }),
+                        fn: this.partActions.delete,
+                        permission: 'fleet-ops delete part',
+                    },
                 ],
                 sortable: false,
                 filterable: false,

@@ -1,4 +1,4 @@
-<div class="work-order-form" ...attributes {{did-insert this.registerWithController}}>
+<div class="work-order-form" ...attributes>
 
     {{! ===== IDENTIFICATION ===== }}
     <ContentPanel @title="Identification" @open={{true}} @wrapperClass="bordered-top">
@@ -202,6 +202,8 @@
                     @type="number"
                     class="w-full form-input"
                     placeholder="e.g. 47250"
+                    {{on "input" (fn this.setCompletionOdometer this.completionOdometer)}}
+                    {{on "change" (fn this.setCompletionOdometer this.completionOdometer)}}
                 />
             </InputGroup>
 
@@ -211,6 +213,8 @@
                     @type="number"
                     class="w-full form-input"
                     placeholder="e.g. 1420"
+                    {{on "input" (fn this.setCompletionEngineHours this.completionEngineHours)}}
+                    {{on "change" (fn this.setCompletionEngineHours this.completionEngineHours)}}
                 />
             </InputGroup>
 
@@ -219,6 +223,7 @@
                     @value={{this.completionLaborCost}}
                     @currency={{or @resource.currency "USD"}}
                     @disabled={{false}}
+                    @onChange={{this.setCompletionLaborCost}}
                 />
             </InputGroup>
 
@@ -227,6 +232,7 @@
                     @value={{this.completionPartsCost}}
                     @currency={{or @resource.currency "USD"}}
                     @disabled={{false}}
+                    @onChange={{this.setCompletionPartsCost}}
                 />
             </InputGroup>
 
@@ -235,6 +241,7 @@
                     @value={{this.completionTax}}
                     @currency={{or @resource.currency "USD"}}
                     @disabled={{false}}
+                    @onChange={{this.setCompletionTax}}
                 />
             </InputGroup>
 
@@ -244,6 +251,8 @@
                     class="w-full form-input"
                     rows="3"
                     placeholder="Notes on what was done, parts replaced, observations..."
+                    {{on "input" (fn this.setCompletionNotes this.completionNotes)}}
+                    {{on "change" (fn this.setCompletionNotes this.completionNotes)}}
                 />
             </InputGroup>
         </div>

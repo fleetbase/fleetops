@@ -143,20 +143,18 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 wrapperClass: 'flex items-center justify-end mx-2',
                 actions: [
                     {
-                        label: this.intl.t('column.view-details'),
+                        label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.maintenance') }),
                         fn: this.maintenanceActions.transition.view,
                         permission: 'fleet-ops view maintenance',
                     },
                     {
-                        label: this.intl.t('column.edit-place'),
+                        label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.maintenance') }),
                         fn: this.maintenanceActions.transition.edit,
                         permission: 'fleet-ops update maintenance',
                     },
+                    { separator: true },
                     {
-                        separator: true,
-                    },
-                    {
-                        label: this.intl.t('column.delete'),
+                        label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.maintenance') }),
                         fn: this.maintenanceActions.delete,
                         permission: 'fleet-ops delete maintenance',
                     },

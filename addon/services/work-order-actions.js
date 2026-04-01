@@ -46,6 +46,47 @@ export default class WorkOrderActionsService extends ResourceActionService {
         },
     };
 
+    /**
+     * Packs completion data into workOrder.meta.completion_data before saving.
+     * All monetary values are converted to cents (integer) for storage.
+     * Called by the edit/new controllers before workOrder.save().
+     *
+     * @param {WorkOrderModel} workOrder
+     * @param {Object} completionData  — plain object from the form component's @onCompletionChange
+     */
+    prepareForSave(workOrder, completionData = {}) {
+        if (workOrder.status !== 'closed' || !completionData) {
+            return;
+        }
+
+        const toCents = (value) => {
+            const parsed = parseFloat(value);
+            return isNaN(parsed) ? null : Math.round(parsed * 100);
+        };
+
+        const laborCostCents = toCents(completionData.laborCost);
+        const partsCostCents = toCents(completionData.partsCost);
+        const taxCents = toCents(completionData.tax);
+        const totalCostCents =
+            laborCostCents !== null || partsCostCents !== null || taxCents !== null
+                ? (laborCostCents ?? 0) + (partsCostCents ?? 0) + (taxCents ?? 0)
+                : null;
+
+        workOrder.meta = {
+            ...(workOrder.meta ?? {}),
+            completion_data: {
+                odometer: completionData.odometer ? parseFloat(completionData.odometer) : null,
+                engine_hours: completionData.engineHours ? parseFloat(completionData.engineHours) : null,
+                labor_cost: laborCostCents,
+                parts_cost: partsCostCents,
+                tax: taxCents,
+                total_cost: totalCostCents,
+                currency: workOrder.currency ?? 'USD',
+                notes: completionData.notes ?? null,
+            },
+        };
+    }
+
     modal = {
         create: (attributes = {}, options = {}, saveOptions = {}) => {
             const workOrder = this.createNewInstance(attributes);

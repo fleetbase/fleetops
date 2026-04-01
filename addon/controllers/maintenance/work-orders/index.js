@@ -86,10 +86,22 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
                 actions: [
-                    { label: this.intl.t('column.view-details'), fn: this.workOrderActions.transition.view, permission: 'fleet-ops view work-order' },
-                    { label: this.intl.t('column.edit-place'), fn: this.workOrderActions.transition.edit, permission: 'fleet-ops update work-order' },
+                    {
+                        label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.work-order') }),
+                        fn: this.workOrderActions.transition.view,
+                        permission: 'fleet-ops view work-order',
+                    },
+                    {
+                        label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.work-order') }),
+                        fn: this.workOrderActions.transition.edit,
+                        permission: 'fleet-ops update work-order',
+                    },
                     { separator: true },
-                    { label: this.intl.t('column.delete'), fn: this.workOrderActions.delete, permission: 'fleet-ops delete work-order' },
+                    {
+                        label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.work-order') }),
+                        fn: this.workOrderActions.delete,
+                        permission: 'fleet-ops delete work-order',
+                    },
                 ],
                 sortable: false,
                 filterable: false,
