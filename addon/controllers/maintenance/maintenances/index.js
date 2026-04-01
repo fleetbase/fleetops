@@ -31,6 +31,12 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 onClick: this.maintenanceActions.transition.create,
             },
             {
+                text: this.intl.t('common.import'),
+                type: 'magic',
+                icon: 'upload',
+                onClick: this.maintenanceActions.import,
+            },
+            {
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',

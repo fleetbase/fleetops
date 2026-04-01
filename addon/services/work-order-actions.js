@@ -1,6 +1,10 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
+import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
 
 export default class WorkOrderActionsService extends ResourceActionService {
+    @service fetch;
+    @service notifications;
     constructor() {
         super(...arguments);
         this.initialize('work-order');
@@ -91,6 +95,28 @@ export default class WorkOrderActionsService extends ResourceActionService {
                 notes: completionData.notes ?? null,
             },
         };
+    }
+
+    @action async sendEmail(workOrder, options = {}) {
+        const confirmed = await this.modalsManager.confirm({
+            title: 'Send Work Order to Vendor',
+            body: `This will email work order #${workOrder.public_id} to the assigned vendor. Do you want to proceed?`,
+            acceptButtonText: 'Send',
+            acceptButtonIcon: 'paper-plane',
+            declineButtonText: 'Cancel',
+            ...options,
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const response = await this.fetch.post(`work-orders/${workOrder.id}/send`);
+            this.notifications.success(response?.message ?? 'Work order sent successfully.');
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     modal = {

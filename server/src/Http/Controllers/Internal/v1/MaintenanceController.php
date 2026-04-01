@@ -3,9 +3,12 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Imports\MaintenanceImport;
 use Fleetbase\FleetOps\Models\Maintenance;
+use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class MaintenanceController extends FleetOpsController
 {
@@ -104,6 +107,30 @@ class MaintenanceController extends FleetOpsController
             'line_items' => $maintenance->line_items,
             'total_cost' => $maintenance->total_cost,
         ]);
+    }
+
+    /**
+     * Process import files (excel, csv) into Maintenance records.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function import(ImportRequest $request)
+    {
+        $disk          = $request->input('disk', config('filesystems.default'));
+        $files         = $request->resolveFilesFromIds();
+        $importedCount = 0;
+
+        foreach ($files as $file) {
+            try {
+                $import = new MaintenanceImport();
+                Excel::import($import, $file->path, $disk);
+                $importedCount += $import->imported;
+            } catch (\Throwable $e) {
+                return response()->error('Invalid file, unable to process.');
+            }
+        }
+
+        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
     }
 
     /**

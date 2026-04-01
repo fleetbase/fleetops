@@ -16,6 +16,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
         return [
             { icon: 'refresh', onClick: this.maintenanceScheduleActions.refresh, helpText: this.intl.t('common.refresh') },
             { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.maintenanceScheduleActions.transition.create },
+            { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.maintenanceScheduleActions.import },
             { text: this.intl.t('common.export'), icon: 'long-arrow-up', iconClass: 'rotate-icon-45', wrapperClass: 'hidden md:flex', onClick: this.maintenanceScheduleActions.export },
         ];
     }

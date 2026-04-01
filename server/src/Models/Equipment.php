@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
 use Fleetbase\Casts\Money;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
@@ -482,5 +483,61 @@ class Equipment extends Model
         }
 
         return null;
+    }
+
+    /**
+     * Create an Equipment instance from an import row.
+     *
+     * Monetary values (purchase_price) must be supplied in cents (integers).
+     * The Money cast will strip non-numeric characters before storage.
+     *
+     * @param array $row          Associative array from the import spreadsheet
+     * @param bool  $saveInstance Whether to persist the record immediately
+     */
+    public static function createFromImport(array $row, bool $saveInstance = false): Equipment
+    {
+        $row = array_filter($row);
+
+        $name          = Utils::or($row, ['name']);
+        $code          = Utils::or($row, ['code', 'internal_id']);
+        $type          = Utils::or($row, ['type'], 'equipment');
+        $status        = Utils::or($row, ['status'], 'operational');
+        $serialNumber  = Utils::or($row, ['serial_number', 'serial']);
+        $manufacturer  = Utils::or($row, ['manufacturer', 'make', 'brand']);
+        $model         = Utils::or($row, ['model', 'equipment_model']);
+        $purchasePrice = Utils::or($row, ['purchase_price', 'price', 'cost']);
+        $currency      = Utils::or($row, ['currency'], 'USD');
+        $purchasedAt   = Utils::or($row, ['purchased_at', 'purchase_date']);
+        $warrantyName  = Utils::or($row, ['warranty_name', 'warranty']);
+
+        $equipment = new static([
+            'company_uuid'   => session('company'),
+            'name'           => $name,
+            'code'           => $code,
+            'type'           => $type,
+            'status'         => $status,
+            'serial_number'  => $serialNumber,
+            'manufacturer'   => $manufacturer,
+            'model'          => $model,
+            'purchase_price' => $purchasePrice,
+            'currency'       => strtoupper($currency ?? 'USD'),
+            'purchased_at'   => $purchasedAt ? \Carbon\Carbon::parse($purchasedAt) : null,
+        ]);
+
+        // Attempt to resolve warranty by name
+        if ($warrantyName) {
+            $warranty = Warranty::where('company_uuid', session('company'))
+                ->where('name', 'like', '%' . $warrantyName . '%')
+                ->first();
+            if ($warranty) {
+                $equipment->warranty_uuid = $warranty->uuid;
+            }
+        }
+
+        if ($saveInstance === true) {
+            $equipment->save();
+        }
+
+        return $equipment;
     }
 }

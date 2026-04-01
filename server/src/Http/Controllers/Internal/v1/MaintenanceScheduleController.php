@@ -3,10 +3,13 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Imports\MaintenanceScheduleImport;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\WorkOrder;
+use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class MaintenanceScheduleController extends FleetOpsController
 {
@@ -16,6 +19,30 @@ class MaintenanceScheduleController extends FleetOpsController
      * @var string
      */
     public $resource = 'maintenance-schedule';
+
+    /**
+     * Process import files (excel, csv) into MaintenanceSchedule records.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function import(ImportRequest $request)
+    {
+        $disk          = $request->input('disk', config('filesystems.default'));
+        $files         = $request->resolveFilesFromIds();
+        $importedCount = 0;
+
+        foreach ($files as $file) {
+            try {
+                $import = new MaintenanceScheduleImport();
+                Excel::import($import, $file->path, $disk);
+                $importedCount += $import->imported;
+            } catch (\Throwable $e) {
+                return response()->error('Invalid file, unable to process.');
+            }
+        }
+
+        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
+    }
 
     /**
      * Pause a maintenance schedule.

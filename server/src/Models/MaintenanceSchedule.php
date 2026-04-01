@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\PolymorphicType;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasCustomFields;
@@ -257,5 +258,94 @@ class MaintenanceSchedule extends Model
     public function complete(): bool
     {
         return $this->update(['status' => 'completed']);
+    }
+
+    /**
+     * Create a MaintenanceSchedule instance from an import row.
+     *
+     * @param array $row          Associative array from the import spreadsheet
+     * @param bool  $saveInstance Whether to persist the record immediately
+     */
+    public static function createFromImport(array $row, bool $saveInstance = false): MaintenanceSchedule
+    {
+        $row = array_filter($row);
+
+        $name                   = Utils::or($row, ['name', 'schedule_name']);
+        $type                   = Utils::or($row, ['type', 'schedule_type'], 'preventive');
+        $status                 = Utils::or($row, ['status'], 'active');
+        $intervalMethod         = Utils::or($row, ['interval_method'], 'time');
+        $intervalType           = Utils::or($row, ['interval_type'], 'recurring');
+        $intervalValue          = Utils::or($row, ['interval_value']);
+        $intervalUnit           = Utils::or($row, ['interval_unit'], 'days');
+        $intervalDistance       = Utils::or($row, ['interval_distance']);
+        $intervalEngineHours    = Utils::or($row, ['interval_engine_hours']);
+        $lastServiceOdometer    = Utils::or($row, ['last_service_odometer']);
+        $lastServiceEngineHours = Utils::or($row, ['last_service_engine_hours']);
+        $lastServiceDate        = Utils::or($row, ['last_service_date']);
+        $nextDueDate            = Utils::or($row, ['next_due_date']);
+        $nextDueOdometer        = Utils::or($row, ['next_due_odometer']);
+        $nextDueEngineHours     = Utils::or($row, ['next_due_engine_hours']);
+        $defaultPriority        = Utils::or($row, ['default_priority'], 'normal');
+        $instructions           = Utils::or($row, ['instructions', 'description']);
+        $vehicleName            = Utils::or($row, ['vehicle', 'vehicle_name', 'asset', 'subject']);
+        $vendorName             = Utils::or($row, ['vendor', 'vendor_name', 'default_assignee']);
+
+        $schedule = new static([
+            'company_uuid'              => session('company'),
+            'name'                      => $name,
+            'type'                      => $type,
+            'status'                    => $status,
+            'interval_method'           => $intervalMethod,
+            'interval_type'             => $intervalType,
+            'interval_value'            => $intervalValue ? (int) $intervalValue : null,
+            'interval_unit'             => $intervalUnit,
+            'interval_distance'         => $intervalDistance ? (float) $intervalDistance : null,
+            'interval_engine_hours'     => $intervalEngineHours ? (float) $intervalEngineHours : null,
+            'last_service_odometer'     => $lastServiceOdometer ? (float) $lastServiceOdometer : null,
+            'last_service_engine_hours' => $lastServiceEngineHours ? (float) $lastServiceEngineHours : null,
+            'last_service_date'         => $lastServiceDate ? \Carbon\Carbon::parse($lastServiceDate) : null,
+            'next_due_date'             => $nextDueDate ? \Carbon\Carbon::parse($nextDueDate) : null,
+            'next_due_odometer'         => $nextDueOdometer ? (float) $nextDueOdometer : null,
+            'next_due_engine_hours'     => $nextDueEngineHours ? (float) $nextDueEngineHours : null,
+            'default_priority'          => $defaultPriority,
+            'instructions'              => $instructions,
+        ]);
+
+        // Attempt to resolve the subject (vehicle or equipment) by identifier
+        if ($vehicleName) {
+            $vehicle = Vehicle::findByName($vehicleName);
+            if ($vehicle) {
+                $schedule->subject_type = Vehicle::class;
+                $schedule->subject_uuid = $vehicle->uuid;
+            } else {
+                $equipment = Equipment::where('company_uuid', session('company'))
+                    ->where(function ($q) use ($vehicleName) {
+                        $q->where('name', 'like', '%' . $vehicleName . '%')
+                          ->orWhere('public_id', $vehicleName)
+                          ->orWhere('serial_number', $vehicleName);
+                    })->first();
+                if ($equipment) {
+                    $schedule->subject_type = Equipment::class;
+                    $schedule->subject_uuid = $equipment->uuid;
+                }
+            }
+        }
+
+        // Attempt to resolve default assignee (vendor) by name
+        if ($vendorName) {
+            $vendor = Vendor::where('company_uuid', session('company'))
+                ->where('name', 'like', '%' . $vendorName . '%')
+                ->first();
+            if ($vendor) {
+                $schedule->default_assignee_type = Vendor::class;
+                $schedule->default_assignee_uuid = $vendor->uuid;
+            }
+        }
+
+        if ($saveInstance === true) {
+            $schedule->save();
+        }
+
+        return $schedule;
     }
 }
