@@ -119,7 +119,7 @@
                         <td class="py-1.5 pr-2 text-gray-800 dark:text-gray-200 truncate">{{item.description}}</td>
                         <td class="py-1.5 pr-2 text-right text-gray-600 dark:text-gray-400">{{item.quantity}}</td>
                         <td class="py-1.5 pr-2 text-right text-gray-600 dark:text-gray-400">
-                            {{format-currency item.unit_cost this.currency}}
+                            {{format-currency (this._toCents item.unit_cost) this.currency}}
                         </td>
                         <td class="py-1.5 pr-2 text-right font-medium text-gray-800 dark:text-gray-200">
                             {{format-currency (this.lineTotal item) this.currency}}

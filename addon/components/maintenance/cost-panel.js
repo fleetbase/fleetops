@@ -53,7 +53,7 @@ export default class MaintenanceCostPanelComponent extends Component {
     /**
      * Safely parse a monetary string attribute (cents stored as string) to int.
      */
-    _toCents(value) {
+    @action _toCents(value) {
         if (value === null || value === undefined || value === '') return 0;
         const parsed = parseInt(numbersOnly(String(value)), 10);
         return isNaN(parsed) ? 0 : parsed;
