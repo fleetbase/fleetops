@@ -47,6 +47,7 @@ export default class MaintenancePartsIndexController extends Controller {
             },
             { icon: 'refresh', onClick: this.partActions.refresh, helpText: this.intl.t('common.refresh') },
             { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.partActions.transition.create },
+            { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.partActions.import },
             { text: this.intl.t('common.export'), icon: 'long-arrow-up', iconClass: 'rotate-icon-45', wrapperClass: 'hidden md:flex', onClick: this.partActions.export },
         ];
     }

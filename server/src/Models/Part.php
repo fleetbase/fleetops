@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\Casts\Money;
 use Fleetbase\Casts\PolymorphicType;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\Maintainable;
 use Fleetbase\Models\Alert;
 use Fleetbase\Models\File;
@@ -503,5 +504,67 @@ class Part extends Model
         $price = $useRetailPrice ? ($this->msrp ?? $this->unit_cost) : $this->unit_cost;
 
         return $quantity * ($price ?? 0);
+    }
+
+    /**
+     * Create a Part instance from an import row.
+     *
+     * Monetary values (unit_cost, msrp) must be supplied in cents (integers).
+     * The Money cast will strip non-numeric characters before storage.
+     *
+     * @param array $row          Associative array from the import spreadsheet
+     * @param bool  $saveInstance Whether to persist the record immediately
+     */
+    public static function createFromImport(array $row, bool $saveInstance = false): Part
+    {
+        $row = array_filter($row);
+
+        $sku            = Utils::or($row, ['sku', 'part_number', 'internal_id']);
+        $name           = Utils::or($row, ['name', 'part_name']);
+        $type           = Utils::or($row, ['type', 'part_type'], 'consumable');
+        $status         = Utils::or($row, ['status'], 'in_stock');
+        $manufacturer   = Utils::or($row, ['manufacturer', 'make', 'brand']);
+        $model          = Utils::or($row, ['model', 'part_model']);
+        $serialNumber   = Utils::or($row, ['serial_number', 'serial']);
+        $barcode        = Utils::or($row, ['barcode']);
+        $description    = Utils::or($row, ['description']);
+        $quantityOnHand = Utils::or($row, ['quantity_on_hand', 'quantity', 'qty']);
+        $unitCost       = Utils::or($row, ['unit_cost', 'cost']);
+        $msrp           = Utils::or($row, ['msrp', 'retail_price']);
+        $currency       = Utils::or($row, ['currency'], 'USD');
+        $vendorName     = Utils::or($row, ['vendor_name', 'vendor', 'supplier']);
+
+        $part = new static([
+            'company_uuid'     => session('company'),
+            'sku'              => $sku,
+            'name'             => $name,
+            'type'             => $type,
+            'status'           => $status,
+            'manufacturer'     => $manufacturer,
+            'model'            => $model,
+            'serial_number'    => $serialNumber,
+            'barcode'          => $barcode,
+            'description'      => $description,
+            'quantity_on_hand' => $quantityOnHand ? (int) $quantityOnHand : 0,
+            'unit_cost'        => $unitCost,
+            'msrp'             => $msrp,
+            'currency'         => strtoupper($currency ?? 'USD'),
+        ]);
+
+        // Attempt to resolve vendor by name
+        if ($vendorName) {
+            $vendor = Vendor::where('company_uuid', session('company'))
+                ->where('name', 'like', '%' . $vendorName . '%')
+                ->first();
+            if ($vendor) {
+                $part->vendor_uuid = $vendor->uuid;
+            }
+        }
+
+        if ($saveInstance === true) {
+            $part->save();
+        }
+
+        return $part;
     }
 }

@@ -18,6 +18,7 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
         return [
             { icon: 'refresh', onClick: this.workOrderActions.refresh, helpText: this.intl.t('common.refresh') },
             { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.workOrderActions.transition.create },
+            { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.workOrderActions.import },
             { text: this.intl.t('common.export'), icon: 'long-arrow-up', iconClass: 'rotate-icon-45', wrapperClass: 'hidden md:flex', onClick: this.workOrderActions.export },
         ];
     }
@@ -94,6 +95,13 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                     {
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.work-order') }),
                         fn: this.workOrderActions.transition.edit,
+                        permission: 'fleet-ops update work-order',
+                    },
+                    { separator: true },
+                    {
+                        label: 'Send Work Order to Vendor',
+                        fn: this.workOrderActions.sendEmail,
+                        icon: 'paper-plane',
                         permission: 'fleet-ops update work-order',
                     },
                     { separator: true },

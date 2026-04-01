@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\Casts\Money;
 use Fleetbase\Casts\PolymorphicType;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -551,5 +552,91 @@ class Maintenance extends Model
         }
 
         return $this->total_cost / $this->duration_hours;
+    }
+
+    /**
+     * Create a Maintenance instance from an import row.
+     *
+     * Monetary values (labor_cost, parts_cost, tax, total_cost) must be supplied in cents.
+     * The Money cast will strip non-numeric characters before storage.
+     *
+     * @param array $row          Associative array from the import spreadsheet
+     * @param bool  $saveInstance Whether to persist the record immediately
+     */
+    public static function createFromImport(array $row, bool $saveInstance = false): Maintenance
+    {
+        $row = array_filter($row);
+
+        $type        = Utils::or($row, ['type', 'maintenance_type'], 'preventive');
+        $status      = Utils::or($row, ['status'], 'scheduled');
+        $priority    = Utils::or($row, ['priority'], 'normal');
+        $summary     = Utils::or($row, ['summary', 'description']);
+        $notes       = Utils::or($row, ['notes', 'additional_notes']);
+        $scheduledAt = Utils::or($row, ['scheduled_at', 'scheduled_date']);
+        $startedAt   = Utils::or($row, ['started_at', 'start_date']);
+        $completedAt = Utils::or($row, ['completed_at', 'completion_date']);
+        $odometer    = Utils::or($row, ['odometer', 'odometer_reading']);
+        $engineHours = Utils::or($row, ['engine_hours']);
+        $laborCost   = Utils::or($row, ['labor_cost']);
+        $partsCost   = Utils::or($row, ['parts_cost']);
+        $tax         = Utils::or($row, ['tax']);
+        $totalCost   = Utils::or($row, ['total_cost']);
+        $currency    = Utils::or($row, ['currency'], 'USD');
+        $vehicleName = Utils::or($row, ['vehicle', 'vehicle_name', 'asset', 'maintainable']);
+        $performedBy = Utils::or($row, ['performed_by', 'technician', 'mechanic']);
+
+        $maintenance = new static([
+            'company_uuid' => session('company'),
+            'type'         => $type,
+            'status'       => $status,
+            'priority'     => $priority,
+            'summary'      => $summary,
+            'notes'        => $notes,
+            'scheduled_at' => $scheduledAt ? \Carbon\Carbon::parse($scheduledAt) : null,
+            'started_at'   => $startedAt ? \Carbon\Carbon::parse($startedAt) : null,
+            'completed_at' => $completedAt ? \Carbon\Carbon::parse($completedAt) : null,
+            'odometer'     => $odometer ? (float) $odometer : null,
+            'engine_hours' => $engineHours ? (float) $engineHours : null,
+            'labor_cost'   => $laborCost,
+            'parts_cost'   => $partsCost,
+            'tax'          => $tax,
+            'total_cost'   => $totalCost,
+            'currency'     => strtoupper($currency ?? 'USD'),
+        ]);
+
+        // Attempt to resolve the maintainable (vehicle or equipment) by identifier
+        if ($vehicleName) {
+            $vehicle = Vehicle::findByName($vehicleName);
+            if ($vehicle) {
+                $maintenance->maintainable_type = Vehicle::class;
+                $maintenance->maintainable_uuid = $vehicle->uuid;
+            } else {
+                $equipment = Equipment::where('company_uuid', session('company'))
+                    ->where(function ($q) use ($vehicleName) {
+                        $q->where('name', 'like', '%' . $vehicleName . '%')
+                          ->orWhere('public_id', $vehicleName)
+                          ->orWhere('serial_number', $vehicleName);
+                    })->first();
+                if ($equipment) {
+                    $maintenance->maintainable_type = Equipment::class;
+                    $maintenance->maintainable_uuid = $equipment->uuid;
+                }
+            }
+        }
+
+        // Attempt to resolve performed_by (driver/user) by identifier
+        if ($performedBy) {
+            $driver = Driver::findByIdentifier($performedBy);
+            if ($driver) {
+                $maintenance->performed_by_type = Driver::class;
+                $maintenance->performed_by_uuid = $driver->uuid;
+            }
+        }
+
+        if ($saveInstance === true) {
+            $maintenance->save();
+        }
+
+        return $maintenance;
     }
 }
