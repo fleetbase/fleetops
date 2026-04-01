@@ -2,8 +2,8 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { task } from 'ember-concurrency';
 import { isArray } from '@ember/array';
+import numbersOnly from '@fleetbase/ember-core/utils/numbers-only';
 
 /**
  * `Maintenance::CostPanel`
@@ -11,22 +11,25 @@ import { isArray } from '@ember/array';
  * Renders an invoice-style line items editor for a maintenance record.
  *
  * Line items are stored in the `line_items` JSON column on the maintenance
- * record. Each item has: { description, quantity, unit_cost, currency }.
+ * record (`@attr('raw')`). Mutations are purely in-memory — the array is
+ * written back onto `@resource.line_items` and the parent form's normal
+ * save flow persists everything together in a single request. This means
+ * the component works correctly for both new (unsaved) and existing records.
  *
  * All monetary values (unit_cost, labor_cost, tax, parts_cost, total_cost)
- * are stored as **cents** (integers) on the backend via the Money::class cast.
- * The `MoneyInput` component handles the cents ↔ display conversion internally:
+ * are stored as **cents** (integers) on the backend via the Money::class cast
+ * and surfaced as strings by `@attr('string')` on the Ember model. The
+ * `numbersOnly()` utility strips any non-digit characters and `parseInt`
+ * converts to a safe integer before arithmetic.
+ *
+ * The `MoneyInput` component handles the cents ↔ display conversion:
  *   - `@value` receives cents (e.g. 1000 = $10.00)
  *   - `@onChange` emits cents (e.g. 1000 = $10.00)
- *
- * Parts cost and total cost are recomputed server-side after every mutation;
- * the component reflects the updated values returned in the API response.
  *
  * Usage:
  *   <Maintenance::CostPanel @resource={{this.maintenance}} @disabled={{cannot-write this.maintenance}} />
  */
 export default class MaintenanceCostPanelComponent extends Component {
-    @service fetch;
     @service notifications;
     @service intl;
 
@@ -45,7 +48,18 @@ export default class MaintenanceCostPanelComponent extends Component {
     @tracked draftQuantity = 1;
     @tracked draftUnitCost = 0;
 
-    // ─── Computed helpers ────────────────────────────────────────────────────
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    /**
+     * Safely parse a monetary string attribute (cents stored as string) to int.
+     */
+    _toCents(value) {
+        if (value === null || value === undefined || value === '') return 0;
+        const parsed = parseInt(numbersOnly(String(value)), 10);
+        return isNaN(parsed) ? 0 : parsed;
+    }
+
+    // ─── Computed getters ─────────────────────────────────────────────────────
 
     get lineItems() {
         return isArray(this.args.resource?.line_items) ? this.args.resource.line_items : [];
@@ -56,15 +70,19 @@ export default class MaintenanceCostPanelComponent extends Component {
     }
 
     get laborCost() {
-        return this.args.resource?.labor_cost ?? 0;
+        return this._toCents(this.args.resource?.labor_cost);
     }
 
     get tax() {
-        return this.args.resource?.tax ?? 0;
+        return this._toCents(this.args.resource?.tax);
     }
 
     get partsCost() {
-        return this.lineItems.reduce((sum, item) => sum + (item.quantity ?? 0) * (item.unit_cost ?? 0), 0);
+        return this.lineItems.reduce((sum, item) => {
+            const qty = parseInt(item.quantity, 10) || 0;
+            const cost = this._toCents(item.unit_cost);
+            return sum + qty * cost;
+        }, 0);
     }
 
     get totalCost() {
@@ -76,7 +94,7 @@ export default class MaintenanceCostPanelComponent extends Component {
      * Displayed via `format-currency` which also expects cents.
      */
     get draftLineTotal() {
-        return (this.draftQuantity ?? 0) * (this.draftUnitCost ?? 0);
+        return (parseInt(this.draftQuantity, 10) || 0) * (this._toCents(this.draftUnitCost));
     }
 
     get isDisabled() {
@@ -91,6 +109,35 @@ export default class MaintenanceCostPanelComponent extends Component {
     @action
     setDraftUnitCost(cents) {
         this.draftUnitCost = cents ?? 0;
+    }
+
+    // ─── Line item helpers ────────────────────────────────────────────────────
+
+    /**
+     * Returns the line total for a single item (quantity × unit_cost).
+     * Both values are in cents, so the result is also in cents.
+     * Used in the template as (this.lineTotal item).
+     */
+    @action
+    lineTotal(item) {
+        const qty = parseInt(item?.quantity, 10) || 0;
+        const cost = this._toCents(item?.unit_cost);
+        return qty * cost;
+    }
+
+    /**
+     * Write a new copy of the line items array back onto the resource so
+     * Ember Data tracks the change and includes it in the next save().
+     */
+    _commitItems(items) {
+        this.args.resource.set('line_items', [...items]);
+        // Recompute parts_cost and total_cost locally so the summary updates
+        // immediately without waiting for a server round-trip.
+        const partsCost = items.reduce((sum, item) => {
+            return sum + (parseInt(item.quantity, 10) || 0) * this._toCents(item.unit_cost);
+        }, 0);
+        this.args.resource.set('parts_cost', String(partsCost));
+        this.args.resource.set('total_cost', String(this.laborCost + partsCost + this.tax));
     }
 
     // ─── Add item ────────────────────────────────────────────────────────────
@@ -108,29 +155,23 @@ export default class MaintenanceCostPanelComponent extends Component {
         this._resetDraft();
     }
 
-    @task({ drop: true })
-    *addLineItem() {
+    @action
+    addLineItem() {
         if (!this.draftDescription?.trim()) {
             this.notifications.warning('Please enter a description for the line item.');
             return;
         }
 
-        const resource = this.args.resource;
-        const payload = {
-            description: this.draftDescription,
-            quantity: this.draftQuantity,
+        const newItem = {
+            description: this.draftDescription.trim(),
+            quantity: parseInt(this.draftQuantity, 10) || 1,
             unit_cost: this.draftUnitCost,
             currency: this.currency,
         };
 
-        try {
-            const response = yield this.fetch.post(`fleet-ops/maintenances/${resource.id}/line-items`, payload);
-            this._applyResponse(resource, response);
-            this.isAddingItem = false;
-            this._resetDraft();
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
+        this._commitItems([...this.lineItems, newItem]);
+        this.isAddingItem = false;
+        this._resetDraft();
     }
 
     // ─── Edit item ───────────────────────────────────────────────────────────
@@ -143,8 +184,8 @@ export default class MaintenanceCostPanelComponent extends Component {
         this.isAddingItem = false;
         this.draftDescription = item.description ?? '';
         this.draftQuantity = item.quantity ?? 1;
-        // unit_cost from the API is already in cents (Money::class cast)
-        this.draftUnitCost = item.unit_cost ?? 0;
+        // unit_cost from the record is already in cents
+        this.draftUnitCost = this._toCents(item.unit_cost);
     }
 
     @action
@@ -153,78 +194,48 @@ export default class MaintenanceCostPanelComponent extends Component {
         this._resetDraft();
     }
 
-    @task({ drop: true })
-    *saveEdit() {
+    @action
+    saveEdit() {
         if (!this.draftDescription?.trim()) {
             this.notifications.warning('Please enter a description for the line item.');
             return;
         }
 
-        const resource = this.args.resource;
         const index = this.editingIndex;
-        const payload = {
-            description: this.draftDescription,
-            quantity: this.draftQuantity,
-            unit_cost: this.draftUnitCost,
-            currency: this.currency,
-        };
+        const updatedItems = this.lineItems.map((item, i) => {
+            if (i !== index) return item;
+            return {
+                ...item,
+                description: this.draftDescription.trim(),
+                quantity: parseInt(this.draftQuantity, 10) || 1,
+                unit_cost: this.draftUnitCost,
+                currency: this.currency,
+            };
+        });
 
-        try {
-            const response = yield this.fetch.put(`fleet-ops/maintenances/${resource.id}/line-items/${index}`, payload);
-            this._applyResponse(resource, response);
-            this.editingIndex = null;
-            this._resetDraft();
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
+        this._commitItems(updatedItems);
+        this.editingIndex = null;
+        this._resetDraft();
     }
 
     // ─── Remove item ─────────────────────────────────────────────────────────
 
-    @task({ drop: true })
-    *removeLineItem(index) {
-        const resource = this.args.resource;
-
-        try {
-            const response = yield this.fetch.delete(`fleet-ops/maintenances/${resource.id}/line-items/${index}`);
-            this._applyResponse(resource, response);
-        } catch (error) {
-            this.notifications.serverError(error);
+    @action
+    removeLineItem(index) {
+        const updatedItems = this.lineItems.filter((_, i) => i !== index);
+        this._commitItems(updatedItems);
+        // If we were editing this item, close the edit row
+        if (this.editingIndex === index) {
+            this.editingIndex = null;
+            this._resetDraft();
         }
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────
 
-    /**
-     * Returns the line total for a single item (quantity × unit_cost).
-     * Both values are in cents, so the result is also in cents.
-     * Used in the template as (this.lineTotal item).
-     */
-    @action
-    lineTotal(item) {
-        return (item?.quantity ?? 0) * (item?.unit_cost ?? 0);
-    }
-
     _resetDraft() {
         this.draftDescription = '';
         this.draftQuantity = 1;
         this.draftUnitCost = 0;
-    }
-
-    /**
-     * Apply the server response back onto the Ember Data record so the UI
-     * reflects the recomputed parts_cost and total_cost without a full reload.
-     */
-    _applyResponse(resource, response) {
-        if (response?.line_items !== undefined) {
-            resource.set('line_items', response.line_items);
-        }
-        if (response?.total_cost !== undefined) {
-            resource.set('total_cost', response.total_cost);
-        }
-        // Recompute parts_cost locally from the updated line items
-        const items = isArray(response?.line_items) ? response.line_items : [];
-        const partsCost = items.reduce((sum, item) => sum + (item.quantity ?? 0) * (item.unit_cost ?? 0), 0);
-        resource.set('parts_cost', partsCost);
     }
 }

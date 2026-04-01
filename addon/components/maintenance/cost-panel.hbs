@@ -97,8 +97,7 @@
                                 <Button
                                     @size="xs"
                                     @type="primary"
-                                    @onClick={{perform this.saveEdit}}
-                                    @isLoading={{this.saveEdit.isRunning}}
+                                    @onClick={{this.saveEdit}}
                                     class="px-2 py-0.5"
                                 >
                                     Save
@@ -140,7 +139,7 @@
                                         type="button"
                                         class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                                         title="Remove"
-                                        {{on "click" (perform this.removeLineItem index)}}
+                                        {{on "click" (fn this.removeLineItem index)}}
                                     >
                                         <FaIcon @icon="trash" @size="xs" />
                                     </button>
@@ -186,8 +185,7 @@
                             <Button
                                 @size="xs"
                                 @type="primary"
-                                @onClick={{perform this.addLineItem}}
-                                @isLoading={{this.addLineItem.isRunning}}
+                                @onClick={{this.addLineItem}}
                                 class="px-2 py-0.5"
                             >
                                 Add
