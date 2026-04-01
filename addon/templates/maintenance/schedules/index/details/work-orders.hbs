@@ -2,7 +2,7 @@
     {{#if @model.length}}
         <div class="space-y-2">
             {{#each @model as |workOrder|}}
-                <div class="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-sm">
+                <LinkTo @route="maintenance.work-orders.index.details" @model={{workOrder}} class="flex items-start justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-2 text-sm">
                     <div class="flex items-center gap-3">
                         <FaIcon @icon="wrench" class="text-gray-400" />
                         <div>
@@ -21,7 +21,7 @@
                         <Badge @status={{workOrder.status}} @label={{smart-humanize workOrder.status}} />
                         <Badge @status={{workOrder.priority}} @label={{smart-humanize workOrder.priority}} />
                     </div>
-                </div>
+                </LinkTo>
             {{/each}}
         </div>
     {{else}}

@@ -50,7 +50,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
             },
             {
                 label: this.intl.t('column.subject'),
-                valuePath: 'subject_name',
+                valuePath: 'subject.name',
                 resizable: true,
                 sortable: false,
             },
@@ -109,7 +109,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                     { label: 'Pause Schedule', fn: this.maintenanceScheduleActions.pause, permission: 'fleet-ops update maintenance-schedule' },
                     { label: 'Resume Schedule', fn: this.maintenanceScheduleActions.resume, permission: 'fleet-ops update maintenance-schedule' },
                     { separator: true },
-                    { label: this.intl.t('column.delete'), fn: this.maintenanceScheduleActions.delete, permission: 'fleet-ops delete maintenance-schedule' },
+                    { label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.maintenance-schedule') }), fn: this.maintenanceScheduleActions.delete, permission: 'fleet-ops delete maintenance-schedule' },
                 ],
                 sortable: false,
                 filterable: false,

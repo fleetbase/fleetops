@@ -1,15 +1,15 @@
 <div class="work-order-details">
 
     {{! ===== OVERVIEW ===== }}
-    <ContentPanel @title="Overview" @open={{true}}>
+    <ContentPanel @title="Overview" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-1">
             <div class="field-info-container">
                 <div class="field-name">Code</div>
-                <div class="field-value">{{n-a @resource.code}}</div>
+                <ClickToCopy @value={{@resource.code}} class="field-value">{{n-a @resource.code}}</ClickToCopy>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Public ID</div>
-                <div class="field-value">{{n-a @resource.public_id}}</div>
+                <div class="field-name">ID</div>
+                <ClickToCopy @value={{@resource.public_id}} class="field-value">{{n-a @resource.public_id}}</ClickToCopy>
             </div>
             <div class="field-info-container col-span-3">
                 <div class="field-name">Subject</div>
@@ -57,15 +57,15 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-1">
             <div class="field-info-container">
                 <div class="field-name">Opened At</div>
-                <div class="field-value">{{format-date @resource.opened_at}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.opened_at)}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">Due At</div>
-                <div class="field-value">{{format-date @resource.due_at}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.due_at)}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">Closed At</div>
-                <div class="field-value">{{format-date @resource.closed_at}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.closed_at)}}</div>
             </div>
             {{#if @resource.schedule}}
                 <div class="field-info-container">
@@ -96,7 +96,8 @@
                     <div class="field-name">Odometer</div>
                     <div class="field-value">
                         {{#if @resource.meta.completion_data.odometer}}
-                            {{@resource.meta.completion_data.odometer}} km
+                            {{@resource.meta.completion_data.odometer}}
+                            km
                         {{else}}
                             —
                         {{/if}}

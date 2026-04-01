@@ -56,6 +56,7 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                 label: this.intl.t('column.priority'),
                 valuePath: 'priority',
                 cellComponent: 'table/cell/base',
+                humanize: true,
                 resizable: true,
                 sortable: true,
                 filterable: true,

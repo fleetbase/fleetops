@@ -34,6 +34,7 @@ export default class MaintenanceMaintenancesIndexDetailsController extends Contr
             {
                 icon: 'trash',
                 fn: this.delete,
+                type: 'danger',
                 permission: 'fleet-ops delete maintenance',
             },
         ];

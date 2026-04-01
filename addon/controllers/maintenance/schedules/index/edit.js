@@ -28,13 +28,13 @@ export default class MaintenanceSchedulesIndexEditController extends Controller 
     }
 
     @action cancel() {
-        return this.hostRouter.transitionTo('maintenance.schedules.index');
+        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index');
     }
 
     @action delete() {
         return this.maintenanceScheduleActions.delete(this.model, {
             onConfirm: () => {
-                this.hostRouter.transitionTo('maintenance.schedules.index');
+                this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index');
             },
         });
     }
