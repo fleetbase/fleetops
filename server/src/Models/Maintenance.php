@@ -638,4 +638,31 @@ class Maintenance extends Model
 
         return $maintenance;
     }
+
+    /**
+     * Mutator for line_items: normalise each item's unit_cost to a cents integer
+     * using the same Money::apply() pipeline used for all other monetary columns.
+     * This ensures that formatted strings like "S$100.00" or "100.00" are stored
+     * as integers (e.g. 10000) regardless of how the frontend serialises the value.
+     */
+    public function setLineItemsAttribute(mixed $value): void
+    {
+        if (is_string($value)) {
+            $value = json_decode($value, true) ?? [];
+        }
+
+        if (!is_array($value)) {
+            $this->attributes['line_items'] = json_encode([]);
+            return;
+        }
+
+        $normalised = array_map(function (array $item) {
+            if (isset($item['unit_cost'])) {
+                $item['unit_cost'] = Money::apply($item['unit_cost']);
+            }
+            return $item;
+        }, $value);
+
+        $this->attributes['line_items'] = json_encode($normalised);
+    }
 }

@@ -20,6 +20,24 @@ class MaintenanceController extends FleetOpsController
     public $resource = 'maintenance';
 
     /**
+     * Eager-load polymorphic relationships after create so they appear in the API response.
+     * Called automatically by HasApiControllerBehavior::createRecord() via getControllerCallback.
+     */
+    public function onAfterCreate($request, Maintenance $record, array $input): void
+    {
+        $record->load(['maintainable', 'performedBy']);
+    }
+
+    /**
+     * Eager-load polymorphic relationships after update so they appear in the API response.
+     * Called automatically by HasApiControllerBehavior::updateRecord() via getControllerCallback.
+     */
+    public function onAfterUpdate($request, Maintenance $record, array $input): void
+    {
+        $record->load(['maintainable', 'performedBy']);
+    }
+
+    /**
      * Add a cost line item to a maintenance record.
      * POST /maintenances/{id}/line-items.
      */
