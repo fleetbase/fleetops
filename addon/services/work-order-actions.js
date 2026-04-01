@@ -97,27 +97,37 @@ export default class WorkOrderActionsService extends ResourceActionService {
         };
     }
 
-    @action async sendEmail(workOrder, options = {}) {
-        const confirmed = await this.modalsManager.confirm({
+    @action sendEmail(workOrder, options = {}) {
+        const assignee = workOrder.assignee;
+        const vendorName = assignee?.name ?? workOrder.assignee_name ?? null;
+        const vendorEmail = assignee?.email ?? null;
+        const vendorPhone = assignee?.phone ?? null;
+
+        this.modalsManager.show('modals/send-work-order', {
             title: 'Send Work Order to Vendor',
-            body: `This will email work order #${workOrder.public_id} to the assigned vendor. Do you want to proceed?`,
-            acceptButtonText: 'Send',
+            acceptButtonText: 'Send Work Order',
             acceptButtonIcon: 'paper-plane',
+            acceptButtonDisabled: !vendorEmail,
             declineButtonText: 'Cancel',
+            workOrder,
+            vendorName,
+            vendorEmail,
+            vendorPhone,
+            confirm: async (modal) => {
+                modal.startLoading();
+                try {
+                    const response = await this.fetch.post(`work-orders/${workOrder.id}/send`);
+                    this.notifications.success(response?.message ?? `Work order sent to ${vendorName ?? 'vendor'} successfully.`);
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
             ...options,
         });
-
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            const response = await this.fetch.post(`work-orders/${workOrder.id}/send`);
-            this.notifications.success(response?.message ?? 'Work order sent successfully.');
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
     }
+
 
     modal = {
         create: (attributes = {}, options = {}, saveOptions = {}) => {
