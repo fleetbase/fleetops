@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Illuminate\Support\Str;
 
 class MaintenanceSchedule extends FleetbaseResource
 {
@@ -72,14 +73,22 @@ class MaintenanceSchedule extends FleetbaseResource
     /**
      * Inject the abstract 'maintenance-subject' type into the embedded subject object
      * so Ember Data can resolve the correct polymorphic model.
+     *
+     * subject_type must be the Ember Data model name for the concrete subtype,
+     * e.g. 'maintenance-subject-vehicle' or 'maintenance-subject-equipment'.
+     * We use the bare PHP class basename so we get 'vehicle' / 'equipment' rather
+     * than the full 'fleet-ops:vehicle' string that toEmberResourceType() would return.
      */
     protected function setSubjectType(?array $resolved): ?array
     {
         if (empty($resolved)) {
             return $resolved;
         }
+
+        $bareSlug = Str::kebab(class_basename($this->subject_type ?? ''));
+
         data_set($resolved, 'type', 'maintenance-subject');
-        data_set($resolved, 'subject_type', 'maintenance-subject-' . Utils::toEmberResourceType($this->subject_type));
+        data_set($resolved, 'subject_type', 'maintenance-subject-' . $bareSlug);
 
         return $resolved;
     }
@@ -87,14 +96,22 @@ class MaintenanceSchedule extends FleetbaseResource
     /**
      * Inject the abstract 'facilitator' type into the embedded default_assignee object
      * so Ember Data can resolve the correct polymorphic model.
+     *
+     * facilitator_type must be the Ember Data model name for the concrete subtype,
+     * e.g. 'facilitator-vendor' or 'facilitator-contact'.
+     * We use the bare PHP class basename so we get 'vendor' / 'contact' rather
+     * than the full 'fleet-ops:vendor' string that toEmberResourceType() would return.
      */
     protected function setAssigneeType(?array $resolved): ?array
     {
         if (empty($resolved)) {
             return $resolved;
         }
+
+        $bareSlug = Str::kebab(class_basename($this->default_assignee_type ?? ''));
+
         data_set($resolved, 'type', 'facilitator');
-        data_set($resolved, 'facilitator_type', 'facilitator-' . Utils::toEmberResourceType($this->default_assignee_type));
+        data_set($resolved, 'facilitator_type', 'facilitator-' . $bareSlug);
 
         return $resolved;
     }

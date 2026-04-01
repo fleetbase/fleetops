@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Illuminate\Support\Str;
 
 class WorkOrder extends FleetbaseResource
 {
@@ -64,14 +65,26 @@ class WorkOrder extends FleetbaseResource
     /**
      * Inject the abstract 'maintenance-subject' type into the embedded target object
      * so Ember Data can resolve the correct polymorphic model.
+     *
+     * The subject_type must be the Ember Data model name for the concrete subtype,
+     * e.g. 'maintenance-subject-vehicle' or 'maintenance-subject-equipment'.
+     *
+     * We derive it from the bare PHP class basename (e.g. 'Vehicle' -> 'vehicle')
+     * rather than using toEmberResourceType() which produces 'fleet-ops:vehicle' —
+     * a string that would make the injected type 'maintenance-subject-fleet-ops:vehicle'.
      */
     protected function setTargetType(?array $resolved): ?array
     {
         if (empty($resolved)) {
             return $resolved;
         }
+
+        // class_basename('Fleetbase\FleetOps\Models\Vehicle') -> 'Vehicle'
+        // Str::kebab('Vehicle') -> 'vehicle'
+        $bareSlug = Str::kebab(class_basename($this->target_type ?? ''));
+
         data_set($resolved, 'type', 'maintenance-subject');
-        data_set($resolved, 'subject_type', 'maintenance-subject-' . Utils::toEmberResourceType($this->target_type));
+        data_set($resolved, 'subject_type', 'maintenance-subject-' . $bareSlug);
 
         return $resolved;
     }
@@ -79,14 +92,26 @@ class WorkOrder extends FleetbaseResource
     /**
      * Inject the abstract 'facilitator' type into the embedded assignee object
      * so Ember Data can resolve the correct polymorphic model.
+     *
+     * The facilitator_type must be the Ember Data model name for the concrete subtype,
+     * e.g. 'facilitator-vendor' or 'facilitator-contact'.
+     *
+     * We derive it from the bare PHP class basename (e.g. 'Vendor' -> 'vendor')
+     * rather than using toEmberResourceType() which produces 'fleet-ops:vendor' —
+     * a string that would make the injected type 'facilitator-fleet-ops:vendor'.
      */
     protected function setAssigneeType(?array $resolved): ?array
     {
         if (empty($resolved)) {
             return $resolved;
         }
+
+        // class_basename('Fleetbase\FleetOps\Models\Vendor') -> 'Vendor'
+        // Str::kebab('Vendor') -> 'vendor'
+        $bareSlug = Str::kebab(class_basename($this->assignee_type ?? ''));
+
         data_set($resolved, 'type', 'facilitator');
-        data_set($resolved, 'facilitator_type', 'facilitator-' . Utils::toEmberResourceType($this->assignee_type));
+        data_set($resolved, 'facilitator_type', 'facilitator-' . $bareSlug);
 
         return $resolved;
     }
