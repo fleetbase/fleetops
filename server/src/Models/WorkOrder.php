@@ -19,6 +19,7 @@ use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -95,8 +96,21 @@ class WorkOrder extends Model
         'cost_center',
         'budget_code',
         'meta',
-        'slug',
     ];
+
+    /**
+     * Boot the model.
+     */
+    public static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->code)) {
+                $model->code = 'WO-' . strtoupper(Str::random(8));
+            }
+        });
+    }
 
     /**
      * Dynamic attributes that are appended to object.
