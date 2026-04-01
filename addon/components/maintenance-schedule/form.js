@@ -4,7 +4,6 @@ import { action } from '@ember/object';
 
 /**
  * Maps a polymorphic type string to the Ember Data model name used by ModelSelect.
- * Uses colon separator to match the convention in work-order/form.js.
  */
 const TYPE_TO_MODEL = {
     'fleet-ops:vehicle': 'vehicle',
@@ -12,6 +11,35 @@ const TYPE_TO_MODEL = {
     'fleet-ops:vendor': 'vendor',
     'fleet-ops:contact': 'contact',
     'fleet-ops:driver': 'driver',
+};
+
+/**
+ * Maps a concrete Ember Data model name back to the backend polymorphic type string.
+ * Used to restore the type selector when editing an existing record that has a
+ * loaded @belongsTo('maintenance-subject', {polymorphic: true}) relationship.
+ */
+const MODEL_TO_TYPE = {
+    'maintenance-subject-vehicle': 'fleet-ops:vehicle',
+    'maintenance-subject-equipment': 'fleet-ops:equipment',
+    // Fall-through for raw vehicle/equipment models passed from vehicle-actions.js
+    vehicle: 'fleet-ops:vehicle',
+    equipment: 'fleet-ops:equipment',
+    vendor: 'fleet-ops:vendor',
+    contact: 'fleet-ops:contact',
+    driver: 'fleet-ops:driver',
+};
+
+/**
+ * Maps a concrete Ember Data model name back to the backend polymorphic type string
+ * for the default_assignee relationship.
+ */
+const ASSIGNEE_MODEL_TO_TYPE = {
+    'facilitator-vendor': 'fleet-ops:vendor',
+    'facilitator-contact': 'fleet-ops:contact',
+    'facilitator-integrated-vendor': 'fleet-ops:vendor',
+    vendor: 'fleet-ops:vendor',
+    contact: 'fleet-ops:contact',
+    driver: 'fleet-ops:driver',
 };
 
 const SUBJECT_TYPE_OPTIONS = [
@@ -63,15 +91,27 @@ export default class MaintenanceScheduleFormComponent extends Component {
         super(...arguments);
         const { resource } = this.args;
         if (resource) {
-            // Restore subject type selection
-            if (resource.subject_type) {
-                this.selectedSubjectType = SUBJECT_TYPE_OPTIONS.find((o) => o.value === resource.subject_type) ?? null;
-                this.subjectModelName = TYPE_TO_MODEL[resource.subject_type] ?? null;
+            // Restore subject type selection from the polymorphic relationship.
+            // When editing an existing record, resource.subject is a loaded MaintenanceSubject model.
+            // When creating from vehicle-actions.js, resource.subject may be a raw vehicle/equipment model.
+            const subject = resource.subject;
+            if (subject) {
+                const modelName = subject.constructor?.modelName ?? subject.modelName;
+                const typeValue = MODEL_TO_TYPE[modelName] ?? null;
+                if (typeValue) {
+                    this.selectedSubjectType = SUBJECT_TYPE_OPTIONS.find((o) => o.value === typeValue) ?? null;
+                    this.subjectModelName = TYPE_TO_MODEL[typeValue] ?? null;
+                }
             }
-            // Restore assignee type selection
-            if (resource.default_assignee_type) {
-                this.selectedAssigneeType = ASSIGNEE_TYPE_OPTIONS.find((o) => o.value === resource.default_assignee_type) ?? null;
-                this.assigneeModelName = TYPE_TO_MODEL[resource.default_assignee_type] ?? null;
+            // Restore assignee type selection from the polymorphic relationship.
+            const defaultAssignee = resource.default_assignee;
+            if (defaultAssignee) {
+                const modelName = defaultAssignee.constructor?.modelName ?? defaultAssignee.modelName;
+                const typeValue = ASSIGNEE_MODEL_TO_TYPE[modelName] ?? null;
+                if (typeValue) {
+                    this.selectedAssigneeType = ASSIGNEE_TYPE_OPTIONS.find((o) => o.value === typeValue) ?? null;
+                    this.assigneeModelName = TYPE_TO_MODEL[typeValue] ?? null;
+                }
             }
             // Restore interval method from stored interval_method field, or infer from populated fields
             if (resource.interval_method) {
@@ -88,28 +128,24 @@ export default class MaintenanceScheduleFormComponent extends Component {
 
     @action onSubjectTypeChange(option) {
         this.selectedSubjectType = option;
-        this.args.resource.subject_type = option.value;
-        this.args.resource.subject_uuid = null;
+        // Clear the subject relationship — user must re-select the asset
         this.args.resource.subject = null;
         this.subjectModelName = TYPE_TO_MODEL[option.value] ?? null;
     }
 
     @action assignSubject(model) {
         this.args.resource.subject = model;
-        this.args.resource.subject_uuid = model?.id ?? null;
     }
 
     @action onAssigneeTypeChange(option) {
         this.selectedAssigneeType = option;
-        this.args.resource.default_assignee_type = option.value;
-        this.args.resource.default_assignee_uuid = null;
-        this.args.resource.defaultAssignee = null;
+        // Clear the default_assignee relationship — user must re-select
+        this.args.resource.default_assignee = null;
         this.assigneeModelName = TYPE_TO_MODEL[option.value] ?? null;
     }
 
     @action assignDefaultAssignee(model) {
-        this.args.resource.defaultAssignee = model;
-        this.args.resource.default_assignee_uuid = model?.id ?? null;
+        this.args.resource.default_assignee = model;
     }
 
     @action onIntervalMethodChange(option) {

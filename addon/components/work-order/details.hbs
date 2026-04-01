@@ -42,20 +42,12 @@
     <ContentPanel @title="Assignment" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-1">
             <div class="field-info-container">
-                <div class="field-name">Target Type</div>
-                <div class="field-value">{{smart-humanize @resource.target_type}}</div>
-            </div>
-            <div class="field-info-container">
                 <div class="field-name">Target</div>
-                <div class="field-value">{{n-a @resource.target_name}}</div>
-            </div>
-            <div class="field-info-container">
-                <div class="field-name">Assignee Type</div>
-                <div class="field-value">{{smart-humanize @resource.assignee_type}}</div>
+                <div class="field-value">{{n-a @resource.target.displayName}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">Assignee</div>
-                <div class="field-value">{{n-a @resource.assignee_name}}</div>
+                <div class="field-value">{{n-a @resource.assignee.displayName}}</div>
             </div>
         </div>
     </ContentPanel>
@@ -75,10 +67,10 @@
                 <div class="field-name">Closed At</div>
                 <div class="field-value">{{format-date @resource.closed_at}}</div>
             </div>
-            {{#if @resource.schedule_uuid}}
+            {{#if @resource.schedule}}
                 <div class="field-info-container">
                     <div class="field-name">Schedule</div>
-                    <div class="field-value">{{n-a @resource.schedule_uuid}}</div>
+                    <div class="field-value">{{n-a @resource.schedule.name}}</div>
                 </div>
             {{/if}}
         </div>

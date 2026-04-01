@@ -14,6 +14,32 @@ const TYPE_TO_MODEL = {
     'Auth:User': 'user',
 };
 
+/**
+ * Maps a concrete Ember Data model name back to the backend polymorphic type string.
+ * Used to restore the type selector when editing an existing record that has a
+ * loaded @belongsTo('work-order-target', {polymorphic: true}) relationship.
+ */
+const TARGET_MODEL_TO_TYPE = {
+    'work-order-target-vehicle': 'fleet-ops:vehicle',
+    'work-order-target-equipment': 'fleet-ops:equipment',
+    // Fall-through for raw models passed from vehicle-actions.js
+    vehicle: 'fleet-ops:vehicle',
+    equipment: 'fleet-ops:equipment',
+};
+
+/**
+ * Maps a concrete Ember Data model name back to the backend polymorphic type string
+ * for the assignee relationship.
+ */
+const ASSIGNEE_MODEL_TO_TYPE = {
+    'facilitator-vendor': 'fleet-ops:vendor',
+    'facilitator-contact': 'fleet-ops:contact',
+    'facilitator-integrated-vendor': 'fleet-ops:vendor',
+    vendor: 'fleet-ops:vendor',
+    contact: 'fleet-ops:contact',
+    user: 'Auth:User',
+};
+
 export default class WorkOrderFormComponent extends Component {
     /** Status options for work orders. */
     statusOptions = ['open', 'in_progress', 'on_hold', 'completed', 'cancelled'];
@@ -72,13 +98,27 @@ export default class WorkOrderFormComponent extends Component {
     constructor(owner, args) {
         super(owner, args);
         const { resource } = args;
-        if (resource?.target_type) {
-            this.targetModelName = TYPE_TO_MODEL[resource.target_type] ?? null;
-            this.selectedTargetType = this.targetTypeOptions.find((o) => o.value === resource.target_type) ?? null;
+        // Restore target type selection from the polymorphic relationship.
+        // When editing an existing record, resource.target is a loaded WorkOrderTarget model.
+        // When creating from vehicle-actions.js, resource.target may be a raw vehicle/equipment model.
+        const target = resource?.target;
+        if (target) {
+            const modelName = target.constructor?.modelName ?? target.modelName;
+            const typeValue = TARGET_MODEL_TO_TYPE[modelName] ?? null;
+            if (typeValue) {
+                this.targetModelName = TYPE_TO_MODEL[typeValue] ?? null;
+                this.selectedTargetType = this.targetTypeOptions.find((o) => o.value === typeValue) ?? null;
+            }
         }
-        if (resource?.assignee_type) {
-            this.assigneeModelName = TYPE_TO_MODEL[resource.assignee_type] ?? null;
-            this.selectedAssigneeType = this.assigneeTypeOptions.find((o) => o.value === resource.assignee_type) ?? null;
+        // Restore assignee type selection from the polymorphic relationship.
+        const assignee = resource?.assignee;
+        if (assignee) {
+            const modelName = assignee.constructor?.modelName ?? assignee.modelName;
+            const typeValue = ASSIGNEE_MODEL_TO_TYPE[modelName] ?? null;
+            if (typeValue) {
+                this.assigneeModelName = TYPE_TO_MODEL[typeValue] ?? null;
+                this.selectedAssigneeType = this.assigneeTypeOptions.find((o) => o.value === typeValue) ?? null;
+            }
         }
     }
 
@@ -88,8 +128,7 @@ export default class WorkOrderFormComponent extends Component {
      */
     @action onTargetTypeChange(option) {
         this.selectedTargetType = option;
-        this.args.resource.target_type = option.value;
-        this.args.resource.target_uuid = null;
+        // Clear the target relationship — user must re-select the asset
         this.args.resource.target = null;
         this.targetModelName = TYPE_TO_MODEL[option.value] ?? null;
     }
@@ -97,7 +136,6 @@ export default class WorkOrderFormComponent extends Component {
     /** Assigns the selected target model to the resource. */
     @action assignTarget(model) {
         this.args.resource.target = model;
-        this.args.resource.target_uuid = model?.id ?? null;
     }
 
     /**
@@ -106,8 +144,7 @@ export default class WorkOrderFormComponent extends Component {
      */
     @action onAssigneeTypeChange(option) {
         this.selectedAssigneeType = option;
-        this.args.resource.assignee_type = option.value;
-        this.args.resource.assignee_uuid = null;
+        // Clear the assignee relationship — user must re-select
         this.args.resource.assignee = null;
         this.assigneeModelName = TYPE_TO_MODEL[option.value] ?? null;
     }
@@ -115,7 +152,6 @@ export default class WorkOrderFormComponent extends Component {
     /** Assigns the selected assignee model to the resource. */
     @action assignAssignee(model) {
         this.args.resource.assignee = model;
-        this.args.resource.assignee_uuid = model?.id ?? null;
     }
 
     /**
