@@ -216,7 +216,7 @@ class Sensor extends Model
 
     public function sensorable(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'sensorable_type', 'sensorable_uuid');
     }
 
     public function photo(): BelongsTo

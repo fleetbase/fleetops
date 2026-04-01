@@ -194,12 +194,12 @@ class WorkOrder extends Model
 
     public function target(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'target_type', 'target_uuid');
     }
 
     public function assignee(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'assignee_type', 'assignee_uuid');
     }
 
     public function maintenances(): HasMany

@@ -203,7 +203,7 @@ class Part extends Model
 
     public function asset(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'asset_type', 'asset_uuid');
     }
 
     /**

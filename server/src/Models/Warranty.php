@@ -164,7 +164,7 @@ class Warranty extends Model
 
     public function subject(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'subject_type', 'subject_uuid');
     }
 
     /**

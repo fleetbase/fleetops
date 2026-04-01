@@ -188,12 +188,12 @@ class Maintenance extends Model
 
     public function maintainable(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'maintainable_type', 'maintainable_uuid');
     }
 
     public function performedBy(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'performed_by_type', 'performed_by_uuid');
     }
 
     /**

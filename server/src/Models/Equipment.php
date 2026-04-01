@@ -188,7 +188,7 @@ class Equipment extends Model
 
     public function equipable(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'equipable_type', 'equipable_uuid');
     }
 
     public function maintenances(): HasMany
