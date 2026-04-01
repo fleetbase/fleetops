@@ -5,7 +5,7 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 
 export default class VehicleActionsService extends ResourceActionService {
-    @service('maintenance-schedule-actions') maintenanceScheduleActions;
+    @service maintenanceScheduleActions;
     @service workOrderActions;
     @service maintenanceActions;
 

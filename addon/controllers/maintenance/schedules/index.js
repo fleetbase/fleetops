@@ -58,6 +58,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 label: this.intl.t('column.type'),
                 valuePath: 'type',
                 cellComponent: 'table/cell/base',
+                humanize: true,
                 resizable: true,
                 sortable: true,
                 filterable: true,
