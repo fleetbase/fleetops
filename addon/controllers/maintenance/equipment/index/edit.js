@@ -22,7 +22,7 @@ export default class MaintenanceEquipmentIndexEditController extends Controller 
             yield equipment.save();
             this.events.trackResourceUpdated(equipment);
             this.overlay?.close();
-            yield this.hostRouter.transitionTo('console.fleet-ops.maintenance.equipment.index.details', equipment);
+            yield this.hostRouter.transitionTo('maintenance.equipment.index.details', equipment);
             this.notifications.success(this.intl.t('common.resource-updated-success', { resource: this.intl.t('resource.equipment'), resourceName: equipment.name }));
         } catch (err) {
             this.notifications.serverError(err);
@@ -33,14 +33,14 @@ export default class MaintenanceEquipmentIndexEditController extends Controller 
         if (this.model.hasDirtyAttributes) {
             return this.#confirmContinueWithUnsavedChanges(this.model);
         }
-        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.equipment.index');
+        return this.hostRouter.transitionTo('maintenance.equipment.index');
     }
 
     @action view() {
         if (this.model.hasDirtyAttributes) {
             return this.#confirmContinueWithUnsavedChanges(this.model);
         }
-        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.equipment.index.details', this.model);
+        return this.hostRouter.transitionTo('maintenance.equipment.index.details', this.model);
     }
 
     #confirmContinueWithUnsavedChanges(equipment, options = {}) {
@@ -50,7 +50,7 @@ export default class MaintenanceEquipmentIndexEditController extends Controller 
             acceptButtonText: this.intl.t('common.continue'),
             confirm: async () => {
                 equipment.rollbackAttributes();
-                await this.hostRouter.transitionTo('console.fleet-ops.maintenance.equipment.index.details', equipment);
+                await this.hostRouter.transitionTo('maintenance.equipment.index.details', equipment);
             },
             ...options,
         });

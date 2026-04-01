@@ -15,8 +15,8 @@ export default class MaintenanceSchedulesIndexDetailsController extends Controll
     get tabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:schedule:details');
         return [
-            { route: 'console.fleet-ops.maintenance.schedules.index.details.index', label: this.intl.t('common.overview') },
-            { route: 'console.fleet-ops.maintenance.schedules.index.details.work-orders', label: this.intl.t('menu.work-orders') },
+            { route: 'maintenance.schedules.index.details.index', label: this.intl.t('common.overview') },
+            { route: 'maintenance.schedules.index.details.work-orders', label: this.intl.t('menu.work-orders') },
             ...(isArray(registeredTabs) ? registeredTabs : []),
         ];
     }
@@ -30,7 +30,7 @@ export default class MaintenanceSchedulesIndexDetailsController extends Controll
     }
 
     @action edit() {
-        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index.edit', this.model);
+        return this.hostRouter.transitionTo('maintenance.schedules.index.edit', this.model);
     }
 
     @action triggerNow() {
@@ -40,7 +40,7 @@ export default class MaintenanceSchedulesIndexDetailsController extends Controll
     @action delete() {
         return this.maintenanceScheduleActions.delete(this.model, {
             onConfirm: () => {
-                this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index');
+                this.hostRouter.transitionTo('maintenance.schedules.index');
             },
         });
     }

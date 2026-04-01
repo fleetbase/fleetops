@@ -20,7 +20,7 @@ export default class MaintenanceMaintenancesIndexNewController extends Controlle
             this.events.trackResourceCreated(maintenance);
             this.overlay?.close();
             yield this.hostRouter.refresh();
-            yield this.hostRouter.transitionTo('console.fleet-ops.maintenance.maintenances.index.details', maintenance);
+            yield this.hostRouter.transitionTo('maintenance.maintenances.index.details', maintenance);
             this.notifications.success(this.intl.t('common.resource-created-success', { resource: this.intl.t('resource.maintenance') }));
             this.resetForm();
         } catch (err) {

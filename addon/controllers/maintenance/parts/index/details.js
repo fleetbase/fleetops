@@ -14,7 +14,7 @@ export default class MaintenancePartsIndexDetailsController extends Controller {
 
     get tabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:part:details');
-        return [{ route: 'console.fleet-ops.maintenance.parts.index.details.index', label: this.intl.t('common.overview') }, ...(isArray(registeredTabs) ? registeredTabs : [])];
+        return [{ route: 'maintenance.parts.index.details.index', label: this.intl.t('common.overview') }, ...(isArray(registeredTabs) ? registeredTabs : [])];
     }
 
     get actionButtons() {
@@ -25,13 +25,13 @@ export default class MaintenancePartsIndexDetailsController extends Controller {
     }
 
     @action edit() {
-        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.parts.index.edit', this.model);
+        return this.hostRouter.transitionTo('maintenance.parts.index.edit', this.model);
     }
 
     @action delete() {
         return this.partActions.delete(this.model, {
             onConfirm: () => {
-                this.hostRouter.transitionTo('console.fleet-ops.maintenance.parts.index');
+                this.hostRouter.transitionTo('maintenance.parts.index');
             },
         });
     }

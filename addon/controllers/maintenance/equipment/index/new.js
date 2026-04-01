@@ -20,7 +20,7 @@ export default class MaintenanceEquipmentIndexNewController extends Controller {
             this.events.trackResourceCreated(equipment);
             this.overlay?.close();
             yield this.hostRouter.refresh();
-            yield this.hostRouter.transitionTo('console.fleet-ops.maintenance.equipment.index.details', equipment);
+            yield this.hostRouter.transitionTo('maintenance.equipment.index.details', equipment);
             this.notifications.success(this.intl.t('common.resource-created-success', { resource: this.intl.t('resource.equipment') }));
             this.resetForm();
         } catch (err) {

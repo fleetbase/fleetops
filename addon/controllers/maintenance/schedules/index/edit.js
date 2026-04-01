@@ -20,7 +20,7 @@ export default class MaintenanceSchedulesIndexEditController extends Controller 
             yield schedule.save();
             this.overlay?.close();
             yield this.hostRouter.refresh();
-            yield this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index.details', schedule);
+            yield this.hostRouter.transitionTo('maintenance.schedules.index.details', schedule);
             this.notifications.success(this.intl.t('common.resource-updated-success', { resource: this.intl.t('resource.maintenance-schedule') }));
         } catch (err) {
             this.notifications.serverError(err);
@@ -28,13 +28,13 @@ export default class MaintenanceSchedulesIndexEditController extends Controller 
     }
 
     @action cancel() {
-        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index');
+        return this.hostRouter.transitionTo('maintenance.schedules.index');
     }
 
     @action delete() {
         return this.maintenanceScheduleActions.delete(this.model, {
             onConfirm: () => {
-                this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index');
+                this.hostRouter.transitionTo('maintenance.schedules.index');
             },
         });
     }

@@ -27,7 +27,7 @@ export default class MaintenanceMaintenancesIndexEditController extends Controll
             yield maintenance.save();
             this.events.trackResourceUpdated(maintenance);
             this.overlay?.close();
-            yield this.hostRouter.transitionTo('console.fleet-ops.maintenance.maintenances.index.details', maintenance);
+            yield this.hostRouter.transitionTo('maintenance.maintenances.index.details', maintenance);
             this.notifications.success(
                 this.intl.t('common.resource-updated-success', {
                     resource: this.intl.t('resource.maintenance'),
@@ -43,14 +43,14 @@ export default class MaintenanceMaintenancesIndexEditController extends Controll
         if (this.model.hasDirtyAttributes) {
             return this.#confirmContinueWithUnsavedChanges(this.model);
         }
-        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.maintenances.index');
+        return this.hostRouter.transitionTo('maintenance.maintenances.index');
     }
 
     @action view() {
         if (this.model.hasDirtyAttributes) {
             return this.#confirmContinueWithUnsavedChanges(this.model);
         }
-        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.maintenances.index.details', this.model);
+        return this.hostRouter.transitionTo('maintenance.maintenances.index.details', this.model);
     }
 
     #confirmContinueWithUnsavedChanges(maintenance, options = {}) {
@@ -60,7 +60,7 @@ export default class MaintenanceMaintenancesIndexEditController extends Controll
             acceptButtonText: this.intl.t('common.continue'),
             confirm: async () => {
                 maintenance.rollbackAttributes();
-                await this.hostRouter.transitionTo('console.fleet-ops.maintenance.maintenances.index.details', maintenance);
+                await this.hostRouter.transitionTo('maintenance.maintenances.index.details', maintenance);
             },
             ...options,
         });

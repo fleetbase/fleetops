@@ -17,7 +17,7 @@ export default class MaintenanceMaintenancesIndexDetailsController extends Contr
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:maintenance:details');
         return [
             {
-                route: 'console.fleet-ops.maintenance.maintenances.index.details.index',
+                route: 'maintenance.maintenances.index.details.index',
                 label: this.intl.t('common.overview'),
             },
             ...(isArray(registeredTabs) ? registeredTabs : []),
@@ -40,13 +40,13 @@ export default class MaintenanceMaintenancesIndexDetailsController extends Contr
     }
 
     @action edit() {
-        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.maintenances.index.edit', this.model);
+        return this.hostRouter.transitionTo('maintenance.maintenances.index.edit', this.model);
     }
 
     @action delete() {
         return this.maintenanceActions.delete(this.model, {
             onConfirm: () => {
-                this.hostRouter.transitionTo('console.fleet-ops.maintenance.maintenances.index');
+                this.hostRouter.transitionTo('maintenance.maintenances.index');
             },
         });
     }

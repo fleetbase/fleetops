@@ -24,7 +24,7 @@ export default class MaintenanceWorkOrdersIndexNewController extends Controller 
             this.events.trackResourceCreated(workOrder);
             this.overlay?.close();
             yield this.hostRouter.refresh();
-            yield this.hostRouter.transitionTo('console.fleet-ops.maintenance.work-orders.index.details', workOrder);
+            yield this.hostRouter.transitionTo('maintenance.work-orders.index.details', workOrder);
             this.notifications.success(this.intl.t('common.resource-created-success', { resource: this.intl.t('resource.work-order') }));
             this.resetForm();
         } catch (err) {
