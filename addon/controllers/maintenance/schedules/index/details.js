@@ -14,7 +14,11 @@ export default class MaintenanceSchedulesIndexDetailsController extends Controll
 
     get tabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:schedule:details');
-        return [{ route: 'maintenance.schedules.index.details.index', label: this.intl.t('common.overview') }, ...(isArray(registeredTabs) ? registeredTabs : [])];
+        return [
+            { route: 'console.fleet-ops.maintenance.schedules.index.details.index', label: this.intl.t('common.overview') },
+            { route: 'console.fleet-ops.maintenance.schedules.index.details.work-orders', label: this.intl.t('menu.work-orders') },
+            ...(isArray(registeredTabs) ? registeredTabs : []),
+        ];
     }
 
     get actionButtons() {

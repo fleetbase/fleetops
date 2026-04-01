@@ -117,4 +117,43 @@ export default class WorkOrderFormComponent extends Component {
         this.args.resource.assignee = model;
         this.args.resource.assignee_uuid = model?.id ?? null;
     }
+
+    /**
+     * Packs the completion data fields into @resource.meta.completion_data
+     * so the WorkOrderObserver can read them when the record is saved.
+     * Called by the controller's save task before workOrder.save().
+     */
+    @action prepareForSave() {
+        if (!this.isCompleting) {
+            return;
+        }
+        const resource = this.args.resource;
+        const existing = resource.meta ?? {};
+        const laborCost = parseFloat(this.completionLaborCost) || 0;
+        const partsCost = parseFloat(this.completionPartsCost) || 0;
+        const tax = parseFloat(this.completionTax) || 0;
+        resource.meta = {
+            ...existing,
+            completion_data: {
+                odometer: this.completionOdometer ? parseFloat(this.completionOdometer) : null,
+                engine_hours: this.completionEngineHours ? parseFloat(this.completionEngineHours) : null,
+                labor_cost: laborCost || null,
+                parts_cost: partsCost || null,
+                tax: tax || null,
+                total_cost: (laborCost + partsCost + tax) || null,
+                currency: resource.currency ?? 'USD',
+                notes: this.completionNotes ?? null,
+            },
+        };
+    }
+
+    /**
+     * Registers this component instance with the parent controller so the
+     * controller's save task can call prepareForSave() before persisting.
+     */
+    @action registerWithController() {
+        if (typeof this.args.onRegisterForm === 'function') {
+            this.args.onRegisterForm(this);
+        }
+    }
 }

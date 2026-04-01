@@ -11,6 +11,7 @@ export default class MaintenanceWorkOrdersIndexEditController extends Controller
     @service modalsManager;
     @service events;
     @tracked overlay;
+    @tracked formComponent = null;
 
     get actionButtons() {
         return [{ icon: 'eye', fn: this.view }];
@@ -18,6 +19,10 @@ export default class MaintenanceWorkOrdersIndexEditController extends Controller
 
     @task *save(workOrder) {
         try {
+            // Pack completion data into meta before persisting
+            if (this.formComponent?.prepareForSave) {
+                this.formComponent.prepareForSave();
+            }
             yield workOrder.save();
             this.events.trackResourceUpdated(workOrder);
             this.overlay?.close();

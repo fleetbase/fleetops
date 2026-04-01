@@ -7,6 +7,6 @@
     @onPressCancel={{this.cancel}}
     @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <WorkOrder::Form @resource={{@model}} @controller={{this}} />
+    <WorkOrder::Form @resource={{@model}} @controller={{this}} @onRegisterForm={{fn (mut this.formComponent)}} />
     <Spacer @height="200px" />
 </Layout::Resource::Panel>

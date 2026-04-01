@@ -11,10 +11,15 @@ export default class MaintenanceWorkOrdersIndexNewController extends Controller 
     @service notifications;
     @service events;
     @tracked overlay;
+    @tracked formComponent = null;
     @tracked workOrder = this.workOrderActions.createNewInstance();
 
     @task *save(workOrder) {
         try {
+            // Pack completion data into meta before persisting
+            if (this.formComponent?.prepareForSave) {
+                this.formComponent.prepareForSave();
+            }
             yield workOrder.save();
             this.events.trackResourceCreated(workOrder);
             this.overlay?.close();
@@ -29,5 +34,6 @@ export default class MaintenanceWorkOrdersIndexNewController extends Controller 
 
     @action resetForm() {
         this.workOrder = this.workOrderActions.createNewInstance();
+        this.formComponent = null;
     }
 }

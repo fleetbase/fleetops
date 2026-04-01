@@ -116,10 +116,15 @@ class ProcessMaintenanceTriggers extends Command
                 }
 
                 // Auto-generate a work order from the schedule defaults
+                // Generate a sequential WO code: WO-YYYYMMDD-XXXX
+                $woCount = WorkOrder::on($conn)->withoutGlobalScopes()->whereNull('deleted_at')->count() + 1;
+                $woCode  = 'WO-' . now()->format('Ymd') . '-' . str_pad($woCount, 4, '0', STR_PAD_LEFT);
+
                 $workOrder = WorkOrder::on($conn)->create([
                     'company_uuid'    => $schedule->company_uuid,
                     'schedule_uuid'   => $schedule->uuid,
                     'subject'         => $schedule->name,
+                    'code'            => $woCode,
                     'status'          => 'open',
                     'priority'        => $schedule->default_priority ?? 'normal',
                     'target_type'     => $schedule->subject_type,
@@ -128,6 +133,7 @@ class ProcessMaintenanceTriggers extends Command
                     'assignee_uuid'   => $schedule->default_assignee_uuid,
                     'instructions'    => $schedule->instructions,
                     'due_at'          => $schedule->next_due_date,
+                    'opened_at'       => now(),
                     'created_by_uuid' => null, // system-generated
                 ]);
 
