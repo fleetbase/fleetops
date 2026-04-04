@@ -73,20 +73,27 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                     start: fetchInfo.startStr,
                     end: fetchInfo.endStr,
                 })
-                .then((data) => {
-                    const events = (data ?? []).map((event) => ({
+                .then((response) => {
+                    // The API returns { events: [...] } — unwrap the array.
+                    const raw = Array.isArray(response) ? response : (response?.events ?? []);
+                    const events = raw.map((event) => ({
                         id: event.id,
                         title: event.title,
                         start: event.start,
-                        allDay: true,
-                        backgroundColor: statusColor(event.status),
-                        borderColor: statusColor(event.status),
+                        end: event.end,
+                        allDay: event.allDay !== false,
+                        // Use the colour the backend already computed; fall back
+                        // to the local statusColor helper if absent.
+                        backgroundColor: event.color ?? statusColor(event.status),
+                        borderColor: event.color ?? statusColor(event.status),
                         extendedProps: {
                             public_id: event.id,
-                            subject: event.subject,
-                            assignee: event.assignee,
+                            uuid: event.uuid,
+                            subject_name: event.subject_name,
+                            assignee_name: event.assignee_name,
                             status: event.status,
                             priority: event.priority,
+                            type: event.type,
                         },
                     }));
                     successCallback(events);
