@@ -248,32 +248,6 @@
         </ContentPanel>
     {{/if}}
 
-    {{! ===== CALENDAR EXPORT ===== }}
-    {{#if @resource.next_due_date}}
-        <ContentPanel @title="Calendar Export" @open={{true}} @wrapperClass="bordered-top">
-            <div class="flex flex-wrap gap-2 text-xs">
-                <Button
-                    @type="default"
-                    @size="sm"
-                    @icon="calendar-arrow-down"
-                    @iconPrefix="far"
-                    {{on "click" (fn this.downloadIcal @resource)}}
-                >
-                    Download .ics
-                </Button>
-                <Button
-                    @type="default"
-                    @size="sm"
-                    @icon="calendar-plus"
-                    @iconPrefix="fab"
-                    {{on "click" (fn this.addToGoogleCalendar @resource)}}
-                >
-                    Add to Google Calendar
-                </Button>
-            </div>
-        </ContentPanel>
-    {{/if}}
-
     {{! ===== CUSTOM FIELDS ===== }}
     <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
 

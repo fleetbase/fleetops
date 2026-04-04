@@ -14,6 +14,8 @@ use Illuminate\Support\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\IcalendarGenerator\Components\Calendar;
 use Spatie\IcalendarGenerator\Components\Event;
+use Spatie\IcalendarGenerator\Enums\RecurrenceFrequency;
+use Spatie\IcalendarGenerator\ValueObjects\RRule;
 
 class MaintenanceScheduleController extends FleetOpsController
 {
@@ -200,16 +202,34 @@ class MaintenanceScheduleController extends FleetOpsController
             $schedule->instructions ? 'Instructions: ' . $schedule->instructions : null,
         ]));
 
+        // Build the event, adding an RRULE when the schedule has a time-based interval.
+        $event = Event::create($eventTitle)
+            ->uniqueIdentifier($schedule->uuid . '@fleetbase.io')
+            ->description($description)
+            ->startsAt($dueDate->copy()->startOfDay())
+            ->endsAt($dueDate->copy()->endOfDay())
+            ->fullDay();
+
+        $intervalValue = (int) ($schedule->interval_value ?? 0);
+        $intervalUnit  = $schedule->interval_unit ?? null;
+
+        if ($intervalValue > 0 && $intervalUnit) {
+            $freqMap = [
+                'days'   => RecurrenceFrequency::daily(),
+                'weeks'  => RecurrenceFrequency::weekly(),
+                'months' => RecurrenceFrequency::monthly(),
+                'years'  => RecurrenceFrequency::yearly(),
+            ];
+            $freq = $freqMap[$intervalUnit] ?? null;
+            if ($freq !== null) {
+                $rrule = RRule::frequency($freq)->interval($intervalValue);
+                $event->rrule($rrule);
+            }
+        }
+
         $calendar = Calendar::create($eventTitle)
             ->productIdentifier('Fleetbase FleetOps')
-            ->event(
-                Event::create($eventTitle)
-                    ->uniqueIdentifier($schedule->uuid . '@fleetbase.io')
-                    ->description($description)
-                    ->startsAt($dueDate->copy()->startOfDay())
-                    ->endsAt($dueDate->copy()->endOfDay())
-                    ->fullDay()
-            );
+            ->event($event);
 
         $filename = 'maintenance-' . $schedule->public_id . '.ics';
 
