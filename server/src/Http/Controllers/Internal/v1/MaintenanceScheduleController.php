@@ -29,7 +29,7 @@ class MaintenanceScheduleController extends FleetOpsController
     /**
      * Process import files (excel, csv) into MaintenanceSchedule records.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function import(ImportRequest $request)
     {
@@ -188,8 +188,8 @@ class MaintenanceScheduleController extends FleetOpsController
                 // Walk forward from next_due_date in steps of (interval_value interval_unit)
                 // and emit an event for every occurrence that falls inside [windowStart, windowEnd].
                 // We cap at 500 occurrences as a safety guard.
-                $occurrence = $firstDue->copy();
-                $count      = 0;
+                $occurrence     = $firstDue->copy();
+                $count          = 0;
                 $maxOccurrences = 500;
 
                 while ($occurrence->lte($windowEnd) && $count < $maxOccurrences) {

@@ -112,10 +112,10 @@ class SendMaintenanceReminders extends Command
                     Mail::to($email)->send(new MaintenanceScheduleReminder($schedule, $offsetDays));
 
                     DB::connection($conn)->table('maintenance_schedule_reminders')->insert([
-                        'schedule_uuid'    => $schedule->uuid,
-                        'offset_days'      => $offsetDays,
+                        'schedule_uuid'     => $schedule->uuid,
+                        'offset_days'       => $offsetDays,
                         'due_date_snapshot' => $dueDateSnapshot,
-                        'sent_at'          => Carbon::now(),
+                        'sent_at'           => Carbon::now(),
                     ]);
                 }
 

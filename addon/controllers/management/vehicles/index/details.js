@@ -33,7 +33,7 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
             },
             {
                 route: 'management.vehicles.index.details.maintenance-history',
-                label: 'Maintenance History',
+                label: 'Maintenance',
             },
             ...(isArray(registeredTabs) ? registeredTabs : []),
         ];

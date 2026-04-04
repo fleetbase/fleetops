@@ -110,7 +110,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
         const publicId = event?.extendedProps?.public_id;
         if (publicId) {
             // transition.view expects an object whose public_id is used as the URL segment
-            this.maintenanceScheduleActions.transition.view({ public_id: publicId });
+            this.maintenanceScheduleActions.transition.view(publicId);
         }
     }
 

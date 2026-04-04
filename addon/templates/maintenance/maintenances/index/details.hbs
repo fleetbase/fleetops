@@ -1,7 +1,7 @@
 <Layout::Resource::Panel
     @resource={{@model}}
     @controller={{this}}
-    @headerComponent={{component "maintenance/panel-header" resource=@model}}
+    @headerComponent={{component "maintenance/panel-header" resource=@model actionButtons=this.actionButtons}}
     @headerTitle={{@model.summary}}
     @actionButtons={{this.actionButtons}}
     @onPressCancel={{transition-to "maintenance.maintenances.index"}}

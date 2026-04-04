@@ -34,7 +34,7 @@ export default class MaintenanceSchedulesIndexDetailsController extends Controll
                 items: [
                     {
                         text: 'Download .ics',
-                        icon: 'calendar-arrow-down',
+                        icon: 'download',
                         iconPrefix: 'far',
                         fn: () => this.downloadIcal(this.model),
                     },
