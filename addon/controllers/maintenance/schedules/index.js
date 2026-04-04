@@ -3,7 +3,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
-const STORAGE_KEY = 'fleetops.maintenance-schedules.viewMode';
+const CACHE_KEY = 'fleetops:maintenance-schedules:layout';
 
 /** Map schedule status to a FullCalendar event background colour. */
 function statusColor(status) {
@@ -22,6 +22,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
     @service maintenanceScheduleActions;
     @service fetch;
     @service intl;
+    @service appCache;
     @service notifications;
 
     /** Alias used by the tabular layout template (@onSearch={{perform this.scheduleActions.controllerSearchTask this}}) */
@@ -36,26 +37,22 @@ export default class MaintenanceSchedulesIndexController extends Controller {
     @tracked public_id;
     @tracked status;
 
-    /** 'list' | 'calendar' — persisted to localStorage */
-    @tracked viewMode = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || 'list';
+    /** 'list' | 'calendar' — persisted via appCache (same pattern as vehicles layout) */
+    @tracked layout = this.appCache.get(CACHE_KEY, 'list');
 
     /** FullCalendar API instance (set via @onInit) */
     calendarApi = null;
 
     // ─── View mode ────────────────────────────────────────────────────────────
 
-    @action setViewMode(mode) {
-        this.viewMode = mode;
-        if (typeof localStorage !== 'undefined') {
-            localStorage.setItem(STORAGE_KEY, mode);
-        }
-    }
-
     @action setCalendarApi(api) {
         this.calendarApi = api;
     }
 
     // ─── Calendar feed (function-based event source for FullCalendar v6) ─────
+    //
+    // NOTE: layout is toggled via the dropdown-button in actionButtons (same
+    // pattern as the vehicles index layout switcher).
     //
     // FullCalendar v6 supports passing a function as the `events` option:
     //   events: function(fetchInfo, successCallback, failureCallback)
@@ -68,6 +65,8 @@ export default class MaintenanceSchedulesIndexController extends Controller {
 
     get calendarEventSource() {
         // Return a bound function so `this` is always the controller.
+        // FullCalendar v6 calls this function with (fetchInfo, successCallback,
+        // failureCallback) whenever it needs to (re-)fetch events.
         return (fetchInfo, successCallback, failureCallback) => {
             this.fetch
                 .get('maintenance-schedules/calendar-feed', {
@@ -112,6 +111,31 @@ export default class MaintenanceSchedulesIndexController extends Controller {
 
     get actionButtons() {
         return [
+            {
+                component: 'dropdown-button',
+                icon: 'display',
+                size: 'xs',
+                items: [
+                    {
+                        label: this.intl.t('common.table-view'),
+                        icon: 'table-list',
+                        onClick: () => {
+                            this.layout = 'list';
+                            this.appCache.set(CACHE_KEY, 'list');
+                        },
+                    },
+                    {
+                        label: this.intl.t('common.calendar-view'),
+                        icon: 'calendar',
+                        onClick: () => {
+                            this.layout = 'calendar';
+                            this.appCache.set(CACHE_KEY, 'calendar');
+                        },
+                    },
+                ],
+                renderInPlace: true,
+                helpText: this.intl.t('common.change-layout'),
+            },
             { icon: 'refresh', onClick: this.maintenanceScheduleActions.refresh, helpText: this.intl.t('common.refresh') },
             { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.maintenanceScheduleActions.transition.create },
             { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.maintenanceScheduleActions.import },

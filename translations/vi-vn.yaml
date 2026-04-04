@@ -36,6 +36,10 @@ fleet-ops:
     item: Mục
     key: Khóa
     label: Nhãn
+    table-view: Xem Bảng
+    grid-view: Xem Lưới
+    calendar-view: Xem Lịch
+    change-layout: Thay đổi bố cục
     length: Chiều dài
     license: Giấy phép
     loading: Đang tải...

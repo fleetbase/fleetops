@@ -32,6 +32,8 @@ common:
   select-resource-filter-by: Select {resource} to filter by
   table-view: Table View
   grid-view: Grid View
+  calendar-view: Calendar View
+  change-layout: Change Layout
   livemap: Live map
   tracking: Tracking
   activity: Activity
