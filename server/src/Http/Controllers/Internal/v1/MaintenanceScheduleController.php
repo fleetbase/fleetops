@@ -196,11 +196,12 @@ class MaintenanceScheduleController extends FleetOpsController
                     if ($occurrence->gte($windowStart)) {
                         $dateStr  = $occurrence->toDateString();
                         $events[] = array_merge($baseEvent, [
-                            // Append the occurrence date to the id so each
-                            // FullCalendar event has a unique id.
-                            'id'    => $schedule->public_id . '-' . $dateStr,
-                            'start' => $dateStr,
-                            'end'   => $dateStr,
+                            // Keep id as the plain public_id so the click
+                            // handler can navigate to the schedule details.
+                            'id'              => $schedule->public_id,
+                            'start'           => $dateStr,
+                            'end'             => $dateStr,
+                            'occurrence_date' => $dateStr,
                         ]);
                     }
                     $occurrence->add($intervalValue . ' ' . $intervalUnit);
