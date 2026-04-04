@@ -89,7 +89,7 @@ class Maintenance extends FleetbaseResource
 
         $bareSlug = Str::kebab(class_basename($this->maintainable_type ?? ''));
 
-        data_set($resolved, 'type', 'maintenance-subject');
+        data_set($resolved, 'type', 'maintenance-subject-' . $bareSlug);
         data_set($resolved, 'subject_type', 'maintenance-subject-' . $bareSlug);
 
         return $resolved;
@@ -112,7 +112,7 @@ class Maintenance extends FleetbaseResource
 
         $bareSlug = Str::kebab(class_basename($this->performed_by_type ?? ''));
 
-        data_set($resolved, 'type', 'facilitator');
+        data_set($resolved, 'type', 'facilitator-' . $bareSlug);
         data_set($resolved, 'facilitator_type', 'facilitator-' . $bareSlug);
 
         return $resolved;

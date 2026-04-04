@@ -87,7 +87,7 @@ class MaintenanceSchedule extends FleetbaseResource
 
         $bareSlug = Str::kebab(class_basename($this->subject_type ?? ''));
 
-        data_set($resolved, 'type', 'maintenance-subject');
+        data_set($resolved, 'type', 'maintenance-subject-' . $bareSlug);
         data_set($resolved, 'subject_type', 'maintenance-subject-' . $bareSlug);
 
         return $resolved;
@@ -110,7 +110,7 @@ class MaintenanceSchedule extends FleetbaseResource
 
         $bareSlug = Str::kebab(class_basename($this->default_assignee_type ?? ''));
 
-        data_set($resolved, 'type', 'facilitator');
+        data_set($resolved, 'type', 'facilitator-' . $bareSlug);
         data_set($resolved, 'facilitator_type', 'facilitator-' . $bareSlug);
 
         return $resolved;

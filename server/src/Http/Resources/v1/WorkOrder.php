@@ -83,7 +83,7 @@ class WorkOrder extends FleetbaseResource
         // Str::kebab('Vehicle') -> 'vehicle'
         $bareSlug = Str::kebab(class_basename($this->target_type ?? ''));
 
-        data_set($resolved, 'type', 'maintenance-subject');
+        data_set($resolved, 'type', 'maintenance-subject-' . $bareSlug);
         data_set($resolved, 'subject_type', 'maintenance-subject-' . $bareSlug);
 
         return $resolved;
@@ -110,7 +110,7 @@ class WorkOrder extends FleetbaseResource
         // Str::kebab('Vendor') -> 'vendor'
         $bareSlug = Str::kebab(class_basename($this->assignee_type ?? ''));
 
-        data_set($resolved, 'type', 'facilitator');
+        data_set($resolved, 'type', 'facilitator-' . $bareSlug);
         data_set($resolved, 'facilitator_type', 'facilitator-' . $bareSlug);
 
         return $resolved;
