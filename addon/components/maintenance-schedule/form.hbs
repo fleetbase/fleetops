@@ -283,4 +283,44 @@
         </div>
     </ContentPanel>
 
+    {{! ===== REMINDER OFFSETS ===== }}
+    <ContentPanel @title="Reminder Emails" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 no-input-group-padding text-xs">
+
+            <div class="text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Send email reminders before the next due date
+            </div>
+
+            <InputGroup @name="Reminder Days Before" @wrapperClass="col-span-2">
+                <div class="flex flex-wrap gap-1 p-1 border border-gray-300 dark:border-gray-600 rounded form-input min-h-[36px] items-center">
+                    {{#each this.reminderOffsets as |offset index|}}
+                        <span class="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-0.5 rounded">
+                            {{offset}} days
+                            <button
+                                type="button"
+                                class="ml-1 text-blue-500 hover:text-red-500"
+                                {{on "click" (fn this.removeReminderOffset index)}}
+                            >
+                                &times;
+                            </button>
+                        </span>
+                    {{/each}}
+                    <Input
+                        @value={{this.newReminderOffset}}
+                        @type="number"
+                        class="flex-1 min-w-[80px] border-0 outline-none bg-transparent text-xs p-0"
+                        placeholder="Add days (e.g. 7)"
+                        min="1"
+                        {{on "keydown" this.onReminderOffsetKeydown}}
+                        disabled={{cannot-write @resource}}
+                    />
+                </div>
+                <p class="text-[11px] text-gray-400 mt-1">
+                    Press Enter or comma to add each offset. The default assignee will receive an email for each configured offset.
+                </p>
+            </InputGroup>
+
+        </div>
+    </ContentPanel>
+
 </div>

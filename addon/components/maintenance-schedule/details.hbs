@@ -230,6 +230,50 @@
         </ContentPanel>
     {{/if}}
 
+    {{! ===== REMINDER OFFSETS ===== }}
+    {{#if @resource.reminder_offsets.length}}
+        <ContentPanel @title="Reminder Emails" @open={{true}} @wrapperClass="bordered-top">
+            <div class="text-xs text-gray-700 dark:text-gray-300">
+                <p class="mb-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold">
+                    The default assignee will receive email reminders at:
+                </p>
+                <div class="flex flex-wrap gap-1">
+                    {{#each @resource.reminder_offsets as |offset|}}
+                        <span class="inline-flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-0.5 rounded">
+                            {{offset}} days before
+                        </span>
+                    {{/each}}
+                </div>
+            </div>
+        </ContentPanel>
+    {{/if}}
+
+    {{! ===== CALENDAR EXPORT ===== }}
+    {{#if @resource.next_due_date}}
+        <ContentPanel @title="Calendar Export" @open={{true}} @wrapperClass="bordered-top">
+            <div class="flex flex-wrap gap-2 text-xs">
+                <Button
+                    @type="default"
+                    @size="sm"
+                    @icon="calendar-arrow-down"
+                    @iconPrefix="far"
+                    {{on "click" (fn this.downloadIcal @resource)}}
+                >
+                    Download .ics
+                </Button>
+                <Button
+                    @type="default"
+                    @size="sm"
+                    @icon="calendar-plus"
+                    @iconPrefix="fab"
+                    {{on "click" (fn this.addToGoogleCalendar @resource)}}
+                >
+                    Add to Google Calendar
+                </Button>
+            </div>
+        </ContentPanel>
+    {{/if}}
+
     {{! ===== CUSTOM FIELDS ===== }}
     <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
 

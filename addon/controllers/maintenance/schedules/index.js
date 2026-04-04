@@ -1,16 +1,114 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+
+const STORAGE_KEY = 'fleetops.maintenance-schedules.viewMode';
+
+/** Map schedule status to a FullCalendar event background colour. */
+function statusColor(status) {
+    switch (status) {
+        case 'overdue':
+            return '#EF4444'; // red-500
+        case 'paused':
+            return '#9CA3AF'; // gray-400
+        case 'active':
+        default:
+            return '#F59E0B'; // amber-500
+    }
+}
 
 export default class MaintenanceSchedulesIndexController extends Controller {
     @service maintenanceScheduleActions;
+    @service fetch;
     @service intl;
+    @service notifications;
+
+    /** Alias used by the tabular layout template (@onSearch={{perform this.scheduleActions.controllerSearchTask this}}) */
+    get scheduleActions() {
+        return this.maintenanceScheduleActions;
+    }
+
     @tracked queryParams = ['status', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
     @tracked public_id;
     @tracked status;
+
+    /** 'list' | 'calendar' — persisted to localStorage */
+    @tracked viewMode = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || 'list';
+
+    /** FullCalendar API instance (set via @onInit) */
+    calendarApi = null;
+
+    // ─── View mode ────────────────────────────────────────────────────────────
+
+    @action setViewMode(mode) {
+        this.viewMode = mode;
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY, mode);
+        }
+    }
+
+    @action setCalendarApi(api) {
+        this.calendarApi = api;
+    }
+
+    // ─── Calendar feed (function-based event source for FullCalendar v6) ─────
+    //
+    // FullCalendar v6 supports passing a function as the `events` option:
+    //   events: function(fetchInfo, successCallback, failureCallback)
+    // The function is called automatically whenever the calendar needs to
+    // (re-)fetch events — on initial render and on navigation. `fetchInfo`
+    // contains `startStr` and `endStr` (ISO date strings) for the visible range.
+    //
+    // We bind this method and pass it as @events to the <FullCalendar> component.
+    // The component passes it straight through to `new Calendar(el, { events })`.
+
+    get calendarEventSource() {
+        // Return a bound function so `this` is always the controller.
+        return (fetchInfo, successCallback, failureCallback) => {
+            this.fetch
+                .get('maintenance-schedules/calendar-feed', {
+                    start: fetchInfo.startStr,
+                    end: fetchInfo.endStr,
+                })
+                .then((data) => {
+                    const events = (data ?? []).map((event) => ({
+                        id: event.id,
+                        title: event.title,
+                        start: event.start,
+                        allDay: true,
+                        backgroundColor: statusColor(event.status),
+                        borderColor: statusColor(event.status),
+                        extendedProps: {
+                            public_id: event.id,
+                            subject: event.subject,
+                            assignee: event.assignee,
+                            status: event.status,
+                            priority: event.priority,
+                        },
+                    }));
+                    successCallback(events);
+                })
+                .catch((error) => {
+                    failureCallback(error);
+                });
+        };
+    }
+
+    // ─── Calendar event click ─────────────────────────────────────────────────
+
+    @action onCalendarEventClick({ event }) {
+        const publicId = event?.extendedProps?.public_id;
+        if (publicId) {
+            // transition.view expects an object whose public_id is used as the URL segment
+            this.maintenanceScheduleActions.transition.view({ public_id: publicId });
+        }
+    }
+
+    // ─── Action buttons ───────────────────────────────────────────────────────
 
     get actionButtons() {
         return [

@@ -65,6 +65,8 @@ export default class MaintenanceScheduleFormComponent extends Component {
     @tracked subjectModelName = null;
     @tracked assigneeModelName = null;
     @tracked selectedIntervalMethod = null;
+    @tracked reminderOffsets = [];
+    @tracked newReminderOffset = '';
 
     subjectTypeOptions = SUBJECT_TYPE_OPTIONS;
     assigneeTypeOptions = ASSIGNEE_TYPE_OPTIONS;
@@ -113,6 +115,10 @@ export default class MaintenanceScheduleFormComponent extends Component {
                     this.assigneeModelName = TYPE_TO_MODEL[typeValue] ?? null;
                 }
             }
+            // Restore reminder_offsets from the resource
+            if (Array.isArray(resource.reminder_offsets)) {
+                this.reminderOffsets = [...resource.reminder_offsets];
+            }
             // Restore interval method from stored interval_method field, or infer from populated fields
             if (resource.interval_method) {
                 this.selectedIntervalMethod = INTERVAL_METHOD_OPTIONS.find((o) => o.value === resource.interval_method) ?? null;
@@ -146,6 +152,29 @@ export default class MaintenanceScheduleFormComponent extends Component {
 
     @action assignDefaultAssignee(model) {
         this.args.resource.default_assignee = model;
+    }
+
+    @action addReminderOffset(value) {
+        const days = parseInt(value, 10);
+        if (!isNaN(days) && days > 0 && !this.reminderOffsets.includes(days)) {
+            this.reminderOffsets = [...this.reminderOffsets, days].sort((a, b) => b - a);
+            this.args.resource.reminder_offsets = [...this.reminderOffsets];
+        }
+        this.newReminderOffset = '';
+    }
+
+    @action removeReminderOffset(index) {
+        const updated = [...this.reminderOffsets];
+        updated.splice(index, 1);
+        this.reminderOffsets = updated;
+        this.args.resource.reminder_offsets = [...this.reminderOffsets];
+    }
+
+    @action onReminderOffsetKeydown(event) {
+        if (event.key === 'Enter' || event.key === ',') {
+            event.preventDefault();
+            this.addReminderOffset(this.newReminderOffset);
+        }
     }
 
     @action onIntervalMethodChange(option) {
