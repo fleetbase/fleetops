@@ -74,6 +74,20 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                label: this.intl.t('column.asset'),
+                valuePath: 'maintainable.name',
+                cellComponent: 'table/cell/base',
+                resizable: true,
+                sortable: true,
+            },
+            {
+                label: this.intl.t('column.performed-by'),
+                valuePath: 'performed_by.name',
+                cellComponent: 'table/cell/base',
+                resizable: true,
+                sortable: true,
+            },
+            {
                 label: this.intl.t('column.type'),
                 valuePath: 'type',
                 cellComponent: 'table/cell/base',

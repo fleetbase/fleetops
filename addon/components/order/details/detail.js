@@ -35,8 +35,13 @@ export default class OrderDetailsDetailComponent extends Component {
         ];
     }
 
+    constructor(owner, { resource }) {
+        super(...arguments);
+        console.log('resource.facilitator:', resource.facilitator);
+        console.log('resource.customer:', resource.customer);
+    }
+
     @action focusOrderAssignedDriver(driver) {
-        console.log('[focusOrderAssignedDriver]', ...arguments);
         this.driverActions.panel.view(driver);
         this.leafletMapManager.map?.flyTo(driver.coordinates, 18);
     }

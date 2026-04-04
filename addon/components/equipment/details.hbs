@@ -5,13 +5,13 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
 
             {{! — Photo — }}
-            {{#if (or @resource.photo_url (config "defaultValues.equipmentImage"))}}
-                <div class="col-span-2 flex items-center gap-3 pb-2 border-b border-gray-100 dark:border-gray-700 mb-1">
+            {{#if (or @resource.photo_url (config "defaultValues.placeholderImage"))}}
+                <div class="col-span-2 flex items-start gap-3 pb-2">
                     <div class="border border-dashed border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-600 rounded-lg flex items-center justify-center w-16 h-16 flex-shrink-0">
                         <Image
                             alt={{@resource.name}}
-                            src={{or @resource.photo_url (config "defaultValues.equipmentImage")}}
-                            @fallbackSrc={{config "defaultValues.equipmentImage"}}
+                            src={{or @resource.photo_url (config "defaultValues.placeholderImage")}}
+                            @fallbackSrc={{config "defaultValues.placeholderImage"}}
                             class="w-12 h-12 object-contain"
                         />
                     </div>

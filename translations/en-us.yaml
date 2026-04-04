@@ -264,6 +264,7 @@ column:
   interval: Interval
   next-due: Next Due
   asset: Asset
+  performed-by: Performed By
 
 map:
   visibility-controls:

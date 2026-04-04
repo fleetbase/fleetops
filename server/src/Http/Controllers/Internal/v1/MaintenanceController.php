@@ -43,7 +43,7 @@ class MaintenanceController extends FleetOpsController
      */
     public function onFindRecord($builder, $request): void
     {
-        $builder->load(['maintainable', 'performedBy']);
+        $builder->with(['maintainable', 'performedBy']);
     }
 
     /**
