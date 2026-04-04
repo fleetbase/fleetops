@@ -92,6 +92,7 @@ class MaintenanceSchedule extends Model
         'default_assignee_type',
         'default_assignee_uuid',
         'instructions',
+        'reminder_offsets',
         'meta',
         'created_by_uuid',
         'updated_by_uuid',
@@ -104,6 +105,7 @@ class MaintenanceSchedule extends Model
      */
     protected $casts = [
         'meta'                   => 'array',
+        'reminder_offsets'       => 'array',
         'next_due_date'          => 'datetime',
         'last_service_date'      => 'datetime',
         'subject_type'           => PolymorphicType::class,

@@ -63,6 +63,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\ReplayVehicleLocations::class,
         \Fleetbase\FleetOps\Console\Commands\TestEmail::class,
         \Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers::class,
+        \Fleetbase\FleetOps\Console\Commands\SendMaintenanceReminders::class,
     ];
 
     /**
@@ -101,6 +102,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             $schedule->command('fleetops:update-estimations')->everyTenMinutes()->withoutOverlapping();
             $schedule->command('fleetops:purge-service-quotes')->daily()->withoutOverlapping();
             $schedule->command('fleetops:process-maintenance-triggers')->daily()->withoutOverlapping()->storeOutputInDb();
+            $schedule->command('fleetops:send-maintenance-reminders')->daily()->withoutOverlapping()->storeOutputInDb();
         });
         $this->registerNotifications();
         $this->registerExpansionsFrom(__DIR__ . '/../Expansions');

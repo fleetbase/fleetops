@@ -428,6 +428,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             $router->post('{id}/pause', $controller('pause'));
                             $router->post('{id}/resume', $controller('resume'));
                             $router->post('{id}/trigger', $controller('trigger'));
+                            $router->get('calendar-feed', $controller('calendarFeed'));
+                            $router->get('{id}/ical', $controller('ical'));
                         });
                         $router->fleetbaseRoutes('work-orders', function ($router, $controller) {
                             $router->post('import', $controller('import'));

@@ -58,6 +58,7 @@ class MaintenanceSchedule extends FleetbaseResource
             // Work-order defaults
             'default_priority'            => $this->default_priority,
             'instructions'                => $this->instructions,
+            'reminder_offsets'            => $this->reminder_offsets ?? [],
             'meta'                        => data_get($this, 'meta', (object) []),
             'slug'                        => $this->slug,
             // Convenience name attrs

@@ -9,7 +9,11 @@ use Fleetbase\FleetOps\Models\WorkOrder;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
+use Spatie\IcalendarGenerator\Components\Calendar;
+use Spatie\IcalendarGenerator\Components\Event;
 
 class MaintenanceScheduleController extends FleetOpsController
 {
@@ -112,5 +116,120 @@ class MaintenanceScheduleController extends FleetOpsController
             'message'    => 'Work order created from schedule.',
             'work_order' => $workOrder,
         ]);
+    }
+
+    /**
+     * Return a JSON calendar feed of upcoming maintenance schedule events.
+     *
+     * Accepts optional `start` and `end` query params (ISO 8601 date strings)
+     * to limit the window. Defaults to the next 90 days.
+     *
+     * GET /maintenance-schedules/calendar-feed
+     */
+    public function calendarFeed(Request $request): JsonResponse
+    {
+        $start = $request->input('start')
+            ? Carbon::parse($request->input('start'))->startOfDay()
+            : Carbon::today();
+
+        $end = $request->input('end')
+            ? Carbon::parse($request->input('end'))->endOfDay()
+            : Carbon::today()->addDays(90)->endOfDay();
+
+        $schedules = MaintenanceSchedule::withoutGlobalScopes()
+            ->where('status', 'active')
+            ->whereNotNull('next_due_date')
+            ->whereBetween('next_due_date', [$start, $end])
+            ->whereNull('deleted_at')
+            ->with(['subject', 'defaultAssignee'])
+            ->get();
+
+        $events = $schedules->map(function (MaintenanceSchedule $schedule) {
+            $assetName = $schedule->subject?->name
+                ?? $schedule->subject?->display_name
+                ?? $schedule->subject?->public_id
+                ?? 'Unknown Asset';
+
+            $assigneeName = $schedule->defaultAssignee?->name ?? null;
+
+            return [
+                'id'            => $schedule->public_id,
+                'uuid'          => $schedule->uuid,
+                'title'         => $schedule->name . ' — ' . $assetName,
+                'start'         => $schedule->next_due_date?->toDateString(),
+                'end'           => $schedule->next_due_date?->toDateString(),
+                'allDay'        => true,
+                'status'        => $schedule->status,
+                'priority'      => $schedule->default_priority,
+                'type'          => $schedule->type,
+                'subject_name'  => $assetName,
+                'assignee_name' => $assigneeName,
+                'color'         => $this->eventColorForPriority($schedule->default_priority),
+            ];
+        });
+
+        return response()->json(['events' => $events]);
+    }
+
+    /**
+     * Download an iCal (.ics) file for a single maintenance schedule.
+     *
+     * GET /maintenance-schedules/{id}/ical
+     */
+    public function ical(string $id): Response
+    {
+        $schedule = MaintenanceSchedule::where('uuid', $id)
+            ->orWhere('public_id', $id)
+            ->with(['subject', 'defaultAssignee'])
+            ->firstOrFail();
+
+        $assetName = $schedule->subject?->name
+            ?? $schedule->subject?->display_name
+            ?? $schedule->subject?->public_id
+            ?? 'Asset';
+
+        $eventTitle = $schedule->name . ' — ' . $assetName;
+
+        $dueDate = $schedule->next_due_date ?? Carbon::today();
+
+        $description = implode("\n", array_filter([
+            'Schedule: ' . $schedule->name,
+            'Asset: ' . $assetName,
+            'Type: ' . ucfirst(str_replace('_', ' ', $schedule->type ?? '')),
+            'Priority: ' . ucfirst($schedule->default_priority ?? 'normal'),
+            $schedule->instructions ? 'Instructions: ' . $schedule->instructions : null,
+        ]));
+
+        $calendar = Calendar::create($eventTitle)
+            ->productIdentifier('Fleetbase FleetOps')
+            ->event(
+                Event::create($eventTitle)
+                    ->uniqueIdentifier($schedule->uuid . '@fleetbase.io')
+                    ->description($description)
+                    ->startsAt($dueDate->copy()->startOfDay())
+                    ->endsAt($dueDate->copy()->endOfDay())
+                    ->fullDay()
+            );
+
+        $filename = 'maintenance-' . $schedule->public_id . '.ics';
+
+        return response($calendar->get(), 200, [
+            'Content-Type'        => 'text/calendar; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    /**
+     * Map a priority string to a FullCalendar-compatible hex colour.
+     */
+    private function eventColorForPriority(?string $priority): string
+    {
+        return match ($priority) {
+            'critical'  => '#ef4444',
+            'high'      => '#f97316',
+            'normal'    => '#3b82f6',
+            'low'       => '#22c55e',
+            default     => '#6b7280',
+        };
     }
 }
