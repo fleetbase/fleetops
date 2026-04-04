@@ -47,7 +47,7 @@ class WorkOrderDispatched extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'fleetops::mail.work-order-dispatched',
+            markdown: 'fleetops::mail.work-order-dispatched',
             with: [
                 'workOrder' => $this->workOrder,
                 'assignee'  => $this->workOrder->assignee,
