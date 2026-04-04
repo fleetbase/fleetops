@@ -124,51 +124,99 @@ class MaintenanceScheduleController extends FleetOpsController
      * Return a JSON calendar feed of upcoming maintenance schedule events.
      *
      * Accepts optional `start` and `end` query params (ISO 8601 date strings)
-     * to limit the window. Defaults to the next 90 days.
+     * to limit the visible window. Defaults to the next 90 days.
+     *
+     * For recurring schedules (those with interval_value + interval_unit set)
+     * we expand all occurrences that fall inside the requested window, not just
+     * the single stored next_due_date. This is what makes navigating to future
+     * calendar months work correctly.
      *
      * GET /maintenance-schedules/calendar-feed
      */
     public function calendarFeed(Request $request): JsonResponse
     {
-        $start = $request->input('start')
+        $windowStart = $request->input('start')
             ? Carbon::parse($request->input('start'))->startOfDay()
             : Carbon::today();
 
-        $end = $request->input('end')
+        $windowEnd = $request->input('end')
             ? Carbon::parse($request->input('end'))->endOfDay()
             : Carbon::today()->addDays(90)->endOfDay();
 
+        // Fetch all active schedules whose next_due_date is on or before the
+        // window end. Schedules that start after the window end can never
+        // produce an occurrence inside the window.
         $schedules = MaintenanceSchedule::withoutGlobalScopes()
             ->where('status', 'active')
             ->whereNotNull('next_due_date')
-            ->whereBetween('next_due_date', [$start, $end])
+            ->where('next_due_date', '<=', $windowEnd)
             ->whereNull('deleted_at')
             ->with(['subject', 'defaultAssignee'])
             ->get();
 
-        $events = $schedules->map(function (MaintenanceSchedule $schedule) {
+        $events = [];
+
+        foreach ($schedules as $schedule) {
             $assetName = $schedule->subject?->name
                 ?? $schedule->subject?->display_name
                 ?? $schedule->subject?->public_id
                 ?? 'Unknown Asset';
 
             $assigneeName = $schedule->defaultAssignee?->name ?? null;
+            $color        = $this->eventColorForPriority($schedule->default_priority);
 
-            return [
+            $baseEvent = [
                 'id'            => $schedule->public_id,
                 'uuid'          => $schedule->uuid,
                 'title'         => $schedule->name . ' — ' . $assetName,
-                'start'         => $schedule->next_due_date?->toDateString(),
-                'end'           => $schedule->next_due_date?->toDateString(),
                 'allDay'        => true,
                 'status'        => $schedule->status,
                 'priority'      => $schedule->default_priority,
                 'type'          => $schedule->type,
                 'subject_name'  => $assetName,
                 'assignee_name' => $assigneeName,
-                'color'         => $this->eventColorForPriority($schedule->default_priority),
+                'color'         => $color,
             ];
-        });
+
+            $intervalValue = (int) ($schedule->interval_value ?? 0);
+            $intervalUnit  = $schedule->interval_unit ?? null; // days | weeks | months | years
+            $firstDue      = $schedule->next_due_date->copy()->startOfDay();
+
+            if ($intervalValue > 0 && $intervalUnit) {
+                // --- Recurring schedule: expand all occurrences in the window ---
+                //
+                // Walk forward from next_due_date in steps of (interval_value interval_unit)
+                // and emit an event for every occurrence that falls inside [windowStart, windowEnd].
+                // We cap at 500 occurrences as a safety guard.
+                $occurrence = $firstDue->copy();
+                $count      = 0;
+                $maxOccurrences = 500;
+
+                while ($occurrence->lte($windowEnd) && $count < $maxOccurrences) {
+                    if ($occurrence->gte($windowStart)) {
+                        $dateStr  = $occurrence->toDateString();
+                        $events[] = array_merge($baseEvent, [
+                            // Append the occurrence date to the id so each
+                            // FullCalendar event has a unique id.
+                            'id'    => $schedule->public_id . '-' . $dateStr,
+                            'start' => $dateStr,
+                            'end'   => $dateStr,
+                        ]);
+                    }
+                    $occurrence->add($intervalValue . ' ' . $intervalUnit);
+                    $count++;
+                }
+            } else {
+                // --- One-off schedule: emit only if it falls in the window ---
+                if ($firstDue->between($windowStart, $windowEnd)) {
+                    $dateStr  = $firstDue->toDateString();
+                    $events[] = array_merge($baseEvent, [
+                        'start' => $dateStr,
+                        'end'   => $dateStr,
+                    ]);
+                }
+            }
+        }
 
         return response()->json(['events' => $events]);
     }
