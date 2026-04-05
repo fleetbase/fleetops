@@ -7,19 +7,19 @@ import { format, startOfWeek, endOfWeek, addWeeks, formatISO } from 'date-fns';
 import { Tooltip } from '@fleetbase/ember-ui/utils/floating';
 
 /**
- * OperationsDriverSchedulesIndexController
+ * OperationsSchedulerFleetScheduleController
  *
  * Fleet-wide driver schedule calendar using FullCalendar `resourceTimelineWeek` view.
  * Each driver is a resource row; materialised ScheduleItem records are rendered as
  * events; approved ScheduleExceptions are shown as red background blocks.
  *
  * Data flow:
- *   1. Route loads drivers and passes them to this controller
+ *   1. Route loads active drivers and passes them to this controller
  *   2. loadScheduleItems task fetches materialised shifts for the current window
- *   3. loadExceptions task fetches approved time-off blocks
+ *   3. loadScheduleExceptions task fetches approved time-off blocks
  *   4. events / calendarResources computed properties transform data for FullCalendar
  */
-export default class OperationsDriverSchedulesIndexController extends Controller {
+export default class OperationsSchedulerFleetScheduleController extends Controller {
     @service modalsManager;
     @service notifications;
     @service store;
@@ -29,7 +29,6 @@ export default class OperationsDriverSchedulesIndexController extends Controller
     @tracked drivers = [];
     @tracked scheduleItems = [];
     @tracked exceptions = [];
-    @tracked selectedFleet = null;
     @tracked calendarApi = null;
 
     // ── Calendar window ───────────────────────────────────────────────────────
@@ -46,7 +45,6 @@ export default class OperationsDriverSchedulesIndexController extends Controller
 
     /**
      * Transform drivers into FullCalendar resource objects.
-     * Each resource row shows the driver's name and avatar.
      */
     @computed('drivers.[]')
     get calendarResources() {
@@ -58,7 +56,7 @@ export default class OperationsDriverSchedulesIndexController extends Controller
     }
 
     /**
-     * Transform schedule items and exceptions into FullCalendar event objects.
+     * Transform schedule items and approved exceptions into FullCalendar event objects.
      * Approved exceptions are rendered as red background blocks.
      */
     @computed('scheduleItems.[]', 'exceptions.[]', 'drivers.[]')
@@ -77,7 +75,6 @@ export default class OperationsDriverSchedulesIndexController extends Controller
             };
         });
 
-        // Approved exceptions rendered as red background blocks
         const exceptionEvents = this.exceptions
             .filter((e) => e.status === 'approved')
             .map((exception) => ({
@@ -112,46 +109,43 @@ export default class OperationsDriverSchedulesIndexController extends Controller
 
     /**
      * Load materialised schedule items for all drivers within the calendar window.
-     * Also triggers loadExceptions to fetch time-off blocks.
      */
     @task *loadScheduleItems() {
         try {
             const items = yield this.store.query('schedule-item', {
                 assignee_type: 'driver',
-                start_at: this.windowStart,
-                end_at: this.windowEnd,
+                start_at_after: this.windowStart,
+                end_at_before: this.windowEnd,
+                limit: 500,
             });
             this.scheduleItems = items.toArray();
-            yield this.loadExceptions.perform();
+            yield this.loadScheduleExceptions.perform();
         } catch (error) {
             this.notifications.serverError(error);
         }
     }
 
     /**
-     * Load approved schedule exceptions (time-off blocks) for all drivers.
+     * Load approved ScheduleException records (time-off, sick leave, etc.)
+     * within the calendar window to render as background blocks.
      */
-    @task *loadExceptions() {
+    @task *loadScheduleExceptions() {
         try {
             const exceptions = yield this.store.query('schedule-exception', {
                 subject_type: 'driver',
-                status: 'approved',
-                start_date: this.windowStart,
-                end_date: this.windowEnd,
+                start_date_after: this.windowStart,
+                end_date_before: this.windowEnd,
+                limit: 200,
             });
             this.exceptions = exceptions.toArray();
-        } catch {
-            // Non-critical — suppress and continue
+        } catch (error) {
+            // Non-critical — suppress and continue without exception blocks
             this.exceptions = [];
         }
     }
 
-    // ── Calendar actions ──────────────────────────────────────────────────────
+    // ── Calendar API ──────────────────────────────────────────────────────────
 
-    /**
-     * Called when FullCalendar is initialised.
-     * Stores the calendar API reference for programmatic control.
-     */
     @action
     setCalendarApi(calendar) {
         this.calendarApi = calendar;
@@ -169,12 +163,14 @@ export default class OperationsDriverSchedulesIndexController extends Controller
         });
     }
 
+    // ── Event handlers ────────────────────────────────────────────────────────
+
     /**
      * Handle clicking a shift event — opens the driver-shift edit modal.
      */
     @action
     onEventClick(info) {
-        const { scheduleItem, driver } = info.event.extendedProps;
+        const { scheduleItem } = info.event.extendedProps;
         if (!scheduleItem) return;
 
         this.modalsManager.show('modals/driver-shift', {
@@ -205,7 +201,7 @@ export default class OperationsDriverSchedulesIndexController extends Controller
     }
 
     /**
-     * Handle drag-and-drop rescheduling of a shift event.
+     * Handle drag-and-drop rescheduling — supports cross-driver reassignment.
      */
     @action
     async onEventDrop(info) {
@@ -229,8 +225,10 @@ export default class OperationsDriverSchedulesIndexController extends Controller
         }
     }
 
+    // ── Shift management ──────────────────────────────────────────────────────
+
     /**
-     * Open the Add Shift modal for a specific driver (from resource row click).
+     * Open the Add Shift modal, optionally pre-selecting a driver.
      */
     @action
     addShiftForDriver(driver) {
@@ -247,7 +245,7 @@ export default class OperationsDriverSchedulesIndexController extends Controller
 
                 try {
                     if (options.isRecurring) {
-                        // Create a ScheduleTemplate and apply it
+                        // Build RRULE-based ScheduleTemplate and apply it to the driver's Schedule
                         const template = this.store.createRecord('schedule-template', {
                             name: options.templateName || `${targetDriver.name} Recurring Schedule`,
                             rrule: options.rrule,
@@ -259,7 +257,7 @@ export default class OperationsDriverSchedulesIndexController extends Controller
                         });
                         const savedTemplate = await template.save();
 
-                        // Find or create the driver's schedule
+                        // Find or create the driver's Schedule container
                         const schedules = await this.store.query('schedule', {
                             subject_type: 'driver',
                             subject_uuid: targetDriver.id,
@@ -278,6 +276,7 @@ export default class OperationsDriverSchedulesIndexController extends Controller
                             }).save();
                         }
 
+                        // Apply the template — core-api materialises ScheduleItems
                         await this.fetch.post(`schedule-templates/${savedTemplate.id}/apply`, {
                             subject_type: 'driver',
                             subject_uuid: targetDriver.id,
@@ -288,7 +287,7 @@ export default class OperationsDriverSchedulesIndexController extends Controller
 
                         this.notifications.success(this.intl.t('scheduler.recurring-schedule-created'));
                     } else {
-                        // Single shift
+                        // Single one-off shift
                         const scheduleItem = this.store.createRecord('schedule-item', {
                             assignee_type: 'driver',
                             assignee_uuid: targetDriver.id,
@@ -320,25 +319,18 @@ export default class OperationsDriverSchedulesIndexController extends Controller
         this.addShiftForDriver(null);
     }
 
-    /**
-     * Navigate the calendar to the previous week.
-     */
+    // ── Calendar navigation ───────────────────────────────────────────────────
+
     @action
     previousWeek() {
         this.calendarApi?.prev();
     }
 
-    /**
-     * Navigate the calendar to the next week.
-     */
     @action
     nextWeek() {
         this.calendarApi?.next();
     }
 
-    /**
-     * Navigate the calendar to today.
-     */
     @action
     goToToday() {
         this.calendarApi?.today();

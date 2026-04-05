@@ -1,1 +1,5 @@
-{{outlet}}
+<TabNavigation @tabs={{this.tabs}} @size="lg" @tablistClass="next-view-section-subheader-fixed-height pl-2">
+    <:default>
+        {{outlet}}
+    </:default>
+</TabNavigation>

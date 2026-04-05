@@ -1,6 +1,5 @@
-<Layout::Section::Header @title={{t "menu.driver-schedules"}}>
+<Layout::Section::Header @title={{t "scheduler.fleet-schedule-tab"}}>
     <div class="flex items-center gap-2">
-        {{! Calendar navigation }}
         <Button
             @type="default"
             @icon="chevron-left"
@@ -19,10 +18,7 @@
             @size="sm"
             @onClick={{this.nextWeek}}
         />
-
         <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-
-        {{! Add shift button }}
         <Button
             @type="primary"
             @text={{t "scheduler.add-shift"}}
@@ -35,7 +31,7 @@
 </Layout::Section::Header>
 
 <Layout::Section::Body>
-    <div id="fleet-ops-driver-schedules-container" class="h-full">
+    <div id="fleet-ops-fleet-schedule-container" class="h-full">
         {{#if this.loadScheduleItems.isRunning}}
             <div class="flex items-center justify-center h-64">
                 <Spinner @size="lg" />

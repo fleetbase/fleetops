@@ -55,7 +55,6 @@ menu:
   orders: Orders
   service-rates: Service Rates
   scheduler: Scheduler
-  driver-schedules: Driver Schedules
   order-config: Order Config
   resources: Resources
   drivers: Drivers
@@ -1199,6 +1198,8 @@ scheduler:
     frequency-weekly: Weekly
     frequency-monthly: Monthly
     today: Today
+    orders-tab: Order Schedule
+    fleet-schedule-tab: Fleet Schedule
 modals:
   new-custom-field-group:
     modal-title: Create a new custom field group

@@ -14,9 +14,9 @@ export default buildRoutes(function () {
                 this.route('edit', { path: '/edit/:public_id' });
             });
         });
-        this.route('scheduler', function () {});
-        this.route('driver-schedules', function () {
+        this.route('scheduler', function () {
             this.route('index', { path: '/' });
+            this.route('fleet-schedule');
         });
         this.route('orders', { path: '/' }, function () {
             this.route('index', { path: '/' }, function () {

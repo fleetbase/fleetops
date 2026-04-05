@@ -59,14 +59,6 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see order'),
             },
             {
-                intl: 'menu.driver-schedules',
-                title: this.intl.t('menu.driver-schedules'),
-                icon: 'calendar-week',
-                route: 'operations.driver-schedules',
-                permission: 'fleet-ops list driver',
-                visible: this.abilities.can('fleet-ops see driver'),
-            },
-            {
                 intl: 'menu.order-config',
                 title: this.intl.t('menu.order-config'),
                 icon: 'diagram-project',
