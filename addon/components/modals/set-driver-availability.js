@@ -41,13 +41,15 @@ export default class ModalsSetDriverAvailabilityComponent extends Component {
     }
 
     @action
-    updateReason(value) {
+    updateReason(event) {
+        const value = event.target.value;
         this.reason = value;
         this.args.options.reason = value;
     }
 
     @action
-    updateNotes(value) {
+    updateNotes(event) {
+        const value = event.target.value;
         this.notes = value;
         this.args.options.notes = value;
     }

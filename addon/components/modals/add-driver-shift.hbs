@@ -37,12 +37,12 @@
 
                 <div class="input-group">
                     <label>{{t "scheduler.shift-title"}}</label>
-                    <InputGroup
-                        @name={{t "scheduler.shift-title"}}
-                        @hideLabel={{true}}
+                    <Input
                         @value={{this.title}}
-                        @placeholder={{t "scheduler.shift-title-placeholder"}}
-                        @onChange={{this.updateTitle}}
+                        @type="text"
+                        placeholder={{t "scheduler.shift-title-placeholder"}}
+                        class="w-full form-input"
+                        {{on "input" this.updateTitle}}
                     />
                 </div>
 
@@ -89,13 +89,12 @@
 
                 <div class="input-group">
                     <label>{{t "common.notes"}}</label>
-                    <InputGroup
-                        @name={{t "common.notes"}}
-                        @hideLabel={{true}}
-                        @type="textarea"
+                    <Textarea
                         @value={{this.notes}}
-                        @placeholder={{t "scheduler.shift-notes-placeholder"}}
-                        @onChange={{this.updateNotes}}
+                        placeholder={{t "scheduler.shift-notes-placeholder"}}
+                        class="w-full form-input"
+                        rows="2"
+                        {{on "input" this.updateNotes}}
                     />
                 </div>
 
@@ -108,12 +107,12 @@
 
                 <div class="input-group">
                     <label>{{t "scheduler.schedule-name"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
-                    <InputGroup
-                        @name={{t "scheduler.schedule-name"}}
-                        @hideLabel={{true}}
+                    <Input
                         @value={{this.templateName}}
-                        @placeholder={{t "scheduler.schedule-name-placeholder"}}
-                        @onChange={{this.updateTemplateName}}
+                        @type="text"
+                        placeholder={{t "scheduler.schedule-name-placeholder"}}
+                        class="w-full form-input"
+                        {{on "input" this.updateTemplateName}}
                     />
                 </div>
 

@@ -61,7 +61,7 @@
                     @type="text"
                     placeholder={{t "scheduler.reason-placeholder"}}
                     class="w-full form-input"
-                    {{on "input" (fn this.updateReason this.reason)}}
+                    {{on "input" this.updateReason}}
                 />
             </div>
 
@@ -73,7 +73,7 @@
                     placeholder={{t "scheduler.notes-placeholder"}}
                     class="w-full form-input"
                     rows="3"
-                    {{on "input" (fn this.updateNotes this.notes)}}
+                    {{on "input" this.updateNotes}}
                 />
             </div>
 

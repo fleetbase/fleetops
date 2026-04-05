@@ -10,7 +10,7 @@
                     @type="text"
                     placeholder={{t "scheduler.shift-title-placeholder"}}
                     class="w-full form-input"
-                    {{on "input" (fn this.updateTitle this.title)}}
+                    {{on "input" this.updateTitle}}
                 />
             </div>
 
@@ -66,7 +66,7 @@
                     placeholder={{t "scheduler.shift-notes-placeholder"}}
                     class="w-full form-input"
                     rows="2"
-                    {{on "input" (fn this.updateNotes this.notes)}}
+                    {{on "input" this.updateNotes}}
                 />
             </div>
 

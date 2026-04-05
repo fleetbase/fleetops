@@ -43,7 +43,8 @@ export default class ModalsDriverShiftComponent extends Component {
     }
 
     @action
-    updateTitle(value) {
+    updateTitle(event) {
+        const value = event.target.value;
         this.title = value;
         this.args.options.title = value;
     }
@@ -73,7 +74,8 @@ export default class ModalsDriverShiftComponent extends Component {
     }
 
     @action
-    updateNotes(value) {
+    updateNotes(event) {
+        const value = event.target.value;
         this.notes = value;
         this.args.options.notes = value;
     }
