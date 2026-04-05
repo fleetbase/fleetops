@@ -3,7 +3,8 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-import { startOfWeek, endOfWeek, addWeeks, formatISO, addDays, format, isSameDay, differenceInMinutes, startOfDay } from 'date-fns';
+import { startOfWeek, endOfWeek, addWeeks, formatISO, addDays, format, isSameDay, differenceInMinutes, startOfDay, endOfDay } from 'date-fns';
+import { htmlSafe } from '@ember/template';
 
 /**
  * Driver::Schedule Component
@@ -105,6 +106,8 @@ export default class DriverScheduleComponent extends Component {
         return Array.from({ length: 7 }, (_, i) => {
             const day = addDays(today, i);
             const dayStart = startOfDay(day);
+            const dayEnd = endOfDay(day);
+            const dayMins = 24 * 60;
             // Match items whose start_at falls on this calendar day (local time)
             const shifts = this.scheduleItems.filter((item) => {
                 const itemDate = item.start_at instanceof Date ? item.start_at : new Date(item.start_at);
@@ -112,17 +115,15 @@ export default class DriverScheduleComponent extends Component {
             });
             const blocks = shifts.map((item) => {
                 const itemStart = item.start_at instanceof Date ? item.start_at : new Date(item.start_at);
-                const itemEnd = item.end_at instanceof Date ? item.end_at : new Date(item.end_at);
-                const startMins = differenceInMinutes(itemStart, dayStart);
-                const endMins = differenceInMinutes(itemEnd, dayStart);
-                const dayMins = 24 * 60;
-                // Clamp to [0, dayMins] to handle overnight shifts
-                const clampedStart = Math.max(0, startMins);
-                const clampedEnd = Math.min(dayMins, endMins > 0 ? endMins : dayMins);
+                // For overnight shifts end_at may be midnight of the next day — clamp to end of this day
+                const rawEnd = item.end_at instanceof Date ? item.end_at : new Date(item.end_at);
+                const itemEnd = rawEnd > dayEnd ? dayEnd : rawEnd;
+                const startMins = Math.max(0, differenceInMinutes(itemStart, dayStart));
+                const endMins = Math.min(dayMins, differenceInMinutes(itemEnd, dayStart));
+                const width = Math.max(endMins - startMins, 2); // minimum 2 min width so block is visible
                 return {
                     item,
-                    left: `${((clampedStart / dayMins) * 100).toFixed(2)}%`,
-                    width: `${(((clampedEnd - clampedStart) / dayMins) * 100).toFixed(2)}%`,
+                    style: htmlSafe(`left:${((startMins / dayMins) * 100).toFixed(2)}%;width:${((width / dayMins) * 100).toFixed(2)}%`),
                 };
             });
             return {

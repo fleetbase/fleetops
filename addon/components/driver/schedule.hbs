@@ -23,7 +23,7 @@
                             {{#each day.blocks as |block|}}
                                 <div
                                     class="absolute top-0 h-full rounded bg-indigo-400 dark:bg-indigo-600 opacity-90 cursor-pointer"
-                                    style="left:{{block.left}};width:{{block.width}}"
+                                    style={{block.style}}
                                     title="{{if block.item.title block.item.title "Shift"}} · {{format-date-fns block.item.start_at "HH:mm"}}–{{format-date-fns block.item.end_at "HH:mm"}}"
                                 ></div>
                             {{/each}}
