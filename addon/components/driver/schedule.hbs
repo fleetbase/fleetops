@@ -1,24 +1,5 @@
 <div class="driver-schedule-container" ...attributes>
 
-    {{! ── Schedule Header ─────────────────────────────────────────────────── }}
-    {{#if this.schedule}}
-        <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 text-xs">
-            <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                <FaIcon @icon="calendar-week" @prefix="fas" class="text-indigo-500" />
-                <span class="font-medium text-gray-700 dark:text-gray-200">{{this.schedule.name}}</span>
-                <Badge @status={{this.schedule.status}} @type="mini" />
-            </div>
-            <Button
-                @type="link"
-                @size="xs"
-                @icon="plus"
-                @text={{t "scheduler.add-shift"}}
-                @permission="fleet-ops update driver"
-                {{on "click" this.addShift}}
-            />
-        </div>
-    {{/if}}
-
     {{! ── Upcoming Shifts Panel (with week timeline strip) ────────────────── }}
     <ContentPanel
         @title={{t "scheduler.upcoming-shifts"}}

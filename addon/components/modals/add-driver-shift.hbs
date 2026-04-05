@@ -24,10 +24,10 @@
             {{! ── Mode toggle ─────────────────────────────────────────────────────── }}
             <div class="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
                 <div>
-                    <p class="font-medium dark:text-gray-100">{{t "scheduler.recurring-schedule"}}</p>
-                    <p class="text-gray-500 dark:text-gray-400 mt-0.5">{{t "scheduler.recurring-schedule-help"}}</p>
+                    <p class="font-medium dark:text-gray-100">{{t "scheduler.one-off-shift"}}</p>
+                    <p class="text-gray-500 dark:text-gray-400 mt-0.5">{{t "scheduler.one-off-shift-help"}}</p>
                 </div>
-                <Toggle @isToggled={{this.isRecurring}} @onToggle={{this.toggleMode}} />
+                <Toggle @isToggled={{this.isOneOff}} @onToggle={{this.toggleMode}} />
             </div>
 
             {{! ══════════════════════════════════════════════════════════════════════ }}
@@ -37,12 +37,12 @@
 
                 <div class="input-group">
                     <label>{{t "scheduler.shift-title"}}</label>
-                    <Input
+                    <InputGroup
+                        @name={{t "scheduler.shift-title"}}
+                        @hideLabel={{true}}
                         @value={{this.title}}
-                        @type="text"
-                        placeholder={{t "scheduler.shift-title-placeholder"}}
-                        class="w-full form-input"
-                        {{on "input" (fn this.updateTitle this.title)}}
+                        @placeholder={{t "scheduler.shift-title-placeholder"}}
+                        @onChange={{this.updateTitle}}
                     />
                 </div>
 
@@ -89,12 +89,13 @@
 
                 <div class="input-group">
                     <label>{{t "common.notes"}}</label>
-                    <Textarea
+                    <InputGroup
+                        @name={{t "common.notes"}}
+                        @hideLabel={{true}}
+                        @type="textarea"
                         @value={{this.notes}}
-                        placeholder={{t "scheduler.shift-notes-placeholder"}}
-                        class="w-full form-input"
-                        rows="2"
-                        {{on "input" (fn this.updateNotes this.notes)}}
+                        @placeholder={{t "scheduler.shift-notes-placeholder"}}
+                        @onChange={{this.updateNotes}}
                     />
                 </div>
 
@@ -106,13 +107,13 @@
             {{#if this.isRecurring}}
 
                 <div class="input-group">
-                    <label>{{t "scheduler.template-name"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
-                    <Input
+                    <label>{{t "scheduler.schedule-name"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
+                    <InputGroup
+                        @name={{t "scheduler.schedule-name"}}
+                        @hideLabel={{true}}
                         @value={{this.templateName}}
-                        @type="text"
-                        placeholder={{t "scheduler.template-name-placeholder"}}
-                        class="w-full form-input"
-                        {{on "input" (fn this.updateTemplateName this.templateName)}}
+                        @placeholder={{t "scheduler.schedule-name-placeholder"}}
+                        @onChange={{this.updateTemplateName}}
                     />
                 </div>
 

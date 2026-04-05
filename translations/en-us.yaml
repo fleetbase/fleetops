@@ -1184,6 +1184,10 @@ scheduler:
     recurrence-end-date: Ends On (optional)
     template-name: Template Name
     template-name-placeholder: e.g. Standard Week
+    schedule-name: Schedule Name
+    schedule-name-placeholder: e.g. Standard Week
+    one-off-shift: One-off Shift
+    one-off-shift-help: Toggle on to add a single shift on a specific date and time instead of a recurring schedule.
     template-color: Color
     shift-start-time: Shift Start Time
     shift-end-time: Shift End Time

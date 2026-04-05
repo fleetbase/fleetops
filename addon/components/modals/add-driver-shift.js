@@ -20,7 +20,7 @@ export default class ModalsAddDriverShiftComponent extends Component {
     @service intl;
 
     // ── Mode ──────────────────────────────────────────────────────────────────
-    @tracked isRecurring = false;
+    @tracked isRecurring = true;
 
     // ── Shared ────────────────────────────────────────────────────────────────
     @tracked selectedDriver = null;
@@ -78,6 +78,14 @@ export default class ModalsAddDriverShiftComponent extends Component {
         return `Weekly on ${days}${times}`;
     }
 
+    /**
+     * The toggle shows "One-off shift" and is ON when NOT recurring.
+     * isRecurring is the source of truth; isOneOff is the inverse for the toggle.
+     */
+    get isOneOff() {
+        return !this.isRecurring;
+    }
+
     get canConfirm() {
         if (this.isRecurring) {
             return this.selectedDays.length > 0 && this.shiftStartTime && this.shiftEndTime;
@@ -88,6 +96,7 @@ export default class ModalsAddDriverShiftComponent extends Component {
     // ── Actions ───────────────────────────────────────────────────────────────
     @action
     toggleMode() {
+        // Toggle flips between recurring (default) and single one-off shift
         this.isRecurring = !this.isRecurring;
     }
 
