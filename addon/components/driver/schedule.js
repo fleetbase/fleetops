@@ -160,7 +160,7 @@ export default class DriverScheduleComponent extends Component {
      */
     @task *loadHOSStatus() {
         try {
-            const response = yield this.fetch.get(`fleet-ops/drivers/${this.args.resource.id}/hos-status`);
+            const response = yield this.fetch.get(`drivers/${this.args.resource.id}/hos-status`);
             this.hosStatus = response;
         } catch {
             // HOS endpoint not yet implemented — suppress error silently
