@@ -6,11 +6,10 @@
             <div class="input-group">
                 <label>{{t "scheduler.shift-title"}}</label>
                 <Input
-                    @value={{this.title}}
+                    @value={{@options.title}}
                     @type="text"
                     placeholder={{t "scheduler.shift-title-placeholder"}}
                     class="w-full form-input"
-                    {{on "input" this.updateTitle}}
                 />
             </div>
 
@@ -18,7 +17,7 @@
             <div class="input-group">
                 <label>{{t "scheduler.shift-start"}}</label>
                 <DateTimeInput
-                    @value={{this.startAt}}
+                    @value={{@options.startAt}}
                     @onChange={{this.updateStartAt}}
                     placeholder={{t "scheduler.select-start-datetime"}}
                     class="w-full form-input"
@@ -29,7 +28,7 @@
             <div class="input-group">
                 <label>{{t "scheduler.shift-end"}}</label>
                 <DateTimeInput
-                    @value={{this.endAt}}
+                    @value={{@options.endAt}}
                     @onChange={{this.updateEndAt}}
                     placeholder={{t "scheduler.select-end-datetime"}}
                     class="w-full form-input"
@@ -41,7 +40,7 @@
                 <div class="input-group">
                     <label>{{t "scheduler.break-start"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
                     <DateTimeInput
-                        @value={{this.breakStartAt}}
+                        @value={{@options.breakStartAt}}
                         @onChange={{this.updateBreakStartAt}}
                         placeholder={{t "scheduler.select-break-start"}}
                         class="w-full form-input"
@@ -50,7 +49,7 @@
                 <div class="input-group">
                     <label>{{t "scheduler.break-end"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
                     <DateTimeInput
-                        @value={{this.breakEndAt}}
+                        @value={{@options.breakEndAt}}
                         @onChange={{this.updateBreakEndAt}}
                         placeholder={{t "scheduler.select-break-end"}}
                         class="w-full form-input"
@@ -62,11 +61,10 @@
             <div class="input-group">
                 <label>{{t "common.notes"}}</label>
                 <Textarea
-                    @value={{this.notes}}
+                    @value={{@options.notes}}
                     placeholder={{t "scheduler.shift-notes-placeholder"}}
                     class="w-full form-input"
                     rows="2"
-                    {{on "input" this.updateNotes}}
                 />
             </div>
 

@@ -9,6 +9,10 @@ import { action } from '@ember/object';
  * "Request Time Off" (is_available=false) flows. The caller controls
  * the initial value of `isAvailable` via modal options.
  *
+ * Plain text/textarea inputs bind @value directly to @options — Ember's
+ * two-way binding keeps them in sync without manual update actions.
+ * DateTimeInput still uses @onChange because it emits a processed value.
+ *
  * @example (from driver/schedule.js)
  *   this.modalsManager.show('modals/set-driver-availability', {
  *       isAvailable: false,
@@ -16,42 +20,33 @@ import { action } from '@ember/object';
  *   });
  */
 export default class ModalsSetDriverAvailabilityComponent extends Component {
-    @tracked startAt = null;
-    @tracked endAt = null;
-    @tracked reason = '';
-    @tracked notes = '';
+    // isAvailable drives the button selection UI — must stay tracked
     @tracked isAvailable = true;
 
     constructor() {
         super(...arguments);
-        // Initialise from modal options so the caller can pre-set isAvailable
-        this.isAvailable = this.args.options?.isAvailable ?? true;
+        const opts = this.args.options;
+
+        // Seed all fields onto @options so the template can bind @value directly
+        // and the confirm callback reads them back without any sync actions.
+        opts.startAt = opts.startAt ?? null;
+        opts.endAt = opts.endAt ?? null;
+        opts.reason = opts.reason ?? '';
+        opts.notes = opts.notes ?? '';
+
+        this.isAvailable = opts.isAvailable ?? true;
+        opts.isAvailable = this.isAvailable;
     }
 
+    // DateTimeInput emits a processed value — needs @onChange
     @action
     updateStartAt(value) {
-        this.startAt = value;
         this.args.options.startAt = value;
     }
 
     @action
     updateEndAt(value) {
-        this.endAt = value;
         this.args.options.endAt = value;
-    }
-
-    @action
-    updateReason(event) {
-        const value = event.target.value;
-        this.reason = value;
-        this.args.options.reason = value;
-    }
-
-    @action
-    updateNotes(event) {
-        const value = event.target.value;
-        this.notes = value;
-        this.args.options.notes = value;
     }
 
     @action

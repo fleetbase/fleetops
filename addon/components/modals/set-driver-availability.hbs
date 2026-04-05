@@ -36,7 +36,7 @@
                 <div class="input-group">
                     <label>{{t "scheduler.start-date"}}</label>
                     <DateTimeInput
-                        @value={{this.startAt}}
+                        @value={{@options.startAt}}
                         @onChange={{this.updateStartAt}}
                         placeholder={{t "scheduler.select-start-date"}}
                         class="w-full form-input"
@@ -45,7 +45,7 @@
                 <div class="input-group">
                     <label>{{t "scheduler.end-date"}}</label>
                     <DateTimeInput
-                        @value={{this.endAt}}
+                        @value={{@options.endAt}}
                         @onChange={{this.updateEndAt}}
                         placeholder={{t "scheduler.select-end-date"}}
                         class="w-full form-input"
@@ -57,11 +57,10 @@
             <div class="input-group">
                 <label>{{t "scheduler.reason"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
                 <Input
-                    @value={{this.reason}}
+                    @value={{@options.reason}}
                     @type="text"
                     placeholder={{t "scheduler.reason-placeholder"}}
                     class="w-full form-input"
-                    {{on "input" this.updateReason}}
                 />
             </div>
 
@@ -69,11 +68,10 @@
             <div class="input-group">
                 <label>{{t "common.notes"}}</label>
                 <Textarea
-                    @value={{this.notes}}
+                    @value={{@options.notes}}
                     placeholder={{t "scheduler.notes-placeholder"}}
                     class="w-full form-input"
                     rows="3"
-                    {{on "input" this.updateNotes}}
                 />
             </div>
 

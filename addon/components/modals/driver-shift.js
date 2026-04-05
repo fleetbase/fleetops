@@ -1,5 +1,4 @@
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
 /**
@@ -8,6 +7,10 @@ import { action } from '@ember/object';
  * Modal for editing an existing ScheduleItem (shift).
  * Pre-populates all fields from the passed `item` option.
  *
+ * Plain text/textarea inputs bind @value directly to @options — Ember's
+ * two-way binding keeps them in sync without manual update actions.
+ * DateTimeInput still uses @onChange because it emits a processed value.
+ *
  * @example
  *   this.modalsManager.show('modals/driver-shift', {
  *       item: scheduleItem,
@@ -15,68 +18,39 @@ import { action } from '@ember/object';
  *   });
  */
 export default class ModalsDriverShiftComponent extends Component {
-    @tracked title = '';
-    @tracked startAt = null;
-    @tracked endAt = null;
-    @tracked breakStartAt = null;
-    @tracked breakEndAt = null;
-    @tracked notes = '';
-
     constructor() {
         super(...arguments);
-        const item = this.args.options?.item;
-        if (item) {
-            this.title = item.title ?? '';
-            this.startAt = item.start_at;
-            this.endAt = item.end_at;
-            this.breakStartAt = item.break_start_at ?? null;
-            this.breakEndAt = item.break_end_at ?? null;
-            this.notes = item.notes ?? '';
-            // Seed modal options so the confirm callback can read them
-            this.args.options.title = this.title;
-            this.args.options.startAt = this.startAt;
-            this.args.options.endAt = this.endAt;
-            this.args.options.breakStartAt = this.breakStartAt;
-            this.args.options.breakEndAt = this.breakEndAt;
-            this.args.options.notes = this.notes;
-        }
+        const opts = this.args.options;
+        const item = opts?.item;
+
+        // Seed all fields onto @options so the template can bind @value directly
+        // and the confirm callback reads them back without any sync actions.
+        opts.title = item?.title ?? '';
+        opts.startAt = item?.start_at ?? null;
+        opts.endAt = item?.end_at ?? null;
+        opts.breakStartAt = item?.break_start_at ?? null;
+        opts.breakEndAt = item?.break_end_at ?? null;
+        opts.notes = item?.notes ?? '';
     }
 
-    @action
-    updateTitle(event) {
-        const value = event.target.value;
-        this.title = value;
-        this.args.options.title = value;
-    }
-
+    // DateTimeInput emits a processed value — needs @onChange
     @action
     updateStartAt(value) {
-        this.startAt = value;
         this.args.options.startAt = value;
     }
 
     @action
     updateEndAt(value) {
-        this.endAt = value;
         this.args.options.endAt = value;
     }
 
     @action
     updateBreakStartAt(value) {
-        this.breakStartAt = value;
         this.args.options.breakStartAt = value;
     }
 
     @action
     updateBreakEndAt(value) {
-        this.breakEndAt = value;
         this.args.options.breakEndAt = value;
-    }
-
-    @action
-    updateNotes(event) {
-        const value = event.target.value;
-        this.notes = value;
-        this.args.options.notes = value;
     }
 }

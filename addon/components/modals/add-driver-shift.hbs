@@ -38,18 +38,17 @@
                 <div class="input-group">
                     <label>{{t "scheduler.shift-title"}}</label>
                     <Input
-                        @value={{this.title}}
+                        @value={{@options.title}}
                         @type="text"
                         placeholder={{t "scheduler.shift-title-placeholder"}}
                         class="w-full form-input"
-                        {{on "input" this.updateTitle}}
                     />
                 </div>
 
                 <div class="input-group">
                     <label>{{t "scheduler.shift-start"}}</label>
                     <DateTimeInput
-                        @value={{this.startAt}}
+                        @value={{@options.startAt}}
                         @onChange={{this.updateStartAt}}
                         placeholder={{t "scheduler.select-start-datetime"}}
                         class="w-full form-input"
@@ -59,7 +58,7 @@
                 <div class="input-group">
                     <label>{{t "scheduler.shift-end"}}</label>
                     <DateTimeInput
-                        @value={{this.endAt}}
+                        @value={{@options.endAt}}
                         @onChange={{this.updateEndAt}}
                         placeholder={{t "scheduler.select-end-datetime"}}
                         class="w-full form-input"
@@ -70,7 +69,7 @@
                     <div class="input-group">
                         <label>{{t "scheduler.break-start"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
                         <DateTimeInput
-                            @value={{this.breakStartAt}}
+                            @value={{@options.breakStartAt}}
                             @onChange={{this.updateBreakStartAt}}
                             placeholder={{t "scheduler.select-break-start"}}
                             class="w-full form-input"
@@ -79,7 +78,7 @@
                     <div class="input-group">
                         <label>{{t "scheduler.break-end"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
                         <DateTimeInput
-                            @value={{this.breakEndAt}}
+                            @value={{@options.breakEndAt}}
                             @onChange={{this.updateBreakEndAt}}
                             placeholder={{t "scheduler.select-break-end"}}
                             class="w-full form-input"
@@ -90,11 +89,10 @@
                 <div class="input-group">
                     <label>{{t "common.notes"}}</label>
                     <Textarea
-                        @value={{this.notes}}
+                        @value={{@options.notes}}
                         placeholder={{t "scheduler.shift-notes-placeholder"}}
                         class="w-full form-input"
                         rows="2"
-                        {{on "input" this.updateNotes}}
                     />
                 </div>
 
@@ -108,11 +106,10 @@
                 <div class="input-group">
                     <label>{{t "scheduler.schedule-name"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
                     <Input
-                        @value={{this.templateName}}
+                        @value={{@options.templateName}}
                         @type="text"
                         placeholder={{t "scheduler.schedule-name-placeholder"}}
                         class="w-full form-input"
-                        {{on "input" this.updateTemplateName}}
                     />
                 </div>
 
@@ -140,13 +137,13 @@
                     <InputGroup
                         @name={{t "scheduler.shift-start-time"}}
                         @type="time"
-                        @value={{this.shiftStartTime}}
+                        @value={{@options.shiftStartTime}}
                         @onChange={{this.updateShiftStartTime}}
                     />
                     <InputGroup
                         @name={{t "scheduler.shift-end-time"}}
                         @type="time"
-                        @value={{this.shiftEndTime}}
+                        @value={{@options.shiftEndTime}}
                         @onChange={{this.updateShiftEndTime}}
                     />
                 </div>
@@ -156,13 +153,13 @@
                     <InputGroup
                         @name={{concat (t "scheduler.break-start") " (" (t "common.optional") ")"}}
                         @type="time"
-                        @value={{this.breakStartTime}}
+                        @value={{@options.breakStartTime}}
                         @onChange={{this.updateBreakStartTime}}
                     />
                     <InputGroup
                         @name={{concat (t "scheduler.break-end") " (" (t "common.optional") ")"}}
                         @type="time"
-                        @value={{this.breakEndTime}}
+                        @value={{@options.breakEndTime}}
                         @onChange={{this.updateBreakEndTime}}
                     />
                 </div>
@@ -172,7 +169,7 @@
                     <div class="input-group">
                         <label>{{t "scheduler.recurrence-start"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
                         <DateTimeInput
-                            @value={{this.recurrenceStartDate}}
+                            @value={{@options.recurrenceStartDate}}
                             @onChange={{this.updateRecurrenceStartDate}}
                             placeholder={{t "scheduler.select-date"}}
                             class="w-full form-input"
@@ -181,7 +178,7 @@
                     <div class="input-group">
                         <label>{{t "scheduler.recurrence-end"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
                         <DateTimeInput
-                            @value={{this.recurrenceEndDate}}
+                            @value={{@options.recurrenceEndDate}}
                             @onChange={{this.updateRecurrenceEndDate}}
                             placeholder={{t "scheduler.select-date"}}
                             class="w-full form-input"
