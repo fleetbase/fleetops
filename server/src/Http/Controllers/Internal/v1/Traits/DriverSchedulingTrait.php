@@ -14,22 +14,38 @@ use Illuminate\Http\Request;
  * ScheduleAvailability) through FleetOps-specific driver endpoints.
  *
  * Routes:
- *   GET /int/v1/fleet-ops/drivers/{id}/schedule-items
- *   GET /int/v1/fleet-ops/drivers/{id}/availabilities
- *   GET /int/v1/fleet-ops/drivers/{id}/hos-status
- *   GET /int/v1/fleet-ops/drivers/{id}/active-shift
+ *   GET /int/v1/drivers/{id}/schedule-items
+ *   GET /int/v1/drivers/{id}/availabilities
+ *   GET /int/v1/drivers/{id}/hos-status
+ *   GET /int/v1/drivers/{id}/active-shift
+ *
+ * The {id} parameter accepts either the driver's UUID or public_id.
  */
 trait DriverSchedulingTrait
 {
     /**
+     * Resolve a Driver by UUID or public_id, throwing 404 if not found.
+     *
+     * @param string $id UUID or public_id
+     *
+     * @return Driver
+     */
+    private function resolveDriver(string $id): Driver
+    {
+        return Driver::where('uuid', $id)
+            ->orWhere('public_id', $id)
+            ->firstOrFail();
+    }
+
+    /**
      * Return all ScheduleItem records assigned to this driver.
      * Supports optional date range filtering via start_at and end_at query params.
      *
-     * GET /int/v1/fleet-ops/drivers/{id}/schedule-items
+     * GET /int/v1/drivers/{id}/schedule-items
      */
     public function scheduleItems(string $id, Request $request): JsonResponse
     {
-        $driver = Driver::where('public_id', $id)->firstOrFail();
+        $driver = $this->resolveDriver($id);
 
         $query = $driver->scheduleItems();
 
@@ -52,11 +68,11 @@ trait DriverSchedulingTrait
      * Return all ScheduleAvailability records for this driver.
      * Supports optional date range filtering via start_at and end_at query params.
      *
-     * GET /int/v1/fleet-ops/drivers/{id}/availabilities
+     * GET /int/v1/drivers/{id}/availabilities
      */
     public function availabilities(string $id, Request $request): JsonResponse
     {
-        $driver = Driver::where('public_id', $id)->firstOrFail();
+        $driver = $this->resolveDriver($id);
 
         $query = $driver->availabilities();
 
@@ -82,11 +98,11 @@ trait DriverSchedulingTrait
      * records. This is a computed endpoint — it does not persist HOS data.
      * A future iteration may integrate with a dedicated HOS tracking system.
      *
-     * GET /int/v1/fleet-ops/drivers/{id}/hos-status
+     * GET /int/v1/drivers/{id}/hos-status
      */
     public function hosStatus(string $id): JsonResponse
     {
-        $driver = Driver::where('public_id', $id)->firstOrFail();
+        $driver = $this->resolveDriver($id);
 
         // Daily hours: sum of completed/in-progress shift durations today
         $dailyMinutes = $driver->scheduleItems()
@@ -116,11 +132,11 @@ trait DriverSchedulingTrait
      * Return the driver's currently active shift for today.
      * Used by the AllocationPayloadBuilder to inject time_window constraints.
      *
-     * GET /int/v1/fleet-ops/drivers/{id}/active-shift
+     * GET /int/v1/drivers/{id}/active-shift
      */
     public function activeShift(string $id): JsonResponse
     {
-        $driver = Driver::where('public_id', $id)->firstOrFail();
+        $driver = $this->resolveDriver($id);
 
         $shift = $driver->activeShiftFor(now());
 

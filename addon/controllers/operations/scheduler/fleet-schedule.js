@@ -114,8 +114,8 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
         try {
             const items = yield this.store.query('schedule-item', {
                 assignee_type: 'driver',
-                start_at_after: this.windowStart,
-                end_at_before: this.windowEnd,
+                start_at_gte: this.windowStart,
+                end_at_lte: this.windowEnd,
                 limit: 500,
             });
             this.scheduleItems = items.toArray();
@@ -133,8 +133,8 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
         try {
             const exceptions = yield this.store.query('schedule-exception', {
                 subject_type: 'driver',
-                start_date_after: this.windowStart,
-                end_date_before: this.windowEnd,
+                start_date_gte: this.windowStart,
+                end_date_lte: this.windowEnd,
                 limit: 200,
             });
             this.exceptions = exceptions.toArray();

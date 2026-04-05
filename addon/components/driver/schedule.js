@@ -170,10 +170,12 @@ export default class DriverScheduleComponent extends Component {
             }
 
             // 2. Load materialised schedule items within the 4-week window
+            // Use _gte/_lte operator suffixes so the API applies range filtering
+            // (plain start_at/end_at would be treated as exact equality by the query builder)
             const items = yield this.store.query('schedule-item', {
                 schedule_uuid: this.schedule.id,
-                start_at: this.startDate,
-                end_at: this.endDate,
+                start_at_gte: this.startDate,
+                end_at_lte: this.endDate,
             });
 
             this.scheduleItems = items.toArray();
