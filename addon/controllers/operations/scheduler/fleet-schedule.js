@@ -272,6 +272,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
                                 subject_type: 'driver',
                                 subject_uuid: targetDriver.id,
                                 name: `${targetDriver.name} Schedule`,
+                                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                                 status: 'draft',
                             }).save();
                         }

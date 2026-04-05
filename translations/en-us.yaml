@@ -48,6 +48,8 @@ common:
   overview: Overview
   notes: Notes
   schedule: Schedule
+  optional: Optional
+  unauthorized-access: You are not authorized to access this resource.
 
 menu:
   operations: Operations
@@ -1200,6 +1202,23 @@ scheduler:
     today: Today
     orders-tab: Order Schedule
     fleet-schedule-tab: Fleet Schedule
+    break-start: Break Start
+    break-end: Break End
+    select-break-start: Select break start time
+    select-break-end: Select break end time
+    select-date: Select date
+    working-days: Working Days
+    recurrence-start: Starts On
+    recurrence-end: Ends On
+    recurring-schedule-help: Define a recurring shift pattern using days and times. Shifts will be automatically created for the driver.
+    shift-deleted: Shift deleted successfully.
+    day-mon: Mon
+    day-tue: Tue
+    day-wed: Wed
+    day-thu: Thu
+    day-fri: Fri
+    day-sat: Sat
+    day-sun: Sun
 modals:
   new-custom-field-group:
     modal-title: Create a new custom field group

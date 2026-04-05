@@ -1,33 +1,25 @@
 <div class="driver-schedule-container" ...attributes>
-    {{! HOS Status Panel — only shown when hosStatus is available }}
-    {{#if this.hosStatus}}
-        <ContentPanel @title={{t "scheduler.hours-of-service"}} @open={{true}} @wrapperClass="bordered-top">
-            <div class="grid grid-cols-3 gap-2 text-xs dark:text-gray-100">
-                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                    <div>
-                        <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.daily-driving-hours"}}</div>
-                        <div class="text-lg font-bold">{{this.hosStatus.daily_hours}}<span class="text-gray-400 font-normal">/11h</span></div>
-                    </div>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                    <div>
-                        <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.weekly-hours"}}</div>
-                        <div class="text-lg font-bold">{{this.hosStatus.weekly_hours}}<span class="text-gray-400 font-normal">/70h</span></div>
-                    </div>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                    <div>
-                        <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.compliance-status"}}</div>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-{{this.hosComplianceBadge.color}}-100 text-{{this.hosComplianceBadge.color}}-800 dark:bg-{{this.hosComplianceBadge.color}}-900 dark:text-{{this.hosComplianceBadge.color}}-200">
-                            {{this.hosComplianceBadge.label}}
-                        </span>
-                    </div>
-                </div>
+
+    {{! ── Schedule Header ─────────────────────────────────────────────────── }}
+    {{#if this.schedule}}
+        <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 text-xs">
+            <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                <FaIcon @icon="calendar-week" @prefix="fas" class="text-indigo-500" />
+                <span class="font-medium text-gray-700 dark:text-gray-200">{{this.schedule.name}}</span>
+                <Badge @status={{this.schedule.status}} @type="mini" />
             </div>
-        </ContentPanel>
+            <Button
+                @type="link"
+                @size="xs"
+                @icon="plus"
+                @text={{t "scheduler.add-shift"}}
+                @permission="fleet-ops update driver"
+                {{on "click" this.addShift}}
+            />
+        </div>
     {{/if}}
 
-    {{! Upcoming Shifts Panel }}
+    {{! ── Upcoming Shifts Panel (with week timeline strip) ────────────────── }}
     <ContentPanel
         @title={{t "scheduler.upcoming-shifts"}}
         @open={{true}}
@@ -35,14 +27,40 @@
         @actionButtons={{this.shiftActionButtons}}
         @wrapperClass="bordered-top"
     >
+        {{! 7-day horizontal timeline strip }}
+        <div class="mb-3">
+            <div class="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 rounded overflow-hidden text-xs">
+                {{#each this.weekDays as |day|}}
+                    <div class="bg-white dark:bg-gray-800 p-1">
+                        {{! Day label row }}
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-gray-400 dark:text-gray-500 uppercase tracking-wide" style="font-size:9px">{{day.label}}</span>
+                            <span class="{{if day.isToday "text-indigo-600 dark:text-indigo-400 font-bold" "text-gray-500 dark:text-gray-400"}}">{{day.dayNum}}</span>
+                        </div>
+                        {{! Shift bar track }}
+                        <div class="relative h-3 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">
+                            {{#each day.blocks as |block|}}
+                                <div
+                                    class="absolute top-0 h-full rounded bg-indigo-400 dark:bg-indigo-600 opacity-90 cursor-pointer"
+                                    style="left:{{block.left}};width:{{block.width}}"
+                                    title="{{if block.item.title block.item.title "Shift"}} · {{format-date-fns block.item.start_at "HH:mm"}}–{{format-date-fns block.item.end_at "HH:mm"}}"
+                                ></div>
+                            {{/each}}
+                        </div>
+                    </div>
+                {{/each}}
+            </div>
+        </div>
+
+        {{! Shift list }}
         {{#if this.upcomingShifts.length}}
             <div class="space-y-1">
                 {{#each this.upcomingShifts as |shift|}}
                     <div class="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-xs dark:text-gray-100">
                         <div class="flex items-center space-x-3">
-                            <div class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></div>
+                            <div class="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0"></div>
                             <div>
-                                <div class="font-medium">{{shift.title}}</div>
+                                <div class="font-medium">{{if shift.title shift.title "Shift"}}</div>
                                 <div class="text-gray-500 dark:text-gray-400">
                                     {{format-date-fns shift.start_at "EEE, MMM d · HH:mm"}}
                                     –
@@ -61,11 +79,43 @@
         {{else}}
             <div class="text-center py-6 text-xs text-gray-500 dark:text-gray-400">
                 {{t "scheduler.no-upcoming-shifts"}}
+                <div class="mt-1">
+                    <Button
+                        @type="link"
+                        @size="xs"
+                        @icon="plus"
+                        @text={{t "scheduler.add-shift"}}
+                        @permission="fleet-ops update driver"
+                        {{on "click" this.addShift}}
+                    />
+                </div>
             </div>
         {{/if}}
     </ContentPanel>
 
-    {{! Time Off & Exceptions Panel }}
+    {{! ── HOS Status Panel ────────────────────────────────────────────────── }}
+    {{#if this.hosStatus}}
+        <ContentPanel @title={{t "scheduler.hours-of-service"}} @open={{false}} @wrapperClass="bordered-top">
+            <div class="grid grid-cols-3 gap-2 text-xs dark:text-gray-100">
+                <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                    <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.daily-driving-hours"}}</div>
+                    <div class="text-lg font-bold">{{this.hosStatus.daily_hours}}<span class="text-gray-400 font-normal">/11h</span></div>
+                </div>
+                <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                    <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.weekly-hours"}}</div>
+                    <div class="text-lg font-bold">{{this.hosStatus.weekly_hours}}<span class="text-gray-400 font-normal">/70h</span></div>
+                </div>
+                <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                    <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.compliance-status"}}</div>
+                    <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-{{this.hosComplianceBadge.color}}-100 text-{{this.hosComplianceBadge.color}}-800 dark:bg-{{this.hosComplianceBadge.color}}-900 dark:text-{{this.hosComplianceBadge.color}}-200">
+                        {{this.hosComplianceBadge.label}}
+                    </span>
+                </div>
+            </div>
+        </ContentPanel>
+    {{/if}}
+
+    {{! ── Time Off & Exceptions Panel ─────────────────────────────────────── }}
     <ContentPanel
         @title={{t "scheduler.time-off-exceptions"}}
         @open={{true}}

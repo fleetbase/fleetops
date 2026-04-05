@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-import { startOfWeek, endOfWeek, addWeeks, formatISO } from 'date-fns';
+import { startOfWeek, endOfWeek, addWeeks, formatISO, addDays, format, isSameDay, differenceInMinutes, startOfDay } from 'date-fns';
 
 /**
  * Driver::Schedule Component
@@ -79,6 +79,37 @@ export default class DriverScheduleComponent extends Component {
         return this.exceptions.filter((e) => e.status === 'approved');
     }
 
+    /**
+     * Returns the 7 days of the current week (Mon–Sun) with any shifts
+     * that fall on each day, used to render the week timeline strip.
+     */
+    get weekDays() {
+        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+        return Array.from({ length: 7 }, (_, i) => {
+            const day = addDays(weekStart, i);
+            const dayStart = startOfDay(day);
+            const shifts = this.scheduleItems.filter((item) => isSameDay(new Date(item.start_at), day));
+            const blocks = shifts.map((item) => {
+                const startMins = differenceInMinutes(new Date(item.start_at), dayStart);
+                const endMins = differenceInMinutes(new Date(item.end_at), dayStart);
+                const dayMins = 24 * 60;
+                return {
+                    item,
+                    left: `${((startMins / dayMins) * 100).toFixed(2)}%`,
+                    width: `${(((endMins - startMins) / dayMins) * 100).toFixed(2)}%`,
+                };
+            });
+            return {
+                date: day,
+                label: format(day, 'EEE'),
+                dayNum: format(day, 'd'),
+                isToday: isSameDay(day, new Date()),
+                shifts,
+                blocks,
+            };
+        });
+    }
+
     // ── Panel action buttons ──────────────────────────────────────────────────
 
     get shiftActionButtons() {
@@ -132,6 +163,7 @@ export default class DriverScheduleComponent extends Component {
                     subject_type: 'driver',
                     subject_uuid: this.args.resource.id,
                     name: `${this.args.resource.name} Schedule`,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                     status: 'draft',
                 });
                 this.schedule = yield newSchedule.save();
