@@ -50,7 +50,7 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-1">
-                            <Badge @status={{shift.status}} />
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium {{this.shiftStatusClass shift.status}}">{{shift.status}}</span>
                             <Button @icon="pencil" @size="xs" @type="link" {{on "click" (fn this.editShift shift)}} />
                             <Button @icon="trash" @size="xs" @type="link" @scheme="danger" {{on "click" (fn this.deleteShift shift)}} />
                         </div>

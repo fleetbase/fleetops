@@ -80,23 +80,49 @@ export default class DriverScheduleComponent extends Component {
     }
 
     /**
-     * Returns the 7 days of the current week (Mon–Sun) with any shifts
+     * Returns the Tailwind CSS classes for a shift status badge.
+     * Called directly from the template as {{this.shiftStatusClass status}}.
+     */
+    shiftStatusClass(status) {
+        const map = {
+            scheduled: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+            in_progress: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+            completed: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+            cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+        };
+        return map[status] ?? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+    }
+
+    /**
+     * Returns 7 days starting from today (rolling window) with any shifts
      * that fall on each day, used to render the week timeline strip.
+     *
+     * We use today as the anchor rather than the start of the calendar week
+     * so that upcoming shifts always appear in the visible window.
      */
     get weekDays() {
-        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+        const today = startOfDay(new Date());
         return Array.from({ length: 7 }, (_, i) => {
-            const day = addDays(weekStart, i);
+            const day = addDays(today, i);
             const dayStart = startOfDay(day);
-            const shifts = this.scheduleItems.filter((item) => isSameDay(new Date(item.start_at), day));
+            // Match items whose start_at falls on this calendar day (local time)
+            const shifts = this.scheduleItems.filter((item) => {
+                const itemDate = item.start_at instanceof Date ? item.start_at : new Date(item.start_at);
+                return isSameDay(itemDate, day);
+            });
             const blocks = shifts.map((item) => {
-                const startMins = differenceInMinutes(new Date(item.start_at), dayStart);
-                const endMins = differenceInMinutes(new Date(item.end_at), dayStart);
+                const itemStart = item.start_at instanceof Date ? item.start_at : new Date(item.start_at);
+                const itemEnd = item.end_at instanceof Date ? item.end_at : new Date(item.end_at);
+                const startMins = differenceInMinutes(itemStart, dayStart);
+                const endMins = differenceInMinutes(itemEnd, dayStart);
                 const dayMins = 24 * 60;
+                // Clamp to [0, dayMins] to handle overnight shifts
+                const clampedStart = Math.max(0, startMins);
+                const clampedEnd = Math.min(dayMins, endMins > 0 ? endMins : dayMins);
                 return {
                     item,
-                    left: `${((startMins / dayMins) * 100).toFixed(2)}%`,
-                    width: `${(((endMins - startMins) / dayMins) * 100).toFixed(2)}%`,
+                    left: `${((clampedStart / dayMins) * 100).toFixed(2)}%`,
+                    width: `${(((clampedEnd - clampedStart) / dayMins) * 100).toFixed(2)}%`,
                 };
             });
             return {
