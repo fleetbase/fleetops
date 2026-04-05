@@ -31,7 +31,7 @@
     <ContentPanel
         @title={{t "scheduler.upcoming-shifts"}}
         @open={{true}}
-        @isLoading={{this.isLoadingSchedule}}
+        @isLoading={{this.loadDriverSchedule.isRunning}}
         @actionButtons={{this.shiftActionButtons}}
         @wrapperClass="bordered-top"
     >
@@ -69,7 +69,7 @@
     <ContentPanel
         @title={{t "scheduler.availability-time-off"}}
         @open={{true}}
-        @isLoading={{this.isLoadingAvailability}}
+        @isLoading={{this.loadAvailability.isRunning}}
         @actionButtons={{this.availabilityActionButtons}}
         @wrapperClass="bordered-top"
     >

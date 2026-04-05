@@ -16,6 +16,9 @@ import { startOfWeek, endOfWeek, addWeeks, formatISO } from 'date-fns';
  * service. The schedule_items relationship on the Driver model uses
  * assignee_type='driver' and assignee_uuid=driver.id as the polymorphic key.
  *
+ * Loading state is derived directly from ember-concurrency task instances
+ * (e.g. this.loadDriverSchedule.isRunning) — no redundant @tracked booleans.
+ *
  * @example
  * <Driver::Schedule @resource={{@driver}} />
  */
@@ -31,8 +34,6 @@ export default class DriverScheduleComponent extends Component {
     @tracked upcomingShifts = [];
     @tracked availability = [];
     @tracked hosStatus = null;
-    @tracked isLoadingSchedule = false;
-    @tracked isLoadingAvailability = false;
 
     constructor() {
         super(...arguments);
@@ -116,9 +117,10 @@ export default class DriverScheduleComponent extends Component {
      * Load all schedule items (shifts) for this driver within the 4-week window.
      * Uses the driverScheduling service which calls the core-api schedule-items endpoint
      * with assignee_type=driver and assignee_uuid=driver.id.
+     *
+     * Loading state is available as this.loadDriverSchedule.isRunning in templates.
      */
     @task *loadDriverSchedule() {
-        this.isLoadingSchedule = true;
         try {
             const items = yield this.driverScheduling.getScheduleItemsForAssignee.perform('driver', this.args.resource.id, {
                 start_at: this.startDate,
@@ -130,17 +132,16 @@ export default class DriverScheduleComponent extends Component {
                 .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
         } catch (error) {
             this.notifications.serverError(error);
-        } finally {
-            this.isLoadingSchedule = false;
         }
     }
 
     /**
      * Load availability records (time-off, preferred hours) for this driver.
      * Uses the core-api schedule-availability endpoint with subject_type=driver.
+     *
+     * Loading state is available as this.loadAvailability.isRunning in templates.
      */
     @task *loadAvailability() {
-        this.isLoadingAvailability = true;
         try {
             const availability = yield this.store.query('schedule-availability', {
                 subject_type: 'driver',
@@ -149,15 +150,13 @@ export default class DriverScheduleComponent extends Component {
             this.availability = availability.toArray();
         } catch (error) {
             this.notifications.serverError(error);
-        } finally {
-            this.isLoadingAvailability = false;
         }
     }
 
     /**
      * Load HOS (Hours of Service) status from the FleetOps driver endpoint.
-     * This is a best-effort load — if the endpoint is not yet implemented,
-     * the hosStatus will remain null and the HOS panel will be hidden.
+     * Best-effort — if the endpoint is not yet implemented hosStatus stays null
+     * and the HOS panel is hidden by the template's {{#if this.hosStatus}} guard.
      */
     @task *loadHOSStatus() {
         try {
@@ -193,10 +192,10 @@ export default class DriverScheduleComponent extends Component {
                         duration: duration,
                         status: 'pending',
                     });
-                    yield scheduleItem.save();
+                    await scheduleItem.save();
                     this.notifications.success(this.intl.t('scheduler.shift-created'));
-                    yield this.loadDriverSchedule.perform();
-                    yield this.loadHOSStatus.perform();
+                    await this.loadDriverSchedule.perform();
+                    await this.loadHOSStatus.perform();
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -221,9 +220,9 @@ export default class DriverScheduleComponent extends Component {
                 const { startAt, endAt } = modal.getOptions();
                 try {
                     item.setProperties({ start_at: startAt, end_at: endAt });
-                    yield item.save();
+                    await item.save();
                     this.notifications.success(this.intl.t('scheduler.shift-updated'));
-                    yield this.loadDriverSchedule.perform();
+                    await this.loadDriverSchedule.perform();
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -246,9 +245,9 @@ export default class DriverScheduleComponent extends Component {
             confirm: async (modal) => {
                 modal.startLoading();
                 try {
-                    yield this.driverScheduling.deleteScheduleItem.perform(item);
-                    yield this.loadDriverSchedule.perform();
-                    yield this.loadHOSStatus.perform();
+                    await this.driverScheduling.deleteScheduleItem.perform(item);
+                    await this.loadDriverSchedule.perform();
+                    await this.loadHOSStatus.perform();
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -282,9 +281,9 @@ export default class DriverScheduleComponent extends Component {
                         reason,
                         notes,
                     });
-                    yield availability.save();
+                    await availability.save();
                     this.notifications.success(this.intl.t('scheduler.availability-set'));
-                    yield this.loadAvailability.perform();
+                    await this.loadAvailability.perform();
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -319,9 +318,9 @@ export default class DriverScheduleComponent extends Component {
                         reason,
                         notes,
                     });
-                    yield availability.save();
+                    await availability.save();
                     this.notifications.success(this.intl.t('scheduler.time-off-requested'));
-                    yield this.loadAvailability.perform();
+                    await this.loadAvailability.perform();
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -344,9 +343,9 @@ export default class DriverScheduleComponent extends Component {
             confirm: async (modal) => {
                 modal.startLoading();
                 try {
-                    yield avail.destroyRecord();
+                    await avail.destroyRecord();
                     this.notifications.success(this.intl.t('scheduler.availability-deleted'));
-                    yield this.loadAvailability.perform();
+                    await this.loadAvailability.perform();
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
