@@ -1,10 +1,20 @@
-<div class="order-schedule-card border border-gray-200 dark:border-gray-700" ...attributes>
-    <a href="javascript:;" class="{{@titleClass}} card-title border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900" {{on "click" (fn this.onTitleClick @order)}}>
-        <span>{{@order.tracking}}</span>
-        <div>
+<div class="order-schedule-card border border-gray-200 dark:border-gray-700 {{if @selected 'ring-2 ring-indigo-500'}}" ...attributes>
+    <div class="card-title border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center gap-2 px-2 py-1.5">
+        {{#if @selectable}}
+            <input
+                type="checkbox"
+                class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600 border-gray-300 dark:border-gray-600 cursor-pointer flex-shrink-0"
+                checked={{@selected}}
+                {{on "click" (fn @onSelect)}}
+            />
+        {{/if}}
+        <a href="javascript:;" class="{{@titleClass}} flex-1 truncate text-sm" {{on "click" (fn this.onTitleClick @order)}}>
+            <span>{{@order.tracking}}</span>
+        </a>
+        <div class="flex-shrink-0">
             <Badge @status={{@order.status}} />
         </div>
-    </a>
+    </div>
     <div class="{{@contentClass}} card-content bg-white dark:bg-gray-900 text-sm space-y-2">
         <div class="flex items-center justify-between">
             <div class="flex flex-row items-center leading-5">

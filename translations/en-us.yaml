@@ -1223,6 +1223,29 @@ scheduler:
     day-fri: Fri
     day-sat: Sat
     day-sun: Sun
+    view-day: Day
+    view-week: Week
+    undo: Undo last action
+    redo: Redo last action
+    search-orders: Search orders...
+    select-all: Select all
+    all-scheduled: All orders scheduled
+    expand-sidebar: Expand sidebar
+    collapse-sidebar: Collapse sidebar
+    bulk-assign: Assign {count} orders
+    bulk-assign-title: Bulk Assign {count} Orders
+    bulk-assign-success: "{count} orders assigned successfully."
+    assign-to-driver: Assign to Driver
+    assign-orders: Assign Orders
+    orders-to-assign: "{count} orders to assign"
+    scheduled-date: Scheduled Date
+    conflict-title: Scheduling Conflict Detected
+    conflict-description: "{orderTracking} overlaps with an existing order for {driverName}."
+    conflicting-orders: Conflicting Orders
+    conflict-resolution-prompt: How would you like to resolve this conflict?
+    auto-adjust: Auto-Adjust Time
+    assign-anyway: Assign Anyway
+    clear-selection: Clear selection
 modals:
   new-custom-field-group:
     modal-title: Create a new custom field group
