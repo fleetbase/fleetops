@@ -28,6 +28,8 @@ common:
   select-resource-filter-by: Изберете {resource} за филтриране
   table-view: Табличен изглед
   grid-view: Мрежов изглед
+  calendar-view: Изглед Календар
+  change-layout: Промяна на оформлението
   livemap: Жива карта
   tracking: Проследяване
   activity: Активност

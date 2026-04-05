@@ -139,6 +139,7 @@ class Vehicle extends Model
         'type',
         'class',
         // Identifiers
+        'internal_id',
         'plate_number',
         'call_sign',
         'serial_number',

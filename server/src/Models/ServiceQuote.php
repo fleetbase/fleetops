@@ -121,7 +121,7 @@ class ServiceQuote extends Model
         return $this->belongsTo(IntegratedVendor::class);
     }
 
-    public function getServiceRateNameAttribute(): string
+    public function getServiceRateNameAttribute(): ?string
     {
         return data_get($this, 'serviceRate.service_name');
     }

@@ -1,10 +1,20 @@
-<div class="form-wrapper" ...attributes>
-    <ContentPanel @title="Part Details" @open={{true}} @wrapperClass="bordered-top">
+<div class="part-form" ...attributes>
+
+    {{! ===== IDENTIFICATION (includes photo, matching vehicle/form convention) ===== }}
+    <ContentPanel @title="Identification" @open={{true}} @wrapperClass="bordered-top">
+        {{! Photo row — identical structure to vehicle/form UploadButton pattern }}
         <div class="flex flex-row space-x-3 mb-3">
             <div class="flex items-center justify-start rounded-full">
-                <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.partImage"}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
+                <Image
+                    src={{@resource.photo_url}}
+                    @fallbackSrc={{config "defaultValues.placeholderImage"}}
+                    alt={{@resource.name}}
+                    height="48"
+                    width="48"
+                    class="h-14 w-14 rounded-full shadow-sm"
+                />
                 <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
-                    <InputInfo @text="Upload new photo" />
+                    <InputInfo @text="Upload a new photo" />
                 </Attach::Tooltip>
             </div>
             <div>
@@ -14,39 +24,79 @@
                     @onFileAdded={{perform this.handlePhotoUpload}}
                     @icon="upload"
                     @size="xs"
-                    @buttonText={{t "common.upload-image"}}
+                    @buttonText="Upload Image"
                     @disabled={{cannot-write @resource}}
                 />
                 <div class="px-1">
-                    <span class="text-gray-300 dark:text-gray-600 text-xs">{{t "common.upload-image-supported"}}</span>
+                    <span class="text-gray-300 dark:text-gray-600 text-xs">Supports JPG, PNG, GIF up to 10 MB</span>
                 </div>
             </div>
         </div>
+
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
-            <InputGroup @name="SKU">
-                <Input @value={{@resource.sku}} @type="text" class="w-full form-input" placeholder="SKU" disabled={{cannot-write @resource}} />
-            </InputGroup>
-
+            {{! Part Identification }}
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Part Details
+            </div>
             <InputGroup @name="Name">
-                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder="Name" disabled={{cannot-write @resource}} />
+                <Input
+                    @value={{@resource.name}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder="Part name"
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
-
-            <InputGroup @name="Manufacturer">
-                <Input @value={{@resource.manufacturer}} @type="text" class="w-full form-input" placeholder="Manufacturer" disabled={{cannot-write @resource}} />
+            <InputGroup @name="SKU">
+                <Input
+                    @value={{@resource.sku}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder="Stock Keeping Unit"
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
-
-            <InputGroup @name="Model">
-                <Input @value={{@resource.model}} @type="text" class="w-full form-input" placeholder="Model" disabled={{cannot-write @resource}} />
-            </InputGroup>
-
             <InputGroup @name="Serial Number">
-                <Input @value={{@resource.serial_number}} @type="text" class="w-full form-input" placeholder="Serial Number" disabled={{cannot-write @resource}} />
+                <Input
+                    @value={{@resource.serial_number}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder="Serial number"
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
-
             <InputGroup @name="Barcode">
-                <Input @value={{@resource.barcode}} @type="text" class="w-full form-input" placeholder="Barcode" disabled={{cannot-write @resource}} />
+                <Input
+                    @value={{@resource.barcode}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder="Barcode or QR code value"
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+            <InputGroup @name="Manufacturer">
+                <Input
+                    @value={{@resource.manufacturer}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder="Manufacturer name"
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+            <InputGroup @name="Model">
+                <Input
+                    @value={{@resource.model}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder="Model designation"
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
 
+            {{! Type & Status }}
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Type & Status
+            </div>
             <InputGroup @name="Type">
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
@@ -62,7 +112,6 @@
                     </PowerSelect>
                 </div>
             </InputGroup>
-
             <InputGroup @name="Status">
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
@@ -79,32 +128,115 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Quantity On Hand" @type="number">
-                <Input @value={{@resource.quantity_on_hand}} @type="number" class="w-full form-input" placeholder="Quantity" disabled={{cannot-write @resource}} />
+            <InputGroup @name="Description" @wrapperClass="col-span-2">
+                <Textarea
+                    @value={{@resource.description}}
+                    aria-label="Description"
+                    class="w-full form-input"
+                    disabled={{cannot-write @resource}}
+                    placeholder="Part description and usage notes"
+                    rows={{3}}
+                />
+            </InputGroup>
+        </div>
+    </ContentPanel>
+
+    {{! ===== INVENTORY ===== }}
+    <ContentPanel @title="Inventory" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Stock Levels
+            </div>
+            <InputGroup @name="Quantity On Hand">
+                <Input
+                    @value={{@resource.quantity_on_hand}}
+                    @type="number"
+                    class="w-full form-input"
+                    placeholder="Current stock quantity"
+                    disabled={{cannot-write @resource}}
+                />
             </InputGroup>
 
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Pricing
+            </div>
+            <InputGroup @name="Currency">
+                <CurrencySelect
+                    @currency={{@resource.currency}}
+                    @onCurrencyChange={{fn (mut @resource.currency)}}
+                    @triggerClass="w-full form-select"
+                    @disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
             <InputGroup @name="Unit Cost">
                 <MoneyInput
                     class="w-full"
                     @value={{@resource.unit_cost}}
                     @currency={{or @resource.currency "USD"}}
-                    @canSelectCurrency={{true}}
-                    @onCurrencyChange={{fn (mut @resource.currency)}}
+                    @onChange={{fn (mut @resource.unit_cost)}}
                     @disabled={{cannot-write @resource}}
                 />
             </InputGroup>
-
             <InputGroup @name="MSRP">
                 <MoneyInput
                     class="w-full"
                     @value={{@resource.msrp}}
                     @currency={{or @resource.currency "USD"}}
-                    @canSelectCurrency={{true}}
+                    @onChange={{fn (mut @resource.msrp)}}
                     @disabled={{cannot-write @resource}}
                 />
             </InputGroup>
+        </div>
+    </ContentPanel>
 
-            <InputGroup @name="Vendor">
+    {{! ===== COMPATIBILITY ===== }}
+    <ContentPanel @title="Compatibility" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Compatible Asset
+            </div>
+            <InputGroup @name="Asset Type">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.assetTypeOptions}}
+                        @selected={{this.selectedAssetType}}
+                        @onChange={{this.onAssetTypeChange}}
+                        @placeholder="Select compatible asset type"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        {{option.label}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+            {{#if this.assetModelName}}
+                <InputGroup @name="Asset">
+                    <ModelSelect
+                        @modelName={{this.assetModelName}}
+                        @selectedModel={{@resource.asset}}
+                        @placeholder="Select compatible asset"
+                        @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
+                        @onChange={{this.assignAsset}}
+                        @disabled={{cannot-write @resource}}
+                        as |model|
+                    >
+                        {{or model.name model.public_id}}
+                    </ModelSelect>
+                </InputGroup>
+            {{/if}}
+        </div>
+    </ContentPanel>
+
+    {{! ===== VENDOR & WARRANTY ===== }}
+    <ContentPanel @title="Vendor & Warranty" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Supplier
+            </div>
+            <InputGroup @name="Vendor" @wrapperClass="col-span-2">
                 <ModelSelect
                     @modelName="vendor"
                     @selectedModel={{@resource.vendor}}
@@ -121,11 +253,14 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name="Warranty">
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Warranty
+            </div>
+            <InputGroup @name="Warranty" @wrapperClass="col-span-2">
                 <ModelSelect
                     @modelName="warranty"
                     @selectedModel={{@resource.warranty}}
-                    @placeholder="Select Warranty"
+                    @placeholder="Select Warranty (optional)"
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -137,27 +272,18 @@
                     {{model.policy_number}} - {{model.provider}}
                 </ModelSelect>
             </InputGroup>
-
-            <InputGroup @name="Description" @wrapperClass="col-span-2">
-                <Textarea
-                    @value={{@resource.description}}
-                    aria-label="Description"
-                    class="w-full form-input"
-                    disabled={{cannot-write @resource}}
-                    placeholder="Description"
-                    rows={{4}}
-                />
-            </InputGroup>
-
-            <RegistryYield @registry="fleet-ops:component:part:form:details" as |RegistryComponent|>
-                <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
-            </RegistryYield>
         </div>
     </ContentPanel>
 
+    {{! ===== REGISTRY & METADATA ===== }}
+    <RegistryYield @registry="fleet-ops:component:part:form:details" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
     <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
-
     <RegistryYield @registry="fleet-ops:component:part:form" as |RegistryComponent|>
         <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
     </RegistryYield>
+    <ContentPanel @title="Metadata" @open={{false}} @wrapperClass="bordered-top">
+        <MetadataEditor @value={{@resource.meta}} @onChange={{fn (mut @resource.meta)}} />
+    </ContentPanel>
 </div>

@@ -32,6 +32,8 @@ common:
   select-resource-filter-by: Select {resource} to filter by
   table-view: Table View
   grid-view: Grid View
+  calendar-view: Calendar View
+  change-layout: Change Layout
   livemap: Live map
   tracking: Tracking
   activity: Activity
@@ -59,9 +61,11 @@ menu:
   fuel-reports: Fuel Reports
   issues: Issues
   maintenance: Maintenance
+  schedules: Schedules
   work-orders: Work Orders
   equipment: Equipment
   parts: Parts
+  maintenance-history: Maintenance History
   connectivity: Connectivity
   telematics: Telematics
   devices: Devices
@@ -78,6 +82,7 @@ menu:
   custom-fields: Custom Fields
   order-board: Order Board
   avatars: Avatars
+  maintenances: Maintenances
 
 resource:
   asset: Asset
@@ -126,6 +131,8 @@ resource:
   issues: Issues
   maintenance: Maintenance
   maintenances: Maintenances
+  maintenance-schedule: Maintenance Schedule
+  maintenance-schedules: Maintenance Schedules
   order-config: Order Config
   order-configs: Order Configs
   order: Order
@@ -245,6 +252,21 @@ column:
   current-job: Current Job
   last-seen: Last Seen
   place: Place
+  subject: Subject
+  summary: Summary
+  total-cost: Total Cost
+  due-at: Due At
+  serial-number: Serial Number
+  manufacturer: Manufacturer
+  part-number: Part Number
+  quantity-on-hand: Quantity on Hand
+  quantity: Quantity
+  unit-cost: Unit Cost
+  code: Code
+  interval: Interval
+  next-due: Next Due
+  asset: Asset
+  performed-by: Performed By
 
 map:
   visibility-controls:
@@ -904,6 +926,9 @@ vehicle:
     year: Year
   actions:
     locate-vehicle: Locate Vehicle on Map
+    schedule-maintenance: Schedule Maintenance
+    create-work-order: Create Work Order
+    log-maintenance: Log Maintenance
 
 vendor:
   fields:
@@ -1716,3 +1741,28 @@ settings:
       button-continue: Continue
       button-start: Start onboard now
       button-in-progress: Onboard in progress
+maintenance-schedule:
+  actions:
+    trigger-now: Trigger Work Order Now
+    pause: Pause Schedule
+    resume: Resume Schedule
+work-order:
+  actions:
+    view: View Work Order
+    edit: Edit Work Order
+    delete: Delete Work Order
+maintenance:
+  actions:
+    view: View Maintenance Record
+    edit: Edit Maintenance Record
+    delete: Delete Maintenance Record
+equipment:
+  actions:
+    view: View Equipment
+    edit: Edit Equipment
+    delete: Delete Equipment
+part:
+  actions:
+    view: View Part
+    edit: Edit Part
+    delete: Delete Part

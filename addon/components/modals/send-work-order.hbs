@@ -1,0 +1,91 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Review the details below before sending. The work order will be emailed to the assigned vendor.
+        </div>
+
+        {{! ── Work Order details ── }}
+        <div class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-4">
+            <div class="bg-gray-50 dark:bg-gray-800 px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Work Order</span>
+            </div>
+            <div class="px-3 py-3 space-y-2">
+                <div class="flex items-start justify-between gap-4">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 shrink-0 w-20">Subject</span>
+                    <span class="text-xs font-medium text-gray-800 dark:text-gray-100 text-right">
+                        {{n-a (or @options.workOrder.subject @options.workOrder.target_name)}}
+                    </span>
+                </div>
+                <div class="flex items-start justify-between gap-4">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 shrink-0 w-20">ID</span>
+                    <span class="text-xs font-mono text-gray-600 dark:text-gray-300 text-right">
+                        {{n-a @options.workOrder.public_id}}
+                    </span>
+                </div>
+                <div class="flex items-start justify-between gap-4">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 shrink-0 w-20">Status</span>
+                    <span class="text-xs text-right">
+                        <Badge @status={{@options.workOrder.status}}>{{smart-humanize @options.workOrder.status}}</Badge>
+                    </span>
+                </div>
+                {{#if @options.workOrder.due_at}}
+                    <div class="flex items-start justify-between gap-4">
+                        <span class="text-xs text-gray-500 dark:text-gray-400 shrink-0 w-20">Due</span>
+                        <span class="text-xs text-gray-600 dark:text-gray-300 text-right">
+                            {{format-date-fns @options.workOrder.due_at}}
+                        </span>
+                    </div>
+                {{/if}}
+            </div>
+        </div>
+
+        {{! ── Recipient (vendor) details ── }}
+        <div class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-50 dark:bg-gray-800 px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Recipient</span>
+            </div>
+            {{#if @options.vendorName}}
+                <div class="px-3 py-3 space-y-2">
+                    <div class="flex items-center gap-3">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                            <FaIcon @icon="building" class="text-blue-500 dark:text-blue-300 text-xs" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                                {{@options.vendorName}}
+                            </div>
+                            {{#if @options.vendorEmail}}
+                                <div class="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center gap-1 mt-0.5">
+                                    <FaIcon @icon="envelope" class="text-gray-400 text-[10px]" />
+                                    {{@options.vendorEmail}}
+                                </div>
+                            {{/if}}
+                            {{#if @options.vendorPhone}}
+                                <div class="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center gap-1 mt-0.5">
+                                    <FaIcon @icon="phone" class="text-gray-400 text-[10px]" />
+                                    {{@options.vendorPhone}}
+                                </div>
+                            {{/if}}
+                        </div>
+                    </div>
+                </div>
+            {{else}}
+                <div class="px-3 py-3">
+                    <div class="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                        <FaIcon @icon="triangle-exclamation" class="text-sm" />
+                        <span class="text-xs">No vendor assigned to this work order.</span>
+                    </div>
+                </div>
+            {{/if}}
+        </div>
+
+        {{#unless @options.vendorEmail}}
+            <div class="mt-3 flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                <FaIcon @icon="circle-exclamation" class="text-red-500 dark:text-red-400 text-sm mt-0.5 shrink-0" />
+                <span class="text-xs text-red-700 dark:text-red-300">
+                    The assigned vendor does not have an email address on file. Please update the vendor record before sending.
+                </span>
+            </div>
+        {{/unless}}
+    </div>
+</Modal::Default>

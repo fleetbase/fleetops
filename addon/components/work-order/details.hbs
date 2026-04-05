@@ -1,18 +1,36 @@
-<div class="details-wrapper" ...attributes>
-    <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+<div class="next-content-panel-wrapper" ...attributes>
+
+    {{! ===== OVERVIEW ===== }}
+    <ContentPanel @title="Overview" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+
+            {{! — Identity — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Identity
+            </div>
             <div class="field-info-container">
                 <div class="field-name">Code</div>
-                <div class="field-value">{{n-a @resource.code}}</div>
+                <ClickToCopy @value={{@resource.code}} class="field-value font-mono">{{n-a @resource.code}}</ClickToCopy>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">ID</div>
+                <ClickToCopy @value={{@resource.public_id}} class="field-value font-mono">{{n-a @resource.public_id}}</ClickToCopy>
+            </div>
+            <div class="field-info-container col-span-2">
+                <div class="field-name">Subject</div>
+                <div class="field-value">{{n-a @resource.subject}}</div>
             </div>
 
+            {{! — Status & Priority — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Status & Priority
+            </div>
             <div class="field-info-container">
                 <div class="field-name">Status</div>
                 <div class="field-value">
                     <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
                 </div>
             </div>
-
             <div class="field-info-container">
                 <div class="field-name">Priority</div>
                 <div class="field-value">
@@ -28,66 +46,142 @@
                 </div>
             </div>
 
-            <div class="field-info-container col-span-3">
-                <div class="field-name">Subject</div>
-                <div class="field-value">{{n-a @resource.subject}}</div>
+            {{! — Assignment — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Assignment
             </div>
-
             <div class="field-info-container">
-                <div class="field-name">Target</div>
-                <div class="field-value">{{n-a @resource.target_name}}</div>
+                <div class="field-name">Target Asset</div>
+                <div class="field-value">{{n-a (or @resource.target.displayName @resource.target.name @resource.target_name)}}</div>
             </div>
-
             <div class="field-info-container">
-                <div class="field-name">Assignee</div>
-                <div class="field-value">{{n-a @resource.assignee_name}}</div>
+                <div class="field-name">Assigned Vendor</div>
+                <div class="field-value">{{n-a (or @resource.assignee.displayName @resource.assignee.name @resource.assignee_name)}}</div>
             </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Completion</div>
-                <div class="field-value">{{n-a @resource.completion_percentage}}%</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Opened At</div>
-                <div class="field-value">{{format-date @resource.opened_at}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Due At</div>
-                <div class="field-value">{{format-date @resource.due_at}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Closed At</div>
-                <div class="field-value">{{format-date @resource.closed_at}}</div>
-            </div>
-
-            {{#if @resource.is_overdue}}
+            {{#if @resource.schedule}}
                 <div class="field-info-container">
-                    <div class="field-name">Overdue Status</div>
-                    <div class="field-value">
-                        <Badge @status="danger">Overdue</Badge>
-                    </div>
-                </div>
-            {{else if @resource.days_until_due}}
-                <div class="field-info-container">
-                    <div class="field-name">Days Until Due</div>
-                    <div class="field-value">{{@resource.days_until_due}} days</div>
+                    <div class="field-name">Linked Schedule</div>
+                    <div class="field-value">{{n-a @resource.schedule.name}}</div>
                 </div>
             {{/if}}
 
-            <div class="field-info-container">
-                <div class="field-name">Estimated Duration</div>
-                <div class="field-value">{{n-a @resource.estimated_duration}}</div>
+            {{! — Scheduling — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Scheduling
             </div>
-
-            <div class="field-info-container col-span-3">
-                <div class="field-name">Instructions</div>
-                <div class="field-value">{{n-a @resource.instructions}}</div>
+            <div class="field-info-container">
+                <div class="field-name">Opened At</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.opened_at "dd MMM yyyy, HH:mm")}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Due At</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.due_at "dd MMM yyyy, HH:mm")}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Closed At</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.closed_at "dd MMM yyyy, HH:mm")}}</div>
             </div>
         </div>
     </ContentPanel>
 
+    {{! ===== BUDGET ===== }}
+    <ContentPanel @title="Budget" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">Estimated Cost</div>
+                <div class="field-value">{{format-currency @resource.estimated_cost @resource.currency}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Approved Budget</div>
+                <div class="field-value">{{format-currency @resource.approved_budget @resource.currency}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Actual Cost</div>
+                <div class="field-value font-semibold">{{format-currency @resource.actual_cost @resource.currency}}</div>
+            </div>
+            {{#if @resource.cost_center}}
+                <div class="field-info-container">
+                    <div class="field-name">Cost Centre</div>
+                    <div class="field-value">{{n-a @resource.cost_center}}</div>
+                </div>
+            {{/if}}
+            {{#if @resource.budget_code}}
+                <div class="field-info-container">
+                    <div class="field-name">Budget Code</div>
+                    <div class="field-value font-mono">{{n-a @resource.budget_code}}</div>
+                </div>
+            {{/if}}
+            <div class="field-info-container">
+                <div class="field-name">Currency</div>
+                <div class="field-value">{{n-a @resource.currency}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    {{! ===== INSTRUCTIONS ===== }}
+    {{#if @resource.instructions}}
+        <ContentPanel @title="Instructions" @open={{false}} @wrapperClass="bordered-top">
+            <div class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                {{@resource.instructions}}
+            </div>
+        </ContentPanel>
+    {{/if}}
+
+    {{! ===== COMPLETION & COST BREAKDOWN (only when closed) ===== }}
+    {{#if (eq @resource.status "closed")}}
+        <ContentPanel @title="Completion & Cost Breakdown" @open={{true}} @wrapperClass="bordered-top">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+
+                <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                    Asset Readings at Completion
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Odometer</div>
+                    <div class="field-value">
+                        {{#if @resource.meta.completion_data.odometer}}
+                            {{@resource.meta.completion_data.odometer}} km
+                        {{else}}
+                            —
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Engine Hours</div>
+                    <div class="field-value">{{n-a @resource.meta.completion_data.engine_hours}}</div>
+                </div>
+
+                <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                    Cost Breakdown
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Labour Cost</div>
+                    <div class="field-value">{{format-currency @resource.meta.completion_data.labor_cost @resource.meta.completion_data.currency}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Parts Cost</div>
+                    <div class="field-value">{{format-currency @resource.meta.completion_data.parts_cost @resource.meta.completion_data.currency}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Tax</div>
+                    <div class="field-value">{{format-currency @resource.meta.completion_data.tax @resource.meta.completion_data.currency}}</div>
+                </div>
+                <div class="field-info-container col-span-2 border-t border-gray-200 dark:border-gray-700 pt-2 mt-1">
+                    <div class="field-name font-semibold">Total Cost</div>
+                    <div class="field-value font-semibold">{{format-currency @resource.meta.completion_data.total_cost @resource.meta.completion_data.currency}}</div>
+                </div>
+
+                {{#if @resource.meta.completion_data.notes}}
+                    <div class="field-info-container col-span-2 mt-2">
+                        <div class="field-name">Completion Notes</div>
+                        <div class="field-value whitespace-pre-wrap">{{@resource.meta.completion_data.notes}}</div>
+                    </div>
+                {{/if}}
+            </div>
+        </ContentPanel>
+    {{/if}}
+
+    {{! ===== CUSTOM FIELDS ===== }}
     <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+
+    <Spacer @height="200px" />
 </div>
