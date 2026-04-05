@@ -65,46 +65,70 @@
         {{/if}}
     </ContentPanel>
 
-    {{! Availability & Time Off Panel }}
+    {{! Time Off & Exceptions Panel }}
     <ContentPanel
-        @title={{t "scheduler.availability-time-off"}}
+        @title={{t "scheduler.time-off-exceptions"}}
         @open={{true}}
-        @isLoading={{this.loadAvailability.isRunning}}
-        @actionButtons={{this.availabilityActionButtons}}
+        @isLoading={{this.loadDriverSchedule.isRunning}}
+        @actionButtons={{this.exceptionActionButtons}}
         @wrapperClass="bordered-top"
     >
-        {{#if this.availability.length}}
+        {{#if this.exceptions.length}}
             <div class="space-y-1">
-                {{#each this.availability as |avail|}}
+                {{#each this.exceptions as |exception|}}
                     <div class="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-xs dark:text-gray-100">
                         <div class="flex items-center space-x-3">
-                            <div class="w-2 h-2 rounded-full flex-shrink-0 {{if avail.is_available "bg-green-500" "bg-red-500"}}"></div>
+                            <div class="w-2 h-2 rounded-full flex-shrink-0
+                                {{if (eq exception.status "approved") "bg-green-500"
+                                    (if (eq exception.status "rejected") "bg-red-500" "bg-yellow-500")}}">
+                            </div>
                             <div>
                                 <div class="font-medium">
-                                    {{#if avail.is_available}}
-                                        <span class="text-green-600 dark:text-green-400">{{t "scheduler.available"}}</span>
-                                    {{else}}
-                                        <span class="text-red-600 dark:text-red-400">{{t "scheduler.unavailable"}}</span>
+                                    {{exception.typeLabel}}
+                                    {{#if exception.reason}}
+                                        <span class="text-gray-400 font-normal"> — {{exception.reason}}</span>
                                     {{/if}}
                                 </div>
                                 <div class="text-gray-500 dark:text-gray-400">
-                                    {{format-date-fns avail.start_at "MMM d"}}
+                                    {{format-date-fns exception.start_date "MMM d"}}
                                     –
-                                    {{format-date-fns avail.end_at "MMM d, yyyy"}}
+                                    {{format-date-fns exception.end_date "MMM d, yyyy"}}
                                 </div>
-                                {{#if avail.reason}}
-                                    <div class="text-gray-400 dark:text-gray-500 italic">{{avail.reason}}</div>
-                                {{/if}}
                             </div>
                         </div>
-                        <Button @icon="trash" @size="xs" @type="link" @scheme="danger" {{on "click" (fn this.deleteAvailability avail)}} />
+                        <div class="flex items-center space-x-1">
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium
+                                {{if (eq exception.status "approved") "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                    (if (eq exception.status "rejected") "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                                        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200")}}">
+                                {{exception.status}}
+                            </span>
+                            {{#if exception.isPending}}
+                                <Button
+                                    @icon="check"
+                                    @size="xs"
+                                    @type="link"
+                                    @scheme="success"
+                                    {{on "click" (fn this.approveException exception)}}
+                                />
+                                <Button
+                                    @icon="xmark"
+                                    @size="xs"
+                                    @type="link"
+                                    @scheme="danger"
+                                    {{on "click" (fn this.rejectException exception)}}
+                                />
+                            {{/if}}
+                            <Button @icon="trash" @size="xs" @type="link" @scheme="danger" {{on "click" (fn this.deleteException exception)}} />
+                        </div>
                     </div>
                 {{/each}}
             </div>
         {{else}}
             <div class="text-center py-6 text-xs text-gray-500 dark:text-gray-400">
-                {{t "scheduler.no-availability-restrictions"}}
+                {{t "scheduler.no-exceptions"}}
             </div>
         {{/if}}
     </ContentPanel>
+
 </div>

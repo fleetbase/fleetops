@@ -1,0 +1,62 @@
+<Layout::Section::Header @title={{t "menu.driver-schedules"}}>
+    <div class="flex items-center gap-2">
+        {{! Calendar navigation }}
+        <Button
+            @type="default"
+            @icon="chevron-left"
+            @size="sm"
+            @onClick={{this.previousWeek}}
+        />
+        <Button
+            @type="default"
+            @text={{t "scheduler.today"}}
+            @size="sm"
+            @onClick={{this.goToToday}}
+        />
+        <Button
+            @type="default"
+            @icon="chevron-right"
+            @size="sm"
+            @onClick={{this.nextWeek}}
+        />
+
+        <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+        {{! Add shift button }}
+        <Button
+            @type="primary"
+            @text={{t "scheduler.add-shift"}}
+            @icon="plus"
+            @size="sm"
+            @onClick={{this.addShift}}
+            @permission="fleet-ops update driver"
+        />
+    </div>
+</Layout::Section::Header>
+
+<Layout::Section::Body>
+    <div id="fleet-ops-driver-schedules-container" class="h-full">
+        {{#if this.loadScheduleItems.isRunning}}
+            <div class="flex items-center justify-center h-64">
+                <Spinner @size="lg" />
+            </div>
+        {{else}}
+            <FullCalendar
+                @events={{this.events}}
+                @resources={{this.calendarResources}}
+                @initialView="resourceTimelineWeek"
+                @editable={{true}}
+                @droppable={{true}}
+                @onEventDrop={{this.onEventDrop}}
+                @onEventClick={{this.onEventClick}}
+                @onInit={{this.setCalendarApi}}
+                @schedulerLicenseKey="GPL-My-Project-Is-Open-Source"
+                @resourceAreaHeaderContent={{t "resource.driver"}}
+                @resourceAreaWidth="180px"
+                @slotMinTime="05:00:00"
+                @slotMaxTime="23:00:00"
+                @height="auto"
+            />
+        {{/if}}
+    </div>
+</Layout::Section::Body>

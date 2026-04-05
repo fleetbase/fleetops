@@ -55,6 +55,7 @@ menu:
   orders: Orders
   service-rates: Service Rates
   scheduler: Scheduler
+  driver-schedules: Driver Schedules
   order-config: Order Config
   resources: Resources
   drivers: Drivers
@@ -1163,7 +1164,41 @@ scheduler:
     reason: Reason
     reason-placeholder: e.g. Personal appointment
     notes-placeholder: Optional additional notes
-
+    shift: Shift
+    add-shift-hint: Click "Add Shift" to schedule a new shift.
+    time-off-exceptions: Time Off & Exceptions
+    no-exceptions: No time off or exceptions recorded.
+    exception-approved: Exception approved.
+    exception-rejected: Exception rejected.
+    exception-deleted: Exception removed.
+    delete-exception: Delete Exception
+    delete-exception-confirm: Are you sure you want to remove this exception?
+    approve: Approve
+    reject: Reject
+    recurring-schedule-created: Recurring schedule created and shifts materialised.
+    recurring-schedule: Recurring Schedule
+    is-recurring: Recurring
+    recurrence-pattern: Recurrence Pattern
+    recurrence-start-date: Starts On
+    recurrence-end-date: Ends On (optional)
+    template-name: Template Name
+    template-name-placeholder: e.g. Standard Week
+    template-color: Color
+    shift-start-time: Shift Start Time
+    shift-end-time: Shift End Time
+    break-start-time: Break Start Time
+    break-end-time: Break End Time
+    day-monday: Monday
+    day-tuesday: Tuesday
+    day-wednesday: Wednesday
+    day-thursday: Thursday
+    day-friday: Friday
+    day-saturday: Saturday
+    day-sunday: Sunday
+    frequency-daily: Daily
+    frequency-weekly: Weekly
+    frequency-monthly: Monthly
+    today: Today
 modals:
   new-custom-field-group:
     modal-title: Create a new custom field group

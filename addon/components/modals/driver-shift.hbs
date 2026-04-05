@@ -1,48 +1,74 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
-        <div class="grid grid-cols-1 gap-2 text-xs dark:text-gray-100">
+        <div class="grid grid-cols-1 gap-4 text-xs dark:text-gray-100">
 
             {{! Shift Title }}
-            <InputGroup @name={{t "scheduler.shift-title"}}>
+            <div class="input-group">
+                <label>{{t "scheduler.shift-title"}}</label>
                 <Input
                     @value={{this.title}}
                     @type="text"
                     placeholder={{t "scheduler.shift-title-placeholder"}}
-                    class="form-input"
-                    {{on "change" (fn this.updateTitle this.title)}}
+                    class="w-full form-input"
+                    {{on "input" (fn this.updateTitle this.title)}}
                 />
-            </InputGroup>
+            </div>
 
             {{! Start Date/Time }}
-            <InputGroup @name={{t "scheduler.shift-start"}}>
+            <div class="input-group">
+                <label>{{t "scheduler.shift-start"}}</label>
                 <DateTimeInput
                     @value={{this.startAt}}
                     @onChange={{this.updateStartAt}}
                     placeholder={{t "scheduler.select-start-datetime"}}
-                    class="form-input"
+                    class="w-full form-input"
                 />
-            </InputGroup>
+            </div>
 
             {{! End Date/Time }}
-            <InputGroup @name={{t "scheduler.shift-end"}}>
+            <div class="input-group">
+                <label>{{t "scheduler.shift-end"}}</label>
                 <DateTimeInput
                     @value={{this.endAt}}
                     @onChange={{this.updateEndAt}}
                     placeholder={{t "scheduler.select-end-datetime"}}
-                    class="form-input"
+                    class="w-full form-input"
                 />
-            </InputGroup>
+            </div>
+
+            {{! Break Window (optional) }}
+            <div class="grid grid-cols-2 gap-4">
+                <div class="input-group">
+                    <label>{{t "scheduler.break-start"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
+                    <DateTimeInput
+                        @value={{this.breakStartAt}}
+                        @onChange={{this.updateBreakStartAt}}
+                        placeholder={{t "scheduler.select-break-start"}}
+                        class="w-full form-input"
+                    />
+                </div>
+                <div class="input-group">
+                    <label>{{t "scheduler.break-end"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
+                    <DateTimeInput
+                        @value={{this.breakEndAt}}
+                        @onChange={{this.updateBreakEndAt}}
+                        placeholder={{t "scheduler.select-break-end"}}
+                        class="w-full form-input"
+                    />
+                </div>
+            </div>
 
             {{! Notes }}
-            <InputGroup @name={{t "common.notes"}}>
+            <div class="input-group">
+                <label>{{t "common.notes"}}</label>
                 <Textarea
                     @value={{this.notes}}
                     placeholder={{t "scheduler.shift-notes-placeholder"}}
-                    class="form-input"
+                    class="w-full form-input"
                     rows="2"
                     {{on "input" (fn this.updateNotes this.notes)}}
                 />
-            </InputGroup>
+            </div>
 
         </div>
     </div>

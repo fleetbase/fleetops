@@ -1,71 +1,81 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
-        <div class="grid grid-cols-1 gap-2 text-xs dark:text-gray-100">
+        <div class="grid grid-cols-1 gap-4 text-xs dark:text-gray-100">
 
-            {{! Availability Toggle }}
-            <InputGroup @name={{t "scheduler.availability-type"}}>
-                <div class="flex items-center space-x-4">
-                    <label class="flex items-center space-x-1 cursor-pointer">
-                        <input
-                            type="radio"
-                            name="availability_type"
-                            checked={{this.isAvailable}}
-                            {{on "change" (fn this.toggleAvailability true)}}
-                        />
-                        <span class="text-green-600 dark:text-green-400">{{t "scheduler.available"}}</span>
-                    </label>
-                    <label class="flex items-center space-x-1 cursor-pointer">
-                        <input
-                            type="radio"
-                            name="availability_type"
-                            checked={{not this.isAvailable}}
-                            {{on "change" (fn this.toggleAvailability false)}}
-                        />
-                        <span class="text-red-600 dark:text-red-400">{{t "scheduler.unavailable-time-off"}}</span>
-                    </label>
+            {{! Availability type selection }}
+            <div class="input-group">
+                <label>{{t "scheduler.availability-type"}}</label>
+                <div class="flex gap-3 mt-1">
+                    <button
+                        type="button"
+                        class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-xs font-medium transition-colors
+                            {{if this.isAvailable
+                                'bg-green-50 dark:bg-green-900/30 border-green-500 text-green-700 dark:text-green-300'
+                                'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-green-400'}}"
+                        {{on "click" (fn this.toggleAvailability true)}}
+                    >
+                        <FaIcon @icon="circle-check" class="text-green-500" />
+                        {{t "scheduler.available"}}
+                    </button>
+                    <button
+                        type="button"
+                        class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-xs font-medium transition-colors
+                            {{unless this.isAvailable
+                                'bg-red-50 dark:bg-red-900/30 border-red-500 text-red-700 dark:text-red-300'
+                                'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-red-400'}}"
+                        {{on "click" (fn this.toggleAvailability false)}}
+                    >
+                        <FaIcon @icon="circle-xmark" class="text-red-500" />
+                        {{t "scheduler.unavailable-time-off"}}
+                    </button>
                 </div>
-            </InputGroup>
+            </div>
 
-            {{! Date Range }}
-            <InputGroup @name={{t "scheduler.start-date"}}>
-                <DateTimeInput
-                    @value={{this.startAt}}
-                    @onChange={{this.updateStartAt}}
-                    placeholder={{t "scheduler.select-start-date"}}
-                    class="form-input"
-                />
-            </InputGroup>
-
-            <InputGroup @name={{t "scheduler.end-date"}}>
-                <DateTimeInput
-                    @value={{this.endAt}}
-                    @onChange={{this.updateEndAt}}
-                    placeholder={{t "scheduler.select-end-date"}}
-                    class="form-input"
-                />
-            </InputGroup>
+            {{! Date range }}
+            <div class="grid grid-cols-2 gap-4">
+                <div class="input-group">
+                    <label>{{t "scheduler.start-date"}}</label>
+                    <DateTimeInput
+                        @value={{this.startAt}}
+                        @onChange={{this.updateStartAt}}
+                        placeholder={{t "scheduler.select-start-date"}}
+                        class="w-full form-input"
+                    />
+                </div>
+                <div class="input-group">
+                    <label>{{t "scheduler.end-date"}}</label>
+                    <DateTimeInput
+                        @value={{this.endAt}}
+                        @onChange={{this.updateEndAt}}
+                        placeholder={{t "scheduler.select-end-date"}}
+                        class="w-full form-input"
+                    />
+                </div>
+            </div>
 
             {{! Reason }}
-            <InputGroup @name={{t "scheduler.reason"}}>
+            <div class="input-group">
+                <label>{{t "scheduler.reason"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
                 <Input
                     @value={{this.reason}}
                     @type="text"
                     placeholder={{t "scheduler.reason-placeholder"}}
-                    class="form-input"
+                    class="w-full form-input"
                     {{on "input" (fn this.updateReason this.reason)}}
                 />
-            </InputGroup>
+            </div>
 
             {{! Notes }}
-            <InputGroup @name={{t "common.notes"}}>
+            <div class="input-group">
+                <label>{{t "common.notes"}}</label>
                 <Textarea
                     @value={{this.notes}}
                     placeholder={{t "scheduler.notes-placeholder"}}
-                    class="form-input"
+                    class="w-full form-input"
                     rows="3"
                     {{on "input" (fn this.updateNotes this.notes)}}
                 />
-            </InputGroup>
+            </div>
 
         </div>
     </div>

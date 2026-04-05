@@ -15,6 +15,9 @@ export default buildRoutes(function () {
             });
         });
         this.route('scheduler', function () {});
+        this.route('driver-schedules', function () {
+            this.route('index', { path: '/' });
+        });
         this.route('orders', { path: '/' }, function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');

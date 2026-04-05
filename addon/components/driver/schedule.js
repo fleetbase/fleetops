@@ -9,56 +9,54 @@ import { startOfWeek, endOfWeek, addWeeks, formatISO } from 'date-fns';
  * Driver::Schedule Component
  *
  * Displays and manages a driver's schedule from their detail panel.
- * Renders upcoming shifts in a list view and provides actions to add shifts,
- * request time off, and manage availability windows.
  *
- * Wires directly to the core-api scheduling system via the driverScheduling
- * service. The schedule_items relationship on the Driver model uses
- * assignee_type='driver' and assignee_uuid=driver.id as the polymorphic key.
+ * Architecture:
+ *   - A Driver has one or more Schedule records (containers, subject_type='driver')
+ *   - Each Schedule is materialised into ScheduleItem records by the daily
+ *     MaterializeSchedulesJob (RRULE → concrete shifts for 60-day window)
+ *   - Deviations are tracked as ScheduleException records (time off, sick leave, etc.)
  *
- * Loading state is derived directly from ember-concurrency task instances
- * (e.g. this.loadDriverSchedule.isRunning) — no redundant @tracked booleans.
+ * This component:
+ *   1. Loads the driver's primary Schedule (or creates one on first use)
+ *   2. Loads materialised ScheduleItem records for the next 4 weeks
+ *   3. Loads pending/approved ScheduleException records
+ *   4. Provides actions to add shifts (single or recurring), request time off, and
+ *      manage exceptions
  *
  * @example
- * <Driver::Schedule @resource={{@driver}} />
+ *   <Driver::Schedule @resource={{@driver}} />
  */
 export default class DriverScheduleComponent extends Component {
-    @service driverScheduling;
     @service notifications;
     @service modalsManager;
     @service store;
     @service fetch;
     @service intl;
 
+    @tracked schedule = null;
     @tracked scheduleItems = [];
     @tracked upcomingShifts = [];
-    @tracked availability = [];
+    @tracked exceptions = [];
     @tracked hosStatus = null;
 
     constructor() {
         super(...arguments);
         this.loadDriverSchedule.perform();
-        this.loadAvailability.perform();
         this.loadHOSStatus.perform();
     }
 
-    /**
-     * Start of the current week — used as the lower bound for schedule queries.
-     */
+    // ── Date window helpers ───────────────────────────────────────────────────
+
     get startDate() {
         return formatISO(startOfWeek(new Date(), { weekStartsOn: 1 }));
     }
 
-    /**
-     * Four weeks from now — used as the upper bound for schedule queries.
-     */
     get endDate() {
         return formatISO(addWeeks(endOfWeek(new Date(), { weekStartsOn: 1 }), 4));
     }
 
-    /**
-     * Derive a color-coded HOS compliance badge from the loaded hosStatus.
-     */
+    // ── Derived state ─────────────────────────────────────────────────────────
+
     get hosComplianceBadge() {
         if (!this.hosStatus) {
             return { color: 'gray', label: 'Unknown' };
@@ -73,9 +71,16 @@ export default class DriverScheduleComponent extends Component {
         return { color: 'green', label: 'Compliant' };
     }
 
-    /**
-     * Action buttons rendered in the Upcoming Shifts ContentPanel header.
-     */
+    get pendingExceptions() {
+        return this.exceptions.filter((e) => e.status === 'pending');
+    }
+
+    get approvedExceptions() {
+        return this.exceptions.filter((e) => e.status === 'approved');
+    }
+
+    // ── Panel action buttons ──────────────────────────────────────────────────
+
     get shiftActionButtons() {
         return [
             {
@@ -89,19 +94,8 @@ export default class DriverScheduleComponent extends Component {
         ];
     }
 
-    /**
-     * Action buttons rendered in the Availability ContentPanel header.
-     */
-    get availabilityActionButtons() {
+    get exceptionActionButtons() {
         return [
-            {
-                type: 'default',
-                text: this.intl.t('scheduler.set-availability'),
-                icon: 'clock',
-                iconPrefix: 'fas',
-                permission: 'fleet-ops update driver',
-                onClick: this.setAvailability,
-            },
             {
                 type: 'default',
                 text: this.intl.t('scheduler.request-time-off'),
@@ -113,41 +107,53 @@ export default class DriverScheduleComponent extends Component {
         ];
     }
 
+    // ── Data loading ──────────────────────────────────────────────────────────
+
     /**
-     * Load all schedule items (shifts) for this driver within the 4-week window.
-     * Uses the driverScheduling service which calls the core-api schedule-items endpoint
-     * with assignee_type=driver and assignee_uuid=driver.id.
+     * Load the driver's primary Schedule container, then load its materialised
+     * ScheduleItems and ScheduleExceptions.
      *
-     * Loading state is available as this.loadDriverSchedule.isRunning in templates.
+     * If no Schedule exists yet for this driver, we create a draft one so the
+     * UI is always ready to accept shifts.
      */
     @task *loadDriverSchedule() {
         try {
-            const items = yield this.driverScheduling.getScheduleItemsForAssignee.perform('driver', this.args.resource.id, {
+            // 1. Find or create the driver's primary schedule
+            const schedules = yield this.store.query('schedule', {
+                subject_type: 'driver',
+                subject_uuid: this.args.resource.id,
+                limit: 1,
+            });
+
+            if (schedules.length > 0) {
+                this.schedule = schedules.firstObject;
+            } else {
+                const newSchedule = this.store.createRecord('schedule', {
+                    subject_type: 'driver',
+                    subject_uuid: this.args.resource.id,
+                    name: `${this.args.resource.name} Schedule`,
+                    status: 'draft',
+                });
+                this.schedule = yield newSchedule.save();
+            }
+
+            // 2. Load materialised schedule items within the 4-week window
+            const items = yield this.store.query('schedule-item', {
+                schedule_uuid: this.schedule.id,
                 start_at: this.startDate,
                 end_at: this.endDate,
             });
+
             this.scheduleItems = items.toArray();
             this.upcomingShifts = this.scheduleItems
                 .filter((item) => new Date(item.start_at) >= new Date())
                 .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
-    }
 
-    /**
-     * Load availability records (time-off, preferred hours) for this driver.
-     * Uses the core-api schedule-availability endpoint with subject_type=driver.
-     *
-     * Loading state is available as this.loadAvailability.isRunning in templates.
-     */
-    @task *loadAvailability() {
-        try {
-            const availability = yield this.store.query('schedule-availability', {
-                subject_type: 'driver',
-                subject_uuid: this.args.resource.id,
+            // 3. Load schedule exceptions
+            const exceptions = yield this.store.query('schedule-exception', {
+                schedule_uuid: this.schedule.id,
             });
-            this.availability = availability.toArray();
+            this.exceptions = exceptions.toArray();
         } catch (error) {
             this.notifications.serverError(error);
         }
@@ -155,22 +161,26 @@ export default class DriverScheduleComponent extends Component {
 
     /**
      * Load HOS (Hours of Service) status from the FleetOps driver endpoint.
-     * Best-effort — if the endpoint is not yet implemented hosStatus stays null
-     * and the HOS panel is hidden by the template's {{#if this.hosStatus}} guard.
+     * Best-effort — if the endpoint is not yet implemented hosStatus stays null.
      */
     @task *loadHOSStatus() {
         try {
             const response = yield this.fetch.get(`drivers/${this.args.resource.id}/hos-status`);
             this.hosStatus = response;
         } catch {
-            // HOS endpoint not yet implemented — suppress error silently
             this.hosStatus = null;
         }
     }
 
+    // ── Shift management ──────────────────────────────────────────────────────
+
     /**
-     * Open the Add Shift modal. Uses the same modalsManager pattern as the
-     * global scheduler's addDriverShift() action, reusing modals/add-driver-shift.
+     * Open the Add Shift modal.
+     *
+     * Two modes are supported:
+     *   - Single shift: creates a ScheduleItem directly on the driver's Schedule
+     *   - Recurring schedule: creates a ScheduleTemplate with an RRULE and
+     *     triggers materialisation via the core-api schedule-templates/{id}/apply endpoint
      */
     @action
     addShift() {
@@ -182,18 +192,47 @@ export default class DriverScheduleComponent extends Component {
             selectedDriver: this.args.resource,
             confirm: async (modal) => {
                 modal.startLoading();
-                const { startAt, endAt, duration } = modal.getOptions();
+                const options = modal.getOptions();
+
                 try {
-                    const scheduleItem = this.store.createRecord('schedule-item', {
-                        assignee_type: 'driver',
-                        assignee_uuid: this.args.resource.id,
-                        start_at: startAt,
-                        end_at: endAt,
-                        duration: duration,
-                        status: 'pending',
-                    });
-                    await scheduleItem.save();
-                    this.notifications.success(this.intl.t('scheduler.shift-created'));
+                    if (options.isRecurring) {
+                        // Recurring mode: create a ScheduleTemplate then apply it
+                        const template = this.store.createRecord('schedule-template', {
+                            name: options.templateName || `${this.args.resource.name} Recurring Schedule`,
+                            rrule: options.rrule,
+                            start_time: options.shiftStartTime,
+                            end_time: options.shiftEndTime,
+                            break_start_time: options.breakStartTime || null,
+                            break_end_time: options.breakEndTime || null,
+                            color: options.templateColor || '#6366f1',
+                        });
+                        const savedTemplate = await template.save();
+
+                        await this.fetch.post(`schedule-templates/${savedTemplate.id}/apply`, {
+                            subject_type: 'driver',
+                            subject_uuid: this.args.resource.id,
+                            schedule_uuid: this.schedule.id,
+                            effective_from: options.recurrenceStartDate || new Date().toISOString(),
+                            effective_until: options.recurrenceEndDate || null,
+                        });
+
+                        this.notifications.success(this.intl.t('scheduler.recurring-schedule-created'));
+                    } else {
+                        // Single shift mode: create a ScheduleItem directly
+                        const scheduleItem = this.store.createRecord('schedule-item', {
+                            schedule_uuid: this.schedule.id,
+                            assignee_type: 'driver',
+                            assignee_uuid: this.args.resource.id,
+                            title: options.title || null,
+                            start_at: options.startAt,
+                            end_at: options.endAt,
+                            notes: options.notes || null,
+                            status: 'scheduled',
+                        });
+                        await scheduleItem.save();
+                        this.notifications.success(this.intl.t('scheduler.shift-created'));
+                    }
+
                     await this.loadDriverSchedule.perform();
                     await this.loadHOSStatus.perform();
                     modal.done();
@@ -206,7 +245,7 @@ export default class DriverScheduleComponent extends Component {
     }
 
     /**
-     * Open the Edit Shift modal for an existing schedule item.
+     * Open the Edit Shift modal for an existing ScheduleItem.
      */
     @action
     editShift(item) {
@@ -217,9 +256,14 @@ export default class DriverScheduleComponent extends Component {
             item,
             confirm: async (modal) => {
                 modal.startLoading();
-                const { startAt, endAt } = modal.getOptions();
+                const options = modal.getOptions();
                 try {
-                    item.setProperties({ start_at: startAt, end_at: endAt });
+                    item.setProperties({
+                        title: options.title,
+                        start_at: options.startAt,
+                        end_at: options.endAt,
+                        notes: options.notes,
+                    });
                     await item.save();
                     this.notifications.success(this.intl.t('scheduler.shift-updated'));
                     await this.loadDriverSchedule.perform();
@@ -233,7 +277,7 @@ export default class DriverScheduleComponent extends Component {
     }
 
     /**
-     * Delete a shift after inline confirmation via modalsManager.
+     * Delete a shift after inline confirmation.
      */
     @action
     deleteShift(item) {
@@ -245,7 +289,8 @@ export default class DriverScheduleComponent extends Component {
             confirm: async (modal) => {
                 modal.startLoading();
                 try {
-                    await this.driverScheduling.deleteScheduleItem.perform(item);
+                    await item.destroyRecord();
+                    this.notifications.success(this.intl.t('scheduler.shift-deleted'));
                     await this.loadDriverSchedule.perform();
                     await this.loadHOSStatus.perform();
                     modal.done();
@@ -257,45 +302,11 @@ export default class DriverScheduleComponent extends Component {
         });
     }
 
-    /**
-     * Open the Set Availability modal to record preferred working hours.
-     */
-    @action
-    setAvailability() {
-        this.modalsManager.show('modals/set-driver-availability', {
-            title: this.intl.t('scheduler.set-availability'),
-            acceptButtonText: this.intl.t('common.save'),
-            acceptButtonIcon: 'check',
-            driver: this.args.resource,
-            isAvailable: true,
-            confirm: async (modal) => {
-                modal.startLoading();
-                const { startAt, endAt, isAvailable, reason, notes } = modal.getOptions();
-                try {
-                    const availability = this.store.createRecord('schedule-availability', {
-                        subject_type: 'driver',
-                        subject_uuid: this.args.resource.id,
-                        start_at: startAt,
-                        end_at: endAt,
-                        is_available: isAvailable,
-                        reason,
-                        notes,
-                    });
-                    await availability.save();
-                    this.notifications.success(this.intl.t('scheduler.availability-set'));
-                    await this.loadAvailability.perform();
-                    modal.done();
-                } catch (error) {
-                    this.notifications.serverError(error);
-                    modal.stopLoading();
-                }
-            },
-        });
-    }
+    // ── Exception management ──────────────────────────────────────────────────
 
     /**
-     * Open the Request Time Off modal. Creates a schedule-availability record
-     * with is_available=false to mark the driver as unavailable.
+     * Open the Request Time Off modal.
+     * Creates a ScheduleException with type='time_off' and status='pending'.
      */
     @action
     requestTimeOff() {
@@ -307,20 +318,22 @@ export default class DriverScheduleComponent extends Component {
             isAvailable: false,
             confirm: async (modal) => {
                 modal.startLoading();
-                const { startAt, endAt, reason, notes } = modal.getOptions();
+                const options = modal.getOptions();
                 try {
-                    const availability = this.store.createRecord('schedule-availability', {
+                    const exception = this.store.createRecord('schedule-exception', {
+                        schedule_uuid: this.schedule?.id,
                         subject_type: 'driver',
                         subject_uuid: this.args.resource.id,
-                        start_at: startAt,
-                        end_at: endAt,
-                        is_available: false,
-                        reason,
-                        notes,
+                        type: 'time_off',
+                        status: 'pending',
+                        start_date: options.startAt,
+                        end_date: options.endAt,
+                        reason: options.reason || null,
+                        notes: options.notes || null,
                     });
-                    await availability.save();
+                    await exception.save();
                     this.notifications.success(this.intl.t('scheduler.time-off-requested'));
-                    await this.loadAvailability.perform();
+                    await this.loadDriverSchedule.perform();
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -331,21 +344,51 @@ export default class DriverScheduleComponent extends Component {
     }
 
     /**
-     * Delete an availability record.
+     * Approve a pending ScheduleException (manager action).
      */
     @action
-    deleteAvailability(avail) {
+    async approveException(exception) {
+        try {
+            await this.fetch.post(`schedule-exceptions/${exception.id}/approve`);
+            exception.set('status', 'approved');
+            this.notifications.success(this.intl.t('scheduler.exception-approved'));
+            await this.loadDriverSchedule.perform();
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    /**
+     * Reject a pending ScheduleException (manager action).
+     */
+    @action
+    async rejectException(exception) {
+        try {
+            await this.fetch.post(`schedule-exceptions/${exception.id}/reject`);
+            exception.set('status', 'rejected');
+            this.notifications.success(this.intl.t('scheduler.exception-rejected'));
+            await this.loadDriverSchedule.perform();
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    /**
+     * Delete a ScheduleException record.
+     */
+    @action
+    deleteException(exception) {
         this.modalsManager.confirm({
-            title: this.intl.t('scheduler.delete-availability'),
-            body: this.intl.t('scheduler.delete-availability-confirm'),
+            title: this.intl.t('scheduler.delete-exception'),
+            body: this.intl.t('scheduler.delete-exception-confirm'),
             acceptButtonText: this.intl.t('common.delete'),
             acceptButtonScheme: 'danger',
             confirm: async (modal) => {
                 modal.startLoading();
                 try {
-                    await avail.destroyRecord();
-                    this.notifications.success(this.intl.t('scheduler.availability-deleted'));
-                    await this.loadAvailability.perform();
+                    await exception.destroyRecord();
+                    this.notifications.success(this.intl.t('scheduler.exception-deleted'));
+                    await this.loadDriverSchedule.perform();
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
