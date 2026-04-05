@@ -443,7 +443,6 @@ device:
     warranty: Гаранция
     warranty-placeholder: Изберете гаранция
     notes: Бележки
-    notes-placeholder: Бележки
 entity:
   fields:
     declare: Декларирай
@@ -574,7 +573,6 @@ order:
     invalid-coordinates: Невалидни координати!
     items-drop: Артикулите се оставят на
     loading-message: Зареждане на оферти за услуги...
-    notes-placeholder: Въведете бележки за поръчката тук....
     notes-title: Бележки
     optimize-route: Оптимизирай маршрута
     optimize-route-help-text: Fleetbase автоматично ще оптимизира маршрута.
@@ -702,7 +700,6 @@ order:
     vehicle-assigned: Превозно средство
     no-driver: Без шофьор
     no-vehicle: Без превозно средство
-    select-driver: Изберете шофьор
     select-vehicle: Изберете превозно средство
   kanban:
     status-updated: Активността на поръчката е актуализирана на статус {status}.
@@ -952,7 +949,6 @@ vehicle:
     make: Марка
     model: Модел
     plate-number: Регистрационен номер
-    select-driver: Изберете шофьор
     upload-new-photo: Качете нова снимка
     vehicle-make: Марка на превозното средство
     vehicle-model: Модел на превозното средство
@@ -1199,54 +1195,53 @@ scheduler:
   scheduled-orders: Насрочени поръчки
   unauthorized-to-schedule: Нямате права да насрочвате поръчки.
   scheduling-for: Насрочване за {orderId}
-    add-shift: Add Shift
-    create-shift: Create Shift
-    edit-shift: Edit Shift
-    delete-shift: Delete Shift
-    delete-shift-confirm: Are you sure you want to delete this shift? This action cannot be undone.
-    shift-created: Shift created successfully.
-    shift-updated: Shift updated successfully.
-    shift-title: Shift Title
-    shift-title-placeholder: e.g. Morning Delivery Run
-    shift-start: Shift Start
-    shift-end: Shift End
-    shift-notes-placeholder: Optional notes about this shift
-    select-start-datetime: Select start date & time
-    select-end-datetime: Select end date & time
-    select-driver: Select Driver
-    upcoming-shifts: Upcoming Shifts
-    no-upcoming-shifts: No upcoming shifts scheduled.
-    hours-of-service: Hours of Service
-    daily-driving-hours: Daily Driving Hours
-    weekly-hours: Weekly Hours
-    compliance-status: Compliance Status
-    set-availability: Set Availability
-    availability-set: Availability saved successfully.
-    availability-time-off: Availability & Time Off
-    no-availability-restrictions: No availability restrictions set.
-    available: Available
-    unavailable: Unavailable
-    unavailable-time-off: Unavailable / Time Off
-    availability-type: Availability Type
-    request-time-off: Request Time Off
-    submit-request: Submit Request
-    time-off-requested: Time off request submitted.
-    delete-availability: Delete Availability
-    delete-availability-confirm: Are you sure you want to remove this availability record?
-    availability-deleted: Availability record removed.
-    start-date: Start Date
-    end-date: End Date
-    select-start-date: Select start date
-    select-end-date: Select end date
-    reason: Reason
-    reason-placeholder: e.g. Personal appointment
-    notes-placeholder: Optional additional notes
+  add-shift: Add Shift
+  create-shift: Create Shift
+  edit-shift: Edit Shift
+  delete-shift: Delete Shift
+  delete-shift-confirm: Are you sure you want to delete this shift? This action cannot be undone.
+  shift-created: Shift created successfully.
+  shift-updated: Shift updated successfully.
+  shift-title: Shift Title
+  shift-title-placeholder: e.g. Morning Delivery Run
+  shift-start: Shift Start
+  shift-end: Shift End
+  shift-notes-placeholder: Optional notes about this shift
+  select-start-datetime: Select start date & time
+  select-end-datetime: Select end date & time
+  select-driver: Select Driver
+  upcoming-shifts: Upcoming Shifts
+  no-upcoming-shifts: No upcoming shifts scheduled.
+  hours-of-service: Hours of Service
+  daily-driving-hours: Daily Driving Hours
+  weekly-hours: Weekly Hours
+  compliance-status: Compliance Status
+  set-availability: Set Availability
+  availability-set: Availability saved successfully.
+  availability-time-off: Availability & Time Off
+  no-availability-restrictions: No availability restrictions set.
+  available: Available
+  unavailable: Unavailable
+  unavailable-time-off: Unavailable / Time Off
+  availability-type: Availability Type
+  request-time-off: Request Time Off
+  submit-request: Submit Request
+  time-off-requested: Time off request submitted.
+  delete-availability: Delete Availability
+  delete-availability-confirm: Are you sure you want to remove this availability record?
+  availability-deleted: Availability record removed.
+  start-date: Start Date
+  end-date: End Date
+  select-start-date: Select start date
+  select-end-date: Select end date
+  reason: Reason
+  reason-placeholder: e.g. Personal appointment
+  notes-placeholder: Optional additional notes
 modals:
   new-custom-field-group:
     modal-title: Създаване на нова група персонализирани полета
     group-name: Име на групата
   assign-driver:
-    select-driver: Изберете шофьор
     select-assign: Изберете шофьор за назначаване
   clone-config-form:
     name: Име на конфигурацията
@@ -1307,7 +1302,6 @@ modals:
   fuel-report-details:
     fuel: Гориво/Обем
   fuel-report-form:
-    select-driver: Изберете шофьор
     select-vehicle: Изберете превозно средство
     volume: Обем
     volume-text: Изберете мерната единица и обема на горивото за докладване.
@@ -1334,7 +1328,6 @@ modals:
     select-reporter: Изберете докладчик
     assigned: Назначено на
     select-assignee: Изберете назначен
-    select-driver: Изберете шофьор
     select-vehicle: Изберете превозно средство
     select-type: Изберете тип
     select-category: Изберете категория
@@ -1369,7 +1362,6 @@ modals:
     tags: Етикети на конфигурацията
     add-tags: Добавяне на етикети
   order-assign-driver:
-    select-driver: Изберете шофьор
     select-assign: Изберете шофьор за присвояване
   order-config-new-status:
     new-status: Нов статус
@@ -1394,7 +1386,6 @@ modals:
     select-facilitator: Изберете фасилитатор
     assign-driver: Назначете шофьор
     assign-driver-text: Назначете шофьора, на когото ще бъде изпратена тази поръчка.
-    select-driver: Изберете шофьор
     assign-vehicle: Назначете превозно средство
     assign-vehicle-text: Назначете превозното средство, с което ще се изпълни тази
       поръчка.
@@ -1529,7 +1520,6 @@ modals:
     make: Марка на превозното средство
     model: Модел на превозното средство
     year: Година на превозното средство
-    select-driver: Изберете шофьор
     body: Тип каросерия на превозното средство
     doors: Брой врати
     type: Тип задвижване на превозното средство

@@ -446,7 +446,6 @@ device:
     warranty: Garantie
     warranty-placeholder: Sélectionnez la garantie
     notes: Notes
-    notes-placeholder: Notes
 entity:
   fields:
     declare: Déclarer
@@ -580,7 +579,6 @@ order:
     invalid-coordinates: Coordonnées invalides !
     items-drop: Articles déposés à
     loading-message: Chargement des devis de service...
-    notes-placeholder: Entrez les notes de la commande ici....
     notes-title: Notes
     optimize-route: Optimiser l'itinéraire
     optimize-route-help-text: Fleetbase optimisera automatiquement l'itinéraire.
@@ -712,7 +710,6 @@ order:
     vehicle-assigned: Véhicule
     no-driver: Aucun conducteur
     no-vehicle: Aucun véhicule
-    select-driver: Sélectionner un conducteur
     select-vehicle: Sélectionner un véhicule
   kanban:
     status-updated: L'activité de la commande a été mise à jour au statut {status}.
@@ -969,7 +966,6 @@ vehicle:
     make: Marque
     model: Modèle
     plate-number: Numéro de plaque
-    select-driver: Sélectionner un conducteur
     upload-new-photo: Télécharger une nouvelle photo
     vehicle-make: Marque du véhicule
     vehicle-model: Modèle du véhicule
@@ -1217,54 +1213,53 @@ scheduler:
   scheduled-orders: Commandes programmées
   unauthorized-to-schedule: Vous n'êtes pas autorisé à programmer des commandes.
   scheduling-for: Programmation pour {orderId}
-    add-shift: Add Shift
-    create-shift: Create Shift
-    edit-shift: Edit Shift
-    delete-shift: Delete Shift
-    delete-shift-confirm: Are you sure you want to delete this shift? This action cannot be undone.
-    shift-created: Shift created successfully.
-    shift-updated: Shift updated successfully.
-    shift-title: Shift Title
-    shift-title-placeholder: e.g. Morning Delivery Run
-    shift-start: Shift Start
-    shift-end: Shift End
-    shift-notes-placeholder: Optional notes about this shift
-    select-start-datetime: Select start date & time
-    select-end-datetime: Select end date & time
-    select-driver: Select Driver
-    upcoming-shifts: Upcoming Shifts
-    no-upcoming-shifts: No upcoming shifts scheduled.
-    hours-of-service: Hours of Service
-    daily-driving-hours: Daily Driving Hours
-    weekly-hours: Weekly Hours
-    compliance-status: Compliance Status
-    set-availability: Set Availability
-    availability-set: Availability saved successfully.
-    availability-time-off: Availability & Time Off
-    no-availability-restrictions: No availability restrictions set.
-    available: Available
-    unavailable: Unavailable
-    unavailable-time-off: Unavailable / Time Off
-    availability-type: Availability Type
-    request-time-off: Request Time Off
-    submit-request: Submit Request
-    time-off-requested: Time off request submitted.
-    delete-availability: Delete Availability
-    delete-availability-confirm: Are you sure you want to remove this availability record?
-    availability-deleted: Availability record removed.
-    start-date: Start Date
-    end-date: End Date
-    select-start-date: Select start date
-    select-end-date: Select end date
-    reason: Reason
-    reason-placeholder: e.g. Personal appointment
-    notes-placeholder: Optional additional notes
+  add-shift: Add Shift
+  create-shift: Create Shift
+  edit-shift: Edit Shift
+  delete-shift: Delete Shift
+  delete-shift-confirm: Are you sure you want to delete this shift? This action cannot be undone.
+  shift-created: Shift created successfully.
+  shift-updated: Shift updated successfully.
+  shift-title: Shift Title
+  shift-title-placeholder: e.g. Morning Delivery Run
+  shift-start: Shift Start
+  shift-end: Shift End
+  shift-notes-placeholder: Optional notes about this shift
+  select-start-datetime: Select start date & time
+  select-end-datetime: Select end date & time
+  select-driver: Select Driver
+  upcoming-shifts: Upcoming Shifts
+  no-upcoming-shifts: No upcoming shifts scheduled.
+  hours-of-service: Hours of Service
+  daily-driving-hours: Daily Driving Hours
+  weekly-hours: Weekly Hours
+  compliance-status: Compliance Status
+  set-availability: Set Availability
+  availability-set: Availability saved successfully.
+  availability-time-off: Availability & Time Off
+  no-availability-restrictions: No availability restrictions set.
+  available: Available
+  unavailable: Unavailable
+  unavailable-time-off: Unavailable / Time Off
+  availability-type: Availability Type
+  request-time-off: Request Time Off
+  submit-request: Submit Request
+  time-off-requested: Time off request submitted.
+  delete-availability: Delete Availability
+  delete-availability-confirm: Are you sure you want to remove this availability record?
+  availability-deleted: Availability record removed.
+  start-date: Start Date
+  end-date: End Date
+  select-start-date: Select start date
+  select-end-date: Select end date
+  reason: Reason
+  reason-placeholder: e.g. Personal appointment
+  notes-placeholder: Optional additional notes
 modals:
   new-custom-field-group:
     modal-title: Créer un nouveau groupe de champs personnalisés
     group-name: Nom du groupe
   assign-driver:
-    select-driver: Sélectionner un conducteur
     select-assign: Sélectionner un conducteur à assigner
   clone-config-form:
     name: Nom de la configuration
@@ -1326,7 +1321,6 @@ modals:
   fuel-report-details:
     fuel: Carburant / Volume
   fuel-report-form:
-    select-driver: Sélectionner le conducteur
     select-vehicle: Sélectionner le véhicule
     volume: Volume
     volume-text: Sélectionnez l'unité métrique et le volume de carburant à déclarer.
@@ -1353,7 +1347,6 @@ modals:
     select-reporter: Sélectionner le rapporteur
     assigned: Attribué à
     select-assignee: Sélectionner le destinataire
-    select-driver: Sélectionner le conducteur
     select-vehicle: Sélectionner le véhicule
     select-type: Sélectionner le type
     select-category: Sélectionner la catégorie
@@ -1387,7 +1380,6 @@ modals:
     tags: Tags de la configuration
     add-tags: Ajouter des tags
   order-assign-driver:
-    select-driver: Sélectionner un conducteur
     select-assign: Sélectionnez le conducteur à assigner
   order-config-new-status:
     new-status: Nouveau statut
@@ -1413,7 +1405,6 @@ modals:
     select-facilitator: Sélectionner un facilitateur
     assign-driver: Assigner un conducteur
     assign-driver-text: Assignez le conducteur à qui cette commande sera expédiée.
-    select-driver: Sélectionner un conducteur
     assign-vehicle: Assigner un véhicule
     assign-vehicle-text: Assignez le véhicule avec lequel cette commande sera effectuée.
     select-vehicle: Sélectionner un véhicule
@@ -1549,7 +1540,6 @@ modals:
     make: Marque du véhicule
     model: Modèle du véhicule
     year: Année du véhicule
-    select-driver: Sélectionner un conducteur
     body: Type de carrosserie du véhicule
     doors: Nombre de portes
     type: Type de transmission du véhicule
