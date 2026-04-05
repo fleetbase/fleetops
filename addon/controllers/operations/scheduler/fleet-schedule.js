@@ -113,7 +113,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
     @task *loadScheduleItems() {
         try {
             const items = yield this.store.query('schedule-item', {
-                assignee_type: 'driver',
+                assignee_type: 'fleet-ops:driver',
                 start_at_gte: this.windowStart,
                 end_at_lte: this.windowEnd,
                 limit: 500,
@@ -132,7 +132,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
     @task *loadScheduleExceptions() {
         try {
             const exceptions = yield this.store.query('schedule-exception', {
-                subject_type: 'driver',
+                subject_type: 'fleet-ops:driver',
                 start_date_gte: this.windowStart,
                 end_date_lte: this.windowEnd,
                 limit: 200,
@@ -259,7 +259,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
 
                         // Find or create the driver's Schedule container
                         const schedules = await this.store.query('schedule', {
-                            subject_type: 'driver',
+                            subject_type: 'fleet-ops:driver',
                             subject_uuid: targetDriver.id,
                             limit: 1,
                         });
@@ -269,7 +269,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
                             schedule = schedules.firstObject;
                         } else {
                             schedule = await this.store.createRecord('schedule', {
-                                subject_type: 'driver',
+                                subject_type: 'fleet-ops:driver',
                                 subject_uuid: targetDriver.id,
                                 name: `${targetDriver.name} Schedule`,
                                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -279,7 +279,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
 
                         // Apply the template — core-api materialises ScheduleItems
                         await this.fetch.post(`schedule-templates/${savedTemplate.id}/apply`, {
-                            subject_type: 'driver',
+                            subject_type: 'fleet-ops:driver',
                             subject_uuid: targetDriver.id,
                             schedule_uuid: schedule.id,
                             effective_from: options.recurrenceStartDate || new Date().toISOString(),
@@ -290,7 +290,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
                     } else {
                         // Single one-off shift
                         const scheduleItem = this.store.createRecord('schedule-item', {
-                            assignee_type: 'driver',
+                            assignee_type: 'fleet-ops:driver',
                             assignee_uuid: targetDriver.id,
                             title: options.title || null,
                             start_at: options.startAt,

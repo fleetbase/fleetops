@@ -151,7 +151,7 @@ export default class DriverScheduleComponent extends Component {
         try {
             // 1. Find or create the driver's primary schedule
             const schedules = yield this.store.query('schedule', {
-                subject_type: 'driver',
+                subject_type: 'fleet-ops:driver',
                 subject_uuid: this.args.resource.id,
                 limit: 1,
             });
@@ -160,7 +160,7 @@ export default class DriverScheduleComponent extends Component {
                 this.schedule = schedules.firstObject;
             } else {
                 const newSchedule = this.store.createRecord('schedule', {
-                    subject_type: 'driver',
+                    subject_type: 'fleet-ops:driver',
                     subject_uuid: this.args.resource.id,
                     name: `${this.args.resource.name} Schedule`,
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -243,7 +243,7 @@ export default class DriverScheduleComponent extends Component {
                         const savedTemplate = await template.save();
 
                         await this.fetch.post(`schedule-templates/${savedTemplate.id}/apply`, {
-                            subject_type: 'driver',
+                            subject_type: 'fleet-ops:driver',
                             subject_uuid: this.args.resource.id,
                             schedule_uuid: this.schedule.id,
                             effective_from: options.recurrenceStartDate || new Date().toISOString(),
@@ -255,7 +255,7 @@ export default class DriverScheduleComponent extends Component {
                         // Single shift mode: create a ScheduleItem directly
                         const scheduleItem = this.store.createRecord('schedule-item', {
                             schedule_uuid: this.schedule.id,
-                            assignee_type: 'driver',
+                            assignee_type: 'fleet-ops:driver',
                             assignee_uuid: this.args.resource.id,
                             title: options.title || null,
                             start_at: options.startAt,
@@ -356,12 +356,12 @@ export default class DriverScheduleComponent extends Component {
                 try {
                     const exception = this.store.createRecord('schedule-exception', {
                         schedule_uuid: this.schedule?.id,
-                        subject_type: 'driver',
+                        subject_type: 'fleet-ops:driver',
                         subject_uuid: this.args.resource.id,
                         type: 'time_off',
                         status: 'pending',
-                        start_date: options.startAt,
-                        end_date: options.endAt,
+                        start_at: options.startAt,
+                        end_at: options.endAt,
                         reason: options.reason || null,
                         notes: options.notes || null,
                     });
