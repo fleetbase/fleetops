@@ -37,6 +37,13 @@ common:
   edit-address: Редактиране на адрес
   new-address: Нов адрес
   select-address: Избор на адрес
+  save: Save
+  save-changes: Save Changes
+  done: Done
+  delete: Delete
+  overview: Overview
+  notes: Notes
+  schedule: Schedule
 menu:
   operations: Операции
   dashboard: Табло
@@ -1192,6 +1199,48 @@ scheduler:
   scheduled-orders: Насрочени поръчки
   unauthorized-to-schedule: Нямате права да насрочвате поръчки.
   scheduling-for: Насрочване за {orderId}
+    add-shift: Add Shift
+    create-shift: Create Shift
+    edit-shift: Edit Shift
+    delete-shift: Delete Shift
+    delete-shift-confirm: Are you sure you want to delete this shift? This action cannot be undone.
+    shift-created: Shift created successfully.
+    shift-updated: Shift updated successfully.
+    shift-title: Shift Title
+    shift-title-placeholder: e.g. Morning Delivery Run
+    shift-start: Shift Start
+    shift-end: Shift End
+    shift-notes-placeholder: Optional notes about this shift
+    select-start-datetime: Select start date & time
+    select-end-datetime: Select end date & time
+    select-driver: Select Driver
+    upcoming-shifts: Upcoming Shifts
+    no-upcoming-shifts: No upcoming shifts scheduled.
+    hours-of-service: Hours of Service
+    daily-driving-hours: Daily Driving Hours
+    weekly-hours: Weekly Hours
+    compliance-status: Compliance Status
+    set-availability: Set Availability
+    availability-set: Availability saved successfully.
+    availability-time-off: Availability & Time Off
+    no-availability-restrictions: No availability restrictions set.
+    available: Available
+    unavailable: Unavailable
+    unavailable-time-off: Unavailable / Time Off
+    availability-type: Availability Type
+    request-time-off: Request Time Off
+    submit-request: Submit Request
+    time-off-requested: Time off request submitted.
+    delete-availability: Delete Availability
+    delete-availability-confirm: Are you sure you want to remove this availability record?
+    availability-deleted: Availability record removed.
+    start-date: Start Date
+    end-date: End Date
+    select-start-date: Select start date
+    select-end-date: Select end date
+    reason: Reason
+    reason-placeholder: e.g. Personal appointment
+    notes-placeholder: Optional additional notes
 modals:
   new-custom-field-group:
     modal-title: Създаване на нова група персонализирани полета
