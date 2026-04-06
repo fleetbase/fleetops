@@ -77,10 +77,7 @@ export default class WorkOrderActionsService extends ResourceActionService {
         const laborCostCents = toIntCents(completionData.laborCost);
         const partsCostCents = toIntCents(completionData.partsCost);
         const taxCents = toIntCents(completionData.tax);
-        const totalCostCents =
-            laborCostCents !== null || partsCostCents !== null || taxCents !== null
-                ? (laborCostCents ?? 0) + (partsCostCents ?? 0) + (taxCents ?? 0)
-                : null;
+        const totalCostCents = laborCostCents !== null || partsCostCents !== null || taxCents !== null ? (laborCostCents ?? 0) + (partsCostCents ?? 0) + (taxCents ?? 0) : null;
 
         workOrder.meta = {
             ...(workOrder.meta ?? {}),
@@ -128,7 +125,6 @@ export default class WorkOrderActionsService extends ResourceActionService {
             ...options,
         });
     }
-
 
     modal = {
         create: (attributes = {}, options = {}, saveOptions = {}) => {

@@ -94,7 +94,7 @@ export default class MaintenanceCostPanelComponent extends Component {
      * Displayed via `format-currency` which also expects cents.
      */
     get draftLineTotal() {
-        return (parseInt(this.draftQuantity, 10) || 0) * (this._toCents(this.draftUnitCost));
+        return (parseInt(this.draftQuantity, 10) || 0) * this._toCents(this.draftUnitCost);
     }
 
     get isDisabled() {

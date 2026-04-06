@@ -95,12 +95,12 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
      */
     getShiftColor(item) {
         const colors = {
-            scheduled: '#6366f1',   // indigo
-            confirmed: '#22c55e',   // green
+            scheduled: '#6366f1', // indigo
+            confirmed: '#22c55e', // green
             in_progress: '#3b82f6', // blue
-            completed: '#9ca3af',   // gray
-            cancelled: '#ef4444',   // red
-            no_show: '#f97316',     // orange
+            completed: '#9ca3af', // gray
+            cancelled: '#ef4444', // red
+            no_show: '#f97316', // orange
         };
         return colors[item.status] || '#6366f1';
     }
@@ -268,13 +268,15 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
                         if (schedules.length > 0) {
                             schedule = schedules.firstObject;
                         } else {
-                            schedule = await this.store.createRecord('schedule', {
-                                subject_type: 'fleet-ops:driver',
-                                subject_uuid: targetDriver.id,
-                                name: `${targetDriver.name} Schedule`,
-                                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                                status: 'draft',
-                            }).save();
+                            schedule = await this.store
+                                .createRecord('schedule', {
+                                    subject_type: 'fleet-ops:driver',
+                                    subject_uuid: targetDriver.id,
+                                    name: `${targetDriver.name} Schedule`,
+                                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                                    status: 'draft',
+                                })
+                                .save();
                         }
 
                         // Apply the template — core-api materialises ScheduleItems
