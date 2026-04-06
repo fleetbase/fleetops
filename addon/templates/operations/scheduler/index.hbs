@@ -169,6 +169,7 @@
             id="fleet-ops-scheduler-timeline"
             class="flex-1 overflow-hidden"
             {{on "dragover" this.onCalendarDragOver}}
+            {{on "dragleave" this.onCalendarDragLeave}}
             {{on "drop" this.onCalendarDrop}}
         >
             <EventCalendar

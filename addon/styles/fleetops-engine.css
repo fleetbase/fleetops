@@ -1907,3 +1907,252 @@ body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-timeline-slot.fc
 body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-timeline-slot-label { color: #6b7280; }
 #fleet-ops-fleet-schedule-container .fc-scrollgrid { border-radius: 0.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
 body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-scrollgrid { border-color: #374151; }
+
+/* ============================================================
+   @event-calendar/core - Fleetbase Scheduler Overrides
+   ============================================================ */
+
+/* Light-mode variable overrides */
+#fleet-ops-scheduler-timeline .ec {
+    --ec-color-400: #9ca3af;
+    --ec-color-300: #d1d5db;
+    --ec-color-200: #e5e7eb;
+    --ec-color-100: #f3f4f6;
+    --ec-color-50:  #f9fafb;
+    --ec-bg-color:     #ffffff;
+    --ec-text-color:   #111827;
+    --ec-border-color: #e5e7eb;
+    --ec-button-bg-color:            #ffffff;
+    --ec-button-border-color:        #d1d5db;
+    --ec-button-text-color:          #374151;
+    --ec-button-active-bg-color:     #4f46e5;
+    --ec-button-active-border-color: #4338ca;
+    --ec-button-active-text-color:   #ffffff;
+    --ec-today-bg-color:   #eff6ff;
+    --ec-highlight-color:  #e0e7ff;
+    --ec-event-bg-color:   #4f46e5;
+    --ec-event-text-color: #ffffff;
+    --ec-bg-event-color:   #e5e7eb;
+    --ec-bg-event-opacity: 0.4;
+    --ec-now-indicator-color: #ef4444;
+    font-size: 0.75rem;
+    font-family: inherit;
+}
+
+/* Dark-mode variable overrides */
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec {
+    --ec-color-400: #4b5563;
+    --ec-color-300: #374151;
+    --ec-color-200: #1f2937;
+    --ec-color-100: #111827;
+    --ec-color-50:  #0f172a;
+    --ec-bg-color:     #111827;
+    --ec-text-color:   #f3f4f6;
+    --ec-border-color: #374151;
+    --ec-button-bg-color:            #1f2937;
+    --ec-button-border-color:        #374151;
+    --ec-button-text-color:          #d1d5db;
+    --ec-button-active-bg-color:     #4f46e5;
+    --ec-button-active-border-color: #6366f1;
+    --ec-button-active-text-color:   #ffffff;
+    --ec-today-bg-color:   #1e3a5f;
+    --ec-highlight-color:  #312e81;
+    --ec-event-bg-color:   #6366f1;
+    --ec-event-text-color: #ffffff;
+    --ec-bg-event-color:   #374151;
+    --ec-bg-event-opacity: 0.5;
+    --ec-now-indicator-color: #f87171;
+}
+
+/* Toolbar refinements */
+#fleet-ops-scheduler-timeline .ec-toolbar {
+    padding: 0.5rem 0.75rem;
+    margin-block-end: 0;
+    border-bottom: 1px solid var(--ec-border-color);
+    background-color: var(--ec-bg-color);
+}
+#fleet-ops-scheduler-timeline .ec-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ec-text-color);
+}
+#fleet-ops-scheduler-timeline .ec-button {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+#fleet-ops-scheduler-timeline .ec-button:not(:disabled):hover {
+    background-color: var(--ec-color-100);
+    border-color: var(--ec-color-300);
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-button:not(:disabled):hover {
+    background-color: var(--ec-color-200);
+}
+
+/* Resource label column */
+#fleet-ops-scheduler-timeline .ec-sidebar {
+    background-color: var(--ec-color-50);
+    border-inline-end-color: var(--ec-border-color);
+    min-width: 180px;
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-sidebar {
+    background-color: var(--ec-color-100);
+}
+#fleet-ops-scheduler-timeline .ec-resource {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ec-text-color);
+    padding: 0.375rem 0.75rem;
+}
+
+/* Column headers (time slots) */
+#fleet-ops-scheduler-timeline .ec-col-head,
+#fleet-ops-scheduler-timeline .ec-col-group {
+    background-color: var(--ec-color-50);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    border-color: var(--ec-border-color);
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-col-head,
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-col-group {
+    background-color: var(--ec-color-100);
+    color: #9ca3af;
+}
+
+/* Row / lane backgrounds */
+#fleet-ops-scheduler-timeline .ec-day {
+    background-color: var(--ec-bg-color);
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-day {
+    background-color: #1f2937;
+}
+
+/* Events */
+#fleet-ops-scheduler-timeline .ec-event {
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 0.1rem 0.35rem;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    border: none;
+}
+#fleet-ops-scheduler-timeline .ec-event:hover {
+    filter: brightness(0.92);
+}
+
+/* Now indicator */
+#fleet-ops-scheduler-timeline .ec-now-indicator {
+    border-color: var(--ec-now-indicator-color);
+}
+#fleet-ops-scheduler-timeline .ec-now-indicator-arrow {
+    border-top-color: var(--ec-now-indicator-color);
+    border-bottom-color: var(--ec-now-indicator-color);
+}
+
+/* Drag-over hover state */
+#fleet-ops-scheduler-timeline[data-dragging-over='true'] .ec-main {
+    outline: 2px dashed #6366f1;
+    outline-offset: -2px;
+    background-color: rgba(99, 102, 241, 0.04);
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline[data-dragging-over='true'] .ec-main {
+    outline-color: #818cf8;
+    background-color: rgba(129, 140, 248, 0.06);
+}
+
+/* Full-height timeline */
+#fleet-ops-scheduler-timeline {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+#fleet-ops-scheduler-timeline .fleetbase-event-calendar,
+#fleet-ops-scheduler-timeline .ec {
+    flex: 1 1 0;
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+#fleet-ops-scheduler-timeline .ec-main {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: auto;
+}
+
+/* Scrollbar styling (Webkit) */
+#fleet-ops-scheduler-timeline .ec-main::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    background-color: transparent;
+}
+#fleet-ops-scheduler-timeline .ec-main::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+    border-radius: 3px;
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollbar-thumb {
+    background-color: #4b5563;
+}
+
+/* ============================================================
+   Scheduler - Full-height layout & header overflow fixes
+   ============================================================ */
+
+/* 1. Make the tab-navigation a flex column so the tab-content
+      fills the remaining height below the tab-list. */
+.tab-navigation.fleet-ops-scheduler-tab-nav {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 2. The tab-content should grow to fill all remaining space
+      below the tab-list. */
+.tab-navigation.fleet-ops-scheduler-tab-nav > .tab-content {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 3. The next-view-section-body inside the scheduler should
+      fill the remaining space below the subheader. */
+.tab-navigation.fleet-ops-scheduler-tab-nav .next-view-section-body {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 4. Fix the subheader overflow: prevent the actions from
+      stretching beyond the viewport width. */
+.tab-navigation.fleet-ops-scheduler-tab-nav .next-view-section-subheader {
+    flex-shrink: 0;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* 5. Allow the actions area to shrink and wrap so buttons
+      remain visible when the timeline stretches the layout. */
+.tab-navigation.fleet-ops-scheduler-tab-nav .next-view-section-subheader-actions {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+/* 6. The scheduler container and timeline fill the body. */
+#fleet-ops-scheduler-container {
+    flex: 1 1 0;
+    min-height: 0;
+}

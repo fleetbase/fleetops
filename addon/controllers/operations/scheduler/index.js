@@ -272,10 +272,25 @@ export default class OperationsSchedulerIndexController extends Controller {
 
     /**
      * Prevents the browser's default "no drop" behaviour so the drop event fires.
+     * Also sets a data attribute on the timeline container to trigger the CSS
+     * drag-over highlight defined in fleetops-engine.css.
      */
     @action onCalendarDragOver(event) {
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
+        const el = document.getElementById('fleet-ops-scheduler-timeline');
+        if (el) el.dataset.draggingOver = 'true';
+    }
+
+    /**
+     * Clears the drag-over highlight when the cursor leaves the timeline container.
+     * Only fires when the pointer exits the container itself, not its children.
+     */
+    @action onCalendarDragLeave(event) {
+        const el = document.getElementById('fleet-ops-scheduler-timeline');
+        if (el && !el.contains(event.relatedTarget)) {
+            delete el.dataset.draggingOver;
+        }
     }
 
     /**
@@ -286,6 +301,9 @@ export default class OperationsSchedulerIndexController extends Controller {
      */
     @action async onCalendarDrop(event) {
         event.preventDefault();
+        // Clear the drag-over highlight.
+        const timelineEl = document.getElementById('fleet-ops-scheduler-timeline');
+        if (timelineEl) delete timelineEl.dataset.draggingOver;
         const order = this._draggedOrder;
         this._draggedOrder = null;
         if (!order || !this.calendar) return;
