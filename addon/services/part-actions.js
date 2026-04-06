@@ -2,7 +2,7 @@ import ResourceActionService, { inject as service } from '@fleetbase/ember-core/
 
 export default class PartActionsService extends ResourceActionService {
     @service currentUser;
-    
+
     constructor() {
         super(...arguments);
         this.initialize('part', {

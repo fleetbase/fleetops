@@ -129,10 +129,14 @@ export default class MaintenanceScheduleDetailsComponent extends Component {
     @action downloadIcal(schedule) {
         const id = schedule.public_id ?? schedule.id;
         this.fetch
-            .download(`maintenance-schedules/${id}/ical`, {}, {
-                fileName: `maintenance-schedule-${id}.ics`,
-                mimeType: 'text/calendar',
-            })
+            .download(
+                `maintenance-schedules/${id}/ical`,
+                {},
+                {
+                    fileName: `maintenance-schedule-${id}.ics`,
+                    mimeType: 'text/calendar',
+                }
+            )
             .catch((error) => {
                 // eslint-disable-next-line no-console
                 console.error('Failed to download iCal:', error);

@@ -206,9 +206,7 @@ export default class DriverScheduleComponent extends Component {
             });
 
             this.scheduleItems = items.toArray();
-            this.upcomingShifts = this.scheduleItems
-                .filter((item) => new Date(item.start_at) >= new Date())
-                .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
+            this.upcomingShifts = this.scheduleItems.filter((item) => new Date(item.start_at) >= new Date()).sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
 
             // 3. Load schedule exceptions
             const exceptions = yield this.store.query('schedule-exception', {

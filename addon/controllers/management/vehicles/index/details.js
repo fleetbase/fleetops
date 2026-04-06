@@ -85,11 +85,12 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
                     {
                         text: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.vehicle') }),
                         icon: 'trash',
-                        fn: () => this.vehicleActions.delete(this.model, {
-                            onConfirm: () => {
-                                this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index');
-                            },
-                        }),
+                        fn: () =>
+                            this.vehicleActions.delete(this.model, {
+                                onConfirm: () => {
+                                    this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index');
+                                },
+                            }),
                         permission: 'fleet-ops delete vehicle',
                         class: 'text-red-500 hover:text-red-600',
                     },

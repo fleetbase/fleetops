@@ -22,7 +22,6 @@ import createFullCalendarEventFromScheduleItem from '../../../utils/create-full-
  *   Socket service -> store.pushPayload() -> reactive UI (no page refresh)
  */
 export default class OperationsSchedulerIndexController extends Controller {
-
     @service scheduling;
     @service socket;
     @service store;
@@ -65,11 +64,7 @@ export default class OperationsSchedulerIndexController extends Controller {
         if (this.searchQuery && this.searchQuery.length >= 2) {
             const q = this.searchQuery.toLowerCase();
             orders = orders.filter((o) => {
-                return (
-                    (o.public_id ?? '').toLowerCase().includes(q) ||
-                    (o.tracking ?? '').toLowerCase().includes(q) ||
-                    (o.payload?.dropoff?.address ?? '').toLowerCase().includes(q)
-                );
+                return (o.public_id ?? '').toLowerCase().includes(q) || (o.tracking ?? '').toLowerCase().includes(q) || (o.payload?.dropoff?.address ?? '').toLowerCase().includes(q);
             });
         }
         this.activeFilters.forEach((filter) => {
@@ -81,17 +76,13 @@ export default class OperationsSchedulerIndexController extends Controller {
 
     @computed('allActiveOrders.@each.{scheduled_at,driver_uuid,status}')
     get calendarEvents() {
-        return this.allActiveOrders
-            .filter((o) => !isNone(o.scheduled_at) && isValidDate(new Date(o.scheduled_at)))
-            .map((o) => createFullCalendarEventFromOrder(o));
+        return this.allActiveOrders.filter((o) => !isNone(o.scheduled_at) && isValidDate(new Date(o.scheduled_at))).map((o) => createFullCalendarEventFromOrder(o));
     }
 
     @computed('drivers.[]', 'allActiveOrders.@each.{scheduled_at,driver_uuid}')
     get calendarResources() {
         return this.drivers.map((driver) => {
-            const assignedCount = this.allActiveOrders.filter(
-                (o) => o.driver_uuid === driver.id && !isNone(o.scheduled_at)
-            ).length;
+            const assignedCount = this.allActiveOrders.filter((o) => o.driver_uuid === driver.id && !isNone(o.scheduled_at)).length;
             const maxCapacity = driver.max_daily_orders ?? 10;
             const pct = Math.round((assignedCount / maxCapacity) * 100);
             return {
@@ -111,11 +102,13 @@ export default class OperationsSchedulerIndexController extends Controller {
         this.drivers.forEach((driver) => {
             const shift = driver.currentShift;
             if (shift) {
-                events.push(createFullCalendarEventFromScheduleItem(shift, driver, {
-                    display: 'background',
-                    backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                    borderColor: 'rgba(99, 102, 241, 0.25)',
-                }));
+                events.push(
+                    createFullCalendarEventFromScheduleItem(shift, driver, {
+                        display: 'background',
+                        backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                        borderColor: 'rgba(99, 102, 241, 0.25)',
+                    })
+                );
             }
         });
         return events;
@@ -352,13 +345,15 @@ export default class OperationsSchedulerIndexController extends Controller {
                         if (schedules.length > 0) {
                             schedule = schedules.firstObject;
                         } else {
-                            schedule = await this.store.createRecord('schedule', {
-                                subject_type: 'driver',
-                                subject_uuid: targetDriver.id,
-                                name: `${targetDriver.name} Schedule`,
-                                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                                status: 'draft',
-                            }).save();
+                            schedule = await this.store
+                                .createRecord('schedule', {
+                                    subject_type: 'driver',
+                                    subject_uuid: targetDriver.id,
+                                    name: `${targetDriver.name} Schedule`,
+                                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                                    status: 'draft',
+                                })
+                                .save();
                         }
                         await this.fetch.post(`schedule-templates/${savedTemplate.id}/apply`, {
                             subject_type: 'driver',
@@ -447,8 +442,12 @@ export default class OperationsSchedulerIndexController extends Controller {
     // Undo / Redo
     // -------------------------------------------------------------------------
 
-    @action undo() { return this.scheduling.undo(); }
-    @action redo() { return this.scheduling.redo(); }
+    @action undo() {
+        return this.scheduling.undo();
+    }
+    @action redo() {
+        return this.scheduling.redo();
+    }
 
     // -------------------------------------------------------------------------
     // Real-Time Socket Subscriptions
@@ -471,22 +470,41 @@ export default class OperationsSchedulerIndexController extends Controller {
 
     _handleOrderSocketEvent({ event, data } = {}) {
         if (!data?.id) return;
-        try { this.store.pushPayload('order', { order: data }); } catch { /* ignore */ }
+        try {
+            this.store.pushPayload('order', { order: data });
+        } catch {
+            /* ignore */
+        }
     }
 
     _handleDriverSocketEvent({ event, data } = {}) {
         if (!data?.id) return;
         if (event === 'driver.location_changed') return;
-        try { this.store.pushPayload('driver', { driver: data }); } catch { /* ignore */ }
+        try {
+            this.store.pushPayload('driver', { driver: data });
+        } catch {
+            /* ignore */
+        }
     }
 
     // -------------------------------------------------------------------------
     // View Navigation
     // -------------------------------------------------------------------------
 
-    @action goToToday() { this.viewDate = new Date(); this.calendar?.today(); }
-    @action goToPrev() { this.calendar?.prev(); const d = this.calendar?.getDate(); if (d) this.viewDate = d; }
-    @action goToNext() { this.calendar?.next(); const d = this.calendar?.getDate(); if (d) this.viewDate = d; }
+    @action goToToday() {
+        this.viewDate = new Date();
+        this.calendar?.today();
+    }
+    @action goToPrev() {
+        this.calendar?.prev();
+        const d = this.calendar?.getDate();
+        if (d) this.viewDate = d;
+    }
+    @action goToNext() {
+        this.calendar?.next();
+        const d = this.calendar?.getDate();
+        if (d) this.viewDate = d;
+    }
 
     @action setViewRange(range) {
         this.viewRange = range;
@@ -499,25 +517,40 @@ export default class OperationsSchedulerIndexController extends Controller {
     // -------------------------------------------------------------------------
 
     removeEvent(event) {
-        if (isObject(event) && typeof event.remove === 'function') { event.remove(); return true; }
+        if (isObject(event) && typeof event.remove === 'function') {
+            event.remove();
+            return true;
+        }
         if (isObject(event) && typeof event.id === 'string') return this.removeEvent(event.id);
-        if (isJson(event)) { event = JSON.parse(event); return this.removeEvent(event.id); }
+        if (isJson(event)) {
+            event = JSON.parse(event);
+            return this.removeEvent(event.id);
+        }
         if (typeof event === 'string') {
             const calEvent = this.calendar?.getEventById(event);
-            if (calEvent && typeof calEvent.remove === 'function') { calEvent.remove(); return true; }
+            if (calEvent && typeof calEvent.remove === 'function') {
+                calEvent.remove();
+                return true;
+            }
         }
         return false;
     }
 
     getEvent(event) {
-        if (isJson(event)) { event = JSON.parse(event); return this.calendar?.getEventById(event.id); }
+        if (isJson(event)) {
+            event = JSON.parse(event);
+            return this.calendar?.getEventById(event.id);
+        }
         if (typeof event === 'string') return this.calendar?.getEventById(event);
         return event;
     }
 
     setEventProperty(event, prop, value) {
         const eventInstance = this.getEvent(event);
-        if (eventInstance && typeof eventInstance.setProp === 'function') { eventInstance.setProp(prop, value); return true; }
+        if (eventInstance && typeof eventInstance.setProp === 'function') {
+            eventInstance.setProp(prop, value);
+            return true;
+        }
         return false;
     }
 }
