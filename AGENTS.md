@@ -44,4 +44,4 @@ Both halves are linked into the host (`fleetbase/api` and `fleetbase/console` re
 - `~/fleetbase-project/docs/extension-contracts.md`
 
 ## Boost gate
-Before first edit in `server/`: `composer require laravel/boost --dev && php artisan boost:install`, then commit.
+`fleetops/server` IS host-cloned, so Boost outputs would land in a place future agents can read. Before first edit in `server/`: `composer require laravel/boost --dev && php artisan boost:install` from a **real terminal** (the installer is interactive and crashes on `docker compose exec -T`). Then commit.
