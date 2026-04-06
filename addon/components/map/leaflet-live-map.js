@@ -29,6 +29,7 @@ export default class MapLeafletLiveMapComponent extends Component {
     @service intl;
     @service universe;
     @service('universe/menu-service') menuService;
+    @service geofenceEventBus;
 
     /** properties */
     id = guidFor(this);
@@ -57,6 +58,12 @@ export default class MapLeafletLiveMapComponent extends Component {
 
         // Ensure we have valid coordinates on initialization
         this.#updateCoordinatesFromLocation();
+
+        // Subscribe to geofence events so the live map can react to boundary crossings
+        this._geofenceEnteredHandler = this.#handleGeofenceEntered.bind(this);
+        this._geofenceExitedHandler  = this.#handleGeofenceExited.bind(this);
+        this.universe.on('fleet-ops.geofence.entered', this._geofenceEnteredHandler);
+        this.universe.on('fleet-ops.geofence.exited',  this._geofenceExitedHandler);
     }
 
     willDestroy() {
@@ -66,6 +73,14 @@ export default class MapLeafletLiveMapComponent extends Component {
         if (this._locationUpdateHandler) {
             this.universe.off('user.located', this._locationUpdateHandler);
             this._locationUpdateHandler = null;
+        }
+        if (this._geofenceEnteredHandler) {
+            this.universe.off('fleet-ops.geofence.entered', this._geofenceEnteredHandler);
+            this._geofenceEnteredHandler = null;
+        }
+        if (this._geofenceExitedHandler) {
+            this.universe.off('fleet-ops.geofence.exited', this._geofenceExitedHandler);
+            this._geofenceExitedHandler = null;
         }
     }
 
@@ -257,6 +272,62 @@ export default class MapLeafletLiveMapComponent extends Component {
         }
         // Return default zoom of 14 if invalid
         return 14;
+    }
+
+    /**
+     * Handles a geofence.entered event from the GeofenceEventBus.
+     * Briefly highlights the geofence layer on the map to provide visual feedback.
+     *
+     * @param {Object} event - Normalised geofence event object
+     */
+    #handleGeofenceEntered(event) {
+        debug(`[LiveMap] geofence.entered — driver: ${event.driverName}, geofence: ${event.geofenceName}`);
+        this.#flashGeofenceLayer(event.geofenceUuid, '#22c55e'); // green
+    }
+
+    /**
+     * Handles a geofence.exited event from the GeofenceEventBus.
+     * Briefly highlights the geofence layer on the map to provide visual feedback.
+     *
+     * @param {Object} event - Normalised geofence event object
+     */
+    #handleGeofenceExited(event) {
+        debug(`[LiveMap] geofence.exited — driver: ${event.driverName}, geofence: ${event.geofenceName}`);
+        this.#flashGeofenceLayer(event.geofenceUuid, '#ef4444'); // red
+    }
+
+    /**
+     * Briefly changes the fill colour of a geofence polygon layer on the map
+     * to provide visual feedback when a driver enters or exits.
+     *
+     * @param {string} geofenceUuid - UUID of the zone or service area
+     * @param {string} flashColor   - Hex colour to flash
+     */
+    #flashGeofenceLayer(geofenceUuid, flashColor) {
+        if (!geofenceUuid || !this.map) {
+            return;
+        }
+
+        // Iterate over all Leaflet layers to find the matching geofence polygon
+        this.map.eachLayer((layer) => {
+            const model = layer._model;
+            if (model && model.uuid === geofenceUuid && typeof layer.setStyle === 'function') {
+                const originalStyle = {
+                    color:   layer.options.color,
+                    fillColor: layer.options.fillColor,
+                    weight:  layer.options.weight,
+                };
+
+                // Flash to the event colour
+                layer.setStyle({ color: flashColor, fillColor: flashColor, weight: 3 });
+
+                // Restore original style after 2 seconds
+                setTimeout(() => {
+                    if (!layer._map) return; // layer may have been removed
+                    layer.setStyle(originalStyle);
+                }, 2000);
+            }
+        });
     }
 
     /**

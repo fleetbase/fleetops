@@ -46,4 +46,63 @@
             </InputGroup>
         </div>
     </ContentPanel>
+
+    <ContentPanel @title="Geofence Triggers" @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                Configure when this service area fires active geofence events. Entry and exit events are dispatched to
+                webhooks, WebSocket channels, and the notification system whenever a driver crosses the service area boundary.
+            </p>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {{! Entry trigger toggle }}
+                <div class="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <Toggle
+                            @isToggled={{@resource.trigger_on_entry}}
+                            @onToggle={{fn (mut @resource.trigger_on_entry)}}
+                        />
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">Trigger on Entry</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Fire a <code class="font-mono">geofence.entered</code> event when a driver enters this service area.
+                        </p>
+                    </div>
+                </div>
+
+                {{! Exit trigger toggle }}
+                <div class="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <Toggle
+                            @isToggled={{@resource.trigger_on_exit}}
+                            @onToggle={{fn (mut @resource.trigger_on_exit)}}
+                        />
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">Trigger on Exit</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Fire a <code class="font-mono">geofence.exited</code> event when a driver leaves this service area.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <InputGroup
+                @name="Dwell Threshold (minutes)"
+                @value={{@resource.dwell_threshold_minutes}}
+                @type="number"
+                @placeholder="e.g. 10"
+                @helpText="Fire a geofence.dwelled event after a driver has been inside this service area for this many minutes. Leave blank to disable dwell tracking."
+            />
+
+            <InputGroup
+                @name="Speed Limit (km/h)"
+                @value={{@resource.speed_limit_kmh}}
+                @type="number"
+                @placeholder="e.g. 50"
+                @helpText="Optional speed limit enforced within this service area. Leave blank for no limit."
+            />
+        </div>
+    </ContentPanel>
 </div>

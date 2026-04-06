@@ -145,6 +145,13 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 $router->put('{id}', 'ServiceAreaController@update');
                 $router->delete('{id}', 'ServiceAreaController@delete');
             });
+            // geofences routes
+            $router->group(['prefix' => 'geofences'], function () use ($router) {
+                $router->get('events', 'GeofenceController@events');
+                $router->get('inventory', 'GeofenceController@inventory');
+                $router->get('dwell-report', 'GeofenceController@dwellReport');
+                $router->get('driver/{driverUuid}/history', 'GeofenceController@driverHistory');
+            });
             // service-rates routes
             $router->group(['prefix' => 'service-rates'], function () use ($router) {
                 $router->post('/', 'ServiceRateController@create');

@@ -1,0 +1,80 @@
+<div class="geofence-events-panel flex flex-col h-full" ...attributes>
+    {{! Panel header }}
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center space-x-2">
+            <FaIcon @icon="map-pin" class="text-blue-500 w-4 h-4" />
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Geofence Events</h3>
+            {{#if this.events.length}}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                    {{this.events.length}}
+                </span>
+            {{/if}}
+        </div>
+        <button
+            type="button"
+            class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            {{on "click" this.clearFeed}}
+        >
+            Clear
+        </button>
+    </div>
+
+    {{! Loading state }}
+    {{#if this.isLoading}}
+        <div class="flex items-center justify-center py-8">
+            <Spinner class="w-5 h-5 text-blue-500" />
+            <span class="ml-2 text-sm text-gray-500">Loading events…</span>
+        </div>
+
+    {{! Empty state }}
+    {{else if (eq this.events.length 0)}}
+        <div class="flex flex-col items-center justify-center py-10 px-4 text-center">
+            <FaIcon @icon="map-pin" class="w-8 h-8 text-gray-300 dark:text-gray-600 mb-3" />
+            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No geofence events yet</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Events will appear here in real time as drivers cross zone and service area boundaries.
+            </p>
+        </div>
+
+    {{! Event feed }}
+    {{else}}
+        <div class="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+            {{#each this.events as |event|}}
+                <div class="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors {{if event.isNew 'bg-blue-50 dark:bg-blue-900/20'}}">
+                    <div class="flex items-start justify-between space-x-2">
+                        <div class="flex-1 min-w-0">
+                            {{! Event type badge }}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{this.badgeColorFor event.eventType}}">
+                                {{this.labelFor event.eventType}}
+                            </span>
+
+                            {{! Driver and geofence names }}
+                            <p class="mt-1 text-sm text-gray-900 dark:text-white truncate">
+                                <span class="font-medium">{{event.driverName}}</span>
+                                <span class="text-gray-500 dark:text-gray-400 mx-1">→</span>
+                                <span class="text-gray-700 dark:text-gray-300">{{event.geofenceName}}</span>
+                            </p>
+
+                            {{! Dwell duration (only for exited/dwelled events) }}
+                            {{#if event.dwellMinutes}}
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                    Dwell: {{event.dwellMinutes}} min
+                                </p>
+                            {{/if}}
+                        </div>
+
+                        {{! Timestamp }}
+                        <div class="flex-shrink-0 text-right">
+                            <p class="text-xs text-gray-400 dark:text-gray-500">
+                                <TimeAgo @date={{event.occurredAt}} />
+                            </p>
+                            <p class="text-xs text-gray-300 dark:text-gray-600 capitalize">
+                                {{event.geofenceType}}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            {{/each}}
+        </div>
+    {{/if}}
+</div>

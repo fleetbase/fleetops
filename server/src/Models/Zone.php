@@ -62,7 +62,21 @@ class Zone extends Model
      *
      * @var array
      */
-    protected $fillable = ['_key', 'company_uuid', 'service_area_uuid', 'name', 'description', 'border', 'color', 'stroke_color', 'status'];
+    protected $fillable = [
+        '_key',
+        'company_uuid',
+        'service_area_uuid',
+        'name',
+        'description',
+        'border',
+        'color',
+        'stroke_color',
+        'status',
+        'trigger_on_entry',
+        'trigger_on_exit',
+        'dwell_threshold_minutes',
+        'speed_limit_kmh',
+    ];
 
     /**
      * The attributes that should be cast to native types.
@@ -70,7 +84,11 @@ class Zone extends Model
      * @var array
      */
     protected $casts = [
-        'border' => PolygonCast::class,
+        'border'                  => PolygonCast::class,
+        'trigger_on_entry'        => 'boolean',
+        'trigger_on_exit'         => 'boolean',
+        'dwell_threshold_minutes' => 'integer',
+        'speed_limit_kmh'         => 'integer',
     ];
 
     /**
