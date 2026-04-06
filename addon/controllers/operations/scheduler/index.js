@@ -4,7 +4,7 @@ import { inject as service } from '@ember/service';
 import { action, computed } from '@ember/object';
 import { isNone } from '@ember/utils';
 import { isValid as isValidDate } from 'date-fns';
-import { task, timeout } from 'ember-concurrency';
+import { task } from 'ember-concurrency';
 import isObject from '@fleetbase/ember-core/utils/is-object';
 import isJson from '@fleetbase/ember-core/utils/is-json';
 import createFullCalendarEventFromOrder from '../../../utils/create-full-calendar-event-from-order';
@@ -153,10 +153,11 @@ export default class OperationsSchedulerIndexController extends Controller {
     // Debounced Sidebar Search
     // -------------------------------------------------------------------------
 
-    searchTask = task({ restartable: true }, async (query) => {
-        await timeout(300);
+    @task({ restartable: true })
+    *searchTask(query) {
+        yield new Promise((resolve) => setTimeout(resolve, 300));
         this.searchQuery = query;
-    });
+    }
 
     @action onSearchInput(event) {
         this.searchTask.perform(event.target.value);
@@ -445,6 +446,7 @@ export default class OperationsSchedulerIndexController extends Controller {
     @action undo() {
         return this.scheduling.undo();
     }
+
     @action redo() {
         return this.scheduling.redo();
     }
