@@ -29,6 +29,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -322,6 +323,24 @@ class Driver extends Model
     {
         // Explicit FK columns required — Fleetbase uses *_uuid not *_id
         return $this->morphMany(ScheduleItem::class, 'assignee', 'assignee_type', 'assignee_uuid');
+    }
+
+    /**
+     * The driver's current active shift — the ScheduleItem whose window
+     * contains the current timestamp and whose status is 'scheduled' or 'active'.
+     *
+     * Exposed as an eager-loadable MorphOne so the order scheduler route can
+     * request it via with: ['currentShift'] without triggering an N+1 query.
+     * The FullCalendar resource timeline uses this to render shift-window
+     * background events for each driver resource row.
+     */
+    public function currentShift(): MorphOne
+    {
+        return $this->morphOne(ScheduleItem::class, 'assignee', 'assignee_type', 'assignee_uuid')
+            ->whereIn('status', ['scheduled', 'active'])
+            ->where('start_at', '<=', now())
+            ->where('end_at', '>=', now())
+            ->latest('start_at');
     }
 
     /**
