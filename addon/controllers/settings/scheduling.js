@@ -115,7 +115,7 @@ export default class SettingsSchedulingController extends Controller {
      * Open the create-template modal.
      */
     @action createTemplate() {
-        this.modalsManager.open('modals/add-driver-shift', {
+        this.modalsManager.show('modals/add-driver-shift', {
             title: this.intl.t('settings.scheduling.new-template'),
             isLibraryTemplate: true,
             onConfirm: () => this.loadTemplates.perform(),
@@ -126,7 +126,7 @@ export default class SettingsSchedulingController extends Controller {
      * Open the edit-template modal.
      */
     @action editTemplate(template) {
-        this.modalsManager.open('modals/add-driver-shift', {
+        this.modalsManager.show('modals/add-driver-shift', {
             title: this.intl.t('settings.scheduling.edit-template'),
             isLibraryTemplate: true,
             template,

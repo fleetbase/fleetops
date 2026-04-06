@@ -24,18 +24,16 @@
                         <span class="text-gray-400 dark:text-gray-500 uppercase tracking-wide" style="font-size:9px">{{day.label}}</span>
                         <span class="{{if day.isToday "flex items-center justify-center w-4 h-4 rounded-full bg-indigo-600 text-white font-bold leading-none text-xs" "text-gray-500 dark:text-gray-400"}}">{{day.dayNum}}</span>
                     </div>
-                    {{! Shift chips — larger with edit/delete buttons }}
+                    {{! Shift chips — badge info style (light/dark via CSS) }}
                     {{#each day.shifts as |shift|}}
-                        <div class="w-full rounded mb-1 bg-indigo-100 dark:bg-indigo-900 border border-indigo-300 dark:border-blue-500 text-indigo-900 dark:text-blue-200">
-                            {{! Time range }}
-                            <div class="px-1 pt-1 font-semibold leading-tight truncate" style="font-size:9px">
+                        <div class="driver-schedule-shift-chip">
+                            <span class="shift-chip-time">
                                 {{format-date-fns shift.start_at "HH:mm"}}–{{format-date-fns shift.end_at "HH:mm"}}
-                            </div>
-                            {{! Edit / Delete row }}
-                            <div class="flex items-center justify-end px-0.5 pb-0.5 space-x-0.5">
+                            </span>
+                            <div class="shift-chip-actions">
                                 <button
                                     type="button"
-                                    class="p-0.5 rounded text-indigo-500 hover:text-indigo-800 dark:text-blue-300 dark:hover:text-white hover:bg-indigo-200 dark:hover:bg-blue-700"
+                                    class="shift-chip-action-btn edit"
                                     title={{t "scheduler.edit-shift"}}
                                     {{on "click" (fn this.editShift shift)}}
                                 >
@@ -43,7 +41,7 @@
                                 </button>
                                 <button
                                     type="button"
-                                    class="p-0.5 rounded text-red-400 hover:text-red-700 dark:text-red-300 dark:hover:text-red-100 hover:bg-red-100 dark:hover:bg-red-800"
+                                    class="shift-chip-action-btn delete"
                                     title={{t "scheduler.delete-shift"}}
                                     {{on "click" (fn this.deleteShift shift)}}
                                 >
