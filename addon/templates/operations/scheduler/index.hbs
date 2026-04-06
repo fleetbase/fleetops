@@ -61,7 +61,7 @@
         {{#if this.hasSelection}}
             <Button
                 @type="primary"
-                @text={{t "scheduler.bulk-assign"}}
+                @text={{t "scheduler.bulk-assign" count=this.selectedOrderIds.size}}
                 @icon="layer-group"
                 @size="sm"
                 @onClick={{this.openBulkAssignModal}}
@@ -190,6 +190,7 @@
                 @onEventDrop={{this.rescheduleEventFromDrag}}
                 @onEventClick={{this.viewOrderAsEvent}}
                 @onCalendarReady={{this.setCalendarApi}}
+                @options={{this.calendarTimezoneOptions}}
             />
         </div>
     </div>

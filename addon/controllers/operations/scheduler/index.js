@@ -159,6 +159,42 @@ export default class OperationsSchedulerIndexController extends Controller {
         return { start: '', center: 'title', end: '' };
     }
 
+    /**
+     * Returns the IANA timezone string for the current organisation.
+     * Falls back to the browser's local timezone when the company record has
+     * not yet loaded or has no timezone set.
+     *
+     * @returns {string}  e.g. 'Asia/Singapore', 'America/New_York'
+     */
+    get companyTimezone() {
+        return this.currentUser?.company?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+
+    /**
+     * Builds the @event-calendar/core format options that make all time labels
+     * and event times display in the organisation's timezone.
+     *
+     * @event-calendar/core passes these objects directly to
+     * `new Intl.DateTimeFormat(locale, format)`, so including `timeZone` in
+     * the format object is sufficient — no patching of the library is needed.
+     *
+     * Note: @event-calendar/core v5.x stores dates internally as UTC wall-clock
+     * values (i.e. the UTC fields mirror the local time the user sees on screen).
+     * Passing `timeZone` in the Intl format objects corrects the *display* of
+     * slot labels and event times.  Drop-date resolution in `onCalendarDrop`
+     * is handled separately via `_reinterpretDateInTimezone`.
+     *
+     * @returns {Object}
+     */
+    get calendarTimezoneOptions() {
+        const tz = this.companyTimezone;
+        return {
+            slotLabelFormat: { hour: 'numeric', minute: '2-digit', timeZone: tz },
+            eventTimeFormat: { hour: 'numeric', minute: '2-digit', timeZone: tz },
+            dayHeaderFormat: { weekday: 'short', month: 'numeric', day: 'numeric', timeZone: tz },
+        };
+    }
+
     // -------------------------------------------------------------------------
     // EventCalendar Render Hooks
     // -------------------------------------------------------------------------
@@ -361,15 +397,20 @@ export default class OperationsSchedulerIndexController extends Controller {
         const savedScrollLeft = ecMain ? ecMain.scrollLeft : 0;
         const savedScrollTop = ecMain ? ecMain.scrollTop : 0;
 
-        // Resolve drop position to a date + resource using EventCalendar's API.
+         // Resolve drop position to a date + resource using EventCalendar's API.
         const dropInfo = this.calendar.dateFromPoint(event.clientX, event.clientY);
         if (!dropInfo) return;
-
         const { date, resource } = dropInfo;
         const driverId = resource?.id ?? null;
         // Use the exact drop date so the event lands where the user dropped it.
         // findBestFit is only used when no specific time can be resolved.
-        const scheduledAt = date ?? new Date();
+        //
+        // @event-calendar/core stores dates as UTC wall-clock values: the UTC
+        // fields of the returned Date match the time the user sees on screen.
+        // When the calendar is displaying in the company timezone (via
+        // calendarTimezoneOptions), the UTC fields represent company-local time.
+        // We reinterpret them as a true UTC instant by using the company timezone.
+        const scheduledAt = date ? this._reinterpretDateInTimezone(date, this.companyTimezone) : new Date();
 
         const result = await this.scheduling.assignOrder(order, driverId, scheduledAt);
 
@@ -405,14 +446,14 @@ export default class OperationsSchedulerIndexController extends Controller {
     @action async rescheduleEventFromDrag(info) {
         const { event, revert } = info;
         const { start, end, extendedProps } = event;
-
+        const tz = this.companyTimezone;
         if (extendedProps?.scheduleItem) {
             // Shift block drag — update the ScheduleItem record directly.
             const scheduleItem = extendedProps.scheduleItem;
             const newResourceId = event.resourceIds?.[0];
             try {
-                scheduleItem.set('start_at', start);
-                scheduleItem.set('end_at', end ?? start);
+                scheduleItem.set('start_at', this._reinterpretDateInTimezone(start, tz));
+                scheduleItem.set('end_at', this._reinterpretDateInTimezone(end ?? start, tz));
                 if (newResourceId) scheduleItem.set('assignee_uuid', newResourceId);
                 await scheduleItem.save();
                 this.notifications.success(this.intl.t('scheduler.shift-updated'));
@@ -422,23 +463,21 @@ export default class OperationsSchedulerIndexController extends Controller {
             }
             return;
         }
-
         // Order event drag — delegate to SchedulingService.
         const order = this.store.peekRecord('order', event.id);
         if (!order) return;
-
         const newDriverId = event.resourceIds?.[0] ?? order.driver_assigned_uuid;
-        const result = await this.scheduling.assignOrder(order, newDriverId, start);
+        const result = await this.scheduling.assignOrder(order, newDriverId, this._reinterpretDateInTimezone(start, tz));
+        const tzStart = this._reinterpretDateInTimezone(start, tz);
         if (result.hasConflict) {
             revert();
-            this._showConflictModal(order, newDriverId, start, result.conflicts);
+            this._showConflictModal(order, newDriverId, tzStart, result.conflicts);
         } else if (result.error) {
             revert();
         } else {
             this._orderRevision += 1;
         }
     }
-
     // -------------------------------------------------------------------------
     // Event Click
     // -------------------------------------------------------------------------
@@ -556,7 +595,7 @@ export default class OperationsSchedulerIndexController extends Controller {
                                     subject_type: 'driver',
                                     subject_uuid: targetDriver.id,
                                     name: `${targetDriver.name} Schedule`,
-                                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                                    timezone: this.companyTimezone,
                                     status: 'draft',
                                 })
                                 .save();
@@ -780,5 +819,78 @@ export default class OperationsSchedulerIndexController extends Controller {
             return true;
         }
         return false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Timezone Utilities
+    // -------------------------------------------------------------------------
+
+    /**
+     * Reinterprets a Date whose *local* fields represent a wall-clock time in
+     * `timezone` and returns the correct UTC instant for that moment.
+     *
+     * @event-calendar/core stores all dates as UTC wall-clock values: when you
+     * call `dateFromPoint()` the returned Date's UTC fields (getUTCHours, etc.)
+     * match exactly what the user sees on the timeline.  When the calendar is
+     * configured to display in the company timezone (via `calendarTimezoneOptions`)
+     * those UTC fields represent company-local time, not true UTC.
+     *
+     * This helper converts them to the correct UTC instant so that the ISO
+     * string sent to the API is accurate.
+     *
+     * Example: drop at 14:00 visible on screen (Singapore, UTC+8)
+     *   `date` from dateFromPoint → local fields = 14:00, UTC fields = 14:00
+     *   Intl tells us 14:00 SGT = 06:00 UTC
+     *   → returns a Date whose getUTCHours() === 6
+     *
+     * @param {Date}   date      The Date returned by dateFromPoint()
+     * @param {string} timezone  IANA timezone string, e.g. 'Asia/Singapore'
+     * @returns {Date}
+     */
+    _reinterpretDateInTimezone(date, timezone) {
+        try {
+            // Extract the wall-clock fields from the UTC side of the date
+            // (because @event-calendar/core mirrors local→UTC on input).
+            const y = date.getUTCFullYear();
+            const mo = date.getUTCMonth() + 1;
+            const d = date.getUTCDate();
+            const h = date.getUTCHours();
+            const mi = date.getUTCMinutes();
+            const s = date.getUTCSeconds();
+
+            // Build an ISO-like string and ask Intl what UTC offset applies in
+            // the target timezone at that wall-clock moment.
+            const wallClock = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+            // Use Intl.DateTimeFormat to find the UTC offset for this timezone.
+            // We format a known UTC time and compare it to the wall-clock time
+            // to derive the offset in minutes.
+            const probe = new Date(`${wallClock}Z`); // treat as UTC first
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone,
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false,
+            }).formatToParts(probe);
+
+            const get = (type) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
+            const tzYear = get('year');
+            const tzMonth = get('month') - 1;
+            const tzDay = get('day');
+            const tzHour = get('hour') % 24; // hour12:false can return 24 for midnight
+            const tzMin = get('minute');
+            const tzSec = get('second');
+
+            // Offset = UTC time - timezone local time (in ms)
+            const probeLocal = Date.UTC(tzYear, tzMonth, tzDay, tzHour, tzMin, tzSec);
+            const offsetMs = probe.getTime() - probeLocal;
+
+            // Apply the offset to the wall-clock instant
+            const wallMs = Date.UTC(y, mo - 1, d, h, mi, s);
+            return new Date(wallMs + offsetMs);
+        } catch {
+            // Fallback: return the date unchanged if Intl is unavailable
+            return date;
+        }
     }
 }
