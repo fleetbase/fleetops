@@ -29,10 +29,15 @@ export default class OrderScheduleCardComponent extends Component {
      * @param {Object} owner - The owner of the component.
      * @param {Object} args - Arguments passed to the component, including the order.
      */
-    constructor(owner, { order }) {
+    constructor(owner, args) {
         super(...arguments);
-        this.loadDriverFromOrder(order);
-        this.loadPayloadFromOrder(order);
+        // When used as a draggable sidebar card in the scheduler (@selectable=true),
+        // skip eager driver/payload fetches — only order metadata is needed for
+        // drag-and-drop. This prevents N+1 404s for orders with stale driver UUIDs.
+        if (!args.selectable) {
+            this.loadDriverFromOrder(args.order);
+            this.loadPayloadFromOrder(args.order);
+        }
     }
 
     /**

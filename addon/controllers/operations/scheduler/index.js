@@ -131,7 +131,7 @@ export default class OperationsSchedulerIndexController extends Controller {
         return this.selectedOrderIds.size > 0;
     }
 
-    isOrderSelected(orderId) {
+    @action isOrderSelected(orderId) {
         return this.selectedOrderIds.has(orderId);
     }
 
