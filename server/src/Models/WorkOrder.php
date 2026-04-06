@@ -3,7 +3,9 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\Casts\Money;
 use Fleetbase\Casts\PolymorphicType;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
@@ -17,6 +19,7 @@ use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -85,9 +88,29 @@ class WorkOrder extends Model
         'closed_at',
         'instructions',
         'checklist',
+        'estimated_cost',
+        'approved_budget',
+        'actual_cost',
+        'currency',
+        'cost_breakdown',
+        'cost_center',
+        'budget_code',
         'meta',
-        'slug',
     ];
+
+    /**
+     * Boot the model.
+     */
+    public static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->code)) {
+                $model->code = 'WO-' . strtoupper(Str::random(8));
+            }
+        });
+    }
 
     /**
      * Dynamic attributes that are appended to object.
@@ -104,11 +127,11 @@ class WorkOrder extends Model
     ];
 
     /**
-     * The attributes excluded from the model's JSON form.
+     * Relationships to always eager load.
      *
      * @var array
      */
-    protected $hidden = ['target', 'assignee'];
+    protected $with = ['target', 'assignee'];
 
     /**
      * The attributes that should be cast to native types.
@@ -116,13 +139,18 @@ class WorkOrder extends Model
      * @var array
      */
     protected $casts = [
-        'opened_at'     => 'datetime',
-        'due_at'        => 'datetime',
-        'closed_at'     => 'datetime',
-        'checklist'     => Json::class,
-        'meta'          => Json::class,
-        'target_type'   => PolymorphicType::class,
-        'assignee_type' => PolymorphicType::class,
+        'opened_at'        => 'datetime',
+        'due_at'           => 'datetime',
+        'closed_at'        => 'datetime',
+        'checklist'        => Json::class,
+        'cost_breakdown'   => Json::class,
+        'meta'             => Json::class,
+        'target_type'      => PolymorphicType::class,
+        'assignee_type'    => PolymorphicType::class,
+        // Money values
+        'estimated_cost'   => Money::class,
+        'approved_budget'  => Money::class,
+        'actual_cost'      => Money::class,
     ];
 
     /**
@@ -166,12 +194,12 @@ class WorkOrder extends Model
 
     public function target(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'target_type', 'target_uuid');
     }
 
     public function assignee(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'assignee_type', 'assignee_uuid');
     }
 
     public function maintenances(): HasMany
@@ -531,5 +559,87 @@ class WorkOrder extends Model
             default:
                 return 1;
         }
+    }
+
+    /**
+     * Create a WorkOrder instance from an import row.
+     *
+     * Monetary values (estimated_cost, approved_budget, actual_cost) must be supplied in cents.
+     * The Money cast will strip non-numeric characters before storage.
+     *
+     * @param array $row          Associative array from the import spreadsheet
+     * @param bool  $saveInstance Whether to persist the record immediately
+     */
+    public static function createFromImport(array $row, bool $saveInstance = false): WorkOrder
+    {
+        $row = array_filter($row);
+
+        $subject        = Utils::or($row, ['subject', 'title', 'name']);
+        $status         = Utils::or($row, ['status'], 'open');
+        $priority       = Utils::or($row, ['priority'], 'normal');
+        $instructions   = Utils::or($row, ['instructions', 'description', 'notes']);
+        $openedAt       = Utils::or($row, ['opened_at', 'open_date']);
+        $dueAt          = Utils::or($row, ['due_at', 'due_date']);
+        $estimatedCost  = Utils::or($row, ['estimated_cost']);
+        $approvedBudget = Utils::or($row, ['approved_budget', 'budget']);
+        $actualCost     = Utils::or($row, ['actual_cost']);
+        $currency       = Utils::or($row, ['currency'], 'USD');
+        $costCenter     = Utils::or($row, ['cost_center']);
+        $budgetCode     = Utils::or($row, ['budget_code']);
+        $vehicleName    = Utils::or($row, ['vehicle', 'vehicle_name', 'asset', 'target']);
+        $vendorName     = Utils::or($row, ['vendor', 'vendor_name', 'assignee']);
+
+        $workOrder = new static([
+            'company_uuid'    => session('company'),
+            'subject'         => $subject,
+            'status'          => $status,
+            'priority'        => $priority,
+            'instructions'    => $instructions,
+            'opened_at'       => $openedAt ? \Carbon\Carbon::parse($openedAt) : now(),
+            'due_at'          => $dueAt ? \Carbon\Carbon::parse($dueAt) : null,
+            'estimated_cost'  => $estimatedCost,
+            'approved_budget' => $approvedBudget,
+            'actual_cost'     => $actualCost,
+            'currency'        => strtoupper($currency ?? 'USD'),
+            'cost_center'     => $costCenter,
+            'budget_code'     => $budgetCode,
+        ]);
+
+        // Attempt to resolve the target (vehicle or equipment) by identifier
+        if ($vehicleName) {
+            $vehicle = Vehicle::findByName($vehicleName);
+            if ($vehicle) {
+                $workOrder->target_type = Vehicle::class;
+                $workOrder->target_uuid = $vehicle->uuid;
+            } else {
+                $equipment = Equipment::where('company_uuid', session('company'))
+                    ->where(function ($q) use ($vehicleName) {
+                        $q->where('name', 'like', '%' . $vehicleName . '%')
+                          ->orWhere('public_id', $vehicleName)
+                          ->orWhere('serial_number', $vehicleName);
+                    })->first();
+                if ($equipment) {
+                    $workOrder->target_type = Equipment::class;
+                    $workOrder->target_uuid = $equipment->uuid;
+                }
+            }
+        }
+
+        // Attempt to resolve assignee (vendor) by name
+        if ($vendorName) {
+            $vendor = Vendor::where('company_uuid', session('company'))
+                ->where('name', 'like', '%' . $vendorName . '%')
+                ->first();
+            if ($vendor) {
+                $workOrder->assignee_type = Vendor::class;
+                $workOrder->assignee_uuid = $vendor->uuid;
+            }
+        }
+
+        if ($saveInstance === true) {
+            $workOrder->save();
+        }
+
+        return $workOrder;
     }
 }

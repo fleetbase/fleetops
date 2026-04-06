@@ -184,12 +184,28 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
         const maintenanceItems = [
             {
+                intl: 'menu.schedules',
+                title: this.intl.t('menu.schedules'),
+                icon: 'calendar-alt',
+                route: 'maintenance.schedules',
+                permission: 'fleet-ops list maintenance-schedule',
+                visible: this.abilities.can('fleet-ops see maintenance-schedule'),
+            },
+            {
                 intl: 'menu.work-orders',
                 title: this.intl.t('menu.work-orders'),
                 icon: 'clipboard-list',
                 route: 'maintenance.work-orders',
                 permission: 'fleet-ops list work-order',
                 visible: this.abilities.can('fleet-ops see work-order'),
+            },
+            {
+                intl: 'menu.maintenances',
+                title: this.intl.t('menu.maintenances'),
+                icon: 'history',
+                route: 'maintenance.maintenances',
+                permission: 'fleet-ops list maintenance',
+                visible: this.abilities.can('fleet-ops see maintenance'),
             },
             {
                 intl: 'menu.equipment',
@@ -297,10 +313,10 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 open: this.appCache.get('fleet-ops:sidebar:management:open', true),
                 onToggle: (open) => this.appCache.set('fleet-ops:sidebar:management:open', open),
             }),
-            // createPanel('menu.maintenance', 'maintenance', maintenanceItems, {
-            //     open: this.appCache.get('fleet-ops:sidebar:maintenance:open', false),
-            //     onToggle: (open) => this.appCache.set('fleet-ops:sidebar:maintenance:open', open),
-            // }),
+            createPanel('menu.maintenance', 'maintenance', maintenanceItems, {
+                open: this.appCache.get('fleet-ops:sidebar:maintenance:open', false),
+                onToggle: (open) => this.appCache.set('fleet-ops:sidebar:maintenance:open', open),
+            }),
             createPanel('menu.connectivity', 'connectivity', connectivityItems, {
                 open: this.appCache.get('fleet-ops:sidebar:connectivity:open', false),
                 onToggle: (open) => this.appCache.set('fleet-ops:sidebar:connectivity:open', open),

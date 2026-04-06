@@ -1,6 +1,6 @@
 {
     "name": "fleetbase/fleetops-api",
-    "version": "0.6.38",
+    "version": "0.6.39",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "keywords": [
         "fleetbase-extension",
@@ -34,7 +34,8 @@
         "php-units-of-measure/php-units-of-measure": "^2.2",
         "psr/http-factory-implementation": "*",
         "toin0u/geocoder-laravel": "^4.4",
-        "webit/eval-math": "^1.0"
+        "webit/eval-math": "^1.0",
+        "spatie/icalendar-generator": "^2.8"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.34.1",

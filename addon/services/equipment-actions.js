@@ -1,15 +1,25 @@
-import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
+import ResourceActionService, { inject as service } from '@fleetbase/ember-core/services/resource-action';
 
 export default class EquipmentActionsService extends ResourceActionService {
+    @service currentUser;
+
     constructor() {
         super(...arguments);
-        this.initialize('equipment');
+        this.initialize('equipment', {
+            defaultAttributes: {
+                currency: this.defaultCurrency,
+            },
+        });
+    }
+
+    get defaultCurrency() {
+        return this.currentUser?.company?.currency || 'USD';
     }
 
     transition = {
-        view: (equipment) => this.transitionTo('maintenance.equipments.index.details', equipment),
-        edit: (equipment) => this.transitionTo('maintenance.equipments.index.edit', equipment),
-        create: () => this.transitionTo('maintenance.equipments.index.new'),
+        view: (equipment) => this.transitionTo('maintenance.equipment.index.details', equipment),
+        edit: (equipment) => this.transitionTo('maintenance.equipment.index.edit', equipment),
+        create: () => this.transitionTo('maintenance.equipment.index.new'),
     };
 
     panel = {

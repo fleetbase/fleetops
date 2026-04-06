@@ -28,6 +28,8 @@ common:
   select-resource-filter-by: Selecione {resource} para filtrar por
   table-view: Visualização em Tabela
   grid-view: Visualização em Grade
+  calendar-view: Visualização em Calendário
+  change-layout: Alterar Layout
   livemap: Mapa ao Vivo
   tracking: Rastreamento
   activity: Atividade

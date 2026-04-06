@@ -220,7 +220,7 @@ class Device extends Model
 
     public function attachable(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'attachable_type', 'attachable_uuid');
     }
 
     public function events(): HasMany
