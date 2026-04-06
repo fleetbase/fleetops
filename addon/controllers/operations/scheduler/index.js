@@ -210,13 +210,13 @@ export default class OperationsSchedulerIndexController extends Controller {
         const metaLine = [scheduledTime, driverName].filter(Boolean).join(' · ');
         return {
             html: `<div style="display:flex;flex-direction:column;gap:2px;padding:2px 0;overflow:hidden;height:100%;">
-                <div style="display:flex;align-items:center;gap:4px;">
-                    <span style="width:6px;height:6px;border-radius:50%;background:${statusColour};flex-shrink:0;"></span>
-                    <span style="font-size:0.72rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${tracking}</span>
-                    <span style="font-size:0.6rem;background:${statusColour}33;color:${statusColour};border-radius:3px;padding:0 4px;white-space:nowrap;flex-shrink:0;">${statusLabel}</span>
+                <div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;">
+                    <span style="width:7px;height:7px;border-radius:50%;background:#ffffff;opacity:0.9;flex-shrink:0;"></span>
+                    <span style="font-size:0.72rem;font-weight:700;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${tracking}</span>
+                    <span style="font-size:0.58rem;background:rgba(255,255,255,0.2);color:#ffffff;border-radius:3px;padding:1px 4px;white-space:nowrap;flex-shrink:0;">${statusLabel}</span>
                 </div>
-                ${metaLine ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.75);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metaLine}</div>` : ''}
-                ${destination ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.65);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">→ ${destination}</div>` : ''}
+                ${metaLine ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metaLine}</div>` : ''}
+                ${destination ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">→ ${destination}</div>` : ''}
             </div>`,
         };
     }

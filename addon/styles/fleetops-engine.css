@@ -2189,7 +2189,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
       The timeline slot width determines how wide each column is; we set a
       sensible min-width so the block never collapses to an unreadable sliver. */
 #fleet-ops-scheduler-timeline .ec-event {
-    min-width: 120px;
+    min-width: 200px;
 }
 
 /* 3. Search icon: FontAwesome SVGs carry vertical-align:-0.125em which shifts

@@ -95,12 +95,12 @@
             {{!-- Search --}}
             <div class="p-2 border-b border-gray-200 dark:border-gray-700">
                 <div class="relative">
-                    <span class="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-gray-400">
-                        <FaIcon @icon="magnifying-glass" @size="xs" />
+                    <span class="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none text-gray-400" style="width:2rem;">
+                        <FaIcon @icon="magnifying-glass" @size="xs" style="vertical-align:0;display:block;" />
                     </span>
                     <input
                         type="text"
-                        class="form-input form-input-sm w-full pl-7 pr-7"
+                        class="form-input form-input-sm w-full pl-8 pr-7"
                         placeholder={{t "scheduler.search-orders"}}
                         value={{this.searchQuery}}
                         {{on "input" this.onSearchInput}}
@@ -182,6 +182,7 @@
                 @editable={{true}}
                 @slotMinTime="05:00:00"
                 @slotMaxTime="23:00:00"
+                @slotWidth={{120}}
                 @height="100%"
                 @headerToolbar={{this.calendarHeaderToolbar}}
                 @resourceLabelContent={{this.renderResourceLabel}}
