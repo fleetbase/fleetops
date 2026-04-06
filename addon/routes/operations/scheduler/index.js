@@ -51,6 +51,13 @@ export default class OperationsSchedulerIndexRoute extends Route {
         // so we do not need to set them explicitly here.
         controller.set('drivers', model.drivers.toArray());
 
+        // Initialise viewDate to today in the company timezone so the calendar
+        // opens on the correct day regardless of the server/browser timezone.
+        // todayInCompanyTimezone is a getter on the controller that uses
+        // _toCalendarDate(new Date()) to shift the current UTC instant into the
+        // company-local date space that @event-calendar/core expects.
+        controller.set('viewDate', controller.todayInCompanyTimezone);
+
         // Open SocketCluster subscriptions for real-time calendar updates.
         controller.subscribeToRealTimeUpdates();
     }

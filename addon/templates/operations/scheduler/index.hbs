@@ -180,8 +180,8 @@
                 @events={{this.allCalendarEvents}}
                 @resources={{this.calendarResources}}
                 @editable={{true}}
-                @slotMinTime="05:00:00"
-                @slotMaxTime="23:00:00"
+                @slotMinTime={{this.calendarSlotMinTime}}
+                @slotMaxTime={{this.calendarSlotMaxTime}}
                 @slotWidth={{120}}
                 @height="100%"
                 @headerToolbar={{this.calendarHeaderToolbar}}
