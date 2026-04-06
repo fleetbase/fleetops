@@ -16,10 +16,20 @@ import createFullCalendarEventFromScheduleItem from '../../../utils/create-full-
  * Unified order dispatch board controller.
  * All scheduling domain logic is delegated to the injected `scheduling` service.
  *
+ * Calendar library: @event-calendar/core (MIT licensed).
+ * This replaces FullCalendar Premium resource-timeline plugins which are
+ * incompatible with Fleetbase's dual AGPL v3 / commercial license.
+ *
  * Data flow:
  *   Route -> store.query() -> Ember Data store
  *   Controller computed getters -> store.peekAll() -> reactive UI
  *   Socket service -> store.pushPayload() -> reactive UI (no page refresh)
+ *
+ * External drag-and-drop:
+ *   Sidebar cards use native HTML5 draggable="true".
+ *   onSidebarDragStart stores the dragged order reference.
+ *   onCalendarDrop uses calendar.dateFromPoint(x, y) to resolve the target
+ *   date and resource, then delegates to SchedulingService.assignOrder().
  */
 export default class OperationsSchedulerIndexController extends Controller {
     @service scheduling;
@@ -40,6 +50,9 @@ export default class OperationsSchedulerIndexController extends Controller {
     @tracked selectedOrderIds = new Set();
     @tracked drivers = [];
     @tracked sidebarCollapsed = false;
+
+    // Holds the order being dragged from the sidebar so onCalendarDrop can access it.
+    _draggedOrder = null;
 
     // -------------------------------------------------------------------------
     // Reactive Computed Getters
@@ -76,7 +89,9 @@ export default class OperationsSchedulerIndexController extends Controller {
 
     @computed('allActiveOrders.@each.{scheduled_at,driver_uuid,status}')
     get calendarEvents() {
-        return this.allActiveOrders.filter((o) => !isNone(o.scheduled_at) && isValidDate(new Date(o.scheduled_at))).map((o) => createFullCalendarEventFromOrder(o));
+        return this.allActiveOrders
+            .filter((o) => !isNone(o.scheduled_at) && isValidDate(new Date(o.scheduled_at)))
+            .map((o) => createFullCalendarEventFromOrder(o));
     }
 
     @computed('drivers.[]', 'allActiveOrders.@each.{scheduled_at,driver_uuid}')
@@ -117,6 +132,66 @@ export default class OperationsSchedulerIndexController extends Controller {
     @computed('calendarEvents.[]', 'backgroundEvents.[]')
     get allCalendarEvents() {
         return [...this.calendarEvents, ...this.backgroundEvents];
+    }
+
+    /**
+     * The view name string passed to EventCalendar's @view arg.
+     * @event-calendar/core uses 'resourceTimelineDay' / 'resourceTimelineWeek'
+     * identical to FullCalendar's naming convention.
+     */
+    get currentCalendarView() {
+        const viewMap = { day: 'resourceTimelineDay', week: 'resourceTimelineWeek' };
+        return viewMap[this.viewRange] ?? 'resourceTimelineDay';
+    }
+
+    // -------------------------------------------------------------------------
+    // EventCalendar Render Hooks
+    // -------------------------------------------------------------------------
+
+    /**
+     * Renders the resource label cell for each driver row.
+     * Returns an HTML string that EventCalendar injects into the label cell.
+     * Shows driver name and a Tailwind capacity bar.
+     */
+    @action renderResourceLabel({ resource }) {
+        const { driver, workload } = resource.extendedProps ?? {};
+        if (!driver) return resource.title ?? '';
+        const { assigned = 0, capacity = 10, percentage = 0 } = workload ?? {};
+        const barColour = percentage >= 90 ? '#ef4444' : percentage >= 70 ? '#f59e0b' : '#6366f1';
+        return {
+            html: `<div class="ec-resource-label-inner" style="width:100%;padding:4px 8px;">
+                <div style="font-size:0.75rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${driver.name ?? ''}</div>
+                <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
+                    <div style="flex:1;height:4px;background:#e5e7eb;border-radius:9999px;overflow:hidden;">
+                        <div style="height:100%;width:${percentage}%;background:${barColour};border-radius:9999px;transition:width 0.3s;"></div>
+                    </div>
+                    <span style="font-size:0.625rem;color:#6b7280;white-space:nowrap;">${assigned}/${capacity}</span>
+                </div>
+            </div>`,
+        };
+    }
+
+    /**
+     * Renders the event tile content inside the timeline.
+     * Returns an HTML string for order events; shift background events render
+     * with no custom content (EventCalendar handles background display natively).
+     */
+    @action renderEventContent({ event }) {
+        if (event.display === 'background') return null;
+        const { orderId, status, tracking } = event.extendedProps ?? {};
+        const label = tracking ?? orderId ?? event.title ?? '';
+        const statusColour = {
+            created: '#6366f1',
+            dispatched: '#3b82f6',
+            active: '#10b981',
+            completed: '#6b7280',
+        }[status] ?? '#6366f1';
+        return {
+            html: `<div style="display:flex;align-items:center;gap:4px;padding:0 4px;overflow:hidden;white-space:nowrap;">
+                <span style="width:6px;height:6px;border-radius:50%;background:${statusColour};flex-shrink:0;"></span>
+                <span style="font-size:0.7rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;">${label}</span>
+            </div>`,
+        };
     }
 
     // -------------------------------------------------------------------------
@@ -168,30 +243,64 @@ export default class OperationsSchedulerIndexController extends Controller {
     }
 
     // -------------------------------------------------------------------------
-    // FullCalendar Lifecycle
+    // EventCalendar Lifecycle
     // -------------------------------------------------------------------------
 
+    /**
+     * Receives the EventCalendar instance once it is mounted.
+     * The instance exposes: setOption(), getOption(), prev(), next(),
+     * getEventById(), removeEventById(), updateEvent(), dateFromPoint().
+     */
     @action setCalendarApi(calendar) {
         this.calendar = calendar;
     }
 
     // -------------------------------------------------------------------------
-    // Drag-and-Drop: Drop from Sidebar
+    // Drag-and-Drop: External Drop from Sidebar (native HTML5)
     // -------------------------------------------------------------------------
 
-    @action async scheduleEventFromDrop(dropInfo) {
-        const { draggedEl, date, resource } = dropInfo;
-        const eventDataStr = draggedEl.dataset.event ?? '{}';
-        let data = {};
-        if (isJson(eventDataStr)) data = JSON.parse(eventDataStr);
-        const order = this.store.peekRecord('order', data.id);
-        if (!order) return;
+    /**
+     * Called on dragstart for each sidebar order card.
+     * Stores the order reference so onCalendarDrop can retrieve it.
+     */
+    @action onSidebarDragStart(order, event) {
+        this._draggedOrder = order;
+        // Set a minimal dataTransfer payload as a fallback identifier.
+        event.dataTransfer.setData('text/plain', order.id);
+        event.dataTransfer.effectAllowed = 'move';
+    }
 
+    /**
+     * Prevents the browser's default "no drop" behaviour so the drop event fires.
+     */
+    @action onCalendarDragOver(event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+    }
+
+    /**
+     * Handles a sidebar card being dropped onto the EventCalendar timeline.
+     * Uses calendar.dateFromPoint(x, y) to resolve the target date and resource
+     * from the drop coordinates — this is the @event-calendar/core equivalent
+     * of FullCalendar's onDrop / eventReceive callback.
+     */
+    @action async onCalendarDrop(event) {
+        event.preventDefault();
+        const order = this._draggedOrder;
+        this._draggedOrder = null;
+        if (!order || !this.calendar) return;
+
+        // Resolve drop position to a date + resource using EventCalendar's API.
+        const dropInfo = this.calendar.dateFromPoint(event.clientX, event.clientY);
+        if (!dropInfo) return;
+
+        const { date, resource } = dropInfo;
         const driverId = resource?.id ?? null;
         let scheduledAt = date;
 
-        if (driverId && !dropInfo.dateStr?.includes('T')) {
-            scheduledAt = await this.scheduling.findBestFit(driverId, order);
+        if (driverId) {
+            // Try best-fit first to place the order within the driver's shift window.
+            scheduledAt = (await this.scheduling.findBestFit(driverId, order)) ?? date;
         }
 
         const result = await this.scheduling.assignOrder(order, driverId, scheduledAt);
@@ -201,16 +310,23 @@ export default class OperationsSchedulerIndexController extends Controller {
     }
 
     // -------------------------------------------------------------------------
-    // Drag-and-Drop: Reschedule Existing Event
+    // Drag-and-Drop: Reschedule Existing Event (internal timeline drag)
     // -------------------------------------------------------------------------
 
-    @action async rescheduleEventFromDrag(eventDropInfo) {
-        const { event, revert } = eventDropInfo;
+    /**
+     * Handles an existing calendar event being dragged to a new time/resource.
+     * @event-calendar/core eventDrop info shape:
+     *   { event, oldEvent, oldResource, newResource, delta, revert, jsEvent, view }
+     * event.resourceIds[0] replaces FullCalendar's event.getResources()[0]?.id
+     */
+    @action async rescheduleEventFromDrag(info) {
+        const { event, revert } = info;
         const { start, end, extendedProps } = event;
 
         if (extendedProps?.scheduleItem) {
+            // Shift block drag — update the ScheduleItem record directly.
             const scheduleItem = extendedProps.scheduleItem;
-            const newResourceId = event.getResources()[0]?.id;
+            const newResourceId = event.resourceIds?.[0];
             try {
                 scheduleItem.set('start_at', start);
                 scheduleItem.set('end_at', end ?? start);
@@ -224,10 +340,11 @@ export default class OperationsSchedulerIndexController extends Controller {
             return;
         }
 
+        // Order event drag — delegate to SchedulingService.
         const order = this.store.peekRecord('order', event.id);
         if (!order) return;
 
-        const newDriverId = event.getResources()[0]?.id ?? order.driver_uuid;
+        const newDriverId = event.resourceIds?.[0] ?? order.driver_uuid;
         const result = await this.scheduling.assignOrder(order, newDriverId, start);
 
         if (result.hasConflict) {
@@ -242,8 +359,12 @@ export default class OperationsSchedulerIndexController extends Controller {
     // Event Click
     // -------------------------------------------------------------------------
 
-    @action viewOrderAsEvent(eventClickInfo) {
-        const { event } = eventClickInfo;
+    /**
+     * @event-calendar/core eventClick info shape: { event, el, jsEvent, view }
+     * Identical to FullCalendar — no changes needed to the info object access.
+     */
+    @action viewOrderAsEvent(info) {
+        const { event } = info;
         if (event.extendedProps?.scheduleItem) return this._viewShiftEvent(event);
         const order = this.store.peekRecord('order', event.id);
         if (order) this.viewEvent(order);
@@ -493,51 +614,67 @@ export default class OperationsSchedulerIndexController extends Controller {
     // View Navigation
     // -------------------------------------------------------------------------
 
+    /**
+     * Navigation uses EventCalendar's setOption/getOption API:
+     *   calendar.setOption('date', newDate)  replaces calendar.today() / gotoDate()
+     *   calendar.getOption('date')           replaces calendar.getDate()
+     *   calendar.setOption('view', viewName) replaces calendar.changeView()
+     *   calendar.prev() / calendar.next()    are identical in both libraries
+     */
     @action goToToday() {
         this.viewDate = new Date();
-        this.calendar?.today();
+        this.calendar?.setOption('date', this.viewDate);
     }
+
     @action goToPrev() {
         this.calendar?.prev();
-        const d = this.calendar?.getDate();
+        const d = this.calendar?.getOption('date');
         if (d) this.viewDate = d;
     }
+
     @action goToNext() {
         this.calendar?.next();
-        const d = this.calendar?.getDate();
+        const d = this.calendar?.getOption('date');
         if (d) this.viewDate = d;
     }
 
     @action setViewRange(range) {
         this.viewRange = range;
-        const viewMap = { day: 'resourceTimelineDay', week: 'resourceTimelineWeek' };
-        this.calendar?.changeView(viewMap[range] ?? 'resourceTimelineDay');
+        // currentCalendarView getter returns the correct view name string.
+        // EventCalendar re-renders reactively when @view arg changes, but we
+        // also call setOption for immediate imperative update if needed.
+        this.calendar?.setOption('view', this.currentCalendarView);
     }
 
     // -------------------------------------------------------------------------
-    // Legacy helpers
+    // Legacy helpers (adapted for @event-calendar/core API)
     // -------------------------------------------------------------------------
 
+    /**
+     * Removes an event from the calendar by ID.
+     * @event-calendar/core uses removeEventById(id) instead of event.remove().
+     */
     removeEvent(event) {
-        if (isObject(event) && typeof event.remove === 'function') {
-            event.remove();
+        if (isObject(event) && typeof event.id === 'string') {
+            this.calendar?.removeEventById(event.id);
             return true;
         }
-        if (isObject(event) && typeof event.id === 'string') return this.removeEvent(event.id);
         if (isJson(event)) {
             event = JSON.parse(event);
-            return this.removeEvent(event.id);
+            this.calendar?.removeEventById(event.id);
+            return true;
         }
         if (typeof event === 'string') {
-            const calEvent = this.calendar?.getEventById(event);
-            if (calEvent && typeof calEvent.remove === 'function') {
-                calEvent.remove();
-                return true;
-            }
+            this.calendar?.removeEventById(event);
+            return true;
         }
         return false;
     }
 
+    /**
+     * Retrieves an event object from the calendar by ID.
+     * @event-calendar/core uses getEventById(id) — same method name as FullCalendar.
+     */
     getEvent(event) {
         if (isJson(event)) {
             event = JSON.parse(event);
@@ -547,10 +684,15 @@ export default class OperationsSchedulerIndexController extends Controller {
         return event;
     }
 
+    /**
+     * Updates a single property on a calendar event.
+     * @event-calendar/core uses updateEvent({...event, [prop]: value})
+     * instead of FullCalendar's event.setProp(prop, value).
+     */
     setEventProperty(event, prop, value) {
         const eventInstance = this.getEvent(event);
-        if (eventInstance && typeof eventInstance.setProp === 'function') {
-            eventInstance.setProp(prop, value);
+        if (eventInstance) {
+            this.calendar?.updateEvent({ ...eventInstance, [prop]: value });
             return true;
         }
         return false;
