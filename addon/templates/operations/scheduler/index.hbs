@@ -38,7 +38,7 @@
                 <Spacer @height="200px" />
             </div>
 
-            <div id="fleet-ops-scheduler-calendar" class="col-span-2 py-4 px-2">
+            <div id="fleet-ops-scheduler-calendar" class="col-span-2 py-4 px-2 h-full overflow-y-scroll">
                 {{#if (cannot "fleet-ops update order")}}
                     <div class="flex flex-row items-center text-xs bg-yellow-800 border border-yellow-600 px-2 py-2 rounded-md text-yellow-100 mb-4 space-x-2">
                         <FaIcon @icon="triangle-exclamation" @size="sm" />

@@ -16,13 +16,12 @@ export default class OperationsSchedulerFleetScheduleRoute extends Route {
     }
 
     async model() {
-        const drivers = await this.store.query('driver', { limit: 200, status: 'active' });
-        return { drivers: drivers.toArray() };
+        return this.store.query('driver', { limit: 200 });
     }
 
     setupController(controller, model) {
         super.setupController(controller, model);
-        controller.drivers = model.drivers;
+        controller.drivers = model.toArray();
         controller.loadScheduleItems.perform();
         controller.loadScheduleExceptions.perform();
     }

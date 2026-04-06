@@ -30,7 +30,7 @@
     </div>
 </Layout::Section::Header>
 
-<Layout::Section::Body>
+<Layout::Section::Body class="h-full overflow-y-scroll">
     <div id="fleet-ops-fleet-schedule-container" class="h-full p-4">
         {{#if this.loadScheduleItems.isRunning}}
             <div class="flex items-center justify-center h-64">
@@ -59,4 +59,5 @@
             />
         {{/if}}
     </div>
+    <Spacer @height="200px" />
 </Layout::Section::Body>

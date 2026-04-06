@@ -49,7 +49,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
     @computed('drivers.[]')
     get calendarResources() {
         return this.drivers.map((driver) => ({
-            id: driver.uuid,
+            id: driver.id,
             title: driver.name,
             extendedProps: { driver },
         }));
@@ -62,7 +62,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
     @computed('scheduleItems.[]', 'exceptions.[]', 'drivers.[]')
     get events() {
         const shiftEvents = this.scheduleItems.map((item) => {
-            const driver = this.drivers.find((d) => d.uuid === item.assignee_uuid);
+            const driver = this.drivers.find((d) => d.id === item.assignee_uuid);
             return {
                 id: item.id,
                 resourceId: item.assignee_uuid,
@@ -215,7 +215,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
             scheduleItem.setProperties({
                 start_at: info.event.start.toISOString(),
                 end_at: info.event.end?.toISOString() || scheduleItem.end_at,
-                assignee_uuid: info.newResource?.id || scheduleItem.assignee_uuid, // newResource.id is driver.uuid (see calendarResources)
+                assignee_uuid: info.newResource?.id || scheduleItem.assignee_uuid, // newResource.id is driver.id (see calendarResources)
             });
             await scheduleItem.save();
             this.notifications.success(this.intl.t('scheduler.shift-updated'));
@@ -260,7 +260,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
                         // Find or create the driver's Schedule container
                         const schedules = await this.store.query('schedule', {
                             subject_type: 'fleet-ops:driver',
-                            subject_uuid: targetDriver.uuid,
+                            subject_uuid: targetDriver.id,
                             limit: 1,
                         });
 
@@ -270,7 +270,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
                         } else {
                             schedule = await this.store.createRecord('schedule', {
                                 subject_type: 'fleet-ops:driver',
-                                subject_uuid: targetDriver.uuid,
+                                subject_uuid: targetDriver.id,
                                 name: `${targetDriver.name} Schedule`,
                                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                                 status: 'draft',
@@ -280,7 +280,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
                         // Apply the template — core-api materialises ScheduleItems
                         await this.fetch.post(`schedule-templates/${savedTemplate.id}/apply`, {
                             subject_type: 'fleet-ops:driver',
-                            subject_uuid: targetDriver.uuid,
+                            subject_uuid: targetDriver.id,
                             schedule_uuid: schedule.id,
                             effective_from: options.recurrenceStartDate || new Date().toISOString(),
                             effective_until: options.recurrenceEndDate || null,
@@ -291,7 +291,7 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
                         // Single one-off shift
                         const scheduleItem = this.store.createRecord('schedule-item', {
                             assignee_type: 'fleet-ops:driver',
-                            assignee_uuid: targetDriver.uuid,
+                            assignee_uuid: targetDriver.id,
                             title: options.title || null,
                             start_at: options.startAt,
                             end_at: options.endAt,
