@@ -278,6 +278,11 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                                 $router->post('import', $controller('import'));
+                                // Driver scheduling endpoints
+                                $router->get('{id}/schedule-items', $controller('scheduleItems'));
+                                $router->get('{id}/availabilities', $controller('availabilities'));
+                                $router->get('{id}/hos-status', $controller('hosStatus'));
+                                $router->get('{id}/active-shift', $controller('activeShift'));
                             }
                         );
                         $router->fleetbaseRoutes('entities');
@@ -523,6 +528,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('notification-settings', 'SettingController@saveNotificationSettings');
                                         $router->get('routing-settings', 'SettingController@getRoutingSettings');
                                         $router->post('routing-settings', 'SettingController@saveRoutingSettings');
+                                        $router->get('scheduling-settings', 'SettingController@getSchedulingSettings');
+                                        $router->post('scheduling-settings', 'SettingController@saveSchedulingSettings');
                                     }
                                 );
                                 $router->group(

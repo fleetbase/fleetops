@@ -14,7 +14,10 @@ export default buildRoutes(function () {
                 this.route('edit', { path: '/edit/:public_id' });
             });
         });
-        this.route('scheduler', function () {});
+        this.route('scheduler', function () {
+            this.route('index', { path: '/' });
+            this.route('fleet-schedule');
+        });
         this.route('orders', { path: '/' }, function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');
@@ -253,6 +256,7 @@ export default buildRoutes(function () {
         this.route('custom-fields');
         this.route('avatars');
         this.route('routing');
+        this.route('scheduling');
         this.route('payments', function () {
             this.route('index', { path: '/' });
             this.route('onboard');

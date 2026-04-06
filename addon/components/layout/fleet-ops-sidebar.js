@@ -285,6 +285,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 permission: 'fleet-ops view avatar',
                 visible: this.abilities.can('fleet-ops see avatar'),
             },
+            {
+                intl: 'menu.scheduling',
+                title: this.intl.t('menu.scheduling'),
+                icon: 'calendar-days',
+                route: 'settings.scheduling',
+                permission: 'fleet-ops view scheduling-settings',
+                visible: this.abilities.can('fleet-ops see scheduling-settings'),
+            },
         ];
 
         const createPanel = (intl, routePrefix, items = [], options = {}) => ({
