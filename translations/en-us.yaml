@@ -87,6 +87,7 @@ menu:
   custom-fields: Custom Fields
   order-board: Order Board
   avatars: Avatars
+  scheduling: Scheduling
 
 resource:
   asset: Asset
@@ -1824,3 +1825,28 @@ settings:
       button-continue: Continue
       button-start: Start onboard now
       button-in-progress: Onboard in progress
+  scheduling:
+    scheduling-settings: Scheduling Settings
+    materialisation: Materialisation
+    horizon-days: Schedule Horizon (Days)
+    horizon-days-help: How many days ahead to generate shift items when a schedule template is applied.
+    default-shift-duration: Default Shift Duration (Hours)
+    default-shift-duration-help: The default number of hours for a shift when no end time is specified.
+    hours-of-service: Hours of Service Limits
+    hos-daily-limit: Daily Driving Limit (Hours)
+    hos-daily-limit-help: Maximum hours a driver is permitted to drive in a single day.
+    hos-weekly-limit: Weekly Driving Limit (Hours)
+    hos-weekly-limit-help: Maximum hours a driver is permitted to drive in a rolling 7-day period.
+    behaviour: Behaviour
+    auto-activate-schedule: Auto-Activate Schedule
+    auto-activate-schedule-help: Automatically transition a schedule from Draft to Active when the first shift is created.
+    notify-drivers: Notify Drivers on Shift Changes
+    notify-drivers-help: Send a push notification to drivers when their shifts are created, updated, or deleted.
+    schedule-templates: Reusable Schedule Templates
+    no-templates: No reusable templates have been created yet.
+    new-template: New Template
+    edit-template: Edit Template
+    delete-template: Delete Template
+    delete-template-confirm: Are you sure you want to delete the template "{name}"? This will not affect existing schedules.
+    template-deleted: Template deleted successfully.
+    settings-saved: Scheduling settings saved.

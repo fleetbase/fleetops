@@ -232,6 +232,7 @@ export default buildRoutes(function () {
         this.route('custom-fields');
         this.route('avatars');
         this.route('routing');
+        this.route('scheduling');
         this.route('payments', function () {
             this.route('index', { path: '/' });
             this.route('onboard');
