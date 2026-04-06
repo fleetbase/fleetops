@@ -122,11 +122,15 @@
             </div>
 
             {{!-- Unscheduled order list --}}
+            {{!-- Cards are made natively draggable; onSidebarDragStart stores the order
+                 reference so onCalendarDrop can retrieve it without any FullCalendar
+                 Draggable wrapper (which required the premium scheduler plugin). --}}
             <div class="flex-1 overflow-y-auto p-2 space-y-1.5">
                 {{#each this.unscheduledOrders as |order|}}
-                    <FullCalendar::Draggable
-                        @eventData={{json-hash id=order.id title=order.eventTitle resourceId=null}}
-                        @disabled={{cannot "fleet-ops update order"}}
+                    <div
+                        draggable={{if (cannot "fleet-ops update order") "false" "true"}}
+                        class="cursor-grab active:cursor-grabbing"
+                        {{on "dragstart" (fn this.onSidebarDragStart order)}}
                     >
                         <Order::ScheduleCard
                             @order={{order}}
@@ -135,7 +139,7 @@
                             @onSelect={{fn this.toggleOrderSelection order.id}}
                             @onTitleClick={{fn this.viewEvent order}}
                         />
-                    </FullCalendar::Draggable>
+                    </div>
                 {{else}}
                     <div class="flex flex-col items-center justify-center py-10 text-gray-400 dark:text-gray-600 text-sm">
                         <FaIcon @icon="calendar-check" @size="2x" class="mb-2 opacity-40" />
@@ -155,23 +159,32 @@
         </button>
 
         {{!-- ── Timeline ─────────────────────────────────────────────────── --}}
-        <div id="fleet-ops-scheduler-timeline" class="flex-1 overflow-hidden">
-            <FullCalendar
+        {{!-- EventCalendar uses @event-calendar/core (MIT licensed).
+             This replaces FullCalendar Premium resource-timeline plugins which
+             are incompatible with Fleetbase's dual AGPL v3 / commercial license.
+             External drag-and-drop is handled via native HTML5 dragover/drop
+             events on this container, with dateFromPoint() used to resolve the
+             target date and resource from the drop coordinates. --}}
+        <div
+            id="fleet-ops-scheduler-timeline"
+            class="flex-1 overflow-hidden"
+            {{on "dragover" this.onCalendarDragOver}}
+            {{on "drop" this.onCalendarDrop}}
+        >
+            <EventCalendar
+                @view={{this.currentCalendarView}}
+                @date={{this.viewDate}}
                 @events={{this.allCalendarEvents}}
                 @resources={{this.calendarResources}}
-                @initialView="resourceTimelineDay"
                 @editable={{true}}
-                @droppable={{true}}
-                @resourceAreaHeaderContent={{t "resource.driver"}}
-                @resourceAreaWidth="200px"
                 @slotMinTime="05:00:00"
                 @slotMaxTime="23:00:00"
                 @height="100%"
-                @schedulerLicenseKey="GPL-My-Project-Is-Open-Source"
-                @onDrop={{this.scheduleEventFromDrop}}
+                @resourceLabelContent={{this.renderResourceLabel}}
+                @eventContent={{this.renderEventContent}}
                 @onEventDrop={{this.rescheduleEventFromDrag}}
                 @onEventClick={{this.viewOrderAsEvent}}
-                @onInit={{this.setCalendarApi}}
+                @onCalendarReady={{this.setCalendarApi}}
             />
         </div>
     </div>
