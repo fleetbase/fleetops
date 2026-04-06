@@ -310,7 +310,8 @@ class Driver extends Model
      */
     public function schedules(): MorphMany
     {
-        return $this->morphMany(Schedule::class, 'subject');
+        // Explicit FK columns required — Fleetbase uses *_uuid not *_id
+        return $this->morphMany(Schedule::class, 'subject', 'subject_type', 'subject_uuid');
     }
 
     /**
@@ -319,7 +320,8 @@ class Driver extends Model
      */
     public function scheduleItems(): MorphMany
     {
-        return $this->morphMany(ScheduleItem::class, 'assignee');
+        // Explicit FK columns required — Fleetbase uses *_uuid not *_id
+        return $this->morphMany(ScheduleItem::class, 'assignee', 'assignee_type', 'assignee_uuid');
     }
 
     /**
@@ -343,7 +345,8 @@ class Driver extends Model
      */
     public function availabilities(): MorphMany
     {
-        return $this->morphMany(ScheduleAvailability::class, 'subject');
+        // Explicit FK columns required — Fleetbase uses *_uuid not *_id
+        return $this->morphMany(ScheduleAvailability::class, 'subject', 'subject_type', 'subject_uuid');
     }
 
     /**
@@ -410,7 +413,7 @@ class Driver extends Model
             function ($option) {
                 $key = str_replace(['.svg', '.png'], '', $option);
 
-                return [$key => Utils::assetFromS3('static/driver-icons/' . $option)];
+                return [$key => Utils::assetFromFleetbase('static/driver-icons/' . $option)];
             }
         );
 

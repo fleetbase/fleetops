@@ -210,4 +210,46 @@ class SettingController extends Controller
 
         return response()->json($routingSettings);
     }
+
+    /**
+     * Retrieve driver scheduling settings for the current company.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSchedulingSettings()
+    {
+        $defaults = [
+            'horizon_days'                   => 60,
+            'default_shift_duration'         => 8,
+            'hos_daily_limit'                => 11,
+            'hos_weekly_limit'               => 70,
+            'auto_activate_schedule'         => true,
+            'notify_drivers_on_shift_change' => false,
+        ];
+        $settings = Setting::lookupFromCompany('fleet-ops.scheduling-settings', $defaults);
+
+        return response()->json($settings);
+    }
+
+    /**
+     * Save driver scheduling settings for the current company.
+     *
+     * @param Request $request
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveSchedulingSettings(Request $request)
+    {
+        $settings = [
+            'horizon_days'                   => (int) $request->input('horizon_days', 60),
+            'default_shift_duration'         => (int) $request->input('default_shift_duration', 8),
+            'hos_daily_limit'                => (int) $request->input('hos_daily_limit', 11),
+            'hos_weekly_limit'               => (int) $request->input('hos_weekly_limit', 70),
+            'auto_activate_schedule'         => (bool) $request->input('auto_activate_schedule', true),
+            'notify_drivers_on_shift_change' => (bool) $request->input('notify_drivers_on_shift_change', false),
+        ];
+        Setting::configureCompany('fleet-ops.scheduling-settings', $settings);
+
+        return response()->json($settings);
+    }
 }

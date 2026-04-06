@@ -30,8 +30,8 @@
     </div>
 </Layout::Section::Header>
 
-<Layout::Section::Body>
-    <div id="fleet-ops-fleet-schedule-container" class="h-full">
+<Layout::Section::Body class="h-full overflow-y-scroll">
+    <div id="fleet-ops-fleet-schedule-container" class="h-full p-4">
         {{#if this.loadScheduleItems.isRunning}}
             <div class="flex items-center justify-center h-64">
                 <Spinner @size="lg" />
@@ -52,7 +52,12 @@
                 @slotMinTime="05:00:00"
                 @slotMaxTime="23:00:00"
                 @height="auto"
+                @nowIndicator={{true}}
+                @weekends={{true}}
+                @slotDuration="01:00:00"
+                @slotLabelInterval="02:00:00"
             />
         {{/if}}
     </div>
+    <Spacer @height="200px" />
 </Layout::Section::Body>

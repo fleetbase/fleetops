@@ -428,10 +428,30 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             $router->post('{id}/test-connection', $controller('testConnection'));
                             $router->post('{key}/test-credentials', $controller('testCredentials'));
                         });
-                        $router->fleetbaseRoutes('work-orders');
-                        $router->fleetbaseRoutes('maintenance');
-                        $router->fleetbaseRoutes('equipment');
-                        $router->fleetbaseRoutes('parts');
+                        $router->fleetbaseRoutes('maintenance-schedules', function ($router, $controller) {
+                            $router->post('import', $controller('import'));
+                            $router->post('{id}/pause', $controller('pause'));
+                            $router->post('{id}/resume', $controller('resume'));
+                            $router->post('{id}/trigger', $controller('trigger'));
+                            $router->get('calendar-feed', $controller('calendarFeed'));
+                            $router->get('{id}/ical', $controller('ical'));
+                        });
+                        $router->fleetbaseRoutes('work-orders', function ($router, $controller) {
+                            $router->post('import', $controller('import'));
+                            $router->post('{id}/send', $controller('sendEmail'));
+                        });
+                        $router->fleetbaseRoutes('maintenances', function ($router, $controller) {
+                            $router->post('import', $controller('import'));
+                            $router->post('{id}/line-items', $controller('addLineItem'));
+                            $router->put('{id}/line-items/{index}', $controller('updateLineItem'));
+                            $router->delete('{id}/line-items/{index}', $controller('removeLineItem'));
+                        });
+                        $router->fleetbaseRoutes('equipment', function ($router, $controller) {
+                            $router->post('import', $controller('import'));
+                        });
+                        $router->fleetbaseRoutes('parts', function ($router, $controller) {
+                            $router->post('import', $controller('import'));
+                        });
                         $router->fleetbaseRoutes('warranties');
                         $router->group(
                             ['prefix' => 'query'],
@@ -508,6 +528,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('notification-settings', 'SettingController@saveNotificationSettings');
                                         $router->get('routing-settings', 'SettingController@getRoutingSettings');
                                         $router->post('routing-settings', 'SettingController@saveRoutingSettings');
+                                        $router->get('scheduling-settings', 'SettingController@getSchedulingSettings');
+                                        $router->post('scheduling-settings', 'SettingController@saveSchedulingSettings');
                                     }
                                 );
                                 $router->group(

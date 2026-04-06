@@ -296,6 +296,24 @@ export default class ManagementVehiclesIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        label: this.intl.t('vehicle.actions.schedule-maintenance'),
+                        fn: this.vehicleActions.scheduleMaintenance,
+                        permission: 'fleet-ops create maintenance-schedule',
+                    },
+                    {
+                        label: this.intl.t('vehicle.actions.create-work-order'),
+                        fn: this.vehicleActions.createWorkOrder,
+                        permission: 'fleet-ops create work-order',
+                    },
+                    {
+                        label: this.intl.t('vehicle.actions.log-maintenance'),
+                        fn: this.vehicleActions.logMaintenance,
+                        permission: 'fleet-ops create maintenance',
+                    },
+                    {
+                        separator: true,
+                    },
+                    {
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.vehicle') }),
                         fn: this.vehicleActions.delete,
                         permission: 'fleet-ops delete vehicle',

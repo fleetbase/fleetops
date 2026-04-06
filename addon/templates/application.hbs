@@ -6,3 +6,7 @@
     {{outlet}}
     <GlobalSearch />
 </Layout::Section::Container>
+
+<RegistryYield @registry="@fleetbase/fleetops-engine" as |RegistryComponent|>
+    <RegistryComponent @controller={{this}} />
+</RegistryYield>

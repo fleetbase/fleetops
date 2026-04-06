@@ -28,6 +28,8 @@ common:
   select-resource-filter-by: '{resource} -г шүүлтүүрээр сонгох'
   table-view: Хүснэгтийн харагдац
   grid-view: Сүлжээний харагдац
+  calendar-view: Хуанлийн харагдац
+  change-layout: Загварыг өөрчлөх
   livemap: Амьд газрын зураг
   tracking: Хянах
   activity: Үйл ажиллагаа

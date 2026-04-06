@@ -27,5 +27,11 @@ class EventServiceProvider extends ServiceProvider
          * Core Events
          */
         \Fleetbase\Events\UserRemovedFromCompany::class => [\Fleetbase\FleetOps\Listeners\HandleUserRemovedFromCompany::class],
+
+        /*
+         * Scheduling Events
+         */
+        \Fleetbase\Events\ScheduleItemCreated::class => [\Fleetbase\FleetOps\Listeners\NotifyDriverOnShiftChange::class],
+        \Fleetbase\Events\ScheduleItemUpdated::class => [\Fleetbase\FleetOps\Listeners\NotifyDriverOnShiftChange::class],
     ];
 }

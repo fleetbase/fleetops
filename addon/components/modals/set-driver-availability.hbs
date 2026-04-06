@@ -8,24 +8,18 @@
                 <div class="flex gap-3 mt-1">
                     <button
                         type="button"
-                        class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-xs font-medium transition-colors
-                            {{if this.isAvailable
-                                'bg-green-50 dark:bg-green-900/30 border-green-500 text-green-700 dark:text-green-300'
-                                'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-green-400'}}"
+                        class="availability-type-btn {{if this.isAvailable 'is-selected-available' 'is-unselected'}}"
                         {{on "click" (fn this.toggleAvailability true)}}
                     >
-                        <FaIcon @icon="circle-check" class="text-green-500" />
+                        <FaIcon @icon="circle-check" />
                         {{t "scheduler.available"}}
                     </button>
                     <button
                         type="button"
-                        class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-xs font-medium transition-colors
-                            {{unless this.isAvailable
-                                'bg-red-50 dark:bg-red-900/30 border-red-500 text-red-700 dark:text-red-300'
-                                'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-red-400'}}"
+                        class="availability-type-btn {{unless this.isAvailable 'is-selected-unavailable' 'is-unselected'}}"
                         {{on "click" (fn this.toggleAvailability false)}}
                     >
-                        <FaIcon @icon="circle-xmark" class="text-red-500" />
+                        <FaIcon @icon="circle-xmark" />
                         {{t "scheduler.unavailable-time-off"}}
                     </button>
                 </div>

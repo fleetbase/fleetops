@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-import { startOfWeek, endOfWeek, addWeeks, formatISO, addDays, format, isSameDay, differenceInMinutes, startOfDay } from 'date-fns';
+import { startOfWeek, endOfWeek, addWeeks, subWeeks, formatISO, addDays, format, isSameDay, startOfDay } from 'date-fns';
 
 /**
  * Driver::Schedule Component
@@ -38,6 +38,8 @@ export default class DriverScheduleComponent extends Component {
     @tracked upcomingShifts = [];
     @tracked exceptions = [];
     @tracked hosStatus = null;
+    /** Anchor date for the 7-day calendar view — start of the displayed week */
+    @tracked calendarAnchor = startOfDay(new Date());
 
     constructor() {
         super(...arguments);
@@ -53,6 +55,23 @@ export default class DriverScheduleComponent extends Component {
 
     get endDate() {
         return formatISO(addWeeks(endOfWeek(new Date(), { weekStartsOn: 1 }), 4));
+    }
+
+    get weekRangeLabel() {
+        const start = this.calendarAnchor;
+        const end = addDays(start, 6);
+        if (format(start, 'MMM') === format(end, 'MMM')) {
+            return `${format(start, 'MMM d')} – ${format(end, 'd, yyyy')}`;
+        }
+        return `${format(start, 'MMM d')} – ${format(end, 'MMM d, yyyy')}`;
+    }
+
+    @action prevWeek() {
+        this.calendarAnchor = subWeeks(this.calendarAnchor, 1);
+    }
+
+    @action nextWeek() {
+        this.calendarAnchor = addWeeks(this.calendarAnchor, 1);
     }
 
     // ── Derived state ─────────────────────────────────────────────────────────
@@ -80,32 +99,40 @@ export default class DriverScheduleComponent extends Component {
     }
 
     /**
-     * Returns the 7 days of the current week (Mon–Sun) with any shifts
-     * that fall on each day, used to render the week timeline strip.
+     * Returns the Tailwind CSS classes for a shift status badge.
+     * Called directly from the template as {{this.shiftStatusClass status}}.
+     */
+    shiftStatusClass(status) {
+        const map = {
+            scheduled: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+            in_progress: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+            completed: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+            cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+        };
+        return map[status] ?? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+    }
+
+    /**
+     * Returns 7 days starting from calendarAnchor with any shifts that fall
+     * on each day. Used to render the compact 7-day calendar grid.
+     * Navigate with prevWeek/nextWeek actions.
      */
     get weekDays() {
-        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+        const anchor = this.calendarAnchor;
+        const today = startOfDay(new Date());
         return Array.from({ length: 7 }, (_, i) => {
-            const day = addDays(weekStart, i);
-            const dayStart = startOfDay(day);
-            const shifts = this.scheduleItems.filter((item) => isSameDay(new Date(item.start_at), day));
-            const blocks = shifts.map((item) => {
-                const startMins = differenceInMinutes(new Date(item.start_at), dayStart);
-                const endMins = differenceInMinutes(new Date(item.end_at), dayStart);
-                const dayMins = 24 * 60;
-                return {
-                    item,
-                    left: `${((startMins / dayMins) * 100).toFixed(2)}%`,
-                    width: `${(((endMins - startMins) / dayMins) * 100).toFixed(2)}%`,
-                };
+            const day = addDays(anchor, i);
+            // Match items whose start_at falls on this calendar day (local time)
+            const shifts = this.scheduleItems.filter((item) => {
+                const itemDate = item.start_at instanceof Date ? item.start_at : new Date(item.start_at);
+                return isSameDay(itemDate, day);
             });
             return {
                 date: day,
                 label: format(day, 'EEE'),
                 dayNum: format(day, 'd'),
-                isToday: isSameDay(day, new Date()),
+                isToday: isSameDay(day, today),
                 shifts,
-                blocks,
             };
         });
     }
@@ -151,7 +178,7 @@ export default class DriverScheduleComponent extends Component {
         try {
             // 1. Find or create the driver's primary schedule
             const schedules = yield this.store.query('schedule', {
-                subject_type: 'driver',
+                subject_type: 'fleet-ops:driver',
                 subject_uuid: this.args.resource.id,
                 limit: 1,
             });
@@ -160,7 +187,7 @@ export default class DriverScheduleComponent extends Component {
                 this.schedule = schedules.firstObject;
             } else {
                 const newSchedule = this.store.createRecord('schedule', {
-                    subject_type: 'driver',
+                    subject_type: 'fleet-ops:driver',
                     subject_uuid: this.args.resource.id,
                     name: `${this.args.resource.name} Schedule`,
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -170,10 +197,12 @@ export default class DriverScheduleComponent extends Component {
             }
 
             // 2. Load materialised schedule items within the 4-week window
+            // Use _gte/_lte operator suffixes so the API applies range filtering
+            // (plain start_at/end_at would be treated as exact equality by the query builder)
             const items = yield this.store.query('schedule-item', {
                 schedule_uuid: this.schedule.id,
-                start_at: this.startDate,
-                end_at: this.endDate,
+                start_at_gte: this.startDate,
+                end_at_lte: this.endDate,
             });
 
             this.scheduleItems = items.toArray();
@@ -241,7 +270,7 @@ export default class DriverScheduleComponent extends Component {
                         const savedTemplate = await template.save();
 
                         await this.fetch.post(`schedule-templates/${savedTemplate.id}/apply`, {
-                            subject_type: 'driver',
+                            subject_type: 'fleet-ops:driver',
                             subject_uuid: this.args.resource.id,
                             schedule_uuid: this.schedule.id,
                             effective_from: options.recurrenceStartDate || new Date().toISOString(),
@@ -253,7 +282,7 @@ export default class DriverScheduleComponent extends Component {
                         // Single shift mode: create a ScheduleItem directly
                         const scheduleItem = this.store.createRecord('schedule-item', {
                             schedule_uuid: this.schedule.id,
-                            assignee_type: 'driver',
+                            assignee_type: 'fleet-ops:driver',
                             assignee_uuid: this.args.resource.id,
                             title: options.title || null,
                             start_at: options.startAt,
@@ -354,12 +383,12 @@ export default class DriverScheduleComponent extends Component {
                 try {
                     const exception = this.store.createRecord('schedule-exception', {
                         schedule_uuid: this.schedule?.id,
-                        subject_type: 'driver',
+                        subject_type: 'fleet-ops:driver',
                         subject_uuid: this.args.resource.id,
                         type: 'time_off',
                         status: 'pending',
-                        start_date: options.startAt,
-                        end_date: options.endAt,
+                        start_at: options.startAt,
+                        end_at: options.endAt,
                         reason: options.reason || null,
                         notes: options.notes || null,
                     });

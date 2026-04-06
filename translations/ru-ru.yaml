@@ -28,6 +28,8 @@ common:
   select-resource-filter-by: Выберите {resource} для фильтрации
   table-view: Табличный вид
   grid-view: Сеточный вид
+  calendar-view: Вид Календаря
+  change-layout: Изменить макет
   livemap: Живая карта
   tracking: Отслеживание
   activity: Активность
