@@ -98,7 +98,7 @@ export default class SchedulingService extends Service {
             payload.driver_id = targetDriver;
         }
         try {
-            await this.fetch.patch('fleet-ops/orders/schedule', payload);
+            await this.fetch.patch('orders/schedule', payload);
             order.set('scheduled_at', targetDate);
             if (targetDriver !== undefined) {
                 order.set('driver_assigned_uuid', targetDriver);
@@ -155,7 +155,7 @@ export default class SchedulingService extends Service {
     async findBestFit(driverId, order) {
         // Try the server-side routing API first
         try {
-            const response = await this.fetch.post('fleet-ops/orders/best-fit', {
+            const response = await this.fetch.post('orders/best-fit', {
                 driver_id: driverId,
                 order_id: order.id,
             });
@@ -226,7 +226,7 @@ export default class SchedulingService extends Service {
         try {
             // Use the dedicated schedule endpoint so the backend only sets
             // scheduled_at / driver_assigned_uuid without triggering dispatch.
-            await this.fetch.patch('fleet-ops/orders/schedule', payload);
+            await this.fetch.patch('orders/schedule', payload);
 
             // Reflect the change locally without triggering another save
             order.set('scheduled_at', scheduledAt);
@@ -257,7 +257,7 @@ export default class SchedulingService extends Service {
         const previousDate = order.scheduled_at;
         const previousDriverId = order.driver_assigned_uuid;
         try {
-            await this.fetch.patch('fleet-ops/orders/schedule', { order: order.id, scheduled_at: null });
+            await this.fetch.patch('orders/schedule', { order: order.id, scheduled_at: null });
             order.set('scheduled_at', null);
             this._pushHistory({
                 orderId: order.id,
@@ -287,7 +287,7 @@ export default class SchedulingService extends Service {
     async bulkAssign(orders, driverId, date) {
         const orderIds = orders.map((o) => o.id);
         try {
-            await this.fetch.post('fleet-ops/orders/bulk-schedule', {
+            await this.fetch.post('orders/bulk-schedule', {
                 order_ids: orderIds,
                 driver_id: driverId,
                 scheduled_at: date instanceof Date ? date.toISOString() : date,
