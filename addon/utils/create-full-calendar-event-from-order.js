@@ -41,7 +41,7 @@ export default function createFullCalendarEventFromOrder(order) {
     const color = STATUS_COLORS[status] ?? STATUS_COLORS.created;
     return {
         id: get(order, 'id'),
-        resourceId: get(order, 'driver_uuid') ?? null,
+        resourceId: get(order, 'driver_assigned_uuid') ?? null,
         title: createOrderEventTitle(order),
         description: createOrderEventDescription(order),
         start,

@@ -90,14 +90,20 @@ export default class SchedulingService extends Service {
         if (!order) return;
         const targetDate = isUndo ? entry.previousDate : entry.newDate;
         const targetDriver = isUndo ? entry.previousDriverId : entry.newDriverId;
-        order.set('scheduled_at', targetDate);
+        const payload = {
+            order: order.id,
+            scheduled_at: targetDate instanceof Date ? targetDate.toISOString() : targetDate,
+        };
         if (targetDriver !== undefined) {
-            order.set('driver_uuid', targetDriver);
+            payload.driver_id = targetDriver;
         }
         try {
-            await order.save();
+            await this.fetch.patch('fleet-ops/orders/schedule', payload);
+            order.set('scheduled_at', targetDate);
+            if (targetDriver !== undefined) {
+                order.set('driver_assigned_uuid', targetDriver);
+            }
         } catch (error) {
-            order.rollbackAttributes();
             this.notifications.serverError(error);
         }
     }
@@ -122,7 +128,7 @@ export default class SchedulingService extends Service {
     checkConflicts(driverId, start, end, excludeOrderId = null) {
         return this.store.peekAll('order').filter((o) => {
             if (o.id === excludeOrderId) return false;
-            if (o.driver_uuid !== driverId) return false;
+            if (o.driver_assigned_uuid !== driverId) return false;
             if (isNone(o.scheduled_at)) return false;
             const oStart = new Date(o.scheduled_at);
             const oEnd = addMinutes(oStart, o.estimated_duration ?? 60);
@@ -163,7 +169,7 @@ export default class SchedulingService extends Service {
         // Heuristic fallback: find the end time of the last order for this driver
         const driverOrders = this.store
             .peekAll('order')
-            .filter((o) => o.driver_uuid === driverId && !isNone(o.scheduled_at))
+            .filter((o) => o.driver_assigned_uuid === driverId && !isNone(o.scheduled_at))
             .sortBy('scheduled_at');
 
         if (driverOrders.length === 0) {
@@ -184,9 +190,10 @@ export default class SchedulingService extends Service {
      *
      * Flow:
      *   1. Conflict check (unless `options.skipConflictCheck` is true)
-     *   2. Optimistic store update
-     *   3. Persist via `order.save()`
-     *   4. On failure: rollback attributes and notify
+     *   2. Persist via a targeted PATCH to the schedule endpoint
+     *      (does NOT trigger dispatch or change the order status)
+     *   3. Reflect the change in the local Ember Data store
+     *   4. On failure: notify and return error
      *
      * @param {Model}   order
      * @param {string}  driverId
@@ -199,7 +206,7 @@ export default class SchedulingService extends Service {
         const duration = order.estimated_duration ?? 60;
         const end = addMinutes(scheduledAt, duration);
         const previousDate = order.scheduled_at;
-        const previousDriverId = order.driver_uuid;
+        const previousDriverId = order.driver_assigned_uuid;
 
         if (!options.skipConflictCheck && driverId) {
             const conflicts = this.checkConflicts(driverId, scheduledAt, end, order.id);
@@ -208,14 +215,25 @@ export default class SchedulingService extends Service {
             }
         }
 
-        // Optimistic update
-        order.set('scheduled_at', scheduledAt);
+        const payload = {
+            order: order.id,
+            scheduled_at: scheduledAt instanceof Date ? scheduledAt.toISOString() : scheduledAt,
+        };
         if (driverId) {
-            order.set('driver_uuid', driverId);
+            payload.driver_id = driverId;
         }
 
         try {
-            await order.save();
+            // Use the dedicated schedule endpoint so the backend only sets
+            // scheduled_at / driver_assigned_uuid without triggering dispatch.
+            await this.fetch.patch('fleet-ops/orders/schedule', payload);
+
+            // Reflect the change locally without triggering another save
+            order.set('scheduled_at', scheduledAt);
+            if (driverId) {
+                order.set('driver_assigned_uuid', driverId);
+            }
+
             this._pushHistory({
                 orderId: order.id,
                 previousDate,
@@ -225,7 +243,6 @@ export default class SchedulingService extends Service {
             });
             return { hasConflict: false };
         } catch (error) {
-            order.rollbackAttributes();
             this.notifications.serverError(error);
             return { hasConflict: false, error };
         }
@@ -238,10 +255,10 @@ export default class SchedulingService extends Service {
      */
     async unscheduleOrder(order) {
         const previousDate = order.scheduled_at;
-        const previousDriverId = order.driver_uuid;
-        order.set('scheduled_at', null);
+        const previousDriverId = order.driver_assigned_uuid;
         try {
-            await order.save();
+            await this.fetch.patch('fleet-ops/orders/schedule', { order: order.id, scheduled_at: null });
+            order.set('scheduled_at', null);
             this._pushHistory({
                 orderId: order.id,
                 previousDate,
@@ -250,7 +267,6 @@ export default class SchedulingService extends Service {
                 newDriverId: null,
             });
         } catch (error) {
-            order.rollbackAttributes();
             this.notifications.serverError(error);
         }
     }
@@ -281,7 +297,7 @@ export default class SchedulingService extends Service {
             for (const order of orders) {
                 try {
                     order.set('scheduled_at', date);
-                    order.set('driver_uuid', driverId);
+                    order.set('driver_assigned_uuid', driverId);
                     await order.save();
                 } catch (error) {
                     order.rollbackAttributes();
@@ -294,7 +310,7 @@ export default class SchedulingService extends Service {
         // Reflect the bulk change in the local store
         orders.forEach((order) => {
             order.set('scheduled_at', date);
-            order.set('driver_uuid', driverId);
+            order.set('driver_assigned_uuid', driverId);
         });
     }
 }

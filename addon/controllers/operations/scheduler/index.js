@@ -54,11 +54,16 @@ export default class OperationsSchedulerIndexController extends Controller {
     // Holds the order being dragged from the sidebar so onCalendarDrop can access it.
     _draggedOrder = null;
 
+    // Revision counter — incremented after every successful save so that
+    // @computed('_orderRevision') getters recompute even when Ember Data's
+    // @each tracking misses a deep attribute change on an existing record.
+    @tracked _orderRevision = 0;
+
     // -------------------------------------------------------------------------
     // Reactive Computed Getters
     // -------------------------------------------------------------------------
 
-    @computed('store', 'viewDate')
+    @computed('_orderRevision', 'store', 'viewDate')
     get allActiveOrders() {
         const viewDateStr = this.viewDate.toDateString();
         const statuses = ['created', 'dispatched', 'active'];
@@ -87,17 +92,17 @@ export default class OperationsSchedulerIndexController extends Controller {
         return orders;
     }
 
-    @computed('allActiveOrders.@each.{scheduled_at,driver_uuid,status}')
+    @computed('allActiveOrders.@each.{scheduled_at,driver_assigned_uuid,status}')
     get calendarEvents() {
         return this.allActiveOrders
             .filter((o) => !isNone(o.scheduled_at) && isValidDate(new Date(o.scheduled_at)))
             .map((o) => createFullCalendarEventFromOrder(o));
     }
 
-    @computed('drivers.[]', 'allActiveOrders.@each.{scheduled_at,driver_uuid}')
+    @computed('drivers.[]', 'allActiveOrders.@each.{scheduled_at,driver_assigned_uuid}')
     get calendarResources() {
         return this.drivers.map((driver) => {
-            const assignedCount = this.allActiveOrders.filter((o) => o.driver_uuid === driver.id && !isNone(o.scheduled_at)).length;
+            const assignedCount = this.allActiveOrders.filter((o) => o.driver_assigned_uuid === driver.id && !isNone(o.scheduled_at)).length;
             const maxCapacity = driver.max_daily_orders ?? 10;
             const pct = Math.round((assignedCount / maxCapacity) * 100);
             return {
@@ -362,14 +367,17 @@ export default class OperationsSchedulerIndexController extends Controller {
 
         const { date, resource } = dropInfo;
         const driverId = resource?.id ?? null;
-        let scheduledAt = date;
-
-        if (driverId) {
-            // Try best-fit first to place the order within the driver's shift window.
-            scheduledAt = (await this.scheduling.findBestFit(driverId, order)) ?? date;
-        }
+        // Use the exact drop date so the event lands where the user dropped it.
+        // findBestFit is only used when no specific time can be resolved.
+        const scheduledAt = date ?? new Date();
 
         const result = await this.scheduling.assignOrder(order, driverId, scheduledAt);
+
+        // Bump the revision counter so allActiveOrders / unscheduledOrders
+        // recompute immediately — this removes the order from the sidebar.
+        if (!result.error) {
+            this._orderRevision += 1;
+        }
 
         // Restore scroll position after the calendar re-renders.
         if (ecMain) {
@@ -419,14 +427,15 @@ export default class OperationsSchedulerIndexController extends Controller {
         const order = this.store.peekRecord('order', event.id);
         if (!order) return;
 
-        const newDriverId = event.resourceIds?.[0] ?? order.driver_uuid;
+        const newDriverId = event.resourceIds?.[0] ?? order.driver_assigned_uuid;
         const result = await this.scheduling.assignOrder(order, newDriverId, start);
-
         if (result.hasConflict) {
             revert();
             this._showConflictModal(order, newDriverId, start, result.conflicts);
         } else if (result.error) {
             revert();
+        } else {
+            this._orderRevision += 1;
         }
     }
 

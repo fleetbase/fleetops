@@ -2172,3 +2172,41 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
     flex: 1 1 0;
     min-height: 0;
 }
+
+/* ============================================================
+   Scheduler – follow-up fixes (round 3)
+   ============================================================ */
+
+/* 1. Resource label: make the inner span (direct child of .ec-row-head)
+      fill the full cell width so the workload bar stretches correctly. */
+#fleet-ops-scheduler-timeline .ec-row-head > span {
+    display: block;
+    width: 100%;
+    text-align: left;
+}
+
+/* 2. Event blocks: ensure a minimum width so the 3-line content is readable.
+      The timeline slot width determines how wide each column is; we set a
+      sensible min-width so the block never collapses to an unreadable sliver. */
+#fleet-ops-scheduler-timeline .ec-event {
+    min-width: 120px;
+}
+
+/* 3. Search icon: FontAwesome SVGs carry vertical-align:-0.125em which shifts
+      the icon slightly below the visual centre of the flex container.
+      The span uses Tailwind utility classes (absolute, inset-y-0, flex,
+      items-center) not a semantic class, so we target the first span child
+      of the .relative wrapper. */
+#fleet-ops-scheduler-sidebar .relative > span:first-child .svg-inline--fa,
+#fleet-ops-scheduler-sidebar .relative > span:first-child svg {
+    vertical-align: middle;
+    display: block;
+    line-height: 1;
+}
+
+/* 4. Schedule card: remove horizontal padding from .card-content so the
+      content sits flush with the card border. */
+.order-schedule-card .card-content {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
