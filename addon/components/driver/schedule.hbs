@@ -1,6 +1,6 @@
 <div class="driver-schedule-container" ...attributes>
 
-    {{! ── Upcoming Shifts Panel (with week timeline strip) ────────────────── }}
+    {{! ── Upcoming Shifts Panel ───────────────────────────────────────────── }}
     <ContentPanel
         @title={{t "scheduler.upcoming-shifts"}}
         @open={{true}}
@@ -8,70 +8,37 @@
         @actionButtons={{this.shiftActionButtons}}
         @wrapperClass="bordered-top"
     >
-        {{! 7-day horizontal timeline strip }}
-        <div class="mb-3">
-            <div class="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 rounded overflow-hidden text-xs">
-                {{#each this.weekDays as |day|}}
-                    <div class="bg-white dark:bg-gray-800 p-1">
-                        {{! Day label row }}
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-gray-400 dark:text-gray-500 uppercase tracking-wide" style="font-size:9px">{{day.label}}</span>
-                            <span class="{{if day.isToday "text-indigo-600 dark:text-indigo-400 font-bold" "text-gray-500 dark:text-gray-400"}}">{{day.dayNum}}</span>
-                        </div>
-                        {{! Shift bar track }}
-                        <div class="relative h-3 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">
-                            {{#each day.blocks as |block|}}
-                                <div
-                                    class="absolute top-0 h-full rounded bg-indigo-400 dark:bg-indigo-600 opacity-90 cursor-pointer"
-                                    style={{block.style}}
-                                    title="{{if block.item.title block.item.title "Shift"}} · {{format-date-fns block.item.start_at "HH:mm"}}–{{format-date-fns block.item.end_at "HH:mm"}}"
-                                ></div>
-                            {{/each}}
-                        </div>
+        {{! 7-day compact calendar grid }}
+        <div class="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 rounded overflow-hidden text-xs mb-1">
+            {{#each this.weekDays as |day|}}
+                <div class="bg-white dark:bg-gray-800 p-1 min-h-12">
+                    {{! Day header }}
+                    <div class="flex flex-col items-center mb-1">
+                        <span class="text-gray-400 dark:text-gray-500 uppercase tracking-wide leading-none" style="font-size:9px">{{day.label}}</span>
+                        <span class="{{if day.isToday "flex items-center justify-center w-4 h-4 rounded-full bg-indigo-600 text-white font-bold leading-none" "text-gray-500 dark:text-gray-400 leading-none"}}">{{day.dayNum}}</span>
                     </div>
-                {{/each}}
-            </div>
+                    {{! Shift chips }}
+                    {{#each day.shifts as |shift|}}
+                        <div
+                            class="w-full rounded px-0.5 py-px mb-px bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 truncate cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-800"
+                            style="font-size:8px;line-height:1.4"
+                            title="{{if shift.title shift.title "Shift"}} · {{format-date-fns shift.start_at "HH:mm"}}–{{format-date-fns shift.end_at "HH:mm"}}"
+                            role="button"
+                            {{on "click" (fn this.editShift shift)}}
+                        >
+                            {{format-date-fns shift.start_at "HH:mm"}}–{{format-date-fns shift.end_at "HH:mm"}}
+                        </div>
+                    {{/each}}
+                </div>
+            {{/each}}
         </div>
 
-        {{! Shift list }}
-        {{#if this.upcomingShifts.length}}
-            <div class="space-y-1">
-                {{#each this.upcomingShifts as |shift|}}
-                    <div class="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-xs dark:text-gray-100">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0"></div>
-                            <div>
-                                <div class="font-medium">{{if shift.title shift.title "Shift"}}</div>
-                                <div class="text-gray-500 dark:text-gray-400">
-                                    {{format-date-fns shift.start_at "EEE, MMM d · HH:mm"}}
-                                    –
-                                    {{format-date-fns shift.end_at "HH:mm"}}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-1">
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium {{this.shiftStatusClass shift.status}}">{{shift.status}}</span>
-                            <Button @icon="pencil" @size="xs" @type="link" {{on "click" (fn this.editShift shift)}} />
-                            <Button @icon="trash" @size="xs" @type="link" @scheme="danger" {{on "click" (fn this.deleteShift shift)}} />
-                        </div>
-                    </div>
-                {{/each}}
-            </div>
-        {{else}}
-            <div class="text-center py-6 text-xs text-gray-500 dark:text-gray-400">
-                {{t "scheduler.no-upcoming-shifts"}}
-                <div class="mt-1">
-                    <Button
-                        @type="link"
-                        @size="xs"
-                        @icon="plus"
-                        @text={{t "scheduler.add-shift"}}
-                        @permission="fleet-ops update driver"
-                        {{on "click" this.addShift}}
-                    />
-                </div>
-            </div>
-        {{/if}}
+        {{! Week navigation row }}
+        <div class="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
+            <Button @icon="chevron-left" @size="xs" @type="link" {{on "click" this.prevWeek}} />
+            <span>{{this.weekRangeLabel}}</span>
+            <Button @icon="chevron-right" @size="xs" @type="link" {{on "click" this.nextWeek}} />
+        </div>
     </ContentPanel>
 
     {{! ── HOS Status Panel ────────────────────────────────────────────────── }}

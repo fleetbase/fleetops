@@ -3,8 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-import { startOfWeek, endOfWeek, addWeeks, formatISO, addDays, format, isSameDay, differenceInMinutes, startOfDay, endOfDay } from 'date-fns';
-import { htmlSafe } from '@ember/template';
+import { startOfWeek, endOfWeek, addWeeks, subWeeks, formatISO, addDays, format, isSameDay, startOfDay } from 'date-fns';
 
 /**
  * Driver::Schedule Component
@@ -39,6 +38,8 @@ export default class DriverScheduleComponent extends Component {
     @tracked upcomingShifts = [];
     @tracked exceptions = [];
     @tracked hosStatus = null;
+    /** Anchor date for the 7-day calendar view — start of the displayed week */
+    @tracked calendarAnchor = startOfDay(new Date());
 
     constructor() {
         super(...arguments);
@@ -54,6 +55,23 @@ export default class DriverScheduleComponent extends Component {
 
     get endDate() {
         return formatISO(addWeeks(endOfWeek(new Date(), { weekStartsOn: 1 }), 4));
+    }
+
+    get weekRangeLabel() {
+        const start = this.calendarAnchor;
+        const end = addDays(start, 6);
+        if (format(start, 'MMM') === format(end, 'MMM')) {
+            return `${format(start, 'MMM d')} – ${format(end, 'd, yyyy')}`;
+        }
+        return `${format(start, 'MMM d')} – ${format(end, 'MMM d, yyyy')}`;
+    }
+
+    @action prevWeek() {
+        this.calendarAnchor = subWeeks(this.calendarAnchor, 1);
+    }
+
+    @action nextWeek() {
+        this.calendarAnchor = addWeeks(this.calendarAnchor, 1);
     }
 
     // ── Derived state ─────────────────────────────────────────────────────────
@@ -95,44 +113,26 @@ export default class DriverScheduleComponent extends Component {
     }
 
     /**
-     * Returns 7 days starting from today (rolling window) with any shifts
-     * that fall on each day, used to render the week timeline strip.
-     *
-     * We use today as the anchor rather than the start of the calendar week
-     * so that upcoming shifts always appear in the visible window.
+     * Returns 7 days starting from calendarAnchor with any shifts that fall
+     * on each day. Used to render the compact 7-day calendar grid.
+     * Navigate with prevWeek/nextWeek actions.
      */
     get weekDays() {
+        const anchor = this.calendarAnchor;
         const today = startOfDay(new Date());
         return Array.from({ length: 7 }, (_, i) => {
-            const day = addDays(today, i);
-            const dayStart = startOfDay(day);
-            const dayEnd = endOfDay(day);
-            const dayMins = 24 * 60;
+            const day = addDays(anchor, i);
             // Match items whose start_at falls on this calendar day (local time)
             const shifts = this.scheduleItems.filter((item) => {
                 const itemDate = item.start_at instanceof Date ? item.start_at : new Date(item.start_at);
                 return isSameDay(itemDate, day);
             });
-            const blocks = shifts.map((item) => {
-                const itemStart = item.start_at instanceof Date ? item.start_at : new Date(item.start_at);
-                // For overnight shifts end_at may be midnight of the next day — clamp to end of this day
-                const rawEnd = item.end_at instanceof Date ? item.end_at : new Date(item.end_at);
-                const itemEnd = rawEnd > dayEnd ? dayEnd : rawEnd;
-                const startMins = Math.max(0, differenceInMinutes(itemStart, dayStart));
-                const endMins = Math.min(dayMins, differenceInMinutes(itemEnd, dayStart));
-                const width = Math.max(endMins - startMins, 2); // minimum 2 min width so block is visible
-                return {
-                    item,
-                    style: htmlSafe(`left:${((startMins / dayMins) * 100).toFixed(2)}%;width:${((width / dayMins) * 100).toFixed(2)}%`),
-                };
-            });
             return {
                 date: day,
                 label: format(day, 'EEE'),
                 dayNum: format(day, 'd'),
-                isToday: isSameDay(day, new Date()),
+                isToday: isSameDay(day, today),
                 shifts,
-                blocks,
             };
         });
     }
