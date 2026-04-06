@@ -700,6 +700,7 @@ order:
     assign-text: You are about to assign a new driver ({driverName}) to Order {orderId}. Click continue to confirm driver.
     assign-button: Continue and assign driver
     date: Date scheduled
+    date-created: Date created
     driver-assigned: Driver
     vehicle-assigned: Vehicle
     no-driver: No Driver
@@ -1256,6 +1257,7 @@ scheduler:
     search-orders: Search orders...
     select-all: Select all
     all-scheduled: All orders scheduled
+    not-scheduled: Not Scheduled
     expand-sidebar: Expand sidebar
     collapse-sidebar: Collapse sidebar
     bulk-assign: Assign {count} orders

@@ -95,7 +95,7 @@
             {{!-- Search --}}
             <div class="p-2 border-b border-gray-200 dark:border-gray-700">
                 <div class="relative">
-                    <FaIcon @icon="magnifying-glass" @size="xs" class="absolute left-2.5 top-2.5 text-gray-400" />
+                    <FaIcon @icon="magnifying-glass" @size="xs" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                     <input
                         type="text"
                         class="form-input form-input-sm w-full pl-7 pr-7"
@@ -181,6 +181,7 @@
                 @slotMinTime="05:00:00"
                 @slotMaxTime="23:00:00"
                 @height="100%"
+                @headerToolbar={{this.calendarHeaderToolbar}}
                 @resourceLabelContent={{this.renderResourceLabel}}
                 @eventContent={{this.renderEventContent}}
                 @onEventDrop={{this.rescheduleEventFromDrag}}

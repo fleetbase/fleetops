@@ -1968,7 +1968,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec {
 #fleet-ops-scheduler-timeline .ec-toolbar {
     padding: 0.5rem 0.75rem;
     margin-block-end: 0;
-    border-bottom: 1px solid var(--ec-border-color);
+    border-bottom: none;
     background-color: var(--ec-bg-color);
 }
 #fleet-ops-scheduler-timeline .ec-title {
@@ -2003,7 +2003,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-sidebar {
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--ec-text-color);
-    padding: 0.375rem 0.75rem;
+    padding: 0;
 }
 
 /* Column headers (time slots) */
@@ -2036,10 +2036,12 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-day {
     border-radius: 0.25rem;
     font-size: 0.7rem;
     font-weight: 500;
-    padding: 0.1rem 0.35rem;
+    padding: 0.25rem 0.5rem;
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     border: none;
+    min-height: 3.25rem;
+    overflow: hidden;
 }
 #fleet-ops-scheduler-timeline .ec-event:hover {
     filter: brightness(0.92);
@@ -2056,13 +2058,27 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-day {
 
 /* Drag-over hover state */
 #fleet-ops-scheduler-timeline[data-dragging-over='true'] .ec-main {
-    outline: 2px dashed #6366f1;
-    outline-offset: -2px;
     background-color: rgba(99, 102, 241, 0.04);
 }
 body[data-theme='dark'] #fleet-ops-scheduler-timeline[data-dragging-over='true'] .ec-main {
-    outline-color: #818cf8;
     background-color: rgba(129, 140, 248, 0.06);
+}
+/* Per-column drop cursor indicator */
+#fleet-ops-scheduler-timeline .ec-drop-cursor {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #6366f1;
+    pointer-events: none;
+    z-index: 10;
+    border-radius: 1px;
+    box-shadow: 0 0 6px rgba(99, 102, 241, 0.7);
+    transition: left 0.04s linear;
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-drop-cursor {
+    background-color: #818cf8;
+    box-shadow: 0 0 6px rgba(129, 140, 248, 0.7);
 }
 
 /* Full-height timeline */

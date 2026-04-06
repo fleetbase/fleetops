@@ -144,6 +144,16 @@ export default class OperationsSchedulerIndexController extends Controller {
         return viewMap[this.viewRange] ?? 'resourceTimelineDay';
     }
 
+    /**
+     * Minimal header toolbar — only the date title is shown.
+     * Navigation (prev/next/today) and view-range buttons are already
+     * provided by the section header above the calendar, so we suppress
+     * the duplicates here.
+     */
+    get calendarHeaderToolbar() {
+        return { start: '', center: 'title', end: '' };
+    }
+
     // -------------------------------------------------------------------------
     // EventCalendar Render Hooks
     // -------------------------------------------------------------------------
@@ -151,7 +161,7 @@ export default class OperationsSchedulerIndexController extends Controller {
     /**
      * Renders the resource label cell for each driver row.
      * Returns an HTML string that EventCalendar injects into the label cell.
-     * Shows driver name and a Tailwind capacity bar.
+     * Shows driver name and a full-width capacity bar.
      */
     @action renderResourceLabel({ resource }) {
         const { driver, workload } = resource.extendedProps ?? {};
@@ -159,13 +169,13 @@ export default class OperationsSchedulerIndexController extends Controller {
         const { assigned = 0, capacity = 10, percentage = 0 } = workload ?? {};
         const barColour = percentage >= 90 ? '#ef4444' : percentage >= 70 ? '#f59e0b' : '#6366f1';
         return {
-            html: `<div class="ec-resource-label-inner" style="width:100%;padding:4px 8px;">
-                <div style="font-size:0.75rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${driver.name ?? ''}</div>
-                <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
-                    <div style="flex:1;height:4px;background:#e5e7eb;border-radius:9999px;overflow:hidden;">
+            html: `<div class="ec-resource-label-inner" style="width:100%;box-sizing:border-box;padding:4px 8px;">
+                <div style="font-size:0.75rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;">${driver.name ?? ''}</div>
+                <div style="display:flex;align-items:center;gap:4px;margin-top:3px;width:100%;">
+                    <div style="flex:1;min-width:0;height:4px;background:#374151;border-radius:9999px;overflow:hidden;">
                         <div style="height:100%;width:${percentage}%;background:${barColour};border-radius:9999px;transition:width 0.3s;"></div>
                     </div>
-                    <span style="font-size:0.625rem;color:#6b7280;white-space:nowrap;">${assigned}/${capacity}</span>
+                    <span style="font-size:0.625rem;color:#9ca3af;white-space:nowrap;flex-shrink:0;">${assigned}/${capacity}</span>
                 </div>
             </div>`,
         };
@@ -175,21 +185,33 @@ export default class OperationsSchedulerIndexController extends Controller {
      * Renders the event tile content inside the timeline.
      * Returns an HTML string for order events; shift background events render
      * with no custom content (EventCalendar handles background display natively).
+     * Shows: tracking number, status badge, driver name, scheduled time, destination.
      */
     @action renderEventContent({ event }) {
         if (event.display === 'background') return null;
-        const { orderId, status, tracking } = event.extendedProps ?? {};
-        const label = tracking ?? orderId ?? event.title ?? '';
+        const { order, status } = event.extendedProps ?? {};
+        const tracking = event.title ?? order?.tracking ?? order?.public_id ?? '';
+        const driverName = order?.driver_assigned?.name ?? order?.get?.('driver_assigned.name') ?? '';
+        const destination = order?.pickupName ?? order?.get?.('pickupName') ?? '';
+        const scheduledTime = order?.scheduledAtTime ?? order?.get?.('scheduledAtTime') ?? '';
         const statusColour = {
             created: '#6366f1',
             dispatched: '#3b82f6',
             active: '#10b981',
             completed: '#6b7280',
+            cancelled: '#ef4444',
         }[status] ?? '#6366f1';
+        const statusLabel = status ? status.charAt(0).toUpperCase() + status.slice(1) : '';
+        const metaLine = [scheduledTime, driverName].filter(Boolean).join(' · ');
         return {
-            html: `<div style="display:flex;align-items:center;gap:4px;padding:0 4px;overflow:hidden;white-space:nowrap;">
-                <span style="width:6px;height:6px;border-radius:50%;background:${statusColour};flex-shrink:0;"></span>
-                <span style="font-size:0.7rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;">${label}</span>
+            html: `<div style="display:flex;flex-direction:column;gap:2px;padding:2px 0;overflow:hidden;height:100%;">
+                <div style="display:flex;align-items:center;gap:4px;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:${statusColour};flex-shrink:0;"></span>
+                    <span style="font-size:0.72rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${tracking}</span>
+                    <span style="font-size:0.6rem;background:${statusColour}33;color:${statusColour};border-radius:3px;padding:0 4px;white-space:nowrap;flex-shrink:0;">${statusLabel}</span>
+                </div>
+                ${metaLine ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.75);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metaLine}</div>` : ''}
+                ${destination ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.65);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">→ ${destination}</div>` : ''}
             </div>`,
         };
     }
@@ -273,23 +295,40 @@ export default class OperationsSchedulerIndexController extends Controller {
     /**
      * Prevents the browser's default "no drop" behaviour so the drop event fires.
      * Also sets a data attribute on the timeline container to trigger the CSS
-     * drag-over highlight defined in fleetops-engine.css.
+     * drag-over highlight, and moves a thin cursor line to the exact drop column.
      */
     @action onCalendarDragOver(event) {
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
         const el = document.getElementById('fleet-ops-scheduler-timeline');
-        if (el) el.dataset.draggingOver = 'true';
+        if (!el) return;
+        el.dataset.draggingOver = 'true';
+        // Move the drop-cursor indicator to the current pointer X position.
+        const ecMain = el.querySelector('.ec-main');
+        if (ecMain) {
+            let cursor = ecMain.querySelector('.ec-drop-cursor');
+            if (!cursor) {
+                cursor = document.createElement('div');
+                cursor.className = 'ec-drop-cursor';
+                ecMain.style.position = 'relative';
+                ecMain.appendChild(cursor);
+            }
+            const rect = ecMain.getBoundingClientRect();
+            const scrollLeft = ecMain.scrollLeft;
+            cursor.style.left = (event.clientX - rect.left + scrollLeft) + 'px';
+        }
     }
 
     /**
-     * Clears the drag-over highlight when the cursor leaves the timeline container.
-     * Only fires when the pointer exits the container itself, not its children.
+     * Clears the drag-over highlight and removes the cursor indicator when the
+     * pointer genuinely exits the timeline container (not just moves to a child).
      */
     @action onCalendarDragLeave(event) {
         const el = document.getElementById('fleet-ops-scheduler-timeline');
         if (el && !el.contains(event.relatedTarget)) {
             delete el.dataset.draggingOver;
+            const cursor = el.querySelector('.ec-drop-cursor');
+            if (cursor) cursor.remove();
         }
     }
 
@@ -301,12 +340,21 @@ export default class OperationsSchedulerIndexController extends Controller {
      */
     @action async onCalendarDrop(event) {
         event.preventDefault();
-        // Clear the drag-over highlight.
+        // Clear the drag-over highlight and cursor indicator.
         const timelineEl = document.getElementById('fleet-ops-scheduler-timeline');
-        if (timelineEl) delete timelineEl.dataset.draggingOver;
+        if (timelineEl) {
+            delete timelineEl.dataset.draggingOver;
+            const cursor = timelineEl.querySelector('.ec-drop-cursor');
+            if (cursor) cursor.remove();
+        }
         const order = this._draggedOrder;
         this._draggedOrder = null;
         if (!order || !this.calendar) return;
+
+        // Preserve scroll position so the drop doesn't reset the timeline view.
+        const ecMain = timelineEl?.querySelector('.ec-main');
+        const savedScrollLeft = ecMain ? ecMain.scrollLeft : 0;
+        const savedScrollTop = ecMain ? ecMain.scrollTop : 0;
 
         // Resolve drop position to a date + resource using EventCalendar's API.
         const dropInfo = this.calendar.dateFromPoint(event.clientX, event.clientY);
@@ -322,6 +370,15 @@ export default class OperationsSchedulerIndexController extends Controller {
         }
 
         const result = await this.scheduling.assignOrder(order, driverId, scheduledAt);
+
+        // Restore scroll position after the calendar re-renders.
+        if (ecMain) {
+            requestAnimationFrame(() => {
+                ecMain.scrollLeft = savedScrollLeft;
+                ecMain.scrollTop = savedScrollTop;
+            });
+        }
+
         if (result.hasConflict) {
             this._showConflictModal(order, driverId, scheduledAt, result.conflicts);
         }
