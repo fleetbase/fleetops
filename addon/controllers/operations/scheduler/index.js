@@ -65,17 +65,29 @@ export default class OperationsSchedulerIndexController extends Controller {
 
     @computed('_orderRevision', 'store', 'viewDate')
     get allActiveOrders() {
-        // viewDate is already in the calendar's fake-UTC space (company-local).
-        // We compare by shifting each order's scheduled_at into the same space
-        // so that an order at 18:45 SGT (10:45 UTC) is counted as an April 6
-        // order when the company timezone is Asia/Singapore, not April 5.
-        const viewDateStr = this.viewDate.toDateString();
+        // Compare dates in the company timezone so that an order at 18:45 SGT
+        // (10:45 UTC) is counted as an April 6 order when the company is
+        // Asia/Singapore, not April 5.
+        //
+        // viewDate is a Date whose UTC fields equal the company-local date
+        // (set by todayInCompanyTimezone / goToToday).  We extract the UTC
+        // date string from it for comparison.
+        //
+        // _toCalendarDate() returns a plain ISO string ("YYYY-MM-DDTHH:mm:ss").
+        // We compare just the date part (first 10 chars) against the viewDate's
+        // UTC date string to determine if the order falls on the viewed day.
+        const viewYear  = this.viewDate.getUTCFullYear();
+        const viewMonth = this.viewDate.getUTCMonth();
+        const viewDay   = this.viewDate.getUTCDate();
         const statuses = ['created', 'dispatched', 'active'];
         return this.store.peekAll('order').filter((order) => {
             if (!statuses.includes(order.status)) return false;
             if (!isNone(order.scheduled_at) && isValidDate(new Date(order.scheduled_at))) {
-                const calDate = this._toCalendarDate(new Date(order.scheduled_at));
-                return calDate ? calDate.toDateString() === viewDateStr : false;
+                const iso = this._toCalendarDate(new Date(order.scheduled_at));
+                if (!iso) return false;
+                // Parse the date part of the ISO string directly
+                const [y, m, d] = iso.substring(0, 10).split('-').map(Number);
+                return y === viewYear && (m - 1) === viewMonth && d === viewDay;
             }
             return true;
         });
@@ -189,70 +201,86 @@ export default class OperationsSchedulerIndexController extends Controller {
     }
 
     /**
-     * Returns the UTC offset (in milliseconds) for the company timezone at the
-     * current moment.  Used to shift dates into the calendar's fake-UTC space.
+     * Converts a true UTC Date into a plain ISO-8601 string (no trailing Z or
+     * offset) that represents the same wall-clock moment in the company timezone.
      *
-     * @event-calendar/core reads the *local* time fields of every Date you pass
-     * and stores them as UTC wall-clock values.  To make an event appear at the
-     * correct company-local time we must pre-shift the true UTC instant by the
-     * company timezone offset before handing it to the calendar.
+     * WHY A STRING, NOT A DATE OBJECT
+     * --------------------------------
+     * @event-calendar/core has two internal date constructors:
      *
-     * Example (Singapore, UTC+8):
-     *   True UTC instant: 2026-04-06T10:45:00Z  (= 18:45 SGT)
-     *   We add +8h → 2026-04-06T18:45:00Z
-     *   Calendar reads UTC fields → positions event at 18:45 ✓
+     *   _fromLocalDate(jsDate)  — reads the browser's *local* time fields and
+     *                             stores them as UTC wall-clock values.
+     *   _fromISOString(str)     — parses the string as UTC directly, ignoring
+     *                             any timezone suffix.
      *
-     * @returns {number}  offset in milliseconds, e.g. 28800000 for UTC+8
+     * If we pass a JS Date the calendar calls _fromLocalDate(), which reads
+     * browser-local fields.  In an EDT browser (UTC-4) a 18:45 UTC Date has
+     * local fields = 14:45, so the calendar stores 14:45 — wrong.
+     *
+     * If we pass a plain ISO string (e.g. "2026-04-06T18:45:00") the calendar
+     * calls _fromISOString(), which stores 18:45 as UTC regardless of the
+     * browser timezone — correct.
+     *
+     * The slot labels use toLocalDate() before Intl formatting, which copies
+     * UTC fields into local fields.  Since we stored 18:45 as UTC, toLocalDate
+     * returns a Date whose local fields are 18:45, and Intl formats it as 18:45
+     * (no timeZone option needed — adding one would re-convert and break it).
+     *
+     * @param {Date|string|null} utcDate  A true UTC instant
+     * @returns {string|null}  e.g. "2026-04-06T18:45:00"
      */
-    get companyTimezoneOffsetMs() {
+    _toCalendarDate(utcDate) {
+        if (!utcDate) return null;
+        const d = utcDate instanceof Date ? utcDate : new Date(utcDate);
+        if (isNaN(d.getTime())) return null;
         const tz = this.companyTimezone;
         try {
-            const now = new Date();
             const parts = new Intl.DateTimeFormat('en-US', {
                 timeZone: tz,
                 year: 'numeric', month: '2-digit', day: '2-digit',
                 hour: '2-digit', minute: '2-digit', second: '2-digit',
                 hour12: false,
-            }).formatToParts(now);
-            const get = (type) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
-            const localMs = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute'), get('second'));
-            // offset = local - utc  (positive for UTC+ zones)
-            return localMs - now.getTime();
+            }).formatToParts(d);
+            const get = (type) => parts.find((p) => p.type === type)?.value ?? '00';
+            const h = String(parseInt(get('hour'), 10) % 24).padStart(2, '0');
+            return `${get('year')}-${get('month')}-${get('day')}T${h}:${get('minute')}:${get('second')}`;
         } catch {
-            return 0;
+            // Fallback: return an ISO string in UTC (better than null)
+            return d.toISOString().substring(0, 19);
         }
     }
-    /**
-     * Converts a true UTC Date into the fake-UTC space that @event-calendar/core
-     * expects.  The returned Date's UTC fields equal the company-local wall-clock
-     * time, so the calendar positions the event correctly on the timeline.
-     *
-     * @param {Date|string|null} date
-     * @returns {Date|null}
-     */
-    _toCalendarDate(date) {
-        if (!date) return null;
-        const d = date instanceof Date ? date : new Date(date);
-        if (isNaN(d.getTime())) return null;
-        return new Date(d.getTime() + this.companyTimezoneOffsetMs);
-    }
+
     /**
      * Returns today's date in the company timezone as a plain JS Date whose
-     * local fields match the company-local calendar date (year/month/day).
+     * UTC fields match the company-local calendar date (year/month/day).
      * Used to initialise viewDate so the calendar opens on the correct day.
+     *
+     * We parse the ISO string returned by _toCalendarDate() so that the Date's
+     * UTC fields equal the company-local wall-clock fields — matching the
+     * internal representation @event-calendar/core uses for the `date` option.
      *
      * @returns {Date}
      */
     get todayInCompanyTimezone() {
-        return this._toCalendarDate(new Date()) ?? new Date();
+        const iso = this._toCalendarDate(new Date());
+        if (!iso) return new Date();
+        // Parse as UTC so the Date's UTC fields = company-local wall-clock
+        return new Date(iso + 'Z');
     }
+
     get calendarTimezoneOptions() {
-        const tz = this.companyTimezone;
         return {
-            // 24-hour format with timeZone so labels show company-local time
-            slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz },
-            eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz },
-            dayHeaderFormat: { weekday: 'short', month: 'numeric', day: 'numeric', timeZone: tz },
+            // 24-hour format WITHOUT timeZone.
+            //
+            // @event-calendar/core calls toLocalDate() before passing to Intl,
+            // which copies the internal UTC fields into local fields.  Because
+            // we pre-encode events as company-local ISO strings, those UTC
+            // fields already equal the company-local wall-clock time.  Adding
+            // a timeZone option here would re-convert the local Date into that
+            // timezone, producing the wrong time in any browser not in UTC.
+            slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+            eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+            dayHeaderFormat: { weekday: 'short', month: 'numeric', day: 'numeric' },
         };
     }
 
@@ -926,14 +954,19 @@ export default class OperationsSchedulerIndexController extends Controller {
      */
     _reinterpretDateInTimezone(date, timezone) {
         try {
-            // Extract the wall-clock fields from the UTC side of the date
-            // (because @event-calendar/core mirrors local→UTC on input).
-            const y = date.getUTCFullYear();
-            const mo = date.getUTCMonth() + 1;
-            const d = date.getUTCDate();
-            const h = date.getUTCHours();
-            const mi = date.getUTCMinutes();
-            const s = date.getUTCSeconds();
+            // dateFromPoint() returns toLocalDate(internalDate), which copies
+            // the internal UTC wall-clock fields into the Date's LOCAL fields.
+            // So the LOCAL fields hold the wall-clock time the user sees on
+            // screen.  We must read LOCAL fields here, not UTC fields.
+            //
+            // (The UTC fields of the returned Date depend on the browser's
+            // timezone and are not meaningful for our purposes.)
+            const y = date.getFullYear();
+            const mo = date.getMonth() + 1;
+            const d = date.getDate();
+            const h = date.getHours();
+            const mi = date.getMinutes();
+            const s = date.getSeconds();
 
             // Build an ISO-like string and ask Intl what UTC offset applies in
             // the target timezone at that wall-clock moment.
