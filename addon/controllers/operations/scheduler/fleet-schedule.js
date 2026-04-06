@@ -80,8 +80,8 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
             .map((exception) => ({
                 id: `exc-${exception.id}`,
                 resourceId: exception.subject_uuid,
-                start: exception.start_date,
-                end: exception.end_date,
+                start: exception.start_at,
+                end: exception.end_at,
                 display: 'background',
                 backgroundColor: '#FCA5A5', // red-300
                 extendedProps: { exception },
@@ -133,8 +133,8 @@ export default class OperationsSchedulerFleetScheduleController extends Controll
         try {
             const exceptions = yield this.store.query('schedule-exception', {
                 subject_type: 'fleet-ops:driver',
-                start_date_gte: this.windowStart,
-                end_date_lte: this.windowEnd,
+                start_at_gte: this.windowStart,
+                end_at_lte: this.windowEnd,
                 limit: 200,
             });
             this.exceptions = exceptions.toArray();

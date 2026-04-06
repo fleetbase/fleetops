@@ -20,7 +20,7 @@ export default class SettingsSchedulingController extends Controller {
     @service notifications;
     @service intl;
     @service store;
-    @service modals;
+    @service modalsManager;
 
     /** How many days ahead to materialise schedule items (default 60) */
     @tracked horizonDays = 60;
@@ -115,7 +115,7 @@ export default class SettingsSchedulingController extends Controller {
      * Open the create-template modal.
      */
     @action createTemplate() {
-        this.modals.open('modals/add-driver-shift', {
+        this.modalsManager.open('modals/add-driver-shift', {
             title: this.intl.t('settings.scheduling.new-template'),
             isLibraryTemplate: true,
             onConfirm: () => this.loadTemplates.perform(),
@@ -126,7 +126,7 @@ export default class SettingsSchedulingController extends Controller {
      * Open the edit-template modal.
      */
     @action editTemplate(template) {
-        this.modals.open('modals/add-driver-shift', {
+        this.modalsManager.open('modals/add-driver-shift', {
             title: this.intl.t('settings.scheduling.edit-template'),
             isLibraryTemplate: true,
             template,
@@ -138,7 +138,7 @@ export default class SettingsSchedulingController extends Controller {
      * Delete a schedule template after confirmation.
      */
     @action async deleteTemplate(template) {
-        await this.modals.confirm({
+        await this.modalsManager.confirm({
             title: this.intl.t('settings.scheduling.delete-template'),
             body: this.intl.t('settings.scheduling.delete-template-confirm', { name: template.name }),
             onConfirm: async () => {
