@@ -2,63 +2,81 @@
 
     {{! ── Upcoming Shifts Panel ───────────────────────────────────────────── }}
     <ContentPanel
-        @title={{t "scheduler.upcoming-shifts"}}
         @open={{true}}
         @isLoading={{this.loadDriverSchedule.isRunning}}
         @actionButtons={{this.shiftActionButtons}}
         @wrapperClass="bordered-top"
     >
+        {{! Panel header: title + week nav on one line }}
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">{{t "scheduler.upcoming-shifts"}}</span>
+            <div class="flex items-center space-x-1">
+                <Button @icon="chevron-left" @size="xs" @type="link" {{on "click" this.prevWeek}} />
+                <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums">{{this.weekRangeLabel}}</span>
+                <Button @icon="chevron-right" @size="xs" @type="link" {{on "click" this.nextWeek}} />
+            </div>
+        </div>
+
         {{! 7-day compact calendar grid }}
-        <div class="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 rounded overflow-hidden text-xs mb-1">
+        <div class="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 rounded overflow-hidden text-xs">
             {{#each this.weekDays as |day|}}
-                <div class="bg-white dark:bg-gray-800 p-1 min-h-12">
-                    {{! Day header }}
-                    <div class="flex flex-col items-center mb-1">
-                        <span class="text-gray-400 dark:text-gray-500 uppercase tracking-wide leading-none" style="font-size:9px">{{day.label}}</span>
-                        <span class="{{if day.isToday "flex items-center justify-center w-4 h-4 rounded-full bg-indigo-600 text-white font-bold leading-none" "text-gray-500 dark:text-gray-400 leading-none"}}">{{day.dayNum}}</span>
+                <div class="bg-white dark:bg-gray-800 p-1.5 min-h-16">
+                    {{! Single-line day header: "Mon 6" }}
+                    <div class="flex items-center space-x-0.5 mb-1.5">
+                        <span class="text-gray-400 dark:text-gray-500 uppercase tracking-wide" style="font-size:9px">{{day.label}}</span>
+                        <span class="{{if day.isToday "flex items-center justify-center w-4 h-4 rounded-full bg-indigo-600 text-white font-bold leading-none text-xs" "text-gray-500 dark:text-gray-400"}}">{{day.dayNum}}</span>
                     </div>
-                    {{! Shift chips }}
+                    {{! Shift chips — larger with edit/delete buttons }}
                     {{#each day.shifts as |shift|}}
-                        <div
-                            class="w-full rounded px-0.5 py-px mb-px bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 truncate cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-800"
-                            style="font-size:8px;line-height:1.4"
-                            title="{{if shift.title shift.title "Shift"}} · {{format-date-fns shift.start_at "HH:mm"}}–{{format-date-fns shift.end_at "HH:mm"}}"
-                            role="button"
-                            {{on "click" (fn this.editShift shift)}}
-                        >
-                            {{format-date-fns shift.start_at "HH:mm"}}–{{format-date-fns shift.end_at "HH:mm"}}
+                        <div class="w-full rounded mb-1 bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300">
+                            {{! Time range }}
+                            <div class="px-1 pt-1 font-medium leading-tight truncate" style="font-size:9px">
+                                {{format-date-fns shift.start_at "HH:mm"}}–{{format-date-fns shift.end_at "HH:mm"}}
+                            </div>
+                            {{! Edit / Delete row }}
+                            <div class="flex items-center justify-end px-0.5 pb-0.5 space-x-0.5">
+                                <button
+                                    type="button"
+                                    class="p-0.5 rounded text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900"
+                                    title={{t "scheduler.edit-shift"}}
+                                    {{on "click" (fn this.editShift shift)}}
+                                >
+                                    <FaIcon @icon="pencil" @size="xs" />
+                                </button>
+                                <button
+                                    type="button"
+                                    class="p-0.5 rounded text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950"
+                                    title={{t "scheduler.delete-shift"}}
+                                    {{on "click" (fn this.deleteShift shift)}}
+                                >
+                                    <FaIcon @icon="trash" @size="xs" />
+                                </button>
+                            </div>
                         </div>
                     {{/each}}
                 </div>
             {{/each}}
         </div>
-
-        {{! Week navigation row }}
-        <div class="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
-            <Button @icon="chevron-left" @size="xs" @type="link" {{on "click" this.prevWeek}} />
-            <span>{{this.weekRangeLabel}}</span>
-            <Button @icon="chevron-right" @size="xs" @type="link" {{on "click" this.nextWeek}} />
-        </div>
     </ContentPanel>
 
     {{! ── HOS Status Panel ────────────────────────────────────────────────── }}
     <ContentPanel @title={{t "scheduler.hours-of-service"}} @open={{true}} @wrapperClass="bordered-top" @isLoading={{this.loadHOSStatus.isRunning}}>
-            <div class="grid grid-cols-3 gap-2 text-xs dark:text-gray-100">
-                <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                    <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.daily-driving-hours"}}</div>
-                    <div class="text-lg font-bold">{{this.hosStatus.daily_hours}}<span class="text-gray-400 font-normal">/11h</span></div>
-                </div>
-                <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                    <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.weekly-hours"}}</div>
-                    <div class="text-lg font-bold">{{this.hosStatus.weekly_hours}}<span class="text-gray-400 font-normal">/70h</span></div>
-                </div>
-                <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                    <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.compliance-status"}}</div>
-                    <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-{{this.hosComplianceBadge.color}}-100 text-{{this.hosComplianceBadge.color}}-800 dark:bg-{{this.hosComplianceBadge.color}}-900 dark:text-{{this.hosComplianceBadge.color}}-200">
-                        {{this.hosComplianceBadge.label}}
-                    </span>
-                </div>
+        <div class="grid grid-cols-3 gap-2 text-xs dark:text-gray-100">
+            <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.daily-driving-hours"}}</div>
+                <div class="text-lg font-bold">{{this.hosStatus.daily_hours}}<span class="text-gray-400 font-normal">/11h</span></div>
             </div>
+            <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.weekly-hours"}}</div>
+                <div class="text-lg font-bold">{{this.hosStatus.weekly_hours}}<span class="text-gray-400 font-normal">/70h</span></div>
+            </div>
+            <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.compliance-status"}}</div>
+                <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-{{this.hosComplianceBadge.color}}-100 text-{{this.hosComplianceBadge.color}}-800 dark:bg-{{this.hosComplianceBadge.color}}-900 dark:text-{{this.hosComplianceBadge.color}}-200">
+                    {{this.hosComplianceBadge.label}}
+                </span>
+            </div>
+        </div>
     </ContentPanel>
 
     {{! ── Time Off & Exceptions Panel ─────────────────────────────────────── }}
@@ -100,20 +118,8 @@
                                 {{exception.status}}
                             </span>
                             {{#if exception.isPending}}
-                                <Button
-                                    @icon="check"
-                                    @size="xs"
-                                    @type="link"
-                                    @scheme="success"
-                                    {{on "click" (fn this.approveException exception)}}
-                                />
-                                <Button
-                                    @icon="xmark"
-                                    @size="xs"
-                                    @type="link"
-                                    @scheme="danger"
-                                    {{on "click" (fn this.rejectException exception)}}
-                                />
+                                <Button @icon="check" @size="xs" @type="link" @scheme="success" {{on "click" (fn this.approveException exception)}} />
+                                <Button @icon="xmark" @size="xs" @type="link" @scheme="danger" {{on "click" (fn this.rejectException exception)}} />
                             {{/if}}
                             <Button @icon="trash" @size="xs" @type="link" @scheme="danger" {{on "click" (fn this.deleteException exception)}} />
                         </div>
