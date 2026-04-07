@@ -345,6 +345,9 @@ export default class OperationsSchedulerIndexController extends Controller {
      */
     @action setCalendarApi(calendar) {
         this.calendar = calendar;
+        // DEBUG
+        const now = new Date();
+        console.log('[Scheduler] setCalendarApi() — viewDate:', this.viewDate, '| companyTimezone:', this.companyTimezone, '| new Date():', now, '| getDate():', now.getDate(), '| getHours():', now.getHours(), '| getUTCDate():', now.getUTCDate(), '| getUTCHours():', now.getUTCHours());
     }
 
     // -------------------------------------------------------------------------
