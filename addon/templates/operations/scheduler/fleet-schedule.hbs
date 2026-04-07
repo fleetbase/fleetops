@@ -1,0 +1,41 @@
+<Layout::Section::Header @title={{t "scheduler.fleet-schedule-tab"}}>
+    <div class="flex items-center gap-2">
+        <Button @type="default" @icon="chevron-left" @size="sm" @onClick={{this.previousWeek}} />
+        <Button @type="default" @text={{t "scheduler.today"}} @size="sm" @onClick={{this.goToToday}} />
+        <Button @type="default" @icon="chevron-right" @size="sm" @onClick={{this.nextWeek}} />
+        <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+        <Button @type="primary" @text={{t "scheduler.add-shift"}} @icon="plus" @size="sm" @onClick={{this.addShift}} @permission="fleet-ops update driver" />
+    </div>
+</Layout::Section::Header>
+
+<Layout::Section::Body class="h-full overflow-y-scroll">
+    <div id="fleet-ops-fleet-schedule-container" class="h-full p-4">
+        {{#if this.loadScheduleItems.isRunning}}
+            <div class="flex items-center justify-center h-64">
+                <Spinner @size="lg" />
+            </div>
+        {{else}}
+            <FullCalendar
+                @events={{this.events}}
+                @resources={{this.calendarResources}}
+                @initialView="resourceTimelineWeek"
+                @editable={{true}}
+                @droppable={{true}}
+                @onEventDrop={{this.onEventDrop}}
+                @onEventClick={{this.onEventClick}}
+                @onInit={{this.setCalendarApi}}
+                @schedulerLicenseKey="GPL-My-Project-Is-Open-Source"
+                @resourceAreaHeaderContent={{t "resource.driver"}}
+                @resourceAreaWidth="180px"
+                @slotMinTime="05:00:00"
+                @slotMaxTime="23:00:00"
+                @height="auto"
+                @nowIndicator={{true}}
+                @weekends={{true}}
+                @slotDuration="01:00:00"
+                @slotLabelInterval="02:00:00"
+            />
+        {{/if}}
+    </div>
+    <Spacer @height="200px" />
+</Layout::Section::Body>

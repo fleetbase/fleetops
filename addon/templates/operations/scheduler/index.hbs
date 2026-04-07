@@ -1,100 +1,159 @@
-<Layout::Section::Header @title={{t "menu.scheduler"}}>
-    {{!-- <div class="flex items-center gap-2">
-        <Button
-            @type={{if (eq this.viewMode "orders") "primary" "default"}}
-            @text="Orders"
-            @icon="box"
-            @onClick={{fn this.switchViewMode "orders"}}
-            @size="sm"
-        />
-        <Button
-            @type={{if (eq this.viewMode "drivers") "primary" "default"}}
-            @text="Driver Schedules"
-            @icon="id-card"
-            @onClick={{fn this.switchViewMode "drivers"}}
-            @size="sm"
-        />
-        {{#if (eq this.viewMode "drivers")}}
-            <Button
-                @type="success"
-                @text="Add Shift"
-                @icon="plus"
-                @onClick={{this.addDriverShift}}
-                @size="sm"
-            />
+<Layout::Section::Header @title={{t "scheduler.orders-tab"}}>
+    <div class="flex items-center gap-2">
+        {{! View range toggle }}
+        <div class="flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
+            <button
+                type="button"
+                class="px-3 py-1 text-xs font-medium transition-colors
+                    {{if (eq this.viewRange 'day') 'bg-indigo-600 text-white' 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}}"
+                {{on "click" (fn this.setViewRange "day")}}
+            >
+                {{t "scheduler.view-day"}}
+            </button>
+            <button
+                type="button"
+                class="px-3 py-1 text-xs font-medium border-l border-gray-300 dark:border-gray-600 transition-colors
+                    {{if (eq this.viewRange 'week') 'bg-indigo-600 text-white' 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}}"
+                {{on "click" (fn this.setViewRange "week")}}
+            >
+                {{t "scheduler.view-week"}}
+            </button>
+        </div>
+
+        <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+        {{! Calendar navigation }}
+        <Button @type="default" @icon="chevron-left" @size="sm" @onClick={{this.goToPrev}} />
+        <Button @type="default" @text={{t "scheduler.today"}} @size="sm" @onClick={{this.goToToday}} />
+        <Button @type="default" @icon="chevron-right" @size="sm" @onClick={{this.goToNext}} />
+
+        <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+        {{! Undo / Redo }}
+        <Button @type="default" @icon="rotate-left" @size="sm" @disabled={{not this.scheduling.canUndo}} @onClick={{this.undo}} />
+        <Button @type="default" @icon="rotate-right" @size="sm" @disabled={{not this.scheduling.canRedo}} @onClick={{this.redo}} />
+
+        {{! Bulk assign (visible only when orders are selected) }}
+        {{#if this.hasSelection}}
+            <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+            <Button @type="primary" @text={{t "scheduler.bulk-assign" count=this.selectedOrderIds.size}} @icon="layer-group" @size="sm" @onClick={{this.openBulkAssignModal}} />
+            <Button @type="default" @icon="xmark" @size="sm" @onClick={{this.clearSelection}} />
         {{/if}}
-    </div> --}}
+    </div>
 </Layout::Section::Header>
 
 <Layout::Section::Body>
-    <div id="fleet-ops-scheduler-container">
-        <div class="grid grid-cols-1 lg:grid-cols-3">
-            <div id="fleet-ops-scheduler-sidebar" class="scheduler-left-sidebar">
-                <ContentPanel
-                    @title={{t "scheduler.unscheduled-orders"}}
-                    @titleStatuRight={{this.unscheduledOrders.length}}
-                    @titleStatuRightClass="info-status-badge"
-                    @hideStatusDot={{true}}
-                    @open={{this.unscheduledOrders.length}}
-                    @wrapperClass="bordered-top"
-                >
-                    <div class="space-y-2">
-                        {{#each this.unscheduledOrders as |order|}}
-                            <FullCalendar::Draggable @eventData={{json-hash id=order.id title=order.eventTitle allDay=true}} @disabled={{cannot "fleet-ops update order"}}>
-                                <Order::ScheduleCard @order={{order}} @titleClass="cursor-move" @onTitleClick={{fn this.viewEvent order}} />
-                            </FullCalendar::Draggable>
-                        {{/each}}
-                    </div>
-                </ContentPanel>
-                <ContentPanel
-                    @title={{t "scheduler.scheduled-orders"}}
-                    @titleStatuRight={{this.scheduledOrders.length}}
-                    @titleStatusRightClass="info-status-badge"
-                    @hideStatusDot={{true}}
-                    @open={{this.scheduledOrders.length}}
-                    @wrapperClass="bordered-top"
-                >
-                    <div class="space-y-2">
-                        {{#each this.scheduledOrders as |order|}}
-                            <Order::ScheduleCard @order={{order}} @titleClass="cursor-pointer" @onTitleClick={{fn this.viewEvent order}} />
-                        {{/each}}
-                    </div>
-                </ContentPanel>
-                <Spacer @height="200px" />
+    {{#if (cannot "fleet-ops update order")}}
+        <div class="flex flex-row items-center text-xs bg-yellow-800 border border-yellow-600 px-3 py-2 rounded-md text-yellow-100 mx-4 mt-2 space-x-2">
+            <FaIcon @icon="triangle-exclamation" @size="sm" />
+            <div class="flex-1">{{t "scheduler.unauthorized-to-schedule"}}</div>
+        </div>
+    {{/if}}
+
+    <div id="fleet-ops-scheduler-container" class="flex h-full overflow-hidden">
+
+        {{! ── Sidebar ──────────────────────────────────────────────────── }}
+        <div
+            id="fleet-ops-scheduler-sidebar"
+            class="flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-200
+                {{if this.sidebarCollapsed 'w-0 overflow-hidden' 'w-72 min-w-72'}}"
+        >
+            {{! Search }}
+            <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none text-gray-400" style="width:2rem;">
+                        <FaIcon @icon="magnifying-glass" @size="xs" style="vertical-align:0;display:block;" />
+                    </span>
+                    <input
+                        type="text"
+                        class="form-input form-input-sm w-full pl-8 pr-7"
+                        placeholder={{t "scheduler.search-orders"}}
+                        value={{this.searchQuery}}
+                        {{on "input" this.onSearchInput}}
+                    />
+                    {{#if this.searchQuery}}
+                        <button type="button" class="absolute right-2 top-2 text-gray-400 hover:text-gray-600" {{on "click" this.clearSearch}}>
+                            <FaIcon @icon="xmark" @size="xs" />
+                        </button>
+                    {{/if}}
+                </div>
             </div>
 
-            <div id="fleet-ops-scheduler-calendar" class="col-span-2 py-4 px-2">
-                {{#if (cannot "fleet-ops update order")}}
-                    <div class="flex flex-row items-center text-xs bg-yellow-800 border border-yellow-600 px-2 py-2 rounded-md text-yellow-100 mb-4 space-x-2">
-                        <FaIcon @icon="triangle-exclamation" @size="sm" />
-                        <div class="flex-1">
-                            {{t "scheduler.unauthorized-to-schedule"}}
-                        </div>
-                    </div>
+            {{! Select all / count header }}
+            <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+                <span>{{t "scheduler.unscheduled-orders"}} ({{this.unscheduledOrders.length}})</span>
+                {{#if this.unscheduledOrders.length}}
+                    <button type="button" class="text-indigo-500 hover:text-indigo-400 text-xs" {{on "click" this.selectAllOrders}}>
+                        {{t "scheduler.select-all"}}
+                    </button>
                 {{/if}}
-                {{#if (eq this.viewMode "drivers")}}
-                    <FullCalendar
-                        @events={{this.events}}
-                        @resources={{this.calendarResources}}
-                        @editable={{true}}
-                        @onEventDrop={{this.rescheduleEventFromDrag}}
-                        @onEventClick={{this.viewOrderAsEvent}}
-                        @onInit={{this.setCalendarApi}}
-                        @schedulerLicenseKey="GPL-My-Project-Is-Open-Source"
-                    />
-                {{else}}
-                    <FullCalendar
-                        @events={{this.events}}
-                        @editable={{true}}
-                        @onDrop={{this.scheduleEventFromDrop}}
-                        @onEventReceive={{this.receivedEvent}}
-                        @onEventDrop={{this.rescheduleEventFromDrag}}
-                        @onEventClick={{this.viewOrderAsEvent}}
-                        @onInit={{this.setCalendarApi}}
-                    />
-                {{/if}}
-                <Spacer @height="200px" />
             </div>
+
+            {{! Unscheduled order list }}
+            {{! Cards are made natively draggable; onSidebarDragStart stores the order
+                 reference so onCalendarDrop can retrieve it without any FullCalendar
+                 Draggable wrapper (which required the premium scheduler plugin). }}
+            <div class="flex-1 overflow-y-auto p-2 space-y-1.5">
+                {{#each this.unscheduledOrders as |order|}}
+                    <div draggable={{if (cannot "fleet-ops update order") "false" "true"}} class="cursor-grab active:cursor-grabbing" {{on "dragstart" (fn this.onSidebarDragStart order)}}>
+                        <Order::ScheduleCard
+                            @order={{order}}
+                            @selectable={{true}}
+                            @selected={{this.isOrderSelected order.id}}
+                            @onSelect={{fn this.toggleOrderSelection order.id}}
+                            @onTitleClick={{fn this.viewEvent order}}
+                        />
+                    </div>
+                {{else}}
+                    <div class="flex flex-col items-center justify-center py-10 text-gray-400 dark:text-gray-600 text-sm">
+                        <FaIcon @icon="calendar-check" @size="2x" class="mb-2 opacity-40" />
+                        <span>{{t "scheduler.all-scheduled"}}</span>
+                    </div>
+                {{/each}}
+            </div>
+        </div>
+
+        {{! Sidebar collapse toggle }}
+        <button
+            type="button"
+            class="flex items-center justify-center w-4 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            {{on "click" (fn (mut this.sidebarCollapsed) (not this.sidebarCollapsed))}}
+        >
+            <FaIcon @icon={{if this.sidebarCollapsed "chevron-right" "chevron-left"}} @size="xs" class="text-gray-400" />
+        </button>
+
+        {{! ── Timeline ─────────────────────────────────────────────────── }}
+        {{! EventCalendar uses @event-calendar/core (MIT licensed).
+             This replaces FullCalendar Premium resource-timeline plugins which
+             are incompatible with Fleetbase's dual AGPL v3 / commercial license.
+             External drag-and-drop is handled via native HTML5 dragover/drop
+             events on this container, with dateFromPoint() used to resolve the
+             target date and resource from the drop coordinates. }}
+        <div
+            id="fleet-ops-scheduler-timeline"
+            class="flex-1 overflow-hidden"
+            {{on "dragover" this.onCalendarDragOver}}
+            {{on "dragleave" this.onCalendarDragLeave}}
+            {{on "drop" this.onCalendarDrop}}
+        >
+            <EventCalendar
+                @view={{this.currentCalendarView}}
+                @date={{this.viewDate}}
+                @events={{this.allCalendarEvents}}
+                @resources={{this.calendarResources}}
+                @editable={{true}}
+                @slotMinTime={{this.calendarSlotMinTime}}
+                @slotMaxTime={{this.calendarSlotMaxTime}}
+                @slotWidth={{80}}
+                @height="100%"
+                @headerToolbar={{this.calendarHeaderToolbar}}
+                @resourceLabelContent={{this.renderResourceLabel}}
+                @eventContent={{this.renderEventContent}}
+                @onEventDrop={{this.rescheduleEventFromDrag}}
+                @onEventClick={{this.viewOrderAsEvent}}
+                @onCalendarReady={{this.setCalendarApi}}
+                @options={{this.calendarOptions}}
+            />
         </div>
     </div>
 </Layout::Section::Body>

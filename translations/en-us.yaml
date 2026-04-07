@@ -32,6 +32,8 @@ common:
   select-resource-filter-by: Select {resource} to filter by
   table-view: Table View
   grid-view: Grid View
+  calendar-view: Calendar View
+  change-layout: Change Layout
   livemap: Live map
   tracking: Tracking
   activity: Activity
@@ -41,6 +43,15 @@ common:
   edit-address: Edit Address
   new-address: New Address
   select-address: Select Address
+  save: Save
+  save-changes: Save Changes
+  done: Done
+  delete: Delete
+  overview: Overview
+  notes: Notes
+  schedule: Schedule
+  optional: Optional
+  unauthorized-access: You are not authorized to access this resource.
 
 menu:
   operations: Operations
@@ -59,9 +70,11 @@ menu:
   fuel-reports: Fuel Reports
   issues: Issues
   maintenance: Maintenance
+  schedules: Schedules
   work-orders: Work Orders
   equipment: Equipment
   parts: Parts
+  maintenance-history: Maintenance History
   connectivity: Connectivity
   telematics: Telematics
   devices: Devices
@@ -78,6 +91,8 @@ menu:
   custom-fields: Custom Fields
   order-board: Order Board
   avatars: Avatars
+  scheduling: Scheduling
+  maintenances: Maintenances
 
 resource:
   asset: Asset
@@ -126,6 +141,8 @@ resource:
   issues: Issues
   maintenance: Maintenance
   maintenances: Maintenances
+  maintenance-schedule: Maintenance Schedule
+  maintenance-schedules: Maintenance Schedules
   order-config: Order Config
   order-configs: Order Configs
   order: Order
@@ -245,6 +262,21 @@ column:
   current-job: Current Job
   last-seen: Last Seen
   place: Place
+  subject: Subject
+  summary: Summary
+  total-cost: Total Cost
+  due-at: Due At
+  serial-number: Serial Number
+  manufacturer: Manufacturer
+  part-number: Part Number
+  quantity-on-hand: Quantity on Hand
+  quantity: Quantity
+  unit-cost: Unit Cost
+  code: Code
+  interval: Interval
+  next-due: Next Due
+  asset: Asset
+  performed-by: Performed By
 
 map:
   visibility-controls:
@@ -668,6 +700,7 @@ order:
     assign-text: You are about to assign a new driver ({driverName}) to Order {orderId}. Click continue to confirm driver.
     assign-button: Continue and assign driver
     date: Date scheduled
+    date-created: Date created
     driver-assigned: Driver
     vehicle-assigned: Vehicle
     no-driver: No Driver
@@ -904,6 +937,9 @@ vehicle:
     year: Year
   actions:
     locate-vehicle: Locate Vehicle on Map
+    schedule-maintenance: Schedule Maintenance
+    create-work-order: Create Work Order
+    log-maintenance: Log Maintenance
 
 vendor:
   fields:
@@ -1114,7 +1150,132 @@ scheduler:
     scheduled-orders: Scheduled Orders
     unauthorized-to-schedule: You are not authorized to schedule orders.
     scheduling-for: Scheduling for {orderId}
-
+    add-shift: Add Shift
+    create-shift: Create Shift
+    edit-shift: Edit Shift
+    delete-shift: Delete Shift
+    delete-shift-confirm: Are you sure you want to delete this shift? This action cannot be undone.
+    shift-created: Shift created successfully.
+    shift-updated: Shift updated successfully.
+    shift-title: Shift Title
+    shift-title-placeholder: e.g. Morning Delivery Run
+    shift-start: Shift Start
+    shift-end: Shift End
+    shift-notes-placeholder: Optional notes about this shift
+    select-start-datetime: Select start date & time
+    select-end-datetime: Select end date & time
+    select-driver: Select Driver
+    upcoming-shifts: Upcoming Shifts
+    no-upcoming-shifts: No upcoming shifts scheduled.
+    hours-of-service: Hours of Service
+    daily-driving-hours: Daily Driving Hours
+    weekly-hours: Weekly Hours
+    compliance-status: Compliance Status
+    set-availability: Set Availability
+    availability-set: Availability saved successfully.
+    availability-time-off: Availability & Time Off
+    no-availability-restrictions: No availability restrictions set.
+    available: Available
+    unavailable: Unavailable
+    unavailable-time-off: Unavailable / Time Off
+    availability-type: Availability Type
+    request-time-off: Request Time Off
+    submit-request: Submit Request
+    time-off-requested: Time off request submitted.
+    delete-availability: Delete Availability
+    delete-availability-confirm: Are you sure you want to remove this availability record?
+    availability-deleted: Availability record removed.
+    start-date: Start Date
+    end-date: End Date
+    select-start-date: Select start date
+    select-end-date: Select end date
+    reason: Reason
+    reason-placeholder: e.g. Personal appointment
+    notes-placeholder: Optional additional notes
+    shift: Shift
+    add-shift-hint: Click "Add Shift" to schedule a new shift.
+    time-off-exceptions: Time Off & Exceptions
+    no-exceptions: No time off or exceptions recorded.
+    exception-approved: Exception approved.
+    exception-rejected: Exception rejected.
+    exception-deleted: Exception removed.
+    delete-exception: Delete Exception
+    delete-exception-confirm: Are you sure you want to remove this exception?
+    approve: Approve
+    reject: Reject
+    recurring-schedule-created: Recurring schedule created and shifts materialised.
+    recurring-schedule: Recurring Schedule
+    is-recurring: Recurring
+    recurrence-pattern: Recurrence Pattern
+    recurrence-start-date: Starts On
+    recurrence-end-date: Ends On (optional)
+    template-name: Template Name
+    template-name-placeholder: e.g. Standard Week
+    schedule-name: Schedule Name
+    schedule-name-placeholder: e.g. Standard Week
+    one-off-shift: One-off Shift
+    one-off-shift-help: Toggle on to add a single shift on a specific date and time instead of a recurring schedule.
+    template-color: Color
+    shift-start-time: Shift Start Time
+    shift-end-time: Shift End Time
+    break-start-time: Break Start Time
+    break-end-time: Break End Time
+    day-monday: Monday
+    day-tuesday: Tuesday
+    day-wednesday: Wednesday
+    day-thursday: Thursday
+    day-friday: Friday
+    day-saturday: Saturday
+    day-sunday: Sunday
+    frequency-daily: Daily
+    frequency-weekly: Weekly
+    frequency-monthly: Monthly
+    today: Today
+    orders-tab: Order Schedule
+    fleet-schedule-tab: Fleet Schedule
+    break-start: Break Start
+    break-end: Break End
+    select-break-start: Select break start time
+    select-break-end: Select break end time
+    select-date: Select date
+    working-days: Working Days
+    recurrence-start: Starts On
+    recurrence-end: Ends On
+    recurring-schedule-help: Define a recurring shift pattern using days and times. Shifts will be automatically created for the driver.
+    shift-deleted: Shift deleted successfully.
+    day-mon: Mon
+    day-tue: Tue
+    day-wed: Wed
+    day-thu: Thu
+    day-fri: Fri
+    day-sat: Sat
+    day-sun: Sun
+    view-day: Day
+    view-week: Week
+    undo: Undo last action
+    redo: Redo last action
+    search-orders: Search orders...
+    select-all: Select all
+    all-scheduled: All orders scheduled
+    not-scheduled: Not Scheduled
+    expand-sidebar: Expand sidebar
+    collapse-sidebar: Collapse sidebar
+    bulk-assign: Assign {count} orders
+    bulk-assign-title: Bulk Assign {count} Orders
+    bulk-assign-success: "{count} orders assigned successfully."
+    bulk-assign-order-count: "{count} orders selected for assignment"
+    bulk-assign-spacing-hint: Orders will be scheduled sequentially starting from the selected date and time, spaced by estimated duration.
+    assign-to-driver: Assign to Driver
+    assign-orders: Assign Orders
+    orders-to-assign: "{count} orders to assign"
+    scheduled-date: Scheduled Date
+    conflict-title: Scheduling Conflict Detected
+    conflict-description: "{orderTracking} overlaps with an existing order for {driverName}."
+    conflicting-orders: Conflicting Orders
+    conflict-resolution-prompt: How would you like to resolve this conflict?
+    auto-adjust: Auto-Adjust Time
+    assign-anyway: Assign Anyway
+    clear-selection: Clear selection
 modals:
   new-custom-field-group:
     modal-title: Create a new custom field group
@@ -1716,3 +1877,53 @@ settings:
       button-continue: Continue
       button-start: Start onboard now
       button-in-progress: Onboard in progress
+  scheduling:
+    scheduling-settings: Scheduling Settings
+    materialisation: Materialisation
+    horizon-days: Schedule Horizon (Days)
+    horizon-days-help: How many days ahead to generate shift items when a schedule template is applied.
+    default-shift-duration: Default Shift Duration (Hours)
+    default-shift-duration-help: The default number of hours for a shift when no end time is specified.
+    hours-of-service: Hours of Service Limits
+    hos-daily-limit: Daily Driving Limit (Hours)
+    hos-daily-limit-help: Maximum hours a driver is permitted to drive in a single day.
+    hos-weekly-limit: Weekly Driving Limit (Hours)
+    hos-weekly-limit-help: Maximum hours a driver is permitted to drive in a rolling 7-day period.
+    behaviour: Behaviour
+    auto-activate-schedule: Auto-Activate Schedule
+    auto-activate-schedule-help: Automatically transition a schedule from Draft to Active when the first shift is created.
+    notify-drivers: Notify Drivers on Shift Changes
+    notify-drivers-help: Send a push notification to drivers when their shifts are created, updated, or deleted.
+    schedule-templates: Reusable Schedule Templates
+    no-templates: No reusable templates have been created yet.
+    new-template: New Template
+    edit-template: Edit Template
+    delete-template: Delete Template
+    delete-template-confirm: Are you sure you want to delete the template "{name}"? This will not affect existing schedules.
+    template-deleted: Template deleted successfully.
+    settings-saved: Scheduling settings saved.
+maintenance-schedule:
+  actions:
+    trigger-now: Trigger Work Order Now
+    pause: Pause Schedule
+    resume: Resume Schedule
+work-order:
+  actions:
+    view: View Work Order
+    edit: Edit Work Order
+    delete: Delete Work Order
+maintenance:
+  actions:
+    view: View Maintenance Record
+    edit: Edit Maintenance Record
+    delete: Delete Maintenance Record
+equipment:
+  actions:
+    view: View Equipment
+    edit: Edit Equipment
+    delete: Delete Equipment
+part:
+  actions:
+    view: View Part
+    edit: Edit Part
+    delete: Delete Part

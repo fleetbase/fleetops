@@ -1,0 +1,287 @@
+<div class="schedule-form" ...attributes>
+
+    {{! ===== IDENTIFICATION ===== }}
+    <ContentPanel @title="Schedule Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <InputGroup @name="Schedule Name" @wrapperClass="col-span-2">
+                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder="e.g. Oil & Filter Change — Truck #4" disabled={{cannot-write @resource}} />
+            </InputGroup>
+
+            <InputGroup @name="Type">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.typeOptions}}
+                        @selected={{@resource.type}}
+                        @onChange={{fn (mut @resource.type)}}
+                        @placeholder="Select Type"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |type|
+                    >
+                        {{smart-humanize type}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name="Status">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.statusOptions}}
+                        @selected={{@resource.status}}
+                        @onChange={{fn (mut @resource.status)}}
+                        @placeholder="Select Status"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |status|
+                    >
+                        {{smart-humanize status}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+        </div>
+    </ContentPanel>
+
+    {{! ===== ASSET (SUBJECT) ===== }}
+    <ContentPanel @title="Asset" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Which asset does this schedule apply to?
+            </div>
+
+            <InputGroup @name="Asset Type">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.subjectTypeOptions}}
+                        @selected={{this.selectedSubjectType}}
+                        @onChange={{this.onSubjectTypeChange}}
+                        @placeholder="Select Asset Type"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        {{option.label}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            {{#if this.subjectModelName}}
+                <InputGroup @name="Asset">
+                    <ModelSelect
+                        @modelName={{this.subjectModelName}}
+                        @selectedModel={{@resource.subject}}
+                        @placeholder="Select Asset"
+                        @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
+                        @onChange={{this.assignSubject}}
+                        @disabled={{cannot-write @resource}}
+                        as |model|
+                    >
+                        {{or model.displayName model.name model.public_id}}
+                    </ModelSelect>
+                </InputGroup>
+            {{/if}}
+
+        </div>
+    </ContentPanel>
+
+    {{! ===== INTERVAL ===== }}
+    <ContentPanel @title="Maintenance Interval" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                How should this maintenance be triggered?
+            </div>
+
+            {{! Interval method selector — drives which fields are shown below }}
+            <InputGroup @name="Interval Method" @wrapperClass="col-span-2">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.intervalMethodOptions}}
+                        @selected={{this.selectedIntervalMethod}}
+                        @onChange={{this.onIntervalMethodChange}}
+                        @placeholder="Select interval method"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        {{option.label}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            {{! TIME-BASED fields }}
+            {{#if this.isTimeBased}}
+                <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                    Time-Based Interval
+                </div>
+                <InputGroup @name="Every">
+                    <Input @value={{@resource.interval_value}} @type="number" class="w-full form-input" placeholder="e.g. 3" disabled={{cannot-write @resource}} />
+                </InputGroup>
+                <InputGroup @name="Unit">
+                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                        <PowerSelect
+                            @options={{this.intervalUnitOptions}}
+                            @selected={{@resource.interval_unit}}
+                            @onChange={{fn (mut @resource.interval_unit)}}
+                            @placeholder="Select unit"
+                            @triggerClass="form-select form-input"
+                            @disabled={{cannot-write @resource}}
+                            as |unit|
+                        >
+                            {{smart-humanize unit}}
+                        </PowerSelect>
+                    </div>
+                </InputGroup>
+                <InputGroup @name="Next Due Date" @wrapperClass="col-span-2">
+                    <DateTimeInput
+                        class="form-input"
+                        @value={{@resource.next_due_date}}
+                        @minDate={{format-date-fns (now) "yyyy-MM-dd"}}
+                        @minTime={{format-date-fns (now) "HH:mm"}}
+                        @onUpdate={{fn (mut @resource.next_due_date)}}
+                        @disabled={{cannot-write @resource}}
+                    />
+                </InputGroup>
+            {{/if}}
+
+            {{! DISTANCE-BASED fields }}
+            {{#if this.isDistanceBased}}
+                <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                    Distance-Based Interval
+                </div>
+                <InputGroup @name="Every (km)">
+                    <Input @value={{@resource.interval_distance}} @type="number" class="w-full form-input" placeholder="e.g. 5000" disabled={{cannot-write @resource}} />
+                </InputGroup>
+                <InputGroup @name="Next Due Odometer (km)">
+                    <Input @value={{@resource.next_due_odometer}} @type="number" class="w-full form-input" placeholder="e.g. 47000" disabled={{cannot-write @resource}} />
+                </InputGroup>
+            {{/if}}
+
+            {{! ENGINE HOURS-BASED fields }}
+            {{#if this.isEngineHoursBased}}
+                <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                    Engine Hours-Based Interval
+                </div>
+                <InputGroup @name="Every (Engine Hours)">
+                    <Input @value={{@resource.interval_engine_hours}} @type="number" class="w-full form-input" placeholder="e.g. 250" disabled={{cannot-write @resource}} />
+                </InputGroup>
+                <InputGroup @name="Next Due Engine Hours">
+                    <Input @value={{@resource.next_due_engine_hours}} @type="number" class="w-full form-input" placeholder="e.g. 1250" disabled={{cannot-write @resource}} />
+                </InputGroup>
+            {{/if}}
+
+        </div>
+    </ContentPanel>
+
+    {{! ===== WORK ORDER DEFAULTS ===== }}
+    <ContentPanel @title="Work Order Defaults" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                These settings are used when a work order is auto-generated from this schedule.
+            </div>
+
+            <InputGroup @name="Default Priority">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.priorityOptions}}
+                        @selected={{@resource.default_priority}}
+                        @onChange={{fn (mut @resource.default_priority)}}
+                        @placeholder="Select Priority"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |priority|
+                    >
+                        {{smart-humanize priority}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name="Default Assignee Type">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.assigneeTypeOptions}}
+                        @selected={{this.selectedAssigneeType}}
+                        @onChange={{this.onAssigneeTypeChange}}
+                        @placeholder="Select Assignee Type"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        {{option.label}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            {{#if this.assigneeModelName}}
+                <InputGroup @name="Default Assignee" @wrapperClass="col-span-2">
+                    <ModelSelect
+                        @modelName={{this.assigneeModelName}}
+                        @selectedModel={{@resource.default_assignee}}
+                        @placeholder="Select Default Assignee"
+                        @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
+                        @onChange={{this.assignDefaultAssignee}}
+                        @disabled={{cannot-write @resource}}
+                        as |model|
+                    >
+                        {{or model.displayName model.name model.public_id}}
+                    </ModelSelect>
+                </InputGroup>
+            {{/if}}
+
+            <InputGroup @name="Instructions" @wrapperClass="col-span-2">
+                <Textarea
+                    @value={{@resource.instructions}}
+                    class="w-full form-input"
+                    rows="3"
+                    placeholder="Instructions for the technician performing this maintenance..."
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
+        </div>
+    </ContentPanel>
+
+    {{! ===== REMINDER OFFSETS ===== }}
+    <ContentPanel @title="Reminder Emails" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 no-input-group-padding text-xs">
+
+            <div class="text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Send email reminders before the next due date
+            </div>
+
+            <InputGroup @name="Reminder Days Before" @wrapperClass="col-span-2">
+                <div class="flex flex-wrap gap-1 p-1 border border-gray-300 dark:border-gray-600 rounded form-input min-h-[36px] items-center">
+                    {{#each this.reminderOffsets as |offset index|}}
+                        <span class="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-0.5 rounded">
+                            {{offset}}
+                            days
+                            <button type="button" class="ml-1 text-blue-500 hover:text-red-500" {{on "click" (fn this.removeReminderOffset index)}}>
+                                &times;
+                            </button>
+                        </span>
+                    {{/each}}
+                    <Input
+                        @value={{this.newReminderOffset}}
+                        @type="number"
+                        class="flex-1 min-w-[80px] border-0 outline-none bg-transparent text-xs p-0"
+                        placeholder="Add days (e.g. 7)"
+                        min="1"
+                        {{on "keydown" this.onReminderOffsetKeydown}}
+                        disabled={{cannot-write @resource}}
+                    />
+                </div>
+                <p class="text-[11px] text-gray-400 mt-1">
+                    Press Enter or comma to add each offset. The default assignee will receive an email for each configured offset.
+                </p>
+            </InputGroup>
+
+        </div>
+    </ContentPanel>
+
+</div>

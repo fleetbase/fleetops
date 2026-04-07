@@ -1,1 +1,7 @@
-{{outlet}}
+<div class="w-full h-full" {{constrain-view-section-width}}>
+    <TabNavigation @containerClass="fleet-ops-scheduler-tab-nav" @tabs={{this.tabs}} @size="lg" @tablistClass="next-view-section-subheader-fixed-height pl-2">
+        <:default>
+            {{outlet}}
+        </:default>
+    </TabNavigation>
+</div>

@@ -19,12 +19,7 @@
             </div>
         </InputGroup>
 
-        <InputGroup
-            @name={{t "order.fields.internal-id"}}
-            @value={{@resource.internal_id}}
-            @helpText={{t "order.fields.internal-id-help-text"}}
-            @disabled={{cannot-write @resource}}
-        />
+        <InputGroup @name={{t "order.fields.internal-id"}} @value={{@resource.internal_id}} @helpText={{t "order.fields.internal-id-help-text"}} @disabled={{cannot-write @resource}} />
 
         <InputGroup>
             <InputLabel @labelText={{t "order.fields.schedule"}} @helpText={{t "order.fields.schedule-help-text"}} />
@@ -92,10 +87,7 @@
         </InputGroup>
 
         {{#if (and @resource.facilitator.isIntegratedVendor @resource.facilitator.service_types.length)}}
-            <InputGroup
-                @name={{t "order.fields.service-type"}}
-                @helpText={{concat (t "order.fields.service-type-help-text") @resource.facilitator.name "."}}
-            >
+            <InputGroup @name={{t "order.fields.service-type"}} @helpText={{concat (t "order.fields.service-type-help-text") @resource.facilitator.name "."}}>
                 <Select
                     class="w-full"
                     @options={{@resource.facilitator.service_types}}

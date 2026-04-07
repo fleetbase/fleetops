@@ -13,18 +13,8 @@
         @disabled={{cannot "fleet-ops update order-config"}}
         {{on "input" this.setActivityCode}}
     />
-    <InputGroup
-        @name={{t "activity.form.status"}}
-        @value={{@resource.status}}
-        @disabled={{cannot "fleet-ops update order-config"}}
-        @helpText={{t "activity.form.status-help-text"}}
-    />
-    <InputGroup
-        @name={{t "activity.form.details"}}
-        @value={{@resource.details}}
-        @disabled={{cannot "fleet-ops update order-config"}}
-        @helpText={{t "activity.form.details-help-text"}}
-    />
+    <InputGroup @name={{t "activity.form.status"}} @value={{@resource.status}} @disabled={{cannot "fleet-ops update order-config"}} @helpText={{t "activity.form.status-help-text"}} />
+    <InputGroup @name={{t "activity.form.details"}} @value={{@resource.details}} @disabled={{cannot "fleet-ops update order-config"}} @helpText={{t "activity.form.details-help-text"}} />
     <InputGroup>
         <Toggle @isToggled={{@resource.complete}} @onToggle={{fn (mut @resource.complete)}} @disabled={{cannot "fleet-ops update order-config"}}>
             <span class="dark:text-gray-100 text-sm ml-2">{{t "activity.form.completes-order"}}</span>

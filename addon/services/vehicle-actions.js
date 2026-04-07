@@ -2,8 +2,13 @@ import ResourceActionService from '@fleetbase/ember-core/services/resource-actio
 import leafletIcon from '@fleetbase/ember-core/utils/leaflet-icon';
 import config from 'ember-get-config';
 import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
 
 export default class VehicleActionsService extends ResourceActionService {
+    @service maintenanceScheduleActions;
+    @service workOrderActions;
+    @service maintenanceActions;
+
     constructor() {
         super(...arguments);
         this.initialize('vehicle', { status: 'active' });
@@ -119,6 +124,18 @@ export default class VehicleActionsService extends ResourceActionService {
             });
         },
     };
+
+    @action scheduleMaintenance(vehicle) {
+        this.maintenanceScheduleActions.modal.create({ subject: vehicle });
+    }
+
+    @action createWorkOrder(vehicle) {
+        this.workOrderActions.modal.create({ target: vehicle });
+    }
+
+    @action logMaintenance(vehicle) {
+        this.maintenanceActions.modal.create({ maintainable: vehicle });
+    }
 
     @action locate(vehicle, options = {}) {
         const { latitude, longitude, location } = vehicle;

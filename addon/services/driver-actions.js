@@ -73,6 +73,10 @@ export default class DriverActionsService extends ResourceActionService {
                         label: this.intl.t('common.overview'),
                         component: 'driver/details',
                     },
+                    {
+                        label: this.intl.t('common.schedule'),
+                        component: 'driver/schedule',
+                    },
                 ],
                 ...options,
             });

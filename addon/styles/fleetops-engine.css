@@ -1851,3 +1851,362 @@ body[data-theme='dark'] .positions-replay-component .metric-card:hover {
     height: 40px;
     flex-shrink: 0;
 }
+.test { color: red; }
+
+/* Scheduling: Availability Type Toggle Buttons */
+.availability-type-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    gap: 0.5rem; padding: 0.625rem 0; border-radius: 0.5rem; border: 1px solid;
+    font-size: 0.75rem; font-weight: 500;
+    transition: color 0.15s, background-color 0.15s, border-color 0.15s; cursor: pointer;
+}
+.availability-type-btn.is-unselected { background-color: #ffffff; border-color: #d1d5db; color: #4b5563; }
+body[data-theme='dark'] .availability-type-btn.is-unselected { background-color: #1f2937; border-color: #4b5563; color: #9ca3af; }
+.availability-type-btn.is-selected-available { background-color: #f0fdf4; border-color: #22c55e; color: #15803d; }
+body[data-theme='dark'] .availability-type-btn.is-selected-available { background-color: #14532d; border-color: #4ade80; color: #bbf7d0; }
+.availability-type-btn.is-selected-unavailable { background-color: #fef2f2; border-color: #ef4444; color: #b91c1c; }
+body[data-theme='dark'] .availability-type-btn.is-selected-unavailable { background-color: #7f1d1d; border-color: #f87171; color: #fecaca; }
+
+/* Scheduling: Shift Chip in Driver Calendar (ember-ui Badge info style) */
+.driver-schedule-shift-chip {
+    display: flex; flex-direction: column; width: 100%; border-radius: 0.25rem;
+    margin-bottom: 0.25rem; padding: 0.25rem 0.375rem; font-size: 0.7rem; line-height: 1.3;
+    border: 1px solid #bfdbfe; background-color: #eff6ff; color: #1e40af;
+}
+body[data-theme='dark'] .driver-schedule-shift-chip { background-color: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+.driver-schedule-shift-chip .shift-chip-time { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.driver-schedule-shift-chip .shift-chip-actions { display: flex; gap: 0.125rem; margin-top: 0.125rem; }
+.driver-schedule-shift-chip .shift-chip-action-btn { padding: 0.125rem; border-radius: 0.25rem; background: transparent; border: none; cursor: pointer; line-height: 1; opacity: 0.7; transition: opacity 0.15s; }
+.driver-schedule-shift-chip .shift-chip-action-btn:hover { opacity: 1; }
+.driver-schedule-shift-chip .shift-chip-action-btn.edit { color: #2563eb; }
+body[data-theme='dark'] .driver-schedule-shift-chip .shift-chip-action-btn.edit { color: #93c5fd; }
+.driver-schedule-shift-chip .shift-chip-action-btn.delete { color: #dc2626; }
+body[data-theme='dark'] .driver-schedule-shift-chip .shift-chip-action-btn.delete { color: #fca5a5; }
+
+/* Fleet Calendar FullCalendar Overrides */
+#fleet-ops-fleet-schedule-container .fc { font-size: 0.75rem; font-family: inherit; }
+#fleet-ops-fleet-schedule-container .fc-theme-standard td,
+#fleet-ops-fleet-schedule-container .fc-theme-standard th,
+#fleet-ops-fleet-schedule-container .fc-theme-standard .fc-scrollgrid { border-color: #e5e7eb; }
+body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-theme-standard td,
+body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-theme-standard th,
+body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-theme-standard .fc-scrollgrid { border-color: #374151; }
+#fleet-ops-fleet-schedule-container .fc-col-header-cell { background-color: #f9fafb; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
+body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-col-header-cell { background-color: #111827; color: #9ca3af; }
+#fleet-ops-fleet-schedule-container .fc-resource-area .fc-cell-text { font-weight: 500; font-size: 0.75rem; color: #111827; }
+body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-resource-area .fc-cell-text { color: #f3f4f6; }
+#fleet-ops-fleet-schedule-container .fc-resource-area th { background-color: #f9fafb; }
+body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-resource-area th { background-color: #111827; }
+#fleet-ops-fleet-schedule-container .fc-timeline-lane { background-color: #ffffff; }
+body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-timeline-lane { background-color: #1f2937; }
+#fleet-ops-fleet-schedule-container .fc-timeline-slot.fc-day-today { background-color: #eff6ff; }
+body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-timeline-slot.fc-day-today { background-color: #1e3a5f; }
+#fleet-ops-fleet-schedule-container .fc-event { border-radius: 0.25rem; border: none; font-size: 0.7rem; font-weight: 500; padding: 0.1rem 0.35rem; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+#fleet-ops-fleet-schedule-container .fc-event:hover { filter: brightness(0.95); }
+#fleet-ops-fleet-schedule-container .fc-timeline-slot-label { font-size: 0.65rem; color: #9ca3af; padding: 0 0.25rem; }
+body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-timeline-slot-label { color: #6b7280; }
+#fleet-ops-fleet-schedule-container .fc-scrollgrid { border-radius: 0.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
+body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-scrollgrid { border-color: #374151; }
+
+/* ============================================================
+   @event-calendar/core - Fleetbase Scheduler Overrides
+   ============================================================ */
+
+/* Light-mode variable overrides */
+#fleet-ops-scheduler-timeline .ec {
+    --ec-color-400: #9ca3af;
+    --ec-color-300: #d1d5db;
+    --ec-color-200: #e5e7eb;
+    --ec-color-100: #f3f4f6;
+    --ec-color-50:  #f9fafb;
+    --ec-bg-color:     #ffffff;
+    --ec-text-color:   #111827;
+    --ec-border-color: #e5e7eb;
+    --ec-button-bg-color:            #ffffff;
+    --ec-button-border-color:        #d1d5db;
+    --ec-button-text-color:          #374151;
+    --ec-button-active-bg-color:     #4f46e5;
+    --ec-button-active-border-color: #4338ca;
+    --ec-button-active-text-color:   #ffffff;
+    --ec-today-bg-color:   #eff6ff;
+    --ec-highlight-color:  #e0e7ff;
+    --ec-event-bg-color:   #4f46e5;
+    --ec-event-text-color: #ffffff;
+    --ec-bg-event-color:   #e5e7eb;
+    --ec-bg-event-opacity: 0.4;
+    --ec-now-indicator-color: #ef4444;
+    font-size: 0.75rem;
+    font-family: inherit;
+}
+
+/* Dark-mode variable overrides */
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec {
+    --ec-color-400: #4b5563;
+    --ec-color-300: #374151;
+    --ec-color-200: #1f2937;
+    --ec-color-100: #111827;
+    --ec-color-50:  #0f172a;
+    --ec-bg-color:     #111827;
+    --ec-text-color:   #f3f4f6;
+    --ec-border-color: #374151;
+    --ec-button-bg-color:            #1f2937;
+    --ec-button-border-color:        #374151;
+    --ec-button-text-color:          #d1d5db;
+    --ec-button-active-bg-color:     #4f46e5;
+    --ec-button-active-border-color: #6366f1;
+    --ec-button-active-text-color:   #ffffff;
+    --ec-today-bg-color:   #1e3a5f;
+    --ec-highlight-color:  #312e81;
+    --ec-event-bg-color:   #6366f1;
+    --ec-event-text-color: #ffffff;
+    --ec-bg-event-color:   #374151;
+    --ec-bg-event-opacity: 0.5;
+    --ec-now-indicator-color: #f87171;
+}
+
+/* Toolbar refinements */
+#fleet-ops-scheduler-timeline .ec-toolbar {
+    padding: 0.5rem 0.75rem;
+    margin-block-end: 0;
+    border-bottom: none;
+    background-color: var(--ec-bg-color);
+}
+#fleet-ops-scheduler-timeline .ec-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ec-text-color);
+}
+#fleet-ops-scheduler-timeline .ec-button {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+#fleet-ops-scheduler-timeline .ec-button:not(:disabled):hover {
+    background-color: var(--ec-color-100);
+    border-color: var(--ec-color-300);
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-button:not(:disabled):hover {
+    background-color: var(--ec-color-200);
+}
+
+/* Resource label column */
+#fleet-ops-scheduler-timeline .ec-sidebar {
+    background-color: var(--ec-color-50);
+    border-inline-end-color: var(--ec-border-color);
+    min-width: 180px;
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-sidebar {
+    background-color: var(--ec-color-100);
+}
+#fleet-ops-scheduler-timeline .ec-resource {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ec-text-color);
+    padding: 0;
+}
+
+/* Column headers (time slots) */
+#fleet-ops-scheduler-timeline .ec-col-head,
+#fleet-ops-scheduler-timeline .ec-col-group {
+    background-color: var(--ec-color-50);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    border-color: var(--ec-border-color);
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-col-head,
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-col-group {
+    background-color: var(--ec-color-100);
+    color: #9ca3af;
+}
+
+/* Row / lane backgrounds */
+#fleet-ops-scheduler-timeline .ec-day {
+    background-color: var(--ec-bg-color);
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-day {
+    background-color: #1f2937;
+}
+
+/* Events */
+#fleet-ops-scheduler-timeline .ec-event {
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    border: none;
+    min-height: 3.25rem;
+    overflow: hidden;
+}
+#fleet-ops-scheduler-timeline .ec-event:hover {
+    filter: brightness(0.92);
+}
+
+/* Now indicator */
+#fleet-ops-scheduler-timeline .ec-now-indicator {
+    border-color: var(--ec-now-indicator-color);
+}
+#fleet-ops-scheduler-timeline .ec-now-indicator-arrow {
+    border-top-color: var(--ec-now-indicator-color);
+    border-bottom-color: var(--ec-now-indicator-color);
+}
+
+/* Drag-over hover state */
+#fleet-ops-scheduler-timeline[data-dragging-over='true'] .ec-main {
+    background-color: rgba(99, 102, 241, 0.04);
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline[data-dragging-over='true'] .ec-main {
+    background-color: rgba(129, 140, 248, 0.06);
+}
+/* Per-column drop cursor indicator */
+#fleet-ops-scheduler-timeline .ec-drop-cursor {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #6366f1;
+    pointer-events: none;
+    z-index: 10;
+    border-radius: 1px;
+    box-shadow: 0 0 6px rgba(99, 102, 241, 0.7);
+    transition: left 0.04s linear;
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-drop-cursor {
+    background-color: #818cf8;
+    box-shadow: 0 0 6px rgba(129, 140, 248, 0.7);
+}
+
+/* Full-height timeline */
+#fleet-ops-scheduler-timeline {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+#fleet-ops-scheduler-timeline .fleetbase-event-calendar,
+#fleet-ops-scheduler-timeline .ec {
+    flex: 1 1 0;
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+#fleet-ops-scheduler-timeline .ec-main {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: auto;
+}
+
+/* Scrollbar styling (Webkit) */
+#fleet-ops-scheduler-timeline .ec-main::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    background-color: transparent;
+}
+#fleet-ops-scheduler-timeline .ec-main::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+    border-radius: 3px;
+}
+body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollbar-thumb {
+    background-color: #4b5563;
+}
+
+/* ============================================================
+   Scheduler - Full-height layout & header overflow fixes
+   ============================================================ */
+
+/* 1. Make the tab-navigation a flex column so the tab-content
+      fills the remaining height below the tab-list. */
+.tab-navigation.fleet-ops-scheduler-tab-nav {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 2. The tab-content should grow to fill all remaining space
+      below the tab-list. */
+.tab-navigation.fleet-ops-scheduler-tab-nav > .tab-content {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 3. The next-view-section-body inside the scheduler should
+      fill the remaining space below the subheader. */
+.tab-navigation.fleet-ops-scheduler-tab-nav .next-view-section-body {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 4. Fix the subheader overflow: prevent the actions from
+      stretching beyond the viewport width. */
+.tab-navigation.fleet-ops-scheduler-tab-nav .next-view-section-subheader {
+    flex-shrink: 0;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* 5. Allow the actions area to shrink and wrap so buttons
+      remain visible when the timeline stretches the layout. */
+.tab-navigation.fleet-ops-scheduler-tab-nav .next-view-section-subheader-actions {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+/* 6. The scheduler container and timeline fill the body. */
+#fleet-ops-scheduler-container {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+/* ============================================================
+   Scheduler – follow-up fixes (round 3)
+   ============================================================ */
+
+/* 1. Resource label: make the inner span (direct child of .ec-row-head)
+      fill the full cell width so the workload bar stretches correctly. */
+#fleet-ops-scheduler-timeline .ec-row-head > span {
+    display: block;
+    width: 100%;
+    text-align: left;
+}
+
+/* 2. Event blocks: ensure a minimum width so the 3-line content is readable.
+      The timeline slot width determines how wide each column is; we set a
+      sensible min-width so the block never collapses to an unreadable sliver. */
+#fleet-ops-scheduler-timeline .ec-event {
+    min-width: 200px;
+}
+
+/* 3. Search icon: FontAwesome SVGs carry vertical-align:-0.125em which shifts
+      the icon slightly below the visual centre of the flex container.
+      The span uses Tailwind utility classes (absolute, inset-y-0, flex,
+      items-center) not a semantic class, so we target the first span child
+      of the .relative wrapper. */
+#fleet-ops-scheduler-sidebar .relative > span:first-child .svg-inline--fa,
+#fleet-ops-scheduler-sidebar .relative > span:first-child svg {
+    vertical-align: middle;
+    display: block;
+    line-height: 1;
+}
+
+/* 4. Schedule card: remove horizontal padding from .card-content so the
+      content sits flush with the card border. */
+.order-schedule-card .card-content {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
