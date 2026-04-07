@@ -83,6 +83,13 @@ class FleetOpsServiceProvider extends CoreServiceProvider
     {
         $this->app->register(CoreServiceProvider::class);
         $this->app->register(ReportSchemaServiceProvider::class);
+
+        // Register the AllocationEngineRegistry as a singleton so that engines
+        // registered from any service provider share the same instance.
+        $this->app->singleton(
+            \Fleetbase\FleetOps\Allocation\AllocationEngineRegistry::class,
+            fn () => new \Fleetbase\FleetOps\Allocation\AllocationEngineRegistry()
+        );
     }
 
     /**
@@ -106,6 +113,18 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         });
         $this->registerNotifications();
         $this->registerExpansionsFrom(__DIR__ . '/../Expansions');
+
+        // Register the default VROOM allocation engine.
+        // Third-party engines can register themselves by resolving the
+        // AllocationEngineRegistry singleton from their own service providers.
+        $this->app->resolving(
+            \Fleetbase\FleetOps\Allocation\AllocationEngineRegistry::class,
+            function (\Fleetbase\FleetOps\Allocation\AllocationEngineRegistry $registry) {
+                if (!$registry->has('vroom')) {
+                    $registry->register(new \Fleetbase\FleetOps\Allocation\Engines\VroomAllocationEngine());
+                }
+            }
+        );
         $this->loadRoutesFrom(__DIR__ . '/../routes.php');
         $this->loadMigrationsFrom(__DIR__ . '/../../migrations');
         $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'fleetops');

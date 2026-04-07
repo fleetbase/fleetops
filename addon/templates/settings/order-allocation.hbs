@@ -1,0 +1,86 @@
+{{page-title (t "allocation.settings-title")}}
+
+<Layout::Section::Header @title={{t "allocation.settings-title"}}>
+    <Button
+        @icon="save"
+        @text={{t "common.save-changes"}}
+        @type="primary"
+        @isLoading={{this.saveSettings.isRunning}}
+        {{on "click" (perform this.saveSettings)}}
+    />
+</Layout::Section::Header>
+
+<div class="settings-container">
+    {{#if this.isLoading}}
+        <div class="flex items-center justify-center py-12">
+            <Spinner />
+        </div>
+    {{else}}
+        <ContentPanel @title={{t "allocation.engine-settings"}} @open={{true}} @wrapperClass="mb-4">
+            <div class="grid grid-cols-1 gap-4 text-xs dark:text-gray-100">
+
+                {{! Engine Selector }}
+                <InputGroup @name={{t "allocation.active-engine"}} @helpText={{t "allocation.active-engine-help"}}>
+                    <div class="fleetbase-model-select-trigger">
+                        <PowerSelect
+                            @options={{this.engineOptions}}
+                            @selected={{this.selectedEngine}}
+                            @onChange={{this.selectEngine}}
+                            @renderInPlace={{true}}
+                            @triggerClass="form-select form-input"
+                            as |engine|
+                        >
+                            {{engine.name}}
+                        </PowerSelect>
+                    </div>
+                </InputGroup>
+
+                {{! Auto-allocate on order creation }}
+                <InputGroup @name={{t "allocation.auto-allocate-on-create"}}>
+                    <Toggle
+                        @isToggled={{this.autoAllocateOnCreate}}
+                        @onToggle={{fn (mut this.autoAllocateOnCreate)}}
+                        @label={{t "allocation.auto-allocate-on-create-label"}}
+                    />
+                </InputGroup>
+
+                {{! Auto re-allocate on delivery completion }}
+                <InputGroup @name={{t "allocation.auto-reallocate-on-complete"}}>
+                    <Toggle
+                        @isToggled={{this.autoReallocateOnComplete}}
+                        @onToggle={{fn (mut this.autoReallocateOnComplete)}}
+                        @label={{t "allocation.auto-reallocate-on-complete-label"}}
+                    />
+                </InputGroup>
+
+            </div>
+        </ContentPanel>
+
+        <ContentPanel @title={{t "allocation.constraint-settings"}} @open={{true}} @wrapperClass="mb-4">
+            <div class="grid grid-cols-1 gap-4 text-xs dark:text-gray-100">
+
+                {{! Max travel time }}
+                <InputGroup @name={{t "allocation.max-travel-time"}} @helpText={{t "allocation.max-travel-time-help"}}>
+                    <Input
+                        @value={{this.maxTravelTimeSeconds}}
+                        @type="number"
+                        min="0"
+                        step="300"
+                        class="form-input"
+                        {{on "change" (fn (mut this.maxTravelTimeSeconds))}}
+                    />
+                </InputGroup>
+
+                {{! Balance workload }}
+                <InputGroup @name={{t "allocation.balance-workload"}}>
+                    <Toggle
+                        @isToggled={{this.balanceWorkload}}
+                        @onToggle={{fn (mut this.balanceWorkload)}}
+                        @label={{t "allocation.balance-workload-label"}}
+                    />
+                </InputGroup>
+
+            </div>
+        </ContentPanel>
+    {{/if}}
+</div>
