@@ -345,10 +345,6 @@ export default class OperationsSchedulerIndexController extends Controller {
      */
     @action setCalendarApi(calendar) {
         this.calendar = calendar;
-        // Navigate to today immediately after the calendar is ready.
-        // This ensures the correct date is shown regardless of any stale
-        // viewDate that may have been set before the calendar was mounted.
-        this.calendar.setOption('date', new Date());
     }
 
     // -------------------------------------------------------------------------
