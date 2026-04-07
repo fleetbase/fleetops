@@ -7,13 +7,7 @@
                 Maintenance Details
             </div>
             <InputGroup @name="Summary" @wrapperClass="col-span-2">
-                <Input
-                    @value={{@resource.summary}}
-                    @type="text"
-                    class="w-full form-input"
-                    placeholder="Brief summary of the maintenance activity"
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.summary}} @type="text" class="w-full form-input" placeholder="Brief summary of the maintenance activity" disabled={{cannot-write @resource}} />
             </InputGroup>
 
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
@@ -199,22 +193,10 @@
                 Asset Readings at Service
             </div>
             <InputGroup @name="Odometer (km)">
-                <Input
-                    @value={{@resource.odometer}}
-                    @type="number"
-                    class="w-full form-input"
-                    placeholder="Odometer reading at service"
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.odometer}} @type="number" class="w-full form-input" placeholder="Odometer reading at service" disabled={{cannot-write @resource}} />
             </InputGroup>
             <InputGroup @name="Engine Hours">
-                <Input
-                    @value={{@resource.engine_hours}}
-                    @type="number"
-                    class="w-full form-input"
-                    placeholder="Engine hours at service"
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.engine_hours}} @type="number" class="w-full form-input" placeholder="Engine hours at service" disabled={{cannot-write @resource}} />
             </InputGroup>
         </div>
     </ContentPanel>

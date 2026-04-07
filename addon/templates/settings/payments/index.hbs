@@ -54,11 +54,7 @@
                                 {{/if}}
                             </InfoBlock>
                             {{#unless this.isStripeEnabled}}
-                                <InfoBlock
-                                    @type="warning"
-                                    @text={{t "settings.payments.system-stripe-not-setup"}}
-                                    class="mt-4"
-                                />
+                                <InfoBlock @type="warning" @text={{t "settings.payments.system-stripe-not-setup"}} class="mt-4" />
                             {{/unless}}
                         </div>
                     </div>

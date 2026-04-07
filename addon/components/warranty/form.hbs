@@ -47,25 +47,11 @@
             </InputGroup>
 
             <InputGroup @name="Terms" @wrapperClass="col-span-2">
-                <Textarea
-                    @value={{@resource.terms}}
-                    aria-label="Terms"
-                    class="w-full form-input"
-                    disabled={{cannot-write @resource}}
-                    placeholder="Warranty Terms"
-                    rows={{5}}
-                />
+                <Textarea @value={{@resource.terms}} aria-label="Terms" class="w-full form-input" disabled={{cannot-write @resource}} placeholder="Warranty Terms" rows={{5}} />
             </InputGroup>
 
             <InputGroup @name="Policy Document" @wrapperClass="col-span-2">
-                <Textarea
-                    @value={{@resource.policy}}
-                    aria-label="Policy"
-                    class="w-full form-input"
-                    disabled={{cannot-write @resource}}
-                    placeholder="Policy Document"
-                    rows={{5}}
-                />
+                <Textarea @value={{@resource.policy}} aria-label="Policy" class="w-full form-input" disabled={{cannot-write @resource}} placeholder="Policy Document" rows={{5}} />
             </InputGroup>
 
             <RegistryYield @registry="fleet-ops:component:warranty:form:details" as |RegistryComponent|>

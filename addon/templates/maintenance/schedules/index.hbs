@@ -18,11 +18,7 @@
 
     <Layout::Section::Body class="overflow-y-scroll h-full">
         <div class="p-4">
-            <FullCalendar
-                @events={{this.calendarEventSource}}
-                @onEventClick={{this.onCalendarEventClick}}
-                @onInit={{this.setCalendarApi}}
-            />
+            <FullCalendar @events={{this.calendarEventSource}} @onEventClick={{this.onCalendarEventClick}} @onInit={{this.setCalendarApi}} />
         </div>
     </Layout::Section::Body>
 {{else}}

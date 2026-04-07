@@ -4,34 +4,17 @@
     {{! ── Currency selector (single, shared by all money fields) ── }}
     <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs mb-2">
         <InputGroup @name="Currency">
-            <CurrencySelect
-                @currency={{@resource.currency}}
-                @onCurrencyChange={{fn (mut @resource.currency)}}
-                @triggerClass="w-full form-select"
-                @disabled={{this.isDisabled}}
-            />
+            <CurrencySelect @currency={{@resource.currency}} @onCurrencyChange={{fn (mut @resource.currency)}} @triggerClass="w-full form-select" @disabled={{this.isDisabled}} />
         </InputGroup>
     </div>
 
     {{! ── Labour & Tax inputs (always editable on the form) ── }}
     <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs mb-4">
         <InputGroup @name="Labour Cost">
-            <MoneyInput
-                class="w-full"
-                @value={{@resource.labor_cost}}
-                @currency={{this.currency}}
-                @onChange={{fn (mut @resource.labor_cost)}}
-                @disabled={{this.isDisabled}}
-            />
+            <MoneyInput class="w-full" @value={{@resource.labor_cost}} @currency={{this.currency}} @onChange={{fn (mut @resource.labor_cost)}} @disabled={{this.isDisabled}} />
         </InputGroup>
         <InputGroup @name="Tax">
-            <MoneyInput
-                class="w-full"
-                @value={{@resource.tax}}
-                @currency={{this.currency}}
-                @onChange={{fn (mut @resource.tax)}}
-                @disabled={{this.isDisabled}}
-            />
+            <MoneyInput class="w-full" @value={{@resource.tax}} @currency={{this.currency}} @onChange={{fn (mut @resource.tax)}} @disabled={{this.isDisabled}} />
         </InputGroup>
     </div>
 
@@ -42,12 +25,12 @@
 
     <table class="w-full text-xs border-collapse mb-2 table-fixed">
         <colgroup>
-            <col style="width: 45%">
-            <col style="width: 10%">
-            <col style="width: 20%">
-            <col style="width: 15%">
+            <col style="width: 45%" />
+            <col style="width: 10%" />
+            <col style="width: 20%" />
+            <col style="width: 15%" />
             {{#unless this.isDisabled}}
-                <col style="width: 10%">
+                <col style="width: 10%" />
             {{/unless}}
         </colgroup>
         <thead>
@@ -67,47 +50,23 @@
                     {{! ── Inline edit row ── }}
                     <tr class="border-b border-gray-100 dark:border-gray-800">
                         <td class="py-1 pr-2">
-                            <Input
-                                @value={{this.draftDescription}}
-                                class="form-input w-full text-xs"
-                                placeholder="Description"
-                            />
+                            <Input @value={{this.draftDescription}} class="form-input w-full text-xs" placeholder="Description" />
                         </td>
                         <td class="py-1 pr-2">
-                            <Input
-                                @value={{this.draftQuantity}}
-                                @type="number"
-                                class="form-input w-full text-xs text-right"
-                                min="0"
-                            />
+                            <Input @value={{this.draftQuantity}} @type="number" class="form-input w-full text-xs text-right" min="0" />
                         </td>
                         <td class="py-1 pr-2">
-                            <MoneyInput
-                                class="w-full"
-                                @value={{this.draftUnitCost}}
-                                @currency={{this.currency}}
-                                @onChange={{this.setDraftUnitCost}}
-                            />
+                            <MoneyInput class="w-full" @value={{this.draftUnitCost}} @currency={{this.currency}} @onChange={{this.setDraftUnitCost}} />
                         </td>
                         <td class="py-1 pr-2 text-right text-gray-500 dark:text-gray-400">
                             {{format-currency this.draftLineTotal this.currency}}
                         </td>
                         <td class="py-1">
                             <div class="flex items-center space-x-1">
-                                <Button
-                                    @size="xs"
-                                    @type="primary"
-                                    @onClick={{this.saveEdit}}
-                                    class="px-2 py-0.5"
-                                >
+                                <Button @size="xs" @type="primary" @onClick={{this.saveEdit}} class="px-2 py-0.5">
                                     Save
                                 </Button>
-                                <Button
-                                    @size="xs"
-                                    @type="default"
-                                    @onClick={{this.cancelEdit}}
-                                    class="px-2 py-0.5"
-                                >
+                                <Button @size="xs" @type="default" @onClick={{this.cancelEdit}} class="px-2 py-0.5">
                                     Cancel
                                 </Button>
                             </div>
@@ -154,48 +113,23 @@
             {{#if this.isAddingItem}}
                 <tr class="border-b border-gray-100 dark:border-gray-800">
                     <td class="py-1 pr-2">
-                        <Input
-                            @value={{this.draftDescription}}
-                            class="form-input w-full text-xs"
-                            placeholder="Description"
-                            autofocus
-                        />
+                        <Input @value={{this.draftDescription}} class="form-input w-full text-xs" placeholder="Description" autofocus />
                     </td>
                     <td class="py-1 pr-2">
-                        <Input
-                            @value={{this.draftQuantity}}
-                            @type="number"
-                            class="form-input w-full text-xs text-right"
-                            min="0"
-                        />
+                        <Input @value={{this.draftQuantity}} @type="number" class="form-input w-full text-xs text-right" min="0" />
                     </td>
                     <td class="py-1 pr-2">
-                        <MoneyInput
-                            class="w-full"
-                            @value={{this.draftUnitCost}}
-                            @currency={{this.currency}}
-                            @onChange={{this.setDraftUnitCost}}
-                        />
+                        <MoneyInput class="w-full" @value={{this.draftUnitCost}} @currency={{this.currency}} @onChange={{this.setDraftUnitCost}} />
                     </td>
                     <td class="py-1 pr-2 text-right text-gray-500 dark:text-gray-400">
                         {{format-currency this.draftLineTotal this.currency}}
                     </td>
                     <td class="py-1">
                         <div class="flex items-center space-x-1">
-                            <Button
-                                @size="xs"
-                                @type="primary"
-                                @onClick={{this.addLineItem}}
-                                class="px-2 py-0.5"
-                            >
+                            <Button @size="xs" @type="primary" @onClick={{this.addLineItem}} class="px-2 py-0.5">
                                 Add
                             </Button>
-                            <Button
-                                @size="xs"
-                                @type="default"
-                                @onClick={{this.cancelAdd}}
-                                class="px-2 py-0.5"
-                            >
+                            <Button @size="xs" @type="default" @onClick={{this.cancelAdd}} class="px-2 py-0.5">
                                 Cancel
                             </Button>
                         </div>

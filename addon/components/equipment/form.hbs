@@ -39,49 +39,19 @@
                 Equipment Details
             </div>
             <InputGroup @name="Name">
-                <Input
-                    @value={{@resource.name}}
-                    @type="text"
-                    class="w-full form-input"
-                    placeholder="Equipment name"
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder="Equipment name" disabled={{cannot-write @resource}} />
             </InputGroup>
             <InputGroup @name="Code">
-                <Input
-                    @value={{@resource.code}}
-                    @type="text"
-                    class="w-full form-input"
-                    placeholder="Internal code or reference"
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.code}} @type="text" class="w-full form-input" placeholder="Internal code or reference" disabled={{cannot-write @resource}} />
             </InputGroup>
             <InputGroup @name="Serial Number">
-                <Input
-                    @value={{@resource.serial_number}}
-                    @type="text"
-                    class="w-full form-input"
-                    placeholder="Manufacturer serial number"
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.serial_number}} @type="text" class="w-full form-input" placeholder="Manufacturer serial number" disabled={{cannot-write @resource}} />
             </InputGroup>
             <InputGroup @name="Manufacturer">
-                <Input
-                    @value={{@resource.manufacturer}}
-                    @type="text"
-                    class="w-full form-input"
-                    placeholder="Manufacturer name"
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.manufacturer}} @type="text" class="w-full form-input" placeholder="Manufacturer name" disabled={{cannot-write @resource}} />
             </InputGroup>
             <InputGroup @name="Model">
-                <Input
-                    @value={{@resource.model}}
-                    @type="text"
-                    class="w-full form-input"
-                    placeholder="Model designation"
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.model}} @type="text" class="w-full form-input" placeholder="Model designation" disabled={{cannot-write @resource}} />
             </InputGroup>
 
             {{! Type & Status }}
@@ -169,12 +139,7 @@
                 Purchase Information
             </div>
             <InputGroup @name="Currency">
-                <CurrencySelect
-                    @currency={{@resource.currency}}
-                    @onCurrencyChange={{fn (mut @resource.currency)}}
-                    @triggerClass="w-full form-select"
-                    @disabled={{cannot-write @resource}}
-                />
+                <CurrencySelect @currency={{@resource.currency}} @onCurrencyChange={{fn (mut @resource.currency)}} @triggerClass="w-full form-select" @disabled={{cannot-write @resource}} />
             </InputGroup>
             <InputGroup @name="Purchase Price">
                 <MoneyInput
@@ -210,7 +175,9 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.policy_number}} - {{model.provider}}
+                    {{model.policy_number}}
+                    -
+                    {{model.provider}}
                 </ModelSelect>
             </InputGroup>
         </div>

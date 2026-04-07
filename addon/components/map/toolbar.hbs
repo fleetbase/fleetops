@@ -29,13 +29,7 @@
             </button>
         {{/let}}
         {{#let (cannot "fleet-ops list order") as |unauthorized|}}
-            <button
-                type="button"
-                id="map-toolbar-search-button"
-                class="toolbar-button {{if unauthorized 'unauthorized'}}"
-                {{on "click" this.globalSearch.toggle}}
-                disabled={{unauthorized}}
-            >
+            <button type="button" id="map-toolbar-search-button" class="toolbar-button {{if unauthorized 'unauthorized'}}" {{on "click" this.globalSearch.toggle}} disabled={{unauthorized}}>
                 <FaIcon @icon="search" />
                 <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
                     {{#let (if unauthorized (concat (t "common.unauthorized-to") " " (t "common.search")) (t "common.search")) as |unauthorizedMessage|}}
@@ -45,12 +39,7 @@
             </button>
         {{/let}}
         {{#let (cannot "fleet-ops list order") as |unauthorized|}}
-            <button
-                type="button"
-                id="map-toolbar-view-orders-button"
-                class="toolbar-button relative {{if unauthorized 'unauthorized'}}"
-                {{on "click" this.orderListOverlay.toggle}}
-            >
+            <button type="button" id="map-toolbar-view-orders-button" class="toolbar-button relative {{if unauthorized 'unauthorized'}}" {{on "click" this.orderListOverlay.toggle}}>
                 <div class="active-orders-count absolute top-0 right-0 -mr-2.5 -mt-1">
                     <div class="relative flex w-5 h-5 rounded-full">
                         <div class="absolute inset-0 rounded-full w-5 h-5 text-xs bg-blue-500 opacity-75 {{if this.activeOrderCount 'animate-ping'}}"></div>
@@ -59,14 +48,7 @@
                 </div>
                 <FaIcon @icon="layer-group" />
                 <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
-                    {{#let
-                        (if
-                            unauthorized
-                            (concat (t "common.unauthorized-to") " " (t "map.toolbar.view-order"))
-                            (t "map.toolbar.view-order")
-                        )
-                        as |unauthorizedMessage|
-                    }}
+                    {{#let (if unauthorized (concat (t "common.unauthorized-to") " " (t "map.toolbar.view-order")) (t "map.toolbar.view-order")) as |unauthorizedMessage|}}
                         <InputInfo @text={{unauthorizedMessage}} @iconClass="hidden" class="py-1 px-2 bg-gray-900 -mt-1" />
                     {{/let}}
                 </Attach::Tooltip>
@@ -77,14 +59,7 @@
                 <dd.Trigger class="toolbar-button {{if unauthorized 'unauthorized'}}">
                     <FaIcon @icon="map-marked-alt" />
                     <Attach::Tooltip @class="clean" @animation="scale" @placement="right">
-                        {{#let
-                            (if
-                                unauthorized
-                                (concat (t "common.unauthorized-to") " " (t "map.toolbar.view-service-area"))
-                                (t "map.toolbar.view-service-area")
-                            )
-                            as |unauthorizedMessage|
-                        }}
+                        {{#let (if unauthorized (concat (t "common.unauthorized-to") " " (t "map.toolbar.view-service-area")) (t "map.toolbar.view-service-area")) as |unauthorizedMessage|}}
                             <InputInfo @text={{unauthorizedMessage}} @iconClass="hidden" class="{{if dd.isOpen 'hidden'}} py-1 px-2 bg-gray-900 -mt-1" />
                         {{/let}}
                     </Attach::Tooltip>

@@ -58,7 +58,13 @@
         <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
     </RegistryYield>
 
-    <ContentPanel @title={{t "common.metadata"}} @open={{true}} @actionButtons={{this.metadataButtons}} @wrapperClass="bordered-top" @panelBodyWrapperClass={{unless (is-object-empty @resource.meta) "px-0i" ""}}>
+    <ContentPanel
+        @title={{t "common.metadata"}}
+        @open={{true}}
+        @actionButtons={{this.metadataButtons}}
+        @wrapperClass="bordered-top"
+        @panelBodyWrapperClass={{unless (is-object-empty @resource.meta) "px-0i" ""}}
+    >
         <MetadataViewer @metadata={{@resource.meta}} />
     </ContentPanel>
 </div>

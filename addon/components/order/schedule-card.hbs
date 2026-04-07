@@ -1,15 +1,14 @@
-{{!--
+{{!
   Order::ScheduleCard
   Compact sidebar card used in the Scheduler's unscheduled-orders panel.
   Layout: header row (checkbox + tracking + badge), then a 2-column grid
   of label/value pairs so everything fits without line-breaking.
---}}
+}}
 <div
-    class="order-schedule-card rounded border border-gray-200 dark:border-gray-700 overflow-hidden
-           {{if @selected 'ring-2 ring-indigo-500 border-indigo-400 dark:border-indigo-500'}}"
+    class="order-schedule-card rounded border border-gray-200 dark:border-gray-700 overflow-hidden {{if @selected 'ring-2 ring-indigo-500 border-indigo-400 dark:border-indigo-500'}}"
     ...attributes
 >
-    {{!-- ── Header ─────────────────────────────────────────────────────── --}}
+    {{! ── Header ─────────────────────────────────────────────────────── }}
     <div class="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         {{#if @selectable}}
             <input
@@ -31,11 +30,11 @@
         </div>
     </div>
 
-    {{!-- ── Body — 2-column grid ───────────────────────────────────────── --}}
+    {{! ── Body — 2-column grid ───────────────────────────────────────── }}
     <div class="{{@contentClass}} card-content bg-white dark:bg-gray-900 px-2 py-1.5">
         <dl class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs">
 
-            {{!-- Scheduled date --}}
+            {{! Scheduled date }}
             <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
                 <FaIcon @icon="clock" @size="xs" class="w-3 text-center" />
                 {{t "order.schedule-card.date"}}
@@ -44,7 +43,7 @@
                 {{n-a @order.scheduledAt (t "scheduler.not-scheduled")}}
             </dd>
 
-            {{!-- Created date --}}
+            {{! Created date }}
             <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
                 <FaIcon @icon="calendar" @size="xs" class="w-3 text-center" />
                 {{t "order.schedule-card.date-created"}}
@@ -53,16 +52,12 @@
                 {{n-a @order.createdAtWithTime}}
             </dd>
 
-            {{!-- Driver --}}
+            {{! Driver }}
             <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
                 <FaIcon @icon="id-card-alt" @size="xs" class="w-3 text-center" />
                 {{t "order.schedule-card.driver-assigned"}}
                 {{#let (cannot "fleet-ops assign-driver-for order") as |unauthorized|}}
-                    <a
-                        href="javascript:;"
-                        class="text-indigo-400 hover:text-indigo-300 {{if unauthorized 'opacity-40 pointer-events-none'}}"
-                        {{on "click" this.startAssignDriver}}
-                    >
+                    <a href="javascript:;" class="text-indigo-400 hover:text-indigo-300 {{if unauthorized 'opacity-40 pointer-events-none'}}" {{on "click" this.startAssignDriver}}>
                         <FaIcon @icon="pen" @size="xs" />
                     </a>
                     {{#if unauthorized}}
@@ -101,30 +96,22 @@
                 {{/if}}
             </dd>
 
-            {{!-- Vehicle --}}
+            {{! Vehicle }}
             <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
                 <FaIcon @icon="truck" @size="xs" class="w-3 text-center" />
                 {{t "order.schedule-card.vehicle-assigned"}}
             </dt>
             <dd class="truncate text-right">
                 {{#if @order.vehicle_assigned}}
-                    <a
-                        href="javascript:;"
-                        class="truncate"
-                        {{on "click" (fn this.onClickVehicle @order.vehicle_assigned)}}
-                    >{{@order.vehicle_assigned.display_name}}</a>
+                    <a href="javascript:;" class="truncate" {{on "click" (fn this.onClickVehicle @order.vehicle_assigned)}}>{{@order.vehicle_assigned.display_name}}</a>
                 {{else if @order.driver_assigned.vehicle}}
-                    <a
-                        href="javascript:;"
-                        class="truncate"
-                        {{on "click" (fn this.onClickVehicle @order.driver_assigned.vehicle)}}
-                    >{{@order.driver_assigned.vehicle_name}}</a>
+                    <a href="javascript:;" class="truncate" {{on "click" (fn this.onClickVehicle @order.driver_assigned.vehicle)}}>{{@order.driver_assigned.vehicle_name}}</a>
                 {{else}}
                     <span class="text-gray-400 dark:text-gray-600">{{t "order.schedule-card.no-vehicle"}}</span>
                 {{/if}}
             </dd>
 
-            {{!-- Destination --}}
+            {{! Destination }}
             <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
                 <FaIcon @icon="location-dot" @size="xs" class="w-3 text-center" />
                 {{t "order.schedule-card.destination"}}

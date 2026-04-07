@@ -29,11 +29,7 @@
                 </div>
             </InputGroup>
 
-            <InputGroup
-                @name={{t "service-rate.fields.base-fee-label"}}
-                @helpText={{t "service-rate.fields.base-fee-help-text"}}
-                @required={{true}}
-            >
+            <InputGroup @name={{t "service-rate.fields.base-fee-label"}} @helpText={{t "service-rate.fields.base-fee-help-text"}} @required={{true}}>
                 <MoneyInput
                     class="w-full"
                     @value={{@resource.base_fee}}
@@ -44,11 +40,7 @@
                 />
             </InputGroup>
 
-            <InputGroup
-                @name={{t "service-rate.fields.rate-calculation-label"}}
-                @helpText={{t "service-rate.fields.rate-calculation-help-text"}}
-                @required={{true}}
-            >
+            <InputGroup @name={{t "service-rate.fields.rate-calculation-label"}} @helpText={{t "service-rate.fields.rate-calculation-help-text"}} @required={{true}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "serviceRateCalculationMethods"}}
@@ -97,11 +89,7 @@
     {{#if @resource.isFixedRate}}
         <ContentPanel @title={{t "service-rate.fields.fixed-meter"}} @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="px-0i">
             <div class="px-2 mb-3">
-                <InfoBlock
-                    class="mb-2"
-                    @text={{t "service-rate.fields.fixed-meter-text"}}
-                    @exampleText={{t "service-rate.fields.fixed-meter-example-text"}}
-                />
+                <InfoBlock class="mb-2" @text={{t "service-rate.fields.fixed-meter-text"}} @exampleText={{t "service-rate.fields.fixed-meter-example-text"}} />
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
                     <InputGroup
                         @name={{t "service-rate.fields.maximum-distance"}}
@@ -163,11 +151,7 @@
     {{else if @resource.isPerDrop}}
         <ContentPanel @title={{t "service-rate.fields.per-drop-off-title"}} @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="px-0i">
             <div class="px-2 mb-3">
-                <InfoBlock
-                    class="mb-3"
-                    @text={{t "service-rate.fields.per-drop-off-text"}}
-                    @exampleText={{t "service-rate.fields.per-drop-off-example-text"}}
-                />
+                <InfoBlock class="mb-3" @text={{t "service-rate.fields.per-drop-off-text"}} @exampleText={{t "service-rate.fields.per-drop-off-example-text"}} />
 
                 <div>
                     <Button
@@ -227,26 +211,14 @@
         </ContentPanel>
     {{else if @resource.isPerMeter}}
         <ContentPanel @title={{t "service-rate.fields.per-meter"}} @open={{true}} @wrapperClass="bordered-top">
-            <InfoBlock
-                class="mb-5"
-                @text={{t "service-rate.fields.per-meter-text"}}
-                @exampleText={{t "service-rate.fields.per-meter-example-text"}}
-            />
+            <InfoBlock class="mb-5" @text={{t "service-rate.fields.per-meter-text"}} @exampleText={{t "service-rate.fields.per-meter-example-text"}} />
 
             <div class="grid grid-cols-2 gap-2">
-                <InputGroup
-                    @name={{t "service-rate.fields.per-meter-rate-fee"}}
-                    @helpText={{t "service-rate.fields.per-meter-rate-fee-help-text"}}
-                    @required={{true}}
-                >
+                <InputGroup @name={{t "service-rate.fields.per-meter-rate-fee"}} @helpText={{t "service-rate.fields.per-meter-rate-fee-help-text"}} @required={{true}}>
                     <MoneyInput class="w-full" @currency={{@resource.currency}} @value={{@resource.per_meter_flat_rate_fee}} disabled={{cannot-write @resource}} />
                 </InputGroup>
 
-                <InputGroup
-                    @name={{t "service-rate.fields.distance-unit"}}
-                    @helpText={{t "service-rate.fields.distance-unit-help-text"}}
-                    @required={{true}}
-                >
+                <InputGroup @name={{t "service-rate.fields.distance-unit"}} @helpText={{t "service-rate.fields.distance-unit-help-text"}} @required={{true}}>
                     <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                         <PowerSelect
                             @options={{get-fleet-ops-options "distanceUnits"}}
@@ -302,11 +274,7 @@
                 </div>
             </InfoBlock>
 
-            <InputGroup
-                @name={{t "service-rate.fields.algorithm-label"}}
-                @helpText={{t "service-rate.fields.algorithm-help-text"}}
-                @required={{true}}
-            >
+            <InputGroup @name={{t "service-rate.fields.algorithm-label"}} @helpText={{t "service-rate.fields.algorithm-help-text"}} @required={{true}}>
                 <Textarea
                     @value={{@resource.algorithm}}
                     placeholder={{t "service-rate.fields.algorithm-placeholder"}}
@@ -425,11 +393,7 @@
 
         {{#if @resource.has_cod_fee}}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 mt-2">
-                <InputGroup
-                    @name={{t "service-rate.fields.calculation-method-label"}}
-                    @helpText={{t "service-rate.fields.calculation-method-help-text"}}
-                    @required={{true}}
-                >
+                <InputGroup @name={{t "service-rate.fields.calculation-method-label"}} @helpText={{t "service-rate.fields.calculation-method-help-text"}} @required={{true}}>
                     <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                         <PowerSelect
                             @options={{get-fleet-ops-options "serviceRateCodCalculationMethods"}}
@@ -449,11 +413,7 @@
                 </InputGroup>
 
                 {{#if @resource.hasCodFlatFee}}
-                    <InputGroup
-                        @name={{t "service-rate.fields.delivery-flat-fee"}}
-                        @helpText={{t "service-rate.fields.delivery-flat-fee-help-text"}}
-                        @required={{true}}
-                    >
+                    <InputGroup @name={{t "service-rate.fields.delivery-flat-fee"}} @helpText={{t "service-rate.fields.delivery-flat-fee-help-text"}} @required={{true}}>
                         <MoneyInput class="w-full" @currency={{@resource.currency}} @value={{@resource.cod_flat_fee}} disabled={{cannot-write @resource}} />
                     </InputGroup>
                 {{else if @resource.hasCodPercentageFee}}
@@ -501,11 +461,7 @@
                     @required={{true}}
                 />
 
-                <InputGroup
-                    @name={{t "service-rate.fields.peak-hours-fee-label"}}
-                    @helpText={{t "service-rate.fields.peak-hours-fee-help-text"}}
-                    @required={{true}}
-                >
+                <InputGroup @name={{t "service-rate.fields.peak-hours-fee-label"}} @helpText={{t "service-rate.fields.peak-hours-fee-help-text"}} @required={{true}}>
                     <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                         <PowerSelect
                             @options={{get-fleet-ops-options "serviceRatePeakHourCalculationMethods"}}
@@ -525,11 +481,7 @@
                 </InputGroup>
 
                 {{#if @resource.hasPeakHoursFlatFee}}
-                    <InputGroup
-                        @name={{t "service-rate.fields.flat-fee-label"}}
-                        @helpText={{t "service-rate.fields.flat-fee-help-text"}}
-                        @required={{true}}
-                    >
+                    <InputGroup @name={{t "service-rate.fields.flat-fee-label"}} @helpText={{t "service-rate.fields.flat-fee-help-text"}} @required={{true}}>
                         <MoneyInput class="w-full" @currency={{@resource.currency}} @value={{@resource.peak_hours_flat_fee}} disabled={{cannot-write @resource}} />
                     </InputGroup>
                 {{else if @resource.hasPeakHoursPercentageFee}}

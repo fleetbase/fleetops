@@ -2,7 +2,11 @@
     {{#if @model.length}}
         <div class="space-y-2">
             {{#each @model as |workOrder|}}
-                <LinkTo @route="maintenance.work-orders.index.details" @model={{workOrder}} class="flex items-start justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-2 text-sm">
+                <LinkTo
+                    @route="maintenance.work-orders.index.details"
+                    @model={{workOrder}}
+                    class="flex items-start justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-2 text-sm"
+                >
                     <div class="flex items-center gap-3">
                         <FaIcon @icon="wrench" class="text-gray-400" />
                         <div>
@@ -12,7 +16,8 @@
                             <div class="text-xs text-gray-500 dark:text-gray-400">
                                 {{workOrder.public_id}}
                                 {{#if workOrder.opened_at}}
-                                    &bull; Opened {{format-date workOrder.opened_at "dd MMM yyyy"}}
+                                    &bull; Opened
+                                    {{format-date workOrder.opened_at "dd MMM yyyy"}}
                                 {{/if}}
                             </div>
                         </div>

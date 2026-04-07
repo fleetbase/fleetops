@@ -109,7 +109,8 @@
                 <div class="field-name">Last Odometer</div>
                 <div class="field-value">
                     {{#if @resource.last_service_odometer}}
-                        {{@resource.last_service_odometer}} km
+                        {{@resource.last_service_odometer}}
+                        km
                     {{else}}
                         —
                     {{/if}}
@@ -131,7 +132,8 @@
                 <div class="field-name">Next Due Odometer</div>
                 <div class="field-value">
                     {{#if @resource.next_due_odometer}}
-                        {{@resource.next_due_odometer}} km
+                        {{@resource.next_due_odometer}}
+                        km
                     {{else}}
                         —
                     {{/if}}
@@ -185,7 +187,7 @@
                                         {{if cell.isScheduled 'bg-blue-500 text-white font-semibold'}}
                                         {{if cell.isToday (if cell.isScheduled 'ring-2 ring-offset-1 ring-blue-400' 'ring-2 ring-blue-400 text-blue-600 dark:text-blue-400 font-semibold')}}
                                         {{unless cell.isCurrentMonth 'text-gray-300 dark:text-gray-600'}}
-                                    "
+                                        "
                                 >
                                     {{cell.day}}
                                 </span>
@@ -216,7 +218,9 @@
                     <div class="space-y-1 pl-4">
                         {{#each this.upcomingOccurrences as |occurrence index|}}
                             <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 text-xs font-semibold flex-shrink-0">
+                                <span
+                                    class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 text-xs font-semibold flex-shrink-0"
+                                >
                                     {{add index 1}}
                                 </span>
                                 <span class="text-xs text-gray-700 dark:text-gray-200">
@@ -240,7 +244,8 @@
                 <div class="flex flex-wrap gap-1">
                     {{#each @resource.reminder_offsets as |offset|}}
                         <span class="inline-flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-0.5 rounded">
-                            {{offset}} days before
+                            {{offset}}
+                            days before
                         </span>
                     {{/each}}
                 </div>

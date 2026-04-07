@@ -51,12 +51,7 @@
             {{! ── Start date/time ─────────────────────────────────────────────── }}
             <div class="input-group">
                 <label>{{t "scheduler.bulk-assign-start-time"}}</label>
-                <DateTimeInput
-                    @value={{@options.date}}
-                    @onChange={{fn (mut @options.date)}}
-                    placeholder={{t "scheduler.select-start-datetime"}}
-                    class="w-full form-input"
-                />
+                <DateTimeInput @value={{@options.date}} @onChange={{fn (mut @options.date)}} placeholder={{t "scheduler.select-start-datetime"}} class="w-full form-input" />
             </div>
 
             {{! ── Spacing hint ────────────────────────────────────────────────── }}

@@ -1,9 +1,4 @@
-<Modal::Default
-    @modalIsOpened={{@modalIsOpened}}
-    @options={{@options}}
-    @confirm={{@onConfirm}}
-    @decline={{@onDecline}}
->
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
         <div class="grid grid-cols-1 gap-4 text-xs dark:text-gray-100">
 
@@ -42,29 +37,9 @@
 
             {{! ── Resolution buttons ──────────────────────────────────────────── }}
             <div class="flex items-center gap-2 justify-end">
-                <Button
-                    @type="default"
-                    @text={{t "common.cancel"}}
-                    @icon="times"
-                    @size="sm"
-                    @onClick={{@onDecline}}
-                />
-                <Button
-                    @type="default"
-                    @text={{t "scheduler.auto-adjust"}}
-                    @icon="wand-magic-sparkles"
-                    @size="sm"
-                    @isLoading={{@options.isLoading}}
-                    @onClick={{this.autoAdjust}}
-                />
-                <Button
-                    @type="danger"
-                    @text={{t "scheduler.assign-anyway"}}
-                    @icon="triangle-exclamation"
-                    @size="sm"
-                    @isLoading={{@options.isLoading}}
-                    @onClick={{this.assignAnyway}}
-                />
+                <Button @type="default" @text={{t "common.cancel"}} @icon="times" @size="sm" @onClick={{@onDecline}} />
+                <Button @type="default" @text={{t "scheduler.auto-adjust"}} @icon="wand-magic-sparkles" @size="sm" @isLoading={{@options.isLoading}} @onClick={{this.autoAdjust}} />
+                <Button @type="danger" @text={{t "scheduler.assign-anyway"}} @icon="triangle-exclamation" @size="sm" @isLoading={{@options.isLoading}} @onClick={{this.assignAnyway}} />
             </div>
 
         </div>

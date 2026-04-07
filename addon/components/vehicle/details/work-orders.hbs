@@ -30,8 +30,7 @@
         <div class="flex flex-col items-center justify-center py-10 text-gray-400 dark:text-gray-600">
             <FaIcon @icon="clipboard-list" @size="2x" class="mb-3" />
             <p class="text-sm">No work orders for this vehicle.</p>
-            <Button @text="Create Work Order" @icon="plus" @size="xs" @type="primary" class="mt-3"
-                @onClick={{fn this.workOrderActions.modal.create (hash target=@vehicle)}} />
+            <Button @text="Create Work Order" @icon="plus" @size="xs" @type="primary" class="mt-3" @onClick={{fn this.workOrderActions.modal.create (hash target=@vehicle)}} />
         </div>
     {{/if}}
 </div>

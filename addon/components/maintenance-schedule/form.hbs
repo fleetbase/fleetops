@@ -4,13 +4,7 @@
     <ContentPanel @title="Schedule Details" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <InputGroup @name="Schedule Name" @wrapperClass="col-span-2">
-                <Input
-                    @value={{@resource.name}}
-                    @type="text"
-                    class="w-full form-input"
-                    placeholder="e.g. Oil & Filter Change — Truck #4"
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder="e.g. Oil & Filter Change — Truck #4" disabled={{cannot-write @resource}} />
             </InputGroup>
 
             <InputGroup @name="Type">
@@ -124,13 +118,7 @@
                     Time-Based Interval
                 </div>
                 <InputGroup @name="Every">
-                    <Input
-                        @value={{@resource.interval_value}}
-                        @type="number"
-                        class="w-full form-input"
-                        placeholder="e.g. 3"
-                        disabled={{cannot-write @resource}}
-                    />
+                    <Input @value={{@resource.interval_value}} @type="number" class="w-full form-input" placeholder="e.g. 3" disabled={{cannot-write @resource}} />
                 </InputGroup>
                 <InputGroup @name="Unit">
                     <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
@@ -165,22 +153,10 @@
                     Distance-Based Interval
                 </div>
                 <InputGroup @name="Every (km)">
-                    <Input
-                        @value={{@resource.interval_distance}}
-                        @type="number"
-                        class="w-full form-input"
-                        placeholder="e.g. 5000"
-                        disabled={{cannot-write @resource}}
-                    />
+                    <Input @value={{@resource.interval_distance}} @type="number" class="w-full form-input" placeholder="e.g. 5000" disabled={{cannot-write @resource}} />
                 </InputGroup>
                 <InputGroup @name="Next Due Odometer (km)">
-                    <Input
-                        @value={{@resource.next_due_odometer}}
-                        @type="number"
-                        class="w-full form-input"
-                        placeholder="e.g. 47000"
-                        disabled={{cannot-write @resource}}
-                    />
+                    <Input @value={{@resource.next_due_odometer}} @type="number" class="w-full form-input" placeholder="e.g. 47000" disabled={{cannot-write @resource}} />
                 </InputGroup>
             {{/if}}
 
@@ -190,22 +166,10 @@
                     Engine Hours-Based Interval
                 </div>
                 <InputGroup @name="Every (Engine Hours)">
-                    <Input
-                        @value={{@resource.interval_engine_hours}}
-                        @type="number"
-                        class="w-full form-input"
-                        placeholder="e.g. 250"
-                        disabled={{cannot-write @resource}}
-                    />
+                    <Input @value={{@resource.interval_engine_hours}} @type="number" class="w-full form-input" placeholder="e.g. 250" disabled={{cannot-write @resource}} />
                 </InputGroup>
                 <InputGroup @name="Next Due Engine Hours">
-                    <Input
-                        @value={{@resource.next_due_engine_hours}}
-                        @type="number"
-                        class="w-full form-input"
-                        placeholder="e.g. 1250"
-                        disabled={{cannot-write @resource}}
-                    />
+                    <Input @value={{@resource.next_due_engine_hours}} @type="number" class="w-full form-input" placeholder="e.g. 1250" disabled={{cannot-write @resource}} />
                 </InputGroup>
             {{/if}}
 
@@ -295,12 +259,9 @@
                 <div class="flex flex-wrap gap-1 p-1 border border-gray-300 dark:border-gray-600 rounded form-input min-h-[36px] items-center">
                     {{#each this.reminderOffsets as |offset index|}}
                         <span class="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-0.5 rounded">
-                            {{offset}} days
-                            <button
-                                type="button"
-                                class="ml-1 text-blue-500 hover:text-red-500"
-                                {{on "click" (fn this.removeReminderOffset index)}}
-                            >
+                            {{offset}}
+                            days
+                            <button type="button" class="ml-1 text-blue-500 hover:text-red-500" {{on "click" (fn this.removeReminderOffset index)}}>
                                 &times;
                             </button>
                         </span>

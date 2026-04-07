@@ -175,11 +175,7 @@
                 </ModelSelect>
 
                 {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator @resource.payload.pickup))}}
-                    <InfoBlock
-                        class="my-2 px-4 py-1.5 danger"
-                        @blockClass="flex flex-row items-center"
-                        @text={{concat @resource.facilitator.name (t "order.fields.infoblock-text")}}
-                    />
+                    <InfoBlock class="my-2 px-4 py-1.5 danger" @blockClass="flex flex-row items-center" @text={{concat @resource.facilitator.name (t "order.fields.infoblock-text")}} />
                 {{/if}}
 
                 {{#if @resource.payload.pickup.hasInvalidCoordinates}}
@@ -223,11 +219,7 @@
                 </ModelSelect>
 
                 {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator @resource.payload.dropoff))}}
-                    <InfoBlock
-                        class="my-2 px-4 py-1.5 danger"
-                        @blockClass="flex flex-row items-center"
-                        @text={{concat @resource.facilitator.name (t "order.fields.infoblock-text")}}
-                    />
+                    <InfoBlock class="my-2 px-4 py-1.5 danger" @blockClass="flex flex-row items-center" @text={{concat @resource.facilitator.name (t "order.fields.infoblock-text")}} />
                 {{/if}}
 
                 {{#if @resource.payload.dropoff.hasInvalidCoordinates}}
@@ -264,11 +256,7 @@
                 </ModelSelect>
 
                 {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator @resource.payload.return))}}
-                    <InfoBlock
-                        class="my-2 px-4 py-1.5 danger"
-                        @blockClass="flex flex-row items-center"
-                        @text={{concat @resource.facilitator.name (t "order.fields.infoblock-text")}}
-                    />
+                    <InfoBlock class="my-2 px-4 py-1.5 danger" @blockClass="flex flex-row items-center" @text={{concat @resource.facilitator.name (t "order.fields.infoblock-text")}} />
                 {{/if}}
 
                 {{#if @resource.payload.return.hasInvalidCoordinates}}

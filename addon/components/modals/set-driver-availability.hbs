@@ -6,11 +6,7 @@
             <div class="input-group">
                 <label>{{t "scheduler.availability-type"}}</label>
                 <div class="flex gap-3 mt-1">
-                    <button
-                        type="button"
-                        class="availability-type-btn {{if this.isAvailable 'is-selected-available' 'is-unselected'}}"
-                        {{on "click" (fn this.toggleAvailability true)}}
-                    >
+                    <button type="button" class="availability-type-btn {{if this.isAvailable 'is-selected-available' 'is-unselected'}}" {{on "click" (fn this.toggleAvailability true)}}>
                         <FaIcon @icon="circle-check" />
                         {{t "scheduler.available"}}
                     </button>
@@ -29,44 +25,24 @@
             <div class="grid grid-cols-2 gap-4">
                 <div class="input-group">
                     <label>{{t "scheduler.start-date"}}</label>
-                    <DateTimeInput
-                        @value={{@options.startAt}}
-                        @onChange={{this.updateStartAt}}
-                        placeholder={{t "scheduler.select-start-date"}}
-                        class="w-full form-input"
-                    />
+                    <DateTimeInput @value={{@options.startAt}} @onChange={{this.updateStartAt}} placeholder={{t "scheduler.select-start-date"}} class="w-full form-input" />
                 </div>
                 <div class="input-group">
                     <label>{{t "scheduler.end-date"}}</label>
-                    <DateTimeInput
-                        @value={{@options.endAt}}
-                        @onChange={{this.updateEndAt}}
-                        placeholder={{t "scheduler.select-end-date"}}
-                        class="w-full form-input"
-                    />
+                    <DateTimeInput @value={{@options.endAt}} @onChange={{this.updateEndAt}} placeholder={{t "scheduler.select-end-date"}} class="w-full form-input" />
                 </div>
             </div>
 
             {{! Reason }}
             <div class="input-group">
                 <label>{{t "scheduler.reason"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
-                <Input
-                    @value={{@options.reason}}
-                    @type="text"
-                    placeholder={{t "scheduler.reason-placeholder"}}
-                    class="w-full form-input"
-                />
+                <Input @value={{@options.reason}} @type="text" placeholder={{t "scheduler.reason-placeholder"}} class="w-full form-input" />
             </div>
 
             {{! Notes }}
             <div class="input-group">
                 <label>{{t "common.notes"}}</label>
-                <Textarea
-                    @value={{@options.notes}}
-                    placeholder={{t "scheduler.notes-placeholder"}}
-                    class="w-full form-input"
-                    rows="3"
-                />
+                <Textarea @value={{@options.notes}} placeholder={{t "scheduler.notes-placeholder"}} class="w-full form-input" rows="3" />
             </div>
 
         </div>

@@ -7,22 +7,10 @@
                 Work Order Details
             </div>
             <InputGroup @name="Code">
-                <Input
-                    @value={{@resource.code}}
-                    @type="text"
-                    class="w-full form-input"
-                    placeholder="Auto-generated if left blank"
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.code}} @type="text" class="w-full form-input" placeholder="Auto-generated if left blank" disabled={{cannot-write @resource}} />
             </InputGroup>
             <InputGroup @name="Subject" @wrapperClass="col-span-2">
-                <Input
-                    @value={{@resource.subject}}
-                    @type="text"
-                    class="w-full form-input"
-                    placeholder="Brief description of the work order"
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.subject}} @type="text" class="w-full form-input" placeholder="Brief description of the work order" disabled={{cannot-write @resource}} />
             </InputGroup>
 
             {{! Status & Priority }}
@@ -190,73 +178,58 @@
 
     {{! ===== COMPLETION DATA (shown when status = closed) ===== }}
     {{#if this.isCompleting}}
-    <ContentPanel @title="Completion Details" @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
-            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
-                Record what was actually done — this will auto-create a Maintenance History entry.
+        <ContentPanel @title="Completion Details" @open={{true}} @wrapperClass="bordered-top">
+            <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+                <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                    Record what was actually done — this will auto-create a Maintenance History entry.
+                </div>
+
+                <InputGroup @name="Odometer at Completion (km)">
+                    <Input
+                        @value={{this.completionOdometer}}
+                        @type="number"
+                        class="w-full form-input"
+                        placeholder="e.g. 47250"
+                        {{on "input" (fn this.setCompletionOdometer this.completionOdometer)}}
+                        {{on "change" (fn this.setCompletionOdometer this.completionOdometer)}}
+                    />
+                </InputGroup>
+
+                <InputGroup @name="Engine Hours at Completion">
+                    <Input
+                        @value={{this.completionEngineHours}}
+                        @type="number"
+                        class="w-full form-input"
+                        placeholder="e.g. 1420"
+                        {{on "input" (fn this.setCompletionEngineHours this.completionEngineHours)}}
+                        {{on "change" (fn this.setCompletionEngineHours this.completionEngineHours)}}
+                    />
+                </InputGroup>
+
+                <InputGroup @name="Labour Cost">
+                    <MoneyInput @value={{this.completionLaborCost}} @currency={{or @resource.currency "USD"}} @disabled={{false}} @onChange={{this.setCompletionLaborCost}} />
+                </InputGroup>
+
+                <InputGroup @name="Parts Cost">
+                    <MoneyInput @value={{this.completionPartsCost}} @currency={{or @resource.currency "USD"}} @disabled={{false}} @onChange={{this.setCompletionPartsCost}} />
+                </InputGroup>
+
+                <InputGroup @name="Tax">
+                    <MoneyInput @value={{this.completionTax}} @currency={{or @resource.currency "USD"}} @disabled={{false}} @onChange={{this.setCompletionTax}} />
+                </InputGroup>
+
+                <InputGroup @name="Completion Notes" @wrapperClass="col-span-2">
+                    <Textarea
+                        @value={{this.completionNotes}}
+                        class="w-full form-input"
+                        rows="3"
+                        placeholder="Notes on what was done, parts replaced, observations..."
+                        {{on "input" (fn this.setCompletionNotes this.completionNotes)}}
+                        {{on "change" (fn this.setCompletionNotes this.completionNotes)}}
+                    />
+                </InputGroup>
             </div>
-
-            <InputGroup @name="Odometer at Completion (km)">
-                <Input
-                    @value={{this.completionOdometer}}
-                    @type="number"
-                    class="w-full form-input"
-                    placeholder="e.g. 47250"
-                    {{on "input" (fn this.setCompletionOdometer this.completionOdometer)}}
-                    {{on "change" (fn this.setCompletionOdometer this.completionOdometer)}}
-                />
-            </InputGroup>
-
-            <InputGroup @name="Engine Hours at Completion">
-                <Input
-                    @value={{this.completionEngineHours}}
-                    @type="number"
-                    class="w-full form-input"
-                    placeholder="e.g. 1420"
-                    {{on "input" (fn this.setCompletionEngineHours this.completionEngineHours)}}
-                    {{on "change" (fn this.setCompletionEngineHours this.completionEngineHours)}}
-                />
-            </InputGroup>
-
-            <InputGroup @name="Labour Cost">
-                <MoneyInput
-                    @value={{this.completionLaborCost}}
-                    @currency={{or @resource.currency "USD"}}
-                    @disabled={{false}}
-                    @onChange={{this.setCompletionLaborCost}}
-                />
-            </InputGroup>
-
-            <InputGroup @name="Parts Cost">
-                <MoneyInput
-                    @value={{this.completionPartsCost}}
-                    @currency={{or @resource.currency "USD"}}
-                    @disabled={{false}}
-                    @onChange={{this.setCompletionPartsCost}}
-                />
-            </InputGroup>
-
-            <InputGroup @name="Tax">
-                <MoneyInput
-                    @value={{this.completionTax}}
-                    @currency={{or @resource.currency "USD"}}
-                    @disabled={{false}}
-                    @onChange={{this.setCompletionTax}}
-                />
-            </InputGroup>
-
-            <InputGroup @name="Completion Notes" @wrapperClass="col-span-2">
-                <Textarea
-                    @value={{this.completionNotes}}
-                    class="w-full form-input"
-                    rows="3"
-                    placeholder="Notes on what was done, parts replaced, observations..."
-                    {{on "input" (fn this.setCompletionNotes this.completionNotes)}}
-                    {{on "change" (fn this.setCompletionNotes this.completionNotes)}}
-                />
-            </InputGroup>
-        </div>
-    </ContentPanel>
+        </ContentPanel>
     {{/if}}
 
     {{! ===== REGISTRY & METADATA ===== }}
