@@ -44,7 +44,7 @@ export default class OperationsSchedulerIndexController extends Controller {
     // UI State
     @tracked calendar = null;
     @tracked viewDate = new Date();
-    @tracked viewRange = 'day';
+    @tracked viewRange = 'week';
     @tracked searchQuery = '';
     @tracked activeFilters = [];
     @tracked selectedOrderIds = new Set();

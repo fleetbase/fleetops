@@ -1263,6 +1263,8 @@ scheduler:
     bulk-assign: Assign {count} orders
     bulk-assign-title: Bulk Assign {count} Orders
     bulk-assign-success: "{count} orders assigned successfully."
+    bulk-assign-order-count: "{count} orders selected for assignment"
+    bulk-assign-spacing-hint: Orders will be scheduled sequentially starting from the selected date and time, spaced by estimated duration.
     assign-to-driver: Assign to Driver
     assign-orders: Assign Orders
     orders-to-assign: "{count} orders to assign"
