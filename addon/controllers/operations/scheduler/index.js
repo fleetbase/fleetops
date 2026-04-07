@@ -9,6 +9,7 @@ import isObject from '@fleetbase/ember-core/utils/is-object';
 import isJson from '@fleetbase/ember-core/utils/is-json';
 import createFullCalendarEventFromOrder from '../../../utils/create-full-calendar-event-from-order';
 import createFullCalendarEventFromScheduleItem from '../../../utils/create-full-calendar-event-from-schedule-item';
+import toCalendarDate from '../../../utils/to-calendar-date';
 
 /**
  * OperationsSchedulerIndexController
@@ -19,6 +20,25 @@ import createFullCalendarEventFromScheduleItem from '../../../utils/create-full-
  * Calendar library: @event-calendar/core (MIT licensed).
  * This replaces FullCalendar Premium resource-timeline plugins which are
  * incompatible with Fleetbase's dual AGPL v3 / commercial license.
+ *
+ * Timezone handling
+ * -----------------
+ * @event-calendar/core has no timezone support — it reads the browser-local
+ * fields of any Date and positions events at that wall-clock time (see
+ * https://github.com/vkurko/calendar/issues/576).
+ *
+ * The solution (as recommended by the maintainer) is to convert all UTC dates
+ * to "fake local" Dates whose local fields equal the company wall-clock time
+ * before passing them to the calendar.  This is done via `toCalendarDate()`.
+ *
+ * The same conversion is applied to:
+ *   - Event start/end (order events and shift background blocks)
+ *   - The `now` option (current-time indicator position)
+ *   - The `date` option (which day is highlighted as "today")
+ *
+ * When the user drops or drags an event, the calendar returns a Date whose
+ * local fields equal the visible wall-clock time.  `_reinterpretDateInTimezone`
+ * converts that back to a true UTC instant for the API.
  *
  * Data flow:
  *   Route -> store.query() -> Ember Data store
@@ -91,9 +111,10 @@ export default class OperationsSchedulerIndexController extends Controller {
 
     @computed('allActiveOrders.@each.{scheduled_at,driver_assigned_uuid,status}', 'currentUser.company.timezone')
     get calendarEvents() {
+        const tz = this.companyTimezone;
         return this.allActiveOrders
             .filter((o) => !isNone(o.scheduled_at) && isValidDate(new Date(o.scheduled_at)))
-            .map((o) => createFullCalendarEventFromOrder(o));
+            .map((o) => createFullCalendarEventFromOrder(o, tz));
     }
 
     @computed('drivers.[]', 'allActiveOrders.@each.{scheduled_at,driver_assigned_uuid}')
@@ -115,11 +136,12 @@ export default class OperationsSchedulerIndexController extends Controller {
 
     @computed('drivers.@each.currentShift', 'currentUser.company.timezone')
     get backgroundEvents() {
+        const tz = this.companyTimezone;
         const events = [];
         this.drivers.forEach((driver) => {
             const shift = driver.currentShift;
             if (shift) {
-                events.push(createFullCalendarEventFromScheduleItem(shift, driver, {
+                events.push(createFullCalendarEventFromScheduleItem(shift, driver, tz, {
                     display: 'background',
                     backgroundColor: 'rgba(99, 102, 241, 0.08)',
                     borderColor: 'rgba(99, 102, 241, 0.25)',
@@ -166,55 +188,31 @@ export default class OperationsSchedulerIndexController extends Controller {
     }
 
     /**
-     * UTC offset in minutes for the company timezone.
-     * Passed to @event-calendar/core as `timezoneOffsetMins` (backport of
-     * https://github.com/vkurko/calendar/pull/629, applied via ember-ui patch).
-     *
-     * The library adds this offset to every event's internal UTC wall-clock
-     * values after loading, and also to `now`/`today`, so that the timeline
-     * displays in the correct timezone regardless of the browser's local timezone.
-     *
-     * Example: Asia/Singapore (UTC+8) → 480
-     *          America/New_York (UTC-4 EDT) → -240
-     *
-     * @returns {number}
-     */
-    get companyTimezoneOffsetMins() {
-        const tz = this.companyTimezone;
-        try {
-            // Use a known reference time to compute the offset.
-            const now = new Date();
-            const parts = new Intl.DateTimeFormat('en-US', {
-                timeZone: tz,
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-                hour12: false,
-            }).formatToParts(now);
-            const get = (type) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
-            const h = get('hour') % 24;
-            const localMs = Date.UTC(get('year'), get('month') - 1, get('day'), h, get('minute'), get('second'));
-            return Math.round((localMs - now.getTime()) / 60000) || 0;
-        } catch {
-            return 0;
-        }
-    }
-
-    /**
      * Options passed to the EventCalendar @options arg.
-     * Uses the timezoneOffsetMins backport so the library handles all timezone
-     * shifting internally — no manual date manipulation needed in the controller.
+     * These control display formatting only — timezone conversion is handled
+     * by toCalendarDate() before events reach the calendar.
      *
      * @returns {object}
      */
     @computed('currentUser.company.timezone')
-    get calendarTimezoneOptions() {
-        console.log('Company timezone:', this.companyTimezone, 'Offset (mins):', this.companyTimezoneOffsetMins);
+    get calendarOptions() {
         return {
-            timezoneOffsetMins: this.companyTimezoneOffsetMins,
             slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
             eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
             dayHeaderFormat: { weekday: 'short', month: 'numeric', day: 'numeric' },
         };
+    }
+
+    /**
+     * The current moment expressed as a "fake local" Date in the company
+     * timezone.  Passed to the calendar as the `now` option so that the
+     * current-time indicator appears at the correct position on the timeline.
+     *
+     * @returns {Date}
+     */
+    @computed('currentUser.company.timezone')
+    get calendarNow() {
+        return toCalendarDate(new Date(), this.companyTimezone);
     }
 
     /** Full 24-hour day visible on the timeline. */
@@ -409,6 +407,11 @@ export default class OperationsSchedulerIndexController extends Controller {
      * Uses calendar.dateFromPoint(x, y) to resolve the target date and resource
      * from the drop coordinates — this is the @event-calendar/core equivalent
      * of FullCalendar's onDrop / eventReceive callback.
+     *
+     * dateFromPoint() returns a Date whose LOCAL fields equal the wall-clock
+     * time the user sees on screen (because the calendar stored the "fake local"
+     * dates we passed in, and returns them the same way).  We reinterpret those
+     * local fields as a true UTC instant using the company timezone.
      */
     @action async onCalendarDrop(event) {
         event.preventDefault();
@@ -428,19 +431,14 @@ export default class OperationsSchedulerIndexController extends Controller {
         const savedScrollLeft = ecMain ? ecMain.scrollLeft : 0;
         const savedScrollTop = ecMain ? ecMain.scrollTop : 0;
 
-         // Resolve drop position to a date + resource using EventCalendar's API.
+        // Resolve drop position to a date + resource using EventCalendar's API.
         const dropInfo = this.calendar.dateFromPoint(event.clientX, event.clientY);
         if (!dropInfo) return;
         const { date, resource } = dropInfo;
         const driverId = resource?.id ?? null;
-        // Use the exact drop date so the event lands where the user dropped it.
-        // findBestFit is only used when no specific time can be resolved.
-        //
-        // @event-calendar/core stores dates as UTC wall-clock values: the UTC
-        // fields of the returned Date match the time the user sees on screen.
-        // When the calendar is displaying in the company timezone (via
-        // calendarTimezoneOptions), the UTC fields represent company-local time.
-        // We reinterpret them as a true UTC instant by using the company timezone.
+
+        // dateFromPoint() returns a Date whose local fields equal the wall-clock
+        // time visible on screen.  Convert to a true UTC instant for the API.
         const scheduledAt = date ? this._reinterpretDateInTimezone(date, this.companyTimezone) : new Date();
 
         const result = await this.scheduling.assignOrder(order, driverId, scheduledAt);
@@ -509,6 +507,7 @@ export default class OperationsSchedulerIndexController extends Controller {
             this._orderRevision += 1;
         }
     }
+
     // -------------------------------------------------------------------------
     // Event Click
     // -------------------------------------------------------------------------
@@ -776,7 +775,8 @@ export default class OperationsSchedulerIndexController extends Controller {
      *   calendar.prev() / calendar.next()    are identical in both libraries
      */
     @action goToToday() {
-        this.viewDate = new Date();
+        // Use the company-local "today" so the calendar highlights the correct day.
+        this.viewDate = toCalendarDate(new Date(), this.companyTimezone);
         this.calendar?.setOption('date', this.viewDate);
     }
 
@@ -857,36 +857,29 @@ export default class OperationsSchedulerIndexController extends Controller {
     // -------------------------------------------------------------------------
 
     /**
-     * Reinterprets a Date whose *local* fields represent a wall-clock time in
-     * `timezone` and returns the correct UTC instant for that moment.
+     * Converts a Date whose **local** fields represent a wall-clock time back
+     * into the correct UTC instant for that moment in the given timezone.
      *
-     * @event-calendar/core stores all dates as UTC wall-clock values: when you
-     * call `dateFromPoint()` the returned Date's UTC fields (getUTCHours, etc.)
-     * match exactly what the user sees on the timeline.  When the calendar is
-     * configured to display in the company timezone (via `calendarTimezoneOptions`)
-     * those UTC fields represent company-local time, not true UTC.
+     * This is the inverse of toCalendarDate().
      *
-     * This helper converts them to the correct UTC instant so that the ISO
-     * string sent to the API is accurate.
+     * When the calendar returns a Date from dateFromPoint() or an eventDrop
+     * callback, its local fields equal the wall-clock time the user sees on
+     * screen (because we passed "fake local" Dates in and the library echoes
+     * them back the same way).  We must convert those local fields to a true
+     * UTC instant before sending to the API.
      *
-     * Example: drop at 14:00 visible on screen (Singapore, UTC+8)
-     *   `date` from dateFromPoint → local fields = 14:00, UTC fields = 14:00
-     *   Intl tells us 14:00 SGT = 06:00 UTC
-     *   → returns a Date whose getUTCHours() === 6
+     * Example: user drops at 22:30 on Apr 6 (visible on screen, SGT)
+     *   date.getHours() === 22, date.getDate() === 6
+     *   → returns a Date whose getUTCHours() === 14 (22:30 SGT = 14:30 UTC)
      *
-     * @param {Date}   date      The Date returned by dateFromPoint()
-     * @param {string} timezone  IANA timezone string, e.g. 'Asia/Singapore'
+     * @param {Date}   date      The Date returned by dateFromPoint() or eventDrop.
+     * @param {string} timezone  IANA timezone string, e.g. 'Asia/Singapore'.
      * @returns {Date}
      */
     _reinterpretDateInTimezone(date, timezone) {
         try {
-            // dateFromPoint() returns toLocalDate(internalDate), which copies
-            // the internal UTC wall-clock fields into the Date's LOCAL fields.
-            // So the LOCAL fields hold the wall-clock time the user sees on
-            // screen.  We must read LOCAL fields here, not UTC fields.
-            //
-            // (The UTC fields of the returned Date depend on the browser's
-            // timezone and are not meaningful for our purposes.)
+            // Read the local fields — these hold the wall-clock time the user
+            // sees on screen.
             const y = date.getFullYear();
             const mo = date.getMonth() + 1;
             const d = date.getDate();
@@ -894,14 +887,10 @@ export default class OperationsSchedulerIndexController extends Controller {
             const mi = date.getMinutes();
             const s = date.getSeconds();
 
-            // Build an ISO-like string and ask Intl what UTC offset applies in
-            // the target timezone at that wall-clock moment.
+            // Build a UTC probe at the same wall-clock instant and ask Intl
+            // what offset the target timezone applies at that moment.
             const wallClock = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-
-            // Use Intl.DateTimeFormat to find the UTC offset for this timezone.
-            // We format a known UTC time and compare it to the wall-clock time
-            // to derive the offset in minutes.
-            const probe = new Date(`${wallClock}Z`); // treat as UTC first
+            const probe = new Date(`${wallClock}Z`);
             const parts = new Intl.DateTimeFormat('en-US', {
                 timeZone: timezone,
                 year: 'numeric', month: '2-digit', day: '2-digit',
@@ -910,22 +899,13 @@ export default class OperationsSchedulerIndexController extends Controller {
             }).formatToParts(probe);
 
             const get = (type) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
-            const tzYear = get('year');
-            const tzMonth = get('month') - 1;
-            const tzDay = get('day');
-            const tzHour = get('hour') % 24; // hour12:false can return 24 for midnight
-            const tzMin = get('minute');
-            const tzSec = get('second');
-
-            // Offset = UTC time - timezone local time (in ms)
-            const probeLocal = Date.UTC(tzYear, tzMonth, tzDay, tzHour, tzMin, tzSec);
+            const tzHour = get('hour') % 24;
+            const probeLocal = Date.UTC(get('year'), get('month') - 1, get('day'), tzHour, get('minute'), get('second'));
             const offsetMs = probe.getTime() - probeLocal;
 
-            // Apply the offset to the wall-clock instant
             const wallMs = Date.UTC(y, mo - 1, d, h, mi, s);
             return new Date(wallMs + offsetMs);
         } catch {
-            // Fallback: return the date unchanged if Intl is unavailable
             return date;
         }
     }
