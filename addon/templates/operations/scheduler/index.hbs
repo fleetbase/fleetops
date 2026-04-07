@@ -138,9 +138,21 @@
         >
             <EventCalendar
                 @view={{this.currentCalendarView}}
+                @date={{this.viewDate}}
                 @events={{this.allCalendarEvents}}
                 @resources={{this.calendarResources}}
+                @editable={{true}}
+                @slotMinTime={{this.calendarSlotMinTime}}
+                @slotMaxTime={{this.calendarSlotMaxTime}}
+                @slotWidth={{80}}
+                @height="100%"
+                @headerToolbar={{this.calendarHeaderToolbar}}
+                @resourceLabelContent={{this.renderResourceLabel}}
+                @eventContent={{this.renderEventContent}}
+                @onEventDrop={{this.rescheduleEventFromDrag}}
+                @onEventClick={{this.viewOrderAsEvent}}
                 @onCalendarReady={{this.setCalendarApi}}
+                @options={{this.calendarOptions}}
             />
         </div>
     </div>
