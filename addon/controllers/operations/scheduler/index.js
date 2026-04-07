@@ -65,29 +65,14 @@ export default class OperationsSchedulerIndexController extends Controller {
 
     @computed('_orderRevision', 'store', 'viewDate')
     get allActiveOrders() {
-        // Compare dates in the company timezone so that an order at 18:45 SGT
-        // (10:45 UTC) is counted as an April 6 order when the company is
-        // Asia/Singapore, not April 5.
-        //
-        // viewDate is a Date whose UTC fields equal the company-local date
-        // (set by todayInCompanyTimezone / goToToday).  We extract the UTC
-        // date string from it for comparison.
-        //
-        // _toCalendarDate() returns a plain ISO string ("YYYY-MM-DDTHH:mm:ss").
-        // We compare just the date part (first 10 chars) against the viewDate's
-        // UTC date string to determine if the order falls on the viewed day.
-        const viewYear  = this.viewDate.getUTCFullYear();
-        const viewMonth = this.viewDate.getUTCMonth();
-        const viewDay   = this.viewDate.getUTCDate();
+        const tz = this.companyTimezone;
+        const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+        const viewDateStr = fmt.format(this.viewDate);
         const statuses = ['created', 'dispatched', 'active'];
         return this.store.peekAll('order').filter((order) => {
             if (!statuses.includes(order.status)) return false;
             if (!isNone(order.scheduled_at) && isValidDate(new Date(order.scheduled_at))) {
-                const iso = this._toCalendarDate(new Date(order.scheduled_at));
-                if (!iso) return false;
-                // Parse the date part of the ISO string directly
-                const [y, m, d] = iso.substring(0, 10).split('-').map(Number);
-                return y === viewYear && (m - 1) === viewMonth && d === viewDay;
+                return fmt.format(new Date(order.scheduled_at)) === viewDateStr;
             }
             return true;
         });
@@ -113,16 +98,7 @@ export default class OperationsSchedulerIndexController extends Controller {
     get calendarEvents() {
         return this.allActiveOrders
             .filter((o) => !isNone(o.scheduled_at) && isValidDate(new Date(o.scheduled_at)))
-            .map((o) => {
-                const event = createFullCalendarEventFromOrder(o);
-                // Shift start/end into the calendar's fake-UTC space so the
-                // event is positioned at the correct company-local time on screen.
-                return {
-                    ...event,
-                    start: this._toCalendarDate(event.start),
-                    end: this._toCalendarDate(event.end),
-                };
-            });
+            .map((o) => createFullCalendarEventFromOrder(o));
     }
 
     @computed('drivers.[]', 'allActiveOrders.@each.{scheduled_at,driver_assigned_uuid}')
@@ -148,17 +124,11 @@ export default class OperationsSchedulerIndexController extends Controller {
         this.drivers.forEach((driver) => {
             const shift = driver.currentShift;
             if (shift) {
-                const event = createFullCalendarEventFromScheduleItem(shift, driver, {
+                events.push(createFullCalendarEventFromScheduleItem(shift, driver, {
                     display: 'background',
                     backgroundColor: 'rgba(99, 102, 241, 0.08)',
                     borderColor: 'rgba(99, 102, 241, 0.25)',
-                });
-                // Shift start/end into the calendar's fake-UTC space.
-                events.push({
-                    ...event,
-                    start: this._toCalendarDate(event.start),
-                    end: this._toCalendarDate(event.end),
-                });
+                }));
             }
         });
         return events;
@@ -201,101 +171,60 @@ export default class OperationsSchedulerIndexController extends Controller {
     }
 
     /**
-     * Converts a true UTC Date into a plain ISO-8601 string (no trailing Z or
-     * offset) that represents the same wall-clock moment in the company timezone.
+     * UTC offset in minutes for the company timezone.
+     * Passed to @event-calendar/core as `timezoneOffsetMins` (backport of
+     * https://github.com/vkurko/calendar/pull/629, applied via ember-ui patch).
      *
-     * WHY A STRING, NOT A DATE OBJECT
-     * --------------------------------
-     * @event-calendar/core has two internal date constructors:
+     * The library adds this offset to every event's internal UTC wall-clock
+     * values after loading, and also to `now`/`today`, so that the timeline
+     * displays in the correct timezone regardless of the browser's local timezone.
      *
-     *   _fromLocalDate(jsDate)  — reads the browser's *local* time fields and
-     *                             stores them as UTC wall-clock values.
-     *   _fromISOString(str)     — parses the string as UTC directly, ignoring
-     *                             any timezone suffix.
+     * Example: Asia/Singapore (UTC+8) → 480
+     *          America/New_York (UTC-4 EDT) → -240
      *
-     * If we pass a JS Date the calendar calls _fromLocalDate(), which reads
-     * browser-local fields.  In an EDT browser (UTC-4) a 18:45 UTC Date has
-     * local fields = 14:45, so the calendar stores 14:45 — wrong.
-     *
-     * If we pass a plain ISO string (e.g. "2026-04-06T18:45:00") the calendar
-     * calls _fromISOString(), which stores 18:45 as UTC regardless of the
-     * browser timezone — correct.
-     *
-     * The slot labels use toLocalDate() before Intl formatting, which copies
-     * UTC fields into local fields.  Since we stored 18:45 as UTC, toLocalDate
-     * returns a Date whose local fields are 18:45, and Intl formats it as 18:45
-     * (no timeZone option needed — adding one would re-convert and break it).
-     *
-     * @param {Date|string|null} utcDate  A true UTC instant
-     * @returns {string|null}  e.g. "2026-04-06T18:45:00"
+     * @returns {number}
      */
-    _toCalendarDate(utcDate) {
-        if (!utcDate) return null;
-        const d = utcDate instanceof Date ? utcDate : new Date(utcDate);
-        if (isNaN(d.getTime())) return null;
+    get companyTimezoneOffsetMins() {
         const tz = this.companyTimezone;
         try {
+            // Use a known reference time to compute the offset.
+            const now = new Date();
             const parts = new Intl.DateTimeFormat('en-US', {
                 timeZone: tz,
                 year: 'numeric', month: '2-digit', day: '2-digit',
                 hour: '2-digit', minute: '2-digit', second: '2-digit',
                 hour12: false,
-            }).formatToParts(d);
-            const get = (type) => parts.find((p) => p.type === type)?.value ?? '00';
-            const h = String(parseInt(get('hour'), 10) % 24).padStart(2, '0');
-            return `${get('year')}-${get('month')}-${get('day')}T${h}:${get('minute')}:${get('second')}`;
+            }).formatToParts(now);
+            const get = (type) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
+            const h = get('hour') % 24;
+            const localMs = Date.UTC(get('year'), get('month') - 1, get('day'), h, get('minute'), get('second'));
+            return Math.round((localMs - now.getTime()) / 60000);
         } catch {
-            // Fallback: return an ISO string in UTC (better than null)
-            return d.toISOString().substring(0, 19);
+            return 0;
         }
     }
 
     /**
-     * Returns today's date in the company timezone as a plain JS Date whose
-     * UTC fields match the company-local calendar date (year/month/day).
-     * Used to initialise viewDate so the calendar opens on the correct day.
+     * Options passed to the EventCalendar @options arg.
+     * Uses the timezoneOffsetMins backport so the library handles all timezone
+     * shifting internally — no manual date manipulation needed in the controller.
      *
-     * We parse the ISO string returned by _toCalendarDate() so that the Date's
-     * UTC fields equal the company-local wall-clock fields — matching the
-     * internal representation @event-calendar/core uses for the `date` option.
-     *
-     * @returns {Date}
+     * @returns {object}
      */
-    get todayInCompanyTimezone() {
-        const iso = this._toCalendarDate(new Date());
-        if (!iso) return new Date();
-        // Parse as UTC so the Date's UTC fields = company-local wall-clock
-        return new Date(iso + 'Z');
-    }
-
     get calendarTimezoneOptions() {
         return {
-            // 24-hour format WITHOUT timeZone.
-            //
-            // @event-calendar/core calls toLocalDate() before passing to Intl,
-            // which copies the internal UTC fields into local fields.  Because
-            // we pre-encode events as company-local ISO strings, those UTC
-            // fields already equal the company-local wall-clock time.  Adding
-            // a timeZone option here would re-convert the local Date into that
-            // timezone, producing the wrong time in any browser not in UTC.
+            timezoneOffsetMins: this.companyTimezoneOffsetMins,
             slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
             eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
             dayHeaderFormat: { weekday: 'short', month: 'numeric', day: 'numeric' },
         };
     }
 
-    /**
-     * The visible time range for the timeline, expressed as company-local
-     * wall-clock HH:mm:ss strings.  These are passed directly to
-     * @event-calendar/core's slotMinTime / slotMaxTime options.
-     *
-     * Because events are now pre-shifted into the calendar's fake-UTC space
-     * by _toCalendarDate(), these strings represent the company-local time
-     * that the user sees on screen — no offset adjustment is needed here.
-     */
+    /** Full 24-hour day visible on the timeline. */
     get calendarSlotMinTime() {
         return '00:00:00';
     }
+
     get calendarSlotMaxTime() {
         return '24:00:00';
     }
@@ -850,7 +779,7 @@ export default class OperationsSchedulerIndexController extends Controller {
      *   calendar.prev() / calendar.next()    are identical in both libraries
      */
     @action goToToday() {
-        this.viewDate = this.todayInCompanyTimezone;
+        this.viewDate = new Date();
         this.calendar?.setOption('date', this.viewDate);
     }
 
