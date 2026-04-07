@@ -51,9 +51,13 @@ export default class OperationsSchedulerIndexRoute extends Route {
         // so we do not need to set them explicitly here.
         controller.set('drivers', model.drivers.toArray());
 
-        // Initialise viewDate to the current UTC instant.
-        // @event-calendar/core applies timezoneOffsetMins internally so the
-        // calendar opens on the correct company-local day automatically.
+        // Initialise viewDate to the current moment so the calendar opens on
+        // today.  The @date arg is only used for the initial render — subsequent
+        // navigation is handled imperatively via calendar.setOption('date', ...)
+        // in the controller's goToPrev / goToNext / goToToday actions.
+        // We do NOT re-apply @date on every re-render (it is excluded from the
+        // did-update watch list) to prevent stale dates from overwriting the
+        // user's current navigation position when events/resources reload.
         controller.set('viewDate', new Date());
 
         // Open SocketCluster subscriptions for real-time calendar updates.
