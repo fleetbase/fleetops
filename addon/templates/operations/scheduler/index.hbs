@@ -47,16 +47,6 @@
 
         <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
 
-        {{!-- Add Shift --}}
-        <Button
-            @type="default"
-            @text={{t "scheduler.add-shift"}}
-            @icon="plus"
-            @size="sm"
-            @onClick={{this.addDriverShift}}
-            @permission="fleet-ops update driver"
-        />
-
         {{!-- Bulk assign (visible only when orders are selected) --}}
         {{#if this.hasSelection}}
             <Button
