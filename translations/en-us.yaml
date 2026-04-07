@@ -52,6 +52,8 @@ common:
   schedule: Schedule
   optional: Optional
   unauthorized-access: You are not authorized to access this resource.
+  online: Online
+  refresh: Refresh
 
 menu:
   operations: Operations
@@ -93,6 +95,8 @@ menu:
   avatars: Avatars
   scheduling: Scheduling
   maintenances: Maintenances
+  allocation: Allocation
+  order-allocation: Order Allocation
 
 resource:
   asset: Asset
@@ -1927,3 +1931,35 @@ part:
     view: View Part
     edit: Edit Part
     delete: Delete Part
+
+allocation:
+  settings-title: Order Allocation Settings
+  engine-settings: Allocation Engine
+  active-engine: Active Allocation Engine
+  active-engine-help: Select which allocation engine is used to assign orders to drivers and vehicles.
+  auto-allocate-on-create: Auto-Allocate on Order Creation
+  auto-allocate-on-create-label: Automatically run allocation when a new order is created.
+  auto-reallocate-on-complete: Auto Re-Allocate on Delivery Completion
+  auto-reallocate-on-complete-label: Re-run allocation when a delivery is completed to fill freed capacity.
+  constraint-settings: Allocation Constraints
+  max-travel-time: Max Travel Time (seconds)
+  max-travel-time-help: Maximum travel time in seconds a driver may be assigned. Leave 0 for no limit.
+  balance-workload: Balance Workload
+  balance-workload-label: Distribute orders evenly across available drivers and vehicles.
+  settings-saved: Allocation settings saved.
+  workbench-title: Order Allocation Workbench
+  unassigned-orders: Unassigned Orders
+  no-unassigned-orders: No unassigned orders — all caught up!
+  available-vehicles: Available Vehicles
+  no-available-vehicles: No vehicles available right now.
+  run-allocation: Run Allocation
+  running: Running…
+  plan-ready: Plan ready — review and commit.
+  commit-plan: Commit Plan
+  discard-plan: Discard
+  committed: "Allocation committed — {count} order(s) assigned."
+  overridden: Overridden
+  on-shift: On Shift
+  empty-state-title: No allocation plan yet
+  empty-state-body: Click "Run Allocation" to generate an optimised assignment plan for unassigned orders.
+  unassigned-warning: Some orders could not be assigned — insufficient vehicle capacity or no drivers on shift.
