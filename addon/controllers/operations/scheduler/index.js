@@ -63,36 +63,14 @@ export default class OperationsSchedulerIndexController extends Controller {
     // Reactive Computed Getters
     // -------------------------------------------------------------------------
 
-    @computed('_orderRevision', 'store', 'viewDate', 'viewRange', 'currentUser.company.timezone')
+    @computed('_orderRevision', 'store')
     get allActiveOrders() {
-        const tz = this.companyTimezone;
-        const viewDate = this.viewDate ?? new Date();
-        const isWeek = this.viewRange === 'week';
-
-        // Compute the start/end of the visible window in company-local time.
-        // For day view: [viewDate 00:00, viewDate+1 00:00)
-        // For week view: [Monday 00:00, Monday+7 00:00)
-        const localDateStr = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
-        const parseLocalDate = (str) => { const [y, m, d] = str.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
-
-        // Find the Monday of the week containing viewDate (in company timezone)
-        const viewLocalStr = localDateStr(viewDate);
-        const viewUtcMidnight = parseLocalDate(viewLocalStr);
-        const dow = viewUtcMidnight.getUTCDay(); // 0=Sun, 1=Mon, ...
-        const daysToMonday = (dow === 0 ? -6 : 1 - dow);
-        const windowStart = isWeek ? new Date(viewUtcMidnight.getTime() + daysToMonday * 86400000) : viewUtcMidnight;
-        const windowEnd = new Date(windowStart.getTime() + (isWeek ? 7 : 1) * 86400000);
-
+        // Return all orders with an active status — no date window filtering.
+        // The calendar renders only what falls in the visible range; unscheduled
+        // orders appear in the sidebar panel. Past orders are kept for historical
+        // context and future orders are always visible regardless of current view.
         const statuses = ['created', 'dispatched', 'active'];
-        return this.store.peekAll('order').filter((order) => {
-            if (!statuses.includes(order.status)) return false;
-            if (!isNone(order.scheduled_at) && isValidDate(new Date(order.scheduled_at))) {
-                // Convert scheduled_at to a UTC-midnight date in company timezone for comparison
-                const scheduledUtcMidnight = parseLocalDate(localDateStr(new Date(order.scheduled_at)));
-                return scheduledUtcMidnight >= windowStart && scheduledUtcMidnight < windowEnd;
-            }
-            return true;
-        });
+        return this.store.peekAll('order').filter((order) => statuses.includes(order.status));
     }
 
     @computed('allActiveOrders.@each.scheduled_at', 'searchQuery', 'activeFilters.[]')
