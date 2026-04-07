@@ -345,9 +345,10 @@ export default class OperationsSchedulerIndexController extends Controller {
      */
     @action setCalendarApi(calendar) {
         this.calendar = calendar;
-        // DEBUG
-        const now = new Date();
-        console.log('[Scheduler] setCalendarApi() — viewDate:', this.viewDate, '| companyTimezone:', this.companyTimezone, '| new Date():', now, '| getDate():', now.getDate(), '| getHours():', now.getHours(), '| getUTCDate():', now.getUTCDate(), '| getUTCHours():', now.getUTCHours());
+        // Navigate to today immediately after the calendar is ready.
+        // This ensures the correct date is shown regardless of any stale
+        // viewDate that may have been set before the calendar was mounted.
+        this.calendar.setOption('date', new Date());
     }
 
     // -------------------------------------------------------------------------
