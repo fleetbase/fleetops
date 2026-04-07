@@ -94,7 +94,7 @@ export default class OperationsSchedulerIndexController extends Controller {
         return orders;
     }
 
-    @computed('allActiveOrders.@each.{scheduled_at,driver_assigned_uuid,status}')
+    @computed('allActiveOrders.@each.{scheduled_at,driver_assigned_uuid,status}', 'currentUser.company.timezone')
     get calendarEvents() {
         return this.allActiveOrders
             .filter((o) => !isNone(o.scheduled_at) && isValidDate(new Date(o.scheduled_at)))
@@ -118,7 +118,7 @@ export default class OperationsSchedulerIndexController extends Controller {
         });
     }
 
-    @computed('drivers.@each.currentShift')
+    @computed('drivers.@each.currentShift', 'currentUser.company.timezone')
     get backgroundEvents() {
         const events = [];
         this.drivers.forEach((driver) => {
@@ -198,7 +198,7 @@ export default class OperationsSchedulerIndexController extends Controller {
             const get = (type) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
             const h = get('hour') % 24;
             const localMs = Date.UTC(get('year'), get('month') - 1, get('day'), h, get('minute'), get('second'));
-            return Math.round((localMs - now.getTime()) / 60000);
+            return Math.round((localMs - now.getTime()) / 60000) || 0;
         } catch {
             return 0;
         }
@@ -211,6 +211,7 @@ export default class OperationsSchedulerIndexController extends Controller {
      *
      * @returns {object}
      */
+    @computed('currentUser.company.timezone')
     get calendarTimezoneOptions() {
         return {
             timezoneOffsetMins: this.companyTimezoneOffsetMins,
