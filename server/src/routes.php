@@ -532,6 +532,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('routing-settings', 'SettingController@saveRoutingSettings');
                                         $router->get('scheduling-settings', 'SettingController@getSchedulingSettings');
                                         $router->post('scheduling-settings', 'SettingController@saveSchedulingSettings');
+                                        $router->get('allocation-settings', 'SettingController@getAllocationSettings');
+                                        $router->post('allocation-settings', 'SettingController@saveAllocationSettings');
                                     }
                                 );
                                 $router->group(
@@ -547,8 +549,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('commit', 'AllocationController@commit');
                                         $router->get('preview', 'AllocationController@preview');
                                         $router->get('engines', 'AllocationController@engines');
-                                        $router->get('settings', 'AllocationController@getSettings');
-                                        $router->patch('settings', 'AllocationController@saveSettings');
                                     }
                                 );
                             }

@@ -252,4 +252,44 @@ class SettingController extends Controller
 
         return response()->json($settings);
     }
+
+    /**
+     * Retrieve order allocation settings for the current company.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAllocationSettings()
+    {
+        $defaults = [
+            'allocation_engine'           => 'vroom',
+            'auto_allocate_on_create'     => false,
+            'auto_reallocate_on_complete' => false,
+            'max_travel_time_seconds'     => 3600,
+            'balance_workload'            => false,
+        ];
+        $settings = Setting::lookupFromCompany('fleet-ops.allocation-settings', $defaults);
+
+        return response()->json($settings);
+    }
+
+    /**
+     * Save order allocation settings for the current company.
+     *
+     * @param Request $request
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveAllocationSettings(Request $request)
+    {
+        $settings = [
+            'allocation_engine'           => $request->input('allocation_engine', 'vroom'),
+            'auto_allocate_on_create'     => (bool) $request->input('auto_allocate_on_create', false),
+            'auto_reallocate_on_complete' => (bool) $request->input('auto_reallocate_on_complete', false),
+            'max_travel_time_seconds'     => (int) $request->input('max_travel_time_seconds', 3600),
+            'balance_workload'            => (bool) $request->input('balance_workload', false),
+        ];
+        Setting::configureCompany('fleet-ops.allocation-settings', $settings);
+
+        return response()->json($settings);
+    }
 }

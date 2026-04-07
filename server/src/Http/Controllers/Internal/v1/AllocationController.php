@@ -3,10 +3,10 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Allocation\AllocationEngineRegistry;
-use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,11 +26,10 @@ use Illuminate\Support\Facades\DB;
  *   GET    /int/v1/fleet-ops/allocation/settings      — get allocation settings
  *   PATCH  /int/v1/fleet-ops/allocation/settings      — save allocation settings
  */
-class AllocationController extends FleetOpsController
+class AllocationController extends Controller
 {
     public function __construct(protected AllocationEngineRegistry $registry)
     {
-        parent::__construct();
     }
 
     /**

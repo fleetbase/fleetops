@@ -16,7 +16,6 @@ export default class SettingsOrderAllocationController extends Controller {
     @service notifications;
     @service intl;
     @service('allocation-engine') engineRegistry;
-    @service('order-allocation') allocationService;
 
     @tracked allocationEngine = 'vroom';
     @tracked autoAllocateOnCreate = false;
@@ -37,7 +36,7 @@ export default class SettingsOrderAllocationController extends Controller {
     @task *loadSettings() {
         this.isLoading = true;
         try {
-            const settings = yield this.fetch.get('fleet-ops/allocation/settings');
+            const settings = yield this.fetch.get('fleet-ops/settings/allocation-settings');
             this.allocationEngine           = settings.allocation_engine ?? 'vroom';
             this.autoAllocateOnCreate       = settings.auto_allocate_on_create ?? false;
             this.autoReallocateOnComplete   = settings.auto_reallocate_on_complete ?? false;
@@ -52,7 +51,7 @@ export default class SettingsOrderAllocationController extends Controller {
 
     @task *saveSettings() {
         try {
-            yield this.fetch.patch('fleet-ops/allocation/settings', {
+            yield this.fetch.post('fleet-ops/settings/allocation-settings', {
                 allocation_engine:           this.allocationEngine,
                 auto_allocate_on_create:     this.autoAllocateOnCreate,
                 auto_reallocate_on_complete: this.autoReallocateOnComplete,
