@@ -63,19 +63,14 @@ export default class OperationsSchedulerIndexController extends Controller {
     // Reactive Computed Getters
     // -------------------------------------------------------------------------
 
-    @computed('_orderRevision', 'store', 'viewDate')
+    @computed('_orderRevision', 'store')
     get allActiveOrders() {
-        const tz = this.companyTimezone;
-        const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
-        const viewDateStr = fmt.format(this.viewDate);
+        // Return all orders with an active status — no date window filtering.
+        // The calendar renders only what falls in the visible range; unscheduled
+        // orders appear in the sidebar panel. Past orders are kept for historical
+        // context and future orders are always visible regardless of current view.
         const statuses = ['created', 'dispatched', 'active'];
-        return this.store.peekAll('order').filter((order) => {
-            if (!statuses.includes(order.status)) return false;
-            if (!isNone(order.scheduled_at) && isValidDate(new Date(order.scheduled_at))) {
-                return fmt.format(new Date(order.scheduled_at)) === viewDateStr;
-            }
-            return true;
-        });
+        return this.store.peekAll('order').filter((order) => statuses.includes(order.status));
     }
 
     @computed('allActiveOrders.@each.scheduled_at', 'searchQuery', 'activeFilters.[]')
