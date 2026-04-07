@@ -212,6 +212,7 @@ export default class OperationsSchedulerIndexController extends Controller {
      * @returns {object}
      */
     get calendarTimezoneOptions() {
+        console.log('Company timezone:', this.companyTimezone, 'Offset (mins):', this.companyTimezoneOffsetMins);
         return {
             timezoneOffsetMins: this.companyTimezoneOffsetMins,
             slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
