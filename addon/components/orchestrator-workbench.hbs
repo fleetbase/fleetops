@@ -1,19 +1,19 @@
 {{! Dispatcher Workbench — Intelligent Order Allocation Engine }}
-<div class="order-allocation-workbench flex flex-col h-full">
+<div class="orchestrator-workbench flex flex-col h-full">
 
     {{! ── Toolbar ── }}
     <div class="workbench-toolbar flex items-center justify-between px-4 py-3 border-b dark:border-gray-700">
         <div class="flex items-center space-x-2">
-            <h2 class="text-sm font-semibold dark:text-white">{{t "allocation.workbench-title"}}</h2>
+            <h2 class="text-sm font-semibold dark:text-white">{{t "orchestrator.workbench-title"}}</h2>
             {{#if this.hasProposedPlan}}
-                <Badge @status="info" @label={{t "allocation.plan-ready"}} />
+                <Badge @status="info" @label={{t "orchestrator.plan-ready"}} />
             {{/if}}
         </div>
         <div class="flex items-center space-x-2">
             {{#if this.hasProposedPlan}}
                 <Button
                     @icon="check"
-                    @text={{t "allocation.commit-plan"}}
+                    @text={{t "orchestrator.commit-plan"}}
                     @type="success"
                     @size="sm"
                     @isLoading={{this.commitPlan.isRunning}}
@@ -21,7 +21,7 @@
                 />
                 <Button
                     @icon="times"
-                    @text={{t "allocation.discard-plan"}}
+                    @text={{t "orchestrator.discard-plan"}}
                     @type="default"
                     @size="sm"
                     {{on "click" this.discardPlan}}
@@ -29,7 +29,7 @@
             {{else}}
                 <Button
                     @icon="bolt"
-                    @text={{t "allocation.run-allocation"}}
+                    @text={{t "orchestrator.run-allocation"}}
                     @type="primary"
                     @size="sm"
                     @isLoading={{this.runAllocation.isRunning}}
@@ -54,7 +54,7 @@
         <div class="order-bucket w-72 flex-shrink-0 border-r dark:border-gray-700 overflow-y-auto">
             <div class="px-3 py-2 border-b dark:border-gray-700">
                 <span class="text-xs font-medium uppercase tracking-wide dark:text-gray-400">
-                    {{t "allocation.unassigned-orders"}} ({{this.unassignedOrders.length}})
+                    {{t "orchestrator.unassigned-orders"}} ({{this.unassignedOrders.length}})
                 </span>
             </div>
             {{#if this.loadUnassignedOrders.isRunning}}
@@ -78,7 +78,7 @@
             {{else}}
                 <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
                     <FaIcon @icon="check-circle" @size="2x" class="mb-2 text-green-400" />
-                    {{t "allocation.no-unassigned-orders"}}
+                    {{t "orchestrator.no-unassigned-orders"}}
                 </div>
             {{/if}}
         </div>
@@ -88,7 +88,7 @@
             {{#if this.runAllocation.isRunning}}
                 <div class="flex flex-col items-center justify-center h-full text-gray-400">
                     <Spinner @size="lg" class="mb-3" />
-                    <span class="text-sm">{{t "allocation.running"}}</span>
+                    <span class="text-sm">{{t "orchestrator.running"}}</span>
                 </div>
             {{else if this.hasProposedPlan}}
 
@@ -96,7 +96,7 @@
                 {{#if this.hasUnassigned}}
                     <div class="mx-4 mt-3 px-3 py-2 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-400 text-xs">
                         <FaIcon @icon="exclamation-triangle" />
-                        {{t "allocation.unassigned-warning" count=this.unassignedAfterRun.length}}
+                        {{t "orchestrator.unassigned-warning" count=this.unassignedAfterRun.length}}
                     </div>
                 {{/if}}
 
@@ -121,7 +121,7 @@
                             {{#if group.driver.activeShift}}
                                 <Badge
                                     @status="success"
-                                    @label={{t "allocation.on-shift"}}
+                                    @label={{t "orchestrator.on-shift"}}
                                     class="ml-2"
                                 />
                             {{/if}}
@@ -143,7 +143,7 @@
                                     <span class="text-gray-400 w-5 text-center mr-2">{{item.sequence}}</span>
                                     <span class="flex-1 dark:text-white truncate">{{item.order.public_id}}</span>
                                     {{#if item._overridden}}
-                                        <Badge @status="warning" @label={{t "allocation.overridden"}} />
+                                        <Badge @status="warning" @label={{t "orchestrator.overridden"}} />
                                     {{/if}}
                                 </div>
                             {{/each}}
@@ -156,8 +156,8 @@
                 {{! Empty state — no plan yet }}
                 <div class="flex flex-col items-center justify-center h-full text-gray-400">
                     <FaIcon @icon="route" @size="3x" class="mb-4 opacity-30" />
-                    <p class="text-sm font-medium mb-1">{{t "allocation.empty-state-title"}}</p>
-                    <p class="text-xs text-center max-w-xs">{{t "allocation.empty-state-body"}}</p>
+                    <p class="text-sm font-medium mb-1">{{t "orchestrator.empty-state-title"}}</p>
+                    <p class="text-xs text-center max-w-xs">{{t "orchestrator.empty-state-body"}}</p>
                 </div>
 
             {{/if}}
@@ -167,7 +167,7 @@
         <div class="vehicle-bucket w-72 flex-shrink-0 border-l dark:border-gray-700 overflow-y-auto">
             <div class="px-3 py-2 border-b dark:border-gray-700">
                 <span class="text-xs font-medium uppercase tracking-wide dark:text-gray-400">
-                    {{t "allocation.available-vehicles"}} ({{this.availableVehicles.length}})
+                    {{t "orchestrator.available-vehicles"}} ({{this.availableVehicles.length}})
                 </span>
             </div>
             {{#if this.loadAvailableVehicles.isRunning}}
@@ -191,7 +191,7 @@
             {{else}}
                 <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
                     <FaIcon @icon="truck" @size="2x" class="mb-2 opacity-40" />
-                    {{t "allocation.no-available-vehicles"}}
+                    {{t "orchestrator.no-available-vehicles"}}
                 </div>
             {{/if}}
         </div>

@@ -14,7 +14,7 @@ export default buildRoutes(function () {
                 this.route('edit', { path: '/edit/:public_id' });
             });
         });
-        this.route('allocation', function () {});
+        this.route('orchestrator', function () {});
         this.route('scheduler', function () {
             this.route('index', { path: '/' });
             this.route('fleet-schedule');
@@ -257,7 +257,7 @@ export default buildRoutes(function () {
         this.route('custom-fields');
         this.route('avatars');
         this.route('routing');
-        this.route('order-allocation');
+        this.route('orchestrator');
         this.route('scheduling');
         this.route('payments', function () {
             this.route('index', { path: '/' });

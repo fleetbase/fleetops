@@ -1,4 +1,4 @@
-<Layout::Section::Header @title={{t "allocation.settings-title"}}>
+<Layout::Section::Header @title={{t "orchestrator.settings-title"}}>
     <Button
         @type="primary"
         @size="sm"
@@ -18,36 +18,36 @@
                 </div>
             {{else}}
                 {{! ── Allocation Engine ──────────────────────────────────────── }}
-                <ContentPanel @title={{t "allocation.engine-settings"}} @open={{true}} @wrapperClass="bordered-classic">
-                    <InputGroup @name={{t "allocation.active-engine"}} @helpText={{t "allocation.active-engine-help"}}>
+                <ContentPanel @title={{t "orchestrator.engine-settings"}} @open={{true}} @wrapperClass="bordered-classic">
+                    <InputGroup @name={{t "orchestrator.active-engine"}} @helpText={{t "orchestrator.active-engine-help"}}>
                         <Select
                             @value={{this.allocationEngine}}
                             @options={{this.engineOptions}}
                             @optionLabel="name"
                             @optionValue="id"
                             @onSelect={{fn (mut this.allocationEngine)}}
-                            @placeholder={{t "allocation.active-engine"}}
+                            @placeholder={{t "orchestrator.active-engine"}}
                             class="w-full"
                         />
                     </InputGroup>
-                    <InputGroup @name={{t "allocation.auto-allocate-on-create"}}>
+                    <InputGroup @name={{t "orchestrator.auto-allocate-on-create"}}>
                         <Toggle
                             @isToggled={{this.autoAllocateOnCreate}}
                             @onToggle={{fn (mut this.autoAllocateOnCreate)}}
-                            @label={{t "allocation.auto-allocate-on-create-label"}}
+                            @label={{t "orchestrator.auto-allocate-on-create-label"}}
                         />
                     </InputGroup>
-                    <InputGroup @name={{t "allocation.auto-reallocate-on-complete"}}>
+                    <InputGroup @name={{t "orchestrator.auto-reallocate-on-complete"}}>
                         <Toggle
                             @isToggled={{this.autoReallocateOnComplete}}
                             @onToggle={{fn (mut this.autoReallocateOnComplete)}}
-                            @label={{t "allocation.auto-reallocate-on-complete-label"}}
+                            @label={{t "orchestrator.auto-reallocate-on-complete-label"}}
                         />
                     </InputGroup>
                 </ContentPanel>
                 {{! ── Allocation Constraints ─────────────────────────────────── }}
-                <ContentPanel @title={{t "allocation.constraint-settings"}} @open={{true}} @wrapperClass="bordered-classic">
-                    <InputGroup @name={{t "allocation.max-travel-time"}} @helpText={{t "allocation.max-travel-time-help"}}>
+                <ContentPanel @title={{t "orchestrator.constraint-settings"}} @open={{true}} @wrapperClass="bordered-classic">
+                    <InputGroup @name={{t "orchestrator.max-travel-time"}} @helpText={{t "orchestrator.max-travel-time-help"}}>
                         <Input
                             @type="number"
                             @value={{this.maxTravelTimeSeconds}}
@@ -56,15 +56,15 @@
                             class="w-full form-input"
                         />
                     </InputGroup>
-                    <InputGroup @name={{t "allocation.balance-workload"}}>
+                    <InputGroup @name={{t "orchestrator.balance-workload"}}>
                         <Toggle
                             @isToggled={{this.balanceWorkload}}
                             @onToggle={{fn (mut this.balanceWorkload)}}
-                            @label={{t "allocation.balance-workload-label"}}
+                            @label={{t "orchestrator.balance-workload-label"}}
                         />
                     </InputGroup>
                 </ContentPanel>
-                <RegistryYield @registry="fleet-ops:template:settings:order-allocation" as |RegistryComponent|>
+                <RegistryYield @registry="fleet-ops:template:settings:orchestrator" as |RegistryComponent|>
                     <RegistryComponent @controller={{this}} />
                 </RegistryYield>
             {{/if}}

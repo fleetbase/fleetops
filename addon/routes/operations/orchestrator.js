@@ -6,7 +6,7 @@ import { inject as service } from '@ember/service';
  *
  * Entry point for the Dispatcher Workbench at /operations/allocation.
  * The route performs an ability check and then hands off to the
- * OrderAllocationWorkbench component via the controller.
+ * OrchestratorWorkbench component via the controller.
  */
 export default class OperationsAllocationRoute extends Route {
     @service notifications;

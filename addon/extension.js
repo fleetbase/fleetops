@@ -61,10 +61,10 @@ export default {
                     route: 'console.fleet-ops.analytics.reports',
                 },
                 {
-                    title: 'Allocation',
+                    title: 'Orchestrator',
                     description: 'Intelligently allocate and dispatch orders to available drivers.',
                     icon: 'diagram-project',
-                    route: 'console.fleet-ops.operations.allocation',
+                    route: 'console.fleet-ops.operations.orchestrator',
                 },
             ],
         });
@@ -178,7 +178,7 @@ export default {
             'fleet-ops:component:order:form:payload:entity',
             'fleet-ops:component:order:form:payload:entity:form',
             'fleet-ops:template:settings:routing',
-            'fleet-ops:template:settings:order-allocation',
+            'fleet-ops:template:settings:orchestrator',
         ]);
     },
 };

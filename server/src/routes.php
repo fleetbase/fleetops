@@ -532,8 +532,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('routing-settings', 'SettingController@saveRoutingSettings');
                                         $router->get('scheduling-settings', 'SettingController@getSchedulingSettings');
                                         $router->post('scheduling-settings', 'SettingController@saveSchedulingSettings');
-                                        $router->get('allocation-settings', 'SettingController@getAllocationSettings');
-                                        $router->post('allocation-settings', 'SettingController@saveAllocationSettings');
+                                        $router->get('orchestrator-settings', 'SettingController@getAllocationSettings');
+                                        $router->post('orchestrator-settings', 'SettingController@saveAllocationSettings');
                                     }
                                 );
                                 $router->group(

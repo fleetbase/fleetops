@@ -2,12 +2,12 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
 /**
- * Settings::OrderAllocationRoute
+ * Settings::OrchestratorRoute
  *
  * Entry point for the allocation settings page at /settings/order-allocation.
  * Loads current settings into the controller on entry.
  */
-export default class SettingsOrderAllocationRoute extends Route {
+export default class SettingsOrchestratorRoute extends Route {
     @service notifications;
     @service abilities;
     @service intl;

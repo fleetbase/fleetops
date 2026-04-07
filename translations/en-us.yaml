@@ -95,8 +95,8 @@ menu:
   avatars: Avatars
   scheduling: Scheduling
   maintenances: Maintenances
-  allocation: Allocation
-  order-allocation: Order Allocation
+  orchestrator: Orchestrator
+  orchestrator-settings: Orchestrator Settings
 
 resource:
   asset: Asset
@@ -1932,8 +1932,8 @@ part:
     edit: Edit Part
     delete: Delete Part
 
-allocation:
-  settings-title: Order Allocation Settings
+orchestrator:
+  settings-title: Orchestrator Settings
   engine-settings: Allocation Engine
   active-engine: Active Allocation Engine
   active-engine-help: Select which allocation engine is used to assign orders to drivers and vehicles.
@@ -1946,20 +1946,20 @@ allocation:
   max-travel-time-help: Maximum travel time in seconds a driver may be assigned. Leave 0 for no limit.
   balance-workload: Balance Workload
   balance-workload-label: Distribute orders evenly across available drivers and vehicles.
-  settings-saved: Allocation settings saved.
-  workbench-title: Order Allocation Workbench
+  settings-saved: Orchestrator settings saved.
+  workbench-title: Orchestrator Workbench
   unassigned-orders: Unassigned Orders
   no-unassigned-orders: No unassigned orders — all caught up!
   available-vehicles: Available Vehicles
   no-available-vehicles: No vehicles available right now.
-  run-allocation: Run Allocation
+  run-allocation: Run Orchestrator
   running: Running…
   plan-ready: Plan ready — review and commit.
   commit-plan: Commit Plan
   discard-plan: Discard
-  committed: "Allocation committed — {count} order(s) assigned."
+  committed: "Orchestration committed — {count} order(s) assigned."
   overridden: Overridden
   on-shift: On Shift
-  empty-state-title: No allocation plan yet
-  empty-state-body: Click "Run Allocation" to generate an optimised assignment plan for unassigned orders.
+  empty-state-title: No orchestration plan yet
+  empty-state-body: Click "Run Orchestrator" to generate an optimised assignment plan for unassigned orders.
   unassigned-warning: Some orders could not be assigned — insufficient vehicle capacity or no drivers on shift.

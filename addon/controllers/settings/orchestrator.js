@@ -5,13 +5,13 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
 /**
- * Settings::OrderAllocationController
+ * Settings::OrchestratorController
  *
- * Manages the allocation settings page at /settings/order-allocation.
+ * Manages the Orchestrator settings page at /settings/orchestrator.
  * Loads current settings, presents the engine selector dropdown (populated
  * from the allocation-engine registry), and saves changes.
  */
-export default class SettingsOrderAllocationController extends Controller {
+export default class SettingsOrchestratorController extends Controller {
     @service fetch;
     @service notifications;
     @service intl;
@@ -36,7 +36,7 @@ export default class SettingsOrderAllocationController extends Controller {
     @task *loadSettings() {
         this.isLoading = true;
         try {
-            const settings = yield this.fetch.get('fleet-ops/settings/allocation-settings');
+            const settings = yield this.fetch.get('fleet-ops/settings/orchestrator-settings');
             this.allocationEngine           = settings.allocation_engine ?? 'vroom';
             this.autoAllocateOnCreate       = settings.auto_allocate_on_create ?? false;
             this.autoReallocateOnComplete   = settings.auto_reallocate_on_complete ?? false;
@@ -51,14 +51,14 @@ export default class SettingsOrderAllocationController extends Controller {
 
     @task *saveSettings() {
         try {
-            yield this.fetch.post('fleet-ops/settings/allocation-settings', {
+            yield this.fetch.post('fleet-ops/settings/orchestrator-settings', {
                 allocation_engine:           this.allocationEngine,
                 auto_allocate_on_create:     this.autoAllocateOnCreate,
                 auto_reallocate_on_complete: this.autoReallocateOnComplete,
                 max_travel_time_seconds:     this.maxTravelTimeSeconds,
                 balance_workload:            this.balanceWorkload,
             });
-            this.notifications.success(this.intl.t('allocation.settings-saved'));
+            this.notifications.success(this.intl.t('orchestrator.settings-saved'));
         } catch (error) {
             this.notifications.serverError(error);
         }

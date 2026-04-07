@@ -5,7 +5,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
 /**
- * OrderAllocationWorkbenchComponent
+ * OrchestratorWorkbenchComponent
  *
  * The Dispatcher Workbench — the primary UI for the Intelligent Order
  * Allocation Engine. Provides:
@@ -19,7 +19,7 @@ import { task } from 'ember-concurrency';
  * The component is rendered at /operations/allocation and is also accessible
  * as an overlay from the live map via the order-list-overlay.
  */
-export default class OrderAllocationWorkbenchComponent extends Component {
+export default class OrchestratorWorkbenchComponent extends Component {
     @service store;
     @service fetch;
     @service notifications;
