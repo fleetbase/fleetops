@@ -2374,3 +2374,45 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
     background: #374151;
     min-width: 16px;
 }
+
+/* ── Orchestrator Workbench: panel toggle buttons ── */
+.workbench-panel-toggle {
+    cursor: pointer;
+    z-index: 1;
+}
+
+/* ── Orchestrator Workbench: Leaflet div-icon markers ── */
+/* The wrapper div produced by div-icon must have no default background/border */
+.orch-marker-wrapper {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Order drop-off dot — blue */
+.orch-marker-order {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #3b82f6;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    transition: transform 0.1s;
+}
+.orch-marker-order.selected {
+    background: #f59e0b;
+    border-color: #fff;
+    transform: scale(1.3);
+}
+
+/* Driver/vehicle dot — green online, red offline */
+.orch-marker-driver {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    background: #ef4444; /* default: offline */
+}
+.orch-marker-driver.online {
+    background: #10b981;
+}

@@ -1,44 +1,43 @@
 {{! Orchestrator Workbench — Intelligent Order Allocation & Route Optimization }}
 <div class="orchestrator-workbench flex flex-col h-full overflow-hidden">
 
-    {{! ── Top Toolbar ── }}
-    <div class="workbench-toolbar flex items-center justify-between px-4 py-2.5 border-b dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
-        <div class="flex items-center space-x-3">
-            <h2 class="text-sm font-semibold dark:text-white">{{t "orchestrator.workbench-title"}}</h2>
-
-            {{! Mode badge }}
+    {{! ── Toolbar (Layout::Section::Header) ── }}
+    <Layout::Section::Header @title={{t "orchestrator.workbench-title"}}>
+        <div class="flex items-center space-x-2">
+            {{! Status badges }}
             {{#if this.hasProposedPlan}}
                 <Badge @status="info" @label={{t "orchestrator.plan-ready"}} />
             {{/if}}
             {{#if this.isCommitted}}
                 <Badge @status="success" @label={{t "orchestrator.committed"}} />
             {{/if}}
-
-            {{! Unassigned warning }}
             {{#if this.hasUnassigned}}
-                <Badge @status="warning" @label={{concat (t "orchestrator.unassigned-count") " " this.unassignedAfterRun.length}} />
+                <Badge @status="warning" @label={{concat this.unassignedAfterRun.length " " (t "orchestrator.unassigned-count")}} />
             {{/if}}
-        </div>
 
-        <div class="flex items-center space-x-2">
-            {{! Import orders button }}
+            <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+            {{! Import orders }}
             <Button
                 @icon="file-import"
                 @text={{t "orchestrator.import-orders"}}
                 @type="default"
                 @size="sm"
-                {{on "click" this.openImportModal}}
+                @onClick={{this.openImportModal}}
             />
 
-            {{! Filter/options toggle }}
+            {{! Options toggle }}
             <Button
                 @icon="sliders-h"
                 @text={{t "orchestrator.options"}}
-                @type="default"
+                @type={{if this.showOptionsPanel "primary" "default"}}
                 @size="sm"
-                {{on "click" this.toggleOptionsPanel}}
+                @onClick={{this.toggleOptionsPanel}}
             />
 
+            <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+            {{! Commit / Discard / Run }}
             {{#if this.hasProposedPlan}}
                 <Button
                     @icon="check"
@@ -46,14 +45,14 @@
                     @type="success"
                     @size="sm"
                     @isLoading={{this.commitPlan.isRunning}}
-                    {{on "click" (perform this.commitPlan)}}
+                    @onClick={{perform this.commitPlan}}
                 />
                 <Button
                     @icon="times"
                     @text={{t "orchestrator.discard-plan"}}
                     @type="default"
                     @size="sm"
-                    {{on "click" this.discardPlan}}
+                    @onClick={{this.discardPlan}}
                 />
             {{else}}
                 <Button
@@ -62,73 +61,64 @@
                     @type="primary"
                     @size="sm"
                     @isLoading={{this.runOrchestration.isRunning}}
-                    {{on "click" (perform this.runOrchestration)}}
+                    @onClick={{perform this.runOrchestration}}
                 />
             {{/if}}
 
+            {{! Refresh }}
             <Button
                 @icon="sync"
-                @text={{t "common.refresh"}}
                 @type="default"
                 @size="sm"
                 @isLoading={{this.loadData.isRunning}}
-                {{on "click" (perform this.loadData)}}
+                @onClick={{perform this.loadData}}
             />
         </div>
-    </div>
+    </Layout::Section::Header>
 
-    {{! ── Options Panel (collapsible) ── }}
+    {{! ── Options Panel (collapsible, sits below the toolbar) ── }}
     {{#if this.showOptionsPanel}}
-        <div class="workbench-options-panel flex items-center space-x-4 px-4 py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0 flex-wrap gap-y-2">
+        <div class="workbench-options-panel flex items-center flex-wrap gap-x-4 gap-y-2 px-4 py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
+            {{! Mode }}
             <div class="flex items-center space-x-2">
-                <label class="text-xs dark:text-gray-400">{{t "orchestrator.mode"}}</label>
+                <label class="text-xs dark:text-gray-400 whitespace-nowrap">{{t "orchestrator.mode"}}</label>
                 <Select
-                    @options={{this.modeOptions}}
                     @value={{this.selectedMode}}
-                    @onChange={{this.setMode}}
-                    @optionLabelPath="label"
-                    @optionValuePath="value"
-                    @size="sm"
+                    @options={{this.modeOptions}}
+                    @optionLabel="label"
+                    @optionValue="value"
+                    @onSelect={{this.setMode}}
+                    class="form-select text-xs"
                 />
             </div>
+            {{! Engine }}
             <div class="flex items-center space-x-2">
-                <label class="text-xs dark:text-gray-400">{{t "orchestrator.engine"}}</label>
+                <label class="text-xs dark:text-gray-400 whitespace-nowrap">{{t "orchestrator.engine"}}</label>
                 <Select
-                    @options={{this.availableEngines}}
                     @value={{this.selectedEngine}}
-                    @onChange={{this.setEngine}}
-                    @optionLabelPath="name"
-                    @optionValuePath="id"
-                    @size="sm"
+                    @options={{this.availableEngines}}
+                    @optionLabel="name"
+                    @optionValue="id"
+                    @onSelect={{this.setEngine}}
+                    class="form-select text-xs"
                 />
             </div>
+            {{! Constraint toggles }}
             <div class="flex items-center space-x-2">
-                <Toggle
-                    @isToggled={{this.balanceWorkload}}
-                    @onToggle={{fn (mut this.balanceWorkload)}}
-                />
-                <label class="text-xs dark:text-gray-400">{{t "orchestrator.balance-workload"}}</label>
+                <Toggle @isToggled={{this.balanceWorkload}} @onToggle={{fn (mut this.balanceWorkload)}} />
+                <label class="text-xs dark:text-gray-400 whitespace-nowrap">{{t "orchestrator.balance-workload"}}</label>
             </div>
             <div class="flex items-center space-x-2">
-                <Toggle
-                    @isToggled={{this.respectSkills}}
-                    @onToggle={{fn (mut this.respectSkills)}}
-                />
-                <label class="text-xs dark:text-gray-400">{{t "orchestrator.respect-skills"}}</label>
+                <Toggle @isToggled={{this.respectSkills}} @onToggle={{fn (mut this.respectSkills)}} />
+                <label class="text-xs dark:text-gray-400 whitespace-nowrap">{{t "orchestrator.respect-skills"}}</label>
             </div>
             <div class="flex items-center space-x-2">
-                <Toggle
-                    @isToggled={{this.respectCapacity}}
-                    @onToggle={{fn (mut this.respectCapacity)}}
-                />
-                <label class="text-xs dark:text-gray-400">{{t "orchestrator.respect-capacity"}}</label>
+                <Toggle @isToggled={{this.respectCapacity}} @onToggle={{fn (mut this.respectCapacity)}} />
+                <label class="text-xs dark:text-gray-400 whitespace-nowrap">{{t "orchestrator.respect-capacity"}}</label>
             </div>
             <div class="flex items-center space-x-2">
-                <Toggle
-                    @isToggled={{this.returnToDepot}}
-                    @onToggle={{fn (mut this.returnToDepot)}}
-                />
-                <label class="text-xs dark:text-gray-400">{{t "orchestrator.return-to-depot"}}</label>
+                <Toggle @isToggled={{this.returnToDepot}} @onToggle={{fn (mut this.returnToDepot)}} />
+                <label class="text-xs dark:text-gray-400 whitespace-nowrap">{{t "orchestrator.return-to-depot"}}</label>
             </div>
         </div>
     {{/if}}
@@ -137,23 +127,31 @@
     <div class="workbench-body flex flex-1 overflow-hidden">
 
         {{! ── LEFT PANEL: Order Pool ── }}
-        <div class="order-pool w-72 flex-shrink-0 border-r dark:border-gray-700 flex flex-col overflow-hidden">
-
-            {{! Order pool header with search and filter }}
-            <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center space-x-2">
-                <Input
-                    @value={{this.orderSearch}}
-                    placeholder={{t "orchestrator.search-orders"}}
-                    class="flex-1 text-xs"
-                    {{on "input" (fn (mut this.orderSearch) (pick "target.value"))}}
-                />
-                <span class="text-xs text-gray-400 flex-shrink-0">
+        <div
+            class="order-pool flex flex-col border-r dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-200
+                   {{if this.leftPanelCollapsed 'w-0 overflow-hidden' 'w-72 min-w-72'}}"
+        >
+            {{! Order pool header: search + count }}
+            <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center space-x-2 flex-shrink-0">
+                <div class="relative flex-1">
+                    <span class="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none text-gray-400" style="width:2rem;">
+                        <FaIcon @icon="magnifying-glass" @size="xs" style="vertical-align:0;display:block;" />
+                    </span>
+                    <input
+                        type="text"
+                        class="form-input form-input-sm w-full pl-8"
+                        placeholder={{t "orchestrator.search-orders"}}
+                        value={{this.orderSearch}}
+                        {{on "input" this.onOrderSearchInput}}
+                    />
+                </div>
+                <span class="text-xs text-gray-400 flex-shrink-0 tabular-nums">
                     {{this.filteredOrders.length}}/{{this.unassignedOrders.length}}
                 </span>
             </div>
 
             {{! Filter chips }}
-            <div class="px-3 py-1.5 border-b dark:border-gray-700 flex items-center space-x-1 overflow-x-auto">
+            <div class="px-3 py-1.5 border-b dark:border-gray-700 flex items-center space-x-1 overflow-x-auto flex-shrink-0">
                 <button
                     type="button"
                     class="order-filter-chip {{if (eq this.orderFilter 'all') 'active'}}"
@@ -226,7 +224,7 @@
 
             {{! Bulk action bar (shown when orders selected) }}
             {{#if this.selectedOrders.length}}
-                <div class="px-3 py-2 border-t dark:border-gray-700 bg-blue-900/20 flex items-center justify-between">
+                <div class="px-3 py-2 border-t dark:border-gray-700 bg-blue-900/20 flex items-center justify-between flex-shrink-0">
                     <span class="text-xs text-blue-400">
                         {{this.selectedOrders.length}} {{t "orchestrator.selected"}}
                     </span>
@@ -236,6 +234,16 @@
                 </div>
             {{/if}}
         </div>
+
+        {{! ── Left panel collapse toggle ── }}
+        <button
+            type="button"
+            class="workbench-panel-toggle flex items-center justify-center w-4 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+            title={{if this.leftPanelCollapsed (t "orchestrator.show-orders") (t "orchestrator.hide-orders")}}
+            {{on "click" this.toggleLeftPanel}}
+        >
+            <FaIcon @icon={{if this.leftPanelCollapsed "chevron-right" "chevron-left"}} @size="xs" class="text-gray-400" />
+        </button>
 
         {{! ── CENTRE PANEL: Map ── }}
         <div class="map-panel flex-1 relative overflow-hidden">
@@ -250,45 +258,71 @@
                 >
                     <layers.tile @url={{this.tileSourceUrl}} />
 
-                    {{! Order markers (unassigned) }}
+                    {{! Order markers — blue dot via div-icon (no broken image URL) }}
                     {{#each this.filteredOrders as |order|}}
                         {{#if order.payload.dropoff.location}}
                             <layers.marker
                                 @lat={{order.payload.dropoff.location.coordinates.[1]}}
                                 @lng={{order.payload.dropoff.location.coordinates.[0]}}
-                                @icon={{this.orderMarkerIcon order}}
+                                @icon={{div-icon
+                                    html=(concat
+                                        "<div class=\"orch-marker-order"
+                                        (if (includes order.public_id this.selectedOrderIdsArray) " selected" "")
+                                        "\"></div>"
+                                    )
+                                    className="orch-marker-wrapper"
+                                    iconSize=(array 14 14)
+                                    iconAnchor=(array 7 7)
+                                }}
                                 @draggable={{false}}
+                                @riseOnHover={{true}}
                             >
                                 <layers.popup>
-                                    <div class="text-xs">
-                                        <div class="font-semibold">{{order.public_id}}</div>
+                                    <div class="text-xs min-w-32">
+                                        <div class="font-semibold mb-0.5">{{order.public_id}}</div>
                                         <div class="text-gray-500">{{order.payload.dropoff.address}}</div>
                                         {{#if order.scheduled_at}}
-                                            <div class="text-blue-500">{{format-date order.scheduled_at "MMM d, HH:mm"}}</div>
+                                            <div class="text-blue-500 mt-0.5">{{format-date order.scheduled_at "MMM d, HH:mm"}}</div>
                                         {{/if}}
                                     </div>
                                 </layers.popup>
+                                <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                    {{order.public_id}}
+                                </layers.tooltip>
                             </layers.marker>
                         {{/if}}
                     {{/each}}
 
-                    {{! Driver/vehicle markers }}
+                    {{! Driver/vehicle markers — green/red dot via div-icon }}
                     {{#each this.availableVehicles as |vehicle|}}
                         {{#if vehicle.driver.location}}
                             <layers.marker
                                 @lat={{vehicle.driver.location.coordinates.[1]}}
                                 @lng={{vehicle.driver.location.coordinates.[0]}}
-                                @icon={{this.driverMarkerIcon vehicle}}
+                                @icon={{div-icon
+                                    html=(concat
+                                        "<div class=\"orch-marker-driver "
+                                        (if vehicle.driver.online "online" "offline")
+                                        "\"></div>"
+                                    )
+                                    className="orch-marker-wrapper"
+                                    iconSize=(array 16 16)
+                                    iconAnchor=(array 8 8)
+                                }}
+                                @riseOnHover={{true}}
                             >
                                 <layers.popup>
-                                    <div class="text-xs">
-                                        <div class="font-semibold">{{vehicle.driver.name}}</div>
+                                    <div class="text-xs min-w-36">
+                                        <div class="font-semibold mb-0.5">{{or vehicle.driver.name vehicle.display_name}}</div>
                                         <div class="text-gray-500">{{vehicle.display_name}}</div>
-                                        <div class={{if vehicle.driver.online "text-green-500" "text-red-400"}}>
+                                        <div class="mt-0.5 {{if vehicle.driver.online 'text-green-500' 'text-red-400'}}">
                                             {{if vehicle.driver.online (t "common.online") (t "common.offline")}}
                                         </div>
                                     </div>
                                 </layers.popup>
+                                <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                    {{or vehicle.driver.name vehicle.display_name}}
+                                </layers.tooltip>
                             </layers.marker>
                         {{/if}}
                     {{/each}}
@@ -313,7 +347,7 @@
                 </div>
             {{/if}}
 
-            {{! Map overlay: running indicator }}
+            {{! Map overlay: engine running indicator }}
             {{#if this.runOrchestration.isRunning}}
                 <div class="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center z-10">
                     <Spinner @size="lg" class="mb-3" />
@@ -322,11 +356,23 @@
             {{/if}}
         </div>
 
-        {{! ── RIGHT PANEL: Driver / Route Timeline ── }}
-        <div class="driver-panel w-80 flex-shrink-0 border-l dark:border-gray-700 flex flex-col overflow-hidden">
+        {{! ── Right panel collapse toggle ── }}
+        <button
+            type="button"
+            class="workbench-panel-toggle flex items-center justify-center w-4 bg-gray-100 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+            title={{if this.rightPanelCollapsed (t "orchestrator.show-drivers") (t "orchestrator.hide-drivers")}}
+            {{on "click" this.toggleRightPanel}}
+        >
+            <FaIcon @icon={{if this.rightPanelCollapsed "chevron-left" "chevron-right"}} @size="xs" class="text-gray-400" />
+        </button>
 
-            {{! Panel header with view toggle }}
-            <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center justify-between">
+        {{! ── RIGHT PANEL: Driver / Route Timeline ── }}
+        <div
+            class="driver-panel flex flex-col border-l dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-200
+                   {{if this.rightPanelCollapsed 'w-0 overflow-hidden' 'w-80 min-w-80'}}"
+        >
+            {{! Panel header }}
+            <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <span class="text-xs font-medium uppercase tracking-wide dark:text-gray-400">
                     {{#if this.hasProposedPlan}}
                         {{t "orchestrator.proposed-routes"}} ({{this.planByVehicle.length}})
@@ -341,24 +387,22 @@
                 {{/if}}
             </div>
 
+            {{! Panel body }}
             <div class="flex-1 overflow-y-auto">
-
                 {{! ── Plan View: per-vehicle route cards ── }}
                 {{#if this.hasProposedPlan}}
-
                     {{#if this.hasUnassigned}}
                         <div class="mx-3 mt-2 px-3 py-2 rounded bg-yellow-900/30 border border-yellow-700 text-yellow-400 text-xs">
                             <FaIcon @icon="exclamation-triangle" class="mr-1" />
                             {{t "orchestrator.unassigned-warning" count=this.unassignedAfterRun.length}}
                         </div>
                     {{/if}}
-
                     {{#each this.planByVehicle as |group|}}
                         <div
                             class="vehicle-route-card mx-3 my-2 rounded border dark:border-gray-600 dark:bg-gray-800 overflow-hidden"
                             data-vehicle-id={{group.vehicle.public_id}}
                         >
-                            {{! Vehicle / driver header }}
+                            {{! Vehicle / driver header — click to expand/collapse }}
                             <div
                                 class="flex items-center px-3 py-2 border-b dark:border-gray-700 cursor-pointer"
                                 style="border-left: 3px solid {{group.routeColor}}"
@@ -377,11 +421,15 @@
                                         <span class="text-xs text-gray-500">·</span>
                                         <span class="text-xs text-gray-400">{{this.formatDuration group.summary.duration}}</span>
                                     {{/if}}
-                                    <FaIcon @icon={{if (includes group.vehicle.public_id this.expandedRouteCardsArray) "chevron-up" "chevron-down"}} @size="xs" class="text-gray-500 ml-1" />
+                                    <FaIcon
+                                        @icon={{if (includes group.vehicle.public_id this.expandedRouteCardsArray) "chevron-up" "chevron-down"}}
+                                        @size="xs"
+                                        class="text-gray-500 ml-1"
+                                    />
                                 </div>
                             </div>
 
-                            {{! Expanded stop list (drag target for resequencing) }}
+                            {{! Expanded stop list — drag target for resequencing }}
                             {{#if (includes group.vehicle.public_id this.expandedRouteCardsArray)}}
                                 <div
                                     class="vehicle-drop-zone px-2 py-1"
@@ -392,27 +440,25 @@
                                 >
                                     {{#each group.orders as |item|}}
                                         <div
-                                            class="assigned-stop flex items-center px-2 py-1.5 my-0.5 rounded text-xs
-                                                   {{if item._overridden 'border border-dashed border-orange-500 bg-orange-900/20' 'dark:bg-gray-700'}}
-                                                   cursor-grab"
+                                            class="assigned-stop flex items-center px-2 py-1.5 my-0.5 rounded text-xs cursor-grab
+                                                   {{if item._overridden 'border border-dashed border-orange-500 bg-orange-900/20' 'dark:bg-gray-700'}}"
                                             draggable="true"
                                             data-order-id={{item.order.public_id}}
                                             {{on "dragstart" (fn this.onAssignedOrderDragStart item.order)}}
                                         >
-                                            <span class="w-5 text-center text-gray-500 mr-2 flex-shrink-0">{{item.sequence}}</span>
+                                            <span class="w-5 text-center text-gray-500 mr-2 flex-shrink-0 tabular-nums">{{item.sequence}}</span>
                                             <div class="flex-1 min-w-0">
                                                 <div class="dark:text-white truncate">{{item.order.public_id}}</div>
                                                 <div class="text-gray-400 truncate">{{item.order.payload.dropoff.address}}</div>
                                             </div>
                                             {{#if item.arrival}}
-                                                <span class="text-gray-500 text-xs flex-shrink-0 ml-1">{{this.formatUnixTime item.arrival}}</span>
+                                                <span class="text-gray-500 text-xs flex-shrink-0 ml-1 tabular-nums">{{this.formatUnixTime item.arrival}}</span>
                                             {{/if}}
                                             {{#if item._overridden}}
-                                                <Badge @status="warning" @label={{t "orchestrator.overridden"}} class="ml-1" />
+                                                <FaIcon @icon="pen" @size="xs" class="text-orange-400 ml-1 flex-shrink-0" />
                                             {{/if}}
                                         </div>
                                     {{/each}}
-
                                     {{! Drop placeholder when empty }}
                                     {{#unless group.orders.length}}
                                         <div class="py-3 text-center text-xs text-gray-500">
@@ -422,7 +468,7 @@
                                 </div>
 
                                 {{! Route summary footer }}
-                                {{#if group.summary}}
+                                {{#if (or group.summary.distance group.summary.duration)}}
                                     <div class="px-3 py-1.5 border-t dark:border-gray-700 flex items-center space-x-3 text-xs text-gray-500">
                                         {{#if group.summary.distance}}
                                             <span><FaIcon @icon="road" @size="xs" class="mr-0.5" />{{this.formatDistance group.summary.distance}}</span>
@@ -484,7 +530,7 @@
 
             {{! Driver selection info bar }}
             {{#if this.selectedDrivers.length}}
-                <div class="px-3 py-2 border-t dark:border-gray-700 bg-blue-900/20 flex items-center justify-between">
+                <div class="px-3 py-2 border-t dark:border-gray-700 bg-blue-900/20 flex items-center justify-between flex-shrink-0">
                     <span class="text-xs text-blue-400">
                         {{this.selectedDrivers.length}} {{t "orchestrator.drivers-selected"}}
                     </span>

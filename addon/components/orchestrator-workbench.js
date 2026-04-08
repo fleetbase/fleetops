@@ -71,6 +71,12 @@ export default class OrchestratorWorkbenchComponent extends Component {
     /** Whether the options panel is visible. */
     @tracked showOptionsPanel = false;
 
+    /** Whether the left (order pool) panel is collapsed. */
+    @tracked leftPanelCollapsed = false;
+
+    /** Whether the right (driver/route) panel is collapsed. */
+    @tracked rightPanelCollapsed = false;
+
     /** Set of selected order public_ids (for targeted runs). */
     @tracked selectedOrderIds = new Set();
 
@@ -272,6 +278,16 @@ export default class OrchestratorWorkbenchComponent extends Component {
         });
     }
 
+    // ── Panel visibility ─────────────────────────────────────────────────────
+
+    @action toggleLeftPanel() {
+        this.leftPanelCollapsed = !this.leftPanelCollapsed;
+    }
+
+    @action toggleRightPanel() {
+        this.rightPanelCollapsed = !this.rightPanelCollapsed;
+    }
+
     // ── Options panel ─────────────────────────────────────────────────────────
 
     @action toggleOptionsPanel() {
@@ -438,32 +454,14 @@ export default class OrchestratorWorkbenchComponent extends Component {
         return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
     }
 
-    orderMarkerIcon(order) {
-        if (!order) return null;
-        const isSelected = this.isOrderSelected(order);
-        const color = isSelected ? '#3B82F6' : '#6B7280';
-        return {
-            html: `<div style="width:10px;height:10px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>`,
-            iconSize: [10, 10],
-            iconAnchor: [5, 5],
-            className: '',
-        };
-    }
-
-    driverMarkerIcon(vehicle) {
-        if (!vehicle) return null;
-        return {
-            html: `<div style="width:14px;height:14px;border-radius:50%;background:#10B981;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>`,
-            iconSize: [14, 14],
-            iconAnchor: [7, 7],
-            className: '',
-        };
-    }
-
     // ── Filters ───────────────────────────────────────────────────────────────
 
     @action setOrderFilter(filter) {
         this.orderFilter = filter;
+    }
+
+    @action onOrderSearchInput(event) {
+        this.orderSearch = event.target.value;
     }
 
     get filteredOrders() {
