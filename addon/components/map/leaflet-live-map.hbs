@@ -1,4 +1,45 @@
+{{!
+    live-map component
+    ─────────────────────────────────────────────────────────────────────────
+    Supports two map providers:
+      • "leaflet" (default) — uses ember-leaflet / Leaflet.js
+      • "google"            — uses ember-google-maps / Google Maps JS API
+
+    The active provider is read from `this.mapManager.activeProvider`.
+    Set `ENV.mapProvider = 'google'` in environment.js to switch globally,
+    or pass `@mapProvider="google"` as a component argument to override.
+
+    Both branches share the same JS component class and all services route
+    through the provider-agnostic MapManagerService.
+}}
+
 <div class="live-map-component {{@wrapperClass}}">
+
+{{#if this.mapManager.isGoogleMaps}}
+    {{!-- ─── Google Maps branch ──────────────────────────────────────────── --}}
+    <Map::GoogleLiveMap
+        @latitude={{this.latitude}}
+        @longitude={{this.longitude}}
+        @zoom={{this.zoom}}
+        @drivers={{this.drivers}}
+        @vehicles={{this.vehicles}}
+        @places={{this.places}}
+        @serviceAreas={{this.serviceAreaActions.serviceAreas}}
+        @ready={{this.load.isIdle}}
+        @onLoad={{this.didLoadGoogleMap}}
+        @onDriverAdded={{fn this.trigger "onDriverAdded"}}
+        @onDriverClicked={{fn this.trigger "onDriverClicked"}}
+        @onVehicleAdded={{fn this.trigger "onVehicleAdded"}}
+        @onVehicleClicked={{fn this.trigger "onVehicleClicked"}}
+        @onPlaceAdded={{fn this.trigger "onPlaceAdded"}}
+        @onPlaceClicked={{fn this.trigger "onPlaceClicked"}}
+        @onServiceAreaLayerAdded={{fn this.trigger "onServiceAreaLayerAdded"}}
+        @onZoneLayerAdd={{fn this.trigger "onZoneLayerAdd"}}
+        @mapClass={{@mapClass}}
+        ...attributes
+    />
+{{else}}
+    {{!-- ─── Leaflet branch (default) ────────────────────────────────────── --}}
     <LeafletMap
         id={{this.id}}
         class="next-leaflet-container-map {{@mapClass}}"
@@ -158,6 +199,8 @@
 
         {{yield layers}}
     </LeafletMap>
+{{/if}}
+
     {{#unless this.ready}}
         <div class="flex w-full h-full items-center justify-center">
             <Spinner />

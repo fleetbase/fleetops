@@ -503,6 +503,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('notification-settings', 'SettingController@saveNotificationSettings');
                                         $router->get('routing-settings', 'SettingController@getRoutingSettings');
                                         $router->post('routing-settings', 'SettingController@saveRoutingSettings');
+                                        $router->get('map', 'SettingController@getMapSettings');
+                                        $router->post('map', 'SettingController@saveMapSettings');
                                     }
                                 );
                                 $router->group(

@@ -210,4 +210,68 @@ class SettingController extends Controller
 
         return response()->json($routingSettings);
     }
+
+    /**
+     * Retrieve and return the map provider settings.
+     *
+     * Returns the persisted map configuration for the current company,
+     * falling back to sensible defaults when no settings have been saved yet.
+     * The Google Maps API key is intentionally excluded from the response
+     * for security; it is stored server-side and injected at build time.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getMapSettings()
+    {
+        $defaults = [
+            'mapProvider'             => 'leaflet',
+            'googleMapsMapType'       => 'roadmap',
+            'googleMapsTrafficLayer'  => false,
+            'googleMapsTransitLayer'  => false,
+            'leafletTileProvider'     => 'carto-light',
+            'leafletCustomTileUrl'    => '',
+        ];
+
+        $mapSettings = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
+
+        // Never expose the raw API key to the frontend
+        unset($mapSettings['googleMapsApiKey']);
+
+        return response()->json($mapSettings);
+    }
+
+    /**
+     * Persist the map provider settings for the current company.
+     *
+     * The Google Maps API key is stored separately in a protected setting
+     * so that it is never returned in the public settings response.
+     *
+     * @param  Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveMapSettings(Request $request)
+    {
+        $settings = $request->input('settings', []);
+
+        // Persist the API key separately so it is never leaked in GET responses
+        if (!empty($settings['googleMapsApiKey'])) {
+            Setting::configureCompany('fleet-ops.map-settings.google-api-key', $settings['googleMapsApiKey']);
+        }
+
+        // Strip the key before saving the general settings blob
+        unset($settings['googleMapsApiKey']);
+
+        // Validate provider value
+        $allowedProviders = ['leaflet', 'google'];
+        if (isset($settings['mapProvider']) && !in_array($settings['mapProvider'], $allowedProviders)) {
+            $settings['mapProvider'] = 'leaflet';
+        }
+
+        Setting::configureCompany('fleet-ops.map-settings', $settings);
+
+        return response()->json([
+            'status'  => 'ok',
+            'message' => 'Map settings successfully saved.',
+        ]);
+    }
 }

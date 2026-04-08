@@ -1,5 +1,15 @@
+/**
+ * PositionPlaybackService
+ *
+ * Refactored to use the provider-agnostic MapManagerService for all
+ * marker operations. The Leaflet-specific `marker._map`, `marker.slideTo`,
+ * `marker.setRotationAngle`, and `map.panTo` calls are replaced with
+ * adapter calls. Backward-compat: if `this.marker` is still a raw Leaflet
+ * marker (set via the old `leafletLayer` option), the Leaflet path is used.
+ */
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 import { task, timeout } from 'ember-concurrency';
 import { debug } from '@ember/debug';
 import { isArray } from '@ember/array';
@@ -21,12 +31,15 @@ import { isArray } from '@ember/array';
  * - Real-time replay: respects actual time intervals between positions
  */
 export default class PositionPlaybackService extends Service {
+    @service mapManager;
+
     @tracked isPlaying = false;
     @tracked isPaused = false;
     @tracked currentIndex = 0;
     @tracked positions = [];
     @tracked speed = 1;
     @tracked marker = null;
+    @tracked markerId = null;
     @tracked map = null;
     @tracked callback = null;
 
@@ -44,11 +57,18 @@ export default class PositionPlaybackService extends Service {
     initialize(options = {}) {
         const { subject, leafletLayer, positions = [], speed = 1, callback = null, map = null } = options;
 
-        // Get marker from subject or manual layer
-        this.marker = leafletLayer || subject?.leafletLayer || subject?._layer || subject?._marker;
-
-        if (!this.marker) {
-            debug('[PositionPlayback] Warning: No leaflet marker found. Marker must be provided or subject must have leafletLayer property.');
+        // Prefer adapter-registered marker (provider-agnostic)
+        const subjectId = subject?.id ?? null;
+        if (subjectId && this.mapManager?.hasMarker(subjectId)) {
+            this.markerId = subjectId;
+            this.marker = null; // adapter handles it
+        } else {
+            // Leaflet backward-compat fallback
+            this.markerId = null;
+            this.marker = leafletLayer || subject?.leafletLayer || subject?._layer || subject?._marker;
+            if (!this.marker) {
+                debug('[PositionPlayback] Warning: No marker found. Provide a subject with a registered marker or leafletLayer property.');
+            }
         }
 
         this.positions = positions;
@@ -59,7 +79,7 @@ export default class PositionPlaybackService extends Service {
         this.isPlaying = false;
         this.isPaused = false;
 
-        debug(`[PositionPlayback] Initialized with ${positions.length} positions at ${speed}x speed`);
+        debug(`[PositionPlayback] Initialized with ${positions.length} positions at ${speed}x speed (markerId=${this.markerId ?? 'leaflet-compat'})`);
     }
 
     /**
@@ -173,35 +193,41 @@ export default class PositionPlaybackService extends Service {
         const position = this.positions[index];
         this.currentIndex = index;
 
-        if (!this.marker || !position) {
+        const useAdapter = this.markerId && this.mapManager?.hasMarker(this.markerId);
+
+        if (!useAdapter && !this.marker) {
             return;
         }
 
-        // Update marker position without animation
         const latLng = this.#getLatLngFromPosition(position);
         if (latLng) {
-            // Update rotation if heading is available
-            if (typeof this.marker.setRotationAngle === 'function' && Number.isFinite(position.heading) && position.heading !== -1) {
-                this.marker.setRotationAngle(position.heading);
-            }
-
-            if (typeof this.marker.slideTo === 'function') {
-                this.marker.slideTo(latLng, { duration: 100 });
+            if (useAdapter) {
+                // Provider-agnostic path
+                if (Number.isFinite(position.heading) && position.heading !== -1) {
+                    this.mapManager.setMarkerRotation(this.markerId, position.heading);
+                }
+                this.mapManager.updateMarkerPosition(this.markerId, latLng[0], latLng[1], true, 100);
+                this.mapManager.panTo(latLng[0], latLng[1]);
             } else {
-                this.marker.setLatLng(latLng);
-                requestAnimationFrame(() => {
-                    if (typeof this.marker.setRotationAngle === 'function' && Number.isFinite(position.heading) && position.heading !== -1) {
-                        this.marker.setRotationAngle(position.heading);
-                    }
-                });
+                // Leaflet backward-compat path
+                if (typeof this.marker.setRotationAngle === 'function' && Number.isFinite(position.heading) && position.heading !== -1) {
+                    this.marker.setRotationAngle(position.heading);
+                }
+                if (typeof this.marker.slideTo === 'function') {
+                    this.marker.slideTo(latLng, { duration: 100 });
+                } else {
+                    this.marker.setLatLng(latLng);
+                    requestAnimationFrame(() => {
+                        if (typeof this.marker.setRotationAngle === 'function' && Number.isFinite(position.heading) && position.heading !== -1) {
+                            this.marker.setRotationAngle(position.heading);
+                        }
+                    });
+                }
+                if (this.map) {
+                    this.map.panTo(latLng, { animate: true });
+                }
             }
 
-            // Pan map to position if map is provided
-            if (this.map) {
-                this.map.panTo(latLng, { animate: true });
-            }
-
-            // Trigger callback
             this.#triggerCallback(position, index, { animated: false });
         }
 
@@ -236,6 +262,7 @@ export default class PositionPlaybackService extends Service {
         this.stop();
         this.positions = [];
         this.marker = null;
+        this.markerId = null;
         this.map = null;
         this.callback = null;
         this.speed = 1;
@@ -260,9 +287,11 @@ export default class PositionPlaybackService extends Service {
                 continue;
             }
 
-            // Get marker (it might have been updated)
-            const marker = this.marker;
-            if (!marker || !marker._map) {
+            // Resolve marker — prefer adapter, fall back to Leaflet
+            const useAdapter = this.markerId && this.mapManager?.hasMarker(this.markerId);
+            const marker = useAdapter ? null : this.marker;
+
+            if (!useAdapter && (!marker || !marker._map)) {
                 debug('[PositionPlayback] Marker not available or not on map');
                 this.currentIndex++;
                 continue;
@@ -276,26 +305,35 @@ export default class PositionPlaybackService extends Service {
                 continue;
             }
 
-            // Calculate animation duration based on distance and speed
-            const animationDuration = this.#calculateAnimationDuration(marker, latLng, position);
+            // Calculate animation duration
+            const animationDuration = useAdapter
+                ? this.#calculateAnimationDurationFromAdapter(latLng, position)
+                : this.#calculateAnimationDuration(marker, latLng, position);
 
             try {
-                // Apply rotation if heading is valid
-                if (typeof marker.setRotationAngle === 'function' && Number.isFinite(position.heading) && position.heading !== -1) {
-                    marker.setRotationAngle(position.heading);
-                }
-
-                // Move marker with animation
-                if (typeof marker.slideTo === 'function') {
-                    marker.slideTo(latLng, { duration: animationDuration });
+                if (useAdapter) {
+                    // ── Provider-agnostic path ─────────────────────────────
+                    if (Number.isFinite(position.heading) && position.heading !== -1) {
+                        this.mapManager.setMarkerRotation(this.markerId, position.heading);
+                    }
+                    this.mapManager.updateMarkerPosition(this.markerId, latLng[0], latLng[1], true, animationDuration);
+                    if (this.map || this.mapManager.isReady) {
+                        this.mapManager.panTo(latLng[0], latLng[1]);
+                    }
                 } else {
-                    marker.setLatLng(latLng);
-                }
-
-                // Pan map to follow marker if map is provided
-                if (this.map) {
-                    const targetLatLng = marker._slideToLatLng ?? marker.getLatLng();
-                    this.map.panTo(targetLatLng, { animate: true });
+                    // ── Leaflet backward-compat path ───────────────────────
+                    if (typeof marker.setRotationAngle === 'function' && Number.isFinite(position.heading) && position.heading !== -1) {
+                        marker.setRotationAngle(position.heading);
+                    }
+                    if (typeof marker.slideTo === 'function') {
+                        marker.slideTo(latLng, { duration: animationDuration });
+                    } else {
+                        marker.setLatLng(latLng);
+                    }
+                    if (this.map) {
+                        const targetLatLng = marker._slideToLatLng ?? marker.getLatLng();
+                        this.map.panTo(targetLatLng, { animate: true });
+                    }
                 }
 
                 // Trigger callback
@@ -444,23 +482,31 @@ export default class PositionPlaybackService extends Service {
         const prev = marker.getLatLng();
         const meters = map ? map.distance(prev, nextLatLng) : prev.distanceTo(nextLatLng);
 
-        // Get speed from position data (assume m/s)
         let mps = Number.isFinite(position.speed) && position.speed > 0 ? position.speed : null;
+        if (mps && position.speed_unit === 'kmh') mps = mps / 3.6;
 
-        // If speed is in km/h, convert to m/s
-        if (mps && position.speed_unit === 'kmh') {
-            mps = mps / 3.6;
+        const baseDuration = mps ? (meters / mps) * 1000 : 500;
+        return Math.max(100, Math.min(baseDuration, 1000));
+    }
+
+    /**
+     * Calculate animation duration using the adapter (no direct Leaflet access).
+     *
+     * @private
+     * @param {Array} nextLatLng - [lat, lng]
+     * @param {Object} position
+     * @returns {number}
+     */
+    #calculateAnimationDurationFromAdapter(nextLatLng, position) {
+        const center = this.mapManager?.getCenter?.();
+        let meters = 0;
+        if (center) {
+            meters = this.mapManager.distanceBetween(center.lat, center.lng, nextLatLng[0], nextLatLng[1]);
         }
-
-        // Calculate base duration for animation
-        let baseDuration = mps ? (meters / mps) * 1000 : 500;
-
-        // For animation, we want it relatively quick regardless of playback speed
-        // The playback speed affects the delay between positions, not the animation speed
-        // Clamp between 100ms and 1000ms for smooth animation
-        const duration = Math.max(100, Math.min(baseDuration, 1000));
-
-        return duration;
+        let mps = Number.isFinite(position.speed) && position.speed > 0 ? position.speed : null;
+        if (mps && position.speed_unit === 'kmh') mps = mps / 3.6;
+        const baseDuration = mps ? (meters / mps) * 1000 : 500;
+        return Math.max(100, Math.min(baseDuration, 1000));
     }
 
     /**

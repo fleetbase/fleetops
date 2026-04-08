@@ -1,3 +1,14 @@
+/**
+ * GeofenceService
+ *
+ * Refactored to use the provider-agnostic MapManagerService for all map
+ * interactions (drawing, fitBounds, showDrawControl, etc.).
+ *
+ * Backward-compatible: `leafletMapManager` is still injected and used as a
+ * fallback for the `#editPolygonLayer` method which has deep Leaflet.draw
+ * coupling. That method will be migrated to the adapter's `editPolygon()`
+ * API in a follow-up once the adapter drawing interface is stable.
+ */
 import Service, { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { debug } from '@ember/debug';
@@ -5,6 +16,7 @@ import { createGeoJsonFromLayer } from '../utils/leaflet-to-geojson';
 import toMultiPolygon from '../utils/to-multi-polygon';
 
 export default class GeofenceService extends Service {
+    @service mapManager;
     @service leafletMapManager;
     @service leafletLayerVisibilityManager;
     @service serviceAreaActions;
@@ -15,48 +27,44 @@ export default class GeofenceService extends Service {
 
     @action createServiceArea() {
         this.notifications.info(this.intl.t('geofence.prompts.use-draw-controls-create-service-area'));
-        this.leafletMapManager.showDrawControl();
-        this.leafletMapManager.map.once('draw:created', ({ layer, layerType }) => {
-            const border = toMultiPolygon(createGeoJsonFromLayer(layer, { layerType }));
-
-            this.serviceAreaActions.modal.create(
-                { border },
-                {
-                    saveOptions: {
-                        callback: (serviceArea) => {
-                            this.leafletMapManager.hideDrawControl();
-                            this.#showServiceArea(serviceArea);
+        this.mapManager.enableDrawingMode('polygon', {
+            onCreate: ({ geoJson }) => {
+                const border = toMultiPolygon(geoJson);
+                this.serviceAreaActions.modal.create(
+                    { border },
+                    {
+                        saveOptions: {
+                            callback: (serviceArea) => {
+                                this.mapManager.disableDrawingMode();
+                                this.#showServiceArea(serviceArea);
+                            },
                         },
-                    },
-                }
-            );
+                    }
+                );
+            },
         });
     }
 
     @action createZone(serviceArea) {
         this.notifications.info(this.intl.t('geofence.prompts.use-draw-controls-create-zone'));
-        this.leafletMapManager.showDrawControl();
-        this.leafletMapManager.map.fitBounds(serviceArea.leafletCoordinates, {
-            paddingBottomRight: [300, 0],
-            maxZoom: 15,
-            animate: true,
-        });
-        // @todo use restriction service to restrict drawing to polygon
-        // this.leafletDrawRestriction.setDrawRestrictionPolygon(serviceArea.leafletLayer);
-        this.leafletMapManager.map.once('draw:created', ({ layer, layerType }) => {
-            const border = createGeoJsonFromLayer(layer, { layerType });
-
-            this.zoneActions.modal.create(
-                { border, service_area_uuid: serviceArea.id },
-                {
-                    saveOptions: {
-                        callback: (zone) => {
-                            this.leafletMapManager.hideDrawControl();
-                            this.#showZone(zone);
+        if (serviceArea.leafletCoordinates) {
+            this.mapManager.fitBounds(serviceArea.leafletCoordinates, { paddingBottomRight: [300, 0], maxZoom: 15, animate: true });
+        }
+        this.mapManager.enableDrawingMode('polygon', {
+            onCreate: ({ geoJson }) => {
+                const border = geoJson;
+                this.zoneActions.modal.create(
+                    { border, service_area_uuid: serviceArea.id },
+                    {
+                        saveOptions: {
+                            callback: (zone) => {
+                                this.mapManager.disableDrawingMode();
+                                this.#showZone(zone);
+                            },
                         },
-                    },
-                }
-            );
+                    }
+                );
+            },
         });
     }
 
@@ -126,11 +134,9 @@ export default class GeofenceService extends Service {
 
     @action focusServiceArea(serviceArea) {
         this.#showServiceArea(serviceArea);
-        this.leafletMapManager.map.fitBounds(serviceArea.leafletCoordinates, {
-            paddingBottomRight: [0, 0],
-            maxZoom: 15,
-            animate: true,
-        });
+        if (serviceArea.leafletCoordinates) {
+            this.mapManager.fitBounds(serviceArea.leafletCoordinates, { paddingBottomRight: [0, 0], maxZoom: 15, animate: true });
+        }
     }
 
     @action blurServiceArea(serviceArea) {
@@ -138,16 +144,20 @@ export default class GeofenceService extends Service {
     }
 
     @action focusZone(zone) {
-        this.leafletMapManager.showLayer(zone.leafletLayer);
-        this.leafletMapManager.map.fitBounds(zone.leafletCoordinates, {
-            paddingBottomRight: [0, 0],
-            maxZoom: 15,
-            animate: true,
-        });
+        this.mapManager.showPolygon(zone.id);
+        if (zone.leafletCoordinates) {
+            this.mapManager.fitBounds(zone.leafletCoordinates, { paddingBottomRight: [0, 0], maxZoom: 15, animate: true });
+        }
     }
 
     /* eslint-disable no-empty */
     async #editPolygonLayer(originalLayer, { focusBounds = null } = {}) {
+        // Delegate to adapter's editPolygon if available (provider-agnostic path)
+        if (typeof this.mapManager.editPolygon === 'function') {
+            return this.mapManager.editPolygon(originalLayer, { focusBounds });
+        }
+
+        // Leaflet backward-compat path (used when adapter is Leaflet)
         const map = this.leafletMapManager.map;
         const draw = this.leafletMapManager.drawControl;
         const group = this.leafletMapManager.drawControlFeatureGroup;

@@ -1,3 +1,17 @@
+/**
+ * MovementTrackerService
+ *
+ * Handles real-time marker movement via SocketCluster events.
+ * Refactored to use the provider-agnostic MapManagerService instead of
+ * accessing Leaflet marker objects directly.
+ *
+ * The EventBuffer is preserved, but marker manipulation now goes through
+ * `mapManager.updateMarkerPosition()` and `mapManager.setMarkerRotation()`
+ * so it works with any map provider.
+ *
+ * Backward-compatible: the `model.leafletLayer` path is still tried as
+ * a last resort so that existing code continues to work during migration.
+ */
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
@@ -14,10 +28,41 @@ export class EventBuffer {
     @tracked intervalId;
     @tracked model;
 
-    constructor(model, { callback = null, waitTime = 1000 * 3 }) {
+    /** @type {import('./map-manager').default|null} */
+    mapManager = null;
+
+    constructor(model, { callback = null, waitTime = 1000 * 3, mapManager = null }) {
         this.model = model;
         this.callback = callback;
         this.waitTime = waitTime;
+        this.mapManager = mapManager;
+    }
+
+    /**
+     * Resolve the marker id for the tracked model.
+     * @returns {string|null}
+     */
+    #getMarkerId() {
+        return this.model?.id ?? null;
+    }
+
+    /**
+     * Calculate distance in metres between two positions.
+     * Uses the adapter when available, falls back to Haversine.
+     *
+     * @param {{ lat: number, lng: number }} prev
+     * @param {number[]} nextLatLng - [lat, lng]
+     * @returns {number}
+     */
+    #calcDistance(prev, nextLatLng) {
+        if (this.mapManager) {
+            return this.mapManager.distanceBetween(prev.lat, prev.lng, nextLatLng[0], nextLatLng[1]);
+        }
+        const R = 6371000;
+        const dLat = ((nextLatLng[0] - prev.lat) * Math.PI) / 180;
+        const dLng = ((nextLatLng[1] - prev.lng) * Math.PI) / 180;
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos((prev.lat * Math.PI) / 180) * Math.cos((nextLatLng[0] * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     start() {
@@ -52,70 +97,74 @@ export class EventBuffer {
     @task *process() {
         debug('Processing movement tracker event buffer.');
 
-        // Take a snapshot of events to process and clear buffer immediately
-        // This prevents losing events that arrive during processing
         const eventsToProcess = [...this.events];
-        this.events = []; // Clear immediately to accept new events
+        this.events = [];
 
-        // Sort events by created_at
         eventsToProcess.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         debug(`[MovementTracker EventBuffer processing ${eventsToProcess.length} events]`);
 
-        // Process sorted events
         for (const output of eventsToProcess) {
             const { event, data } = output;
 
-            // get movingObject marker
-            const marker = this.model.leafletLayer || this.model._layer || this.model._marker;
-            if (!marker || !marker._map) {
+            // Resolve marker via adapter (provider-agnostic) or Leaflet fallback
+            const markerId = this.#getMarkerId();
+            const hasAdapterMarker = markerId && this.mapManager?.hasMarker(markerId);
+            const leafletMarker = !hasAdapterMarker ? (this.model?.leafletLayer || this.model?._layer || this.model?._marker) : null;
+
+            if (!hasAdapterMarker && (!leafletMarker || !leafletMarker._map)) {
                 debug('No marker or marker not on map yet');
                 continue;
             }
 
-            // log incoming event
             debug(`${event} - ${data.id} ${data.additionalData?.index ? '#' + data.additionalData?.index : ''} (${output.created_at}) [ ${data.location.coordinates.join(' ')} ]`);
 
-            // GeoJSON -> Leaflet [lat, lng]
+            // GeoJSON -> [lat, lng]
             const [lng, lat] = data.location.coordinates;
             const nextLatLng = [lat, lng];
 
-            // Calc speed
-            const map = marker._map;
-            const prev = marker.getLatLng();
-            const meters = map ? map.distance(prev, nextLatLng) : prev.distanceTo(nextLatLng);
+            // Calculate distance for animation duration
+            let meters = 0;
+            if (hasAdapterMarker) {
+                const adapterCenter = this.mapManager.getCenter?.();
+                if (adapterCenter) meters = this.#calcDistance(adapterCenter, nextLatLng);
+            } else if (leafletMarker) {
+                const map = leafletMarker._map;
+                const prev = leafletMarker.getLatLng();
+                meters = map ? map.distance(prev, nextLatLng) : prev.distanceTo(nextLatLng);
+            }
 
-            // Assume payload speed is m/s; if it's km/h, convert: mps = kmh / 3.6
             let mps = Number.isFinite(data.speed) && data.speed > 0 ? data.speed : null;
-
-            // Reduce animation duration and clamp between 100ms and 500ms
-            // This makes animations faster and prevents long delays
             const durationMs = mps ? Math.max(100, Math.min((meters / mps) * 1000, 500)) : 500;
 
             try {
-                // Apply rotation if heading is valid
-                if (typeof marker.setRotationAngle === 'function' && Number.isFinite(data.heading) && data.heading !== -1) {
-                    marker.setRotationAngle(data.heading);
-                }
-
-                // Move marker with animation
-                if (typeof marker.slideTo === 'function') {
-                    marker.slideTo(nextLatLng, { duration: durationMs });
-                } else {
-                    marker.setLatLng(nextLatLng);
+                if (hasAdapterMarker) {
+                    // ── Provider-agnostic path ─────────────────────────────
+                    if (Number.isFinite(data.heading) && data.heading !== -1) {
+                        this.mapManager.setMarkerRotation(markerId, data.heading);
+                    }
+                    this.mapManager.updateMarkerPosition(markerId, lat, lng, true, durationMs);
+                } else if (leafletMarker) {
+                    // ── Leaflet backward-compat path ───────────────────────
+                    if (typeof leafletMarker.setRotationAngle === 'function' && Number.isFinite(data.heading) && data.heading !== -1) {
+                        leafletMarker.setRotationAngle(data.heading);
+                    }
+                    if (typeof leafletMarker.slideTo === 'function') {
+                        leafletMarker.slideTo(nextLatLng, { duration: durationMs });
+                    } else {
+                        leafletMarker.setLatLng(nextLatLng);
+                    }
                 }
 
                 if (typeof this.callback === 'function') {
                     this.callback(output, { nextLatLng, duration: durationMs, mps });
                 }
 
-                // Wait for animation to complete
                 yield timeout(durationMs + 50);
             } catch (err) {
                 debug('MovementTracker EventBuffer error: ' + err.message);
             }
         }
 
-        // Don't clear here - we already cleared at the start
         debug(`[MovementTracker EventBuffer finished processing ${eventsToProcess.length} events]`);
     }
 }
@@ -123,6 +172,8 @@ export class EventBuffer {
 export default class MovementTrackerService extends Service {
     @service socket;
     @service universe;
+    @service mapManager;
+
     @tracked channels = [];
     @tracked buffers = new Map();
 
@@ -138,7 +189,7 @@ export default class MovementTrackerService extends Service {
     #getBuffer(key, model, opts = {}) {
         let buf = this.buffers.get(key);
         if (!buf) {
-            buf = new EventBuffer(model, opts);
+            buf = new EventBuffer(model, { ...opts, mapManager: this.mapManager });
             buf.start();
             this.buffers.set(key, buf);
         }

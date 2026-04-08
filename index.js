@@ -90,4 +90,33 @@ module.exports = buildEngine({
     isDevelopingAddon() {
         return true;
     },
+
+    /**
+     * Inject the Google Maps JavaScript API script tag into the app's index.html
+     * when `mapProvider` is set to 'google' in the environment config.
+     *
+     * The script is injected with `defer` so it does not block the initial render.
+     * The GoogleMapsAdapter polls for `window.google.maps` before initialising.
+     *
+     * To enable:
+     *   1. Set MAP_PROVIDER=google in your .env file
+     *   2. Set GOOGLE_MAPS_API_KEY=<your-key> in your .env file
+     *   3. Ensure the key has Maps JS API, Drawing Library, and Geometry Library enabled
+     *
+     * @param {string} type   'head' | 'body' | 'all'
+     * @param {Object} config  The resolved environment config
+     * @returns {string|undefined}
+     */
+    contentFor(type, config) {
+        if (type === 'head' && config.mapProvider === 'google' && config.googleMapsApiKey) {
+            const libraries = config.googleMapsLibraries || 'drawing,geometry,places';
+            return [
+                '<!-- Google Maps JavaScript API (injected by @fleetbase/fleetops-engine) -->',
+                '<script',
+                `    src="https://maps.googleapis.com/maps/api/js?key=${config.googleMapsApiKey}&libraries=${libraries}&loading=async"`,
+                '    defer',
+                '></script>',
+            ].join('\n');
+        }
+    },
 });
