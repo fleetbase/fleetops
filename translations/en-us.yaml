@@ -1733,25 +1733,3 @@ settings:
       button-continue: Continue
       button-start: Start onboard now
       button-in-progress: Onboard in progress
-map-settings:
-  map-settings: Map Settings
-  map-provider: Map Provider
-  map-provider-help-text: Choose the map engine used to render the live operations map. Leaflet uses OpenStreetMap tiles and requires no API key. Google Maps requires a valid Google Maps JavaScript API key.
-  select-map-provider: Select map provider
-  google-maps-api-key: Google Maps API Key
-  google-maps-api-key-help-text: Your Google Maps JavaScript API key. Required when Google Maps is selected as the map provider. The key is stored securely and never exposed in API responses.
-  google-maps-api-key-placeholder: AIza...
-  google-maps-map-type: Map Type
-  google-maps-map-type-help-text: The default map style to display when Google Maps is active.
-  select-map-type: Select map type
-  show-traffic-layer: Show Traffic Layer
-  show-traffic-layer-help-text: Overlay real-time traffic conditions on the Google Maps view.
-  show-transit-layer: Show Transit Layer
-  show-transit-layer-help-text: Overlay public transit routes on the Google Maps view.
-  google-api-key-requirements-title: Required Google Cloud APIs
-  google-api-key-requirement-maps-js: Maps JavaScript API
-  google-api-key-requirement-drawing: Drawing Library (for geofence creation)
-  google-api-key-requirement-geometry: Geometry Library (for distance calculations)
-  google-api-key-requirement-geocoding: Geocoding API (for address lookups)
-  settings-saved: Map settings saved successfully.
-  settings-save-failed: Failed to save map settings. Please try again.
