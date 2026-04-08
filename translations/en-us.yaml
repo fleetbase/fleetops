@@ -2037,3 +2037,5 @@ orchestrator:
   empty-file: The file appears to be empty.
   missing-dropoff: Dropoff address is required.
   stops-count: "{count} stops"
+# Order card fields
+  scheduled: Scheduled

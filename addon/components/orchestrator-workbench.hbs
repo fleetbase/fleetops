@@ -6,13 +6,13 @@
         <div class="flex items-center space-x-2">
             {{! Status badges }}
             {{#if this.hasProposedPlan}}
-                <Badge @status="info" @label={{t "orchestrator.plan-ready"}} />
+                <Badge @status="info">{{t "orchestrator.plan-ready"}}</Badge>
             {{/if}}
             {{#if this.isCommitted}}
-                <Badge @status="success" @label={{t "orchestrator.committed"}} />
+                <Badge @status="success">{{t "orchestrator.committed"}}</Badge>
             {{/if}}
             {{#if this.hasUnassigned}}
-                <Badge @status="warning" @label={{concat (t "orchestrator.unassigned-count") " " this.unassignedAfterRun.length}} />
+                <Badge @status="warning">{{t "orchestrator.unassigned-count"}} {{this.unassignedAfterRun.length}}</Badge>
             {{/if}}
 
             {{#if (or this.hasProposedPlan this.isCommitted this.hasUnassigned)}}
@@ -167,61 +167,69 @@
                                 </span>
                                 <div class="flex-shrink-0 flex items-center gap-1">
                                     {{#if order.orchestrator_priority}}
-                                        <Badge @status={{this.priorityStatus order.orchestrator_priority}} @label={{order.orchestrator_priority}} />
+                                        <Badge @status={{this.priorityStatus order.orchestrator_priority}}>{{smart-humanize order.orchestrator_priority}}</Badge>
                                     {{/if}}
                                     <Badge @status={{order.status}} />
                                 </div>
                             </div>
 
-                            {{! Body: 2-column dl grid (matches schedule-card layout) }}
+                            {{! Body: 2-column dl grid — all fields always shown, "-" when absent }}
                             <div class="bg-white dark:bg-gray-900 px-2 py-1.5">
                                 <dl class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs">
-
                                     {{! Pickup }}
-                                    {{#if order.payload.pickup.address}}
-                                        <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                            <FaIcon @icon="circle-dot" @size="xs" class="w-3 text-center text-green-500" />
-                                            Pickup
-                                        </dt>
-                                        <dd class="truncate text-right text-gray-700 dark:text-gray-300">
-                                            {{order.payload.pickup.address}}
-                                        </dd>
-                                    {{/if}}
-
+                                    <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        <FaIcon @icon="circle-dot" @size="xs" class="w-3 text-center text-green-500" />
+                                        {{t "orchestrator.pickup"}}
+                                    </dt>
+                                    <dd class="truncate text-right text-gray-700 dark:text-gray-300">
+                                        {{or order.payload.pickup.address "-"}}
+                                    </dd>
                                     {{! Dropoff }}
                                     <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
                                         <FaIcon @icon="location-dot" @size="xs" class="w-3 text-center text-red-400" />
-                                        Dropoff
+                                        {{t "orchestrator.dropoff"}}
                                     </dt>
                                     <dd class="truncate text-right text-gray-700 dark:text-gray-300">
-                                        {{or order.payload.dropoff.address (t "orchestrator.no-address")}}
+                                        {{or order.payload.dropoff.address "-"}}
                                     </dd>
-
                                     {{! Scheduled date }}
-                                    {{#if order.scheduled_at}}
-                                        <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                            <FaIcon @icon="clock" @size="xs" class="w-3 text-center" />
-                                            Scheduled
-                                        </dt>
-                                        <dd class="truncate text-right text-blue-500 dark:text-blue-400">
+                                    <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        <FaIcon @icon="clock" @size="xs" class="w-3 text-center" />
+                                        {{t "orchestrator.scheduled"}}
+                                    </dt>
+                                    <dd class="truncate text-right text-blue-500 dark:text-blue-400">
+                                        {{#if order.scheduled_at}}
                                             {{format-date order.scheduled_at "MMM d, HH:mm"}}
-                                        </dd>
-                                    {{/if}}
-
+                                        {{else}}
+                                            -
+                                        {{/if}}
+                                    </dd>
                                     {{! Customer }}
-                                    {{#if order.customer.name}}
-                                        <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                            <FaIcon @icon="user" @size="xs" class="w-3 text-center" />
-                                            Customer
-                                        </dt>
-                                        <dd class="truncate text-right text-gray-700 dark:text-gray-300">
-                                            {{order.customer.name}}
-                                        </dd>
-                                    {{/if}}
-
+                                    <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        <FaIcon @icon="user" @size="xs" class="w-3 text-center" />
+                                        {{t "orchestrator.customer"}}
+                                    </dt>
+                                    <dd class="truncate text-right text-gray-700 dark:text-gray-300">
+                                        {{or order.customer.name "-"}}
+                                    </dd>
+                                    {{! Driver assigned }}
+                                    <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        <FaIcon @icon="id-badge" @size="xs" class="w-3 text-center" />
+                                        {{t "orchestrator.driver-assigned"}}
+                                    </dt>
+                                    <dd class="truncate text-right text-gray-700 dark:text-gray-300">
+                                        {{or order.driver_assigned.name "-"}}
+                                    </dd>
+                                    {{! Vehicle assigned }}
+                                    <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        <FaIcon @icon="truck" @size="xs" class="w-3 text-center" />
+                                        {{t "orchestrator.vehicle-assigned"}}
+                                    </dt>
+                                    <dd class="truncate text-right text-gray-700 dark:text-gray-300">
+                                        {{or order.vehicle_assigned.display_name "-"}}
+                                    </dd>
                                 </dl>
-
-                                {{! Skills tags }}
+                                {{! Skills tags — additive, only shown when present }}
                                 {{#if order.required_skills.length}}
                                     <div class="flex flex-wrap gap-0.5 mt-1">
                                         {{#each order.required_skills as |skill|}}
@@ -229,6 +237,7 @@
                                         {{/each}}
                                     </div>
                                 {{/if}}
+                            </div>
                             </div>
                         </div>
                     {{/each}}
@@ -266,6 +275,7 @@
 
         {{! ── CENTRE PANEL: Map ── }}
         <div class="map-panel flex-1 relative overflow-hidden">
+            <div class="next-map-container w-full h-full">
             {{#if this.mapReady}}
                 <LeafletMap class="w-full h-full" @lat={{this.mapCenter.lat}} @lng={{this.mapCenter.lng}} @zoom={{this.mapZoom}} @onLoad={{this.onMapLoad}} as |layers|>
                     <layers.tile @url={{this.tileSourceUrl}} />
@@ -513,52 +523,47 @@
                     {{else if (eq this.rightPanelTab "drivers")}}
                         {{#if this.availableDrivers.length}}
                             {{#each this.availableDrivers as |driver|}}
-                                {{! Compact avatar row — no separate header panel }}
                                 <div
                                     role="button"
-                                    class="flex items-center gap-2.5 px-3 py-2 border-b dark:border-gray-700/60 cursor-pointer select-none
-                                           hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors
-                                           {{if (includes driver.public_id this.selectedDriverIdsArray) 'bg-indigo-50 dark:bg-indigo-900/20' ''}}"
+                                    class="flex items-start gap-3 px-3 py-2.5 border-b dark:border-gray-700/60 cursor-pointer select-none transition-colors
+                                           {{if (includes driver.public_id this.selectedDriverIdsArray)
+                                               'bg-indigo-100 dark:bg-indigo-400/20 hover:bg-indigo-100 dark:hover:bg-indigo-400/20'
+                                               'hover:bg-gray-50 dark:hover:bg-gray-800/60'}}"
                                     {{on "click" (fn this.toggleDriverSelection driver)}}
                                 >
-                                    {{! Avatar with online dot }}
-                                    <div class="relative flex-shrink-0">
+                                    {{! Avatar — online dot top-right }}
+                                    <div class="relative flex-shrink-0 mt-0.5">
                                         <img
                                             src={{driver.photo_url}}
-                                            alt={{driver.name}}
-                                            class="w-8 h-8 rounded-full object-cover bg-gray-200 dark:bg-gray-700"
+                                            alt={{or driver.name "Driver"}}
+                                            class="w-9 h-9 rounded-full object-cover bg-gray-200 dark:bg-gray-700"
                                             {{fallback-img-src (config "defaultValues.driverImage")}}
                                         />
-                                        <span class="absolute -bottom-0.5 -right-0.5 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
+                                        <span class="absolute top-0 right-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
                                                      {{if driver.online 'bg-green-500' 'bg-gray-400'}}"></span>
                                     </div>
 
-                                    {{! Name + secondary info }}
-                                    <div class="flex-1 min-w-0">
+                                    {{! All fields — always shown, "-" when absent }}
+                                    <div class="flex-1 min-w-0 space-y-0.5">
                                         <div class="text-xs font-semibold truncate dark:text-white">{{or driver.name "-"}}</div>
-                                        <div class="text-xs text-gray-400 truncate">
-                                            {{#if driver.vehicle}}
-                                                <FaIcon @icon="truck" @size="xs" class="mr-0.5" />
-                                                {{driver.vehicle.display_name}}
-                                            {{else if driver.phone}}
-                                                <FaIcon @icon="phone" @size="xs" class="mr-0.5" />
-                                                {{driver.phone}}
-                                            {{else}}
-                                                -
-                                            {{/if}}
-                                        </div>
-                                    </div>
 
-                                    {{! Right: status + shift badge }}
-                                    <div class="flex flex-col items-end gap-0.5 flex-shrink-0">
-                                        {{#if driver.online}}
-                                            <Badge @status="success" @label={{t "common.online"}} />
-                                        {{else}}
-                                            <Badge @status="default" @label={{t "common.offline"}} />
-                                        {{/if}}
-                                        {{#if driver.activeShift}}
-                                            <span class="text-xs text-green-500">{{t "orchestrator.on-shift"}}</span>
-                                        {{/if}}
+                                        {{! Vehicle }}
+                                        <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                            <FaIcon @icon="truck" @size="xs" class="w-3 flex-shrink-0" />
+                                            <span class="truncate">{{or driver.vehicle.display_name (t "orchestrator.no-vehicle-assigned")}}</span>
+                                        </div>
+
+                                        {{! Phone }}
+                                        <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                            <FaIcon @icon="phone" @size="xs" class="w-3 flex-shrink-0" />
+                                            <span class="truncate">{{or driver.phone "-"}}</span>
+                                        </div>
+
+                                        {{! Email }}
+                                        <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                            <FaIcon @icon="envelope" @size="xs" class="w-3 flex-shrink-0" />
+                                            <span class="truncate">{{or driver.email "-"}}</span>
+                                        </div>
                                     </div>
                                 </div>
                             {{/each}}
@@ -573,55 +578,53 @@
                     {{else if (eq this.rightPanelTab "vehicles")}}
                         {{#if this.availableVehicles.length}}
                             {{#each this.availableVehicles as |vehicle|}}
-                                {{! Compact avatar row — no separate header panel }}
                                 <div
                                     role="button"
-                                    class="flex items-center gap-2.5 px-3 py-2 border-b dark:border-gray-700/60 cursor-pointer select-none
-                                           hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors
-                                           {{if (includes vehicle.public_id this.selectedVehicleIdsArray) 'bg-indigo-50 dark:bg-indigo-900/20' ''}}"
+                                    class="flex items-start gap-3 px-3 py-2.5 border-b dark:border-gray-700/60 cursor-pointer select-none transition-colors
+                                           {{if (includes vehicle.public_id this.selectedVehicleIdsArray)
+                                               'bg-indigo-100 dark:bg-indigo-400/20 hover:bg-indigo-100 dark:hover:bg-indigo-400/20'
+                                               'hover:bg-gray-50 dark:hover:bg-gray-800/60'}}"
                                     {{on "click" (fn this.toggleVehicleSelection vehicle)}}
                                 >
-                                    {{! Vehicle avatar }}
-                                    <div class="relative flex-shrink-0">
-                                        <Image
-                                            src={{vehicle.avatar_url}}
-                                            @fallbackSrc={{config "defaultValues.vehicleAvatar"}}
-                                            alt={{vehicle.display_name}}
-                                            class="w-8 h-8 rounded object-cover bg-gray-200 dark:bg-gray-700"
+                                    {{! Avatar (photo_url) — driver online dot top-right }}
+                                    <div class="relative flex-shrink-0 mt-0.5">
+                                        <img
+                                            src={{vehicle.photo_url}}
+                                            alt={{or vehicle.display_name "Vehicle"}}
+                                            class="w-9 h-9 rounded object-cover bg-gray-200 dark:bg-gray-700"
+                                            {{fallback-img-src (config "defaultValues.vehicleAvatar")}}
                                         />
-                                        {{#if vehicle.driver}}
-                                            <span class="absolute -bottom-0.5 -right-0.5 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
-                                                         {{if vehicle.driver.online 'bg-green-500' 'bg-gray-400'}}"></span>
-                                        {{/if}}
+                                        <span class="absolute top-0 right-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
+                                                     {{if vehicle.driver.online 'bg-green-500' 'bg-gray-400'}}"></span>
                                     </div>
 
-                                    {{! Name + secondary info }}
-                                    <div class="flex-1 min-w-0">
-                                        <div class="text-xs font-semibold truncate dark:text-white">{{or vehicle.display_name "-"}}</div>
-                                        <div class="text-xs text-gray-400 truncate">
-                                            {{#if vehicle.driver}}
-                                                <FaIcon @icon="id-card-alt" @size="xs" class="mr-0.5" />
-                                                {{vehicle.driver.name}}
-                                            {{else if vehicle.plate_number}}
-                                                <FaIcon @icon="hashtag" @size="xs" class="mr-0.5" />
-                                                {{vehicle.plate_number}}
-                                            {{else}}
-                                                -
+                                    {{! All fields — always shown, "-" when absent }}
+                                    <div class="flex-1 min-w-0 space-y-0.5">
+                                        {{! Name + vehicle status badge }}
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-semibold truncate dark:text-white">{{or vehicle.display_name "-"}}</span>
+                                            {{#if vehicle.status}}
+                                                <Badge @status={{vehicle.status}}>{{smart-humanize vehicle.status}}</Badge>
                                             {{/if}}
                                         </div>
-                                    </div>
 
-                                    {{! Right: driver online status or no-driver }}
-                                    <div class="flex-shrink-0">
-                                        {{#if vehicle.driver}}
-                                            {{#if vehicle.driver.online}}
-                                                <Badge @status="success" @label={{t "common.online"}} />
-                                            {{else}}
-                                                <Badge @status="default" @label={{t "common.offline"}} />
-                                            {{/if}}
-                                        {{else}}
-                                            <Badge @status="default" @label="No Driver" />
-                                        {{/if}}
+                                        {{! Assigned driver }}
+                                        <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                            <FaIcon @icon="id-card-alt" @size="xs" class="w-3 flex-shrink-0" />
+                                            <span class="truncate">{{or vehicle.driver.name (t "orchestrator.no-driver-assigned")}}</span>
+                                        </div>
+
+                                        {{! Plate number }}
+                                        <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                            <FaIcon @icon="hashtag" @size="xs" class="w-3 flex-shrink-0" />
+                                            <span class="truncate">{{or vehicle.plate_number "-"}}</span>
+                                        </div>
+
+                                        {{! Call sign }}
+                                        <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                            <FaIcon @icon="broadcast-tower" @size="xs" class="w-3 flex-shrink-0" />
+                                            <span class="truncate">{{or vehicle.call_sign "-"}}</span>
+                                        </div>
                                     </div>
                                 </div>
                             {{/each}}
