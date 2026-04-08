@@ -97,7 +97,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     // ── Map ───────────────────────────────────────────────────────────────────
 
-    @tracked mapReady = true;
+    @tracked mapReady = false;
     @tracked mapCenter = { lat: 0, lng: 0 };
     @tracked mapZoom = 11;
     @tracked leafletMap = null;
@@ -129,8 +129,10 @@ export default class OrchestratorWorkbenchComponent extends Component {
             });
             this.unassignedOrders = orders.toArray();
             this._centerMapOnOrders();
+            this.mapReady = true;
         } catch (error) {
             this.notifications.serverError(error);
+            this.mapReady = true; // still show map even if orders fail to load
         }
     }
 
@@ -301,6 +303,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     isOrderSelected(order) {
+        if (!order?.public_id) return false;
         return this.selectedOrderIds.has(order.public_id);
     }
 
@@ -436,6 +439,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     orderMarkerIcon(order) {
+        if (!order) return null;
         const isSelected = this.isOrderSelected(order);
         const color = isSelected ? '#3B82F6' : '#6B7280';
         return {
@@ -447,6 +451,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     driverMarkerIcon(vehicle) {
+        if (!vehicle) return null;
         return {
             html: `<div style="width:14px;height:14px;border-radius:50%;background:#10B981;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>`,
             iconSize: [14, 14],
@@ -486,6 +491,18 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     // ── Computed helpers ──────────────────────────────────────────────────────
+
+    get selectedOrderIdsArray() {
+        return [...this.selectedOrderIds];
+    }
+
+    get selectedVehicleIdsArray() {
+        return [...this.selectedVehicleIds];
+    }
+
+    get expandedRouteCardsArray() {
+        return [...this.expandedRouteCards];
+    }
 
     get selectedOrders() {
         return this.unassignedOrders.filter((o) => this.selectedOrderIds.has(o.public_id));

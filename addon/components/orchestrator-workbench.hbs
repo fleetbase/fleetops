@@ -184,7 +184,7 @@
                     {{#each this.filteredOrders as |order|}}
                         <div
                             class="order-pool-card mx-2 my-1 px-3 py-2 rounded border cursor-grab select-none
-                                   {{if (this.isOrderSelected order) 'selected' ''}}
+                                   {{if (includes order.public_id this.selectedOrderIdsArray) 'selected' ''}}
                                    dark:border-gray-600 dark:bg-gray-800 text-xs"
                             draggable="true"
                             data-order-id={{order.public_id}}
@@ -377,12 +377,12 @@
                                         <span class="text-xs text-gray-500">·</span>
                                         <span class="text-xs text-gray-400">{{this.formatDuration group.summary.duration}}</span>
                                     {{/if}}
-                                    <FaIcon @icon={{if (this.isRouteCardExpanded group.vehicle.public_id) "chevron-up" "chevron-down"}} @size="xs" class="text-gray-500 ml-1" />
+                                    <FaIcon @icon={{if (includes group.vehicle.public_id this.expandedRouteCardsArray) "chevron-up" "chevron-down"}} @size="xs" class="text-gray-500 ml-1" />
                                 </div>
                             </div>
 
                             {{! Expanded stop list (drag target for resequencing) }}
-                            {{#if (this.isRouteCardExpanded group.vehicle.public_id)}}
+                            {{#if (includes group.vehicle.public_id this.expandedRouteCardsArray)}}
                                 <div
                                     class="vehicle-drop-zone px-2 py-1"
                                     data-vehicle-id={{group.vehicle.public_id}}
@@ -443,7 +443,7 @@
                     {{#each this.availableVehicles as |vehicle|}}
                         <div
                             class="driver-card mx-3 my-1.5 px-3 py-2 rounded border dark:border-gray-600 dark:bg-gray-800 text-xs
-                                   {{if (this.isDriverSelected vehicle) 'ring-1 ring-blue-500' ''}}"
+                                   {{if (includes vehicle.public_id this.selectedVehicleIdsArray) 'ring-1 ring-blue-500' ''}}"
                             {{on "click" (fn this.toggleDriverSelection vehicle)}}
                         >
                             <div class="flex items-center justify-between">
