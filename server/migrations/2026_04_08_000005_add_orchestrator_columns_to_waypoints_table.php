@@ -20,7 +20,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('waypoints', function (Blueprint $table) {
-            $table->dateTime('time_window_start')->nullable()->after('tracking_number');
+            $table->dateTime('time_window_start')->nullable()->after('type');
             $table->dateTime('time_window_end')->nullable()->after('time_window_start');
             $table->unsignedInteger('service_time')->nullable()->comment('Seconds')->after('time_window_end');
         });
