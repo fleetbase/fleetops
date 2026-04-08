@@ -496,7 +496,7 @@
                     >
                         <FaIcon @icon="id-card-alt" @size="xs" class="mr-1" />
                         {{t "orchestrator.available-drivers"}}
-                        <span class="ml-1 text-gray-400 tabular-nums">({{this.availableDrivers.length}})</span>
+                        <span class="ml-1 text-gray-400 tabular-nums">({{this.filteredDrivers.length}})</span>
                     </button>
                     <button
                         type="button"
@@ -510,10 +510,63 @@
                     >
                         <FaIcon @icon="truck" @size="xs" class="mr-1" />
                         {{t "orchestrator.available-vehicles"}}
-                        <span class="ml-1 text-gray-400 tabular-nums">({{this.availableVehicles.length}})</span>
+                        <span class="ml-1 text-gray-400 tabular-nums">({{this.filteredVehicles.length}})</span>
                     </button>
                 </div>
 
+                {{! Search + filter strip — shared, sits above the scrollable list }}
+                <div class="px-2 py-1.5 border-b dark:border-gray-700 flex-shrink-0 space-y-1">
+                    {{! Search input }}
+                    <div class="relative">
+                        <FaIcon @icon="search" @size="xs" class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        {{#if (eq this.rightPanelTab "drivers")}}
+                            <input
+                                type="text"
+                                class="form-input form-input-sm w-full pl-7 pr-2 py-1 text-xs"
+                                placeholder={{t "orchestrator.search-drivers"}}
+                                value={{this.driverSearch}}
+                                {{on "input" this.onDriverSearchInput}}
+                            />
+                        {{else}}
+                            <input
+                                type="text"
+                                class="form-input form-input-sm w-full pl-7 pr-2 py-1 text-xs"
+                                placeholder={{t "orchestrator.search-vehicles"}}
+                                value={{this.vehicleSearch}}
+                                {{on "input" this.onVehicleSearchInput}}
+                            />
+                        {{/if}}
+                    </div>
+                    {{! Filter chips }}
+                    {{#if (eq this.rightPanelTab "drivers")}}
+                        <div class="flex gap-1 flex-wrap">
+                            <button type="button"
+                                class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.driverFilter 'all') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+                                {{on "click" (fn this.setDriverFilter "all")}}>{{t "orchestrator.filter-all"}}</button>
+                            <button type="button"
+                                class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.driverFilter 'online') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+                                {{on "click" (fn this.setDriverFilter "online")}}>{{t "orchestrator.filter-online"}}</button>
+                            <button type="button"
+                                class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.driverFilter 'offline') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+                                {{on "click" (fn this.setDriverFilter "offline")}}>{{t "orchestrator.filter-offline"}}</button>
+                            <button type="button"
+                                class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.driverFilter 'on-shift') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+                                {{on "click" (fn this.setDriverFilter "on-shift")}}>{{t "orchestrator.filter-on-shift"}}</button>
+                        </div>
+                    {{else}}
+                        <div class="flex gap-1 flex-wrap">
+                            <button type="button"
+                                class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.vehicleFilter 'all') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+                                {{on "click" (fn this.setVehicleFilter "all")}}>{{t "orchestrator.filter-all"}}</button>
+                            <button type="button"
+                                class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.vehicleFilter 'active') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+                                {{on "click" (fn this.setVehicleFilter "active")}}>{{t "orchestrator.filter-active"}}</button>
+                            <button type="button"
+                                class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.vehicleFilter 'no-driver') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+                                {{on "click" (fn this.setVehicleFilter "no-driver")}}>{{t "orchestrator.filter-no-driver"}}</button>
+                        </div>
+                    {{/if}}
+                </div>
                 {{! Tab content }}
                 <div class="flex-1 overflow-y-auto">
                     {{#if this.loadData.isRunning}}
@@ -521,8 +574,8 @@
 
                         {{! ── Drivers tab ── }}
                     {{else if (eq this.rightPanelTab "drivers")}}
-                        {{#if this.availableDrivers.length}}
-                            {{#each this.availableDrivers as |driver|}}
+                        {{#if this.filteredDrivers.length}}
+                            {{#each this.filteredDrivers as |driver|}}
                                 <div
                                     role="button"
                                     class="flex items-start gap-3 px-3 py-2.5 border-b dark:border-gray-700/60 cursor-pointer select-none transition-colors
@@ -574,14 +627,18 @@
                         {{else}}
                             <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
                                 <FaIcon @icon="id-card-alt" @size="2x" class="mb-2 opacity-40" />
-                                {{t "orchestrator.no-available-drivers"}}
+                                {{#if this.driverSearch}}
+                                    {{t "orchestrator.no-search-results"}}
+                                {{else}}
+                                    {{t "orchestrator.no-available-drivers"}}
+                                {{/if}}
                             </div>
                         {{/if}}
 
                         {{! ── Vehicles tab ── }}
                     {{else if (eq this.rightPanelTab "vehicles")}}
-                        {{#if this.availableVehicles.length}}
-                            {{#each this.availableVehicles as |vehicle|}}
+                        {{#if this.filteredVehicles.length}}
+                            {{#each this.filteredVehicles as |vehicle|}}
                                 <div
                                     role="button"
                                     class="flex items-start gap-3 px-3 py-2.5 border-b dark:border-gray-700/60 cursor-pointer select-none transition-colors
@@ -639,7 +696,11 @@
                         {{else}}
                             <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
                                 <FaIcon @icon="truck" @size="2x" class="mb-2 opacity-40" />
-                                {{t "orchestrator.no-available-vehicles"}}
+                                {{#if this.vehicleSearch}}
+                                    {{t "orchestrator.no-search-results"}}
+                                {{else}}
+                                    {{t "orchestrator.no-available-vehicles"}}
+                                {{/if}}
                             </div>
                         {{/if}}
                     {{/if}}

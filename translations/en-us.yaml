@@ -1993,6 +1993,14 @@ orchestrator:
   available-vehicles: Available Vehicles
   no-available-drivers: No drivers available right now.
   no-available-vehicles: No vehicles available right now.
+  no-search-results: No results match your search.
+  search-drivers: Search drivers...
+  search-vehicles: Search vehicles...
+  filter-online: Online
+  filter-offline: Offline
+  filter-on-shift: On Shift
+  filter-active: Active
+  filter-no-driver: No Driver
   proposed-routes: Proposed Routes
   stops: stops
   drivers-selected: drivers selected
