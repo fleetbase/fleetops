@@ -258,7 +258,7 @@ class SettingController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getAllocationSettings()
+    public function getOrchestratorSettings()
     {
         $defaults = [
             'allocation_engine'           => 'vroom',
@@ -279,7 +279,7 @@ class SettingController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function saveAllocationSettings(Request $request)
+    public function saveOrchestratorSettings(Request $request)
     {
         $settings = [
             'allocation_engine'           => $request->input('allocation_engine', 'vroom'),
