@@ -549,6 +549,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('commit', 'AllocationController@commit');
                                         $router->get('preview', 'AllocationController@preview');
                                         $router->get('engines', 'AllocationController@engines');
+                                        $router->post('import-orders', 'AllocationController@importOrders');
                                     }
                                 );
                             }

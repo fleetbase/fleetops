@@ -1,15 +1,44 @@
-{{! Dispatcher Workbench — Intelligent Order Allocation Engine }}
-<div class="orchestrator-workbench flex flex-col h-full">
+{{! Orchestrator Workbench — Intelligent Order Allocation & Route Optimization }}
+<div class="orchestrator-workbench flex flex-col h-full overflow-hidden">
 
-    {{! ── Toolbar ── }}
-    <div class="workbench-toolbar flex items-center justify-between px-4 py-3 border-b dark:border-gray-700">
-        <div class="flex items-center space-x-2">
+    {{! ── Top Toolbar ── }}
+    <div class="workbench-toolbar flex items-center justify-between px-4 py-2.5 border-b dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
+        <div class="flex items-center space-x-3">
             <h2 class="text-sm font-semibold dark:text-white">{{t "orchestrator.workbench-title"}}</h2>
+
+            {{! Mode badge }}
             {{#if this.hasProposedPlan}}
                 <Badge @status="info" @label={{t "orchestrator.plan-ready"}} />
             {{/if}}
+            {{#if this.isCommitted}}
+                <Badge @status="success" @label={{t "orchestrator.committed"}} />
+            {{/if}}
+
+            {{! Unassigned warning }}
+            {{#if this.hasUnassigned}}
+                <Badge @status="warning" @label={{concat (t "orchestrator.unassigned-count") " " this.unassignedAfterRun.length}} />
+            {{/if}}
         </div>
+
         <div class="flex items-center space-x-2">
+            {{! Import orders button }}
+            <Button
+                @icon="file-import"
+                @text={{t "orchestrator.import-orders"}}
+                @type="default"
+                @size="sm"
+                {{on "click" this.openImportModal}}
+            />
+
+            {{! Filter/options toggle }}
+            <Button
+                @icon="sliders-h"
+                @text={{t "orchestrator.options"}}
+                @type="default"
+                @size="sm"
+                {{on "click" this.toggleOptionsPanel}}
+            />
+
             {{#if this.hasProposedPlan}}
                 <Button
                     @icon="check"
@@ -29,13 +58,14 @@
             {{else}}
                 <Button
                     @icon="bolt"
-                    @text={{t "orchestrator.run-allocation"}}
+                    @text={{t "orchestrator.run-orchestration"}}
                     @type="primary"
                     @size="sm"
-                    @isLoading={{this.runAllocation.isRunning}}
-                    {{on "click" (perform this.runAllocation)}}
+                    @isLoading={{this.runOrchestration.isRunning}}
+                    {{on "click" (perform this.runOrchestration)}}
                 />
             {{/if}}
+
             <Button
                 @icon="sync"
                 @text={{t "common.refresh"}}
@@ -47,151 +77,420 @@
         </div>
     </div>
 
-    {{! ── Main Content ── }}
+    {{! ── Options Panel (collapsible) ── }}
+    {{#if this.showOptionsPanel}}
+        <div class="workbench-options-panel flex items-center space-x-4 px-4 py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0 flex-wrap gap-y-2">
+            <div class="flex items-center space-x-2">
+                <label class="text-xs dark:text-gray-400">{{t "orchestrator.mode"}}</label>
+                <Select
+                    @options={{this.modeOptions}}
+                    @value={{this.selectedMode}}
+                    @onChange={{this.setMode}}
+                    @optionLabelPath="label"
+                    @optionValuePath="value"
+                    @size="sm"
+                />
+            </div>
+            <div class="flex items-center space-x-2">
+                <label class="text-xs dark:text-gray-400">{{t "orchestrator.engine"}}</label>
+                <Select
+                    @options={{this.availableEngines}}
+                    @value={{this.selectedEngine}}
+                    @onChange={{this.setEngine}}
+                    @optionLabelPath="name"
+                    @optionValuePath="id"
+                    @size="sm"
+                />
+            </div>
+            <div class="flex items-center space-x-2">
+                <Toggle
+                    @isToggled={{this.balanceWorkload}}
+                    @onToggle={{fn (mut this.balanceWorkload)}}
+                />
+                <label class="text-xs dark:text-gray-400">{{t "orchestrator.balance-workload"}}</label>
+            </div>
+            <div class="flex items-center space-x-2">
+                <Toggle
+                    @isToggled={{this.respectSkills}}
+                    @onToggle={{fn (mut this.respectSkills)}}
+                />
+                <label class="text-xs dark:text-gray-400">{{t "orchestrator.respect-skills"}}</label>
+            </div>
+            <div class="flex items-center space-x-2">
+                <Toggle
+                    @isToggled={{this.respectCapacity}}
+                    @onToggle={{fn (mut this.respectCapacity)}}
+                />
+                <label class="text-xs dark:text-gray-400">{{t "orchestrator.respect-capacity"}}</label>
+            </div>
+            <div class="flex items-center space-x-2">
+                <Toggle
+                    @isToggled={{this.returnToDepot}}
+                    @onToggle={{fn (mut this.returnToDepot)}}
+                />
+                <label class="text-xs dark:text-gray-400">{{t "orchestrator.return-to-depot"}}</label>
+            </div>
+        </div>
+    {{/if}}
+
+    {{! ── Main 3-Panel Body ── }}
     <div class="workbench-body flex flex-1 overflow-hidden">
 
-        {{! ── Left Panel: Order Bucket ── }}
-        <div class="order-bucket w-72 flex-shrink-0 border-r dark:border-gray-700 overflow-y-auto">
-            <div class="px-3 py-2 border-b dark:border-gray-700">
-                <span class="text-xs font-medium uppercase tracking-wide dark:text-gray-400">
-                    {{t "orchestrator.unassigned-orders"}} ({{this.unassignedOrders.length}})
+        {{! ── LEFT PANEL: Order Pool ── }}
+        <div class="order-pool w-72 flex-shrink-0 border-r dark:border-gray-700 flex flex-col overflow-hidden">
+
+            {{! Order pool header with search and filter }}
+            <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center space-x-2">
+                <Input
+                    @value={{this.orderSearch}}
+                    placeholder={{t "orchestrator.search-orders"}}
+                    class="flex-1 text-xs"
+                    {{on "input" (fn (mut this.orderSearch) (pick "target.value"))}}
+                />
+                <span class="text-xs text-gray-400 flex-shrink-0">
+                    {{this.filteredOrders.length}}/{{this.unassignedOrders.length}}
                 </span>
             </div>
-            {{#if this.loadUnassignedOrders.isRunning}}
-                <div class="flex justify-center py-8"><Spinner /></div>
-            {{else if this.unassignedOrders.length}}
-                {{#each this.unassignedOrders as |order|}}
-                    <div
-                        class="order-card mx-2 my-1 px-3 py-2 rounded border dark:border-gray-600 dark:bg-gray-800 cursor-grab text-xs"
-                        draggable="true"
-                        data-order-id={{order.public_id}}
-                    >
-                        <div class="font-medium dark:text-white truncate">{{order.public_id}}</div>
-                        <div class="text-gray-400 truncate">{{order.payload.dropoff.address}}</div>
-                        {{#if order.scheduled_at}}
-                            <div class="text-blue-400 mt-0.5">
-                                <FaIcon @icon="clock" @size="xs" /> {{format-date order.scheduled_at "HH:mm"}}
+
+            {{! Filter chips }}
+            <div class="px-3 py-1.5 border-b dark:border-gray-700 flex items-center space-x-1 overflow-x-auto">
+                <button
+                    type="button"
+                    class="order-filter-chip {{if (eq this.orderFilter 'all') 'active'}}"
+                    {{on "click" (fn this.setOrderFilter "all")}}
+                >{{t "orchestrator.filter-all"}}</button>
+                <button
+                    type="button"
+                    class="order-filter-chip {{if (eq this.orderFilter 'scheduled') 'active'}}"
+                    {{on "click" (fn this.setOrderFilter "scheduled")}}
+                >{{t "orchestrator.filter-scheduled"}}</button>
+                <button
+                    type="button"
+                    class="order-filter-chip {{if (eq this.orderFilter 'urgent') 'active'}}"
+                    {{on "click" (fn this.setOrderFilter "urgent")}}
+                >{{t "orchestrator.filter-urgent"}}</button>
+                <button
+                    type="button"
+                    class="order-filter-chip {{if (eq this.orderFilter 'imported') 'active'}}"
+                    {{on "click" (fn this.setOrderFilter "imported")}}
+                >{{t "orchestrator.filter-imported"}}</button>
+            </div>
+
+            {{! Order list }}
+            <div class="flex-1 overflow-y-auto">
+                {{#if this.loadData.isRunning}}
+                    <div class="flex justify-center py-8"><Spinner /></div>
+                {{else if this.filteredOrders.length}}
+                    {{#each this.filteredOrders as |order|}}
+                        <div
+                            class="order-pool-card mx-2 my-1 px-3 py-2 rounded border cursor-grab select-none
+                                   {{if (this.isOrderSelected order) 'selected' ''}}
+                                   dark:border-gray-600 dark:bg-gray-800 text-xs"
+                            draggable="true"
+                            data-order-id={{order.public_id}}
+                            {{on "dragstart" (fn this.onOrderDragStart order)}}
+                            {{on "click" (fn this.toggleOrderSelection order)}}
+                        >
+                            <div class="flex items-start justify-between">
+                                <span class="font-medium dark:text-white truncate flex-1 mr-1">{{order.public_id}}</span>
+                                {{#if order.orchestrator_priority}}
+                                    <Badge @status={{this.priorityStatus order.orchestrator_priority}} @label={{order.orchestrator_priority}} />
+                                {{/if}}
                             </div>
-                        {{/if}}
-                    </div>
-                {{/each}}
-            {{else}}
-                <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
-                    <FaIcon @icon="check-circle" @size="2x" class="mb-2 text-green-400" />
-                    {{t "orchestrator.no-unassigned-orders"}}
-                </div>
-            {{/if}}
-        </div>
-
-        {{! ── Centre Panel: Proposed Plan / Vehicle Bucket ── }}
-        <div class="plan-panel flex-1 overflow-y-auto">
-            {{#if this.runAllocation.isRunning}}
-                <div class="flex flex-col items-center justify-center h-full text-gray-400">
-                    <Spinner @size="lg" class="mb-3" />
-                    <span class="text-sm">{{t "orchestrator.running"}}</span>
-                </div>
-            {{else if this.hasProposedPlan}}
-
-                {{! Unassigned warning banner }}
-                {{#if this.hasUnassigned}}
-                    <div class="mx-4 mt-3 px-3 py-2 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-400 text-xs">
-                        <FaIcon @icon="exclamation-triangle" />
-                        {{t "orchestrator.unassigned-warning" count=this.unassignedAfterRun.length}}
+                            <div class="text-gray-400 truncate mt-0.5">
+                                <FaIcon @icon="map-marker-alt" @size="xs" class="mr-0.5" />
+                                {{or order.payload.dropoff.address (t "orchestrator.no-address")}}
+                            </div>
+                            {{#if order.scheduled_at}}
+                                <div class="text-blue-400 mt-0.5">
+                                    <FaIcon @icon="clock" @size="xs" class="mr-0.5" />
+                                    {{format-date order.scheduled_at "MMM d, HH:mm"}}
+                                </div>
+                            {{/if}}
+                            {{#if order.required_skills.length}}
+                                <div class="flex flex-wrap gap-0.5 mt-1">
+                                    {{#each order.required_skills as |skill|}}
+                                        <span class="skill-tag">{{skill}}</span>
+                                    {{/each}}
+                                </div>
+                            {{/if}}
+                        </div>
+                    {{/each}}
+                {{else}}
+                    <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
+                        <FaIcon @icon="check-circle" @size="2x" class="mb-2 text-green-400" />
+                        {{t "orchestrator.no-unassigned-orders"}}
                     </div>
                 {{/if}}
+            </div>
 
-                {{! Per-vehicle route cards }}
-                {{#each this.planByVehicle as |group|}}
-                    <div
-                        class="vehicle-route-card mx-4 my-3 rounded border dark:border-gray-600 dark:bg-gray-800"
-                        data-vehicle-id={{group.vehicle.public_id}}
-                        data-driver-id={{group.driver.public_id}}
-                    >
-                        {{! Vehicle header }}
-                        <div class="flex items-center px-3 py-2 border-b dark:border-gray-700">
-                            <FaIcon @icon="truck" class="text-blue-400 mr-2" />
-                            <span class="text-xs font-semibold dark:text-white flex-1">
-                                {{group.vehicle.display_name}}
-                            </span>
-                            {{#if group.driver}}
-                                <span class="text-xs text-gray-400">
-                                    <FaIcon @icon="user" class="mr-1" />{{group.driver.name}}
-                                </span>
-                            {{/if}}
-                            {{#if group.driver.activeShift}}
-                                <Badge
-                                    @status="success"
-                                    @label={{t "orchestrator.on-shift"}}
-                                    class="ml-2"
-                                />
-                            {{/if}}
-                        </div>
-
-                        {{! Assigned orders list (drag target) }}
-                        <div
-                            class="vehicle-drop-zone px-2 py-1 min-h-12"
-                            data-vehicle-id={{group.vehicle.public_id}}
-                            data-driver-id={{group.driver.public_id}}
-                        >
-                            {{#each group.orders as |item|}}
-                                <div
-                                    class="assigned-order flex items-center px-2 py-1.5 my-0.5 rounded text-xs
-                                           {{if item._overridden "border border-dashed border-orange-400 bg-orange-900/20" "dark:bg-gray-700"}}"
-                                    draggable="true"
-                                    data-order-id={{item.order.public_id}}
-                                >
-                                    <span class="text-gray-400 w-5 text-center mr-2">{{item.sequence}}</span>
-                                    <span class="flex-1 dark:text-white truncate">{{item.order.public_id}}</span>
-                                    {{#if item._overridden}}
-                                        <Badge @status="warning" @label={{t "orchestrator.overridden"}} />
-                                    {{/if}}
-                                </div>
-                            {{/each}}
-                        </div>
-                    </div>
-                {{/each}}
-
-            {{else}}
-
-                {{! Empty state — no plan yet }}
-                <div class="flex flex-col items-center justify-center h-full text-gray-400">
-                    <FaIcon @icon="route" @size="3x" class="mb-4 opacity-30" />
-                    <p class="text-sm font-medium mb-1">{{t "orchestrator.empty-state-title"}}</p>
-                    <p class="text-xs text-center max-w-xs">{{t "orchestrator.empty-state-body"}}</p>
+            {{! Bulk action bar (shown when orders selected) }}
+            {{#if this.selectedOrders.length}}
+                <div class="px-3 py-2 border-t dark:border-gray-700 bg-blue-900/20 flex items-center justify-between">
+                    <span class="text-xs text-blue-400">
+                        {{this.selectedOrders.length}} {{t "orchestrator.selected"}}
+                    </span>
+                    <button type="button" class="text-xs text-gray-400 hover:text-white" {{on "click" this.clearSelection}}>
+                        {{t "orchestrator.clear-selection"}}
+                    </button>
                 </div>
-
             {{/if}}
         </div>
 
-        {{! ── Right Panel: Vehicle Bucket ── }}
-        <div class="vehicle-bucket w-72 flex-shrink-0 border-l dark:border-gray-700 overflow-y-auto">
-            <div class="px-3 py-2 border-b dark:border-gray-700">
+        {{! ── CENTRE PANEL: Map ── }}
+        <div class="map-panel flex-1 relative overflow-hidden">
+            {{#if this.mapReady}}
+                <LeafletMap
+                    class="w-full h-full"
+                    @lat={{this.mapCenter.lat}}
+                    @lng={{this.mapCenter.lng}}
+                    @zoom={{this.mapZoom}}
+                    @onLoad={{this.onMapLoad}}
+                    as |layers|
+                >
+                    <layers.tile @url={{this.tileSourceUrl}} />
+
+                    {{! Order markers (unassigned) }}
+                    {{#each this.filteredOrders as |order|}}
+                        {{#if order.payload.dropoff.location}}
+                            <layers.marker
+                                @lat={{order.payload.dropoff.location.coordinates.[1]}}
+                                @lng={{order.payload.dropoff.location.coordinates.[0]}}
+                                @icon={{this.orderMarkerIcon order}}
+                                @draggable={{false}}
+                            >
+                                <layers.popup>
+                                    <div class="text-xs">
+                                        <div class="font-semibold">{{order.public_id}}</div>
+                                        <div class="text-gray-500">{{order.payload.dropoff.address}}</div>
+                                        {{#if order.scheduled_at}}
+                                            <div class="text-blue-500">{{format-date order.scheduled_at "MMM d, HH:mm"}}</div>
+                                        {{/if}}
+                                    </div>
+                                </layers.popup>
+                            </layers.marker>
+                        {{/if}}
+                    {{/each}}
+
+                    {{! Driver/vehicle markers }}
+                    {{#each this.availableVehicles as |vehicle|}}
+                        {{#if vehicle.driver.location}}
+                            <layers.marker
+                                @lat={{vehicle.driver.location.coordinates.[1]}}
+                                @lng={{vehicle.driver.location.coordinates.[0]}}
+                                @icon={{this.driverMarkerIcon vehicle}}
+                            >
+                                <layers.popup>
+                                    <div class="text-xs">
+                                        <div class="font-semibold">{{vehicle.driver.name}}</div>
+                                        <div class="text-gray-500">{{vehicle.display_name}}</div>
+                                        <div class={{if vehicle.driver.online "text-green-500" "text-red-400"}}>
+                                            {{if vehicle.driver.online (t "common.online") (t "common.offline")}}
+                                        </div>
+                                    </div>
+                                </layers.popup>
+                            </layers.marker>
+                        {{/if}}
+                    {{/each}}
+
+                    {{! Proposed route polylines }}
+                    {{#if this.hasProposedPlan}}
+                        {{#each this.planByVehicle as |group|}}
+                            {{#if group.routePolyline}}
+                                <layers.polyline
+                                    @positions={{group.routePolyline}}
+                                    @color={{group.routeColor}}
+                                    @weight={{3}}
+                                    @opacity={{0.8}}
+                                />
+                            {{/if}}
+                        {{/each}}
+                    {{/if}}
+                </LeafletMap>
+            {{else}}
+                <div class="flex items-center justify-center h-full text-gray-400">
+                    <Spinner />
+                </div>
+            {{/if}}
+
+            {{! Map overlay: running indicator }}
+            {{#if this.runOrchestration.isRunning}}
+                <div class="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center z-10">
+                    <Spinner @size="lg" class="mb-3" />
+                    <span class="text-sm text-white">{{t "orchestrator.running"}}</span>
+                </div>
+            {{/if}}
+        </div>
+
+        {{! ── RIGHT PANEL: Driver / Route Timeline ── }}
+        <div class="driver-panel w-80 flex-shrink-0 border-l dark:border-gray-700 flex flex-col overflow-hidden">
+
+            {{! Panel header with view toggle }}
+            <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center justify-between">
                 <span class="text-xs font-medium uppercase tracking-wide dark:text-gray-400">
-                    {{t "orchestrator.available-vehicles"}} ({{this.availableVehicles.length}})
+                    {{#if this.hasProposedPlan}}
+                        {{t "orchestrator.proposed-routes"}} ({{this.planByVehicle.length}})
+                    {{else}}
+                        {{t "orchestrator.available-drivers"}} ({{this.availableVehicles.length}})
+                    {{/if}}
                 </span>
+                {{#if this.hasProposedPlan}}
+                    <button type="button" class="text-xs text-blue-400 hover:text-blue-300" {{on "click" this.discardPlan}}>
+                        {{t "orchestrator.clear"}}
+                    </button>
+                {{/if}}
             </div>
-            {{#if this.loadAvailableVehicles.isRunning}}
-                <div class="flex justify-center py-8"><Spinner /></div>
-            {{else if this.availableVehicles.length}}
-                {{#each this.availableVehicles as |vehicle|}}
-                    <div class="vehicle-card mx-2 my-1 px-3 py-2 rounded border dark:border-gray-600 dark:bg-gray-800 text-xs">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium dark:text-white truncate">{{vehicle.display_name}}</span>
-                            {{#if vehicle.driver.online}}
-                                <Badge @status="success" @label={{t "common.online"}} />
+
+            <div class="flex-1 overflow-y-auto">
+
+                {{! ── Plan View: per-vehicle route cards ── }}
+                {{#if this.hasProposedPlan}}
+
+                    {{#if this.hasUnassigned}}
+                        <div class="mx-3 mt-2 px-3 py-2 rounded bg-yellow-900/30 border border-yellow-700 text-yellow-400 text-xs">
+                            <FaIcon @icon="exclamation-triangle" class="mr-1" />
+                            {{t "orchestrator.unassigned-warning" count=this.unassignedAfterRun.length}}
+                        </div>
+                    {{/if}}
+
+                    {{#each this.planByVehicle as |group|}}
+                        <div
+                            class="vehicle-route-card mx-3 my-2 rounded border dark:border-gray-600 dark:bg-gray-800 overflow-hidden"
+                            data-vehicle-id={{group.vehicle.public_id}}
+                        >
+                            {{! Vehicle / driver header }}
+                            <div
+                                class="flex items-center px-3 py-2 border-b dark:border-gray-700 cursor-pointer"
+                                style="border-left: 3px solid {{group.routeColor}}"
+                                {{on "click" (fn this.toggleRouteCard group.vehicle.public_id)}}
+                            >
+                                <FaIcon @icon="truck" class="mr-2 text-blue-400 flex-shrink-0" />
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-xs font-semibold dark:text-white truncate">{{group.vehicle.display_name}}</div>
+                                    {{#if group.driver}}
+                                        <div class="text-xs text-gray-400 truncate">{{group.driver.name}}</div>
+                                    {{/if}}
+                                </div>
+                                <div class="flex items-center space-x-1 flex-shrink-0">
+                                    <span class="text-xs text-gray-400">{{group.orders.length}} {{t "orchestrator.stops"}}</span>
+                                    {{#if group.summary.duration}}
+                                        <span class="text-xs text-gray-500">·</span>
+                                        <span class="text-xs text-gray-400">{{this.formatDuration group.summary.duration}}</span>
+                                    {{/if}}
+                                    <FaIcon @icon={{if (this.isRouteCardExpanded group.vehicle.public_id) "chevron-up" "chevron-down"}} @size="xs" class="text-gray-500 ml-1" />
+                                </div>
+                            </div>
+
+                            {{! Expanded stop list (drag target for resequencing) }}
+                            {{#if (this.isRouteCardExpanded group.vehicle.public_id)}}
+                                <div
+                                    class="vehicle-drop-zone px-2 py-1"
+                                    data-vehicle-id={{group.vehicle.public_id}}
+                                    data-driver-id={{group.driver.public_id}}
+                                    {{on "dragover" this.onDragOver}}
+                                    {{on "drop" (fn this.onDropOnVehicle group.vehicle.public_id group.driver.public_id)}}
+                                >
+                                    {{#each group.orders as |item|}}
+                                        <div
+                                            class="assigned-stop flex items-center px-2 py-1.5 my-0.5 rounded text-xs
+                                                   {{if item._overridden 'border border-dashed border-orange-500 bg-orange-900/20' 'dark:bg-gray-700'}}
+                                                   cursor-grab"
+                                            draggable="true"
+                                            data-order-id={{item.order.public_id}}
+                                            {{on "dragstart" (fn this.onAssignedOrderDragStart item.order)}}
+                                        >
+                                            <span class="w-5 text-center text-gray-500 mr-2 flex-shrink-0">{{item.sequence}}</span>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="dark:text-white truncate">{{item.order.public_id}}</div>
+                                                <div class="text-gray-400 truncate">{{item.order.payload.dropoff.address}}</div>
+                                            </div>
+                                            {{#if item.arrival}}
+                                                <span class="text-gray-500 text-xs flex-shrink-0 ml-1">{{this.formatUnixTime item.arrival}}</span>
+                                            {{/if}}
+                                            {{#if item._overridden}}
+                                                <Badge @status="warning" @label={{t "orchestrator.overridden"}} class="ml-1" />
+                                            {{/if}}
+                                        </div>
+                                    {{/each}}
+
+                                    {{! Drop placeholder when empty }}
+                                    {{#unless group.orders.length}}
+                                        <div class="py-3 text-center text-xs text-gray-500">
+                                            {{t "orchestrator.drop-orders-here"}}
+                                        </div>
+                                    {{/unless}}
+                                </div>
+
+                                {{! Route summary footer }}
+                                {{#if group.summary}}
+                                    <div class="px-3 py-1.5 border-t dark:border-gray-700 flex items-center space-x-3 text-xs text-gray-500">
+                                        {{#if group.summary.distance}}
+                                            <span><FaIcon @icon="road" @size="xs" class="mr-0.5" />{{this.formatDistance group.summary.distance}}</span>
+                                        {{/if}}
+                                        {{#if group.summary.duration}}
+                                            <span><FaIcon @icon="clock" @size="xs" class="mr-0.5" />{{this.formatDuration group.summary.duration}}</span>
+                                        {{/if}}
+                                    </div>
+                                {{/if}}
                             {{/if}}
                         </div>
-                        {{#if vehicle.driver}}
-                            <div class="text-gray-400 mt-0.5 truncate">
-                                <FaIcon @icon="user" class="mr-1" />{{vehicle.driver.name}}
+                    {{/each}}
+
+                {{! ── Available Drivers View (pre-run) ── }}
+                {{else if this.loadData.isRunning}}
+                    <div class="flex justify-center py-8"><Spinner /></div>
+                {{else if this.availableVehicles.length}}
+                    {{#each this.availableVehicles as |vehicle|}}
+                        <div
+                            class="driver-card mx-3 my-1.5 px-3 py-2 rounded border dark:border-gray-600 dark:bg-gray-800 text-xs
+                                   {{if (this.isDriverSelected vehicle) 'ring-1 ring-blue-500' ''}}"
+                            {{on "click" (fn this.toggleDriverSelection vehicle)}}
+                        >
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium dark:text-white truncate flex-1 mr-1">
+                                    {{or vehicle.driver.name vehicle.display_name}}
+                                </span>
+                                {{#if vehicle.driver.online}}
+                                    <Badge @status="success" @label={{t "common.online"}} />
+                                {{else}}
+                                    <Badge @status="error" @label={{t "common.offline"}} />
+                                {{/if}}
                             </div>
-                        {{/if}}
+                            <div class="text-gray-400 mt-0.5 truncate">
+                                <FaIcon @icon="truck" @size="xs" class="mr-0.5" />{{vehicle.display_name}}
+                            </div>
+                            {{#if vehicle.driver.activeShift}}
+                                <div class="text-green-400 mt-0.5">
+                                    <FaIcon @icon="calendar-check" @size="xs" class="mr-0.5" />
+                                    {{t "orchestrator.on-shift"}}
+                                </div>
+                            {{/if}}
+                            {{#if vehicle.skills.length}}
+                                <div class="flex flex-wrap gap-0.5 mt-1">
+                                    {{#each vehicle.skills as |skill|}}
+                                        <span class="skill-tag">{{skill}}</span>
+                                    {{/each}}
+                                </div>
+                            {{/if}}
+                        </div>
+                    {{/each}}
+                {{else}}
+                    <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
+                        <FaIcon @icon="truck" @size="2x" class="mb-2 opacity-40" />
+                        {{t "orchestrator.no-available-vehicles"}}
                     </div>
-                {{/each}}
-            {{else}}
-                <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
-                    <FaIcon @icon="truck" @size="2x" class="mb-2 opacity-40" />
-                    {{t "orchestrator.no-available-vehicles"}}
+                {{/if}}
+            </div>
+
+            {{! Driver selection info bar }}
+            {{#if this.selectedDrivers.length}}
+                <div class="px-3 py-2 border-t dark:border-gray-700 bg-blue-900/20 flex items-center justify-between">
+                    <span class="text-xs text-blue-400">
+                        {{this.selectedDrivers.length}} {{t "orchestrator.drivers-selected"}}
+                    </span>
+                    <button type="button" class="text-xs text-gray-400 hover:text-white" {{on "click" this.clearDriverSelection}}>
+                        {{t "orchestrator.clear-selection"}}
+                    </button>
                 </div>
             {{/if}}
         </div>

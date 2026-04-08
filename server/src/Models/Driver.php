@@ -110,6 +110,12 @@ class Driver extends Model
         'slug',
         'status',
         'meta,',
+        // Orchestrator
+        'skills',
+        'max_travel_time',
+        'max_distance',
+        'time_window_start',
+        'time_window_end',
     ];
 
     /**
@@ -132,9 +138,13 @@ class Driver extends Model
      * @var array
      */
     protected $casts = [
-        'location'   => Point::class,
-        'online'     => 'boolean',
-        'meta'       => Json::class,
+        'location'        => Point::class,
+        'online'          => 'boolean',
+        'meta'            => Json::class,
+        // Orchestrator
+        'skills'          => Json::class,
+        'max_travel_time' => 'integer',
+        'max_distance'    => 'integer',
     ];
 
     /**

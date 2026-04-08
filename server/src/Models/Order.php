@@ -120,6 +120,11 @@ class Order extends Model
         'notes',
         'type',
         'status',
+        // Orchestrator
+        'orchestrator_priority',
+        'required_skills',
+        'time_window_start',
+        'time_window_end',
     ];
 
     /**
@@ -205,6 +210,11 @@ class Order extends Model
         'scheduled_at'     => 'datetime',
         'dispatched_at'    => 'datetime',
         'started_at'       => 'datetime',
+        // Orchestrator
+        'required_skills'       => Json::class,
+        'time_window_start'     => 'datetime',
+        'time_window_end'       => 'datetime',
+        'orchestrator_priority' => 'integer',
     ];
 
     /**

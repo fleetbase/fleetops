@@ -51,7 +51,7 @@ class Waypoint extends Model
      *
      * @var array
      */
-    protected $fillable = ['_key', '_import_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'type', 'order'];
+    protected $fillable = ['_key', '_import_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'type', 'order', 'time_window_start', 'time_window_end', 'service_time'];
 
     /**
      * Dynamic attributes that are appended to object.
@@ -81,6 +81,10 @@ class Waypoint extends Model
      */
     protected $casts = [
         'customer_type'    => PolymorphicType::class,
+        // Orchestrator
+        'time_window_start' => 'datetime',
+        'time_window_end'   => 'datetime',
+        'service_time'      => 'integer',
     ];
 
     /**

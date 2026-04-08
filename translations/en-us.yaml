@@ -1963,3 +1963,70 @@ orchestrator:
   empty-state-title: No orchestration plan yet
   empty-state-body: Click "Run Orchestrator" to generate an optimised assignment plan for unassigned orders.
   unassigned-warning: Some orders could not be assigned — insufficient vehicle capacity or no drivers on shift.
+  # Workbench toolbar & options
+  run-orchestration: Run Orchestrator
+  options: Options
+  mode: Mode
+  mode-allocate: Allocate Orders
+  mode-optimize: Optimize Routes
+  engine: Engine
+  respect-skills: Respect Skills
+  respect-capacity: Respect Capacity
+  return-to-depot: Return to Depot
+  # Plan state
+  unassigned-count: "Unassigned:"
+  clear: Clear
+  # Order pool
+  search-orders: Search orders…
+  filter-all: All
+  filter-scheduled: Scheduled
+  filter-urgent: Urgent
+  filter-imported: Imported
+  no-address: No address
+  selected: selected
+  clear-selection: Clear
+  # Driver panel
+  available-drivers: Available Drivers
+  proposed-routes: Proposed Routes
+  stops: stops
+  drivers-selected: drivers selected
+  drop-orders-here: Drop orders here
+  # Import modal
+  import-orders: Import Orders
+  import-step-upload: Upload
+  import-step-map: Map Columns
+  import-step-preview: Preview & Import
+  drop-file-here: Drop your CSV or Excel file here
+  or: or
+  browse-file: Browse file
+  accepted-formats: "Accepted: .csv, .xlsx, .xls"
+  remove-file: Remove file
+  download-template: Download Import Template
+  download-template-desc: Use our template to ensure your data imports correctly.
+  download: Download
+  next: Next
+  back: Back
+  map-columns-desc: "Map the columns in"
+  select-column: "— skip —"
+  data-preview: "First 3 rows preview:"
+  preview-import: Preview Import
+  preview-desc: "{count} rows ready to import"
+  errors: errors
+  all-rows-valid: All rows valid
+  validation-warning: "{count} row(s) have errors and will be skipped."
+  import-confirm: Confirm Import
+  col-pickup: Pickup
+  col-dropoff: Dropoff
+  col-scheduled: Scheduled
+  col-weight: Weight
+  col-status: Status
+  error: Error
+  valid: Valid
+  import-success: "{count} order(s) imported successfully."
+  no-valid-rows: No valid rows to import.
+  invalid-file-type: "Please upload a .csv, .xlsx or .xls file."
+  parse-error: Could not parse the file. Please check the format.
+  read-error: Could not read the file.
+  empty-file: The file appears to be empty.
+  missing-dropoff: Dropoff address is required.
+  stops-count: "{count} stops"

@@ -569,6 +569,247 @@ export const transmissionTypes = [
 
 export const odometerUnits = [...distanceUnits, { label: 'Hours', value: 'hours', description: 'Unit of time measurement, commonly used worldwide.' }];
 
+// ─── Orchestrator: Driver & Vehicle Skills ────────────────────────────────────
+
+/**
+ * driverSkills
+ * Comprehensive list of driver qualifications and certifications used by the
+ * Orchestrator to match orders to appropriately skilled drivers.
+ */
+export const driverSkills = [
+    // Licences & Certifications
+    { label: 'Car Licence (B)', value: 'licence_b', description: 'Standard passenger car licence.', group: 'licence' },
+    { label: 'Light Truck Licence (C)', value: 'licence_c', description: 'Licence for rigid trucks up to 8 tonnes GVM.', group: 'licence' },
+    { label: 'Medium Rigid (MR)', value: 'licence_mr', description: 'Two-axle rigid vehicle up to 8 tonnes.', group: 'licence' },
+    { label: 'Heavy Rigid (HR)', value: 'licence_hr', description: 'Three or more axle rigid vehicle.', group: 'licence' },
+    { label: 'Heavy Combination (HC)', value: 'licence_hc', description: 'Prime mover + semi-trailer combination.', group: 'licence' },
+    { label: 'Multi-Combination (MC)', value: 'licence_mc', description: 'B-double, road train, or multi-trailer combination.', group: 'licence' },
+    { label: 'Motorcycle Licence (A)', value: 'licence_a', description: 'Motorcycle or scooter delivery licence.', group: 'licence' },
+    { label: 'Forklift Licence', value: 'licence_forklift', description: 'Certified forklift operator.', group: 'licence' },
+    { label: 'Dangerous Goods (DG)', value: 'cert_dg', description: 'Certified to transport dangerous goods under ADG/IMDG codes.', group: 'certification' },
+    { label: 'Hazmat (US DOT)', value: 'cert_hazmat', description: 'US DOT hazardous materials endorsement.', group: 'certification' },
+    { label: 'ADR Hazmat (EU)', value: 'cert_adr', description: 'European ADR dangerous goods driver certificate.', group: 'certification' },
+    { label: 'Refrigerated Transport', value: 'cert_reefer', description: 'Trained in cold-chain and temperature-controlled transport.', group: 'certification' },
+    { label: 'Oversize / Overweight', value: 'cert_oversize', description: 'Certified for oversize or overweight load operations.', group: 'certification' },
+    { label: 'Passenger Transport', value: 'cert_passenger', description: 'Authorised to carry fare-paying passengers.', group: 'certification' },
+    { label: 'First Aid', value: 'cert_first_aid', description: 'Current first aid certificate.', group: 'certification' },
+    { label: 'Defensive Driving', value: 'cert_defensive_driving', description: 'Advanced defensive driving qualification.', group: 'certification' },
+    // Operational Skills
+    { label: 'Hand-truck / Trolley', value: 'skill_hand_truck', description: 'Proficient with hand-truck and trolley equipment.', group: 'operational' },
+    { label: 'Tail-lift Operation', value: 'skill_tail_lift', description: 'Trained to operate hydraulic tail-lift.', group: 'operational' },
+    { label: 'Crane / HIAB', value: 'skill_hiab', description: 'Certified to operate truck-mounted crane/HIAB.', group: 'operational' },
+    { label: 'Pallet Jack', value: 'skill_pallet_jack', description: 'Manual or electric pallet jack operation.', group: 'operational' },
+    { label: 'Pump-out / Tanker', value: 'skill_tanker', description: 'Trained in tanker loading, unloading, and pump operation.', group: 'operational' },
+    { label: 'Livestock Handling', value: 'skill_livestock', description: 'Experienced with live animal transport and handling.', group: 'operational' },
+    { label: 'Fragile / White Goods', value: 'skill_fragile', description: 'Trained in handling fragile or high-value goods.', group: 'operational' },
+    { label: 'Pharmaceutical / Medical', value: 'skill_pharma', description: 'Experienced with pharmaceutical and medical supply chain requirements.', group: 'operational' },
+    { label: 'Cash-in-Transit', value: 'skill_cit', description: 'Cleared and trained for cash-in-transit operations.', group: 'operational' },
+    { label: 'Contactless / Unattended Delivery', value: 'skill_contactless', description: 'Proficient in unattended or safe-drop delivery procedures.', group: 'operational' },
+    // Language & Customer Service
+    { label: 'Customer-facing', value: 'skill_customer_facing', description: 'Experienced in direct customer interaction and service.', group: 'soft_skills' },
+    { label: 'Multilingual', value: 'skill_multilingual', description: 'Fluent in more than one language.', group: 'soft_skills' },
+    { label: 'Digital / App Proficient', value: 'skill_digital', description: 'Comfortable using mobile apps and digital POD tools.', group: 'soft_skills' },
+];
+
+/**
+ * vehicleSkills
+ * Equipment and capability flags for vehicles used by the Orchestrator to
+ * match vehicles to orders requiring specific handling.
+ */
+export const vehicleSkills = [
+    // Cargo Handling Equipment
+    { label: 'Tail Lift', value: 'tail_lift', description: 'Hydraulic tail-lift for loading/unloading without a dock.', group: 'equipment' },
+    { label: 'Crane / HIAB', value: 'hiab', description: 'Truck-mounted crane for self-loading.', group: 'equipment' },
+    { label: 'Pallet Racking', value: 'pallet_racking', description: 'Internal pallet racking system.', group: 'equipment' },
+    { label: 'Roller Bed / Conveyor Floor', value: 'roller_bed', description: 'Motorised roller floor for easy cargo movement.', group: 'equipment' },
+    { label: 'Curtainsider', value: 'curtainsider', description: 'Curtain-sided trailer for easy side-loading.', group: 'equipment' },
+    { label: 'Flatbed / Step-deck', value: 'flatbed', description: 'Open flatbed or step-deck for oversized loads.', group: 'equipment' },
+    { label: 'Refrigerated (Reefer)', value: 'refrigerated', description: 'Active refrigeration unit for cold-chain cargo.', group: 'temperature' },
+    { label: 'Chilled (2–8 °C)', value: 'chilled', description: 'Maintains chilled temperature range 2–8 °C.', group: 'temperature' },
+    { label: 'Frozen (< −18 °C)', value: 'frozen', description: 'Maintains frozen temperature below −18 °C.', group: 'temperature' },
+    { label: 'Ambient / Insulated', value: 'insulated', description: 'Insulated body without active cooling.', group: 'temperature' },
+    { label: 'Heated / Warm', value: 'heated', description: 'Heated cargo space for temperature-sensitive goods in cold climates.', group: 'temperature' },
+    // Compliance & Certification
+    { label: 'Dangerous Goods Approved', value: 'dg_approved', description: 'Vehicle certified and placarded for dangerous goods.', group: 'compliance' },
+    { label: 'ADR Certified (EU)', value: 'adr_certified', description: 'European ADR dangerous goods vehicle certification.', group: 'compliance' },
+    { label: 'Oversize Permit', value: 'oversize_permit', description: 'Holds current oversize/overweight load permit.', group: 'compliance' },
+    { label: 'Food Grade', value: 'food_grade', description: 'Cargo area meets food safety/hygiene standards.', group: 'compliance' },
+    { label: 'Pharmaceutical Grade', value: 'pharma_grade', description: 'Meets GDP/pharmaceutical transport standards.', group: 'compliance' },
+    { label: 'Cash-in-Transit Secure', value: 'cit_secure', description: 'Armoured or security-fitted for cash-in-transit.', group: 'compliance' },
+    // Connectivity & Telematics
+    { label: 'GPS / Live Tracking', value: 'gps_tracking', description: 'Fitted with live GPS tracking device.', group: 'telematics' },
+    { label: 'Temperature Logger', value: 'temp_logger', description: 'Continuous temperature data logging.', group: 'telematics' },
+    { label: 'Dash Camera', value: 'dash_cam', description: 'Forward-facing dash camera installed.', group: 'telematics' },
+    { label: 'ELD / Tachograph', value: 'eld', description: 'Electronic logging device or digital tachograph fitted.', group: 'telematics' },
+];
+
+// ─── Orchestrator: Capacity & Dimension Options ───────────────────────────────
+
+/**
+ * capacityDimensions
+ * The multi-dimensional capacity axes supported by the Orchestrator and VROOM.
+ * Each dimension can be independently constrained on vehicles and required by orders.
+ */
+export const capacityDimensions = [
+    { label: 'Weight (kg)', value: 'weight_kg', unit: 'kg', description: 'Gross cargo weight in kilograms.', group: 'weight' },
+    { label: 'Weight (lb)', value: 'weight_lb', unit: 'lb', description: 'Gross cargo weight in pounds.', group: 'weight' },
+    { label: 'Volume (m³)', value: 'volume_m3', unit: 'm³', description: 'Total cargo volume in cubic metres.', group: 'volume' },
+    { label: 'Volume (ft³)', value: 'volume_ft3', unit: 'ft³', description: 'Total cargo volume in cubic feet.', group: 'volume' },
+    { label: 'Pallets', value: 'pallets', unit: 'pallets', description: 'Number of standard EUR/AU pallets.', group: 'units' },
+    { label: 'Parcels / Packages', value: 'parcels', unit: 'parcels', description: 'Count of individual parcels or packages.', group: 'units' },
+    { label: 'Cartons / Cases', value: 'cartons', unit: 'cartons', description: 'Count of cartons or cases.', group: 'units' },
+    { label: 'Linear Metres (LDM)', value: 'ldm', unit: 'LDM', description: 'Loading metres — floor space occupied by cargo.', group: 'length' },
+    { label: 'Floor Area (m²)', value: 'floor_area_m2', unit: 'm²', description: 'Cargo floor area in square metres.', group: 'length' },
+    { label: 'Seats / Passengers', value: 'seats', unit: 'seats', description: 'Passenger seat capacity (for passenger transport).', group: 'units' },
+];
+
+/**
+ * vehicleCapacityProfiles
+ * Common pre-defined capacity profiles for quick assignment to vehicles.
+ */
+export const vehicleCapacityProfiles = [
+    { label: 'Motorbike / Scooter', value: 'moto', description: 'Up to 20 kg, 0.05 m³, 5 parcels.', weight_kg: 20, volume_m3: 0.05, parcels: 5 },
+    { label: 'Small Car / Hatchback', value: 'small_car', description: 'Up to 150 kg, 0.3 m³, 20 parcels.', weight_kg: 150, volume_m3: 0.3, parcels: 20 },
+    { label: 'Cargo Van (Small)', value: 'small_van', description: 'Up to 800 kg, 5 m³, 100 parcels.', weight_kg: 800, volume_m3: 5, parcels: 100 },
+    { label: 'Cargo Van (Large)', value: 'large_van', description: 'Up to 1,500 kg, 10 m³, 200 parcels.', weight_kg: 1500, volume_m3: 10, parcels: 200 },
+    { label: 'Light Truck (3.5t)', value: 'light_truck', description: 'Up to 3,500 kg, 20 m³, 6 pallets.', weight_kg: 3500, volume_m3: 20, pallets: 6 },
+    { label: 'Medium Truck (7.5t)', value: 'medium_truck', description: 'Up to 7,500 kg, 40 m³, 14 pallets.', weight_kg: 7500, volume_m3: 40, pallets: 14 },
+    { label: 'Heavy Truck (13.5t)', value: 'heavy_truck', description: 'Up to 13,500 kg, 60 m³, 22 pallets.', weight_kg: 13500, volume_m3: 60, pallets: 22 },
+    { label: 'Semi-Trailer (26t)', value: 'semi_trailer', description: 'Up to 26,000 kg, 90 m³, 33 pallets.', weight_kg: 26000, volume_m3: 90, pallets: 33 },
+    { label: 'B-Double (42.5t)', value: 'b_double', description: 'Up to 42,500 kg, 150 m³, 54 pallets.', weight_kg: 42500, volume_m3: 150, pallets: 54 },
+    { label: 'Refrigerated Van', value: 'reefer_van', description: 'Up to 1,200 kg, 8 m³, cold-chain.', weight_kg: 1200, volume_m3: 8 },
+    { label: 'Refrigerated Truck (10t)', value: 'reefer_truck', description: 'Up to 10,000 kg, 50 m³, cold-chain.', weight_kg: 10000, volume_m3: 50 },
+];
+
+// ─── Orchestrator: Order Priority Options ─────────────────────────────────────
+
+/**
+ * orderPriorityLevels
+ * Routing priority levels for orders. Higher priority orders are served first
+ * by the optimization engine when time windows conflict.
+ */
+export const orderPriorityLevels = [
+    { label: 'Critical', value: 100, description: 'Must be served first — SLA breach imminent or emergency delivery.', color: 'red' },
+    { label: 'High', value: 75, description: 'High-priority order; serve before standard orders.', color: 'orange' },
+    { label: 'Standard', value: 50, description: 'Normal priority — default for all orders.', color: 'blue' },
+    { label: 'Low', value: 25, description: 'Low-priority order; serve after higher-priority stops.', color: 'gray' },
+    { label: 'Flexible', value: 10, description: 'No strict time requirement; fill remaining capacity.', color: 'green' },
+];
+
+// ─── Orchestrator: Time Window Presets ────────────────────────────────────────
+
+/**
+ * timeWindowPresets
+ * Common delivery/pickup time window presets for quick assignment.
+ * Times are stored as HH:MM strings; the backend converts to Unix timestamps.
+ */
+export const timeWindowPresets = [
+    { label: 'Early Morning (06:00–09:00)', value: 'early_morning', start: '06:00', end: '09:00', description: 'Pre-business-hours delivery window.' },
+    { label: 'Morning (08:00–12:00)', value: 'morning', start: '08:00', end: '12:00', description: 'Standard morning delivery window.' },
+    { label: 'Midday (11:00–14:00)', value: 'midday', start: '11:00', end: '14:00', description: 'Lunchtime delivery window.' },
+    { label: 'Afternoon (12:00–17:00)', value: 'afternoon', start: '12:00', end: '17:00', description: 'Standard afternoon delivery window.' },
+    { label: 'Business Hours (09:00–17:00)', value: 'business_hours', start: '09:00', end: '17:00', description: 'Full business-hours window.' },
+    { label: 'Evening (17:00–21:00)', value: 'evening', start: '17:00', end: '21:00', description: 'After-hours residential delivery.' },
+    { label: 'Night (21:00–06:00)', value: 'night', start: '21:00', end: '06:00', description: 'Overnight or graveyard-shift delivery.' },
+    { label: 'AM Only (Before 12:00)', value: 'am_only', start: '00:00', end: '12:00', description: 'Must be delivered before noon.' },
+    { label: 'PM Only (After 12:00)', value: 'pm_only', start: '12:00', end: '23:59', description: 'Must be delivered after noon.' },
+    { label: 'Anytime', value: 'anytime', start: '00:00', end: '23:59', description: 'No time restriction — deliver any time.' },
+];
+
+// ─── Orchestrator: Route Optimization Constraint Options ──────────────────────
+
+/**
+ * optimizationObjectives
+ * The primary objective the optimization engine should minimise/maximise.
+ */
+export const optimizationObjectives = [
+    { label: 'Minimize Total Distance', value: 'min_distance', description: 'Produce routes with the shortest total travel distance.', icon: 'route' },
+    { label: 'Minimize Total Duration', value: 'min_duration', description: 'Produce routes with the shortest total travel time.', icon: 'clock' },
+    { label: 'Minimize Vehicles Used', value: 'min_vehicles', description: 'Use as few vehicles as possible while serving all orders.', icon: 'truck' },
+    { label: 'Balance Workload', value: 'balance_workload', description: 'Distribute stops evenly across all available drivers.', icon: 'scale' },
+    { label: 'Maximize On-Time Delivery', value: 'max_on_time', description: 'Prioritise serving stops within their time windows.', icon: 'check-circle' },
+    { label: 'Minimize Overtime', value: 'min_overtime', description: 'Keep driver working hours within contracted limits.', icon: 'user-clock' },
+    { label: 'Minimize Fuel / Emissions', value: 'min_emissions', description: 'Optimise for lowest fuel consumption and CO₂ output.', icon: 'leaf' },
+];
+
+/**
+ * routingConstraintOptions
+ * Boolean constraint toggles exposed in the Orchestrator settings and run panel.
+ */
+export const routingConstraintOptions = [
+    { label: 'Respect Time Windows', value: 'respect_time_windows', description: 'Enforce delivery/pickup time windows as hard constraints.' },
+    { label: 'Respect Vehicle Capacity', value: 'respect_capacity', description: 'Do not exceed vehicle weight, volume, or unit capacity.' },
+    { label: 'Respect Driver Skills', value: 'respect_skills', description: 'Only assign orders to drivers/vehicles with matching skills.' },
+    { label: 'Respect Max Tasks per Route', value: 'respect_max_tasks', description: 'Do not exceed the maximum number of stops per vehicle.' },
+    { label: 'Respect Max Travel Time', value: 'respect_max_travel_time', description: 'Do not exceed the maximum driving time per vehicle/driver.' },
+    { label: 'Respect Max Distance', value: 'respect_max_distance', description: 'Do not exceed the maximum distance per vehicle/driver.' },
+    { label: 'Allow Unassigned Orders', value: 'allow_unassigned', description: 'Permit orders to remain unassigned if no feasible vehicle exists.' },
+    { label: 'Pickup Before Delivery', value: 'pickup_before_delivery', description: 'Enforce pickup-before-dropoff sequencing for P&D orders.' },
+    { label: 'Return to Depot', value: 'return_to_depot', description: 'Require vehicles to return to their start depot after the last stop.' },
+    { label: 'Avoid Highways', value: 'avoid_highways', description: 'Route via non-highway roads where possible.' },
+    { label: 'Avoid Tolls', value: 'avoid_tolls', description: 'Route to avoid toll roads where possible.' },
+    { label: 'Avoid Ferries', value: 'avoid_ferries', description: 'Route to avoid ferry crossings where possible.' },
+];
+
+/**
+ * serviceTimePresets
+ * Common service time (dwell time) presets for waypoints.
+ * Represents the expected time in seconds to complete the task at a stop.
+ */
+export const serviceTimePresets = [
+    { label: '2 minutes', value: 120, description: 'Quick drop — parcel left at door.' },
+    { label: '5 minutes', value: 300, description: 'Standard residential drop-off.' },
+    { label: '10 minutes', value: 600, description: 'Standard commercial delivery.' },
+    { label: '15 minutes', value: 900, description: 'Delivery with signature/POD.' },
+    { label: '20 minutes', value: 1200, description: 'Delivery with unloading assistance.' },
+    { label: '30 minutes', value: 1800, description: 'Larger delivery or installation.' },
+    { label: '45 minutes', value: 2700, description: 'Complex delivery or site inspection.' },
+    { label: '1 hour', value: 3600, description: 'Full hour on-site service.' },
+    { label: '2 hours', value: 7200, description: 'Extended on-site service or installation.' },
+];
+
+// ─── Orchestrator: Import Column Mapping Options ──────────────────────────────
+
+/**
+ * importColumnMappings
+ * Canonical column names used by the Orchestrator order import flow.
+ * Each entry defines the internal field name, a human-readable label, whether
+ * it is required, and example values to guide column mapping.
+ */
+export const importColumnMappings = [
+    // Order Identity
+    { field: 'reference', label: 'Order Reference / ID', required: false, example: 'ORD-001', group: 'order' },
+    { field: 'type', label: 'Order Type', required: false, example: 'delivery', group: 'order' },
+    { field: 'notes', label: 'Notes / Instructions', required: false, example: 'Leave at back door', group: 'order' },
+    { field: 'priority', label: 'Priority', required: false, example: '75', group: 'order' },
+    // Pickup
+    { field: 'pickup_name', label: 'Pickup Contact Name', required: false, example: 'Warehouse A', group: 'pickup' },
+    { field: 'pickup_address', label: 'Pickup Address', required: true, example: '123 Main St, Sydney NSW 2000', group: 'pickup' },
+    { field: 'pickup_lat', label: 'Pickup Latitude', required: false, example: '-33.8688', group: 'pickup' },
+    { field: 'pickup_lng', label: 'Pickup Longitude', required: false, example: '151.2093', group: 'pickup' },
+    { field: 'pickup_time_window_start', label: 'Pickup Window Start', required: false, example: '08:00', group: 'pickup' },
+    { field: 'pickup_time_window_end', label: 'Pickup Window End', required: false, example: '12:00', group: 'pickup' },
+    { field: 'pickup_service_time', label: 'Pickup Service Time (min)', required: false, example: '10', group: 'pickup' },
+    // Dropoff
+    { field: 'dropoff_name', label: 'Dropoff Contact Name', required: false, example: 'John Smith', group: 'dropoff' },
+    { field: 'dropoff_address', label: 'Dropoff Address', required: true, example: '456 Queen St, Melbourne VIC 3000', group: 'dropoff' },
+    { field: 'dropoff_lat', label: 'Dropoff Latitude', required: false, example: '-37.8136', group: 'dropoff' },
+    { field: 'dropoff_lng', label: 'Dropoff Longitude', required: false, example: '144.9631', group: 'dropoff' },
+    { field: 'dropoff_time_window_start', label: 'Delivery Window Start', required: false, example: '12:00', group: 'dropoff' },
+    { field: 'dropoff_time_window_end', label: 'Delivery Window End', required: false, example: '17:00', group: 'dropoff' },
+    { field: 'dropoff_service_time', label: 'Delivery Service Time (min)', required: false, example: '5', group: 'dropoff' },
+    // Cargo / Capacity
+    { field: 'weight_kg', label: 'Weight (kg)', required: false, example: '25', group: 'cargo' },
+    { field: 'volume_m3', label: 'Volume (m³)', required: false, example: '0.5', group: 'cargo' },
+    { field: 'pallets', label: 'Pallets', required: false, example: '2', group: 'cargo' },
+    { field: 'parcels', label: 'Parcels / Packages', required: false, example: '10', group: 'cargo' },
+    { field: 'required_skills', label: 'Required Skills (comma-separated)', required: false, example: 'refrigerated,tail_lift', group: 'cargo' },
+    // Customer
+    { field: 'customer_name', label: 'Customer Name', required: false, example: 'Acme Corp', group: 'customer' },
+    { field: 'customer_phone', label: 'Customer Phone', required: false, example: '+61400000000', group: 'customer' },
+    { field: 'customer_email', label: 'Customer Email', required: false, example: 'customer@example.com', group: 'customer' },
+];
+
 export default function fleetOpsOptions(key) {
     const allOptions = {
         driverTypes,
@@ -615,6 +856,19 @@ export default function fleetOpsOptions(key) {
         transmissionTypes,
         odometerUnits,
         measurementSystems,
+        // Orchestrator options
+        driverSkills,
+        driverSkillsPowerGroups: toPowerSelectGroups(driverSkills),
+        vehicleSkills,
+        vehicleSkillsPowerGroups: toPowerSelectGroups(vehicleSkills),
+        capacityDimensions,
+        vehicleCapacityProfiles,
+        orderPriorityLevels,
+        timeWindowPresets,
+        optimizationObjectives,
+        routingConstraintOptions,
+        serviceTimePresets,
+        importColumnMappings,
     };
 
     return allOptions[key] ?? [];

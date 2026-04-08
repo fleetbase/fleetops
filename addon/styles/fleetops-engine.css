@@ -2210,3 +2210,167 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
     padding-left: 0 !important;
     padding-right: 0 !important;
 }
+
+/* ============================================================
+   Orchestrator Workbench
+   ============================================================ */
+
+/* ── Workbench layout ── */
+.orchestrator-workbench {
+    background: var(--color-bg-surface, #111827);
+}
+
+/* ── Toolbar ── */
+.workbench-toolbar {
+    min-height: 44px;
+}
+
+/* ── Options panel ── */
+.workbench-options-panel label {
+    white-space: nowrap;
+}
+
+/* ── Order pool card ── */
+.order-pool-card {
+    background: #1f2937;
+    border-color: #374151;
+    transition: background 0.1s, border-color 0.1s;
+}
+.order-pool-card:hover {
+    background: #263040;
+    border-color: #4b5563;
+}
+.order-pool-card.selected {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+}
+
+/* ── Order filter chips ── */
+.order-filter-chip {
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: #9ca3af;
+    background: transparent;
+    border: 1px solid #374151;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.order-filter-chip:hover {
+    background: #374151;
+    color: #e5e7eb;
+}
+.order-filter-chip.active {
+    background: #1d4ed8;
+    border-color: #3b82f6;
+    color: #fff;
+}
+
+/* ── Skill tags ── */
+.skill-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.6rem;
+    font-weight: 500;
+    background: #1e3a5f;
+    color: #93c5fd;
+    border: 1px solid #1d4ed8;
+}
+
+/* ── Vehicle route cards ── */
+.vehicle-route-card {
+    transition: box-shadow 0.1s;
+}
+.vehicle-route-card:hover {
+    box-shadow: 0 0 0 1px #3b82f6;
+}
+
+/* ── Assigned stop row ── */
+.assigned-stop {
+    transition: background 0.1s;
+}
+.assigned-stop:hover {
+    background: #263040 !important;
+}
+
+/* ── Driver card ── */
+.driver-card {
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+}
+.driver-card:hover {
+    background: #263040;
+    border-color: #4b5563;
+}
+
+/* ── Vehicle drop zone (drag target) ── */
+.vehicle-drop-zone {
+    min-height: 32px;
+    transition: background 0.1s;
+}
+.vehicle-drop-zone.drag-over {
+    background: rgba(59, 130, 246, 0.1);
+    outline: 1px dashed #3b82f6;
+    border-radius: 4px;
+}
+
+/* ── Import modal ── */
+.import-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    border: 2px dashed #374151;
+    border-radius: 0.5rem;
+    background: #1f2937;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+.import-dropzone:hover,
+.import-dropzone.dragging {
+    border-color: #3b82f6;
+    background: #1e3a5f;
+}
+.import-dropzone p {
+    margin: 0;
+}
+
+/* ── Import step indicator ── */
+.import-step {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+.import-step.active {
+    color: #3b82f6;
+}
+.import-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #374151;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #9ca3af;
+}
+.import-step.active .import-step-num {
+    background: #1d4ed8;
+    color: #fff;
+}
+.import-step-divider {
+    flex: 1;
+    height: 1px;
+    background: #374151;
+    min-width: 16px;
+}
