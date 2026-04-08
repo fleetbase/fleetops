@@ -43,12 +43,12 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see order'),
             },
             {
-                intl: 'menu.service-rates',
-                title: this.intl.t('menu.service-rates'),
-                icon: 'file-invoice-dollar',
-                route: 'operations.service-rates',
-                permission: 'fleet-ops list service-rate',
-                visible: this.abilities.can('fleet-ops see service-rate'),
+                intl: 'menu.orchestrator',
+                title: this.intl.t('menu.orchestrator'),
+                icon: 'circle-nodes',
+                route: 'operations.orchestrator',
+                permission: 'fleet-ops list order',
+                visible: this.abilities.can('fleet-ops see order'),
             },
             {
                 intl: 'menu.scheduler',
@@ -67,12 +67,12 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see order-config'),
             },
             {
-                intl: 'menu.orchestrator',
-                title: this.intl.t('menu.orchestrator'),
-                icon: 'circle-nodes',
-                route: 'operations.orchestrator',
-                permission: 'fleet-ops list order',
-                visible: this.abilities.can('fleet-ops see order'),
+                intl: 'menu.service-rates',
+                title: this.intl.t('menu.service-rates'),
+                icon: 'file-invoice-dollar',
+                route: 'operations.service-rates',
+                permission: 'fleet-ops list service-rate',
+                visible: this.abilities.can('fleet-ops see service-rate'),
             },
         ];
 
@@ -278,6 +278,22 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see routing-settings'),
             },
             {
+                intl: 'menu.orchestrator',
+                title: this.intl.t('menu.orchestrator'),
+                icon: 'circle-nodes',
+                route: 'settings.orchestrator',
+                permission: 'fleet-ops view routing-settings',
+                visible: this.abilities.can('fleet-ops see routing-settings'),
+            },
+            {
+                intl: 'menu.scheduling',
+                title: this.intl.t('menu.scheduling'),
+                icon: 'calendar-days',
+                route: 'settings.scheduling',
+                permission: 'fleet-ops view scheduling-settings',
+                visible: this.abilities.can('fleet-ops see scheduling-settings'),
+            },
+            {
                 intl: 'menu.custom-fields',
                 title: this.intl.t('menu.custom-fields'),
                 icon: 'rectangle-list',
@@ -292,22 +308,6 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 route: 'settings.avatars',
                 permission: 'fleet-ops view avatar',
                 visible: this.abilities.can('fleet-ops see avatar'),
-            },
-            {
-                intl: 'menu.orchestrator-settings',
-                title: this.intl.t('menu.orchestrator-settings'),
-                icon: 'circle-nodes',
-                route: 'settings.orchestrator',
-                permission: 'fleet-ops view routing-settings',
-                visible: this.abilities.can('fleet-ops see routing-settings'),
-            },
-            {
-                intl: 'menu.scheduling',
-                title: this.intl.t('menu.scheduling'),
-                icon: 'calendar-days',
-                route: 'settings.scheduling',
-                permission: 'fleet-ops view scheduling-settings',
-                visible: this.abilities.can('fleet-ops see scheduling-settings'),
             },
         ];
 
