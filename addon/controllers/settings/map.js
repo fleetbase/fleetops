@@ -47,15 +47,6 @@ export default class SettingsMapController extends Controller {
     @tracked mapProvider = 'leaflet';
 
     /**
-     * The Google Maps API key entered by the user.
-     * Stored separately from the settings blob so it is never leaked.
-     *
-     * @memberof SettingsMapController
-     * @var {String}
-     */
-    @tracked googleMapsApiKey = '';
-
-    /**
      * The selected Google Maps map type (roadmap / satellite / hybrid / terrain).
      *
      * @memberof SettingsMapController
@@ -147,16 +138,6 @@ export default class SettingsMapController extends Controller {
     }
 
     /**
-     * Called when the user types in the Google Maps API key field.
-     *
-     * @param {Event} event
-     * @memberof SettingsMapController
-     */
-    @action onApiKeyChange(event) {
-        this.googleMapsApiKey = event?.target?.value ?? '';
-    }
-
-    /**
      * Toggle the Google Maps traffic layer setting.
      *
      * @memberof SettingsMapController
@@ -189,12 +170,6 @@ export default class SettingsMapController extends Controller {
             googleMapsTransitLayer: this.googleMapsTransitLayer,
         };
 
-        // Only include the API key in the payload when the user has typed one,
-        // so that an empty submission does not overwrite a previously saved key.
-        if (this.googleMapsApiKey && this.googleMapsApiKey.trim().length > 0) {
-            settings.googleMapsApiKey = this.googleMapsApiKey.trim();
-        }
-
         try {
             yield this.fetch.post('fleet-ops/settings/map', { settings });
 
@@ -204,7 +179,7 @@ export default class SettingsMapController extends Controller {
                 this.mapManager.setActiveProvider(this.mapProvider);
             }
 
-            this.notifications.success(this.intl.t('map-settings.settings-saved'));
+            this.notifications.success(this.intl.t('settings.map.settings-saved'));
         } catch (error) {
             this.notifications.serverError(error);
         }
@@ -223,9 +198,6 @@ export default class SettingsMapController extends Controller {
             this.googleMapsMapType = response?.googleMapsMapType ?? 'roadmap';
             this.googleMapsTrafficLayer = response?.googleMapsTrafficLayer ?? false;
             this.googleMapsTransitLayer = response?.googleMapsTransitLayer ?? false;
-            // The API key is intentionally NOT returned by the server for security.
-            // We leave the field blank so the user can enter a new key if needed.
-            this.googleMapsApiKey = '';
             this.settingsLoaded = true;
         } catch (error) {
             this.notifications.serverError(error);

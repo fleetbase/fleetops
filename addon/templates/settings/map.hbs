@@ -37,20 +37,6 @@
                     {{!-- Google Maps options — only shown when Google Maps is selected --}}
                     {{#if this.isGoogleMapsSelected}}
 
-                        {{!-- API Key --}}
-                        <InputGroup
-                            @name={{t "settings.map.google-maps-api-key"}}
-                            @helpText={{t "settings.map.google-maps-api-key-help-text"}}
-                        >
-                            <Input
-                                class="form-input w-full"
-                                type="password"
-                                value={{this.googleMapsApiKey}}
-                                placeholder={{t "settings.map.google-maps-api-key-placeholder"}}
-                                {{on "input" this.onApiKeyChange}}
-                            />
-                        </InputGroup>
-
                         {{!-- Map type --}}
                         <InputGroup
                             @name={{t "settings.map.google-maps-map-type"}}
@@ -86,22 +72,6 @@
                                 @helpText={{t "settings.map.show-transit-layer-help-text"}}
                             />
                         </InputGroup>
-
-                        {{!-- Required Google Cloud APIs info box --}}
-                        <div class="rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 p-3 mt-2 mb-2">
-                            <div class="flex items-start space-x-2">
-                                <FaIcon @icon="circle-info" class="text-blue-500 mt-0.5 flex-shrink-0" />
-                                <div class="text-xs text-blue-700 dark:text-blue-300">
-                                    <p class="font-semibold mb-1">{{t "settings.map.google-api-key-requirements-title"}}</p>
-                                    <ul class="list-disc list-inside space-y-0.5">
-                                        <li>{{t "settings.map.google-api-key-requirement-maps-js"}}</li>
-                                        <li>{{t "settings.map.google-api-key-requirement-drawing"}}</li>
-                                        <li>{{t "settings.map.google-api-key-requirement-geometry"}}</li>
-                                        <li>{{t "settings.map.google-api-key-requirement-geocoding"}}</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
 
                     {{/if}}
                     {{!-- /Google Maps options --}}

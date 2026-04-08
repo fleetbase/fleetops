@@ -212,30 +212,33 @@ class SettingController extends Controller
     }
 
     /**
-     * Retrieve and return the map provider settings.
+     * Retrieve and return the map provider settings for the current company.
      *
-     * Returns the persisted map configuration for the current company,
-     * falling back to sensible defaults when no settings have been saved yet.
-     * The Google Maps API key is intentionally excluded from the response
-     * for security; it is stored server-side and injected at build time.
+     * The Google Maps API key is sourced exclusively from the system-level
+     * services configuration managed by the core-api admin settings panel
+     * (services.google_maps.api_key). FleetOps never stores or manages the
+     * key independently — it simply reads it from the shared system config
+     * and passes it to the frontend so the Google Maps adapter can initialise.
      *
      * @return \Illuminate\Http\JsonResponse
      */
     public function getMapSettings()
     {
         $defaults = [
-            'mapProvider'             => 'leaflet',
-            'googleMapsMapType'       => 'roadmap',
-            'googleMapsTrafficLayer'  => false,
-            'googleMapsTransitLayer'  => false,
-            'leafletTileProvider'     => 'carto-light',
-            'leafletCustomTileUrl'    => '',
+            'mapProvider'          => 'leaflet',
+            'googleMapsMapType'    => 'roadmap',
+            'googleMapsTrafficLayer' => false,
+            'googleMapsTransitLayer' => false,
+            'leafletTileProvider'  => 'carto-light',
+            'leafletCustomTileUrl' => '',
         ];
 
         $mapSettings = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
 
-        // Never expose the raw API key to the frontend
-        unset($mapSettings['googleMapsApiKey']);
+        // Source the Google Maps API key from the system-level services config
+        // that is managed by the core-api admin settings panel. This ensures a
+        // single source of truth and avoids duplicating key management.
+        $mapSettings['googleMapsApiKey'] = config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY', ''));
 
         return response()->json($mapSettings);
     }
@@ -243,8 +246,10 @@ class SettingController extends Controller
     /**
      * Persist the map provider settings for the current company.
      *
-     * The Google Maps API key is stored separately in a protected setting
-     * so that it is never returned in the public settings response.
+     * The Google Maps API key is managed entirely through the core-api admin
+     * settings panel (Settings → Services → Google Maps) and is therefore
+     * never accepted or stored by this endpoint. Only the provider selection
+     * and display preferences are persisted here.
      *
      * @param  Request  $request
      * @return \Illuminate\Http\JsonResponse
@@ -253,12 +258,8 @@ class SettingController extends Controller
     {
         $settings = $request->input('settings', []);
 
-        // Persist the API key separately so it is never leaked in GET responses
-        if (!empty($settings['googleMapsApiKey'])) {
-            Setting::configureCompany('fleet-ops.map-settings.google-api-key', $settings['googleMapsApiKey']);
-        }
-
-        // Strip the key before saving the general settings blob
+        // The API key is managed at the system level via core-api — strip it
+        // from the payload in case a client accidentally sends it.
         unset($settings['googleMapsApiKey']);
 
         // Validate provider value
