@@ -274,10 +274,9 @@
 
         {{! ── CENTRE PANEL: Map ── }}
         <div class="map-panel flex-1 relative overflow-hidden">
-            <div class="fleetbase-leaflet-map-container w-full h-full">
-                {{#if this.mapReady}}
-                    <LeafletMap class="w-full h-full" @lat={{this.mapCenter.lat}} @lng={{this.mapCenter.lng}} @zoom={{this.mapZoom}} @onLoad={{this.onMapLoad}} as |layers|>
-                        <layers.tile @url={{this.tileSourceUrl}} />
+            <div class="next-map-container w-full h-full">
+                <LeafletMap class="w-full h-full" @lat={{this.mapCenter.lat}} @lng={{this.mapCenter.lng}} @zoom={{this.mapZoom}} @onLoad={{this.onMapLoad}} as |layers|>
+                    <layers.tile @url={{this.tileSourceUrl}} />
 
                         {{! Order markers — blue dot via div-icon (no broken image URL) }}
                         {{#each this.filteredOrders as |order|}}
@@ -309,6 +308,7 @@
                                 </layers.marker>
                             {{/if}}
                         {{/each}}
+
 
                         {{! Driver markers — green/red dot via div-icon }}
                         {{#each this.availableDrivers as |driver|}}
