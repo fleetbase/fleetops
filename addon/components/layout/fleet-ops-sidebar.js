@@ -254,6 +254,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see routing-settings'),
             },
             {
+                intl: 'menu.map',
+                title: this.intl.t('menu.map'),
+                icon: 'map',
+                route: 'settings.map',
+                permission: 'fleet-ops view map-settings',
+                visible: this.abilities.can('fleet-ops see map-settings'),
+            },
+            {
                 intl: 'menu.custom-fields',
                 title: this.intl.t('menu.custom-fields'),
                 icon: 'rectangle-list',

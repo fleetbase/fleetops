@@ -1,0 +1,125 @@
+<Layout::Section::Header @title={{t "settings.map.fleet-ops-map-settings"}}>
+    <Button
+        @type="primary"
+        @size="sm"
+        @icon="save"
+        @text={{t "common.save-changes"}}
+        @onClick={{perform this.saveSettings}}
+        @disabled={{this.saveSettings.isRunning}}
+        @isLoading={{or this.saveSettings.isRunning this.getSettings.isRunning}}
+        @permission="fleet-ops update map-settings"
+    />
+</Layout::Section::Header>
+<Layout::Section::Body class="overflow-y-scroll h-full">
+    <div class="container mx-auto h-screen">
+        <div class="max-w-3xl my-10 mx-auto space-y-6">
+
+            {{!-- ─── Map Provider Panel ──────────────────────────────────────────── --}}
+            <ContentPanel @title={{t "settings.map.configure-map"}} @open={{true}} @wrapperClass="bordered-classic">
+                {{#if this.settingsLoaded}}
+
+                    {{!-- Provider selector --}}
+                    <InputGroup
+                        @name={{t "settings.map.map-provider"}}
+                        @helpText={{t "settings.map.map-provider-help-text"}}
+                    >
+                        <Select
+                            class="w-full flex-1"
+                            @value={{this.selectedMapProvider}}
+                            @options={{this.mapProviderOptions}}
+                            @optionLabel="label"
+                            @optionValue="value"
+                            @placeholder={{t "settings.map.select-map-provider"}}
+                            @onSelect={{this.selectMapProvider}}
+                        />
+                    </InputGroup>
+
+                    {{!-- Google Maps options — only shown when Google Maps is selected --}}
+                    {{#if this.isGoogleMapsSelected}}
+
+                        {{!-- API Key --}}
+                        <InputGroup
+                            @name={{t "settings.map.google-maps-api-key"}}
+                            @helpText={{t "settings.map.google-maps-api-key-help-text"}}
+                        >
+                            <Input
+                                class="form-input w-full"
+                                type="password"
+                                value={{this.googleMapsApiKey}}
+                                placeholder={{t "settings.map.google-maps-api-key-placeholder"}}
+                                {{on "input" this.onApiKeyChange}}
+                            />
+                        </InputGroup>
+
+                        {{!-- Map type --}}
+                        <InputGroup
+                            @name={{t "settings.map.google-maps-map-type"}}
+                            @helpText={{t "settings.map.google-maps-map-type-help-text"}}
+                        >
+                            <Select
+                                class="w-full flex-1"
+                                @value={{this.selectedGoogleMapType}}
+                                @options={{this.googleMapTypeOptions}}
+                                @optionLabel="label"
+                                @optionValue="value"
+                                @placeholder={{t "settings.map.select-map-type"}}
+                                @onSelect={{this.selectGoogleMapType}}
+                            />
+                        </InputGroup>
+
+                        {{!-- Traffic layer toggle --}}
+                        <InputGroup>
+                            <Toggle
+                                @isToggled={{this.googleMapsTrafficLayer}}
+                                @onToggle={{this.toggleTrafficLayer}}
+                                @label={{t "settings.map.show-traffic-layer"}}
+                                @helpText={{t "settings.map.show-traffic-layer-help-text"}}
+                            />
+                        </InputGroup>
+
+                        {{!-- Transit layer toggle --}}
+                        <InputGroup>
+                            <Toggle
+                                @isToggled={{this.googleMapsTransitLayer}}
+                                @onToggle={{this.toggleTransitLayer}}
+                                @label={{t "settings.map.show-transit-layer"}}
+                                @helpText={{t "settings.map.show-transit-layer-help-text"}}
+                            />
+                        </InputGroup>
+
+                        {{!-- Required Google Cloud APIs info box --}}
+                        <div class="rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 p-3 mt-2 mb-2">
+                            <div class="flex items-start space-x-2">
+                                <FaIcon @icon="circle-info" class="text-blue-500 mt-0.5 flex-shrink-0" />
+                                <div class="text-xs text-blue-700 dark:text-blue-300">
+                                    <p class="font-semibold mb-1">{{t "settings.map.google-api-key-requirements-title"}}</p>
+                                    <ul class="list-disc list-inside space-y-0.5">
+                                        <li>{{t "settings.map.google-api-key-requirement-maps-js"}}</li>
+                                        <li>{{t "settings.map.google-api-key-requirement-drawing"}}</li>
+                                        <li>{{t "settings.map.google-api-key-requirement-geometry"}}</li>
+                                        <li>{{t "settings.map.google-api-key-requirement-geocoding"}}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                    {{/if}}
+                    {{!-- /Google Maps options --}}
+
+                {{else}}
+                    {{!-- Loading state --}}
+                    <div class="flex items-center justify-center py-8">
+                        <Spinner />
+                    </div>
+                {{/if}}
+            </ContentPanel>
+
+            {{!-- Extension point for third-party panels --}}
+            <RegistryYield @registry="fleet-ops:template:settings:map" as |RegistryComponent|>
+                <RegistryComponent @controller={{this}} />
+            </RegistryYield>
+
+        </div>
+    </div>
+    <Spacer @height="600px" />
+</Layout::Section::Body>
