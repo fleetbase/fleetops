@@ -609,7 +609,7 @@
                                     {{! All fields — always shown, "-" when absent }}
                                     <div class="flex-1 min-w-0 space-y-0.5">
                                         {{! Name + vehicle status badge }}
-                                        <div class="flex items-center gap-1.5">
+                                        <div class="flex items-center justify-between gap-1.5">
                                             <span class="text-xs font-semibold truncate dark:text-white">{{or vehicle.display_name "-"}}</span>
                                             {{#if vehicle.status}}
                                                 <Badge @status={{vehicle.status}}>{{smart-humanize vehicle.status}}</Badge>
