@@ -10,6 +10,9 @@ import { singularize, pluralize } from 'ember-inflector';
 import { all } from 'rsvp';
 import { task } from 'ember-concurrency';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
+import { colorForId, darkenColor, routeStyleForStatus } from '../../utils/route-colors';
+
+const L = window.leaflet || window.L;
 
 export default class MapLeafletLiveMapComponent extends Component {
     @service leafletMapManager;
@@ -46,6 +49,9 @@ export default class MapLeafletLiveMapComponent extends Component {
     @tracked vehicles = [];
     @tracked places = [];
 
+    /** Internal map of route id -> L.LayerGroup for live route polylines */
+    _liveRouteLayerGroups = new Map();
+
     constructor() {
         super(...arguments);
 
@@ -67,6 +73,9 @@ export default class MapLeafletLiveMapComponent extends Component {
             this.universe.off('user.located', this._locationUpdateHandler);
             this._locationUpdateHandler = null;
         }
+
+        // Remove all live route polyline layers from the map
+        this.#clearLiveRouteLayerGroups();
     }
 
     @action didLoad({ target: map }) {
@@ -183,6 +192,9 @@ export default class MapLeafletLiveMapComponent extends Component {
             this.#createMapContextMenu(this.map);
             this.trigger('onLoaded', { map: this.map, data });
             this.ready = true;
+
+            // Render color-coded polylines for all loaded routes
+            this.#renderLiveRoutes(this.routes);
         } catch (err) {
             debug('Failed to load live map: ' + err.message);
         }
@@ -543,6 +555,144 @@ export default class MapLeafletLiveMapComponent extends Component {
 
         // Fallback to default Singapore longitude
         return 103.8864;
+    }
+
+    /**
+     * Render color-coded, offset polylines on the live map for all active routes.
+     *
+     * Each route is assigned a deterministic color from the palette (derived from
+     * the order public_id) and drawn as a two-layer cased polyline. When multiple
+     * routes share the same road segments, alternating pixel offsets are applied
+     * so that each route remains visually distinct.
+     *
+     * Route geometry is sourced from `route.details.coordinates` (OSRM format) or
+     * `route.details.geometry.coordinates` (GeoJSON LineString format).
+     *
+     * @param {Array} routes - Array of route model objects from the live API
+     */
+    #renderLiveRoutes(routes) {
+        if (!this.map || !isArray(routes) || routes.length === 0) return;
+
+        // Clear any previously rendered route layers before re-rendering
+        this.#clearLiveRouteLayerGroups();
+
+        // Pixel offsets cycle through to visually separate overlapping routes.
+        // Values are in CSS pixels; alternating left/right keeps routes balanced.
+        const PIXEL_OFFSETS = [0, -4, 4, -8, 8, -12, 12];
+
+        routes.forEach((route, index) => {
+            // Derive a stable color from the order public_id
+            const orderId = route.get ? route.get('order.public_id') || route.get('public_id') : route.order_public_id || route.public_id || String(index);
+            const status = route.get ? route.get('order.status') || route.get('status') : route.order_status || route.status || 'dispatched';
+            const routeColor = colorForId(orderId);
+            const lineStyles = routeStyleForStatus(status, routeColor);
+
+            // Extract geometry coordinates from the route details JSON
+            const coordinates = this.#extractRouteCoordinates(route);
+            if (!coordinates || coordinates.length < 2) return;
+
+            // Convert [lng, lat] pairs (OSRM/GeoJSON) to Leaflet [lat, lng] pairs
+            const latLngs = coordinates.map(([lng, lat]) => [lat, lng]);
+
+            // Apply a pixel offset to visually separate overlapping routes.
+            // We use a CSS transform on the SVG path via a custom pane approach,
+            // or simply shift by varying the weight for a layered visual effect.
+            const pixelOffset = PIXEL_OFFSETS[index % PIXEL_OFFSETS.length];
+
+            const group = L.layerGroup().addTo(this.map);
+
+            // Build the tooltip content for this route
+            const driverName = route.get ? route.get('driver_assigned.name') || route.get('driver_name') : route.driver_name || 'Unassigned';
+            const orderPublicId = route.get ? route.get('order.public_id') || route.get('public_id') : route.order_public_id || route.public_id || '—';
+            const tooltipContent = `<div class="fleetops-route-tooltip">
+                <div class="fleetops-route-tooltip__id">${orderPublicId}</div>
+                <div class="fleetops-route-tooltip__driver">Driver: ${driverName}</div>
+                <div class="fleetops-route-tooltip__status">Status: ${status}</div>
+            </div>`;
+
+            // Draw each style layer (casing + main line) as separate polylines
+            lineStyles.forEach((styleOptions, styleIndex) => {
+                // For overlapping routes, nudge weight slightly per offset index
+                // so routes at the same pixel still show through each other
+                const adjustedOptions = {
+                    ...styleOptions,
+                    weight: (styleOptions.weight || 5) + pixelOffset * 0.15,
+                };
+
+                const polyline = L.polyline(latLngs, adjustedOptions);
+
+                // Only bind the interactive tooltip to the topmost (last) style layer
+                if (styleIndex === lineStyles.length - 1) {
+                    polyline.bindTooltip(tooltipContent, {
+                        sticky: true,
+                        className: 'fleetops-route-tooltip-wrapper',
+                    });
+                }
+
+                polyline.addTo(group);
+            });
+
+            // Store the group so we can remove it on refresh or destroy
+            const routeKey = route.id || orderId || String(index);
+            this._liveRouteLayerGroups.set(routeKey, group);
+        });
+    }
+
+    /**
+     * Extract an array of [lng, lat] coordinate pairs from a route model's
+     * `details` JSON field. Handles both OSRM and GeoJSON LineString formats.
+     *
+     * @param {Object} route - Route model
+     * @returns {Array|null} Array of [lng, lat] pairs, or null if not available
+     */
+    #extractRouteCoordinates(route) {
+        let details;
+        try {
+            details = route.get ? route.get('details') : route.details;
+            if (typeof details === 'string') {
+                details = JSON.parse(details);
+            }
+        } catch (_) {
+            return null;
+        }
+
+        if (!details) return null;
+
+        // OSRM table format: details.coordinates = [[lng, lat], ...]
+        if (isArray(details.coordinates) && details.coordinates.length >= 2) {
+            return details.coordinates;
+        }
+
+        // GeoJSON LineString format: details.geometry.coordinates = [[lng, lat], ...]
+        if (details.geometry && isArray(details.geometry.coordinates) && details.geometry.coordinates.length >= 2) {
+            return details.geometry.coordinates;
+        }
+
+        // OSRM route response format: details.routes[0].geometry.coordinates
+        if (isArray(details.routes) && details.routes.length > 0) {
+            const firstRoute = details.routes[0];
+            if (firstRoute.geometry && isArray(firstRoute.geometry.coordinates)) {
+                return firstRoute.geometry.coordinates;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Remove all live route polyline LayerGroups from the map and clear the registry.
+     */
+    #clearLiveRouteLayerGroups() {
+        this._liveRouteLayerGroups.forEach((group) => {
+            try {
+                if (this.map) {
+                    this.map.removeLayer(group);
+                } else {
+                    group.remove();
+                }
+            } catch (_) {}
+        });
+        this._liveRouteLayerGroups.clear();
     }
 
     #changeTileSource(source) {

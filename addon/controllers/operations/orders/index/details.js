@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { task } from 'ember-concurrency';
+import { colorForId } from '../../../../utils/route-colors';
 
 export default class OperationsOrdersIndexDetailsController extends Controller {
     @controller('operations.orders.index') index;
@@ -106,10 +107,44 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
         yield this.hostRouter.refresh();
     }
 
+    /**
+     * Build the routing options object for this order, supplying the deterministic
+     * route color, order status, and place models for enhanced waypoint markers.
+     *
+     * The `places` array is parallel to `routeWaypoints` — index 0 is the pickup
+     * place, the last index is the dropoff, and any intermediate entries are stops.
+     * This data is passed through to `addRoutingControl` so each waypoint marker
+     * can display a rich popup with the place name, address, ETA, and status.
+     */
+    get routingOptions() {
+        const order = this.model;
+        const orderId = order.public_id;
+        const status = order.status || 'dispatched';
+
+        // Collect Place models from the payload waypoints (each waypoint has a `place`)
+        let places = [];
+        try {
+            const payload = order.get ? order.get('payload') : order.payload;
+            const waypoints = payload?.get ? payload.get('waypoints') : payload?.waypoints;
+            if (isArray(waypoints)) {
+                places = waypoints.map((wp) => (wp.get ? wp.get('place') : wp.place)).filter(Boolean);
+            }
+        } catch (_) {
+            // Gracefully degrade — markers will render without popup content
+        }
+
+        return {
+            orderId,
+            status,
+            places,
+            color: colorForId(orderId),
+        };
+    }
+
     @action async setup() {
         // Change to map layout and display order route
         this.index.changeLayout('map');
-        this.routingControl = await this.leafletMapManager.addRoutingControl(this.model.routeWaypoints);
+        this.routingControl = await this.leafletMapManager.addRoutingControl(this.model.routeWaypoints, this.routingOptions);
 
         // Hide sidebar
         this.sidebar.hideNow();
@@ -125,7 +160,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
             async (_msg, { reloadable }) => {
                 if (reloadable) {
                     await this.hostRouter.refresh();
-                    this.leafletMapManager.replaceRoutingControl(this.model.routeWaypoints, this.routingControl);
+                    this.leafletMapManager.replaceRoutingControl(this.model.routeWaypoints, this.routingControl, this.routingOptions);
                 }
             },
             { debounceMs: 250 }

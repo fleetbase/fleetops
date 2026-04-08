@@ -6,7 +6,10 @@ import { isArray } from '@ember/array';
 import { renderCompleted, waitForInsertedAndSized } from '@fleetbase/ember-ui/utils/dom';
 import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import { getLayerById, findLayer, flyToLayer } from '../utils/leaflet';
+import { colorForId, routeStyleForStatus, waypointIconHtml } from '../utils/route-colors';
 import isUuid from '@fleetbase/ember-core/utils/is-uuid';
+
+const L = window.leaflet || window.L;
 
 export default class LeafletMapManagerService extends Service {
     @service leafletRoutingControl;
@@ -221,6 +224,19 @@ export default class LeafletMapManagerService extends Service {
 
     /** routing methods */
     /* eslint-disable no-empty */
+
+    /**
+     * Add a Leaflet Routing Machine control to the map for the given waypoints.
+     *
+     * Enhanced options:
+     *   @param {Array}    waypoints            - Array of [lat, lng] pairs or L.LatLng objects
+     *   @param {Object}   options
+     *   @param {string}   options.color        - Explicit hex color for the route line
+     *   @param {string}   options.orderId      - Order public_id used for deterministic color derivation
+     *   @param {string}   options.status       - Order status for status-based line styling
+     *   @param {Array}    options.places       - Place models parallel to waypoints for popup content
+     *   @param {Function} options.onRouteFound - Callback invoked with the first found route object
+     */
     async addRoutingControl(waypoints, options = {}) {
         if (!isArray(waypoints) || waypoints.length === 0) return;
 
@@ -233,21 +249,84 @@ export default class LeafletMapManagerService extends Service {
         const { router, formatter } = this.leafletRoutingControl.get(routingService);
         const tag = `routing:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
 
+        // Resolve route color: explicit > derived from orderId > derived from tag
+        const routeColor = options.color || colorForId(options.orderId || tag);
+
+        // Resolve line styles based on order status (falls back to active/dispatched style)
+        const lineStyles = routeStyleForStatus(options.status || 'dispatched', routeColor);
+
+        // Capture places array for rich popup content on waypoint markers
+        const places = isArray(options.places) ? options.places : [];
+
         const routingControl = new RoutingControl({
             router,
             formatter,
             waypoints,
-            markerOptions: {
-                icon: L.icon({
-                    iconUrl: '/assets/images/marker-icon.png',
-                    iconRetinaUrl: '/assets/images/marker-icon-2x.png',
-                    shadowUrl: '/assets/images/marker-shadow.png',
-                    iconSize: [25, 41],
-                    iconAnchor: [12, 41],
-                }),
-            },
             alternativeClassName: 'hidden',
             addWaypoints: false,
+
+            // ── Color-coded, cased route line ──────────────────────────────────
+            lineOptions: {
+                styles: lineStyles,
+                missingRouteTolerance: 0,
+            },
+
+            // ── Enhanced waypoint markers ──────────────────────────────────────
+            createMarker: (i, waypoint, n) => {
+                const isPickup = i === 0;
+                const isDropoff = i === n - 1;
+
+                // Label: "P" for pickup, "D" for dropoff, sequential number for via-stops
+                const label = isPickup ? 'P' : isDropoff ? 'D' : String(i);
+
+                // Color: green pickup, red dropoff, route color for via-stops
+                const markerColor = isPickup ? '#22C55E' : isDropoff ? '#EF4444' : routeColor;
+
+                // Human-readable title for tooltip and accessibility
+                const title = isPickup ? 'Pickup' : isDropoff ? 'Dropoff' : `Stop ${i}`;
+
+                const icon = L.divIcon({
+                    className: 'fleetops-waypoint-marker',
+                    html: waypointIconHtml(label, markerColor),
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16],
+                    popupAnchor: [0, -20],
+                });
+
+                const marker = L.marker(waypoint.latLng, { icon, title });
+
+                // Bind a lightweight tooltip (always visible on hover)
+                marker.bindTooltip(title, {
+                    direction: 'top',
+                    offset: [0, -20],
+                    className: 'fleetops-waypoint-tooltip',
+                });
+
+                // Bind a rich popup if place data is available
+                const place = places[i];
+                if (place) {
+                    const placeName = place.get ? place.get('name') || place.get('address') : place.name || place.address || '';
+                    const placeAddress = place.get ? place.get('address') : place.address || '';
+                    const placeEta = place.get ? place.get('eta') : place.eta || '';
+                    const placeStatus = place.get ? place.get('status') : place.status || '';
+
+                    marker.bindPopup(
+                        `<div class="fleetops-waypoint-popup">
+                            <div class="fleetops-waypoint-popup__header">
+                                <span class="fleetops-waypoint-popup__badge" style="background:${markerColor}">${label}</span>
+                                <strong>${title}</strong>
+                            </div>
+                            ${placeName ? `<div class="fleetops-waypoint-popup__name">${placeName}</div>` : ''}
+                            ${placeAddress ? `<div class="fleetops-waypoint-popup__address">${placeAddress}</div>` : ''}
+                            ${placeEta ? `<div class="fleetops-waypoint-popup__meta">ETA: <strong>${placeEta}</strong></div>` : ''}
+                            ${placeStatus ? `<div class="fleetops-waypoint-popup__meta">Status: <strong>${placeStatus}</strong></div>` : ''}
+                        </div>`,
+                        { maxWidth: 240, className: 'fleetops-waypoint-popup-wrapper' }
+                    );
+                }
+
+                return marker;
+            },
         }).addTo(map);
 
         // Track routing control

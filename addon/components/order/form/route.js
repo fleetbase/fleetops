@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action, get } from '@ember/object';
 import { task } from 'ember-concurrency';
+import { colorForId } from '../../../utils/route-colors';
 
 export default class OrderFormRouteComponent extends Component {
     @service leafletMapManager;
@@ -131,7 +132,15 @@ export default class OrderFormRouteComponent extends Component {
     @action async previewRoute() {
         if (!this.coordinates.length) return;
 
+        const order = this.args.resource;
+        const orderId = order.public_id;
+        const status = order.status || 'pending';
+
         const routingControl = await this.leafletMapManager.replaceRoutingControl(this.coordinates, this.routingControl, {
+            orderId,
+            status,
+            places: this.places,
+            color: colorForId(orderId || 'new-order'),
             onRouteFound: (route) => this.setRoute(route),
             removeOptions: {
                 filter: (layer) => layer.record_id === this.args.resource.driver_assigned?.id,
