@@ -62,6 +62,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     /** Orders that the engine could not assign. */
     @tracked unassignedAfterRun = [];
+    @tracked orchestratorRunMessage = null; // backend message from the last run (e.g. "No available vehicles/drivers found.")
 
     /** Whether the workbench is in "committed" state (plan applied). */
     @tracked isCommitted = false;
@@ -121,13 +122,16 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     constructor() {
         super(...arguments);
-        // Initialise map centre from the location service (browser geolocation /
-        // company address / IP fallback — same as the live map component).
-        const lat = this.location.getLatitude();
-        const lng = this.location.getLongitude();
-        if (lat && lng) {
-            this.mapCenter = { lat, lng };
-        }
+        // Kick off async location resolution (geolocation → whois → default).
+        // Once resolved we call setView imperatively so Leaflet actually moves.
+        this.location.getUserLocation().then(({ latitude, longitude }) => {
+            this.mapCenter = { lat: latitude, lng: longitude };
+            if (this.leafletMap?.setView) {
+                this.leafletMap.setView([latitude, longitude], this.mapZoom);
+            }
+        }).catch(() => {
+            // Already defaulted to Singapore in the tracked property initialiser
+        });
         this.loadData.perform();
         this.loadEngines.perform();
     }
@@ -196,23 +200,41 @@ export default class OrchestratorWorkbenchComponent extends Component {
      * Run the orchestration engine and populate the proposed plan.
      */
     @task *runOrchestration() {
-        this.proposedPlan       = null;
-        this.isCommitted        = false;
-        this.manualOverrides    = {};
-        this.routeSummaries     = {};
-        this.unassignedAfterRun = [];
+        this.proposedPlan           = null;
+        this.isCommitted             = false;
+        this.manualOverrides         = {};
+        this.routeSummaries          = {};
+        this.unassignedAfterRun      = [];
+        this.orchestratorRunMessage  = null;
 
-        // Use selected orders/vehicles if any, otherwise run against all
-        const orderIds   = this.selectedOrderIds.size > 0
+        // Use selected orders if any, otherwise run against all
+        const orderIds = this.selectedOrderIds.size > 0
             ? [...this.selectedOrderIds]
             : this.unassignedOrders.map((o) => o.public_id);
 
-        const vehicleIds = this.selectedVehicleIds.size > 0
-            ? [...this.selectedVehicleIds]
+        // Resolve vehicle IDs from both the Vehicles tab selection and the
+        // Drivers tab selection (drivers resolve to their assigned vehicle).
+        const vehicleIdsFromVehicleTab = [...this.selectedVehicleIds];
+        const vehicleIdsFromDriverTab  = [...this.selectedDriverIds]
+            .map((driverId) => {
+                const driver = this.availableDrivers.find((d) => d.public_id === driverId);
+                return driver?.vehicle?.public_id ?? null;
+            })
+            .filter(Boolean);
+
+        // Union both sets; fall back to all available vehicles if nothing selected
+        const resolvedVehicleIds = [...new Set([...vehicleIdsFromVehicleTab, ...vehicleIdsFromDriverTab])];
+        const vehicleIds = resolvedVehicleIds.length > 0
+            ? resolvedVehicleIds
             : this.availableVehicles.map((v) => v.public_id);
 
+        // Also send driver_ids as a hint (backend may use for direct assignment)
+        const driverIds = this.selectedDriverIds.size > 0
+            ? [...this.selectedDriverIds]
+            : null;
+
         try {
-            const result = yield this.fetch.post('fleet-ops/allocation/run', {
+            const payload = {
                 order_ids:   orderIds,
                 vehicle_ids: vehicleIds,
                 mode:        this.selectedMode,
@@ -224,10 +246,17 @@ export default class OrchestratorWorkbenchComponent extends Component {
                     return_to_depot:  this.returnToDepot,
                     geometry:         true, // request polylines
                 },
-            });
+            };
+            // Include driver_ids hint only when drivers are explicitly selected
+            if (driverIds) {
+                payload.driver_ids = driverIds;
+            }
+            const result = yield this.fetch.post('fleet-ops/allocation/run', payload);
 
-            this.proposedPlan       = result.assignments ?? [];
-            this.unassignedAfterRun = result.unassigned ?? [];
+            this.proposedPlan           = result.assignments ?? [];
+            this.unassignedAfterRun      = result.unassigned ?? [];
+            // Surface any informational/warning message from the backend
+            this.orchestratorRunMessage  = result.message ?? null;
 
             // Store per-vehicle summaries keyed by vehicle_id
             const summaries = {};
@@ -320,6 +349,10 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     // ── Options panel ─────────────────────────────────────────────────────────
+
+    @action dismissRunMessage() {
+        this.orchestratorRunMessage = null;
+    }
 
     @action toggleOptionsPanel() {
         this.showOptionsPanel = !this.showOptionsPanel;
@@ -473,6 +506,12 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     @action onMapLoad(map) {
         this.leafletMap = map;
+        // Imperatively set the view to the current mapCenter so Leaflet
+        // actually positions the viewport (tracked @lat/@lng changes after
+        // initial render are ignored by ember-leaflet).
+        if (map?.setView) {
+            map.setView([this.mapCenter.lat, this.mapCenter.lng], this.mapZoom);
+        }
     }
 
     _centerMapOnOrders() {
@@ -488,10 +527,14 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
         if (!lats.length) return;
 
-        this.mapCenter = {
-            lat: lats.reduce((a, b) => a + b, 0) / lats.length,
-            lng: lngs.reduce((a, b) => a + b, 0) / lngs.length,
-        };
+        const lat = lats.reduce((a, b) => a + b, 0) / lats.length;
+        const lng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
+        this.mapCenter = { lat, lng };
+
+        // Imperatively move the Leaflet viewport
+        if (this.leafletMap?.setView) {
+            this.leafletMap.setView([lat, lng], this.mapZoom);
+        }
     }
 
     get tileSourceUrl() {

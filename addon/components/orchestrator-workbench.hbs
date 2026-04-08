@@ -12,7 +12,7 @@
                 <Badge @status="success" @label={{t "orchestrator.committed"}} />
             {{/if}}
             {{#if this.hasUnassigned}}
-                <Badge @status="warning" @label={{concat this.unassignedAfterRun.length " " (t "orchestrator.unassigned-count")}} />
+                <Badge @status="warning" @label={{concat (t "orchestrator.unassigned-count") " " this.unassignedAfterRun.length}} />
             {{/if}}
 
             {{#if (or this.hasProposedPlan this.isCommitted this.hasUnassigned)}}
@@ -46,6 +46,22 @@
             <Button @icon="sync" @type="default" @size="sm" @isLoading={{this.loadData.isRunning}} @onClick={{perform this.loadData}} />
         </div>
     </Layout::Section::Header>
+
+    {{! ── Run message alert banner (dismissable) ── }}
+    {{#if this.orchestratorRunMessage}}
+        <div class="flex items-start gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700 flex-shrink-0">
+            <FaIcon @icon="exclamation-triangle" class="mt-0.5 flex-shrink-0 text-amber-500" @size="sm" />
+            <p class="flex-1 text-xs text-amber-800 dark:text-amber-200">{{this.orchestratorRunMessage}}</p>
+            <button
+                type="button"
+                class="flex-shrink-0 text-amber-400 hover:text-amber-600 dark:hover:text-amber-200 transition-colors"
+                {{on "click" this.dismissRunMessage}}
+                aria-label="Dismiss"
+            >
+                <FaIcon @icon="times" @size="xs" />
+            </button>
+        </div>
+    {{/if}}
 
     {{! ── Options Panel (collapsible, sits below the toolbar) ── }}
     {{#if this.showOptionsPanel}}
@@ -497,63 +513,51 @@
                     {{else if (eq this.rightPanelTab "drivers")}}
                         {{#if this.availableDrivers.length}}
                             {{#each this.availableDrivers as |driver|}}
+                                {{! Compact avatar row — no separate header panel }}
                                 <div
-                                    class="resource-card mx-3 my-1.5 rounded border overflow-hidden dark:border-gray-600
-                                        {{if (includes driver.public_id this.selectedDriverIdsArray) 'ring-1 ring-indigo-500 border-indigo-400 dark:border-indigo-500' ''}}"
+                                    role="button"
+                                    class="flex items-center gap-2.5 px-3 py-2 border-b dark:border-gray-700/60 cursor-pointer select-none
+                                           hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors
+                                           {{if (includes driver.public_id this.selectedDriverIdsArray) 'bg-indigo-50 dark:bg-indigo-900/20' ''}}"
                                     {{on "click" (fn this.toggleDriverSelection driver)}}
                                 >
-                                    {{! Card header: name + online badge }}
-                                    <div class="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                                        <div class="relative flex-shrink-0">
-                                            <Image src={{avatar-url driver.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} class="w-6 h-6 rounded-full" alt={{driver.name}} />
-                                            <FaIcon @icon="circle" @size="2xs" class="absolute -bottom-0.5 -right-0.5 h-2 w-2 {{if driver.online 'text-green-500' 'text-gray-400'}}" />
+                                    {{! Avatar with online dot }}
+                                    <div class="relative flex-shrink-0">
+                                        <img
+                                            src={{driver.photo_url}}
+                                            alt={{driver.name}}
+                                            class="w-8 h-8 rounded-full object-cover bg-gray-200 dark:bg-gray-700"
+                                            {{fallback-img-src (config "defaultValues.driverImage")}}
+                                        />
+                                        <span class="absolute -bottom-0.5 -right-0.5 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
+                                                     {{if driver.online 'bg-green-500' 'bg-gray-400'}}"></span>
+                                    </div>
+
+                                    {{! Name + secondary info }}
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-xs font-semibold truncate dark:text-white">{{or driver.name "-"}}</div>
+                                        <div class="text-xs text-gray-400 truncate">
+                                            {{#if driver.vehicle}}
+                                                <FaIcon @icon="truck" @size="xs" class="mr-0.5" />
+                                                {{driver.vehicle.display_name}}
+                                            {{else if driver.phone}}
+                                                <FaIcon @icon="phone" @size="xs" class="mr-0.5" />
+                                                {{driver.phone}}
+                                            {{else}}
+                                                -
+                                            {{/if}}
                                         </div>
-                                        <span class="flex-1 min-w-0 truncate text-xs font-semibold text-gray-800 dark:text-gray-100">
-                                            {{driver.name}}
-                                        </span>
+                                    </div>
+
+                                    {{! Right: status + shift badge }}
+                                    <div class="flex flex-col items-end gap-0.5 flex-shrink-0">
                                         {{#if driver.online}}
                                             <Badge @status="success" @label={{t "common.online"}} />
                                         {{else}}
                                             <Badge @status="default" @label={{t "common.offline"}} />
                                         {{/if}}
-                                    </div>
-                                    {{! Card body: vehicle + shift }}
-                                    <div class="bg-white dark:bg-gray-900 px-2 py-1.5">
-                                        <dl class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs">
-                                            {{#if driver.vehicle}}
-                                                <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                                    <FaIcon @icon="truck" @size="xs" class="w-3 text-center" />
-                                                    Vehicle
-                                                </dt>
-                                                <dd class="truncate text-right text-gray-700 dark:text-gray-300">
-                                                    {{driver.vehicle.display_name}}
-                                                </dd>
-                                            {{/if}}
-                                            {{#if driver.phone}}
-                                                <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                                    <FaIcon @icon="phone" @size="xs" class="w-3 text-center" />
-                                                    Phone
-                                                </dt>
-                                                <dd class="truncate text-right text-gray-700 dark:text-gray-300">
-                                                    {{driver.phone}}
-                                                </dd>
-                                            {{/if}}
-                                            {{#if driver.activeShift}}
-                                                <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                                    <FaIcon @icon="calendar-check" @size="xs" class="w-3 text-center text-green-500" />
-                                                    Shift
-                                                </dt>
-                                                <dd class="truncate text-right text-green-500">
-                                                    {{t "orchestrator.on-shift"}}
-                                                </dd>
-                                            {{/if}}
-                                        </dl>
-                                        {{#if driver.skills.length}}
-                                            <div class="flex flex-wrap gap-0.5 mt-1">
-                                                {{#each driver.skills as |skill|}}
-                                                    <span class="skill-tag">{{skill}}</span>
-                                                {{/each}}
-                                            </div>
+                                        {{#if driver.activeShift}}
+                                            <span class="text-xs text-green-500">{{t "orchestrator.on-shift"}}</span>
                                         {{/if}}
                                     </div>
                                 </div>
@@ -561,7 +565,7 @@
                         {{else}}
                             <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
                                 <FaIcon @icon="id-card-alt" @size="2x" class="mb-2 opacity-40" />
-                                No drivers available right now.
+                                {{t "orchestrator.no-available-drivers"}}
                             </div>
                         {{/if}}
 
@@ -569,17 +573,46 @@
                     {{else if (eq this.rightPanelTab "vehicles")}}
                         {{#if this.availableVehicles.length}}
                             {{#each this.availableVehicles as |vehicle|}}
+                                {{! Compact avatar row — no separate header panel }}
                                 <div
-                                    class="resource-card mx-3 my-1.5 rounded border overflow-hidden dark:border-gray-600
-                                        {{if (includes vehicle.public_id this.selectedVehicleIdsArray) 'ring-1 ring-indigo-500 border-indigo-400 dark:border-indigo-500' ''}}"
+                                    role="button"
+                                    class="flex items-center gap-2.5 px-3 py-2 border-b dark:border-gray-700/60 cursor-pointer select-none
+                                           hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors
+                                           {{if (includes vehicle.public_id this.selectedVehicleIdsArray) 'bg-indigo-50 dark:bg-indigo-900/20' ''}}"
                                     {{on "click" (fn this.toggleVehicleSelection vehicle)}}
                                 >
-                                    {{! Card header: vehicle name + status }}
-                                    <div class="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                                        <FaIcon @icon="truck" @size="sm" class="flex-shrink-0 text-gray-500 dark:text-gray-400" />
-                                        <span class="flex-1 min-w-0 truncate text-xs font-semibold text-gray-800 dark:text-gray-100">
-                                            {{vehicle.display_name}}
-                                        </span>
+                                    {{! Vehicle avatar }}
+                                    <div class="relative flex-shrink-0">
+                                        <Image
+                                            src={{vehicle.avatar_url}}
+                                            @fallbackSrc={{config "defaultValues.vehicleAvatar"}}
+                                            alt={{vehicle.display_name}}
+                                            class="w-8 h-8 rounded object-cover bg-gray-200 dark:bg-gray-700"
+                                        />
+                                        {{#if vehicle.driver}}
+                                            <span class="absolute -bottom-0.5 -right-0.5 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
+                                                         {{if vehicle.driver.online 'bg-green-500' 'bg-gray-400'}}"></span>
+                                        {{/if}}
+                                    </div>
+
+                                    {{! Name + secondary info }}
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-xs font-semibold truncate dark:text-white">{{or vehicle.display_name "-"}}</div>
+                                        <div class="text-xs text-gray-400 truncate">
+                                            {{#if vehicle.driver}}
+                                                <FaIcon @icon="id-card-alt" @size="xs" class="mr-0.5" />
+                                                {{vehicle.driver.name}}
+                                            {{else if vehicle.plate_number}}
+                                                <FaIcon @icon="hashtag" @size="xs" class="mr-0.5" />
+                                                {{vehicle.plate_number}}
+                                            {{else}}
+                                                -
+                                            {{/if}}
+                                        </div>
+                                    </div>
+
+                                    {{! Right: driver online status or no-driver }}
+                                    <div class="flex-shrink-0">
                                         {{#if vehicle.driver}}
                                             {{#if vehicle.driver.online}}
                                                 <Badge @status="success" @label={{t "common.online"}} />
@@ -588,34 +621,6 @@
                                             {{/if}}
                                         {{else}}
                                             <Badge @status="default" @label="No Driver" />
-                                        {{/if}}
-                                    </div>
-                                    {{! Card body: driver + plate }}
-                                    <div class="bg-white dark:bg-gray-900 px-2 py-1.5">
-                                        <dl class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs">
-                                            <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                                <FaIcon @icon="id-card-alt" @size="xs" class="w-3 text-center" />
-                                                Driver
-                                            </dt>
-                                            <dd class="truncate text-right text-gray-700 dark:text-gray-300">
-                                                {{or vehicle.driver.name "—"}}
-                                            </dd>
-                                            {{#if vehicle.plate_number}}
-                                                <dt class="flex items-center gap-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                                    <FaIcon @icon="hashtag" @size="xs" class="w-3 text-center" />
-                                                    Plate
-                                                </dt>
-                                                <dd class="truncate text-right text-gray-700 dark:text-gray-300">
-                                                    {{vehicle.plate_number}}
-                                                </dd>
-                                            {{/if}}
-                                        </dl>
-                                        {{#if vehicle.skills.length}}
-                                            <div class="flex flex-wrap gap-0.5 mt-1">
-                                                {{#each vehicle.skills as |skill|}}
-                                                    <span class="skill-tag">{{skill}}</span>
-                                                {{/each}}
-                                            </div>
                                         {{/if}}
                                     </div>
                                 </div>
