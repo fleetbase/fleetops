@@ -112,9 +112,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @tracked returnToDepot = false;
 
     // ── Map ───────────────────────────────────────────────────────────────────
-
-    @tracked mapReady = false;
-    @tracked mapCenter = { lat: 1.369, lng: 103.8864 }; // Singapore fallback (matches location service default)
+    // NOTE: mapReady is intentionally removed. The map always renders — we rely
+    // on onMapLoad's imperative setView to position it correctly. Removing the
+    // {{#if mapReady}} guard means Leaflet mounts before loadUnassignedOrders
+    // completes, so onMapLoad fires first and setView always has a valid map ref.
+    @tracked mapCenter = { lat: 1.369, lng: 103.8864 }; // Singapore synchronous fallback
     @tracked mapZoom = 11;
     @tracked leafletMap = null;
 
@@ -122,15 +124,23 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     constructor() {
         super(...arguments);
-        // Kick off async location resolution (geolocation → whois → default).
-        // Once resolved we call setView imperatively so Leaflet actually moves.
+        // Synchronously seed mapCenter from the location service.
+        // getLatitude/getLongitude always return a valid number — Singapore
+        // (1.369, 103.8864) if geolocation hasn't resolved yet.
+        const lat = this.location.getLatitude();
+        const lng = this.location.getLongitude();
+        if (lat && lng) {
+            this.mapCenter = { lat, lng };
+        }
+        // Also kick off async resolution so we update to the real location
+        // (browser geolocation → company address → IP/whois → Singapore).
         this.location.getUserLocation().then(({ latitude, longitude }) => {
             this.mapCenter = { lat: latitude, lng: longitude };
             if (this.leafletMap?.setView) {
                 this.leafletMap.setView([latitude, longitude], this.mapZoom);
             }
         }).catch(() => {
-            // Already defaulted to Singapore in the tracked property initialiser
+            // mapCenter already set to Singapore above — nothing to do
         });
         this.loadData.perform();
         this.loadEngines.perform();
@@ -156,10 +166,8 @@ export default class OrchestratorWorkbenchComponent extends Component {
             });
             this.unassignedOrders = orders.toArray();
             this._centerMapOnOrders();
-            this.mapReady = true;
         } catch (error) {
             this.notifications.serverError(error);
-            this.mapReady = true; // still show map even if orders fail to load
         }
     }
 
