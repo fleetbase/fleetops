@@ -3,7 +3,6 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-import { getOwner } from '@ember/application';
 
 // Route colours for up to 20 vehicles — cycles if more
 const ROUTE_COLORS = [
@@ -23,8 +22,8 @@ const ROUTE_COLORS = [
  *     with drag-and-drop support and multi-select for targeted runs.
  *   - Interactive Map (centre): Leaflet map showing order markers, driver
  *     positions, and proposed route polylines.
- *   - Driver / Route Panel (right): available drivers pre-run; per-vehicle
- *     route cards with stop sequences and ETA estimates post-run.
+ *   - Resource Panel (right): tabbed view of available drivers and vehicles
+ *     pre-run; per-vehicle route cards with stop sequences post-run.
  *
  * Modes:
  *   - 'allocate': assign unassigned orders to drivers (default)
@@ -36,6 +35,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @service notifications;
     @service intl;
     @service modalsManager;
+    @service location;
     @service('order-allocation') allocationService;
 
     // ── Data ──────────────────────────────────────────────────────────────────
@@ -43,8 +43,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
     /** All unassigned orders loaded from the store. */
     @tracked unassignedOrders = [];
 
-    /** Available vehicles (with online drivers). */
+    /** Available vehicles (with or without an online driver). */
     @tracked availableVehicles = [];
+
+    /** Available drivers (online). */
+    @tracked availableDrivers = [];
 
     /** Available engine list from the backend. */
     @tracked availableEngines = [];
@@ -74,14 +77,20 @@ export default class OrchestratorWorkbenchComponent extends Component {
     /** Whether the left (order pool) panel is collapsed. */
     @tracked leftPanelCollapsed = false;
 
-    /** Whether the right (driver/route) panel is collapsed. */
+    /** Whether the right (resource) panel is collapsed. */
     @tracked rightPanelCollapsed = false;
+
+    /** Active tab in the right panel: 'drivers' | 'vehicles' */
+    @tracked rightPanelTab = 'drivers';
 
     /** Set of selected order public_ids (for targeted runs). */
     @tracked selectedOrderIds = new Set();
 
     /** Set of selected vehicle public_ids (for targeted runs). */
     @tracked selectedVehicleIds = new Set();
+
+    /** Set of selected driver public_ids (for targeted runs). */
+    @tracked selectedDriverIds = new Set();
 
     /** Set of expanded route card vehicle IDs. */
     @tracked expandedRouteCards = new Set();
@@ -104,7 +113,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     // ── Map ───────────────────────────────────────────────────────────────────
 
     @tracked mapReady = false;
-    @tracked mapCenter = { lat: 0, lng: 0 };
+    @tracked mapCenter = { lat: 1.369, lng: 103.8864 }; // Singapore fallback (matches location service default)
     @tracked mapZoom = 11;
     @tracked leafletMap = null;
 
@@ -112,6 +121,13 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     constructor() {
         super(...arguments);
+        // Initialise map centre from the location service (browser geolocation /
+        // company address / IP fallback — same as the live map component).
+        const lat = this.location.getLatitude();
+        const lng = this.location.getLongitude();
+        if (lat && lng) {
+            this.mapCenter = { lat, lng };
+        }
         this.loadData.perform();
         this.loadEngines.perform();
     }
@@ -122,6 +138,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         yield Promise.all([
             this.loadUnassignedOrders.perform(),
             this.loadAvailableVehicles.perform(),
+            this.loadAvailableDrivers.perform(),
         ]);
     }
 
@@ -145,10 +162,20 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @task *loadAvailableVehicles() {
         try {
             const vehicles = yield this.store.query('vehicle', {
-                with_online_driver: true,
                 limit: 300,
             });
             this.availableVehicles = vehicles.toArray();
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    @task *loadAvailableDrivers() {
+        try {
+            const drivers = yield this.store.query('driver', {
+                limit: 300,
+            });
+            this.availableDrivers = drivers.toArray();
         } catch (error) {
             this.notifications.serverError(error);
         }
@@ -288,6 +315,10 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.rightPanelCollapsed = !this.rightPanelCollapsed;
     }
 
+    @action setRightPanelTab(tab) {
+        this.rightPanelTab = tab;
+    }
+
     // ── Options panel ─────────────────────────────────────────────────────────
 
     @action toggleOptionsPanel() {
@@ -323,9 +354,9 @@ export default class OrchestratorWorkbenchComponent extends Component {
         return this.selectedOrderIds.has(order.public_id);
     }
 
-    // ── Driver selection ──────────────────────────────────────────────────────
+    // ── Vehicle selection ─────────────────────────────────────────────────────
 
-    @action toggleDriverSelection(vehicle) {
+    @action toggleVehicleSelection(vehicle) {
         const ids = new Set(this.selectedVehicleIds);
         if (ids.has(vehicle.public_id)) {
             ids.delete(vehicle.public_id);
@@ -335,12 +366,25 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.selectedVehicleIds = ids;
     }
 
-    @action clearDriverSelection() {
+    @action clearVehicleSelection() {
         this.selectedVehicleIds = new Set();
     }
 
-    isDriverSelected(vehicle) {
-        return this.selectedVehicleIds.has(vehicle.public_id);
+    // ── Driver selection ──────────────────────────────────────────────────────
+
+    @action toggleDriverSelection(driver) {
+        const ids = new Set(this.selectedDriverIds);
+        if (ids.has(driver.public_id)) {
+            ids.delete(driver.public_id);
+        } else {
+            ids.add(driver.public_id);
+        }
+        this.selectedDriverIds = ids;
+    }
+
+    @action clearDriverSelection() {
+        this.selectedDriverIds  = new Set();
+        this.selectedVehicleIds = new Set();
     }
 
     // ── Route card expand/collapse ────────────────────────────────────────────
@@ -467,12 +511,14 @@ export default class OrchestratorWorkbenchComponent extends Component {
     get filteredOrders() {
         let orders = this.unassignedOrders;
 
-        // Text search
+        // Text search — matches tracking number, public_id, or dropoff address
         if (this.orderSearch) {
             const q = this.orderSearch.toLowerCase();
             orders = orders.filter((o) =>
+                o.tracking?.toLowerCase().includes(q) ||
                 o.public_id?.toLowerCase().includes(q) ||
-                o.payload?.dropoff?.address?.toLowerCase().includes(q)
+                o.payload?.dropoff?.address?.toLowerCase().includes(q) ||
+                o.payload?.pickup?.address?.toLowerCase().includes(q)
             );
         }
 
@@ -498,6 +544,10 @@ export default class OrchestratorWorkbenchComponent extends Component {
         return [...this.selectedVehicleIds];
     }
 
+    get selectedDriverIdsArray() {
+        return [...this.selectedDriverIds];
+    }
+
     get expandedRouteCardsArray() {
         return [...this.expandedRouteCards];
     }
@@ -506,8 +556,12 @@ export default class OrchestratorWorkbenchComponent extends Component {
         return this.unassignedOrders.filter((o) => this.selectedOrderIds.has(o.public_id));
     }
 
-    get selectedDrivers() {
+    get selectedVehicles() {
         return this.availableVehicles.filter((v) => this.selectedVehicleIds.has(v.public_id));
+    }
+
+    get selectedDrivers() {
+        return this.availableDrivers.filter((d) => this.selectedDriverIds.has(d.public_id));
     }
 
     get hasProposedPlan() {
@@ -540,9 +594,10 @@ export default class OrchestratorWorkbenchComponent extends Component {
             const { vehicle_id } = assignment;
             if (!groups[vehicle_id]) {
                 const vehicle = this.availableVehicles.find((v) => v.public_id === vehicle_id);
+                const driver  = vehicle?.driver ?? this.availableDrivers.find((d) => d.public_id === assignment.driver_id);
                 groups[vehicle_id] = {
                     vehicle,
-                    driver: vehicle?.driver,
+                    driver,
                     orders: [],
                 };
             }

@@ -1950,8 +1950,6 @@ orchestrator:
   workbench-title: Orchestrator Workbench
   unassigned-orders: Unassigned Orders
   no-unassigned-orders: No unassigned orders — all caught up!
-  available-vehicles: Available Vehicles
-  no-available-vehicles: No vehicles available right now.
   run-allocation: Run Orchestrator
   running: Running…
   plan-ready: Plan ready — review and commit.
@@ -1985,11 +1983,20 @@ orchestrator:
   no-address: No address
   selected: selected
   clear-selection: Clear
-  # Driver panel
+  # Panel toggles
+  show-orders: Show Order Pool
+  hide-orders: Hide Order Pool
+  show-drivers: Show Resources
+  hide-drivers: Hide Resources
+  # Driver / resource panel
   available-drivers: Available Drivers
+  available-vehicles: Available Vehicles
+  no-available-drivers: No drivers available right now.
+  no-available-vehicles: No vehicles available right now.
   proposed-routes: Proposed Routes
   stops: stops
   drivers-selected: drivers selected
+  vehicles-selected: vehicles selected
   drop-orders-here: Drop orders here
   # Import modal
   import-orders: Import Orders
