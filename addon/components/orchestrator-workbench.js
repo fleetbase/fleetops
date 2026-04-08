@@ -129,9 +129,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
         // (1.369, 103.8864) if geolocation hasn't resolved yet.
         const lat = this.location.getLatitude();
         const lng = this.location.getLongitude();
-        if (lat && lng) {
+        // Use != null check — 0 is falsy but a valid coordinate
+        if (lat != null && lng != null) {
             this.mapCenter = { lat, lng };
         }
+        console.log('[OrchestratorWorkbench] constructor — location service returned lat:', lat, 'lng:', lng, '→ mapCenter:', JSON.stringify(this.mapCenter));
         // Also kick off async resolution so we update to the real location
         // (browser geolocation → company address → IP/whois → Singapore).
         this.location.getUserLocation().then(({ latitude, longitude }) => {
@@ -218,15 +220,16 @@ export default class OrchestratorWorkbenchComponent extends Component {
         // Use selected orders if any, otherwise run against all
         const orderIds = this.selectedOrderIds.size > 0
             ? [...this.selectedOrderIds]
-            : this.unassignedOrders.map((o) => o.public_id);
+            : this.unassignedOrders.map((o) => o.get ? o.get('public_id') : o.public_id);
 
         // Resolve vehicle IDs from both the Vehicles tab selection and the
         // Drivers tab selection (drivers resolve to their assigned vehicle).
         const vehicleIdsFromVehicleTab = [...this.selectedVehicleIds];
         const vehicleIdsFromDriverTab  = [...this.selectedDriverIds]
             .map((driverId) => {
-                const driver = this.availableDrivers.find((d) => d.public_id === driverId);
-                return driver?.vehicle?.public_id ?? null;
+                const driver = this.availableDrivers.find((d) => (d.get ? d.get('public_id') : d.public_id) === driverId);
+                const veh = driver?.get ? driver.get('vehicle') : driver?.vehicle;
+                return (veh?.get ? veh.get('public_id') : veh?.public_id) ?? null;
             })
             .filter(Boolean);
 
@@ -234,7 +237,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         const resolvedVehicleIds = [...new Set([...vehicleIdsFromVehicleTab, ...vehicleIdsFromDriverTab])];
         const vehicleIds = resolvedVehicleIds.length > 0
             ? resolvedVehicleIds
-            : this.availableVehicles.map((v) => v.public_id);
+            : this.availableVehicles.map((v) => v.get ? v.get('public_id') : v.public_id);
 
         // Also send driver_ids as a hint (backend may use for direct assignment)
         const driverIds = this.selectedDriverIds.size > 0
@@ -517,8 +520,12 @@ export default class OrchestratorWorkbenchComponent extends Component {
         // Imperatively set the view to the current mapCenter so Leaflet
         // actually positions the viewport (tracked @lat/@lng changes after
         // initial render are ignored by ember-leaflet).
+        console.log('[OrchestratorWorkbench] onMapLoad — calling setView with:', JSON.stringify(this.mapCenter), 'zoom:', this.mapZoom, 'map.setView available:', !!map?.setView);
         if (map?.setView) {
             map.setView([this.mapCenter.lat, this.mapCenter.lng], this.mapZoom);
+            console.log('[OrchestratorWorkbench] onMapLoad — setView called successfully');
+        } else {
+            console.warn('[OrchestratorWorkbench] onMapLoad — map.setView not available!', map);
         }
     }
 
