@@ -274,96 +274,97 @@
 
         {{! ── CENTRE PANEL: Map ── }}
         <div class="map-panel flex-1 relative overflow-hidden">
-            <div class="next-map-container w-full h-full">
-            {{#if this.mapReady}}
-                <LeafletMap class="w-full h-full" @lat={{this.mapCenter.lat}} @lng={{this.mapCenter.lng}} @zoom={{this.mapZoom}} @onLoad={{this.onMapLoad}} as |layers|>
-                    <layers.tile @url={{this.tileSourceUrl}} />
+            <div class="fleetbase-leaflet-map-container w-full h-full">
+                {{#if this.mapReady}}
+                    <LeafletMap class="w-full h-full" @lat={{this.mapCenter.lat}} @lng={{this.mapCenter.lng}} @zoom={{this.mapZoom}} @onLoad={{this.onMapLoad}} as |layers|>
+                        <layers.tile @url={{this.tileSourceUrl}} />
 
-                    {{! Order markers — blue dot via div-icon (no broken image URL) }}
-                    {{#each this.filteredOrders as |order|}}
-                        {{#if order.payload.dropoff.location}}
-                            <layers.marker
-                                @lat={{order.payload.dropoff.location.coordinates.[1]}}
-                                @lng={{order.payload.dropoff.location.coordinates.[0]}}
-                                @icon={{div-icon
-                                    html=(concat '<div class="orch-marker-order' (if (includes order.public_id this.selectedOrderIdsArray) " selected" "") '"></div>')
-                                    className="orch-marker-wrapper"
-                                    iconSize=(array 14 14)
-                                    iconAnchor=(array 7 7)
-                                }}
-                                @draggable={{false}}
-                                @riseOnHover={{true}}
-                            >
-                                <layers.popup>
-                                    <div class="text-xs min-w-32">
-                                        <div class="font-semibold mb-0.5">{{or order.tracking order.public_id}}</div>
-                                        <div class="text-gray-500">{{order.payload.dropoff.address}}</div>
-                                        {{#if order.scheduled_at}}
-                                            <div class="text-blue-500 mt-0.5">{{format-date order.scheduled_at "MMM d, HH:mm"}}</div>
-                                        {{/if}}
-                                    </div>
-                                </layers.popup>
-                                <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
-                                    {{or order.tracking order.public_id}}
-                                </layers.tooltip>
-                            </layers.marker>
-                        {{/if}}
-                    {{/each}}
-
-                    {{! Driver markers — green/red dot via div-icon }}
-                    {{#each this.availableDrivers as |driver|}}
-                        {{#if driver.location}}
-                            <layers.marker
-                                @lat={{driver.location.coordinates.[1]}}
-                                @lng={{driver.location.coordinates.[0]}}
-                                @icon={{div-icon
-                                    html=(concat '<div class="orch-marker-driver ' (if driver.online "online" "offline") '"></div>')
-                                    className="orch-marker-wrapper"
-                                    iconSize=(array 16 16)
-                                    iconAnchor=(array 8 8)
-                                }}
-                                @riseOnHover={{true}}
-                            >
-                                <layers.popup>
-                                    <div class="text-xs min-w-36">
-                                        <div class="font-semibold mb-0.5">{{driver.name}}</div>
-                                        {{#if driver.vehicle}}
-                                            <div class="text-gray-500">{{driver.vehicle.display_name}}</div>
-                                        {{/if}}
-                                        <div class="mt-0.5 {{if driver.online 'text-green-500' 'text-red-400'}}">
-                                            {{if driver.online (t "common.online") (t "common.offline")}}
+                        {{! Order markers — blue dot via div-icon (no broken image URL) }}
+                        {{#each this.filteredOrders as |order|}}
+                            {{#if order.payload.dropoff.location}}
+                                <layers.marker
+                                    @lat={{order.payload.dropoff.location.coordinates.[1]}}
+                                    @lng={{order.payload.dropoff.location.coordinates.[0]}}
+                                    @icon={{div-icon
+                                        html=(concat '<div class="orch-marker-order' (if (includes order.public_id this.selectedOrderIdsArray) " selected" "") '"></div>')
+                                        className="orch-marker-wrapper"
+                                        iconSize=(array 14 14)
+                                        iconAnchor=(array 7 7)
+                                    }}
+                                    @draggable={{false}}
+                                    @riseOnHover={{true}}
+                                >
+                                    <layers.popup>
+                                        <div class="text-xs min-w-32">
+                                            <div class="font-semibold mb-0.5">{{or order.tracking order.public_id}}</div>
+                                            <div class="text-gray-500">{{order.payload.dropoff.address}}</div>
+                                            {{#if order.scheduled_at}}
+                                                <div class="text-blue-500 mt-0.5">{{format-date order.scheduled_at "MMM d, HH:mm"}}</div>
+                                            {{/if}}
                                         </div>
-                                    </div>
-                                </layers.popup>
-                                <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
-                                    {{driver.name}}
-                                </layers.tooltip>
-                            </layers.marker>
-                        {{/if}}
-                    {{/each}}
-
-                    {{! Proposed route polylines }}
-                    {{#if this.hasProposedPlan}}
-                        {{#each this.planByVehicle as |group|}}
-                            {{#if group.routePolyline}}
-                                <layers.polyline @positions={{group.routePolyline}} @color={{group.routeColor}} @weight={{3}} @opacity={{0.8}} />
+                                    </layers.popup>
+                                    <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                        {{or order.tracking order.public_id}}
+                                    </layers.tooltip>
+                                </layers.marker>
                             {{/if}}
                         {{/each}}
-                    {{/if}}
-                </LeafletMap>
-            {{else}}
-                <div class="flex items-center justify-center h-full text-gray-400">
-                    <Spinner />
-                </div>
-            {{/if}}
 
-            {{! Map overlay: engine running indicator }}
-            {{#if this.runOrchestration.isRunning}}
-                <div class="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center z-10">
-                    <Spinner @size="lg" class="mb-3" />
-                    <span class="text-sm text-white">{{t "orchestrator.running"}}</span>
-                </div>
-            {{/if}}
+                        {{! Driver markers — green/red dot via div-icon }}
+                        {{#each this.availableDrivers as |driver|}}
+                            {{#if driver.location}}
+                                <layers.marker
+                                    @lat={{driver.location.coordinates.[1]}}
+                                    @lng={{driver.location.coordinates.[0]}}
+                                    @icon={{div-icon
+                                        html=(concat '<div class="orch-marker-driver ' (if driver.online "online" "offline") '"></div>')
+                                        className="orch-marker-wrapper"
+                                        iconSize=(array 16 16)
+                                        iconAnchor=(array 8 8)
+                                    }}
+                                    @riseOnHover={{true}}
+                                >
+                                    <layers.popup>
+                                        <div class="text-xs min-w-36">
+                                            <div class="font-semibold mb-0.5">{{driver.name}}</div>
+                                            {{#if driver.vehicle}}
+                                                <div class="text-gray-500">{{driver.vehicle.display_name}}</div>
+                                            {{/if}}
+                                            <div class="mt-0.5 {{if driver.online 'text-green-500' 'text-red-400'}}">
+                                                {{if driver.online (t "common.online") (t "common.offline")}}
+                                            </div>
+                                        </div>
+                                    </layers.popup>
+                                    <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                        {{driver.name}}
+                                    </layers.tooltip>
+                                </layers.marker>
+                            {{/if}}
+                        {{/each}}
+
+                        {{! Proposed route polylines }}
+                        {{#if this.hasProposedPlan}}
+                            {{#each this.planByVehicle as |group|}}
+                                {{#if group.routePolyline}}
+                                    <layers.polyline @positions={{group.routePolyline}} @color={{group.routeColor}} @weight={{3}} @opacity={{0.8}} />
+                                {{/if}}
+                            {{/each}}
+                        {{/if}}
+                    </LeafletMap>
+                {{else}}
+                    <div class="flex items-center justify-center h-full text-gray-400">
+                        <Spinner />
+                    </div>
+                {{/if}}
+
+                {{! Map overlay: engine running indicator }}
+                {{#if this.runOrchestration.isRunning}}
+                    <div class="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center z-10">
+                        <Spinner @size="lg" class="mb-3" />
+                        <span class="text-sm text-white">{{t "orchestrator.running"}}</span>
+                    </div>
+                {{/if}}
+            </div>
         </div>
 
         {{! ── Right panel collapse toggle ── }}
@@ -525,9 +526,11 @@
                                 <div
                                     role="button"
                                     class="flex items-start gap-3 px-3 py-2.5 border-b dark:border-gray-700/60 cursor-pointer select-none transition-colors
-                                           {{if (includes driver.public_id this.selectedDriverIdsArray)
-                                               'bg-indigo-100 dark:bg-indigo-400/20 hover:bg-indigo-100 dark:hover:bg-indigo-400/20'
-                                               'hover:bg-gray-50 dark:hover:bg-gray-800/60'}}"
+                                        {{if
+                                            (includes driver.public_id this.selectedDriverIdsArray)
+                                            'bg-indigo-100 dark:bg-indigo-400/20 hover:bg-indigo-100 dark:hover:bg-indigo-400/20'
+                                            'hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                                        }}"
                                     {{on "click" (fn this.toggleDriverSelection driver)}}
                                 >
                                     {{! Avatar — online dot top-right }}
@@ -538,8 +541,10 @@
                                             class="w-9 h-9 rounded-full object-cover bg-gray-200 dark:bg-gray-700"
                                             {{fallback-img-src (config "defaultValues.driverImage")}}
                                         />
-                                        <span class="absolute top-0 right-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
-                                                     {{if driver.online 'bg-green-500' 'bg-gray-400'}}"></span>
+                                        <span
+                                            class="absolute top-0 right-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
+                                                {{if driver.online 'bg-green-500' 'bg-gray-400'}}"
+                                        ></span>
                                     </div>
 
                                     {{! All fields — always shown, "-" when absent }}
@@ -580,9 +585,11 @@
                                 <div
                                     role="button"
                                     class="flex items-start gap-3 px-3 py-2.5 border-b dark:border-gray-700/60 cursor-pointer select-none transition-colors
-                                           {{if (includes vehicle.public_id this.selectedVehicleIdsArray)
-                                               'bg-indigo-100 dark:bg-indigo-400/20 hover:bg-indigo-100 dark:hover:bg-indigo-400/20'
-                                               'hover:bg-gray-50 dark:hover:bg-gray-800/60'}}"
+                                        {{if
+                                            (includes vehicle.public_id this.selectedVehicleIdsArray)
+                                            'bg-indigo-100 dark:bg-indigo-400/20 hover:bg-indigo-100 dark:hover:bg-indigo-400/20'
+                                            'hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                                        }}"
                                     {{on "click" (fn this.toggleVehicleSelection vehicle)}}
                                 >
                                     {{! Avatar (photo_url) — driver online dot top-right }}
@@ -593,8 +600,10 @@
                                             class="w-9 h-9 rounded object-cover bg-gray-200 dark:bg-gray-700"
                                             {{fallback-img-src (config "defaultValues.vehicleAvatar")}}
                                         />
-                                        <span class="absolute top-0 right-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
-                                                     {{if vehicle.driver.online 'bg-green-500' 'bg-gray-400'}}"></span>
+                                        <span
+                                            class="absolute top-0 right-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
+                                                {{if vehicle.driver.online 'bg-green-500' 'bg-gray-400'}}"
+                                        ></span>
                                     </div>
 
                                     {{! All fields — always shown, "-" when absent }}
@@ -659,6 +668,5 @@
                 {{/if}}
             {{/if}}
         </div>
-
     </div>
 </div>
