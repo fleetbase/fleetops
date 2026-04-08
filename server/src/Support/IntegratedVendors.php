@@ -5,6 +5,8 @@ namespace Fleetbase\FleetOps\Support;
 use Fleetbase\FleetOps\Integrations\Lalamove\Lalamove;
 use Fleetbase\FleetOps\Integrations\Lalamove\LalamoveMarket;
 use Fleetbase\FleetOps\Integrations\Lalamove\LalamoveServiceType;
+use Fleetbase\FleetOps\Integrations\ParcelPath\ParcelPath;
+use Fleetbase\FleetOps\Integrations\ParcelPath\ParcelPathServiceType;
 use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Illuminate\Support\Str;
 
@@ -230,6 +232,46 @@ class IntegratedVendors
                     'cancelFromFleetbaseOrder' => [],
                 ],
             ],
+        ],
+        [
+            'name'             => 'ParcelPath',
+            'code'             => 'parcelpath',
+            'host'             => 'https://api.parcelpath.com/',
+            'sandbox'          => 'https://api-sandbox.parcelpath.com/',
+            'namespace'        => 'v1',
+            'bridge'           => ParcelPath::class,
+            'svc_bridge'       => ParcelPathServiceType::class,
+            'iso2cc_bridge'    => null,
+            'credentialParams' => [
+                ['key' => 'api_key', 'helpText' => 'Your ParcelPath API key'],
+            ],
+            'optionParams' => [
+                ['key' => 'carrier_filter', 'options' => [
+                    ['value' => 'all',  'label' => 'UPS + USPS'],
+                    ['value' => 'ups',  'label' => 'UPS Only'],
+                    ['value' => 'usps', 'label' => 'USPS Only'],
+                ], 'optionValue' => 'value', 'optionLabel' => 'label'],
+                ['key' => 'label_format', 'options' => [
+                    ['value' => 'PDF', 'label' => 'PDF'],
+                    ['value' => 'ZPL', 'label' => 'ZPL (thermal)'],
+                ], 'optionValue' => 'value', 'optionLabel' => 'label'],
+                ['key' => 'insurance_default', 'options' => [
+                    ['value' => 'none',   'label' => 'No insurance'],
+                    ['value' => 'auto',   'label' => 'Auto-insure all'],
+                    ['value' => 'prompt', 'label' => 'Ask per shipment'],
+                ], 'optionValue' => 'value', 'optionLabel' => 'label'],
+                ['key' => 'markup_type', 'options' => [
+                    ['value' => 'flat',    'label' => 'Flat (cents)'],
+                    ['value' => 'percent', 'label' => 'Percentage'],
+                ], 'optionValue' => 'value', 'optionLabel' => 'label'],
+                ['key' => 'markup_amount'],
+                ['key' => 'client_label'],
+            ],
+            'bridgeParams' => [
+                'apiKey'  => 'credentials.api_key',
+                'sandbox' => 'sandbox',
+            ],
+            'callbacks' => [],
         ],
     ];
 
