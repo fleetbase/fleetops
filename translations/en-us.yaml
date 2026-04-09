@@ -1998,7 +1998,8 @@ orchestrator:
   search-vehicles: Search vehicles...
   filter-online: Online
   filter-offline: Offline
-  filter-on-shift: On Shift
+  filter-on-shift: On Job
+  filter-on-job: On Job
   filter-active: Active
   filter-no-driver: No Driver
   proposed-routes: Proposed Routes
@@ -2054,3 +2055,6 @@ orchestrator:
   vehicle-assigned: Vehicle Assigned
   no-vehicle-assigned: No vehicle assigned
   no-driver-assigned: No driver assigned
+  created: Created
+  balance-workload: Balance Workload
+  import-orders: Import Orders

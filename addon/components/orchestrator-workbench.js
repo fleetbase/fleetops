@@ -404,6 +404,12 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.selectedOrderIds = new Set();
     }
 
+    @action stopPropagation(event) {
+        if (event?.stopPropagation) {
+            event.stopPropagation();
+        }
+    }
+
     isOrderSelected(order) {
         if (!order?.public_id) return false;
         return this.selectedOrderIds.has(order.public_id);
