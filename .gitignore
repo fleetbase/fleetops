@@ -31,6 +31,11 @@
 composer.lock
 /server_vendor
 /server/vendor/
+# Local Pest workaround: a `vendor -> server_vendor` symlink at the
+# project root, created on each one-off pest run because Pest's bin
+# script hardcodes the literal `vendor/` path while fleetops uses a
+# non-standard composer vendor-dir of `server_vendor`. Not real source.
+/vendor
 .phpunit.result.cache
 .php_cs.cache
 .php-cs-fixer.cache
