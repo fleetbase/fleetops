@@ -99,6 +99,18 @@ export default class OrchestratorWorkbenchComponent extends Component {
     /** Order pool search string. */
     @tracked orderSearch = '';
 
+    /** Driver tab search string. */
+    @tracked driverSearch = '';
+
+    /** Driver tab filter: 'all' | 'online' | 'offline' | 'on-shift' */
+    @tracked driverFilter = 'all';
+
+    /** Vehicle tab search string. */
+    @tracked vehicleSearch = '';
+
+    /** Vehicle tab filter: 'all' | 'active' | 'no-driver' */
+    @tracked vehicleFilter = 'all';
+
     /** Order pool filter: 'all' | 'scheduled' | 'urgent' | 'imported'. */
     @tracked orderFilter = 'all';
 
@@ -564,6 +576,68 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     @action onOrderSearchInput(event) {
         this.orderSearch = event.target.value;
+    }
+
+    @action onDriverSearchInput(event) {
+        this.driverSearch = event.target.value;
+    }
+
+    @action setDriverFilter(filter) {
+        this.driverFilter = filter;
+    }
+
+    @action onVehicleSearchInput(event) {
+        this.vehicleSearch = event.target.value;
+    }
+
+    @action setVehicleFilter(filter) {
+        this.vehicleFilter = filter;
+    }
+
+    get filteredDrivers() {
+        let drivers = this.availableDrivers;
+
+        if (this.driverSearch) {
+            const q = this.driverSearch.toLowerCase();
+            drivers = drivers.filter((d) =>
+                d.name?.toLowerCase().includes(q) ||
+                d.phone?.toLowerCase().includes(q) ||
+                d.email?.toLowerCase().includes(q) ||
+                d.vehicle?.display_name?.toLowerCase().includes(q)
+            );
+        }
+
+        if (this.driverFilter === 'online') {
+            drivers = drivers.filter((d) => d.online);
+        } else if (this.driverFilter === 'offline') {
+            drivers = drivers.filter((d) => !d.online);
+        } else if (this.driverFilter === 'on-shift') {
+            drivers = drivers.filter((d) => d.current_job);
+        }
+
+        return drivers;
+    }
+
+    get filteredVehicles() {
+        let vehicles = this.availableVehicles;
+
+        if (this.vehicleSearch) {
+            const q = this.vehicleSearch.toLowerCase();
+            vehicles = vehicles.filter((v) =>
+                v.display_name?.toLowerCase().includes(q) ||
+                v.plate_number?.toLowerCase().includes(q) ||
+                v.call_sign?.toLowerCase().includes(q) ||
+                v.driver?.name?.toLowerCase().includes(q)
+            );
+        }
+
+        if (this.vehicleFilter === 'active') {
+            vehicles = vehicles.filter((v) => v.status === 'active');
+        } else if (this.vehicleFilter === 'no-driver') {
+            vehicles = vehicles.filter((v) => !v.driver?.id);
+        }
+
+        return vehicles;
     }
 
     get filteredOrders() {
