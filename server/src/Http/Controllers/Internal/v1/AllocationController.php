@@ -312,6 +312,9 @@ class AllocationController extends Controller
                 ];
             });
 
+        // Exclude configs that have no custom fields at all
+        $configs = $configs->filter(fn ($config) => count($config['fields']) > 0)->values();
+
         return response()->json(['configs' => $configs]);
     }
 

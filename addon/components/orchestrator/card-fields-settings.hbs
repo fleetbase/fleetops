@@ -27,31 +27,25 @@
                 Backend returns { id, uuid, name, key, fields: [{key, label, type, required}] }
                 We use config.uuid as the settings key so it matches
                 order.order_config_uuid on the card renderer. }}
+            {{! Backend already excludes configs with no custom fields }}
             {{#each this.orderConfigs as |config|}}
                 <ContentPanel @title={{config.name}} @open={{true}} @wrapperClass="bordered-top">
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
                         {{t "orchestrator.config-fields-description" name=config.name}}
                     </p>
-                    {{#if config.fields.length}}
-                        <div class="grid grid-cols-2 gap-2">
-                            {{#each config.fields as |field|}}
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600"
-                                        checked={{this.isConfigFieldSelected config.uuid field.key}}
-                                        {{on "change" (fn this.toggleConfigField config.uuid field.key)}}
-                                    />
-                                    <div class="min-w-0">
-                                        <span class="text-xs text-gray-700 dark:text-gray-300 block truncate">{{field.label}}</span>
-                                        <span class="text-2xs text-gray-400 block truncate">{{field.key}}</span>
-                                    </div>
-                                </label>
-                            {{/each}}
-                        </div>
-                    {{else}}
-                        <p class="text-xs text-gray-400 italic">{{t "orchestrator.no-custom-fields"}}</p>
-                    {{/if}}
+                    <div class="grid grid-cols-2 gap-2">
+                        {{#each config.fields as |field|}}
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600"
+                                    checked={{this.isConfigFieldSelected config.uuid field.key}}
+                                    {{on "change" (fn this.toggleConfigField config.uuid field.key)}}
+                                />
+                                <span class="text-xs text-gray-700 dark:text-gray-300" title={{field.key}}>{{field.label}}</span>
+                            </label>
+                        {{/each}}
+                    </div>
                 </ContentPanel>
             {{/each}}
 
