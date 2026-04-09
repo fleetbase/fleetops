@@ -3,11 +3,14 @@
 namespace Fleetbase\FleetOps\Integrations\UPS;
 
 use Fleetbase\FleetOps\Models\IntegratedVendor;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceQuoteItem;
+use Fleetbase\Models\File;
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * UPS direct bridge class (Mode B).
@@ -377,6 +380,202 @@ class UPS
         return $rows;
     }
 
+    /**
+     * Map a human signature confirmation preference ('standard', 'adult')
+     * to the UPS DCISType numeric code expected in
+     * PackageServiceOptions.DeliveryConfirmation.DCISType. Returns null
+     * when no signature is requested (default, none, empty, unknown).
+     *
+     * Ported from the ParcelPath v9 createUPSDapLabel signature-mapping
+     * table per the Phase 2 extraction rule — only the generic mapping
+     * is carried over, no user/session-specific fallbacks.
+     */
+    public static function signatureConfirmationCode(?string $preference): ?int
+    {
+        if ($preference === null || $preference === '') {
+            return null;
+        }
+        return match (strtolower($preference)) {
+            'standard' => 2,
+            'adult'    => 3,
+            default    => null,
+        };
+    }
+
+    /**
+     * Build the POST /api/shipments/v2409/ship request body.
+     *
+     * $labelFormat is normalized to uppercase and defaults to PDF.
+     * $orderPublicId, when provided, is injected as the UPS
+     * ReferenceNumber (code 00) on every package AND into the
+     * Shipment.Description so the tracking event feed carries a
+     * human-readable tie-back to the FleetOps order.
+     * $signaturePreference follows the signatureConfirmationCode
+     * mapping; null/unknown values omit DeliveryConfirmation entirely.
+     */
+    public static function buildShipRequest(
+        string $shipperName,
+        array $shipFrom,
+        array $shipTo,
+        array $packages,
+        string $accountNumber,
+        string $serviceCode,
+        string $labelFormat = 'PDF',
+        ?string $orderPublicId = null,
+        ?string $signaturePreference = null
+    ): array {
+        $format = strtoupper($labelFormat);
+        $sigCode = self::signatureConfirmationCode($signaturePreference);
+
+        // Attach reference number + optional DeliveryConfirmation to every package.
+        $preparedPackages = [];
+        foreach ($packages as $pkg) {
+            if ($orderPublicId !== null && $orderPublicId !== '') {
+                $pkg['ReferenceNumber'] = [[
+                    'Code'  => '00',
+                    'Value' => $orderPublicId,
+                ]];
+            }
+            if ($sigCode !== null) {
+                $pkg['PackageServiceOptions'] = array_merge(
+                    $pkg['PackageServiceOptions'] ?? [],
+                    ['DeliveryConfirmation' => ['DCISType' => (string) $sigCode]]
+                );
+            }
+            $preparedPackages[] = $pkg;
+        }
+
+        $description = 'FleetOps shipment'
+            . ($orderPublicId !== null && $orderPublicId !== '' ? ' ' . $orderPublicId : '');
+
+        return [
+            'ShipmentRequest' => [
+                'Request' => [
+                    'RequestOption' => 'nonvalidate',
+                ],
+                'Shipment' => [
+                    'Description' => $description,
+                    'Shipper' => [
+                        'Name'          => $shipperName,
+                        'ShipperNumber' => $accountNumber,
+                        'Address'       => $shipFrom,
+                    ],
+                    'ShipTo' => [
+                        'Name'    => $shipperName,
+                        'Address' => $shipTo,
+                    ],
+                    'ShipFrom' => [
+                        'Name'    => $shipperName,
+                        'Address' => $shipFrom,
+                    ],
+                    'PaymentInformation' => [
+                        'ShipmentCharge' => [
+                            'Type'        => '01', // Transportation
+                            'BillShipper' => ['AccountNumber' => $accountNumber],
+                        ],
+                    ],
+                    'Service' => ['Code' => $serviceCode],
+                    'Package' => $preparedPackages,
+                ],
+                'LabelSpecification' => [
+                    'LabelImageFormat' => ['Code' => $format],
+                    'HTTPUserAgent'    => 'fleetops',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Normalize the POST /api/shipments/v2409/ship response into a row
+     * ready for persisting to Storage + the File table.
+     *
+     * Returns:
+     *   [
+     *     'tracking_number' => string,
+     *     'shipment_id'     => string,  // UPS ShipmentIdentificationNumber
+     *     'label_binary'    => string,  // raw decoded bytes
+     *     'label_format'    => 'PDF' | 'ZPL' | 'GIF',
+     *     'label_mime'      => 'application/pdf' | 'application/zpl' | 'image/gif',
+     *   ]
+     *
+     * Handles the UPS quirk where a single PackageResults may come back
+     * as an object rather than an array of one.
+     *
+     * Throws RuntimeException on malformed responses — the impure
+     * wrapper should surface these as vendor errors to the caller.
+     */
+    public static function normalizeShipResponse(array $response): array
+    {
+        $results = $response['ShipmentResponse']['ShipmentResults'] ?? null;
+        if (!is_array($results) || empty($results)) {
+            throw new \RuntimeException('UPS ship response is missing ShipmentResults');
+        }
+
+        $shipmentId = $results['ShipmentIdentificationNumber'] ?? null;
+
+        $packageResults = $results['PackageResults'] ?? null;
+        if ($packageResults === null) {
+            throw new \RuntimeException('UPS ship response is missing PackageResults');
+        }
+
+        // Single PackageResults can come back as a direct object rather than an array.
+        if (isset($packageResults['TrackingNumber']) || isset($packageResults['ShippingLabel'])) {
+            $firstPackage = $packageResults;
+        } else {
+            $firstPackage = $packageResults[0] ?? null;
+        }
+        if (!is_array($firstPackage)) {
+            throw new \RuntimeException('UPS ship response has no package entries');
+        }
+
+        $trackingNumber = $firstPackage['TrackingNumber'] ?? $shipmentId;
+        if (!is_string($trackingNumber) || $trackingNumber === '') {
+            throw new \RuntimeException('UPS ship response is missing a tracking number');
+        }
+
+        $labelImage = $firstPackage['ShippingLabel']['GraphicImage'] ?? '';
+        $labelFormat = strtoupper((string) ($firstPackage['ShippingLabel']['ImageFormat']['Code'] ?? 'PDF'));
+
+        $labelMime = match ($labelFormat) {
+            'ZPL'   => 'application/zpl',
+            'GIF'   => 'image/gif',
+            default => 'application/pdf',
+        };
+
+        return [
+            'tracking_number' => $trackingNumber,
+            'shipment_id'     => (string) ($shipmentId ?? $trackingNumber),
+            'label_binary'    => base64_decode($labelImage),
+            'label_format'    => $labelFormat,
+            'label_mime'      => $labelMime,
+        ];
+    }
+
+    /**
+     * Normalize the DELETE /api/shipments/v1/void/cancel/{id} response.
+     * Returns true when UPS reports a successful void by either returning
+     * Status.Code='1' or Status.Description='Success' (case-insensitive).
+     */
+    public static function normalizeVoidResponse(array $response): bool
+    {
+        $status = $response['VoidShipmentResponse']['SummaryResult']['Status'] ?? null;
+        if (!is_array($status)) {
+            return false;
+        }
+
+        $code = isset($status['Code']) ? (string) $status['Code'] : '';
+        if ($code === '1') {
+            return true;
+        }
+
+        $description = isset($status['Description']) ? (string) $status['Description'] : '';
+        if (strcasecmp($description, 'Success') === 0) {
+            return true;
+        }
+
+        return false;
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     //  IMPURE RUNTIME WRAPPERS — compose pure helpers + HTTP + Eloquent.
     //  Not unit-tested in this phase; exercised via smoke test once the
@@ -455,5 +654,100 @@ class UPS
         }
 
         return $quotes;
+    }
+
+    /**
+     * Purchase a UPS shipping label against the POST /api/shipments/v2409/ship
+     * endpoint. Decodes the base64 label binary, writes it to the default
+     * Storage disk under carrier-labels/, creates a File record pointing at
+     * it, and stores the shipmentIdentificationNumber + tracking_number +
+     * carrier ('UPS') + service_code on Order.meta.integrated_vendor_order.
+     *
+     * Not unit-tested here; exercised at runtime via smoke test once the
+     * registry entry lands (Task 17) and a real UPS sandbox account is
+     * configured. The tricky pieces — request assembly and response
+     * parsing — are already covered by UPSLabelBuilderTest.
+     */
+    public function createOrderFromServiceQuote(ServiceQuote $serviceQuote, Order $order): array
+    {
+        $serviceCode = (string) ($serviceQuote->meta['service_code'] ?? '');
+        if ($serviceCode === '') {
+            throw new \RuntimeException('ServiceQuote missing UPS service_code in meta');
+        }
+
+        $format = strtoupper((string) ($this->integratedVendor?->options['label_format'] ?? 'PDF'));
+        $signature = $order->getMeta('signature_confirmation', null);
+
+        $shipperName = (string) ($order->payload->pickup->name ?? 'FleetOps Shipper');
+        $shipFrom = static::placeToUpsAddress($order->payload->pickup);
+        $shipTo   = static::placeToUpsAddress($order->payload->dropoff);
+
+        $packages = [];
+        foreach ($order->payload->entities ?? [] as $entity) {
+            if (($entity->type ?? 'parcel') !== 'parcel') {
+                continue;
+            }
+            $packages[] = static::entityToUpsPackage($entity);
+        }
+
+        $body = static::buildShipRequest(
+            $shipperName,
+            $shipFrom,
+            $shipTo,
+            $packages,
+            (string) $this->accountNumber,
+            $serviceCode,
+            $format,
+            $order->public_id,
+            is_string($signature) ? $signature : null,
+        );
+
+        $response = $this->post('/api/shipments/v2409/ship', ['json' => $body]) ?? [];
+        $result   = static::normalizeShipResponse($response);
+
+        $ext   = strtolower($result['label_format']);
+        $disk  = config('filesystems.default');
+        $filename = 'ups_label_' . $result['tracking_number'] . '.' . $ext;
+        $path  = 'carrier-labels/' . $filename;
+        Storage::disk($disk)->put($path, $result['label_binary']);
+
+        File::create([
+            'company_uuid'      => $order->company_uuid,
+            'subject_uuid'      => $order->uuid,
+            'subject_type'      => Order::class,
+            'content_type'      => $result['label_mime'],
+            'folder'            => 'carrier-labels',
+            'path'              => $path,
+            'disk'              => $disk,
+            'original_filename' => $filename,
+        ]);
+
+        $order->updateMeta('integrated_vendor_order', [
+            'carrier'                      => 'UPS',
+            'shipmentIdentificationNumber' => $result['shipment_id'],
+            'tracking_number'              => $result['tracking_number'],
+            'service_code'                 => $serviceCode,
+        ]);
+
+        return $result;
+    }
+
+    /**
+     * Void a UPS shipment by its ShipmentIdentificationNumber.
+     *
+     * NOTE on extraction rule: ParcelPath v9's void path (per the
+     * Phase 2 porting rules flagged by the team) contained an
+     * email-based UPS URL override that switched hosts depending on
+     * the logged-in user's email. That branch is NOT carried over.
+     * Only the generic sandbox/production host selection managed by
+     * UPSOAuthClient and $this->baseUrl() is used.
+     */
+    public function voidShipment(string $shipmentIdentificationNumber): bool
+    {
+        $response = $this->delete(
+            '/api/shipments/v1/void/cancel/' . rawurlencode($shipmentIdentificationNumber)
+        ) ?? [];
+
+        return static::normalizeVoidResponse($response);
     }
 }
