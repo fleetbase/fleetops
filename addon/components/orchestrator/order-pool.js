@@ -105,12 +105,44 @@ export default class OrchestratorOrderPoolComponent extends Component {
         }
 
         // ── Config-specific custom fields ──────────────────────────────────────
+        // Custom fields are flattened onto the order payload by withCustomFields() using
+        // Str::snake(Str::lower(label)) as the key. We try three lookup strategies:
+        //   1. Direct property access by fieldKey (matches when name === snake(label))
+        //   2. Scan the custom_field_values collection (included on internal requests)
+        //      and match on customField.name or customField.label
+        //   3. Fall back to scanning all top-level order keys for a close match
         const configUuid = order.order_config_uuid;
         if (configUuid && cardFields.byConfig?.[configUuid]) {
             for (const fieldKey of cardFields.byConfig[configUuid]) {
-                const cfv = order.custom_field_values?.find?.((v) => v.field_key === fieldKey);
-                if (cfv) {
-                    fields.push({ label: cfv.label ?? fieldKey, value: cfv.value });
+                let label = fieldKey;
+                let value = null;
+
+                // Strategy 1: flat property on order (most common path)
+                const directVal = order[fieldKey];
+                if (directVal !== undefined && directVal !== null && typeof directVal !== 'object') {
+                    value = String(directVal);
+                }
+
+                // Strategy 2: scan custom_field_values collection
+                if (value === null) {
+                    const cfvCollection = order.custom_field_values ?? order.customFieldValues ?? [];
+                    const cfvArray = typeof cfvCollection.toArray === 'function' ? cfvCollection.toArray() : (Array.isArray(cfvCollection) ? cfvCollection : []);
+                    const cfv = cfvArray.find((v) => {
+                        const cfName = v.custom_field?.name ?? v.customField?.get?.('name') ?? v.field_key ?? '';
+                        const cfLabel = v.custom_field?.label ?? v.customField?.get?.('label') ?? v.label ?? '';
+                        return cfName === fieldKey || cfLabel === fieldKey;
+                    });
+                    if (cfv) {
+                        const rawVal = cfv.value ?? cfv.string_value ?? cfv.raw_value;
+                        label = cfv.custom_field?.label ?? cfv.customField?.get?.('label') ?? fieldKey;
+                        value = (rawVal !== null && rawVal !== undefined && typeof rawVal !== 'object')
+                            ? String(rawVal)
+                            : (typeof rawVal === 'object' && rawVal !== null ? JSON.stringify(rawVal) : null);
+                    }
+                }
+
+                if (value !== null) {
+                    fields.push({ label, value });
                 }
             }
         }

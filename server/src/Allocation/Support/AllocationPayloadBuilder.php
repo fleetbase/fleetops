@@ -23,6 +23,28 @@ use Illuminate\Support\Collection;
 class AllocationPayloadBuilder
 {
     /**
+     * Safely read a meta key from a model, returning $default on any error.
+     *
+     * Vehicle::getAllMeta() has a strict array return type but some rows store
+     * the meta column as a raw JSON string rather than a decoded array, causing
+     * a TypeError at runtime. This wrapper catches that and any other meta
+     * read failure so a single bad vehicle row does not abort the whole run.
+     *
+     * @param  \Illuminate\Database\Eloquent\Model  $model
+     * @param  string  $key
+     * @param  mixed   $default
+     * @return mixed
+     */
+    protected static function safeMeta($model, string $key, $default = null)
+    {
+        try {
+            return $model->getMeta($key) ?? $default;
+        } catch (\Throwable $e) {
+            return $default;
+        }
+    }
+
+    /**
      * Build the normalized job list from a collection of Orders.
      *
      * Each job contains:
@@ -130,10 +152,10 @@ class AllocationPayloadBuilder
                 $entry['end'] = [$vehicle->location->getLng(), $vehicle->location->getLat()];
             }
             $entry['capacity'] = [
-                (int) round((float) ($vehicle->capacity_weight_kg ?? $vehicle->getMeta('max_weight_kg') ?? 0)),
-                (int) round((float) ($vehicle->capacity_volume_m3 ?? $vehicle->getMeta('max_volume_m3') ?? 0) * 1000),
-                (int) ($vehicle->capacity_pallets ?? $vehicle->getMeta('max_pallets') ?? 0),
-                (int) ($vehicle->capacity_parcels ?? $vehicle->getMeta('max_parcels') ?? 100),
+                (int) round((float) ($vehicle->capacity_weight_kg ?? static::safeMeta($vehicle, 'max_weight_kg', 0))),
+                (int) round((float) ($vehicle->capacity_volume_m3 ?? static::safeMeta($vehicle, 'max_volume_m3', 0)) * 1000),
+                (int) ($vehicle->capacity_pallets ?? static::safeMeta($vehicle, 'max_pallets', 0)),
+                (int) ($vehicle->capacity_parcels ?? static::safeMeta($vehicle, 'max_parcels', 100)),
             ];
             if ($vehicle->max_tasks !== null && $vehicle->max_tasks > 0) {
                 $entry['max_tasks'] = (int) $vehicle->max_tasks;
@@ -176,10 +198,10 @@ class AllocationPayloadBuilder
             // --- Multi-dimensional capacity ---
             // [weight_kg, volume_l (×1000 from m3), pallets, parcels]
             $entry['capacity'] = [
-                (int) round((float) ($vehicle->capacity_weight_kg ?? $vehicle->getMeta('max_weight_kg') ?? 0)),
-                (int) round((float) ($vehicle->capacity_volume_m3 ?? $vehicle->getMeta('max_volume_m3') ?? 0) * 1000),
-                (int) ($vehicle->capacity_pallets ?? $vehicle->getMeta('max_pallets') ?? 0),
-                (int) ($vehicle->capacity_parcels ?? $vehicle->getMeta('max_parcels') ?? 100),
+                (int) round((float) ($vehicle->capacity_weight_kg ?? static::safeMeta($vehicle, 'max_weight_kg', 0))),
+                (int) round((float) ($vehicle->capacity_volume_m3 ?? static::safeMeta($vehicle, 'max_volume_m3', 0)) * 1000),
+                (int) ($vehicle->capacity_pallets ?? static::safeMeta($vehicle, 'max_pallets', 0)),
+                (int) ($vehicle->capacity_parcels ?? static::safeMeta($vehicle, 'max_parcels', 100)),
             ];
 
             // --- Max tasks ---
@@ -188,7 +210,7 @@ class AllocationPayloadBuilder
             }
 
             // --- Max travel time (seconds) ---
-            $maxTravel = $driver->max_travel_time ?? $vehicle->getMeta('max_travel_time_seconds');
+            $maxTravel = $driver->max_travel_time ?? static::safeMeta($vehicle, 'max_travel_time_seconds');
             if ($maxTravel) {
                 $entry['max_travel_time'] = (int) $maxTravel;
             }
