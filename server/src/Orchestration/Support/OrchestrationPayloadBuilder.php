@@ -207,20 +207,20 @@ class OrchestrationPayloadBuilder
             }
 
             // --- Max travel time (seconds) ---
-            $maxTravel = $driver->max_travel_time ?? static::safeMeta($vehicle, 'max_travel_time_seconds');
+            $maxTravel = $driver?->max_travel_time ?? static::safeMeta($vehicle, 'max_travel_time_seconds');
             if ($maxTravel) {
                 $entry['max_travel_time'] = (int) $maxTravel;
             }
 
             // --- Time window ---
             // Priority: driver.time_window_start/end columns → active shift → vehicle.time_window columns
-            if ($driver->time_window_start && $driver->time_window_end) {
+            if ($driver?->time_window_start && $driver?->time_window_end) {
                 $entry['time_window'] = [
                     $driver->time_window_start->timestamp,
                     $driver->time_window_end->timestamp,
                 ];
             } else {
-                $activeShift = $driver->activeShiftFor(now());
+                $activeShift = $driver?->activeShiftFor(now());
                 if ($activeShift) {
                     $entry['time_window'] = [
                         $activeShift->start_at->timestamp,
@@ -237,7 +237,7 @@ class OrchestrationPayloadBuilder
             // --- Skills ---
             $skills = array_values(array_unique(array_merge(
                 static::resolveSkills($vehicle->skills ?? [], $vehicle->custom_fields ?? []),
-                static::resolveSkills($driver->skills ?? [], $driver->custom_fields ?? [])
+                static::resolveSkills($driver?->skills ?? [], $driver?->custom_fields ?? [])
             )));
             if (!empty($skills)) {
                 $entry['skills'] = $skills;
