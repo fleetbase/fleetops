@@ -1,5 +1,5 @@
-{{! Orchestrator::OrderPool — Left panel: filterable, searchable order list }}
-<div class="order-pool flex flex-col h-full">
+{{! Orchestrator::OrderPool — left panel of the workbench }}
+<div class="order-pool flex flex-col h-full overflow-hidden">
 
     {{! Search + count }}
     <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center space-x-2 flex-shrink-0">
@@ -9,7 +9,7 @@
             </span>
             <input
                 type="text"
-                class="form-input form-input-sm w-full pl-7"
+                class="form-input form-input-sm w-full pl-7i"
                 placeholder={{t "orchestrator.search-orders"}}
                 value={{this.orderSearch}}
                 {{on "input" this.onSearchInput}}
@@ -35,6 +35,7 @@
             <div class="flex justify-center py-8"><Spinner /></div>
         {{else if this.filteredOrders.length}}
             {{#each this.filteredOrders as |order|}}
+                {{! ── Order Pool Card — matches original order-pool-card style ── }}
                 <div
                     class="order-pool-card mx-2 my-1 rounded border overflow-hidden cursor-grab select-none dark:border-gray-600
                         {{if (includes order.public_id this.selectedOrderIdsArray) 'ring-2 ring-indigo-500 border-indigo-400 dark:border-indigo-500' ''}}"
@@ -43,7 +44,7 @@
                     {{on "dragstart" (fn @onDragStart order)}}
                     {{on "click" (fn @onToggleSelection order)}}
                 >
-                    {{! Card header }}
+                    {{! Header: tracking number + status badge }}
                     <div class="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                         <input
                             type="checkbox"
@@ -57,61 +58,103 @@
                         </span>
                         <div class="flex-shrink-0 flex items-center gap-1">
                             {{#if order.orchestrator_priority}}
-                                <Badge @status={{this.priorityStatus order.orchestrator_priority}}>P{{order.orchestrator_priority}}</Badge>
+                                <Badge @status={{this.priorityBadgeStatus}}>{{smart-humanize order.orchestrator_priority}}</Badge>
                             {{/if}}
                             <Badge @status={{order.status}} />
                         </div>
                     </div>
-
-                    {{! Card body: standard fields }}
+                    {{! Card body: standard fields in original dl grid style }}
                     <div class="bg-white dark:bg-gray-900 px-2 py-1.5">
-                        <dl class="grid grid-cols-2 gap-x-2 gap-y-0.5">
+                        <dl class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
+                            {{! Pickup — only when present }}
+                            {{#if order.payload.pickup.address}}
+                                <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                    <FaIcon @icon="location-crosshairs" @size="xs" class="w-3 text-center text-green-400" />
+                                    {{t "orchestrator.pickup"}}
+                                </dt>
+                                <dd class="truncate text-right text-gray-700 dark:text-gray-300 text-xs">{{order.payload.pickup.address}}</dd>
+                            {{/if}}
+                            {{! Dropoff }}
                             {{#if order.payload.dropoff.address}}
-                                <div class="col-span-2 flex gap-1 min-w-0">
-                                    <dt class="text-2xs text-gray-400 dark:text-gray-500 flex-shrink-0 w-12">{{t "orchestrator.dropoff"}}</dt>
-                                    <dd class="text-2xs text-gray-700 dark:text-gray-300 truncate">{{order.payload.dropoff.address}}</dd>
-                                </div>
+                                <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                    <FaIcon @icon="location-dot" @size="xs" class="w-3 text-center text-red-400" />
+                                    {{t "orchestrator.dropoff"}}
+                                </dt>
+                                <dd class="truncate text-right text-gray-700 dark:text-gray-300 text-xs">{{order.payload.dropoff.address}}</dd>
                             {{/if}}
+                            {{! Scheduled date }}
                             {{#if order.scheduled_at}}
-                                <div class="flex gap-1 min-w-0">
-                                    <dt class="text-2xs text-gray-400 dark:text-gray-500 flex-shrink-0 w-12">{{t "orchestrator.scheduled"}}</dt>
-                                    <dd class="text-2xs text-gray-700 dark:text-gray-300 truncate">{{order.scheduledAt}}</dd>
-                                </div>
+                                <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                    <FaIcon @icon="clock" @size="xs" class="w-3 text-center" />
+                                    {{t "orchestrator.scheduled"}}
+                                </dt>
+                                <dd class="truncate text-right text-blue-500 dark:text-blue-400 text-xs">{{format-date order.scheduled_at "MMM d, HH:mm"}}</dd>
                             {{/if}}
-                            {{#if order.customer_name}}
-                                <div class="flex gap-1 min-w-0">
-                                    <dt class="text-2xs text-gray-400 dark:text-gray-500 flex-shrink-0 w-12">{{t "orchestrator.customer"}}</dt>
-                                    <dd class="text-2xs text-gray-700 dark:text-gray-300 truncate">{{order.customer_name}}</dd>
-                                </div>
+                            {{! Customer }}
+                            {{#if order.customer.name}}
+                                <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                    <FaIcon @icon="user" @size="xs" class="w-3 text-center" />
+                                    {{t "orchestrator.customer"}}
+                                </dt>
+                                <dd class="truncate text-right text-gray-700 dark:text-gray-300 text-xs">{{order.customer.name}}</dd>
                             {{/if}}
-
-                            {{! Configured custom/meta fields for this order's config }}
-                            {{#each (this.cardFieldsForOrder order) as |field|}}
-                                <div class="flex gap-1 min-w-0">
-                                    <dt class="text-2xs text-gray-400 dark:text-gray-500 flex-shrink-0 w-12 truncate">{{field.label}}</dt>
-                                    <dd class="text-2xs text-gray-700 dark:text-gray-300 truncate">{{field.value}}</dd>
-                                </div>
+                            {{! Driver assigned }}
+                            <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                <FaIcon @icon="id-badge" @size="xs" class="w-3 text-center" />
+                                {{t "orchestrator.driver-assigned"}}
+                            </dt>
+                            <dd class="truncate text-right text-gray-700 dark:text-gray-300 text-xs">{{or order.driver_assigned.name "-"}}</dd>
+                            {{! Vehicle assigned }}
+                            <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                <FaIcon @icon="truck" @size="xs" class="w-3 text-center" />
+                                {{t "orchestrator.vehicle-assigned"}}
+                            </dt>
+                            <dd class="truncate text-right text-gray-700 dark:text-gray-300 text-xs">{{or order.vehicle_assigned.display_name "-"}}</dd>
+                            {{! Created date }}
+                            <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                <FaIcon @icon="calendar-plus" @size="xs" class="w-3 text-center" />
+                                {{t "orchestrator.created"}}
+                            </dt>
+                            <dd class="truncate text-right text-gray-500 dark:text-gray-400 text-xs">
+                                {{#if order.created_at}}{{format-date order.created_at "MMM d, HH:mm"}}{{else}}-{{/if}}
+                            </dd>
+                            {{! Configured custom/meta fields for this order's config — uses getter, not method call }}
+                            {{#each (this.resolvedCardFields order) as |field|}}
+                                <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap truncate">{{field.label}}</dt>
+                                <dd class="truncate text-right text-gray-700 dark:text-gray-300 text-xs">{{field.value}}</dd>
                             {{/each}}
                         </dl>
+                        {{! Skills tags }}
+                        {{#if order.required_skills.length}}
+                            <div class="flex flex-wrap gap-0.5 mt-1">
+                                {{#each order.required_skills as |skill|}}
+                                    <span class="skill-tag">{{skill}}</span>
+                                {{/each}}
+                            </div>
+                        {{/if}}
                     </div>
                 </div>
             {{/each}}
         {{else}}
-            <div class="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-600">
-                <FaIcon @icon="inbox" class="mb-2 text-2xl" />
-                <p class="text-xs">{{t "orchestrator.no-orders"}}</p>
+            <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
+                <FaIcon @icon="check-circle" @size="2x" class="mb-2 text-green-400" />
+                {{t "orchestrator.no-unassigned-orders"}}
             </div>
         {{/if}}
     </div>
 
-    {{! Footer: import + selection count }}
-    <div class="px-3 py-2 border-t dark:border-gray-700 flex items-center justify-between flex-shrink-0 bg-gray-50 dark:bg-gray-800">
+    {{! Bulk action bar + import }}
+    <div class="px-3 py-2 border-t dark:border-gray-700 flex items-center justify-between flex-shrink-0">
         <Button @icon="file-import" @text={{t "orchestrator.import-orders"}} @type="default" @size="xs" @onClick={{@onOpenImport}} />
         {{#if this.selectedOrderIdsArray.length}}
-            <span class="text-xs text-indigo-600 dark:text-indigo-400">
-                {{this.selectedOrderIdsArray.length}} {{t "orchestrator.selected"}}
-                <button type="button" class="ml-1 text-gray-400 hover:text-gray-600" {{on "click" @onClearSelection}}>✕</button>
-            </span>
+            <div class="flex items-center gap-1.5">
+                <span class="text-xs text-blue-400">
+                    {{this.selectedOrderIdsArray.length}} {{t "orchestrator.selected"}}
+                </span>
+                <button type="button" class="text-xs text-gray-400 hover:text-white" {{on "click" @onClearSelection}}>
+                    {{t "orchestrator.clear-selection"}}
+                </button>
+            </div>
         {{/if}}
     </div>
 </div>

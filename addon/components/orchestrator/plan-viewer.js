@@ -41,7 +41,11 @@ export default class OrchestratorPlanViewerComponent extends Component {
         this.expandedCards = new Set();
     }
 
-    isExpanded(vehicleId) {
+    /**
+     * isExpanded — decorated as @action so Glimmer allows it to be invoked
+     * with an argument from HBS: (this.isExpanded vehicleId)
+     */
+    @action isExpanded(vehicleId) {
         return this.expandedCards.has(vehicleId);
     }
 

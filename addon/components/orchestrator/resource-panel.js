@@ -100,4 +100,9 @@ export default class OrchestratorResourcePanelComponent extends Component {
     get selectedDriverIdsArray() {
         return [...(this.args.selectedDriverIds ?? new Set())];
     }
+
+    @action clearAllSelections() {
+        this.args.onClearVehicles?.();
+        this.args.onClearDrivers?.();
+    }
 }

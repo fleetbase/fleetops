@@ -1,4 +1,3 @@
-{{! Orchestrator Workbench v2 — Phased Intelligent Order Allocation }}
 <div class="orchestrator-workbench flex flex-col h-full overflow-hidden">
 
     {{! ── Toolbar ── }}
@@ -102,67 +101,77 @@
             />
         </div>
 
-        {{! ── CENTRE: Map + collapse toggles ── }}
+        {{! ── Left panel collapse toggle — original long border bar style ── }}
+        <button
+            type="button"
+            class="workbench-panel-toggle flex items-center justify-center w-4 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+            title={{if this.leftPanelCollapsed (t "orchestrator.expand-panel") (t "orchestrator.collapse-panel")}}
+            {{on "click" this.toggleLeftPanel}}
+        >
+            <FaIcon @icon={{if this.leftPanelCollapsed "chevron-right" "chevron-left"}} @size="xs" class="text-gray-400" />
+        </button>
+
+        {{! ── CENTRE: Map ── }}
         <div class="map-panel flex-1 relative overflow-hidden">
+            <div class="fleetbase-leaflet-map-container w-full h-full">
+                <LeafletMap
+                    @lat={{this.mapCenter.lat}}
+                    @lng={{this.mapCenter.lng}}
+                    @zoom={{this.mapZoom}}
+                    @onLoad={{this.onMapLoad}}
+                    class="w-full h-full"
+                >
+                    <:layers as |layers|>
+                        <layers.tile @url={{this.tileSourceUrl}} />
 
-            {{! Left panel collapse toggle }}
-            <button
-                type="button"
-                class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-5 h-10 bg-white dark:bg-gray-800 border border-l-0 dark:border-gray-600 rounded-r flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shadow-sm"
-                {{on "click" this.toggleLeftPanel}}
-                title={{if this.leftPanelCollapsed (t "orchestrator.expand-panel") (t "orchestrator.collapse-panel")}}
-            >
-                <FaIcon @icon={{if this.leftPanelCollapsed "chevron-right" "chevron-left"}} @size="xs" />
-            </button>
+                        {{! Order markers }}
+                        {{#each this.unassignedOrders as |order|}}
+                            {{#if order.payload.dropoff.location}}
+                                <layers.marker
+                                    @lat={{order.payload.dropoff.location.coordinates.[1]}}
+                                    @lng={{order.payload.dropoff.location.coordinates.[0]}}
+                                />
+                            {{/if}}
+                        {{/each}}
 
-            {{! Right panel collapse toggle }}
-            <button
-                type="button"
-                class="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-5 h-10 bg-white dark:bg-gray-800 border border-r-0 dark:border-gray-600 rounded-l flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shadow-sm"
-                {{on "click" this.toggleRightPanel}}
-                title={{if this.rightPanelCollapsed (t "orchestrator.expand-panel") (t "orchestrator.collapse-panel")}}
-            >
-                <FaIcon @icon={{if this.rightPanelCollapsed "chevron-left" "chevron-right"}} @size="xs" />
-            </button>
-
-            {{! Leaflet map }}
-            <LeafletMap
-                @lat={{this.mapCenter.lat}}
-                @lng={{this.mapCenter.lng}}
-                @zoom={{this.mapZoom}}
-                @onLoad={{this.onMapLoad}}
-                class="w-full h-full"
-            >
-                <:layers as |layers|>
-                    <layers.tile @url={{this.tileSourceUrl}} />
-
-                    {{! Order markers }}
-                    {{#each this.unassignedOrders as |order|}}
-                        {{#if order.payload.dropoff.location}}
-                            <layers.marker
-                                @lat={{order.payload.dropoff.location.coordinates.[1]}}
-                                @lng={{order.payload.dropoff.location.coordinates.[0]}}
-                            />
+                        {{! Planned route polylines }}
+                        {{#if this.hasProposedPlan}}
+                            {{#each this.planByVehicle as |group|}}
+                                {{#if group.routePolyline}}
+                                    <layers.polyline
+                                        @positions={{group.routePolyline}}
+                                        @color={{group.routeColor}}
+                                        @weight={{3}}
+                                        @opacity={{0.8}}
+                                    />
+                                {{/if}}
+                            {{/each}}
                         {{/if}}
-                    {{/each}}
+                    </:layers>
+                </LeafletMap>
+            </div>
 
-                    {{! Planned route polylines }}
-                    {{#each this.planByVehicle as |group|}}
-                        {{#if group.routePolyline}}
-                            <layers.polyline
-                                @locations={{group.routePolyline}}
-                                @color={{group.routeColor}}
-                                @weight={{3}}
-                                @opacity={{0.8}}
-                            />
-                        {{/if}}
-                    {{/each}}
-                </:layers>
-            </LeafletMap>
+            {{! Map overlay: engine running indicator }}
+            {{#if this.runOrchestration.isRunning}}
+                <div class="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center z-10">
+                    <Spinner @size="lg" class="mb-3" />
+                    <span class="text-sm text-white">{{t "orchestrator.running"}}</span>
+                </div>
+            {{/if}}
         </div>
 
+        {{! ── Right panel collapse toggle — original long border bar style ── }}
+        <button
+            type="button"
+            class="workbench-panel-toggle flex items-center justify-center w-4 bg-gray-100 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+            title={{if this.rightPanelCollapsed (t "orchestrator.expand-panel") (t "orchestrator.collapse-panel")}}
+            {{on "click" this.toggleRightPanel}}
+        >
+            <FaIcon @icon={{if this.rightPanelCollapsed "chevron-left" "chevron-right"}} @size="xs" class="text-gray-400" />
+        </button>
+
         {{! ── RIGHT PANEL: Resources (pre-run) or Plan (post-run) ── }}
-        <div class="right-panel flex flex-col border-l dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-200
+        <div class="driver-panel flex flex-col border-l dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-200
             {{if this.rightPanelCollapsed 'w-0 overflow-hidden' 'w-80 min-w-80'}}">
 
             {{#if this.hasProposedPlan}}
@@ -186,6 +195,7 @@
                     @drivers={{this.availableDrivers}}
                     @selectedVehicleIds={{this.selectedVehicleIds}}
                     @selectedDriverIds={{this.selectedDriverIds}}
+                    @isLoading={{this.loadData.isRunning}}
                     @onToggleVehicle={{this.toggleVehicleSelection}}
                     @onToggleDriver={{this.toggleDriverSelection}}
                     @onClearVehicles={{this.clearVehicleSelection}}
