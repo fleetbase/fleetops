@@ -15,7 +15,7 @@
                 <Badge @status="warning">{{this.unassignedAfterRun.length}} {{t "orchestrator.unassigned"}}</Badge>
             {{/if}}
             {{#if this.phaseCount}}
-                <Badge @status="default">{{this.phaseCount}} {{t "orchestrator.phases"}}</Badge>
+                <Badge @status="info">{{this.phaseCount}} {{t "orchestrator.phases"}}</Badge>
             {{/if}}
 
             {{#if (or this.hasProposedPlan this.isCommitted this.hasUnassigned this.phaseCount)}}

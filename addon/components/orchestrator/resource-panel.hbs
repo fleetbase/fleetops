@@ -5,7 +5,7 @@
     <div class="flex border-b dark:border-gray-700 flex-shrink-0">
         <button
             type="button"
-            class="flex-1 py-2 text-xs font-medium transition-colors
+            class="flex-1 py-2 pl-2 text-xs font-medium transition-colors
                 {{if
                     (eq this.activeTab 'vehicles')
                     'text-indigo-500 border-b-2 border-indigo-500 dark:text-indigo-400 dark:border-indigo-400'
@@ -118,7 +118,7 @@
                                 {{fallback-img-src (config "defaultValues.vehicleAvatar")}}
                             />
                             <span
-                                class="absolute top-0 right-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
+                                class="absolute top-0 left-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
                                     {{if vehicle.driver.online 'bg-green-500' 'bg-gray-400'}}"
                             ></span>
                         </div>
@@ -183,7 +183,7 @@
                                 {{fallback-img-src (config "defaultValues.driverImage")}}
                             />
                             <span
-                                class="absolute top-0 right-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
+                                class="absolute top-0 left-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
                                     {{if driver.online 'bg-green-500' 'bg-gray-400'}}"
                             ></span>
                         </div>

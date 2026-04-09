@@ -36,19 +36,19 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     // ── Data ──────────────────────────────────────────────────────────────────
 
-    @tracked unassignedOrders  = [];
+    @tracked unassignedOrders = [];
     @tracked availableVehicles = [];
-    @tracked availableDrivers  = [];
-    @tracked availableEngines  = [];
+    @tracked availableDrivers = [];
+    @tracked availableEngines = [];
 
     // ── Plan state ────────────────────────────────────────────────────────────
 
-    @tracked proposedPlan          = null;
-    @tracked routeSummaries        = {};
-    @tracked unassignedAfterRun    = [];
+    @tracked proposedPlan = null;
+    @tracked routeSummaries = {};
+    @tracked unassignedAfterRun = [];
     @tracked orchestratorRunMessage = null;
-    @tracked isCommitted           = false;
-    @tracked manualOverrides       = {};
+    @tracked isCommitted = false;
+    @tracked manualOverrides = {};
 
     // ── Phase builder ─────────────────────────────────────────────────────────
 
@@ -75,22 +75,22 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     // ── UI state ──────────────────────────────────────────────────────────────
 
-    @tracked leftPanelCollapsed  = false;
+    @tracked leftPanelCollapsed = false;
     @tracked rightPanelCollapsed = false;
-    @tracked leftPanelWidth      = 288;  // 18rem default (w-72)
-    @tracked rightPanelWidth     = 320;  // 20rem default (w-80)
+    @tracked leftPanelWidth = 290;
+    @tracked rightPanelWidth = 330;
 
     // ── Resize state (not tracked — only used during drag) ────────────────────
     _resizing = null;
 
-    @tracked selectedOrderIds   = new Set();
+    @tracked selectedOrderIds = new Set();
     @tracked selectedVehicleIds = new Set();
-    @tracked selectedDriverIds  = new Set();
+    @tracked selectedDriverIds = new Set();
 
     // ── Map ───────────────────────────────────────────────────────────────────
 
     @tracked mapCenter = { lat: 1.369, lng: 103.8864 };
-    @tracked mapZoom   = 11;
+    @tracked mapZoom = 11;
     @tracked leafletMap = null;
 
     // ── Drag ──────────────────────────────────────────────────────────────────
@@ -106,12 +106,15 @@ export default class OrchestratorWorkbenchComponent extends Component {
         if (lat != null && lng != null) {
             this.mapCenter = { lat, lng };
         }
-        this.location.getUserLocation().then(({ latitude, longitude }) => {
-            this.mapCenter = { lat: latitude, lng: longitude };
-            if (this.leafletMap?.setView) {
-                this.leafletMap.setView([latitude, longitude], this.mapZoom);
-            }
-        }).catch(() => {});
+        this.location
+            .getUserLocation()
+            .then(({ latitude, longitude }) => {
+                this.mapCenter = { lat: latitude, lng: longitude };
+                if (this.leafletMap?.setView) {
+                    this.leafletMap.setView([latitude, longitude], this.mapZoom);
+                }
+            })
+            .catch(() => {});
 
         this.loadData.perform();
         this.loadEngines.perform();
@@ -121,20 +124,16 @@ export default class OrchestratorWorkbenchComponent extends Component {
     // ── Data loading ──────────────────────────────────────────────────────────
 
     @task *loadData() {
-        yield Promise.all([
-            this.loadOrders.perform(),
-            this.loadAvailableVehicles.perform(),
-            this.loadAvailableDrivers.perform(),
-        ]);
+        yield Promise.all([this.loadOrders.perform(), this.loadAvailableVehicles.perform(), this.loadAvailableDrivers.perform()]);
     }
 
     @task *loadOrders() {
         try {
             const orders = yield this.store.query('order', {
                 unassigned: true,
-                status:     'created,dispatched,started',
-                limit:      500,
-                with:       'payload.dropoff,payload.pickup,payload.waypoints,customFields',
+                status: 'created,dispatched,started',
+                limit: 500,
+                with: 'payload.dropoff,payload.pickup,payload.waypoints,customFields',
             });
             this.unassignedOrders = orders.toArray();
             this._centerMapOnOrders();
@@ -186,16 +185,14 @@ export default class OrchestratorWorkbenchComponent extends Component {
      * falls back to a single legacy 'allocate' run.
      */
     @task *runOrchestration() {
-        this.proposedPlan           = null;
-        this.isCommitted            = false;
-        this.manualOverrides        = {};
-        this.routeSummaries         = {};
-        this.unassignedAfterRun     = [];
+        this.proposedPlan = null;
+        this.isCommitted = false;
+        this.manualOverrides = {};
+        this.routeSummaries = {};
+        this.unassignedAfterRun = [];
         this.orchestratorRunMessage = null;
 
-        const phasesToRun = this.phases.length > 0
-            ? this.phases
-            : [this._legacyPhase()];
+        const phasesToRun = this.phases.length > 0 ? this.phases : [this._legacyPhase()];
 
         yield this._executePhases.perform(phasesToRun);
     }
@@ -211,12 +208,10 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     @task *_runSinglePhase(phase) {
-        const orderIds = this.selectedOrderIds.size > 0
-            ? [...this.selectedOrderIds]
-            : this.unassignedOrders.map((o) => o.public_id);
+        const orderIds = this.selectedOrderIds.size > 0 ? [...this.selectedOrderIds] : this.unassignedOrders.map((o) => o.public_id);
 
         const vehicleIdsFromVehicleTab = [...this.selectedVehicleIds];
-        const vehicleIdsFromDriverTab  = [...this.selectedDriverIds]
+        const vehicleIdsFromDriverTab = [...this.selectedDriverIds]
             .map((driverId) => {
                 const driver = this.availableDrivers.find((d) => d.public_id === driverId);
                 return driver?.vehicle?.public_id ?? null;
@@ -224,26 +219,22 @@ export default class OrchestratorWorkbenchComponent extends Component {
             .filter(Boolean);
 
         const resolvedVehicleIds = [...new Set([...vehicleIdsFromVehicleTab, ...vehicleIdsFromDriverTab])];
-        const vehicleIds = resolvedVehicleIds.length > 0
-            ? resolvedVehicleIds
-            : this.availableVehicles.map((v) => v.public_id);
+        const vehicleIds = resolvedVehicleIds.length > 0 ? resolvedVehicleIds : this.availableVehicles.map((v) => v.public_id);
 
-        const driverIds = this.selectedDriverIds.size > 0
-            ? [...this.selectedDriverIds]
-            : null;
+        const driverIds = this.selectedDriverIds.size > 0 ? [...this.selectedDriverIds] : null;
 
         try {
             const payload = {
-                order_ids:   orderIds,
+                order_ids: orderIds,
                 vehicle_ids: vehicleIds,
-                mode:        phase.mode,
+                mode: phase.mode,
                 order_statuses: phase.orderStatuses ?? ['created'],
                 options: {
-                    engine:           phase.engine ?? 'vroom',
+                    engine: phase.engine ?? 'vroom',
                     balance_workload: phase.balanceWorkload ?? false,
-                    respect_skills:   phase.respectSkills ?? true,
+                    respect_skills: phase.respectSkills ?? true,
                     respect_capacity: phase.respectCapacity ?? true,
-                    return_to_depot:  phase.returnToDepot ?? false,
+                    return_to_depot: phase.returnToDepot ?? false,
                 },
             };
             if (driverIds) {
@@ -254,8 +245,8 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
             // Merge results — later phases can override earlier assignments
             const newAssignments = result.assignments ?? [];
-            const existing       = this.proposedPlan ?? [];
-            const merged         = [...existing];
+            const existing = this.proposedPlan ?? [];
+            const merged = [...existing];
             for (const assignment of newAssignments) {
                 const idx = merged.findIndex((a) => a.order_id === assignment.order_id);
                 if (idx >= 0) {
@@ -264,8 +255,8 @@ export default class OrchestratorWorkbenchComponent extends Component {
                     merged.push(assignment);
                 }
             }
-            this.proposedPlan        = merged;
-            this.unassignedAfterRun  = result.unassigned ?? [];
+            this.proposedPlan = merged;
+            this.unassignedAfterRun = result.unassigned ?? [];
             if (result.message) {
                 this.orchestratorRunMessage = result.message;
             }
@@ -301,11 +292,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
             });
 
             this.notifications.success(this.intl.t('orchestrator.committed'));
-            this.isCommitted        = true;
-            this.proposedPlan       = null;
+            this.isCommitted = true;
+            this.proposedPlan = null;
             this.unassignedAfterRun = [];
-            this.manualOverrides    = {};
-            this.routeSummaries     = {};
+            this.manualOverrides = {};
+            this.routeSummaries = {};
             yield this.loadData.perform();
         } catch (error) {
             this.notifications.serverError(error);
@@ -313,11 +304,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     @action discardPlan() {
-        this.proposedPlan        = null;
-        this.unassignedAfterRun  = [];
-        this.manualOverrides     = {};
-        this.isCommitted         = false;
-        this.routeSummaries      = {};
+        this.proposedPlan = null;
+        this.unassignedAfterRun = [];
+        this.manualOverrides = {};
+        this.isCommitted = false;
+        this.routeSummaries = {};
         this.orchestratorRunMessage = null;
     }
 
@@ -334,32 +325,36 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     _legacyPhase() {
         return {
-            id:              'legacy',
-            mode:            'allocate',
-            label:           'Allocate',
-            engine:          'vroom',
-            orderStatuses:   ['created'],
+            id: 'legacy',
+            mode: 'allocate',
+            label: 'Allocate',
+            engine: 'vroom',
+            orderStatuses: ['created'],
             balanceWorkload: false,
-            respectSkills:   true,
+            respectSkills: true,
             respectCapacity: true,
-            returnToDepot:   false,
-            autoCommit:      false,
+            returnToDepot: false,
+            autoCommit: false,
         };
     }
 
     // ── Panel toggles ─────────────────────────────────────────────────────────
 
-    @action toggleLeftPanel()  { this.leftPanelCollapsed  = !this.leftPanelCollapsed; }
-    @action toggleRightPanel() { this.rightPanelCollapsed = !this.rightPanelCollapsed; }
+    @action toggleLeftPanel() {
+        this.leftPanelCollapsed = !this.leftPanelCollapsed;
+    }
+    @action toggleRightPanel() {
+        this.rightPanelCollapsed = !this.rightPanelCollapsed;
+    }
 
     @action togglePhaseBuilder() {
-        this.showPhaseBuilder       = !this.showPhaseBuilder;
+        this.showPhaseBuilder = !this.showPhaseBuilder;
         this.showCardFieldsSettings = false;
     }
 
     @action toggleCardFieldsSettings() {
         this.showCardFieldsSettings = !this.showCardFieldsSettings;
-        this.showPhaseBuilder       = false;
+        this.showPhaseBuilder = false;
     }
 
     @action onCardFieldsSaved() {
@@ -371,7 +366,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     @action openImportModal() {
         this.modalsManager.show('modals/orchestrator-import', {
-            title:            this.intl.t('orchestrator.import-orders'),
+            title: this.intl.t('orchestrator.import-orders'),
             acceptButtonText: this.intl.t('orchestrator.import-confirm'),
             onImportComplete: () => this.loadOrders.perform(),
         });
@@ -416,7 +411,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     @action clearDriverSelection() {
-        this.selectedDriverIds  = new Set();
+        this.selectedDriverIds = new Set();
         this.selectedVehicleIds = new Set();
     }
 
@@ -451,20 +446,16 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
         const existingAssignment = this.proposedPlan?.find((a) => a.order_id === orderId);
         if (existingAssignment) {
-            this.proposedPlan = this.proposedPlan.map((a) =>
-                a.order_id === orderId
-                    ? { ...a, vehicle_id: vehicleId, driver_id: driverId, _overridden: true }
-                    : a
-            );
+            this.proposedPlan = this.proposedPlan.map((a) => (a.order_id === orderId ? { ...a, vehicle_id: vehicleId, driver_id: driverId, _overridden: true } : a));
         } else {
-            const order   = this.unassignedOrders.find((o) => o.public_id === orderId);
+            const order = this.unassignedOrders.find((o) => o.public_id === orderId);
             const vehicle = this.availableVehicles.find((v) => v.public_id === vehicleId);
             if (order && vehicle) {
                 const newAssignment = {
-                    order_id:    orderId,
-                    vehicle_id:  vehicleId,
-                    driver_id:   driverId,
-                    sequence:    (this.proposedPlan?.filter((a) => a.vehicle_id === vehicleId).length ?? 0) + 1,
+                    order_id: orderId,
+                    vehicle_id: vehicleId,
+                    driver_id: driverId,
+                    sequence: (this.proposedPlan?.filter((a) => a.vehicle_id === vehicleId).length ?? 0) + 1,
                     _overridden: true,
                 };
                 this.proposedPlan = [...(this.proposedPlan ?? []), newAssignment];
@@ -496,16 +487,20 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     get tileSourceUrl() {
         const isDark = document.documentElement.classList.contains('dark');
-        return isDark
-            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        return isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
     }
 
     // ── Computed helpers ──────────────────────────────────────────────────────
 
-    get selectedOrderIdsArray()   { return [...this.selectedOrderIds]; }
-    get selectedVehicleIdsArray() { return [...this.selectedVehicleIds]; }
-    get selectedDriverIdsArray()  { return [...this.selectedDriverIds]; }
+    get selectedOrderIdsArray() {
+        return [...this.selectedOrderIds];
+    }
+    get selectedVehicleIdsArray() {
+        return [...this.selectedVehicleIds];
+    }
+    get selectedDriverIdsArray() {
+        return [...this.selectedDriverIds];
+    }
 
     get hasProposedPlan() {
         return Array.isArray(this.proposedPlan) && this.proposedPlan.length > 0;
@@ -521,16 +516,16 @@ export default class OrchestratorWorkbenchComponent extends Component {
         return Object.entries(grouped).map(([vehicleId, group]) => {
             // Derive a deterministic color from the vehicle public_id so the same
             // vehicle always gets the same color across runs and page refreshes.
-            const routeColor  = colorForId(group.vehicle?.public_id ?? vehicleId);
+            const routeColor = colorForId(group.vehicle?.public_id ?? vehicleId);
             // Build the two-layer cased polyline style array for this vehicle's route.
             // The status is taken from the first order in the group (all share a vehicle).
             const firstStatus = group.orders?.[0]?.order?.status ?? 'dispatched';
-            const lineStyles  = routeStyleForStatus(firstStatus, routeColor);
+            const lineStyles = routeStyleForStatus(firstStatus, routeColor);
             return {
                 ...group,
                 routeColor,
                 lineStyles,
-                summary:       this.routeSummaries[vehicleId] ?? {},
+                summary: this.routeSummaries[vehicleId] ?? {},
                 routePolyline: null,
             };
         });
@@ -556,15 +551,15 @@ export default class OrchestratorWorkbenchComponent extends Component {
             const { vehicle_id } = assignment;
             if (!groups[vehicle_id]) {
                 const vehicle = this.availableVehicles.find((v) => v.public_id === vehicle_id);
-                const driver  = vehicle?.driver ?? this.availableDrivers.find((d) => d.public_id === assignment.driver_id);
+                const driver = vehicle?.driver ?? this.availableDrivers.find((d) => d.public_id === assignment.driver_id);
                 groups[vehicle_id] = { vehicle, driver, orders: [] };
             }
             const order = this.unassignedOrders.find((o) => o.public_id === assignment.order_id);
             if (order) {
                 groups[vehicle_id].orders.push({
                     order,
-                    sequence:    assignment.sequence,
-                    arrival:     assignment.arrival,
+                    sequence: assignment.sequence,
+                    arrival: assignment.arrival,
                     _overridden: assignment._overridden ?? false,
                 });
             }
@@ -607,12 +602,12 @@ export default class OrchestratorWorkbenchComponent extends Component {
      */
     @action startLeftResize(event) {
         event.preventDefault();
-        const startX     = event.clientX;
+        const startX = event.clientX;
         const startWidth = this.leftPanelWidth;
 
         const onMove = (e) => {
             const delta = e.clientX - startX;
-            const next  = Math.min(480, Math.max(200, startWidth + delta));
+            const next = Math.min(480, Math.max(200, startWidth + delta));
             this.leftPanelWidth = next;
         };
         const onUp = () => {
@@ -622,7 +617,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
             document.body.style.userSelect = '';
         };
 
-        document.body.style.cursor     = 'col-resize';
+        document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
@@ -634,12 +629,12 @@ export default class OrchestratorWorkbenchComponent extends Component {
      */
     @action startRightResize(event) {
         event.preventDefault();
-        const startX     = event.clientX;
+        const startX = event.clientX;
         const startWidth = this.rightPanelWidth;
 
         const onMove = (e) => {
-            const delta = startX - e.clientX;  // inverted: drag left = wider
-            const next  = Math.min(560, Math.max(240, startWidth + delta));
+            const delta = startX - e.clientX; // inverted: drag left = wider
+            const next = Math.min(560, Math.max(240, startWidth + delta));
             this.rightPanelWidth = next;
         };
         const onUp = () => {
@@ -649,7 +644,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
             document.body.style.userSelect = '';
         };
 
-        document.body.style.cursor     = 'col-resize';
+        document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);

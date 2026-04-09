@@ -1,9 +1,9 @@
 {{! Orchestrator::CardFieldsSettings — Configure which fields show on order cards }}
-<div class="card-fields-settings">
+<div class="card-fields-settings" ...attributes>
     {{#if this.loadData.isRunning}}
         <div class="flex justify-center py-8"><Spinner /></div>
     {{else}}
-        <div>
+        <div class={{@wrapperClass}}>
 
             {{! Standard fields }}
             <ContentPanel @title={{t "orchestrator.standard-fields"}} @open={{true}} @wrapperClass="bordered-top">

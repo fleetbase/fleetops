@@ -2419,8 +2419,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
 
 .pl-7i {
     padding-left: 1.75rem !important;
-}   Route Visualization – Waypoint Markers
-   ============================================================ */
+}
 
 /**
  * Base reset for the Leaflet divIcon container.
