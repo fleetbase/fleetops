@@ -2,7 +2,7 @@
 
 namespace Fleetbase\FleetOps\Jobs;
 
-use Fleetbase\FleetOps\Allocation\AllocationEngineRegistry;
+use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
@@ -51,7 +51,7 @@ class ProcessAllocationJob implements ShouldQueue
     ) {
     }
 
-    public function handle(AllocationEngineRegistry $registry): void
+    public function handle(OrchestrationEngineRegistry $registry): void
     {
         $ordersQuery = Order::where('company_uuid', $this->companyUuid)
             ->whereNull('driver_assigned_uuid')
@@ -81,7 +81,7 @@ class ProcessAllocationJob implements ShouldQueue
             return;
         }
 
-        $engineId = Setting::lookup('fleetops.allocation_engine', 'vroom');
+        $engineId = Setting::lookup('fleetops.orchestrator_engine', 'greedy');
         $engine   = $registry->resolve($engineId);
 
         $result = $engine->allocate($orders, $vehicles, [

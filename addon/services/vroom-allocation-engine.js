@@ -4,8 +4,8 @@ import AllocationEngineInterfaceService from './allocation-engine-interface';
 /**
  * VroomAllocationEngineService
  *
- * Frontend adapter for the VROOM allocation engine. Delegates all computation
- * to the backend AllocationController — the frontend adapter's role is to
+ * Frontend adapter for the VROOM orchestration engine. Delegates all computation
+ * to the backend OrchestrationController — the frontend adapter's role is to
  * call the correct API endpoint and return the normalized result.
  *
  * This service is registered into the allocation-engine registry via the
@@ -19,7 +19,7 @@ export default class VroomAllocationEngineService extends AllocationEngineInterf
     identifier = 'vroom';
 
     /**
-     * Run the VROOM allocation via the backend API.
+     * Run the VROOM orchestration via the backend API.
      *
      * @param {Array}  orders   Array of order records (or order public_ids).
      * @param {Array}  vehicles Array of vehicle records (or vehicle public_ids).
@@ -31,10 +31,10 @@ export default class VroomAllocationEngineService extends AllocationEngineInterf
         const vehicleIds = vehicles.map((v) => (typeof v === 'string' ? v : v.public_id));
 
         try {
-            const result = await this.fetch.post('fleet-ops/allocation/run', {
+            const result = await this.fetch.post('fleet-ops/orchestrator/run', {
                 order_ids:   orderIds,
                 vehicle_ids: vehicleIds,
-                options,
+                options:     { ...options, engine: 'vroom' },
             });
             return result;
         } catch (error) {

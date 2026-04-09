@@ -130,13 +130,14 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     @task *loadOrders() {
         try {
-            const orders = yield this.store.query('order', {
+            // Use the dedicated orchestrator/orders endpoint which returns the
+            // OrchestratorOrderResource — a richer payload that includes
+            // custom_field_values without impacting the tabular orders view.
+            const result = yield this.fetch.get('fleet-ops/orchestrator/orders', {
                 unassigned: true,
-                status:     'created,dispatched,started',
                 limit:      500,
-                with:       'payload.dropoff,payload.pickup,payload.waypoints,customFieldValues.customField',
             });
-            this.unassignedOrders = orders.toArray();
+            this.unassignedOrders = result?.orders ?? [];
             this._centerMapOnOrders();
         } catch (error) {
             this.notifications.serverError(error);
@@ -163,7 +164,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     @task *loadEngines() {
         try {
-            const result = yield this.fetch.get('fleet-ops/allocation/engines');
+            const result = yield this.fetch.get('fleet-ops/orchestrator/engines');
             this.availableEngines = result?.engines ?? [{ id: 'greedy', name: 'Greedy (built-in)' }];
         } catch {
             this.availableEngines = [{ id: 'greedy', name: 'Greedy (built-in)' }];
@@ -250,7 +251,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
                 payload.driver_ids = driverIds;
             }
 
-            const result = yield this.fetch.post('fleet-ops/allocation/run', payload);
+            const result = yield this.fetch.post('fleet-ops/orchestrator/run', payload);
 
             // Merge results — later phases can override earlier assignments
             const newAssignments = result.assignments ?? [];
@@ -296,7 +297,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         });
 
         try {
-            yield this.fetch.post('fleet-ops/allocation/commit', {
+            yield this.fetch.post('fleet-ops/orchestrator/commit', {
                 assignments: finalAssignments,
             });
 

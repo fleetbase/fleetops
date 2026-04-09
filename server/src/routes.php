@@ -545,14 +545,15 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                     }
                                 );
                                 $router->group(
-                                    ['prefix' => 'allocation'],
+                                    ['prefix' => 'orchestrator'],
                                     function ($router) {
-                                        $router->post('run', 'AllocationController@run');
-                                        $router->post('commit', 'AllocationController@commit');
-                                        $router->get('preview', 'AllocationController@preview');
-                                        $router->get('engines', 'AllocationController@engines');
-                                        $router->post('import-orders', 'AllocationController@importOrders');
-                                        $router->get('order-config-fields', 'AllocationController@orderConfigFields');
+                                        $router->get('orders', 'OrchestrationController@orders');
+                                        $router->post('run', 'OrchestrationController@run');
+                                        $router->post('commit', 'OrchestrationController@commit');
+                                        $router->get('preview', 'OrchestrationController@preview');
+                                        $router->get('engines', 'OrchestrationController@engines');
+                                        $router->post('import-orders', 'OrchestrationController@importOrders');
+                                        $router->get('order-config-fields', 'OrchestrationController@orderConfigFields');
                                     }
                                 );
                                 $router->group(

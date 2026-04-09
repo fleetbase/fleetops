@@ -118,35 +118,6 @@ class Order extends FleetbaseResource
             'created_at'           => $this->created_at,
             'updated_at'           => $this->updated_at,
 
-            // Custom field values — included when the relation is eager-loaded
-            // (e.g. when the request sends with=customFieldValues.customField).
-            // Each entry carries the raw value string and the parent CustomField
-            // definition so the card renderer can match by field name/label.
-            'custom_field_values'  => $this->when(
-                $isInternal,
-                $this->whenLoaded('customFieldValues', function () {
-                    return $this->customFieldValues->map(function ($cfv) {
-                        return [
-                            'id'                => $cfv->uuid,
-                            'uuid'              => $cfv->uuid,
-                            'custom_field_uuid' => $cfv->custom_field_uuid,
-                            'value'             => $cfv->value,
-                            'value_type'        => $cfv->value_type,
-                            'custom_field'      => $cfv->relationLoaded('customField') && $cfv->customField
-                                ? [
-                                    'id'       => $cfv->customField->uuid,
-                                    'uuid'     => $cfv->customField->uuid,
-                                    'name'     => $cfv->customField->name,
-                                    'label'    => $cfv->customField->label,
-                                    'type'     => $cfv->customField->type,
-                                    'required' => (bool) $cfv->customField->required,
-                                ]
-                                : null,
-                        ];
-                    })->values();
-                })
-            ),
-
             // Meta flag to indicate this is an index resource
             'meta'                 => [
                 '_index_resource' => true,

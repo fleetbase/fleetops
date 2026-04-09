@@ -248,7 +248,7 @@ export default class OrchestratorImportComponent extends Component {
         }
 
         try {
-            yield this.fetch.post('fleet-ops/allocation/import-orders', {
+            yield this.fetch.post('fleet-ops/orchestrator/import-orders', {
                 rows:    validRows,
                 options: { mark_imported: true },
             });
