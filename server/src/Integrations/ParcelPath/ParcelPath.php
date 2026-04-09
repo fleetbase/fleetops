@@ -3,11 +3,14 @@
 namespace Fleetbase\FleetOps\Integrations\ParcelPath;
 
 use Fleetbase\FleetOps\Models\IntegratedVendor;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceQuoteItem;
+use Fleetbase\Models\File;
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * ParcelPath API bridge (Mode A — default).
@@ -271,6 +274,44 @@ class ParcelPath
         return $rows;
     }
 
+    /**
+     * Build the POST /v1/labels request body.
+     */
+    public static function buildLabelPurchaseRequest(?string $rateId, string $labelFormat = 'PDF'): array
+    {
+        if ($rateId === null || $rateId === '') {
+            throw new \InvalidArgumentException('rate_id required');
+        }
+
+        return [
+            'rate_id'      => $rateId,
+            'label_format' => strtoupper($labelFormat),
+        ];
+    }
+
+    /**
+     * Normalize the POST /v1/labels response into a row ready for persistence.
+     */
+    public static function normalizeLabelResponse(array $response): array
+    {
+        if (empty($response['tracking_number']) || !isset($response['label_data'])) {
+            throw new \RuntimeException('invalid label response');
+        }
+
+        $format = strtoupper((string) ($response['label_format'] ?? 'PDF'));
+        $mime   = $format === 'ZPL' ? 'application/zpl' : 'application/pdf';
+
+        return [
+            'tracking_number'        => (string) $response['tracking_number'],
+            'carrier'                => (string) ($response['carrier'] ?? ''),
+            'label_binary'           => base64_decode((string) $response['label_data']),
+            'label_format'           => $format,
+            'label_mime'             => $mime,
+            'parcelpath_shipment_id' => $response['parcelpath_shipment_id'] ?? null,
+            'insurance'              => (array) ($response['insurance'] ?? []),
+        ];
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     //  IMPURE RUNTIME WRAPPERS — compose pure helpers + HTTP + Eloquent.
     //  Not unit-tested in this phase; exercised via smoke test once the
@@ -325,5 +366,48 @@ class ParcelPath
         }
 
         return $quotes;
+    }
+
+    /**
+     * Purchase a label via POST /v1/labels, persist the label binary as a
+     * File record, and stamp the ParcelPath shipment id / tracking number /
+     * insurance payload onto Order.meta.integrated_vendor_order.
+     */
+    public function createOrderFromServiceQuote(ServiceQuote $serviceQuote, Order $order): array
+    {
+        $rateId = $serviceQuote->meta['pp_rate_id'] ?? null;
+        $format = $this->integratedVendor?->options['label_format'] ?? 'PDF';
+
+        $body     = static::buildLabelPurchaseRequest($rateId, $format);
+        $response = $this->post('labels', ['json' => $body]) ?? [];
+        $row      = static::normalizeLabelResponse($response);
+
+        $ext              = strtolower($row['label_format']);
+        $trackingNumber   = $row['tracking_number'];
+        $path             = 'carrier-labels/pp_label_' . $trackingNumber . '.' . $ext;
+        $disk             = config('filesystems.default');
+        $originalFilename = 'pp_label_' . $trackingNumber . '.' . $ext;
+
+        Storage::disk($disk)->put($path, $row['label_binary']);
+
+        File::create([
+            'company_uuid'      => $order->company_uuid,
+            'subject_uuid'      => $order->uuid,
+            'subject_type'      => Order::class,
+            'folder'            => 'carrier-labels',
+            'content_type'      => $row['label_mime'],
+            'path'              => $path,
+            'disk'              => $disk,
+            'original_filename' => $originalFilename,
+        ]);
+
+        $order->updateMeta('integrated_vendor_order', [
+            'parcelpath_shipment_id' => $row['parcelpath_shipment_id'],
+            'tracking_number'        => $trackingNumber,
+            'carrier'                => $row['carrier'],
+            'insurance'              => $row['insurance'],
+        ]);
+
+        return $row;
     }
 }
