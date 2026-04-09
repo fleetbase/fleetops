@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * VroomAllocationEngine.
+ * VroomOrchestrationEngine.
  *
  * Self-contained VROOM integration for the FleetOps Orchestrator Workbench.
  * This engine does NOT depend on the optional `fleetbase/vroom` extension —
@@ -48,8 +48,8 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
      * Run the VROOM VRP solver.
      *
      * Constructs a VROOM-format payload from the normalized jobs/vehicles
-     * produced by AllocationPayloadBuilder, calls the VROOM HTTP API, and
-     * maps the response back to the standard AllocationEngineInterface result
+     * produced by OrchestrationPayloadBuilder, calls the VROOM HTTP API, and
+     * maps the response back to the standard OrchestrationEngineInterface result
      * shape.
      *
      * @throws \RuntimeException if the VROOM API is unreachable or returns an error
@@ -144,7 +144,7 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
     }
 
     /**
-     * Map a VROOM API response to the standard AllocationEngineInterface shape.
+     * Map a VROOM API response to the standard OrchestrationEngineInterface shape.
      *
      * @param array $jobIdReverse Map of VROOM integer job ID → order public_id
      */

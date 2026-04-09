@@ -15,7 +15,7 @@ export default class SettingsOrchestratorController extends Controller {
     @service fetch;
     @service notifications;
     @service intl;
-    @service('allocation-engine') engineRegistry;
+    @service('orchestration-engine') engineRegistry;
 
     @tracked allocationEngine = 'vroom';
     @tracked autoAllocateOnCreate = false;

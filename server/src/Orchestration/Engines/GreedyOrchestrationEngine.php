@@ -6,7 +6,7 @@ use Fleetbase\FleetOps\Orchestration\Contracts\OrchestrationEngineInterface;
 use Illuminate\Support\Collection;
 
 /**
- * GreedyAllocationEngine.
+ * GreedyOrchestrationEngine.
  *
  * A simple, dependency-free allocation engine that assigns orders to vehicles
  * without requiring an external routing service such as VROOM.
@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
  *      the purpose of this run (one order per vehicle per run by default; pass
  *      `allow_multi_order = true` in $options to allow multiple orders per vehicle).
  *
- * This engine is registered as 'greedy' in the AllocationEngineRegistry and is
+ * This engine is registered as 'greedy' in the OrchestrationEngineRegistry and is
  * used automatically when VROOM is unavailable or when the user explicitly
  * selects it in the orchestrator settings.
  */

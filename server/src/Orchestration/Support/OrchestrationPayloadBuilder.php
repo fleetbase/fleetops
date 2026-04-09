@@ -8,12 +8,12 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Illuminate\Support\Collection;
 
 /**
- * AllocationPayloadBuilder.
+ * OrchestrationPayloadBuilder.
  *
  * Transforms FleetOps Order and Vehicle/Driver records into a normalized
  * intermediate representation that engine adapters can consume. This class
  * is engine-agnostic — it does not produce VROOM JSON directly. Each engine
- * adapter (e.g. VroomAllocationEngine) calls the builder and then maps the
+ * adapter (e.g. VroomOrchestrationEngine) calls the builder and then maps the
  * normalized output to its own wire format.
  *
  * The builder now reads first-class orchestrator columns (skills, capacity_*,
