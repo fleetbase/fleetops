@@ -134,7 +134,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
                 unassigned: true,
                 status:     'created,dispatched,started',
                 limit:      500,
-                with:       'payload.dropoff,payload.pickup,payload.waypoints,customFields',
+                with:       'payload.dropoff,payload.pickup,payload.waypoints,customFieldValues.customField',
             });
             this.unassignedOrders = orders.toArray();
             this._centerMapOnOrders();
@@ -164,9 +164,9 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @task *loadEngines() {
         try {
             const result = yield this.fetch.get('fleet-ops/allocation/engines');
-            this.availableEngines = result?.engines ?? [{ id: 'vroom', name: 'VROOM' }];
+            this.availableEngines = result?.engines ?? [{ id: 'greedy', name: 'Greedy (built-in)' }];
         } catch {
-            this.availableEngines = [{ id: 'vroom', name: 'VROOM' }];
+            this.availableEngines = [{ id: 'greedy', name: 'Greedy (built-in)' }];
         }
     }
 
@@ -239,7 +239,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
                 mode:        phase.mode,
                 order_statuses: phase.orderStatuses ?? ['created'],
                 options: {
-                    engine:           phase.engine ?? 'vroom',
+                    engine:           phase.engine ?? 'greedy',
                     balance_workload: phase.balanceWorkload ?? false,
                     respect_skills:   phase.respectSkills ?? true,
                     respect_capacity: phase.respectCapacity ?? true,
@@ -337,7 +337,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
             id:              'legacy',
             mode:            'allocate',
             label:           'Allocate',
-            engine:          'vroom',
+            engine:          'greedy',
             orderStatuses:   ['created'],
             balanceWorkload: false,
             respectSkills:   true,

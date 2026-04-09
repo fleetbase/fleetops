@@ -105,7 +105,7 @@ class AllocationController extends Controller
         // ── Run engine ────────────────────────────────────────────────────────
         $engineId = $mode === 'assign_drivers'
             ? 'driver_assignment'
-            : ($request->input('options.engine') ?? Setting::lookup('fleetops.orchestrator_engine', 'vroom'));
+            : ($request->input('options.engine') ?? Setting::lookup('fleetops.orchestrator_engine', 'greedy'));
 
         try {
             if ($mode === 'assign_drivers') {
