@@ -288,7 +288,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         });
 
         try {
-            yield this.fetch.post('fleet-ops/orchestrator/commit', {
+            const result = yield this.fetch.post('fleet-ops/orchestrator/commit', {
                 assignments: finalAssignments,
             });
 
