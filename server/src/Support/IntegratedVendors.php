@@ -7,6 +7,8 @@ use Fleetbase\FleetOps\Integrations\Lalamove\LalamoveMarket;
 use Fleetbase\FleetOps\Integrations\Lalamove\LalamoveServiceType;
 use Fleetbase\FleetOps\Integrations\ParcelPath\ParcelPath;
 use Fleetbase\FleetOps\Integrations\ParcelPath\ParcelPathServiceType;
+use Fleetbase\FleetOps\Integrations\UPS\UPS;
+use Fleetbase\FleetOps\Integrations\UPS\UPSServiceType;
 use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Illuminate\Support\Str;
 
@@ -270,6 +272,40 @@ class IntegratedVendors
             'bridgeParams' => [
                 'apiKey'  => 'credentials.api_key',
                 'sandbox' => 'sandbox',
+            ],
+            'callbacks' => [],
+        ],
+        [
+            'name'             => 'UPS',
+            'code'             => 'ups',
+            'host'             => 'https://onlinetools.ups.com/',
+            'sandbox'          => 'https://wwwcie.ups.com/',
+            'namespace'        => 'api',
+            'bridge'           => UPS::class,
+            'svc_bridge'       => UPSServiceType::class,
+            'iso2cc_bridge'    => null,
+            'credentialParams' => [
+                ['key' => 'client_id'],
+                ['key' => 'client_secret'],
+                ['key' => 'account_number'],
+            ],
+            'optionParams' => [
+                ['key' => 'label_format', 'options' => [
+                    ['value' => 'PDF', 'label' => 'PDF'],
+                    ['value' => 'ZPL', 'label' => 'ZPL (thermal)'],
+                ], 'optionValue' => 'value', 'optionLabel' => 'label'],
+                ['key' => 'markup_type', 'options' => [
+                    ['value' => 'flat',    'label' => 'Flat (cents)'],
+                    ['value' => 'percent', 'label' => 'Percentage'],
+                ], 'optionValue' => 'value', 'optionLabel' => 'label'],
+                ['key' => 'markup_amount'],
+                ['key' => 'client_label'],
+            ],
+            'bridgeParams' => [
+                'clientId'      => 'credentials.client_id',
+                'clientSecret'  => 'credentials.client_secret',
+                'accountNumber' => 'credentials.account_number',
+                'sandbox'       => 'sandbox',
             ],
             'callbacks' => [],
         ],
