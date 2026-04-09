@@ -351,11 +351,6 @@
                             {{/each}}
                         {{/if}}
                     </LeafletMap>
-                {{else}}
-                    <div class="flex items-center justify-center h-full text-gray-400">
-                        <Spinner />
-                    </div>
-                {{/if}}
 
                 {{! Map overlay: engine running indicator }}
                 {{#if this.runOrchestration.isRunning}}
