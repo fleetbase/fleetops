@@ -5,12 +5,14 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\IntegratedVendor;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceQuoteItem;
 use Fleetbase\FleetOps\Models\ServiceRate;
+use Fleetbase\FleetOps\Support\IntegratedVendorResolver;
 use Fleetbase\FleetOps\Support\Payment;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Http\Request;
@@ -80,6 +82,78 @@ class ServiceQuoteController extends FleetOpsController
             }
 
             return response()->json($serviceQuotes);
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // Phase 2 Task 19: automatic IntegratedVendor resolution.
+        //
+        // When no explicit facilitator was passed, check whether the
+        // request is associated with an Order whose customer is a
+        // Vendor (shipper client). If so, resolve the set of matching
+        // IntegratedVendor credentials via IntegratedVendorResolver and
+        // fetch quotes from every one of them in a single batch. This
+        // is the broker auto-routing path — a dispatcher picks only a
+        // carrier (UPS / USPS / ParcelPath) and the system routes
+        // through the credential record scoped to the order's customer,
+        // falling back to the catch-all when no client-specific record
+        // exists.
+        //
+        // Compatible with the existing single-facilitator path above:
+        // passing `facilitator=integrated_vendor_xxx` explicitly skips
+        // this auto-resolve block entirely.
+        // ─────────────────────────────────────────────────────────────────
+        $autoResolveOrder = null;
+        if ($orderPublicId = $request->input('order')) {
+            $autoResolveOrder = Order::with('customer')
+                ->where('public_id', $orderPublicId)
+                ->first();
+        }
+
+        $providerFilter = $request->input('providers');
+        if (is_string($providerFilter) && $providerFilter !== '') {
+            $providerFilter = array_filter(array_map('trim', explode(',', $providerFilter)));
+        } elseif (!is_array($providerFilter)) {
+            $providerFilter = null;
+        }
+
+        $companyUuid = $request->session()->get('company');
+        if ($companyUuid && ($autoResolveOrder !== null || $providerFilter !== null)) {
+            $resolvedVendors = IntegratedVendorResolver::resolveForQuoteRequest(
+                (string) $companyUuid,
+                $autoResolveOrder,
+                $providerFilter
+            );
+
+            if (count($resolvedVendors) > 0) {
+                $aggregated = [];
+                foreach ($resolvedVendors as $vendor) {
+                    try {
+                        $fromBridge = $vendor->api()
+                            ->setRequestId($requestId)
+                            ->getQuoteFromPayload($payload, $serviceType, $scheduledAt, $isRouteOptimized);
+                        if (!is_array($fromBridge)) {
+                            $fromBridge = [$fromBridge];
+                        }
+                        $aggregated = array_merge($aggregated, $fromBridge);
+                    } catch (\Exception $e) {
+                        // Per-vendor failure should not abort the batch.
+                        // Swallow + continue so a single misconfigured
+                        // carrier credential doesn't block the others.
+                        // The pure-helper resolver already filtered out
+                        // provider rows that had no viable credential
+                        // candidate, so anything that throws here is an
+                        // upstream carrier error worth surfacing through
+                        // observability rather than a 400 response.
+                        report($e);
+                        continue;
+                    }
+                }
+
+                if ($single) {
+                    return response()->json($aggregated);
+                }
+                return response()->json($aggregated);
+            }
         }
 
         // get all waypoints
