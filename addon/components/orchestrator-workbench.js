@@ -292,7 +292,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
                 assignments: finalAssignments,
             });
 
-            this.notifications.success(this.intl.t('orchestrator.committed'));
+            this.notifications.success(this.intl.t('orchestrator.committed', { count: result?.committed?.length ?? finalAssignments.length }));
             this.isCommitted = true;
             this.proposedPlan = null;
             this.unassignedAfterRun = [];
