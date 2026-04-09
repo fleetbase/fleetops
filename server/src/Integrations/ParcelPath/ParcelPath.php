@@ -312,6 +312,42 @@ class ParcelPath
         ];
     }
 
+    /**
+     * Normalize the GET /v1/tracking/{n} response.
+     */
+    public static function normalizeTrackingResponse(array $response): array
+    {
+        $events = [];
+        foreach (($response['events'] ?? []) as $event) {
+            $events[] = [
+                'code'      => strtoupper((string) ($event['code'] ?? '')),
+                'status'    => (string) ($event['status'] ?? ''),
+                'timestamp' => isset($event['timestamp']) ? (string) $event['timestamp'] : null,
+                'location'  => isset($event['location']) ? (string) $event['location'] : null,
+                'details'   => isset($event['details']) ? (string) $event['details'] : null,
+            ];
+        }
+
+        return [
+            'status'  => isset($response['status']) ? strtoupper((string) $response['status']) : 'UNKNOWN',
+            'carrier' => isset($response['carrier']) ? strtoupper((string) $response['carrier']) : '',
+            'events'  => $events,
+        ];
+    }
+
+    /**
+     * Normalize the DELETE /v1/shipments/{id} response into a boolean.
+     */
+    public static function normalizeVoidResponse(array $response): bool
+    {
+        if (isset($response['voided']) && $response['voided'] === true) {
+            return true;
+        }
+
+        $status = isset($response['status']) ? strtolower((string) $response['status']) : '';
+        return $status === 'voided' || $status === 'cancelled';
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     //  IMPURE RUNTIME WRAPPERS — compose pure helpers + HTTP + Eloquent.
     //  Not unit-tested in this phase; exercised via smoke test once the
@@ -409,5 +445,23 @@ class ParcelPath
         ]);
 
         return $row;
+    }
+
+    /**
+     * Fetch tracking status via GET /v1/tracking/{trackingNumber}.
+     */
+    public function getTrackingStatus(string $trackingNumber): array
+    {
+        $response = $this->get('tracking/' . $trackingNumber) ?? [];
+        return static::normalizeTrackingResponse($response);
+    }
+
+    /**
+     * Void a shipment via DELETE /v1/shipments/{shipmentId}.
+     */
+    public function voidShipment(string $shipmentId): bool
+    {
+        $response = $this->delete('shipments/' . $shipmentId) ?? [];
+        return static::normalizeVoidResponse($response);
     }
 }
