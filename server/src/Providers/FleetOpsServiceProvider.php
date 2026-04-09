@@ -114,7 +114,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->registerNotifications();
         $this->registerExpansionsFrom(__DIR__ . '/../Expansions');
 
-        // Register the default VROOM allocation engine.
+        // Register built-in allocation engines.
         // Third-party engines can register themselves by resolving the
         // AllocationEngineRegistry singleton from their own service providers.
         $this->app->resolving(
@@ -122,6 +122,9 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             function (\Fleetbase\FleetOps\Allocation\AllocationEngineRegistry $registry) {
                 if (!$registry->has('vroom')) {
                     $registry->register(new \Fleetbase\FleetOps\Allocation\Engines\VroomAllocationEngine());
+                }
+                if (!$registry->has('greedy')) {
+                    $registry->register(new \Fleetbase\FleetOps\Allocation\Engines\GreedyAllocationEngine());
                 }
             }
         );

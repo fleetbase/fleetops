@@ -103,16 +103,28 @@ class AllocationController extends Controller
         }
 
         // ── Run engine ────────────────────────────────────────────────────────
-        if ($mode === 'assign_drivers') {
-            $engine = new DriverAssignmentEngine();
-            $result = $engine->assign($orders, $vehicles, $options);
-        } else {
-            $engineId = $request->input('options.engine')
-                ?? Setting::lookup('fleetops.orchestrator_engine', 'vroom');
-            $engine = $this->registry->resolve($engineId);
-            $result = $engine->allocate($orders, $vehicles, $options);
-        }
+        $engineId = $mode === 'assign_drivers'
+            ? 'driver_assignment'
+            : ($request->input('options.engine') ?? Setting::lookup('fleetops.orchestrator_engine', 'vroom'));
 
+        try {
+            if ($mode === 'assign_drivers') {
+                $engine = new DriverAssignmentEngine();
+                $result = $engine->assign($orders, $vehicles, $options);
+            } else {
+                $engine = $this->registry->resolve($engineId);
+                $result = $engine->allocate($orders, $vehicles, $options);
+            }
+        } catch (\RuntimeException $e) {
+            // Allocation engine is unavailable (e.g. VROOM not running).
+            // Return a structured JSON 503 so the frontend can display a
+            // user-friendly message instead of an unhandled exception page.
+            return response()->json([
+                'error'  => $e->getMessage(),
+                'hint'   => 'If you are using the VROOM engine, ensure the VROOM service is running and the VROOM_HOST environment variable is set correctly. Alternatively, switch to the built-in "greedy" engine in Orchestrator Settings.',
+                'engine' => $engineId,
+            ], 503);
+        }
         return response()->json($result);
     }
 

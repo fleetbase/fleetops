@@ -105,43 +105,69 @@ export default class OrchestratorOrderPoolComponent extends Component {
         }
 
         // ── Config-specific custom fields ──────────────────────────────────────
-        // Custom fields are flattened onto the order payload by withCustomFields() using
-        // Str::snake(Str::lower(label)) as the key. We try three lookup strategies:
-        //   1. Direct property access by fieldKey (matches when name === snake(label))
-        //   2. Scan the custom_field_values collection (included on internal requests)
-        //      and match on customField.name or customField.label
-        //   3. Fall back to scanning all top-level order keys for a close match
+        // The backend withCustomFields() does two things on internal requests:
+        //   a) Flattens each CFV as a top-level key using Str::snake(Str::lower(label))
+        //   b) Also includes the raw `custom_field_values` collection
+        //
+        // The card-fields-settings component saves field.name as the fieldKey.
+        // CustomField.name is already the snake_lower version of the label, so
+        // strategy 1 (direct property) covers the vast majority of cases.
+        //
+        // The `order` here is an Ember Data model instance. Ember Data stores
+        // attributes accessed via `.get()` but also exposes them as plain JS
+        // properties on modern versions. We use both access patterns.
         const configUuid = order.order_config_uuid;
         if (configUuid && cardFields.byConfig?.[configUuid]) {
             for (const fieldKey of cardFields.byConfig[configUuid]) {
                 let label = fieldKey;
                 let value = null;
 
-                // Strategy 1: flat property on order (most common path)
-                const directVal = order[fieldKey];
+                // Strategy 1: flat property pushed by withCustomFields() onto the
+                // serialised order payload (snake_lower of the field label).
+                // Try both plain property access and Ember Data .get().
+                const directVal = order[fieldKey] ?? order.get?.(fieldKey);
                 if (directVal !== undefined && directVal !== null && typeof directVal !== 'object') {
                     value = String(directVal);
                 }
 
-                // Strategy 2: scan custom_field_values collection
+                // Strategy 2: scan the custom_field_values HasMany relation.
+                // On internal API requests withCustomFields() includes the full
+                // CustomFieldValue collection. Each CFV has a .value (scalar string)
+                // and its CustomField relation loaded as .custom_field (plain object
+                // in the JSON) or .customField (Ember Data belongsTo proxy).
                 if (value === null) {
                     const cfvCollection = order.custom_field_values ?? order.customFieldValues ?? [];
-                    const cfvArray = typeof cfvCollection.toArray === 'function' ? cfvCollection.toArray() : (Array.isArray(cfvCollection) ? cfvCollection : []);
-                    const cfv = cfvArray.find((v) => {
-                        const cfName = v.custom_field?.name ?? v.customField?.get?.('name') ?? v.field_key ?? '';
-                        const cfLabel = v.custom_field?.label ?? v.customField?.get?.('label') ?? v.label ?? '';
-                        return cfName === fieldKey || cfLabel === fieldKey;
-                    });
-                    if (cfv) {
-                        const rawVal = cfv.value ?? cfv.string_value ?? cfv.raw_value;
-                        label = cfv.custom_field?.label ?? cfv.customField?.get?.('label') ?? fieldKey;
-                        value = (rawVal !== null && rawVal !== undefined && typeof rawVal !== 'object')
-                            ? String(rawVal)
-                            : (typeof rawVal === 'object' && rawVal !== null ? JSON.stringify(rawVal) : null);
+                    const cfvArray = typeof cfvCollection?.toArray === 'function'
+                        ? cfvCollection.toArray()
+                        : (Array.isArray(cfvCollection) ? cfvCollection : []);
+
+                    for (const cfv of cfvArray) {
+                        // Resolve the parent CustomField — may be a plain object
+                        // (from JSON) or an Ember Data model proxy.
+                        const cf = cfv.custom_field
+                            ?? (typeof cfv.customField?.get === 'function' ? cfv.customField : null)
+                            ?? cfv.customField
+                            ?? null;
+
+                        const cfName  = cf?.name  ?? cf?.get?.('name')  ?? '';
+                        const cfLabel = cf?.label ?? cf?.get?.('label') ?? '';
+
+                        if (cfName !== fieldKey && cfLabel !== fieldKey) {
+                            continue;
+                        }
+
+                        // .value on a CFV is a scalar string (CustomValue cast
+                        // returns the raw string for non-object value_types).
+                        const rawVal = cfv.value ?? cfv.string_value ?? null;
+                        if (rawVal !== null && rawVal !== undefined) {
+                            label = cfLabel || cfName || fieldKey;
+                            value = typeof rawVal === 'object' ? JSON.stringify(rawVal) : String(rawVal);
+                        }
+                        break;
                     }
                 }
 
-                if (value !== null) {
+                if (value !== null && value !== '') {
                     fields.push({ label, value });
                 }
             }
@@ -224,7 +250,9 @@ export default class OrchestratorOrderPoolComponent extends Component {
     _formatDate(date) {
         if (!date) return null;
         try {
-            return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(date));
+            // Use 'en-US' explicitly — passing undefined uses the browser/OS locale
+            // which may be Arabic or another non-Latin script on some deployments.
+            return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(date));
         } catch {
             return String(date);
         }

@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Allocation\Engines;
 
 use Fleetbase\FleetOps\Allocation\Contracts\AllocationEngineInterface;
 use Fleetbase\FleetOps\Allocation\Support\AllocationPayloadBuilder;
+use Fleetbase\Models\Setting;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -11,18 +12,25 @@ use Illuminate\Support\Facades\Log;
 /**
  * VroomAllocationEngine.
  *
- * Implements AllocationEngineInterface using the VROOM open-source vehicle
- * routing engine (https://github.com/VROOM-Project/vroom).
+ * Self-contained VROOM integration for the FleetOps Orchestrator Workbench.
+ * This engine does NOT depend on the optional `fleetbase/vroom` extension —
+ * it communicates directly with the VROOM HTTP API using the same base URI
+ * and API-key convention that the extension uses, so the two are compatible
+ * when both are installed.
  *
- * VROOM is already used by FleetOps for route optimization. This engine
- * reuses the same VROOM endpoint but constructs a Vehicle Routing Problem
- * (VRP) payload instead of a Travelling Salesman Problem (TSP) payload,
- * enabling multi-vehicle assignment with capacity, skill, and time-window
- * constraints.
+ * Resolution order for configuration:
  *
- * Configuration:
- *   VROOM_HOST — base URL of the VROOM server (default: http://localhost:3000)
- *   VROOM_TIMEOUT — HTTP timeout in seconds (default: 30)
+ *   1. Company-level setting  — `Setting::lookupCompany('vroom', 'api_key')`
+ *      (written by the fleetbase/vroom extension settings page, if installed)
+ *   2. Environment variable   — `VROOM_API_KEY`
+ *   3. No key                 — requests are sent without an api_key parameter
+ *      (works for self-hosted VROOM instances that do not require auth)
+ *
+ *   Base URI: `config('vroom.base_uri')` → `VROOM_HOST` env → default production URL
+ *   Timeout:  `VROOM_TIMEOUT` env (default 30 s)
+ *
+ * The VROOM HTTP API endpoint used is `POST {base_uri}/solve`, matching the
+ * verso-optim.com hosted service and the fleetbase/vroom extension.
  */
 class VroomAllocationEngine implements AllocationEngineInterface
 {
@@ -44,7 +52,7 @@ class VroomAllocationEngine implements AllocationEngineInterface
      * maps the response back to the standard AllocationEngineInterface result
      * shape.
      *
-     * @throws \RuntimeException if the VROOM API returns an error
+     * @throws \RuntimeException if the VROOM API is unreachable or returns an error
      */
     public function allocate(Collection $orders, Collection $vehicles, array $options = []): array
     {
@@ -92,19 +100,49 @@ class VroomAllocationEngine implements AllocationEngineInterface
         }
         unset($job);
 
-        $host    = config('fleetops.vroom.host', env('VROOM_HOST', 'http://localhost:3000'));
-        $timeout = (int) config('fleetops.vroom.timeout', env('VROOM_TIMEOUT', 30));
+        // ── Resolve connection config ─────────────────────────────────────────
+        // Base URI: prefer the vroom extension config, then VROOM_HOST env, then
+        // the production verso-optim.com hosted service.
+        $baseUri = config('vroom.base_uri', env('VROOM_HOST', 'https://api.verso-optim.com/vrp/v1'));
+        $timeout = (int) env('VROOM_TIMEOUT', 30);
 
+        // ── Resolve API key ───────────────────────────────────────────────────
+        // 1. Company-level setting (written by fleetbase/vroom extension UI)
+        // 2. VROOM_API_KEY env var
+        // 3. null — no key appended (for self-hosted instances)
+        $apiKey = null;
         try {
-            $response = Http::timeout($timeout)
-                ->post("{$host}/", $vroomPayload);
+            $apiKey = Setting::lookupCompany('vroom', ['api_key' => null])['api_key'] ?? null;
+        } catch (\Throwable) {
+            // Setting table may not exist in minimal installs — ignore
+        }
+        if (!$apiKey) {
+            $apiKey = env('VROOM_API_KEY');
+        }
+
+        // Build the solve URL — append api_key as query param when present
+        $solveUrl = rtrim($baseUri, '/') . '/solve';
+        if ($apiKey) {
+            $solveUrl .= '?api_key=' . urlencode($apiKey);
+        }
+
+        // ── Call VROOM ────────────────────────────────────────────────────────
+        try {
+            $response = Http::timeout($timeout)->post($solveUrl, $vroomPayload);
         } catch (\Exception $e) {
             Log::error('[VroomAllocationEngine] HTTP request failed: ' . $e->getMessage());
-            throw new \RuntimeException('VROOM allocation engine is unavailable: ' . $e->getMessage(), 0, $e);
+            throw new \RuntimeException(
+                'VROOM allocation engine is unavailable: ' . $e->getMessage() .
+                ' — ensure VROOM_HOST is reachable or switch to the built-in greedy engine.',
+                0,
+                $e
+            );
         }
 
         if (!$response->successful()) {
-            throw new \RuntimeException('VROOM returned an error: ' . $response->status() . ' — ' . $response->body());
+            throw new \RuntimeException(
+                'VROOM returned an error: HTTP ' . $response->status() . ' — ' . $response->body()
+            );
         }
 
         $result = $response->json();
