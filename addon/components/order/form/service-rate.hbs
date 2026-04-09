@@ -35,7 +35,7 @@
                             @icon="refresh"
                             @text={{t "order.fields.refresh-button"}}
                             @isLoading={{this.getServiceQuotes.isRunning}}
-                            @disabled={{not this.selectedRate}}
+                            @disabled={{and (not this.selectedRate) (not this.isIntegratedVendorFacilitator)}}
                             @onClick={{perform this.getServiceQuotes this.selectedRate}}
                         />
                     </div>
@@ -48,7 +48,7 @@
                     <InfoBlock class="my-3" @text={{t "order.fields.service-quote-info"}} />
                     <div class="radio-group-condensed -space-y-px">
                         {{#each this.serviceQuotes as |serviceQuote|}}
-                            <div class="radio-group-item shadow-sm flex-col pl-0i pr-0i {{if (eq @resource.service_quote_uuid serviceQuote.uuid) 'is-checked'}}">
+                            <div class="radio-group-item shadow-sm flex-col pl-0i pr-0i {{if (eq @resource.service_quote_uuid serviceQuote.uuid) 'is-checked'}}" data-test-service-quote={{serviceQuote.uuid}}>
                                 <div class="flex flex-row items-center mb-2.5 px-4">
                                     <RadioButton
                                         @radioClass="focus:ring-blue-500 h-6 w-6 text-blue-500"
@@ -58,9 +58,32 @@
                                         @name="serviceQuote"
                                         @changed={{fn (mut @resource.service_quote_uuid)}}
                                     />
-                                    <label for={{serviceQuote.uuid}} class="ml-3 flex-1">{{serviceQuote.public_id}}</label>
+                                    {{#if serviceQuote.meta.carrier}}
+                                        <img
+                                            src="/images/integrated-vendors/{{lowercase serviceQuote.meta.carrier}}.png"
+                                            alt={{serviceQuote.meta.carrier}}
+                                            class="ml-3 w-6 h-6"
+                                            data-test-carrier-logo={{serviceQuote.meta.carrier}}
+                                        />
+                                        <label for={{serviceQuote.uuid}} class="ml-2 flex-1">
+                                            <div class="text-sm font-semibold text-black dark:text-white" data-test-quote-service-token>
+                                                {{or serviceQuote.meta.service_token serviceQuote.public_id}}
+                                            </div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                {{serviceQuote.meta.carrier}}
+                                                {{#if serviceQuote.meta.estimated_days}}
+                                                    · <span data-test-quote-eta>{{t "order.fields.estimated-days" days=serviceQuote.meta.estimated_days}}</span>
+                                                {{/if}}
+                                                {{#if this.isIntegratedVendorFacilitator}}
+                                                    · <span data-test-quote-source>{{t "order.fields.via-facilitator" facilitator=@resource.facilitator.name}}</span>
+                                                {{/if}}
+                                            </div>
+                                        </label>
+                                    {{else}}
+                                        <label for={{serviceQuote.uuid}} class="ml-3 flex-1">{{serviceQuote.public_id}}</label>
+                                    {{/if}}
                                     <Badge @hideStatusDot={{true}} @status="info">
-                                        {{serviceQuote.request_id}}
+                                        {{or serviceQuote.meta.carrier serviceQuote.request_id}}
                                     </Badge>
                                 </div>
                                 <div class="next-table-wrapper no-scroll h-auto table-fluid rounded-none">
