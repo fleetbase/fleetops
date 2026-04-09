@@ -112,7 +112,7 @@
                     </span>
                     <input
                         type="text"
-                        class="form-input form-input-sm w-full pl-8"
+                        class="form-input form-input-sm w-full pl-7i"
                         placeholder={{t "orchestrator.search-orders"}}
                         value={{this.orderSearch}}
                         {{on "input" this.onOrderSearchInput}}
@@ -274,7 +274,8 @@
 
         {{! ── CENTRE PANEL: Map ── }}
         <div class="map-panel flex-1 relative overflow-hidden">
-            <div class="next-map-container w-full h-full">
+            <div class="fleetbase-leaflet-map-container w-full h-full">
+                {{log "mapCenter" this.mapCenter}}
                 <LeafletMap class="w-full h-full" @lat={{this.mapCenter.lat}} @lng={{this.mapCenter.lng}} @zoom={{this.mapZoom}} @onLoad={{this.onMapLoad}} as |layers|>
                     <layers.tile @url={{this.tileSourceUrl}} />
 
@@ -517,7 +518,7 @@
                         {{#if (eq this.rightPanelTab "drivers")}}
                             <input
                                 type="text"
-                                class="form-input form-input-sm w-full pl-7 pr-2 py-1 text-xs"
+                                class="form-input form-input-sm w-full pl-7i pr-2 py-1 text-xs"
                                 placeholder={{t "orchestrator.search-drivers"}}
                                 value={{this.driverSearch}}
                                 {{on "input" this.onDriverSearchInput}}
@@ -525,7 +526,7 @@
                         {{else}}
                             <input
                                 type="text"
-                                class="form-input form-input-sm w-full pl-7 pr-2 py-1 text-xs"
+                                class="form-input form-input-sm w-full pl-7i pr-2 py-1 text-xs"
                                 placeholder={{t "orchestrator.search-vehicles"}}
                                 value={{this.vehicleSearch}}
                                 {{on "input" this.onVehicleSearchInput}}

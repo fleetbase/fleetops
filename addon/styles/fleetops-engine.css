@@ -2416,3 +2416,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
 .orch-marker-driver.online {
     background: #10b981;
 }
+
+.pl-7i {
+    padding-left: 1.75rem !important;
+}
