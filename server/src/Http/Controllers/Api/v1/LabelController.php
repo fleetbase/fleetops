@@ -6,7 +6,9 @@ use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\Http\Controllers\Controller;
+use Fleetbase\Models\File;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class LabelController extends Controller
 {
@@ -37,6 +39,24 @@ class LabelController extends Controller
 
         if (!$subject) {
             return response()->apiError('Unable to render label.');
+        }
+
+        $carrierLabel = File::where('subject_uuid', $subject->uuid)
+            ->where('folder', 'carrier-labels')
+            ->latest()
+            ->first();
+
+        if ($carrierLabel) {
+            $disk = Storage::disk(
+                $carrierLabel->disk ?: config('filesystems.default')
+            );
+            if ($format === 'base64') {
+                return response()->json([
+                    'data' => base64_encode($disk->get($carrierLabel->path)),
+                ]);
+            }
+
+            return $disk->response($carrierLabel->path);
         }
 
         switch ($format) {
