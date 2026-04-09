@@ -123,26 +123,55 @@
                 as |layers|>
                     <layers.tile @url={{this.tileSourceUrl}} />
 
-                    {{! Order markers }}
+                    {{! ── Unassigned order markers ──
+                         Pickup = green "P" circle, Dropoff = red "D" circle.
+                         Uses waypointIconHtml from route-colors utility to
+                         produce the same styled divIcon as the order form. }}
                     {{#each this.unassignedOrders as |order|}}
+                        {{#if order.payload.pickup.location}}
+                            <layers.marker
+                                @lat={{order.payload.pickup.location.coordinates.[1]}}
+                                @lng={{order.payload.pickup.location.coordinates.[0]}}
+                                @icon={{hash
+                                    className="fleetops-waypoint-marker"
+                                    html=(this.waypointIconHtml "P" "#22C55E")
+                                    iconSize=(array 32 32)
+                                    iconAnchor=(array 16 16)
+                                }}
+                            />
+                        {{/if}}
                         {{#if order.payload.dropoff.location}}
                             <layers.marker
                                 @lat={{order.payload.dropoff.location.coordinates.[1]}}
                                 @lng={{order.payload.dropoff.location.coordinates.[0]}}
+                                @icon={{hash
+                                    className="fleetops-waypoint-marker"
+                                    html=(this.waypointIconHtml "D" "#EF4444")
+                                    iconSize=(array 32 32)
+                                    iconAnchor=(array 16 16)
+                                }}
                             />
                         {{/if}}
                     {{/each}}
 
-                    {{! Planned route polylines }}
+                    {{! ── Planned route polylines (post-run) ──
+                         Two-layer cased polyline: outer casing + inner colored line.
+                         lineStyles is an array of two style objects from
+                         routeStyleForStatus() in route-colors utility. }}
                     {{#if this.hasProposedPlan}}
                         {{#each this.planByVehicle as |group|}}
                             {{#if group.routePolyline}}
-                                <layers.polyline
-                                    @positions={{group.routePolyline}}
-                                    @color={{group.routeColor}}
-                                    @weight={{3}}
-                                    @opacity={{0.8}}
-                                />
+                                {{#each group.lineStyles as |style|}}
+                                    <layers.polyline
+                                        @positions={{group.routePolyline}}
+                                        @color={{style.color}}
+                                        @weight={{style.weight}}
+                                        @opacity={{style.opacity}}
+                                        @dashArray={{style.dashArray}}
+                                        @lineCap={{style.lineCap}}
+                                        @lineJoin={{style.lineJoin}}
+                                    />
+                                {{/each}}
                             {{/if}}
                         {{/each}}
                     {{/if}}

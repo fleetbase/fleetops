@@ -29,9 +29,9 @@ export default class OrchestratorCardFieldsSettingsComponent extends Component {
 
     /** Current saved settings. */
     @tracked settings = {
-        standard:  ['tracking', 'status', 'scheduled_at', 'customer', 'dropoff'],
-        byConfig:  {},
-        meta:      [],
+        standard: ['pickup', 'dropoff', 'scheduled_at', 'customer', 'driver_assigned', 'vehicle_assigned', 'created_at'],
+        byConfig: {},
+        meta:     [],
     };
 
     @tracked isLoaded = false;
@@ -43,15 +43,18 @@ export default class OrchestratorCardFieldsSettingsComponent extends Component {
 
     get standardFieldOptions() {
         return [
-            { key: 'tracking',     label: this.intl.t('orchestrator.field-tracking') },
-            { key: 'status',       label: this.intl.t('orchestrator.field-status') },
-            { key: 'scheduled_at', label: this.intl.t('orchestrator.field-scheduled-at') },
-            { key: 'customer',     label: this.intl.t('orchestrator.field-customer') },
-            { key: 'type',         label: this.intl.t('orchestrator.field-type') },
-            { key: 'notes',        label: this.intl.t('orchestrator.field-notes') },
-            { key: 'priority',     label: this.intl.t('orchestrator.field-priority') },
-            { key: 'dropoff',      label: this.intl.t('orchestrator.field-dropoff') },
-            { key: 'pickup',       label: this.intl.t('orchestrator.field-pickup') },
+            { key: 'tracking',         label: this.intl.t('orchestrator.field-tracking') },
+            { key: 'status',           label: this.intl.t('orchestrator.field-status') },
+            { key: 'scheduled_at',     label: this.intl.t('orchestrator.field-scheduled-at') },
+            { key: 'customer',         label: this.intl.t('orchestrator.field-customer') },
+            { key: 'type',             label: this.intl.t('orchestrator.field-type') },
+            { key: 'notes',            label: this.intl.t('orchestrator.field-notes') },
+            { key: 'priority',         label: this.intl.t('orchestrator.field-priority') },
+            { key: 'dropoff',          label: this.intl.t('orchestrator.dropoff') },
+            { key: 'pickup',           label: this.intl.t('orchestrator.pickup') },
+            { key: 'driver_assigned',  label: this.intl.t('orchestrator.driver-assigned') },
+            { key: 'vehicle_assigned', label: this.intl.t('orchestrator.vehicle-assigned') },
+            { key: 'created_at',       label: this.intl.t('orchestrator.created') },
         ];
     }
 
@@ -62,12 +65,13 @@ export default class OrchestratorCardFieldsSettingsComponent extends Component {
                 this.fetch.get('fleet-ops/settings/orchestrator-card-fields').catch(() => null),
             ]);
 
-            this.orderConfigs = configsResult?.order_configs ?? [];
+            // Backend returns { configs: [...], meta_keys: [...] }
+            this.orderConfigs      = configsResult?.configs ?? [];
             this.availableMetaKeys = configsResult?.meta_keys ?? [];
 
             if (settingsResult?.settings) {
                 this.settings = {
-                    standard: settingsResult.settings.standard ?? ['tracking', 'status', 'scheduled_at', 'customer', 'dropoff'],
+                    standard: settingsResult.settings.standard ?? this.settings.standard,
                     byConfig: settingsResult.settings.byConfig ?? {},
                     meta:     settingsResult.settings.meta ?? [],
                 };
@@ -101,7 +105,7 @@ export default class OrchestratorCardFieldsSettingsComponent extends Component {
 
     @action toggleConfigField(configUuid, fieldKey) {
         const byConfig = { ...(this.settings.byConfig ?? {}) };
-        const current = byConfig[configUuid] ?? [];
+        const current  = byConfig[configUuid] ?? [];
         byConfig[configUuid] = current.includes(fieldKey)
             ? current.filter((k) => k !== fieldKey)
             : [...current, fieldKey];
@@ -116,15 +120,19 @@ export default class OrchestratorCardFieldsSettingsComponent extends Component {
         this.settings = { ...this.settings, meta: updated };
     }
 
-    isStandardSelected(key) {
+    /**
+     * These three methods are called with arguments from HBS so they must be
+     * decorated with @action to satisfy Glimmer's template invocation rules.
+     */
+    @action isStandardSelected(key) {
         return (this.settings.standard ?? []).includes(key);
     }
 
-    isConfigFieldSelected(configUuid, fieldKey) {
+    @action isConfigFieldSelected(configUuid, fieldKey) {
         return (this.settings.byConfig?.[configUuid] ?? []).includes(fieldKey);
     }
 
-    isMetaKeySelected(key) {
+    @action isMetaKeySelected(key) {
         return (this.settings.meta ?? []).includes(key);
     }
 }

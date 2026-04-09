@@ -23,21 +23,24 @@
                 </div>
             </ContentPanel>
 
-            {{! Per-order-config custom fields }}
+            {{! Per-order-config custom fields.
+                Backend returns { id, name, key, fields: [{key, label, type, required}] }
+                We use config.id (public_id) as the settings key so it matches
+                what order.order_config_uuid resolves to on the card renderer. }}
             {{#each this.orderConfigs as |config|}}
                 <ContentPanel @title={{config.name}} @open={{true}}>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
                         {{t "orchestrator.config-fields-description" name=config.name}}
                     </p>
-                    {{#if config.custom_fields.length}}
+                    {{#if config.fields.length}}
                         <div class="grid grid-cols-2 gap-2">
-                            {{#each config.custom_fields as |field|}}
+                            {{#each config.fields as |field|}}
                                 <label class="flex items-center gap-2 cursor-pointer">
                                     <input
                                         type="checkbox"
                                         class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600"
-                                        checked={{this.isConfigFieldSelected config.uuid field.key}}
-                                        {{on "change" (fn this.toggleConfigField config.uuid field.key)}}
+                                        checked={{this.isConfigFieldSelected config.id field.key}}
+                                        {{on "change" (fn this.toggleConfigField config.id field.key)}}
                                     />
                                     <div class="min-w-0">
                                         <span class="text-xs text-gray-700 dark:text-gray-300 block truncate">{{field.label}}</span>
@@ -52,7 +55,7 @@
                 </ContentPanel>
             {{/each}}
 
-            {{! Meta fields }}
+            {{! Meta fields — only shown when the company has orders with meta keys }}
             {{#if this.availableMetaKeys.length}}
                 <ContentPanel @title={{t "orchestrator.meta-fields"}} @open={{false}}>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{t "orchestrator.meta-fields-description"}}</p>

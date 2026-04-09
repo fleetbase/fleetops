@@ -3,14 +3,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-
-// Route colours for up to 20 vehicles — cycles if more
-const ROUTE_COLORS = [
-    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
-    '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1',
-    '#14B8A6', '#A3E635', '#FB923C', '#F43F5E', '#A78BFA',
-    '#22D3EE', '#4ADE80', '#FBBF24', '#E879F9', '#60A5FA',
-];
+import { colorForId, routeStyleForStatus, waypointIconHtml } from '../utils/route-colors';
 
 /**
  * OrchestratorWorkbenchComponent
@@ -520,12 +513,34 @@ export default class OrchestratorWorkbenchComponent extends Component {
     get planByVehicle() {
         if (!this.proposedPlan?.length) return [];
         const grouped = this._groupByVehicle(this.proposedPlan);
-        return Object.entries(grouped).map(([vehicleId, group], index) => ({
-            ...group,
-            routeColor:    ROUTE_COLORS[index % ROUTE_COLORS.length],
-            summary:       this.routeSummaries[vehicleId] ?? {},
-            routePolyline: null,
-        }));
+        return Object.entries(grouped).map(([vehicleId, group]) => {
+            // Derive a deterministic color from the vehicle public_id so the same
+            // vehicle always gets the same color across runs and page refreshes.
+            const routeColor  = colorForId(group.vehicle?.public_id ?? vehicleId);
+            // Build the two-layer cased polyline style array for this vehicle's route.
+            // The status is taken from the first order in the group (all share a vehicle).
+            const firstStatus = group.orders?.[0]?.order?.status ?? 'dispatched';
+            const lineStyles  = routeStyleForStatus(firstStatus, routeColor);
+            return {
+                ...group,
+                routeColor,
+                lineStyles,
+                summary:       this.routeSummaries[vehicleId] ?? {},
+                routePolyline: null,
+            };
+        });
+    }
+
+    /**
+     * Build a Leaflet divIcon HTML string for an order waypoint marker.
+     * Exposed as an @action so it can be called from HBS templates.
+     *
+     * @param {string} label    - Marker label (e.g. "P", "D", stop number)
+     * @param {string} bgColor  - CSS background color
+     * @returns {string} HTML string for L.divIcon
+     */
+    @action waypointIconHtml(label, bgColor) {
+        return waypointIconHtml(label, bgColor);
     }
 
     _groupByVehicle(assignments) {

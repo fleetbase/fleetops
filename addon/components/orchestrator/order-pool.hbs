@@ -20,13 +20,23 @@
         </span>
     </div>
 
-    {{! Filter chips }}
-    <div class="px-3 py-1.5 border-b dark:border-gray-700 flex items-center space-x-1 overflow-x-auto flex-shrink-0">
-        <button type="button" class="order-filter-chip {{if (eq this.orderFilter 'all') 'active'}}" {{on "click" (fn this.setFilter "all")}}>{{t "orchestrator.filter-all"}}</button>
-        <button type="button" class="order-filter-chip {{if (eq this.orderFilter 'scheduled') 'active'}}" {{on "click" (fn this.setFilter "scheduled")}}>{{t "orchestrator.filter-scheduled"}}</button>
-        <button type="button" class="order-filter-chip {{if (eq this.orderFilter 'urgent') 'active'}}" {{on "click" (fn this.setFilter "urgent")}}>{{t "orchestrator.filter-urgent"}}</button>
-        <button type="button" class="order-filter-chip {{if (eq this.orderFilter 'imported') 'active'}}" {{on "click" (fn this.setFilter "imported")}}>{{t "orchestrator.filter-imported"}}</button>
-        <button type="button" class="order-filter-chip {{if (eq this.orderFilter 'unplanned') 'active'}}" {{on "click" (fn this.setFilter "unplanned")}}>{{t "orchestrator.filter-unplanned"}}</button>
+    {{! Filter chips — same px-2 py-0.5 rounded text-xs pattern as vehicle/driver panel }}
+    <div class="px-3 py-1.5 border-b dark:border-gray-700 flex items-center gap-1 overflow-x-auto flex-shrink-0">
+        <button type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'all') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "all")}}>{{t "orchestrator.filter-all"}}</button>
+        <button type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'scheduled') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "scheduled")}}>{{t "orchestrator.filter-scheduled"}}</button>
+        <button type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'urgent') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "urgent")}}>{{t "orchestrator.filter-urgent"}}</button>
+        <button type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'imported') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "imported")}}>{{t "orchestrator.filter-imported"}}</button>
+        <button type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'unplanned') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "unplanned")}}>{{t "orchestrator.filter-unplanned"}}</button>
     </div>
 
     {{! Order list }}
@@ -35,10 +45,16 @@
             <div class="flex justify-center py-8"><Spinner /></div>
         {{else if this.filteredOrders.length}}
             {{#each this.filteredOrders as |order|}}
-                {{! ── Order Pool Card ── }}
+                {{! ── Order Pool Card ──
+                     Clicking anywhere on the card toggles selection (outline highlight).
+                     The checkbox inside also toggles selection but stops propagation
+                     so it does not double-fire. Dragging the card to the map or
+                     resource panel triggers the drag-and-drop assignment flow. }}
                 <div
-                    class="order-pool-card mx-2 my-1 rounded border overflow-hidden cursor-grab select-none dark:border-gray-600
-                        {{if (includes order.public_id this.selectedOrderIdsArray) 'ring-2 ring-indigo-500 border-indigo-400 dark:border-indigo-500' ''}}"
+                    class="order-pool-card mx-2 my-1 rounded border overflow-hidden select-none
+                        {{if (includes order.public_id this.selectedOrderIdsArray)
+                            'ring-2 ring-indigo-500 border-indigo-400 dark:border-indigo-500 cursor-grab'
+                            'border-gray-200 dark:border-gray-700 cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-500 hover:ring-1 hover:ring-indigo-400'}}"
                     draggable="true"
                     data-order-id={{order.public_id}}
                     {{on "dragstart" (fn @onDragStart order)}}
@@ -65,12 +81,8 @@
                     </div>
 
                     {{! Card body — all fields driven by resolvedCardFields.
-                         When no card-field settings are saved the JS returns the
-                         default set: pickup, dropoff, scheduled, customer,
-                         driver-assigned, vehicle-assigned, created.
-                         This eliminates the previous duplicate-field bug where
-                         fields were rendered both here AND via the old hardcoded
-                         block. }}
+                         Default set: pickup, dropoff, scheduled, customer,
+                         driver-assigned, vehicle-assigned, created. }}
                     <div class="bg-white dark:bg-gray-900 px-2 py-1.5">
                         <dl class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
                             {{#each (this.resolvedCardFields order) as |field|}}
