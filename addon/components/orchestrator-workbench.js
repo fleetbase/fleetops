@@ -145,7 +145,6 @@ export default class OrchestratorWorkbenchComponent extends Component {
         if (lat != null && lng != null) {
             this.mapCenter = { lat, lng };
         }
-        console.log('[OrchestratorWorkbench] constructor — location service returned lat:', lat, 'lng:', lng, '→ mapCenter:', JSON.stringify(this.mapCenter));
         // Also kick off async resolution so we update to the real location
         // (browser geolocation → company address → IP/whois → Singapore).
         this.location.getUserLocation().then(({ latitude, longitude }) => {
@@ -527,18 +526,10 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     // ── Map ───────────────────────────────────────────────────────────────────
 
-    @action onMapLoad(map) {
+    @action onMapLoad({ target: map }) {
+        // @onLoad fires with a Leaflet event object { target: map } — same as the live map's didLoad({ target: map })
         this.leafletMap = map;
-        // Imperatively set the view to the current mapCenter so Leaflet
-        // actually positions the viewport (tracked @lat/@lng changes after
-        // initial render are ignored by ember-leaflet).
-        console.log('[OrchestratorWorkbench] onMapLoad — calling setView with:', JSON.stringify(this.mapCenter), 'zoom:', this.mapZoom, 'map.setView available:', !!map?.setView);
-        if (map?.setView) {
-            map.setView([this.mapCenter.lat, this.mapCenter.lng], this.mapZoom);
-            console.log('[OrchestratorWorkbench] onMapLoad — setView called successfully');
-        } else {
-            console.warn('[OrchestratorWorkbench] onMapLoad — map.setView not available!', map);
-        }
+        map.setView([this.mapCenter.lat, this.mapCenter.lng], this.mapZoom);
     }
 
     _centerMapOnOrders() {
@@ -565,7 +556,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     get tileSourceUrl() {
-        return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        // Match the live map tile source — CartoCDN with dark/light theme awareness
+        const isDark = document.documentElement.classList.contains('dark');
+        return isDark
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
     }
 
     // ── Filters ───────────────────────────────────────────────────────────────
