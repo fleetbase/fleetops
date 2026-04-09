@@ -355,7 +355,7 @@ class Driver extends Model
 
     /**
      * Get the active schedule item (shift) for a given date.
-     * Used by AllocationPayloadBuilder to inject time_window constraints.
+     * Used by OrchestrationPayloadBuilder to inject time_window constraints.
      */
     public function activeShiftFor(?\DateTimeInterface $date = null): ?ScheduleItem
     {

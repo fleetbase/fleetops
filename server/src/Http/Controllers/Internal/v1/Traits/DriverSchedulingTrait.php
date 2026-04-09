@@ -196,7 +196,7 @@ trait DriverSchedulingTrait
 
     /**
      * Return the driver's currently active shift for today.
-     * Used by the AllocationPayloadBuilder to inject time_window constraints.
+     * Used by OrchestrationPayloadBuilder to inject time_window constraints.
      *
      * GET /int/v1/drivers/{id}/active-shift
      */

@@ -1,8 +1,8 @@
 import { inject as service } from '@ember/service';
-import AllocationEngineInterfaceService from './allocation-engine-interface';
+import OrchestrationEngineInterfaceService from './orchestration-engine-interface';
 
 /**
- * VroomAllocationEngineService
+ * VroomOrchestrationEngineService
  *
  * Frontend adapter for the VROOM orchestration engine. Delegates all computation
  * to the backend OrchestrationController — the frontend adapter's role is to
@@ -11,7 +11,7 @@ import AllocationEngineInterfaceService from './allocation-engine-interface';
  * This service is registered into the allocation-engine registry via the
  * register-vroom-allocation instance initializer.
  */
-export default class VroomAllocationEngineService extends AllocationEngineInterfaceService {
+export default class VroomOrchestrationEngineService extends OrchestrationEngineInterfaceService {
     @service fetch;
     @service notifications;
 

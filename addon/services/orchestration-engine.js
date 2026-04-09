@@ -5,7 +5,7 @@ import { tracked } from '@glimmer/tracking';
  * AllocationEngineService
  *
  * Registry service for allocation engine adapters. Mirrors the backend
- * AllocationEngineRegistry pattern. Engines register themselves from
+ * OrchestrationEngineRegistry pattern. Engines register themselves from
  * instance initializers and the settings UI reads availableEngines to
  * populate the engine selector dropdown.
  *
@@ -15,7 +15,7 @@ import { tracked } from '@glimmer/tracking';
 export default class AllocationEngineService extends Service {
     /**
      * Map of registered engines keyed by identifier.
-     * @type {Map<string, AllocationEngineInterfaceService>}
+     * @type {Map<string, OrchestrationEngineInterfaceService>}
      */
     @tracked _engines = new Map();
 
@@ -23,7 +23,7 @@ export default class AllocationEngineService extends Service {
      * Register an allocation engine adapter.
      *
      * @param {string}                            identifier  Unique engine key.
-     * @param {AllocationEngineInterfaceService}  engine      Engine service instance.
+     * @param {OrchestrationEngineInterfaceService}  engine      Engine service instance.
      * @throws {Error} if an engine with the same identifier is already registered.
      */
     register(identifier, engine) {
@@ -37,7 +37,7 @@ export default class AllocationEngineService extends Service {
      * Resolve an engine by identifier.
      *
      * @param  {string} identifier
-     * @returns {AllocationEngineInterfaceService}
+     * @returns {OrchestrationEngineInterfaceService}
      * @throws {Error} if no engine with the given identifier is registered.
      */
     resolve(identifier) {
