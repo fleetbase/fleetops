@@ -532,12 +532,14 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     /**
-     * Build a Leaflet divIcon HTML string for an order waypoint marker.
-     * Exposed as an @action so it can be called from HBS templates.
+     * Build the HTML string for a waypoint marker.
+     * Used via the ember-leaflet {{div-icon html=(this.waypointIconHtml ...)}} helper
+     * in the HBS template — ember-leaflet's {{div-icon}} constructs the proper
+     * L.DivIcon instance, so we only need to return the HTML string here.
      *
-     * @param {string} label    - Marker label (e.g. "P", "D", stop number)
-     * @param {string} bgColor  - CSS background color
-     * @returns {string} HTML string for L.divIcon
+     * @param {string} label   - Marker label ("P", "D", or a stop number)
+     * @param {string} bgColor - CSS background color
+     * @returns {string}
      */
     @action waypointIconHtml(label, bgColor) {
         return waypointIconHtml(label, bgColor);
