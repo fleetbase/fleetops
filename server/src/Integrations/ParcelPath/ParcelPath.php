@@ -336,6 +336,20 @@ class ParcelPath
     }
 
     /**
+     * Map a normalized tracking status code into the Fleetbase Order status
+     * to transition to when this is a terminal event, or null when the order
+     * should stay in its current state. Case-insensitive.
+     */
+    public static function terminalOrderStatus(string $normalizedStatus): ?string
+    {
+        return match (strtoupper($normalizedStatus)) {
+            'DELIVERED'                    => 'completed',
+            'RETURN_TO_SENDER', 'RETURNED' => 'returned',
+            default                        => null,
+        };
+    }
+
+    /**
      * Normalize the DELETE /v1/shipments/{id} response into a boolean.
      */
     public static function normalizeVoidResponse(array $response): bool
