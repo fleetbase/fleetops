@@ -77,6 +77,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     @tracked leftPanelCollapsed  = false;
     @tracked rightPanelCollapsed = false;
+    @tracked leftPanelWidth      = 288;  // 18rem default (w-72)
+    @tracked rightPanelWidth     = 320;  // 20rem default (w-80)
+
+    // ── Resize state (not tracked — only used during drag) ────────────────────
+    _resizing = null;
 
     @tracked selectedOrderIds   = new Set();
     @tracked selectedVehicleIds = new Set();
@@ -591,5 +596,62 @@ export default class OrchestratorWorkbenchComponent extends Component {
     formatUnixTime(unix) {
         if (!unix) return '';
         return new Date(unix * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // ── Panel resize ──────────────────────────────────────────────────────────
+
+    /**
+     * Begin dragging the left panel resize handle.
+     * Attaches mousemove/mouseup listeners to the document for the duration
+     * of the drag so the resize works even when the cursor leaves the handle.
+     */
+    @action startLeftResize(event) {
+        event.preventDefault();
+        const startX     = event.clientX;
+        const startWidth = this.leftPanelWidth;
+
+        const onMove = (e) => {
+            const delta = e.clientX - startX;
+            const next  = Math.min(480, Math.max(200, startWidth + delta));
+            this.leftPanelWidth = next;
+        };
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        document.body.style.cursor     = 'col-resize';
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    }
+
+    /**
+     * Begin dragging the right panel resize handle.
+     * Dragging left increases the panel width (delta is inverted).
+     */
+    @action startRightResize(event) {
+        event.preventDefault();
+        const startX     = event.clientX;
+        const startWidth = this.rightPanelWidth;
+
+        const onMove = (e) => {
+            const delta = startX - e.clientX;  // inverted: drag left = wider
+            const next  = Math.min(560, Math.max(240, startWidth + delta));
+            this.rightPanelWidth = next;
+        };
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        document.body.style.cursor     = 'col-resize';
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
     }
 }

@@ -103,6 +103,7 @@ export default class OrchestratorCardFieldsSettingsComponent extends Component {
         this.settings = { ...this.settings, standard: updated };
     }
 
+    // configUuid here is the real UUID (not public_id) so it matches order.order_config_uuid
     @action toggleConfigField(configUuid, fieldKey) {
         const byConfig = { ...(this.settings.byConfig ?? {}) };
         const current  = byConfig[configUuid] ?? [];
@@ -128,6 +129,7 @@ export default class OrchestratorCardFieldsSettingsComponent extends Component {
         return (this.settings.standard ?? []).includes(key);
     }
 
+    // configUuid here is the real UUID (not public_id) so it matches order.order_config_uuid
     @action isConfigFieldSelected(configUuid, fieldKey) {
         return (this.settings.byConfig?.[configUuid] ?? []).includes(fieldKey);
     }

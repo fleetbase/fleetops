@@ -283,20 +283,32 @@ class AllocationController extends Controller
             ->with('customFields')
             ->get(['uuid', 'public_id', 'name', 'key'])
             ->map(function ($config) {
-                $fields = collect($config->customFields ?? [])
+                // customFields is a morphMany on subject_uuid/subject_type.
+                // If the eager load returned nothing (e.g. subject_type mismatch),
+                // fall back to a direct query by subject_uuid.
+                $customFields = $config->customFields;
+                if ($customFields->isEmpty()) {
+                    $customFields = \Fleetbase\Models\CustomField::where('subject_uuid', $config->uuid)
+                        ->orderBy('order')
+                        ->get();
+                }
+
+                $fields = $customFields
                     ->map(fn ($field) => [
-                        'key'      => $field->key ?? Str::slug($field->label ?? '', '_'),
-                        'label'    => $field->label ?? $field->key ?? '',
+                        // CustomField stores the machine key in 'name', human label in 'label'
+                        'key'      => $field->name ?? Str::slug($field->label ?? '', '_'),
+                        'label'    => $field->label ?? $field->name ?? '',
                         'type'     => $field->type ?? 'text',
                         'required' => (bool) ($field->required ?? false),
                     ])
                     ->values();
 
                 return [
-                    'id'     => $config->public_id,
-                    'name'   => $config->name,
-                    'key'    => $config->key,
-                    'fields' => $fields,
+                    'id'         => $config->public_id,
+                    'uuid'       => $config->uuid,
+                    'name'       => $config->name,
+                    'key'        => $config->key,
+                    'fields'     => $fields,
                 ];
             });
 

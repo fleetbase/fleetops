@@ -77,9 +77,7 @@
     {{! ── Card fields settings panel (collapsible, below toolbar) ── }}
     {{#if this.showCardFieldsSettings}}
         <div class="workbench-card-fields-panel border-b dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 overflow-y-auto" style="max-height: 400px;">
-            <div class="p-4">
-                <Orchestrator::CardFieldsSettings @onSaved={{this.onCardFieldsSaved}} />
-            </div>
+            <Orchestrator::CardFieldsSettings @onSaved={{this.onCardFieldsSaved}} />
         </div>
     {{/if}}
 
@@ -87,8 +85,11 @@
     <div class="workbench-body flex flex-1 overflow-hidden">
 
         {{! ── LEFT PANEL: Order Pool ── }}
-        <div class="order-pool-panel flex flex-col border-r dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-200
-            {{if this.leftPanelCollapsed 'w-0 overflow-hidden' 'w-72 min-w-72'}}">
+        <div
+            class="order-pool-panel flex flex-col border-r dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0
+                {{if this.leftPanelCollapsed 'w-0 overflow-hidden'}}"
+            style={{if this.leftPanelCollapsed "" (concat "width:" this.leftPanelWidth "px;min-width:200px;max-width:480px;")}}
+        >
             <Orchestrator::OrderPool
                 @orders={{this.unassignedOrders}}
                 @selectedOrderIds={{this.selectedOrderIds}}
@@ -101,15 +102,23 @@
             />
         </div>
 
-        {{! ── Left panel collapse toggle — original long border bar style ── }}
-        <button
-            type="button"
-            class="workbench-panel-toggle flex items-center justify-center w-4 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
-            title={{if this.leftPanelCollapsed (t "orchestrator.expand-panel") (t "orchestrator.collapse-panel")}}
-            {{on "click" this.toggleLeftPanel}}
-        >
-            <FaIcon @icon={{if this.leftPanelCollapsed "chevron-right" "chevron-left"}} @size="xs" class="text-gray-400" />
-        </button>
+        {{! ── Left panel resize handle + collapse toggle ── }}
+        <div class="flex flex-col flex-shrink-0 relative">
+            {{! Drag resize handle }}
+            <div
+                class="workbench-resize-handle w-1 cursor-col-resize bg-transparent hover:bg-indigo-400 dark:hover:bg-indigo-500 transition-colors h-full absolute left-0 top-0 z-10"
+                {{on "mousedown" this.startLeftResize}}
+            ></div>
+            {{! Collapse toggle bar }}
+            <button
+                type="button"
+                class="workbench-panel-toggle flex items-center justify-center w-4 h-full bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                title={{if this.leftPanelCollapsed (t "orchestrator.expand-panel") (t "orchestrator.collapse-panel")}}
+                {{on "click" this.toggleLeftPanel}}
+            >
+                <FaIcon @icon={{if this.leftPanelCollapsed "chevron-right" "chevron-left"}} @size="xs" class="text-gray-400" />
+            </button>
+        </div>
 
         {{! ── CENTRE: Map ── }}
         <div class="map-panel flex-1 relative overflow-hidden">
@@ -242,19 +251,30 @@
             {{/if}}
         </div>
 
-        {{! ── Right panel collapse toggle — original long border bar style ── }}
-        <button
-            type="button"
-            class="workbench-panel-toggle flex items-center justify-center w-4 bg-gray-100 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
-            title={{if this.rightPanelCollapsed (t "orchestrator.expand-panel") (t "orchestrator.collapse-panel")}}
-            {{on "click" this.toggleRightPanel}}
-        >
-            <FaIcon @icon={{if this.rightPanelCollapsed "chevron-left" "chevron-right"}} @size="xs" class="text-gray-400" />
-        </button>
+        {{! ── Right panel resize handle + collapse toggle ── }}
+        <div class="flex flex-col flex-shrink-0 relative">
+            {{! Drag resize handle }}
+            <div
+                class="workbench-resize-handle w-1 cursor-col-resize bg-transparent hover:bg-indigo-400 dark:hover:bg-indigo-500 transition-colors h-full absolute right-0 top-0 z-10"
+                {{on "mousedown" this.startRightResize}}
+            ></div>
+            {{! Collapse toggle bar }}
+            <button
+                type="button"
+                class="workbench-panel-toggle flex items-center justify-center w-4 h-full bg-gray-100 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                title={{if this.rightPanelCollapsed (t "orchestrator.expand-panel") (t "orchestrator.collapse-panel")}}
+                {{on "click" this.toggleRightPanel}}
+            >
+                <FaIcon @icon={{if this.rightPanelCollapsed "chevron-left" "chevron-right"}} @size="xs" class="text-gray-400" />
+            </button>
+        </div>
 
         {{! ── RIGHT PANEL: Resources (pre-run) or Plan (post-run) ── }}
-        <div class="driver-panel flex flex-col border-l dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-200
-            {{if this.rightPanelCollapsed 'w-0 overflow-hidden' 'w-80 min-w-80'}}">
+        <div
+            class="driver-panel flex flex-col border-l dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0
+                {{if this.rightPanelCollapsed 'w-0 overflow-hidden'}}"
+            style={{if this.rightPanelCollapsed "" (concat "width:" this.rightPanelWidth "px;min-width:240px;max-width:560px;")}}
+        >
 
             {{#if this.hasProposedPlan}}
                 {{! Post-run: plan viewer }}
