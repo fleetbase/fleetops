@@ -3,6 +3,9 @@
 namespace Fleetbase\FleetOps\Integrations\ParcelPath;
 
 use Fleetbase\FleetOps\Models\IntegratedVendor;
+use Fleetbase\FleetOps\Models\Payload;
+use Fleetbase\FleetOps\Models\ServiceQuote;
+use Fleetbase\FleetOps\Models\ServiceQuoteItem;
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
 
@@ -161,5 +164,166 @@ class ParcelPath
     public function delete(string $path, array $options = [])
     {
         return $this->request('DELETE', $path, $options);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  PURE HELPERS — request builders and response normalizers.
+    //  These are static and take plain arrays / duck-typed objects so
+    //  they can be unit-tested without booting Laravel. The runtime
+    //  wrappers below (getQuoteFromPayload, createOrderFromServiceQuote,
+    //  getTrackingStatus, voidShipment) compose these with Eloquent
+    //  writes and the Guzzle client.
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Convert a Place-like object (anything with street1/city/province/
+     * postal_code/country properties) into the ship_from / ship_to shape
+     * ParcelPath expects.
+     */
+    public static function placeToAddress(object $place): array
+    {
+        return [
+            'address' => (string) ($place->street1 ?? ''),
+            'city'    => (string) ($place->city ?? ''),
+            'state'   => (string) ($place->province ?? ''),
+            'zip'     => (string) ($place->postal_code ?? ''),
+            'country' => (string) ($place->country ?? 'US'),
+        ];
+    }
+
+    /**
+     * Convert an iterable of Entity-like parcel objects into the parcels
+     * array ParcelPath expects. Non-parcel entities are skipped.
+     */
+    public static function entitiesToParcels(iterable $entities): array
+    {
+        $parcels = [];
+        foreach ($entities as $entity) {
+            $type = $entity->type ?? null;
+            if ($type !== null && $type !== 'parcel') {
+                continue;
+            }
+            $parcels[] = [
+                'length' => (float) ($entity->length ?? 0),
+                'width'  => (float) ($entity->width ?? 0),
+                'height' => (float) ($entity->height ?? 0),
+                'weight' => (float) ($entity->weight ?? 0),
+                'template' => isset($entity->meta['package_template'])
+                    ? (string) $entity->meta['package_template']
+                    : null,
+            ];
+        }
+        return $parcels;
+    }
+
+    /**
+     * Build the POST /v1/rates request body.
+     */
+    public static function buildRatesRequest(
+        array $shipFrom,
+        array $shipTo,
+        array $parcels,
+        ?string $carrierFilter = 'all'
+    ): array {
+        return [
+            'ship_from'      => $shipFrom,
+            'ship_to'        => $shipTo,
+            'parcels'        => $parcels,
+            'carrier_filter' => $carrierFilter ?: 'all',
+        ];
+    }
+
+    /**
+     * Normalize the POST /v1/rates response into an array of rows ready
+     * for ServiceQuote::create(...). Amount is converted to integer cents.
+     * Each row carries a `meta` sub-array with carrier/service_token/
+     * pp_rate_id/estimated_days/insurance_available/insurance_cost/
+     * carrier_amount so the runtime wrapper can persist it verbatim.
+     */
+    public static function normalizeRatesResponse(array $response): array
+    {
+        $rows = [];
+        $rates = $response['rates'] ?? [];
+        foreach ($rates as $rate) {
+            if (!isset($rate['amount'])) {
+                continue;
+            }
+            $amountCents = (int) round(((float) $rate['amount']) * 100);
+            $insuranceCostCents = isset($rate['insurance_cost'])
+                ? (int) round(((float) $rate['insurance_cost']) * 100)
+                : null;
+
+            $rows[] = [
+                'amount'   => $amountCents,
+                'currency' => (string) ($rate['currency'] ?? 'USD'),
+                'service'  => (string) ($rate['service'] ?? ''),
+                'meta' => [
+                    'carrier'              => (string) ($rate['carrier'] ?? ''),
+                    'service_token'        => (string) ($rate['service_token'] ?? ''),
+                    'pp_rate_id'           => $rate['rate_id'] ?? null,
+                    'estimated_days'       => $rate['estimated_days'] ?? null,
+                    'insurance_available'  => (bool) ($rate['insurance_available'] ?? false),
+                    'insurance_cost'       => $insuranceCostCents,
+                    'carrier_amount'       => $amountCents,
+                ],
+            ];
+        }
+        return $rows;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  IMPURE RUNTIME WRAPPERS — compose pure helpers + HTTP + Eloquent.
+    //  Not unit-tested in this phase; exercised via smoke test once the
+    //  full label/order flow lands. Kept thin so the testable parts are
+    //  all above.
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Rate a Payload via POST /v1/rates and persist each returned rate as
+     * a ServiceQuote + ServiceQuoteItem. Returns the created ServiceQuote
+     * collection. Called from ServiceQuoteController::query via the
+     * IntegratedVendor bridge machinery.
+     */
+    public function getQuoteFromPayload(
+        Payload $payload,
+        ?string $serviceType = null,
+        ?string $scheduledAt = null,
+        ?bool $isRouteOptimized = null
+    ): array {
+        $carrierFilter = $this->integratedVendor?->options['carrier_filter'] ?? 'all';
+
+        $body = static::buildRatesRequest(
+            static::placeToAddress($payload->pickup),
+            static::placeToAddress($payload->dropoff),
+            static::entitiesToParcels($payload->entities ?? []),
+            $carrierFilter
+        );
+
+        $response = $this->post('rates', ['json' => $body]) ?? [];
+        $rows     = static::normalizeRatesResponse($response);
+
+        $quotes = [];
+        foreach ($rows as $row) {
+            $serviceQuote = ServiceQuote::create([
+                'company_uuid' => $this->integratedVendor?->company_uuid,
+                'payload_uuid' => $payload->uuid,
+                'service_type' => 'parcel',
+                'amount'       => $row['amount'],
+                'currency'     => $row['currency'],
+                'meta'         => $row['meta'],
+            ]);
+
+            ServiceQuoteItem::create([
+                'service_quote_uuid' => $serviceQuote->uuid,
+                'amount'             => $row['amount'],
+                'currency'           => $row['currency'],
+                'details'            => $row['meta']['carrier'] . ' ' . $row['service'],
+                'code'               => $row['meta']['service_token'],
+            ]);
+
+            $quotes[] = $serviceQuote;
+        }
+
+        return $quotes;
     }
 }
