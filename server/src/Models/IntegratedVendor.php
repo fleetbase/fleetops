@@ -54,6 +54,7 @@ class IntegratedVendor extends Model
         '_key',
         'public_id',
         'company_uuid',
+        'shipper_client_uuid',
         'created_by_uuid',
         'host',
         'namespace',
@@ -148,6 +149,20 @@ class IntegratedVendor extends Model
     public function company()
     {
         return $this->belongsTo(\Fleetbase\Models\Company::class);
+    }
+
+    /**
+     * The shipper client (Vendor) this IntegratedVendor credential record is
+     * scoped to, if any. When null, this record is the broker-level catch-all
+     * for the given provider. Used by ServiceQuoteController auto-resolve to
+     * route orders through the right carrier credential based on the order's
+     * customer Vendor.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function shipperClient()
+    {
+        return $this->belongsTo(\Fleetbase\FleetOps\Models\Vendor::class, 'shipper_client_uuid', 'uuid');
     }
 
     public function setWebhookUrlAttribute($webhookUrl = null)
