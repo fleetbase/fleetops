@@ -3,7 +3,7 @@
     {{#if this.loadData.isRunning}}
         <div class="flex justify-center py-8"><Spinner /></div>
     {{else}}
-        <div class="space-y-5">
+        <div>
 
             {{! Standard fields }}
             <ContentPanel @title={{t "orchestrator.standard-fields"}} @open={{true}} @wrapperClass="bordered-top">
@@ -39,8 +39,8 @@
                                     <input
                                         type="checkbox"
                                         class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600"
-                        checked={{this.isConfigFieldSelected config.uuid field.key}}
-                                {{on "change" (fn this.toggleConfigField config.uuid field.key)}}
+                                        checked={{this.isConfigFieldSelected config.uuid field.key}}
+                                        {{on "change" (fn this.toggleConfigField config.uuid field.key)}}
                                     />
                                     <div class="min-w-0">
                                         <span class="text-xs text-gray-700 dark:text-gray-300 block truncate">{{field.label}}</span>
@@ -76,14 +76,8 @@
             {{/if}}
 
             {{! Save button }}
-            <div class="flex justify-end pt-2">
-                <Button
-                    @text={{t "orchestrator.save-card-fields"}}
-                    @type="primary"
-                    @size="sm"
-                    @isLoading={{this.saveSettings.isRunning}}
-                    @onClick={{perform this.saveSettings}}
-                />
+            <div class="px-3 py-2 border-t dark:border-gray-700 flex-shrink-0 bg-gray-50 dark:bg-gray-800">
+                <Button @text={{t "orchestrator.save-card-fields"}} @type="primary" @size="sm" @isLoading={{this.saveSettings.isRunning}} @onClick={{perform this.saveSettings}} />
             </div>
         </div>
     {{/if}}

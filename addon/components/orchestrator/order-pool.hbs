@@ -40,7 +40,7 @@
     </div>
 
     {{! Order list }}
-    <div class="flex-1 overflow-y-auto">
+    <div class="flex-1 overflow-y-auto space-y-2">
         {{#if @isLoading}}
             <div class="flex justify-center py-8"><Spinner /></div>
         {{else if this.filteredOrders.length}}
