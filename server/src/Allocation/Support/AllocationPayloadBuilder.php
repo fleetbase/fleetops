@@ -113,41 +113,69 @@ class AllocationPayloadBuilder
     }
 
     /**
-     * Build the normalized vehicle list from a collection of Vehicles.
+     * Build vehicles for vehicle-only allocation mode — no driver required.
      *
-     * Each vehicle entry contains:
-     *   - id:           vehicle public_id
-     *   - driver_id:    driver public_id (for result mapping)
-     *   - start:        [longitude, latitude] of the driver's current position
-     *   - end:          [longitude, latitude] of the depot/return location (if return_to_depot)
-     *   - capacity:     [max_weight_kg, max_volume_l, max_pallets, max_parcels]
-     *   - max_tasks:    maximum number of stops this vehicle can handle
-     *   - max_travel_time: maximum travel time in seconds (from driver or vehicle)
-     *   - time_window:  [shift_start_unix, shift_end_unix] from driver shift or time_window columns
-     *   - skills:       integer skill codes from vehicle.skills + driver.skills or custom fields
+     * Uses vehicle.location as the start position. Skills and capacity are
+     * read from the vehicle only. Used by the 'assign_vehicles' mode.
      *
      * @param  Collection $vehicles
      * @return array
      */
+    public static function buildVehiclesOnly(Collection $vehicles): array
+    {
+        return $vehicles->map(function (Vehicle $vehicle) {
+            if (!$vehicle->location) {
+                return null;
+            }
+            $entry = [
+                'id'        => $vehicle->public_id,
+                'driver_id' => null,
+                'start'     => [$vehicle->location->getLng(), $vehicle->location->getLat()],
+            ];
+            if ($vehicle->return_to_depot && $vehicle->location) {
+                $entry['end'] = [$vehicle->location->getLng(), $vehicle->location->getLat()];
+            }
+            $entry['capacity'] = [
+                (int) round((float) ($vehicle->capacity_weight_kg ?? $vehicle->getMeta('max_weight_kg') ?? 0)),
+                (int) round((float) ($vehicle->capacity_volume_m3 ?? $vehicle->getMeta('max_volume_m3') ?? 0) * 1000),
+                (int) ($vehicle->capacity_pallets ?? $vehicle->getMeta('max_pallets') ?? 0),
+                (int) ($vehicle->capacity_parcels ?? $vehicle->getMeta('max_parcels') ?? 100),
+            ];
+            if ($vehicle->max_tasks !== null && $vehicle->max_tasks > 0) {
+                $entry['max_tasks'] = (int) $vehicle->max_tasks;
+            }
+            if ($vehicle->time_window_start && $vehicle->time_window_end) {
+                $entry['time_window'] = [
+                    $vehicle->time_window_start->timestamp,
+                    $vehicle->time_window_end->timestamp,
+                ];
+            }
+            $skills = static::resolveSkills($vehicle->skills ?? [], $vehicle->custom_fields ?? []);
+            if (!empty($skills)) {
+                $entry['skills'] = $skills;
+            }
+            return $entry;
+        })->filter()->values()->toArray();
+    }
+
     public static function buildVehicles(Collection $vehicles): array
     {
         return $vehicles->map(function (Vehicle $vehicle) {
             $driver = $vehicle->driver;
-
-            if (!$driver || !$driver->location) {
+            // For vehicle-only mode, fall back to vehicle.location when no driver
+            $startLocation = $driver?->location ?? $vehicle->location;
+            if (!$startLocation) {
                 return null;
             }
-
             // --- Start position ---
             $entry = [
                 'id'        => $vehicle->public_id,
-                'driver_id' => $driver->public_id,
-                'start'     => [$driver->location->getLng(), $driver->location->getLat()],
+                'driver_id' => $driver?->public_id,
+                'start'     => [$startLocation->getLng(), $startLocation->getLat()],
             ];
-
             // --- Return to depot ---
-            if ($vehicle->return_to_depot && $driver->location) {
-                $entry['end'] = [$driver->location->getLng(), $driver->location->getLat()];
+            if ($vehicle->return_to_depot && $startLocation) {
+                $entry['end'] = [$startLocation->getLng(), $startLocation->getLat()];
             }
 
             // --- Multi-dimensional capacity ---

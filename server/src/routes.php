@@ -534,6 +534,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('scheduling-settings', 'SettingController@saveSchedulingSettings');
                                         $router->get('orchestrator-settings', 'SettingController@getOrchestratorSettings');
                                         $router->post('orchestrator-settings', 'SettingController@saveOrchestratorSettings');
+                                        $router->get('orchestrator-card-fields', 'SettingController@getOrchestratorCardFields');
+                                        $router->post('orchestrator-card-fields', 'SettingController@saveOrchestratorCardFields');
                                     }
                                 );
                                 $router->group(
@@ -550,6 +552,23 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->get('preview', 'AllocationController@preview');
                                         $router->get('engines', 'AllocationController@engines');
                                         $router->post('import-orders', 'AllocationController@importOrders');
+                                        $router->get('order-config-fields', 'AllocationController@orderConfigFields');
+                                    }
+                                );
+                                $router->group(
+                                    ['prefix' => 'manifests'],
+                                    function ($router) {
+                                        $router->get('/', 'ManifestController@index');
+                                        $router->get('{id}', 'ManifestController@show');
+                                        $router->post('{id}/cancel', 'ManifestController@cancel');
+                                        $router->delete('{id}', 'ManifestController@destroy');
+                                    }
+                                );
+                                $router->group(
+                                    ['prefix' => 'manifest-stops'],
+                                    function ($router) {
+                                        $router->get('{id}', 'ManifestController@showStop');
+                                        $router->patch('{id}', 'ManifestController@updateStop');
                                     }
                                 );
                             }

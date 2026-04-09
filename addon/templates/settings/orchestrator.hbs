@@ -64,6 +64,11 @@
                         />
                     </InputGroup>
                 </ContentPanel>
+                {{! ── Order Card Fields ───────────────────────────────────── }}
+                <ContentPanel @title={{t "orchestrator.card-fields"}} @open={{false}} @wrapperClass="bordered-classic">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{t "orchestrator.card-fields-description"}}</p>
+                    <Orchestrator::CardFieldsSettings />
+                </ContentPanel>
                 <RegistryYield @registry="fleet-ops:template:settings:orchestrator" as |RegistryComponent|>
                     <RegistryComponent @controller={{this}} />
                 </RegistryYield>

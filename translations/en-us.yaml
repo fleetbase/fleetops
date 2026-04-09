@@ -2056,3 +2056,63 @@ orchestrator:
   no-vehicle-assigned: No vehicle assigned
   no-driver-assigned: No driver assigned
   created: Created
+  # Phase builder
+  phases: Phases
+  phases-description: Compose a multi-step orchestration run. Each phase runs a specific mode in sequence.
+  add-phase: Add Phase
+  no-phases: No phases configured. Add a phase to get started.
+  phase-n: "Phase {n}"
+  phase-label: Phase Label
+  save-phase: Save Phase
+  select-phase-to-edit: Select a phase to edit its settings.
+  run-phases: "Run {count} Phase(s)"
+  include-order-statuses: Include Order Statuses
+  constraints: Constraints
+  auto-commit: Auto-commit after phase
+  # Allocation modes
+  mode-assign-vehicles: Assign Vehicles
+  mode-assign-drivers: Assign Drivers
+  mode-optimize-routes: Optimise Routes
+  # Order statuses for phase filter
+  status-created: Created
+  status-dispatched: Dispatched
+  status-started: Started
+  # Card fields settings
+  card-fields: Card Fields
+  card-fields-description: Configure which fields are displayed on order cards in the workbench. Fields are grouped by order config so you can tailor the view for each order type.
+  card-fields-saved: Order card fields saved.
+  save-card-fields: Save Card Fields
+  standard-fields: Standard Fields
+  standard-fields-description: These fields appear on every order card regardless of order type.
+  config-fields-description: "Custom fields for {name} orders."
+  meta-fields: Meta Fields
+  meta-fields-description: Free-form metadata keys pushed by integrations.
+  no-custom-fields: No custom fields defined for this order config.
+  field-tracking: Tracking Number
+  field-status: Status
+  field-scheduled-at: Scheduled At
+  field-customer: Customer
+  field-type: Type
+  field-notes: Notes
+  field-priority: Priority
+  field-dropoff: Dropoff Address
+  field-pickup: Pickup Address
+  # Resource panel filters
+  filter-available: Available
+  filter-unplanned: Unplanned
+  # Plan viewer
+  expand-all: Expand all
+  collapse-all: Collapse all
+  no-plan: Run the orchestrator to see the proposed plan.
+  unassigned-description: These orders could not be assigned. They will remain in the queue for re-allocation.
+  unassigned: unassigned
+  # General additions
+  vehicles: Vehicles
+  drivers: Drivers
+  orders: Orders
+  cancel: Cancel
+  no-vehicles: No vehicles found.
+  no-drivers: No drivers found.
+  no-orders: No orders found.
+  expand-panel: Expand panel
+  collapse-panel: Collapse panel

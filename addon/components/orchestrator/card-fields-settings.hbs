@@ -1,0 +1,87 @@
+{{! Orchestrator::CardFieldsSettings — Configure which fields show on order cards }}
+<div class="card-fields-settings">
+    {{#if this.loadData.isRunning}}
+        <div class="flex justify-center py-8"><Spinner /></div>
+    {{else}}
+        <div class="space-y-5">
+
+            {{! Standard fields }}
+            <ContentPanel @title={{t "orchestrator.standard-fields"}} @open={{true}}>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{t "orchestrator.standard-fields-description"}}</p>
+                <div class="grid grid-cols-2 gap-2">
+                    {{#each this.standardFieldOptions as |field|}}
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600"
+                                checked={{this.isStandardSelected field.key}}
+                                {{on "change" (fn this.toggleStandardField field.key)}}
+                            />
+                            <span class="text-xs text-gray-700 dark:text-gray-300">{{field.label}}</span>
+                        </label>
+                    {{/each}}
+                </div>
+            </ContentPanel>
+
+            {{! Per-order-config custom fields }}
+            {{#each this.orderConfigs as |config|}}
+                <ContentPanel @title={{config.name}} @open={{true}}>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        {{t "orchestrator.config-fields-description" name=config.name}}
+                    </p>
+                    {{#if config.custom_fields.length}}
+                        <div class="grid grid-cols-2 gap-2">
+                            {{#each config.custom_fields as |field|}}
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600"
+                                        checked={{this.isConfigFieldSelected config.uuid field.key}}
+                                        {{on "change" (fn this.toggleConfigField config.uuid field.key)}}
+                                    />
+                                    <div class="min-w-0">
+                                        <span class="text-xs text-gray-700 dark:text-gray-300 block truncate">{{field.label}}</span>
+                                        <span class="text-2xs text-gray-400 block truncate">{{field.key}}</span>
+                                    </div>
+                                </label>
+                            {{/each}}
+                        </div>
+                    {{else}}
+                        <p class="text-xs text-gray-400 italic">{{t "orchestrator.no-custom-fields"}}</p>
+                    {{/if}}
+                </ContentPanel>
+            {{/each}}
+
+            {{! Meta fields }}
+            {{#if this.availableMetaKeys.length}}
+                <ContentPanel @title={{t "orchestrator.meta-fields"}} @open={{false}}>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{t "orchestrator.meta-fields-description"}}</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        {{#each this.availableMetaKeys as |key|}}
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600"
+                                    checked={{this.isMetaKeySelected key}}
+                                    {{on "change" (fn this.toggleMetaKey key)}}
+                                />
+                                <span class="text-xs font-mono text-gray-600 dark:text-gray-400 truncate">{{key}}</span>
+                            </label>
+                        {{/each}}
+                    </div>
+                </ContentPanel>
+            {{/if}}
+
+            {{! Save button }}
+            <div class="flex justify-end pt-2">
+                <Button
+                    @text={{t "orchestrator.save-card-fields"}}
+                    @type="primary"
+                    @size="sm"
+                    @isLoading={{this.saveSettings.isRunning}}
+                    @onClick={{perform this.saveSettings}}
+                />
+            </div>
+        </div>
+    {{/if}}
+</div>

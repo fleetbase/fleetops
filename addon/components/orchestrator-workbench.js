@@ -15,19 +15,22 @@ const ROUTE_COLORS = [
 /**
  * OrchestratorWorkbenchComponent
  *
- * The Dispatcher Workbench — the primary UI for the Orchestrator module.
- * Provides:
+ * The Dispatcher Workbench — primary UI for the Orchestrator module.
  *
- *   - Order Pool (left): filterable, searchable list of unassigned orders
- *     with drag-and-drop support and multi-select for targeted runs.
- *   - Interactive Map (centre): Leaflet map showing order markers, driver
- *     positions, and proposed route polylines.
- *   - Resource Panel (right): tabbed view of available drivers and vehicles
- *     pre-run; per-vehicle route cards with stop sequences post-run.
+ * Layout:
+ *   Left panel   — Orchestrator::OrderPool (filterable order list)
+ *   Centre        — Leaflet map + optional phase builder panel
+ *   Right panel  — Orchestrator::ResourcePanel (pre-run) or
+ *                  Orchestrator::PlanViewer (post-run)
  *
- * Modes:
- *   - 'allocate': assign unassigned orders to drivers (default)
- *   - 'optimize': re-sequence already-assigned orders for minimum distance/time
+ * Modes (via PhaseBuilder):
+ *   assign_vehicles — allocate orders to vehicles using VROOM
+ *   assign_drivers  — match drivers to vehicles (greedy shift-aware)
+ *   optimize_routes — re-sequence stops for minimum distance/time
+ *   allocate        — legacy single-pass assign driver+vehicle (default)
+ *
+ * The workbench delegates rendering of each panel to dedicated sub-components
+ * and only owns cross-cutting state: data, plan, selections, map, and phases.
  */
 export default class OrchestratorWorkbenchComponent extends Component {
     @service store;
@@ -40,142 +43,100 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     // ── Data ──────────────────────────────────────────────────────────────────
 
-    /** All unassigned orders loaded from the store. */
-    @tracked unassignedOrders = [];
-
-    /** Available vehicles (with or without an online driver). */
+    @tracked unassignedOrders  = [];
     @tracked availableVehicles = [];
-
-    /** Available drivers (online). */
-    @tracked availableDrivers = [];
-
-    /** Available engine list from the backend. */
-    @tracked availableEngines = [];
+    @tracked availableDrivers  = [];
+    @tracked availableEngines  = [];
 
     // ── Plan state ────────────────────────────────────────────────────────────
 
-    /** The proposed allocation/optimization plan — null until a run completes. */
-    @tracked proposedPlan = null;
+    @tracked proposedPlan          = null;
+    @tracked routeSummaries        = {};
+    @tracked unassignedAfterRun    = [];
+    @tracked orchestratorRunMessage = null;
+    @tracked isCommitted           = false;
+    @tracked manualOverrides       = {};
 
-    /** Per-vehicle route summaries (distance, duration) from the engine. */
-    @tracked routeSummaries = {};
+    // ── Phase builder ─────────────────────────────────────────────────────────
 
-    /** Orders that the engine could not assign. */
-    @tracked unassignedAfterRun = [];
-    @tracked orchestratorRunMessage = null; // backend message from the last run (e.g. "No available vehicles/drivers found.")
+    /**
+     * User-composed list of phases to execute in sequence.
+     * Each phase: { id, mode, label, engine, orderStatuses, balanceWorkload,
+     *               respectSkills, respectCapacity, returnToDepot, autoCommit }
+     */
+    @tracked phases = [];
 
-    /** Whether the workbench is in "committed" state (plan applied). */
-    @tracked isCommitted = false;
+    /** Whether the phase builder panel is visible (replaces old options panel). */
+    @tracked showPhaseBuilder = false;
 
-    /** Tracks manual drag-and-drop overrides made by the dispatcher. */
-    @tracked manualOverrides = {};
+    /** Whether the card fields settings panel is visible. */
+    @tracked showCardFieldsSettings = false;
+
+    // ── Configurable card fields ──────────────────────────────────────────────
+
+    /**
+     * Loaded from company settings. Shape:
+     *   { standard: string[], byConfig: { [configUuid]: string[] }, meta: string[] }
+     */
+    @tracked cardFields = null;
 
     // ── UI state ──────────────────────────────────────────────────────────────
 
-    /** Whether the options panel is visible. */
-    @tracked showOptionsPanel = false;
-
-    /** Whether the left (order pool) panel is collapsed. */
-    @tracked leftPanelCollapsed = false;
-
-    /** Whether the right (resource) panel is collapsed. */
+    @tracked leftPanelCollapsed  = false;
     @tracked rightPanelCollapsed = false;
 
-    /** Active tab in the right panel: 'drivers' | 'vehicles' */
-    @tracked rightPanelTab = 'drivers';
-
-    /** Set of selected order public_ids (for targeted runs). */
-    @tracked selectedOrderIds = new Set();
-
-    /** Set of selected vehicle public_ids (for targeted runs). */
+    @tracked selectedOrderIds   = new Set();
     @tracked selectedVehicleIds = new Set();
-
-    /** Set of selected driver public_ids (for targeted runs). */
-    @tracked selectedDriverIds = new Set();
-
-    /** Set of expanded route card vehicle IDs. */
-    @tracked expandedRouteCards = new Set();
-
-    /** Order pool search string. */
-    @tracked orderSearch = '';
-
-    /** Driver tab search string. */
-    @tracked driverSearch = '';
-
-    /** Driver tab filter: 'all' | 'online' | 'offline' | 'on-shift' */
-    @tracked driverFilter = 'all';
-
-    /** Vehicle tab search string. */
-    @tracked vehicleSearch = '';
-
-    /** Vehicle tab filter: 'all' | 'active' | 'no-driver' */
-    @tracked vehicleFilter = 'all';
-
-    /** Order pool filter: 'all' | 'scheduled' | 'urgent' | 'imported'. */
-    @tracked orderFilter = 'all';
-
-    // ── Run options ───────────────────────────────────────────────────────────
-
-    @tracked selectedMode = 'allocate';
-    @tracked selectedEngine = 'vroom';
-    @tracked balanceWorkload = false;
-    @tracked respectSkills = true;
-    @tracked respectCapacity = true;
-    @tracked returnToDepot = false;
+    @tracked selectedDriverIds  = new Set();
 
     // ── Map ───────────────────────────────────────────────────────────────────
-    // NOTE: mapReady is intentionally removed. The map always renders — we rely
-    // on onMapLoad's imperative setView to position it correctly. Removing the
-    // {{#if mapReady}} guard means Leaflet mounts before loadUnassignedOrders
-    // completes, so onMapLoad fires first and setView always has a valid map ref.
-    @tracked mapCenter = { lat: 1.369, lng: 103.8864 }; // Singapore synchronous fallback
-    @tracked mapZoom = 11;
+
+    @tracked mapCenter = { lat: 1.369, lng: 103.8864 };
+    @tracked mapZoom   = 11;
     @tracked leafletMap = null;
+
+    // ── Drag ──────────────────────────────────────────────────────────────────
+
+    @tracked _draggingOrder = null;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     constructor() {
         super(...arguments);
-        // Synchronously seed mapCenter from the location service.
-        // getLatitude/getLongitude always return a valid number — Singapore
-        // (1.369, 103.8864) if geolocation hasn't resolved yet.
         const lat = this.location.getLatitude();
         const lng = this.location.getLongitude();
-        // Use != null check — 0 is falsy but a valid coordinate
         if (lat != null && lng != null) {
             this.mapCenter = { lat, lng };
         }
-        // Also kick off async resolution so we update to the real location
-        // (browser geolocation → company address → IP/whois → Singapore).
         this.location.getUserLocation().then(({ latitude, longitude }) => {
             this.mapCenter = { lat: latitude, lng: longitude };
             if (this.leafletMap?.setView) {
                 this.leafletMap.setView([latitude, longitude], this.mapZoom);
             }
-        }).catch(() => {
-            // mapCenter already set to Singapore above — nothing to do
-        });
+        }).catch(() => {});
+
         this.loadData.perform();
         this.loadEngines.perform();
+        this.loadCardFields.perform();
     }
 
     // ── Data loading ──────────────────────────────────────────────────────────
 
     @task *loadData() {
         yield Promise.all([
-            this.loadUnassignedOrders.perform(),
+            this.loadOrders.perform(),
             this.loadAvailableVehicles.perform(),
             this.loadAvailableDrivers.perform(),
         ]);
     }
 
-    @task *loadUnassignedOrders() {
+    @task *loadOrders() {
         try {
             const orders = yield this.store.query('order', {
                 unassigned: true,
-                status:     'created',
+                status:     'created,dispatched,started',
                 limit:      500,
-                with:       'payload.dropoff,payload.pickup,payload.waypoints',
+                with:       'payload.dropoff,payload.pickup,payload.waypoints,customFields',
             });
             this.unassignedOrders = orders.toArray();
             this._centerMapOnOrders();
@@ -186,9 +147,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     @task *loadAvailableVehicles() {
         try {
-            const vehicles = yield this.store.query('vehicle', {
-                limit: 300,
-            });
+            const vehicles = yield this.store.query('vehicle', { limit: 300 });
             this.availableVehicles = vehicles.toArray();
         } catch (error) {
             this.notifications.serverError(error);
@@ -197,9 +156,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     @task *loadAvailableDrivers() {
         try {
-            const drivers = yield this.store.query('driver', {
-                limit: 300,
-            });
+            const drivers = yield this.store.query('driver', { limit: 300 });
             this.availableDrivers = drivers.toArray();
         } catch (error) {
             this.notifications.serverError(error);
@@ -215,42 +172,64 @@ export default class OrchestratorWorkbenchComponent extends Component {
         }
     }
 
-    // ── Orchestration actions ─────────────────────────────────────────────────
+    @task *loadCardFields() {
+        try {
+            const result = yield this.fetch.get('fleet-ops/settings/orchestrator-card-fields').catch(() => null);
+            this.cardFields = result?.settings ?? null;
+        } catch {
+            this.cardFields = null;
+        }
+    }
+
+    // ── Orchestration ─────────────────────────────────────────────────────────
 
     /**
-     * Run the orchestration engine and populate the proposed plan.
+     * Run all configured phases in sequence. If no phases are configured,
+     * falls back to a single legacy 'allocate' run.
      */
     @task *runOrchestration() {
         this.proposedPlan           = null;
-        this.isCommitted             = false;
-        this.manualOverrides         = {};
-        this.routeSummaries          = {};
-        this.unassignedAfterRun      = [];
-        this.orchestratorRunMessage  = null;
+        this.isCommitted            = false;
+        this.manualOverrides        = {};
+        this.routeSummaries         = {};
+        this.unassignedAfterRun     = [];
+        this.orchestratorRunMessage = null;
 
-        // Use selected orders if any, otherwise run against all
+        const phasesToRun = this.phases.length > 0
+            ? this.phases
+            : [this._legacyPhase()];
+
+        yield this._executePhases.perform(phasesToRun);
+    }
+
+    @task *_executePhases(phases) {
+        for (const phase of phases) {
+            yield this._runSinglePhase.perform(phase);
+            // If phase has autoCommit, commit immediately before next phase
+            if (phase.autoCommit && this.proposedPlan?.length) {
+                yield this.commitPlan.perform();
+            }
+        }
+    }
+
+    @task *_runSinglePhase(phase) {
         const orderIds = this.selectedOrderIds.size > 0
             ? [...this.selectedOrderIds]
-            : this.unassignedOrders.map((o) => o.get ? o.get('public_id') : o.public_id);
+            : this.unassignedOrders.map((o) => o.public_id);
 
-        // Resolve vehicle IDs from both the Vehicles tab selection and the
-        // Drivers tab selection (drivers resolve to their assigned vehicle).
         const vehicleIdsFromVehicleTab = [...this.selectedVehicleIds];
         const vehicleIdsFromDriverTab  = [...this.selectedDriverIds]
             .map((driverId) => {
-                const driver = this.availableDrivers.find((d) => (d.get ? d.get('public_id') : d.public_id) === driverId);
-                const veh = driver?.get ? driver.get('vehicle') : driver?.vehicle;
-                return (veh?.get ? veh.get('public_id') : veh?.public_id) ?? null;
+                const driver = this.availableDrivers.find((d) => d.public_id === driverId);
+                return driver?.vehicle?.public_id ?? null;
             })
             .filter(Boolean);
 
-        // Union both sets; fall back to all available vehicles if nothing selected
         const resolvedVehicleIds = [...new Set([...vehicleIdsFromVehicleTab, ...vehicleIdsFromDriverTab])];
         const vehicleIds = resolvedVehicleIds.length > 0
             ? resolvedVehicleIds
-            : this.availableVehicles.map((v) => v.get ? v.get('public_id') : v.public_id);
+            : this.availableVehicles.map((v) => v.public_id);
 
-        // Also send driver_ids as a hint (backend may use for direct assignment)
         const driverIds = this.selectedDriverIds.size > 0
             ? [...this.selectedDriverIds]
             : null;
@@ -259,30 +238,43 @@ export default class OrchestratorWorkbenchComponent extends Component {
             const payload = {
                 order_ids:   orderIds,
                 vehicle_ids: vehicleIds,
-                mode:        this.selectedMode,
+                mode:        phase.mode,
+                order_statuses: phase.orderStatuses ?? ['created'],
                 options: {
-                    engine:           this.selectedEngine,
-                    balance_workload: this.balanceWorkload,
-                    respect_skills:   this.respectSkills,
-                    respect_capacity: this.respectCapacity,
-                    return_to_depot:  this.returnToDepot,
-                    geometry:         true, // request polylines
+                    engine:           phase.engine ?? 'vroom',
+                    balance_workload: phase.balanceWorkload ?? false,
+                    respect_skills:   phase.respectSkills ?? true,
+                    respect_capacity: phase.respectCapacity ?? true,
+                    return_to_depot:  phase.returnToDepot ?? false,
                 },
             };
-            // Include driver_ids hint only when drivers are explicitly selected
             if (driverIds) {
                 payload.driver_ids = driverIds;
             }
+
             const result = yield this.fetch.post('fleet-ops/allocation/run', payload);
 
-            this.proposedPlan           = result.assignments ?? [];
-            this.unassignedAfterRun      = result.unassigned ?? [];
-            // Surface any informational/warning message from the backend
-            this.orchestratorRunMessage  = result.message ?? null;
+            // Merge results — later phases can override earlier assignments
+            const newAssignments = result.assignments ?? [];
+            const existing       = this.proposedPlan ?? [];
+            const merged         = [...existing];
+            for (const assignment of newAssignments) {
+                const idx = merged.findIndex((a) => a.order_id === assignment.order_id);
+                if (idx >= 0) {
+                    merged[idx] = { ...merged[idx], ...assignment };
+                } else {
+                    merged.push(assignment);
+                }
+            }
+            this.proposedPlan        = merged;
+            this.unassignedAfterRun  = result.unassigned ?? [];
+            if (result.message) {
+                this.orchestratorRunMessage = result.message;
+            }
 
-            // Store per-vehicle summaries keyed by vehicle_id
-            const summaries = {};
-            for (const assignment of this.proposedPlan) {
+            // Update route summaries
+            const summaries = { ...this.routeSummaries };
+            for (const assignment of newAssignments) {
                 if (assignment.vehicle_id && !summaries[assignment.vehicle_id]) {
                     summaries[assignment.vehicle_id] = {
                         duration: assignment.route_duration ?? null,
@@ -291,25 +283,15 @@ export default class OrchestratorWorkbenchComponent extends Component {
                 }
             }
             this.routeSummaries = summaries;
-
-            // Auto-expand all route cards
-            this.expandedRouteCards = new Set(
-                Object.keys(this._groupByVehicle(this.proposedPlan))
-            );
         } catch (error) {
             this.notifications.serverError(error);
         }
     }
 
-    /**
-     * Commit the (possibly modified) proposed plan.
-     */
+    /** Commit the (possibly modified) proposed plan and generate manifests. */
     @task *commitPlan() {
-        if (!this.proposedPlan?.length) {
-            return;
-        }
+        if (!this.proposedPlan?.length) return;
 
-        // Apply manual overrides before committing
         const finalAssignments = this.proposedPlan.map((assignment) => {
             const override = this.manualOverrides[assignment.order_id];
             return override ? { ...assignment, ...override } : assignment;
@@ -325,105 +307,101 @@ export default class OrchestratorWorkbenchComponent extends Component {
             this.proposedPlan       = null;
             this.unassignedAfterRun = [];
             this.manualOverrides    = {};
-            this.expandedRouteCards = new Set();
+            this.routeSummaries     = {};
             yield this.loadData.perform();
         } catch (error) {
             this.notifications.serverError(error);
         }
     }
 
-    /**
-     * Discard the proposed plan without committing.
-     */
     @action discardPlan() {
-        this.proposedPlan       = null;
-        this.unassignedAfterRun = [];
-        this.manualOverrides    = {};
-        this.isCommitted        = false;
-        this.expandedRouteCards = new Set();
-        this.routeSummaries     = {};
+        this.proposedPlan        = null;
+        this.unassignedAfterRun  = [];
+        this.manualOverrides     = {};
+        this.isCommitted         = false;
+        this.routeSummaries      = {};
+        this.orchestratorRunMessage = null;
+    }
+
+    // ── Phase management ──────────────────────────────────────────────────────
+
+    @action onPhasesChange(phases) {
+        this.phases = phases;
+    }
+
+    @action onRunPhases(phases) {
+        this.phases = phases;
+        this.runOrchestration.perform();
+    }
+
+    _legacyPhase() {
+        return {
+            id:              'legacy',
+            mode:            'allocate',
+            label:           'Allocate',
+            engine:          'vroom',
+            orderStatuses:   ['created'],
+            balanceWorkload: false,
+            respectSkills:   true,
+            respectCapacity: true,
+            returnToDepot:   false,
+            autoCommit:      false,
+        };
+    }
+
+    // ── Panel toggles ─────────────────────────────────────────────────────────
+
+    @action toggleLeftPanel()  { this.leftPanelCollapsed  = !this.leftPanelCollapsed; }
+    @action toggleRightPanel() { this.rightPanelCollapsed = !this.rightPanelCollapsed; }
+
+    @action togglePhaseBuilder() {
+        this.showPhaseBuilder       = !this.showPhaseBuilder;
+        this.showCardFieldsSettings = false;
+    }
+
+    @action toggleCardFieldsSettings() {
+        this.showCardFieldsSettings = !this.showCardFieldsSettings;
+        this.showPhaseBuilder       = false;
+    }
+
+    @action onCardFieldsSaved() {
+        this.showCardFieldsSettings = false;
+        this.loadCardFields.perform();
     }
 
     // ── Import ────────────────────────────────────────────────────────────────
 
     @action openImportModal() {
         this.modalsManager.show('modals/orchestrator-import', {
-            title:       this.intl.t('orchestrator.import-orders'),
+            title:            this.intl.t('orchestrator.import-orders'),
             acceptButtonText: this.intl.t('orchestrator.import-confirm'),
-            onImportComplete: () => {
-                this.loadUnassignedOrders.perform();
-            },
+            onImportComplete: () => this.loadOrders.perform(),
         });
     }
 
-    // ── Panel visibility ─────────────────────────────────────────────────────
-
-    @action toggleLeftPanel() {
-        this.leftPanelCollapsed = !this.leftPanelCollapsed;
-    }
-
-    @action toggleRightPanel() {
-        this.rightPanelCollapsed = !this.rightPanelCollapsed;
-    }
-
-    @action setRightPanelTab(tab) {
-        this.rightPanelTab = tab;
-    }
-
-    // ── Options panel ─────────────────────────────────────────────────────────
+    // ── Run message ───────────────────────────────────────────────────────────
 
     @action dismissRunMessage() {
         this.orchestratorRunMessage = null;
-    }
-
-    @action toggleOptionsPanel() {
-        this.showOptionsPanel = !this.showOptionsPanel;
-    }
-
-    @action setMode(mode) {
-        this.selectedMode = mode;
-    }
-
-    @action setEngine(engineId) {
-        this.selectedEngine = engineId;
     }
 
     // ── Order selection ───────────────────────────────────────────────────────
 
     @action toggleOrderSelection(order) {
         const ids = new Set(this.selectedOrderIds);
-        if (ids.has(order.public_id)) {
-            ids.delete(order.public_id);
-        } else {
-            ids.add(order.public_id);
-        }
+        ids.has(order.public_id) ? ids.delete(order.public_id) : ids.add(order.public_id);
         this.selectedOrderIds = ids;
     }
 
-    @action clearSelection() {
+    @action clearOrderSelection() {
         this.selectedOrderIds = new Set();
-    }
-
-    @action stopPropagation(event) {
-        if (event?.stopPropagation) {
-            event.stopPropagation();
-        }
-    }
-
-    isOrderSelected(order) {
-        if (!order?.public_id) return false;
-        return this.selectedOrderIds.has(order.public_id);
     }
 
     // ── Vehicle selection ─────────────────────────────────────────────────────
 
     @action toggleVehicleSelection(vehicle) {
         const ids = new Set(this.selectedVehicleIds);
-        if (ids.has(vehicle.public_id)) {
-            ids.delete(vehicle.public_id);
-        } else {
-            ids.add(vehicle.public_id);
-        }
+        ids.has(vehicle.public_id) ? ids.delete(vehicle.public_id) : ids.add(vehicle.public_id);
         this.selectedVehicleIds = ids;
     }
 
@@ -435,11 +413,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     @action toggleDriverSelection(driver) {
         const ids = new Set(this.selectedDriverIds);
-        if (ids.has(driver.public_id)) {
-            ids.delete(driver.public_id);
-        } else {
-            ids.add(driver.public_id);
-        }
+        ids.has(driver.public_id) ? ids.delete(driver.public_id) : ids.add(driver.public_id);
         this.selectedDriverIds = ids;
     }
 
@@ -448,25 +422,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.selectedVehicleIds = new Set();
     }
 
-    // ── Route card expand/collapse ────────────────────────────────────────────
-
-    @action toggleRouteCard(vehicleId) {
-        const expanded = new Set(this.expandedRouteCards);
-        if (expanded.has(vehicleId)) {
-            expanded.delete(vehicleId);
-        } else {
-            expanded.add(vehicleId);
-        }
-        this.expandedRouteCards = expanded;
-    }
-
-    isRouteCardExpanded(vehicleId) {
-        return this.expandedRouteCards.has(vehicleId);
-    }
-
     // ── Drag-and-drop ─────────────────────────────────────────────────────────
-
-    @tracked _draggingOrder = null;
 
     @action onOrderDragStart(order, event) {
         this._draggingOrder = order;
@@ -485,55 +441,43 @@ export default class OrchestratorWorkbenchComponent extends Component {
         event.dataTransfer.dropEffect = 'move';
     }
 
-    /**
-     * Handle a drop onto a vehicle route card.
-     * Reassigns the dragged order to the target vehicle/driver.
-     */
     @action onDropOnVehicle(vehicleId, driverId, event) {
         event.preventDefault();
         const orderId = event.dataTransfer.getData('text/plain');
         if (!orderId) return;
 
-        // Record the override
         this.manualOverrides = {
             ...this.manualOverrides,
             [orderId]: { vehicle_id: vehicleId, driver_id: driverId, _overridden: true },
         };
 
-        // If the order is currently in the unassigned pool, add it to the plan
         const existingAssignment = this.proposedPlan?.find((a) => a.order_id === orderId);
-
         if (existingAssignment) {
-            // Move existing assignment to new vehicle
-            this.proposedPlan = this.proposedPlan.map((a) => {
-                if (a.order_id === orderId) {
-                    return { ...a, vehicle_id: vehicleId, driver_id: driverId, _overridden: true };
-                }
-                return a;
-            });
+            this.proposedPlan = this.proposedPlan.map((a) =>
+                a.order_id === orderId
+                    ? { ...a, vehicle_id: vehicleId, driver_id: driverId, _overridden: true }
+                    : a
+            );
         } else {
-            // Add a new manual assignment from the order pool
-            const order  = this.unassignedOrders.find((o) => o.public_id === orderId);
+            const order   = this.unassignedOrders.find((o) => o.public_id === orderId);
             const vehicle = this.availableVehicles.find((v) => v.public_id === vehicleId);
             if (order && vehicle) {
                 const newAssignment = {
-                    order_id:   orderId,
-                    vehicle_id: vehicleId,
-                    driver_id:  driverId,
-                    sequence:   (this.proposedPlan?.filter((a) => a.vehicle_id === vehicleId).length ?? 0) + 1,
+                    order_id:    orderId,
+                    vehicle_id:  vehicleId,
+                    driver_id:   driverId,
+                    sequence:    (this.proposedPlan?.filter((a) => a.vehicle_id === vehicleId).length ?? 0) + 1,
                     _overridden: true,
                 };
                 this.proposedPlan = [...(this.proposedPlan ?? []), newAssignment];
             }
         }
-
         this._draggingOrder = null;
     }
 
     // ── Map ───────────────────────────────────────────────────────────────────
 
     @action onMapLoad({ target: map }) {
-        // @onLoad fires with a Leaflet event object { target: map } — same as the live map's didLoad({ target: map })
         this.leafletMap = map;
         map.setView([this.mapCenter.lat, this.mapCenter.lng], this.mapZoom);
     }
@@ -541,161 +485,29 @@ export default class OrchestratorWorkbenchComponent extends Component {
     _centerMapOnOrders() {
         const orders = this.unassignedOrders;
         if (!orders.length) return;
-
-        const lats = orders
-            .map((o) => o.payload?.dropoff?.location?.coordinates?.[1])
-            .filter(Boolean);
-        const lngs = orders
-            .map((o) => o.payload?.dropoff?.location?.coordinates?.[0])
-            .filter(Boolean);
-
+        const lats = orders.map((o) => o.payload?.dropoff?.location?.coordinates?.[1]).filter(Boolean);
+        const lngs = orders.map((o) => o.payload?.dropoff?.location?.coordinates?.[0]).filter(Boolean);
         if (!lats.length) return;
-
         const lat = lats.reduce((a, b) => a + b, 0) / lats.length;
         const lng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
         this.mapCenter = { lat, lng };
-
-        // Imperatively move the Leaflet viewport
         if (this.leafletMap?.setView) {
             this.leafletMap.setView([lat, lng], this.mapZoom);
         }
     }
 
     get tileSourceUrl() {
-        // Match the live map tile source — CartoCDN with dark/light theme awareness
         const isDark = document.documentElement.classList.contains('dark');
         return isDark
             ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-    }
-
-    // ── Filters ───────────────────────────────────────────────────────────────
-
-    @action setOrderFilter(filter) {
-        this.orderFilter = filter;
-    }
-
-    @action onOrderSearchInput(event) {
-        this.orderSearch = event.target.value;
-    }
-
-    @action onDriverSearchInput(event) {
-        this.driverSearch = event.target.value;
-    }
-
-    @action setDriverFilter(filter) {
-        this.driverFilter = filter;
-    }
-
-    @action onVehicleSearchInput(event) {
-        this.vehicleSearch = event.target.value;
-    }
-
-    @action setVehicleFilter(filter) {
-        this.vehicleFilter = filter;
-    }
-
-    get filteredDrivers() {
-        let drivers = this.availableDrivers;
-
-        if (this.driverSearch) {
-            const q = this.driverSearch.toLowerCase();
-            drivers = drivers.filter((d) =>
-                d.name?.toLowerCase().includes(q) ||
-                d.phone?.toLowerCase().includes(q) ||
-                d.email?.toLowerCase().includes(q) ||
-                d.vehicle?.display_name?.toLowerCase().includes(q)
-            );
-        }
-
-        if (this.driverFilter === 'online') {
-            drivers = drivers.filter((d) => d.online);
-        } else if (this.driverFilter === 'offline') {
-            drivers = drivers.filter((d) => !d.online);
-        } else if (this.driverFilter === 'on-shift') {
-            drivers = drivers.filter((d) => d.current_job);
-        }
-
-        return drivers;
-    }
-
-    get filteredVehicles() {
-        let vehicles = this.availableVehicles;
-
-        if (this.vehicleSearch) {
-            const q = this.vehicleSearch.toLowerCase();
-            vehicles = vehicles.filter((v) =>
-                v.display_name?.toLowerCase().includes(q) ||
-                v.plate_number?.toLowerCase().includes(q) ||
-                v.call_sign?.toLowerCase().includes(q) ||
-                v.driver?.name?.toLowerCase().includes(q)
-            );
-        }
-
-        if (this.vehicleFilter === 'active') {
-            vehicles = vehicles.filter((v) => v.status === 'active');
-        } else if (this.vehicleFilter === 'no-driver') {
-            vehicles = vehicles.filter((v) => !v.driver?.id);
-        }
-
-        return vehicles;
-    }
-
-    get filteredOrders() {
-        let orders = this.unassignedOrders;
-
-        // Text search — matches tracking number, public_id, or dropoff address
-        if (this.orderSearch) {
-            const q = this.orderSearch.toLowerCase();
-            orders = orders.filter((o) =>
-                o.tracking?.toLowerCase().includes(q) ||
-                o.public_id?.toLowerCase().includes(q) ||
-                o.payload?.dropoff?.address?.toLowerCase().includes(q) ||
-                o.payload?.pickup?.address?.toLowerCase().includes(q)
-            );
-        }
-
-        // Filter chips
-        if (this.orderFilter === 'scheduled') {
-            orders = orders.filter((o) => o.scheduled_at);
-        } else if (this.orderFilter === 'urgent') {
-            orders = orders.filter((o) => (o.orchestrator_priority ?? 0) >= 75);
-        } else if (this.orderFilter === 'imported') {
-            orders = orders.filter((o) => o.meta?.imported_via_orchestrator);
-        }
-
-        return orders;
+            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
     }
 
     // ── Computed helpers ──────────────────────────────────────────────────────
 
-    get selectedOrderIdsArray() {
-        return [...this.selectedOrderIds];
-    }
-
-    get selectedVehicleIdsArray() {
-        return [...this.selectedVehicleIds];
-    }
-
-    get selectedDriverIdsArray() {
-        return [...this.selectedDriverIds];
-    }
-
-    get expandedRouteCardsArray() {
-        return [...this.expandedRouteCards];
-    }
-
-    get selectedOrders() {
-        return this.unassignedOrders.filter((o) => this.selectedOrderIds.has(o.public_id));
-    }
-
-    get selectedVehicles() {
-        return this.availableVehicles.filter((v) => this.selectedVehicleIds.has(v.public_id));
-    }
-
-    get selectedDrivers() {
-        return this.availableDrivers.filter((d) => this.selectedDriverIds.has(d.public_id));
-    }
+    get selectedOrderIdsArray()   { return [...this.selectedOrderIds]; }
+    get selectedVehicleIdsArray() { return [...this.selectedVehicleIds]; }
+    get selectedDriverIdsArray()  { return [...this.selectedDriverIds]; }
 
     get hasProposedPlan() {
         return Array.isArray(this.proposedPlan) && this.proposedPlan.length > 0;
@@ -705,19 +517,14 @@ export default class OrchestratorWorkbenchComponent extends Component {
         return this.unassignedAfterRun.length > 0;
     }
 
-    /**
-     * Group proposed assignments by vehicle_id.
-     * Returns an array of { vehicle, driver, orders, routeColor, summary, routePolyline }.
-     */
     get planByVehicle() {
         if (!this.proposedPlan?.length) return [];
-
         const grouped = this._groupByVehicle(this.proposedPlan);
         return Object.entries(grouped).map(([vehicleId, group], index) => ({
             ...group,
-            routeColor:   ROUTE_COLORS[index % ROUTE_COLORS.length],
-            summary:      this.routeSummaries[vehicleId] ?? {},
-            routePolyline: null, // populated when geometry is returned by engine
+            routeColor:    ROUTE_COLORS[index % ROUTE_COLORS.length],
+            summary:       this.routeSummaries[vehicleId] ?? {},
+            routePolyline: null,
         }));
     }
 
@@ -728,11 +535,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
             if (!groups[vehicle_id]) {
                 const vehicle = this.availableVehicles.find((v) => v.public_id === vehicle_id);
                 const driver  = vehicle?.driver ?? this.availableDrivers.find((d) => d.public_id === assignment.driver_id);
-                groups[vehicle_id] = {
-                    vehicle,
-                    driver,
-                    orders: [],
-                };
+                groups[vehicle_id] = { vehicle, driver, orders: [] };
             }
             const order = this.unassignedOrders.find((o) => o.public_id === assignment.order_id);
             if (order) {
@@ -744,24 +547,14 @@ export default class OrchestratorWorkbenchComponent extends Component {
                 });
             }
         }
-        // Sort stops by sequence within each group
         for (const g of Object.values(groups)) {
             g.orders.sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
         }
         return groups;
     }
 
-    get modeOptions() {
-        return [
-            { value: 'allocate', label: this.intl.t('orchestrator.mode-allocate') },
-            { value: 'optimize', label: this.intl.t('orchestrator.mode-optimize') },
-        ];
-    }
-
-    priorityStatus(priority) {
-        if (priority >= 75) return 'error';
-        if (priority >= 50) return 'warning';
-        return 'info';
+    get phaseCount() {
+        return this.phases.length;
     }
 
     // ── Formatters ────────────────────────────────────────────────────────────
@@ -775,14 +568,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     formatDistance(metres) {
         if (!metres) return '';
-        return metres >= 1000
-            ? `${(metres / 1000).toFixed(1)} km`
-            : `${metres} m`;
+        return metres >= 1000 ? `${(metres / 1000).toFixed(1)} km` : `${metres} m`;
     }
 
     formatUnixTime(unix) {
         if (!unix) return '';
-        const d = new Date(unix * 1000);
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return new Date(unix * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 }

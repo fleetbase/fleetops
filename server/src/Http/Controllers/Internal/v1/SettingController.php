@@ -292,4 +292,46 @@ class SettingController extends Controller
 
         return response()->json($settings);
     }
+
+    /**
+     * Retrieve orchestrator order card field settings for the current company.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getOrchestratorCardFields()
+    {
+        $defaults = [
+            'standard'  => ['tracking', 'status', 'scheduled_at', 'customer', 'dropoff'],
+            'byConfig'  => (object) [],
+            'meta'      => [],
+        ];
+        $settings = Setting::lookupFromCompany('fleet-ops.orchestrator-card-fields', $defaults);
+
+        return response()->json(['settings' => $settings]);
+    }
+
+    /**
+     * Save orchestrator order card field settings for the current company.
+     *
+     * @param Request $request
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveOrchestratorCardFields(Request $request)
+    {
+        $settings = $request->input('settings', []);
+
+        $normalized = [
+            'standard'  => $settings['standard'] ?? ['tracking', 'status', 'scheduled_at', 'customer', 'dropoff'],
+            'byConfig'  => $settings['byConfig'] ?? [],
+            'meta'      => $settings['meta'] ?? [],
+        ];
+        Setting::configureCompany('fleet-ops.orchestrator-card-fields', $normalized);
+
+        return response()->json([
+            'status'   => 'ok',
+            'message'  => 'Orchestrator card fields saved.',
+            'settings' => $normalized,
+        ]);
+    }
 }
