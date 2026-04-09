@@ -38,9 +38,16 @@ class LiveController extends Controller
                 ->applyDirectivesForPermissions('fleet-ops list order')
                 ->get();
 
-            // Loop through each order to get its current destination location
+            // Loop through each order to get its current destination location.
+            // Filter out null and 0,0 fallback coordinates — these are returned
+            // by getCurrentDestinationLocation() when an order has no dropoff or
+            // waypoint set, and would cause the location service to resolve to
+            // the ocean (0,0 = Gulf of Guinea).
             foreach ($orders as $order) {
-                $coordinates[] = $order->getCurrentDestinationLocation();
+                $location = $order->getCurrentDestinationLocation();
+                if ($location && !($location->getLat() == 0 && $location->getLng() == 0)) {
+                    $coordinates[] = $location;
+                }
             }
 
             return response()->json($coordinates);
