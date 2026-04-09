@@ -2,14 +2,15 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
-use Fleetbase\FleetOps\Allocation\AllocationEngineRegistry;
-use Fleetbase\FleetOps\Allocation\Engines\DriverAssignmentEngine;
+use Fleetbase\FleetOps\Http\Resources\v1\Orchestrator\Order as OrchestratorOrderResource;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Orchestration\Engines\DriverAssignmentEngine;
+use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
 use Illuminate\Http\JsonResponse;
@@ -19,26 +20,62 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * AllocationController.
+ * OrchestrationController.
  *
- * Provides the HTTP interface for the Orchestrator.
+ * HTTP interface for the Orchestrator Workbench.
  *
- * Supported modes:
- *   - assign_vehicles : Assign orders to vehicles (no driver required). Uses VROOM.
- *   - assign_drivers  : Match available drivers to vehicles with planned orders.
- *   - optimize        : Re-sequence stops for already-assigned orders. Uses VROOM.
- *   - allocate        : Legacy single-pass assign orders to driver+vehicle pairs.
+ * Responsibilities:
+ *   - Serving orders for the workbench (with custom field values)
+ *   - Running orchestration phases (assign_vehicles, assign_drivers, optimize, allocate)
+ *   - Committing a proposed plan to Manifests and ManifestStops
+ *   - Listing available orchestration engines
+ *   - Providing order-config custom field definitions for card configuration
+ *   - Importing orders from parsed CSV/Excel data
  */
-class AllocationController extends Controller
+class OrchestrationController extends Controller
 {
-    public function __construct(protected AllocationEngineRegistry $registry)
+    public function __construct(protected OrchestrationEngineRegistry $registry)
     {
     }
 
     /**
-     * Run the allocation engine for the given mode.
+     * Return orders for the Orchestrator Workbench.
      *
-     * POST /int/v1/fleet-ops/allocation/run
+     * This endpoint uses the dedicated OrchestratorOrderResource which includes
+     * custom_field_values — unlike the lightweight Index/Order resource used by
+     * the tabular orders view, which intentionally omits them for performance.
+     *
+     * GET /int/v1/fleet-ops/orchestrator/orders
+     */
+    public function orders(Request $request): JsonResponse
+    {
+        $companyUuid = session('company');
+
+        $query = Order::where('company_uuid', $companyUuid)
+            ->whereIn('status', ['created', 'dispatched', 'started'])
+            ->with([
+                'payload.dropoff',
+                'payload.pickup',
+                'payload.waypoints',
+                'customFieldValues.customField',
+            ]);
+
+        if ($request->boolean('unassigned')) {
+            $query->whereNull('vehicle_assigned_uuid');
+        }
+
+        $limit = min((int) $request->input('limit', 500), 1000);
+        $orders = $query->limit($limit)->get();
+
+        return response()->json([
+            'orders' => OrchestratorOrderResource::collection($orders)->resolve(),
+        ]);
+    }
+
+    /**
+     * Run an orchestration phase for the given mode.
+     *
+     * POST /int/v1/fleet-ops/orchestrator/run
      */
     public function run(Request $request): JsonResponse
     {
@@ -82,7 +119,7 @@ class AllocationController extends Controller
         if ($mode === 'assign_vehicles' || $mode === 'assign_drivers') {
             $vehicles = $vehiclesQuery->get();
         } else {
-            // Legacy allocate mode requires online driver
+            // Legacy allocate mode requires an online driver
             $vehicles = $vehiclesQuery->get()->filter(fn ($v) => $v->driver !== null);
         }
 
@@ -116,22 +153,23 @@ class AllocationController extends Controller
                 $result = $engine->allocate($orders, $vehicles, $options);
             }
         } catch (\RuntimeException $e) {
-            // Allocation engine is unavailable (e.g. VROOM not running).
+            // Engine is unavailable (e.g. VROOM not reachable).
             // Return a structured JSON 503 so the frontend can display a
             // user-friendly message instead of an unhandled exception page.
             return response()->json([
                 'error'  => $e->getMessage(),
-                'hint'   => 'If you are using the VROOM engine, ensure the VROOM service is running and the VROOM_HOST environment variable is set correctly. Alternatively, switch to the built-in "greedy" engine in Orchestrator Settings.',
+                'hint'   => 'If you are using the VROOM engine, ensure the VROOM service is running and VROOM_HOST is configured correctly. Alternatively, switch to the built-in "greedy" engine in Orchestrator Settings.',
                 'engine' => $engineId,
             ], 503);
         }
+
         return response()->json($result);
     }
 
     /**
-     * Preview allocation without committing any assignments.
+     * Preview an orchestration run without committing any assignments.
      *
-     * GET /int/v1/fleet-ops/allocation/preview
+     * GET /int/v1/fleet-ops/orchestrator/preview
      */
     public function preview(Request $request): JsonResponse
     {
@@ -139,12 +177,12 @@ class AllocationController extends Controller
     }
 
     /**
-     * Commit an allocation plan — creates Manifests and ManifestStops.
+     * Commit an orchestration plan — creates Manifests and ManifestStops.
      *
      * Does NOT trigger dispatch or update order status. That is the
      * responsibility of the operational flow (driver actions / dispatcher).
      *
-     * POST /int/v1/fleet-ops/allocation/commit
+     * POST /int/v1/fleet-ops/orchestrator/commit
      */
     public function commit(Request $request): JsonResponse
     {
@@ -270,9 +308,9 @@ class AllocationController extends Controller
     }
 
     /**
-     * Return available allocation engines.
+     * Return available orchestration engines.
      *
-     * GET /int/v1/fleet-ops/allocation/engines
+     * GET /int/v1/fleet-ops/orchestrator/engines
      */
     public function engines(): JsonResponse
     {
@@ -285,7 +323,7 @@ class AllocationController extends Controller
      * Return all active Order Configs with their custom field definitions.
      * Used by the Orchestrator Settings UI for configurable card fields.
      *
-     * GET /int/v1/fleet-ops/allocation/order-config-fields
+     * GET /int/v1/fleet-ops/orchestrator/order-config-fields
      */
     public function orderConfigFields(): JsonResponse
     {
@@ -307,7 +345,6 @@ class AllocationController extends Controller
 
                 $fields = $customFields
                     ->map(fn ($field) => [
-                        // CustomField stores the machine key in 'name', human label in 'label'
                         'key'      => $field->name ?? Str::slug($field->label ?? '', '_'),
                         'label'    => $field->label ?? $field->name ?? '',
                         'type'     => $field->type ?? 'text',
@@ -316,11 +353,11 @@ class AllocationController extends Controller
                     ->values();
 
                 return [
-                    'id'         => $config->public_id,
-                    'uuid'       => $config->uuid,
-                    'name'       => $config->name,
-                    'key'        => $config->key,
-                    'fields'     => $fields,
+                    'id'     => $config->public_id,
+                    'uuid'   => $config->uuid,
+                    'name'   => $config->name,
+                    'key'    => $config->key,
+                    'fields' => $fields,
                 ];
             });
 
@@ -333,7 +370,7 @@ class AllocationController extends Controller
     /**
      * Import orders from parsed CSV/Excel row data.
      *
-     * POST /int/v1/fleet-ops/allocation/import-orders
+     * POST /int/v1/fleet-ops/orchestrator/import-orders
      */
     public function importOrders(Request $request): JsonResponse
     {
@@ -356,9 +393,9 @@ class AllocationController extends Controller
                     'notes'                 => $row['notes'] ?? null,
                     'scheduled_at'          => $row['scheduled_at'] ?? null,
                     'meta'                  => array_filter([
-                        'weight_kg'  => $row['weight_kg'] ?? null,
-                        'volume_m3'  => $row['volume_m3'] ?? null,
-                        'parcels'    => $row['parcels'] ?? null,
+                        'weight_kg' => $row['weight_kg'] ?? null,
+                        'volume_m3' => $row['volume_m3'] ?? null,
+                        'parcels'   => $row['parcels'] ?? null,
                     ]),
                     'time_window_start'     => $row['time_window_start'] ?? null,
                     'time_window_end'       => $row['time_window_end'] ?? null,
@@ -367,6 +404,7 @@ class AllocationController extends Controller
                     '_pickup_address'       => $row['pickup_address'] ?? null,
                     '_dropoff_address'      => $row['dropoff_address'] ?? null,
                 ];
+
                 $order     = Order::create($orderData);
                 $created[] = $order->public_id;
             } catch (\Exception $e) {

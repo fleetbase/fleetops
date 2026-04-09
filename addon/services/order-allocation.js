@@ -7,19 +7,18 @@ import { task } from 'ember-concurrency';
  *
  * Orchestrates the full allocation workflow:
  *   1. Fetch unassigned orders and available vehicles
- *   2. Run the active allocation engine (via the allocation-engine registry)
+ *   2. Run the active orchestration engine (via the orchestration-engine registry)
  *   3. Present the proposed plan to the dispatcher
  *   4. Commit confirmed assignments to the backend
  *
  * This service is injected into the Dispatcher Workbench component and the
- * allocation settings controller.
+ * orchestrator settings controller.
  */
 export default class OrderAllocationService extends Service {
     @service fetch;
     @service store;
     @service notifications;
     @service intl;
-    @service('allocation-engine') engineRegistry;
 
     /** The proposed allocation plan returned by the last run. */
     @tracked currentPlan = null;
@@ -28,15 +27,15 @@ export default class OrderAllocationService extends Service {
     @tracked isRunning = false;
 
     /** The identifier of the currently active engine (from settings). */
-    @tracked activeEngineId = 'vroom';
+    @tracked activeEngineId = 'greedy';
 
     /**
-     * Load allocation settings from the backend.
+     * Load orchestrator settings from the backend.
      */
     @task *loadSettings() {
         try {
-            const settings = yield this.fetch.get('fleet-ops/allocation/settings');
-            this.activeEngineId = settings.allocation_engine ?? 'vroom';
+            const settings = yield this.fetch.get('fleet-ops/settings/orchestrator-settings');
+            this.activeEngineId = settings.orchestrator_engine ?? 'greedy';
             return settings;
         } catch (error) {
             this.notifications.serverError(error);
@@ -44,14 +43,14 @@ export default class OrderAllocationService extends Service {
     }
 
     /**
-     * Save allocation settings to the backend.
+     * Save orchestrator settings to the backend.
      *
      * @param {Object} settings
      */
     @task *saveSettings(settings) {
         try {
-            yield this.fetch.patch('fleet-ops/allocation/settings', settings);
-            this.notifications.success(this.intl.t('allocation.settings-saved'));
+            yield this.fetch.post('fleet-ops/settings/orchestrator-settings', settings);
+            this.notifications.success(this.intl.t('orchestrator.settings-saved'));
         } catch (error) {
             this.notifications.serverError(error);
             throw error;
@@ -59,7 +58,7 @@ export default class OrderAllocationService extends Service {
     }
 
     /**
-     * Run the allocation engine and store the proposed plan.
+     * Run the orchestration engine and store the proposed plan.
      *
      * @param {Array}  orderIds   Optional list of order public_ids to allocate.
      * @param {Array}  vehicleIds Optional list of vehicle public_ids to use.
@@ -68,7 +67,7 @@ export default class OrderAllocationService extends Service {
     @task *run(orderIds = [], vehicleIds = [], options = {}) {
         this.isRunning = true;
         try {
-            const result = yield this.fetch.post('fleet-ops/allocation/run', {
+            const result = yield this.fetch.post('fleet-ops/orchestrator/run', {
                 order_ids:   orderIds,
                 vehicle_ids: vehicleIds,
                 options,
@@ -84,7 +83,7 @@ export default class OrderAllocationService extends Service {
     }
 
     /**
-     * Commit a (possibly modified) allocation plan.
+     * Commit a (possibly modified) orchestration plan.
      * The dispatcher may have adjusted assignments via drag-and-drop before
      * calling commit.
      *
@@ -92,9 +91,9 @@ export default class OrderAllocationService extends Service {
      */
     @task *commit(assignments) {
         try {
-            const result = yield this.fetch.post('fleet-ops/allocation/commit', { assignments });
+            const result = yield this.fetch.post('fleet-ops/orchestrator/commit', { assignments });
             this.notifications.success(
-                this.intl.t('allocation.committed', { count: result.committed?.length ?? 0 })
+                this.intl.t('orchestrator.committed', { count: result.committed?.length ?? 0 })
             );
             this.currentPlan = null;
             return result;
@@ -105,12 +104,12 @@ export default class OrderAllocationService extends Service {
     }
 
     /**
-     * Fetch the list of available allocation engines from the backend.
+     * Fetch the list of available orchestration engines from the backend.
      * Used to cross-validate that the backend and frontend registries are in sync.
      */
     @task *fetchAvailableEngines() {
         try {
-            const response = yield this.fetch.get('fleet-ops/allocation/engines');
+            const response = yield this.fetch.get('fleet-ops/orchestrator/engines');
             return response.engines ?? [];
         } catch (error) {
             return [];

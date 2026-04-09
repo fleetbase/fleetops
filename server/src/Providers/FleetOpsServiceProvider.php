@@ -84,11 +84,11 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->app->register(CoreServiceProvider::class);
         $this->app->register(ReportSchemaServiceProvider::class);
 
-        // Register the AllocationEngineRegistry as a singleton so that engines
+        // Register the OrchestrationEngineRegistry as a singleton so that engines
         // registered from any service provider share the same instance.
         $this->app->singleton(
-            \Fleetbase\FleetOps\Allocation\AllocationEngineRegistry::class,
-            fn () => new \Fleetbase\FleetOps\Allocation\AllocationEngineRegistry()
+            \Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry::class,
+            fn () => new \Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry()
         );
     }
 
@@ -114,17 +114,17 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->registerNotifications();
         $this->registerExpansionsFrom(__DIR__ . '/../Expansions');
 
-        // Register built-in allocation engines.
+        // Register built-in orchestration engines.
         // Third-party engines can register themselves by resolving the
-        // AllocationEngineRegistry singleton from their own service providers.
+        // OrchestrationEngineRegistry singleton from their own service providers.
         $this->app->resolving(
-            \Fleetbase\FleetOps\Allocation\AllocationEngineRegistry::class,
-            function (\Fleetbase\FleetOps\Allocation\AllocationEngineRegistry $registry) {
+            \Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry::class,
+            function (\Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry $registry) {
                 if (!$registry->has('vroom')) {
-                    $registry->register(new \Fleetbase\FleetOps\Allocation\Engines\VroomAllocationEngine());
+                    $registry->register(new \Fleetbase\FleetOps\Orchestration\Engines\VroomOrchestrationEngine());
                 }
                 if (!$registry->has('greedy')) {
-                    $registry->register(new \Fleetbase\FleetOps\Allocation\Engines\GreedyAllocationEngine());
+                    $registry->register(new \Fleetbase\FleetOps\Orchestration\Engines\GreedyOrchestrationEngine());
                 }
             }
         );

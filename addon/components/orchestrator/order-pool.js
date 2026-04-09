@@ -105,66 +105,57 @@ export default class OrchestratorOrderPoolComponent extends Component {
         }
 
         // ── Config-specific custom fields ──────────────────────────────────────
-        // The backend withCustomFields() does two things on internal requests:
-        //   a) Flattens each CFV as a top-level key using Str::snake(Str::lower(label))
-        //   b) Also includes the raw `custom_field_values` collection
+        // The orders query sends with=customFieldValues.customField which causes
+        // the backend to eager-load the customFieldValues hasMany and each CFV's
+        // customField belongsTo. The Index/Order resource serialises this as a
+        // plain `custom_field_values` array, each entry containing:
+        //   { uuid, custom_field_uuid, value, value_type, custom_field: { name, label, ... } }
         //
-        // The card-fields-settings component saves field.name as the fieldKey.
-        // CustomField.name is already the snake_lower version of the label, so
-        // strategy 1 (direct property) covers the vast majority of cases.
+        // The card-fields-settings component stores field.name (the machine key,
+        // e.g. "bl-number") as the fieldKey in byConfig. We match against
+        // custom_field.name first, then custom_field.label as a fallback.
         //
-        // The `order` here is an Ember Data model instance. Ember Data stores
-        // attributes accessed via `.get()` but also exposes them as plain JS
-        // properties on modern versions. We use both access patterns.
+        // The `order` here is an Ember Data model instance. The custom_field_values
+        // hasMany is declared embedded:always in the serializer, so each CFV is
+        // pushed into the store as a custom-field-value record. We access the
+        // collection via order.custom_field_values (Ember Data proxy) or the
+        // raw array if it hasn't been fully hydrated yet.
         const configUuid = order.order_config_uuid;
         if (configUuid && cardFields.byConfig?.[configUuid]) {
             for (const fieldKey of cardFields.byConfig[configUuid]) {
                 let label = fieldKey;
                 let value = null;
 
-                // Strategy 1: flat property pushed by withCustomFields() onto the
-                // serialised order payload (snake_lower of the field label).
-                // Try both plain property access and Ember Data .get().
-                const directVal = order[fieldKey] ?? order.get?.(fieldKey);
-                if (directVal !== undefined && directVal !== null && typeof directVal !== 'object') {
-                    value = String(directVal);
-                }
+                // Scan the custom_field_values collection for a matching field.
+                // Each CFV carries a nested custom_field plain object with name+label.
+                const cfvCollection = order.custom_field_values ?? order.customFieldValues ?? [];
+                const cfvArray = typeof cfvCollection?.toArray === 'function'
+                    ? cfvCollection.toArray()
+                    : (Array.isArray(cfvCollection) ? cfvCollection : []);
 
-                // Strategy 2: scan the custom_field_values HasMany relation.
-                // On internal API requests withCustomFields() includes the full
-                // CustomFieldValue collection. Each CFV has a .value (scalar string)
-                // and its CustomField relation loaded as .custom_field (plain object
-                // in the JSON) or .customField (Ember Data belongsTo proxy).
-                if (value === null) {
-                    const cfvCollection = order.custom_field_values ?? order.customFieldValues ?? [];
-                    const cfvArray = typeof cfvCollection?.toArray === 'function'
-                        ? cfvCollection.toArray()
-                        : (Array.isArray(cfvCollection) ? cfvCollection : []);
+                for (const cfv of cfvArray) {
+                    // custom_field may be a plain object (from the serialised JSON)
+                    // or an Ember Data model proxy (if the relation was fully loaded).
+                    const cf = cfv.custom_field
+                        ?? (typeof cfv.customField?.get === 'function' ? cfv.customField : null)
+                        ?? cfv.customField
+                        ?? null;
 
-                    for (const cfv of cfvArray) {
-                        // Resolve the parent CustomField — may be a plain object
-                        // (from JSON) or an Ember Data model proxy.
-                        const cf = cfv.custom_field
-                            ?? (typeof cfv.customField?.get === 'function' ? cfv.customField : null)
-                            ?? cfv.customField
-                            ?? null;
+                    const cfName  = cf?.name  ?? cf?.get?.('name')  ?? '';
+                    const cfLabel = cf?.label ?? cf?.get?.('label') ?? '';
 
-                        const cfName  = cf?.name  ?? cf?.get?.('name')  ?? '';
-                        const cfLabel = cf?.label ?? cf?.get?.('label') ?? '';
-
-                        if (cfName !== fieldKey && cfLabel !== fieldKey) {
-                            continue;
-                        }
-
-                        // .value on a CFV is a scalar string (CustomValue cast
-                        // returns the raw string for non-object value_types).
-                        const rawVal = cfv.value ?? cfv.string_value ?? null;
-                        if (rawVal !== null && rawVal !== undefined) {
-                            label = cfLabel || cfName || fieldKey;
-                            value = typeof rawVal === 'object' ? JSON.stringify(rawVal) : String(rawVal);
-                        }
-                        break;
+                    // Match on machine key (name) first, then human label.
+                    if (cfName !== fieldKey && cfLabel !== fieldKey) {
+                        continue;
                     }
+
+                    const rawVal = cfv.value ?? null;
+                    if (rawVal !== null && rawVal !== undefined) {
+                        // Use the human label for display if available.
+                        label = cfLabel || cfName || fieldKey;
+                        value = typeof rawVal === 'object' ? JSON.stringify(rawVal) : String(rawVal);
+                    }
+                    break;
                 }
 
                 if (value !== null && value !== '') {

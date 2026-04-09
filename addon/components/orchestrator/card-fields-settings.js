@@ -61,7 +61,7 @@ export default class OrchestratorCardFieldsSettingsComponent extends Component {
     @task *loadData() {
         try {
             const [configsResult, settingsResult] = yield Promise.all([
-                this.fetch.get('fleet-ops/allocation/order-config-fields'),
+                this.fetch.get('fleet-ops/orchestrator/order-config-fields'),
                 this.fetch.get('fleet-ops/settings/orchestrator-card-fields').catch(() => null),
             ]);
 
