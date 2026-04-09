@@ -35,7 +35,7 @@
             <div class="flex justify-center py-8"><Spinner /></div>
         {{else if this.filteredOrders.length}}
             {{#each this.filteredOrders as |order|}}
-                {{! ── Order Pool Card — matches original order-pool-card style ── }}
+                {{! ── Order Pool Card ── }}
                 <div
                     class="order-pool-card mx-2 my-1 rounded border overflow-hidden cursor-grab select-none dark:border-gray-600
                         {{if (includes order.public_id this.selectedOrderIdsArray) 'ring-2 ring-indigo-500 border-indigo-400 dark:border-indigo-500' ''}}"
@@ -44,7 +44,7 @@
                     {{on "dragstart" (fn @onDragStart order)}}
                     {{on "click" (fn @onToggleSelection order)}}
                 >
-                    {{! Header: tracking number + status badge }}
+                    {{! Header: checkbox + tracking number + priority/status badges }}
                     <div class="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                         <input
                             type="checkbox"
@@ -58,70 +58,31 @@
                         </span>
                         <div class="flex-shrink-0 flex items-center gap-1">
                             {{#if order.orchestrator_priority}}
-                                <Badge @status={{this.priorityBadgeStatus}}>{{smart-humanize order.orchestrator_priority}}</Badge>
+                                <Badge @status={{this.priorityBadgeStatus order.orchestrator_priority}}>P{{order.orchestrator_priority}}</Badge>
                             {{/if}}
                             <Badge @status={{order.status}} />
                         </div>
                     </div>
-                    {{! Card body: standard fields in original dl grid style }}
+
+                    {{! Card body — all fields driven by resolvedCardFields.
+                         When no card-field settings are saved the JS returns the
+                         default set: pickup, dropoff, scheduled, customer,
+                         driver-assigned, vehicle-assigned, created.
+                         This eliminates the previous duplicate-field bug where
+                         fields were rendered both here AND via the old hardcoded
+                         block. }}
                     <div class="bg-white dark:bg-gray-900 px-2 py-1.5">
                         <dl class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
-                            {{! Pickup — only when present }}
-                            {{#if order.payload.pickup.address}}
-                                <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                    <FaIcon @icon="location-crosshairs" @size="xs" class="w-3 text-center text-green-400" />
-                                    {{t "orchestrator.pickup"}}
-                                </dt>
-                                <dd class="truncate text-right text-gray-700 dark:text-gray-300 text-xs">{{order.payload.pickup.address}}</dd>
-                            {{/if}}
-                            {{! Dropoff }}
-                            {{#if order.payload.dropoff.address}}
-                                <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                    <FaIcon @icon="location-dot" @size="xs" class="w-3 text-center text-red-400" />
-                                    {{t "orchestrator.dropoff"}}
-                                </dt>
-                                <dd class="truncate text-right text-gray-700 dark:text-gray-300 text-xs">{{order.payload.dropoff.address}}</dd>
-                            {{/if}}
-                            {{! Scheduled date }}
-                            {{#if order.scheduled_at}}
-                                <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                    <FaIcon @icon="clock" @size="xs" class="w-3 text-center" />
-                                    {{t "orchestrator.scheduled"}}
-                                </dt>
-                                <dd class="truncate text-right text-blue-500 dark:text-blue-400 text-xs">{{format-date order.scheduled_at "MMM d, HH:mm"}}</dd>
-                            {{/if}}
-                            {{! Customer }}
-                            {{#if order.customer.name}}
-                                <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                    <FaIcon @icon="user" @size="xs" class="w-3 text-center" />
-                                    {{t "orchestrator.customer"}}
-                                </dt>
-                                <dd class="truncate text-right text-gray-700 dark:text-gray-300 text-xs">{{order.customer.name}}</dd>
-                            {{/if}}
-                            {{! Driver assigned }}
-                            <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                <FaIcon @icon="id-badge" @size="xs" class="w-3 text-center" />
-                                {{t "orchestrator.driver-assigned"}}
-                            </dt>
-                            <dd class="truncate text-right text-gray-700 dark:text-gray-300 text-xs">{{or order.driver_assigned.name "-"}}</dd>
-                            {{! Vehicle assigned }}
-                            <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                <FaIcon @icon="truck" @size="xs" class="w-3 text-center" />
-                                {{t "orchestrator.vehicle-assigned"}}
-                            </dt>
-                            <dd class="truncate text-right text-gray-700 dark:text-gray-300 text-xs">{{or order.vehicle_assigned.display_name "-"}}</dd>
-                            {{! Created date }}
-                            <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                <FaIcon @icon="calendar-plus" @size="xs" class="w-3 text-center" />
-                                {{t "orchestrator.created"}}
-                            </dt>
-                            <dd class="truncate text-right text-gray-500 dark:text-gray-400 text-xs">
-                                {{#if order.created_at}}{{format-date order.created_at "MMM d, HH:mm"}}{{else}}-{{/if}}
-                            </dd>
-                            {{! Configured custom/meta fields for this order's config — uses getter, not method call }}
                             {{#each (this.resolvedCardFields order) as |field|}}
-                                <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap truncate">{{field.label}}</dt>
-                                <dd class="truncate text-right text-gray-700 dark:text-gray-300 text-xs">{{field.value}}</dd>
+                                <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                    {{#if field.icon}}
+                                        <FaIcon @icon={{field.icon}} @size="xs" class="w-3 text-center {{if field.iconClass field.iconClass ''}}" />
+                                    {{/if}}
+                                    {{field.label}}
+                                </dt>
+                                <dd class="truncate text-right text-xs {{if field.highlight field.highlight 'text-gray-700 dark:text-gray-300'}}">
+                                    {{or field.value "-"}}
+                                </dd>
                             {{/each}}
                         </dl>
                         {{! Skills tags }}
@@ -157,4 +118,5 @@
             </div>
         {{/if}}
     </div>
+
 </div>

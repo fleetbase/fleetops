@@ -280,14 +280,15 @@ class AllocationController extends Controller
 
         $configs = OrderConfig::where('company_uuid', $companyUuid)
             ->where('status', 'active')
-            ->get(['uuid', 'public_id', 'name', 'key', 'custom_fields'])
+            ->with('customFields')
+            ->get(['uuid', 'public_id', 'name', 'key'])
             ->map(function ($config) {
-                $fields = collect($config->custom_fields ?? [])
+                $fields = collect($config->customFields ?? [])
                     ->map(fn ($field) => [
-                        'key'      => $field['key'] ?? Str::slug($field['label'] ?? '', '_'),
-                        'label'    => $field['label'] ?? $field['key'] ?? '',
-                        'type'     => $field['type'] ?? 'text',
-                        'required' => $field['required'] ?? false,
+                        'key'      => $field->key ?? Str::slug($field->label ?? '', '_'),
+                        'label'    => $field->label ?? $field->key ?? '',
+                        'type'     => $field->type ?? 'text',
+                        'required' => (bool) ($field->required ?? false),
                     ])
                     ->values();
 

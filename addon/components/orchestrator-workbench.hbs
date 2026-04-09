@@ -120,34 +120,32 @@
                     @zoom={{this.mapZoom}}
                     @onLoad={{this.onMapLoad}}
                     class="w-full h-full"
-                >
-                    <:layers as |layers|>
-                        <layers.tile @url={{this.tileSourceUrl}} />
+                as |layers|>
+                    <layers.tile @url={{this.tileSourceUrl}} />
 
-                        {{! Order markers }}
-                        {{#each this.unassignedOrders as |order|}}
-                            {{#if order.payload.dropoff.location}}
-                                <layers.marker
-                                    @lat={{order.payload.dropoff.location.coordinates.[1]}}
-                                    @lng={{order.payload.dropoff.location.coordinates.[0]}}
+                    {{! Order markers }}
+                    {{#each this.unassignedOrders as |order|}}
+                        {{#if order.payload.dropoff.location}}
+                            <layers.marker
+                                @lat={{order.payload.dropoff.location.coordinates.[1]}}
+                                @lng={{order.payload.dropoff.location.coordinates.[0]}}
+                            />
+                        {{/if}}
+                    {{/each}}
+
+                    {{! Planned route polylines }}
+                    {{#if this.hasProposedPlan}}
+                        {{#each this.planByVehicle as |group|}}
+                            {{#if group.routePolyline}}
+                                <layers.polyline
+                                    @positions={{group.routePolyline}}
+                                    @color={{group.routeColor}}
+                                    @weight={{3}}
+                                    @opacity={{0.8}}
                                 />
                             {{/if}}
                         {{/each}}
-
-                        {{! Planned route polylines }}
-                        {{#if this.hasProposedPlan}}
-                            {{#each this.planByVehicle as |group|}}
-                                {{#if group.routePolyline}}
-                                    <layers.polyline
-                                        @positions={{group.routePolyline}}
-                                        @color={{group.routeColor}}
-                                        @weight={{3}}
-                                        @opacity={{0.8}}
-                                    />
-                                {{/if}}
-                            {{/each}}
-                        {{/if}}
-                    </:layers>
+                    {{/if}}
                 </LeafletMap>
             </div>
 

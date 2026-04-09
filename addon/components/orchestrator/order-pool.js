@@ -19,6 +19,38 @@ import { inject as service } from '@ember/service';
  * @arg onDragStart         - Action(order, event) — drag start handler
  * @arg onOpenImport        - Action — open import modal
  */
+
+/**
+ * Default standard fields shown when no card-field settings have been saved.
+ * Each entry includes icon and highlight metadata so the HBS can render them
+ * with the same visual treatment as the original hardcoded block.
+ */
+const DEFAULT_FIELDS = [
+    { key: 'pickup',           icon: 'location-crosshairs', iconClass: 'text-green-400' },
+    { key: 'dropoff',          icon: 'location-dot',        iconClass: 'text-red-400' },
+    { key: 'scheduled_at',     icon: 'clock',               highlight: 'text-blue-500 dark:text-blue-400' },
+    { key: 'customer',         icon: 'user' },
+    { key: 'driver_assigned',  icon: 'id-badge' },
+    { key: 'vehicle_assigned', icon: 'truck' },
+    { key: 'created_at',       icon: 'calendar-plus',       highlight: 'text-gray-500 dark:text-gray-400' },
+];
+
+/** Icon/highlight metadata for known standard field keys. */
+const FIELD_META = {
+    tracking:          { icon: 'hashtag' },
+    status:            { icon: 'circle-dot' },
+    scheduled_at:      { icon: 'clock',               highlight: 'text-blue-500 dark:text-blue-400' },
+    customer:          { icon: 'user' },
+    type:              { icon: 'tag' },
+    notes:             { icon: 'note-sticky' },
+    priority:          { icon: 'flag' },
+    dropoff:           { icon: 'location-dot',         iconClass: 'text-red-400' },
+    pickup:            { icon: 'location-crosshairs',  iconClass: 'text-green-400' },
+    driver_assigned:   { icon: 'id-badge' },
+    vehicle_assigned:  { icon: 'truck' },
+    created_at:        { icon: 'calendar-plus',        highlight: 'text-gray-500 dark:text-gray-400' },
+};
+
 export default class OrchestratorOrderPoolComponent extends Component {
     @service intl;
 
@@ -39,20 +71,40 @@ export default class OrchestratorOrderPoolComponent extends Component {
 
     /**
      * resolvedCardFields — decorated as @action so Glimmer allows it to be
-     * invoked with arguments from HBS: {{#each (this.resolvedCardFields order) as |field|}}
+     * invoked with arguments from HBS:
+     *   {{#each (this.resolvedCardFields order) as |field|}}
+     *
+     * Returns an array of { label, value, icon?, iconClass?, highlight? }.
+     *
+     * When no cardFields settings have been saved (@arg cardFields is null/undefined)
+     * it falls back to DEFAULT_FIELDS so the card always shows a useful set of
+     * information without requiring the dispatcher to configure anything first.
      */
     @action resolvedCardFields(order) {
         const cardFields = this.args.cardFields;
-        if (!cardFields) return [];
-        const fields = [];
 
-        // Standard fields
-        for (const key of cardFields.standard ?? []) {
-            const value = this._resolveStandardField(order, key);
-            if (value) fields.push({ label: key, value });
+        // ── Default fallback (no settings saved yet) ──────────────────────────
+        if (!cardFields) {
+            return DEFAULT_FIELDS
+                .map(({ key, icon, iconClass, highlight }) => {
+                    const { value, label } = this._resolveStandardFieldFull(order, key);
+                    if (!value) return null;
+                    return { label, value, icon, iconClass, highlight };
+                })
+                .filter(Boolean);
         }
 
-        // Config-specific custom fields
+        const fields = [];
+
+        // ── Standard fields (from settings) ───────────────────────────────────
+        for (const key of cardFields.standard ?? []) {
+            const { value, label } = this._resolveStandardFieldFull(order, key);
+            if (!value) continue;
+            const meta = FIELD_META[key] ?? {};
+            fields.push({ label, value, ...meta });
+        }
+
+        // ── Config-specific custom fields ──────────────────────────────────────
         const configUuid = order.order_config_uuid;
         if (configUuid && cardFields.byConfig?.[configUuid]) {
             for (const fieldKey of cardFields.byConfig[configUuid]) {
@@ -63,7 +115,7 @@ export default class OrchestratorOrderPoolComponent extends Component {
             }
         }
 
-        // Meta fields
+        // ── Meta fields ────────────────────────────────────────────────────────
         for (const key of cardFields.meta ?? []) {
             const val = order.meta?.[key];
             if (val !== undefined && val !== null) {
@@ -112,18 +164,37 @@ export default class OrchestratorOrderPoolComponent extends Component {
         return [...(this.args.selectedOrderIds ?? new Set())];
     }
 
-    _resolveStandardField(order, key) {
-        const map = {
-            tracking: order.tracking ?? order.public_id,
-            status: order.status,
-            scheduled_at: order.scheduledAt,
-            customer: order.customer?.name,
-            type: order.type,
-            notes: order.notes,
-            priority: order.orchestrator_priority,
-            dropoff: order.payload?.dropoff?.address ?? order.dropoff_name,
-            pickup: order.payload?.pickup?.address ?? order.pickup_name,
+    /**
+     * Returns { label, value } for a standard field key.
+     * Labels are human-readable strings (not raw keys).
+     */
+    _resolveStandardFieldFull(order, key) {
+        const t = (k) => {
+            try { return this.intl.t(`orchestrator.${k}`); } catch { return k; }
         };
-        return map[key] ?? order[key] ?? '';
+        const map = {
+            tracking:          { label: t('field-tracking'),          value: order.tracking ?? order.public_id },
+            status:            { label: t('field-status'),            value: order.status },
+            scheduled_at:      { label: t('scheduled'),               value: order.scheduled_at ? this._formatDate(order.scheduled_at) : null },
+            customer:          { label: t('customer'),                value: order.customer?.name },
+            type:              { label: t('field-type'),              value: order.type },
+            notes:             { label: t('field-notes'),             value: order.notes },
+            priority:          { label: t('field-priority'),          value: order.orchestrator_priority != null ? String(order.orchestrator_priority) : null },
+            dropoff:           { label: t('dropoff'),                 value: order.payload?.dropoff?.address ?? order.dropoff_name },
+            pickup:            { label: t('pickup'),                  value: order.payload?.pickup?.address ?? order.pickup_name },
+            driver_assigned:   { label: t('driver-assigned'),        value: order.driver_assigned?.name },
+            vehicle_assigned:  { label: t('vehicle-assigned'),       value: order.vehicle_assigned?.display_name ?? order.vehicle_assigned?.name },
+            created_at:        { label: t('created'),                 value: order.created_at ? this._formatDate(order.created_at) : null },
+        };
+        return map[key] ?? { label: key, value: order[key] != null ? String(order[key]) : null };
+    }
+
+    _formatDate(date) {
+        if (!date) return null;
+        try {
+            return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(date));
+        } catch {
+            return String(date);
+        }
     }
 }
