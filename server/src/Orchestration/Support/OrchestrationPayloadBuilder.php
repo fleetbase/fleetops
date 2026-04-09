@@ -30,10 +30,7 @@ class OrchestrationPayloadBuilder
      * a TypeError at runtime. This wrapper catches that and any other meta
      * read failure so a single bad vehicle row does not abort the whole run.
      *
-     * @param  \Illuminate\Database\Eloquent\Model  $model
-     * @param  string  $key
-     * @param  mixed   $default
-     * @return mixed
+     * @param \Illuminate\Database\Eloquent\Model $model
      */
     protected static function safeMeta($model, string $key, $default = null)
     {

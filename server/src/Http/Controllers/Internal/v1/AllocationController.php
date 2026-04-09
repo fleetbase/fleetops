@@ -125,6 +125,7 @@ class AllocationController extends Controller
                 'engine' => $engineId,
             ], 503);
         }
+
         return response()->json($result);
     }
 

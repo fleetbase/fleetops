@@ -131,18 +131,11 @@ class VroomAllocationEngine implements AllocationEngineInterface
             $response = Http::timeout($timeout)->post($solveUrl, $vroomPayload);
         } catch (\Exception $e) {
             Log::error('[VroomAllocationEngine] HTTP request failed: ' . $e->getMessage());
-            throw new \RuntimeException(
-                'VROOM allocation engine is unavailable: ' . $e->getMessage() .
-                ' — ensure VROOM_HOST is reachable or switch to the built-in greedy engine.',
-                0,
-                $e
-            );
+            throw new \RuntimeException('VROOM allocation engine is unavailable: ' . $e->getMessage() . ' — ensure VROOM_HOST is reachable or switch to the built-in greedy engine.', 0, $e);
         }
 
         if (!$response->successful()) {
-            throw new \RuntimeException(
-                'VROOM returned an error: HTTP ' . $response->status() . ' — ' . $response->body()
-            );
+            throw new \RuntimeException('VROOM returned an error: HTTP ' . $response->status() . ' — ' . $response->body());
         }
 
         $result = $response->json();

@@ -52,19 +52,54 @@ class OrchestrationController extends Controller
         $companyUuid = session('company');
 
         $query = Order::where('company_uuid', $companyUuid)
-            ->whereIn('status', ['created', 'dispatched', 'started'])
-            ->with([
-                'payload.dropoff',
-                'payload.pickup',
-                'payload.waypoints',
-                'customFieldValues.customField',
-            ]);
+            ->whereIn('status', ['created', 'dispatched', 'started']);
+
+        $query - whereHas('payload', function ($payloadQuery) {
+            $payloadQuery->where(function ($q) {
+                $q->whereHas('waypoints', function ($w) {
+                    $w->whereNotNull('waypoints.uuid');
+                });
+                $q->orWhereHas('pickup', function ($p) {
+                    $p->whereNotNull('places.uuid');
+                });
+                $q->orWhereHas('dropoff', function ($d) {
+                    $d->whereNotNull('places.uuid');
+                });
+            });
+        });
+
+        $query->whereHas('trackingNumber', function ($q) {
+            $q->select('uuid');
+        });
+
+        $query->whereHas('trackingStatuses', function ($q) {
+            $q->select('uuid');
+        });
 
         if ($request->boolean('unassigned')) {
             $query->whereNull('vehicle_assigned_uuid');
         }
 
-        $limit = min((int) $request->input('limit', 500), 1000);
+        $query->with([
+            'payload.entities',
+            'payload.waypoints',
+            'payload.pickup',
+            'payload.dropoff',
+            'payload.return',
+            'trackingNumber',
+            'trackingStatuses',
+            'driverAssigned' => function ($query) {
+                $query->without(['jobs', 'currentJob']);
+            },
+            'vehicleAssigned' => function ($query) {
+                $query->without(['fleets', 'vendor']);
+            },
+            'customer',
+            'facilitator',
+            'customFieldValues.customField',
+        ]);
+
+        $limit  = min((int) $request->input('limit', 500), 1000);
         $orders = $query->limit($limit)->get();
 
         return response()->json([

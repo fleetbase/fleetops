@@ -50,10 +50,7 @@ class OrchestrationEngineRegistry
     public function resolve(string $identifier): OrchestrationEngineInterface
     {
         if (!isset($this->engines[$identifier])) {
-            throw new \RuntimeException(
-                "No orchestration engine registered with identifier '{$identifier}'. " .
-                'Available engines: ' . implode(', ', array_keys($this->engines))
-            );
+            throw new \RuntimeException("No orchestration engine registered with identifier '{$identifier}'. " . 'Available engines: ' . implode(', ', array_keys($this->engines)));
         }
 
         return $this->engines[$identifier];

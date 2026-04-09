@@ -3,8 +3,8 @@
 namespace Fleetbase\FleetOps\Http\Resources\v1\Orchestrator;
 
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Driver;
-use Fleetbase\FleetOps\Http\Resources\v1\Index\Vehicle;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Payload;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Vehicle;
 use Fleetbase\Http\Resources\FleetbaseResource;
 
 /**
