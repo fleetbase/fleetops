@@ -9,6 +9,8 @@ use Fleetbase\FleetOps\Integrations\ParcelPath\ParcelPath;
 use Fleetbase\FleetOps\Integrations\ParcelPath\ParcelPathServiceType;
 use Fleetbase\FleetOps\Integrations\UPS\UPS;
 use Fleetbase\FleetOps\Integrations\UPS\UPSServiceType;
+use Fleetbase\FleetOps\Integrations\USPS\USPS;
+use Fleetbase\FleetOps\Integrations\USPS\USPSServiceType;
 use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Illuminate\Support\Str;
 
@@ -306,6 +308,39 @@ class IntegratedVendors
                 'clientSecret'  => 'credentials.client_secret',
                 'accountNumber' => 'credentials.account_number',
                 'sandbox'       => 'sandbox',
+            ],
+            'callbacks' => [],
+        ],
+        [
+            'name'             => 'USPS',
+            'code'             => 'usps',
+            'host'             => 'https://api.usps.com/',
+            'sandbox'          => 'https://apis-tem.usps.com/',
+            'namespace'        => 'v3',
+            'bridge'           => USPS::class,
+            'svc_bridge'       => USPSServiceType::class,
+            'iso2cc_bridge'    => null,
+            'credentialParams' => [
+                ['key' => 'client_id'],
+                ['key' => 'client_secret'],
+                // USPS v3 rates and labels are zip-code and credential
+                // scoped — there is no shipper account number, unlike UPS.
+            ],
+            'optionParams' => [
+                // NOTE: no label_format option. USPS v3 is PDF-only;
+                // the normalizer in USPS::normalizeLabelResponse enforces
+                // application/pdf regardless of what the response reports.
+                ['key' => 'markup_type', 'options' => [
+                    ['value' => 'flat',    'label' => 'Flat (cents)'],
+                    ['value' => 'percent', 'label' => 'Percentage'],
+                ], 'optionValue' => 'value', 'optionLabel' => 'label'],
+                ['key' => 'markup_amount'],
+                ['key' => 'client_label'],
+            ],
+            'bridgeParams' => [
+                'clientId'     => 'credentials.client_id',
+                'clientSecret' => 'credentials.client_secret',
+                'sandbox'      => 'sandbox',
             ],
             'callbacks' => [],
         ],
