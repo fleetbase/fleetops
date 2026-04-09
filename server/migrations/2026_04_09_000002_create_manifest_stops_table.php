@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * Each stop represents a single physical location the driver must visit,
  * with its VROOM-optimised sequence, ETA, and progress status.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('manifest_stops', function (Blueprint $table) {

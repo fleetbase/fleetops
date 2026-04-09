@@ -5,7 +5,7 @@ namespace Fleetbase\FleetOps\Allocation\Contracts;
 use Illuminate\Support\Collection;
 
 /**
- * AllocationEngineInterface
+ * AllocationEngineInterface.
  *
  * Defines the single contract that every allocation/optimization engine must
  * implement. The interface is intentionally minimal — engines receive a
@@ -26,8 +26,8 @@ interface AllocationEngineInterface
     /**
      * Run the allocation/optimization algorithm.
      *
-     * @param Collection $orders   Collection of Order models to allocate.
-     * @param Collection $vehicles Collection of Vehicle models (with loaded driver).
+     * @param Collection $orders   collection of Order models to allocate
+     * @param Collection $vehicles collection of Vehicle models (with loaded driver)
      * @param array      $options  Engine-specific options (e.g. max_travel_time,
      *                             balance_workload, geometry). Keys are defined
      *                             per-engine; unknown keys MUST be silently ignored.
@@ -49,7 +49,7 @@ interface AllocationEngineInterface
      * Return the human-readable display name for this engine.
      * Used in the settings UI dropdown.
      *
-     * @return string  e.g. "VROOM", "Google OR-Tools", "Custom Solver"
+     * @return string e.g. "VROOM", "Google OR-Tools", "Custom Solver"
      */
     public function getName(): string;
 
@@ -57,7 +57,7 @@ interface AllocationEngineInterface
      * Return the machine-readable identifier for this engine.
      * Must be unique across all registered engines.
      *
-     * @return string  e.g. "vroom", "or-tools", "custom"
+     * @return string e.g. "vroom", "or-tools", "custom"
      */
     public function getIdentifier(): string;
 }

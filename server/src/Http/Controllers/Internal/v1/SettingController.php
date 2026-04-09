@@ -234,8 +234,6 @@ class SettingController extends Controller
     /**
      * Save driver scheduling settings for the current company.
      *
-     * @param Request $request
-     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function saveSchedulingSettings(Request $request)
@@ -275,8 +273,6 @@ class SettingController extends Controller
     /**
      * Save order allocation settings for the current company.
      *
-     * @param Request $request
-     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function saveOrchestratorSettings(Request $request)
@@ -312,8 +308,6 @@ class SettingController extends Controller
 
     /**
      * Save orchestrator order card field settings for the current company.
-     *
-     * @param Request $request
      *
      * @return \Illuminate\Http\JsonResponse
      */

@@ -8,7 +8,7 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Illuminate\Support\Collection;
 
 /**
- * AllocationPayloadBuilder
+ * AllocationPayloadBuilder.
  *
  * Transforms FleetOps Order and Vehicle/Driver records into a normalized
  * intermediate representation that engine adapters can consume. This class
@@ -35,9 +35,6 @@ class AllocationPayloadBuilder
      *   - amount:        multi-dimensional capacity demand [weight_kg, volume_m3, pallets, parcels]
      *   - priority:      orchestrator_priority (0–100, higher = more important)
      *   - description:   human-readable label for debugging
-     *
-     * @param  Collection $orders
-     * @return array
      */
     public static function buildJobs(Collection $orders): array
     {
@@ -88,8 +85,8 @@ class AllocationPayloadBuilder
                     $order->time_window_end->timestamp,
                 ]];
             } elseif ($order->scheduled_at) {
-                $start = $order->scheduled_at->timestamp;
-                $end   = $order->scheduled_at->copy()->addHours(4)->timestamp;
+                $start               = $order->scheduled_at->timestamp;
+                $end                 = $order->scheduled_at->copy()->addHours(4)->timestamp;
                 $job['time_windows'] = [[$start, $end]];
             }
 
@@ -117,9 +114,6 @@ class AllocationPayloadBuilder
      *
      * Uses vehicle.location as the start position. Skills and capacity are
      * read from the vehicle only. Used by the 'assign_vehicles' mode.
-     *
-     * @param  Collection $vehicles
-     * @return array
      */
     public static function buildVehiclesOnly(Collection $vehicles): array
     {
@@ -154,6 +148,7 @@ class AllocationPayloadBuilder
             if (!empty($skills)) {
                 $entry['skills'] = $skills;
             }
+
             return $entry;
         })->filter()->values()->toArray();
     }
@@ -240,8 +235,9 @@ class AllocationPayloadBuilder
      * "cold_chain", "hazmat", "fragile". These are hashed to stable positive integers.
      * Custom fields that are boolean-true are also included for backwards compatibility.
      *
-     * @param  array $skills       String skill identifiers from the skills JSON column
-     * @param  array $customFields Custom fields array from HasCustomFields trait
+     * @param array $skills       String skill identifiers from the skills JSON column
+     * @param array $customFields Custom fields array from HasCustomFields trait
+     *
      * @return array<int>
      */
     public static function resolveSkills(array $skills, array $customFields = []): array
@@ -266,7 +262,7 @@ class AllocationPayloadBuilder
     }
 
     /**
-     * @deprecated Use resolveSkills() instead.
+     * @deprecated use resolveSkills() instead
      */
     protected static function extractSkillsFromCustomFields(array $customFields): array
     {

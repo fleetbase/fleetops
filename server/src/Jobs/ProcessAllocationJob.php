@@ -15,7 +15,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
 /**
- * ProcessAllocationJob
+ * ProcessAllocationJob.
  *
  * Dispatched asynchronously when auto-allocation is triggered (e.g. on order
  * creation or on delivery completion when auto_reallocate_on_complete is
@@ -30,7 +30,10 @@ use Illuminate\Support\Facades\Log;
  */
 class ProcessAllocationJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     /**
      * Maximum number of retry attempts before the job is marked as failed.
@@ -38,14 +41,15 @@ class ProcessAllocationJob implements ShouldQueue
     public int $tries = 3;
 
     /**
-     * @param string $companyUuid  The company to run allocation for.
-     * @param array  $orderIds     Optional list of order public_ids to allocate.
-     *                             If empty, all unassigned orders are used.
+     * @param string $companyUuid the company to run allocation for
+     * @param array  $orderIds    Optional list of order public_ids to allocate.
+     *                            If empty, all unassigned orders are used.
      */
     public function __construct(
         protected string $companyUuid,
-        protected array $orderIds = []
-    ) {}
+        protected array $orderIds = [],
+    ) {
+    }
 
     public function handle(AllocationEngineRegistry $registry): void
     {
@@ -62,6 +66,7 @@ class ProcessAllocationJob implements ShouldQueue
 
         if ($orders->isEmpty()) {
             Log::info("[ProcessAllocationJob] No unassigned orders for company {$this->companyUuid}.");
+
             return;
         }
 
@@ -72,6 +77,7 @@ class ProcessAllocationJob implements ShouldQueue
 
         if ($vehicles->isEmpty()) {
             Log::info("[ProcessAllocationJob] No available vehicles for company {$this->companyUuid}.");
+
             return;
         }
 
@@ -79,7 +85,7 @@ class ProcessAllocationJob implements ShouldQueue
         $engine   = $registry->resolve($engineId);
 
         $result = $engine->allocate($orders, $vehicles, [
-            'max_travel_time' => Setting::lookup('fleetops.allocation_max_travel_time', 3600),
+            'max_travel_time'  => Setting::lookup('fleetops.allocation_max_travel_time', 3600),
             'balance_workload' => Setting::lookup('fleetops.allocation_balance_workload', false),
         ]);
 

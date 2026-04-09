@@ -8,7 +8,7 @@ use Fleetbase\Models\Setting;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
 /**
- * HandleDeliveryCompletion
+ * HandleDeliveryCompletion.
  *
  * Listens for the OrderCompleted event and dispatches a new allocation run
  * when the 'auto_reallocate_on_complete' setting is enabled.

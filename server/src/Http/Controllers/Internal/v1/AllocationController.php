@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * AllocationController
+ * AllocationController.
  *
  * Provides the HTTP interface for the Orchestrator.
  *
@@ -246,6 +246,7 @@ class AllocationController extends Controller
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json(['error' => 'Commit failed: ' . $e->getMessage()], 500);
         }
 
@@ -279,7 +280,6 @@ class AllocationController extends Controller
         $companyUuid = session('company');
 
         $configs = OrderConfig::where('company_uuid', $companyUuid)
-            ->where('status', 'active')
             ->with('customFields')
             ->get(['uuid', 'public_id', 'name', 'key'])
             ->map(function ($config) {

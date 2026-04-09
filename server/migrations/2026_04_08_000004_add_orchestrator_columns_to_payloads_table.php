@@ -16,8 +16,7 @@ use Illuminate\Support\Facades\Schema;
  * These columns allow the Orchestrator to quickly compare payload requirements
  * against vehicle capacity without re-aggregating entity dimensions on every run.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('payloads', function (Blueprint $table) {

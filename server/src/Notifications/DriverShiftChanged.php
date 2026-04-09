@@ -2,13 +2,12 @@
 
 namespace Fleetbase\FleetOps\Notifications;
 
-use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\Models\ScheduleItem;
 use Fleetbase\Support\Utils;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Fleetbase\Models\ScheduleItem;
 
 class DriverShiftChanged extends Notification implements ShouldQueue
 {
@@ -16,15 +15,11 @@ class DriverShiftChanged extends Notification implements ShouldQueue
 
     /**
      * The schedule item that was created or updated.
-     *
-     * @var ScheduleItem
      */
     public ScheduleItem $scheduleItem;
 
     /**
      * Whether this is a new shift (created) or an update to an existing one.
-     *
-     * @var bool
      */
     public bool $isNew;
 
@@ -62,7 +57,7 @@ class DriverShiftChanged extends Notification implements ShouldQueue
         $this->isNew        = $isNew;
 
         $start = $scheduleItem->start_at ? $scheduleItem->start_at->format('D, M j g:ia') : '—';
-        $end   = $scheduleItem->end_at   ? $scheduleItem->end_at->format('g:ia')           : '—';
+        $end   = $scheduleItem->end_at ? $scheduleItem->end_at->format('g:ia') : '—';
 
         if ($isNew) {
             $this->title   = 'New shift scheduled';
@@ -75,10 +70,6 @@ class DriverShiftChanged extends Notification implements ShouldQueue
 
     /**
      * Get the notification's delivery channels.
-     *
-     * @param mixed $notifiable
-     *
-     * @return array
      */
     public function via($notifiable): array
     {
@@ -87,10 +78,6 @@ class DriverShiftChanged extends Notification implements ShouldQueue
 
     /**
      * Build the mail representation of the notification.
-     *
-     * @param mixed $notifiable
-     *
-     * @return MailMessage
      */
     public function toMail($notifiable): MailMessage
     {
@@ -109,10 +96,6 @@ class DriverShiftChanged extends Notification implements ShouldQueue
 
     /**
      * Get the array representation of the notification.
-     *
-     * @param mixed $notifiable
-     *
-     * @return array
      */
     public function toArray($notifiable): array
     {

@@ -15,8 +15,7 @@ use Illuminate\Support\Facades\Schema;
  * These per-stop constraints are passed directly to the VROOM engine as
  * shipment/job time_windows and service fields.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('waypoints', function (Blueprint $table) {

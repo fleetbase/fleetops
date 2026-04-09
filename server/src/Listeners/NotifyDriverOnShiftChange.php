@@ -11,7 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 
 /**
- * Listener: NotifyDriverOnShiftChange
+ * Listener: NotifyDriverOnShiftChange.
  *
  * Fires after a ScheduleItem is created or updated. Checks the company-level
  * `notify_drivers_on_shift_change` scheduling setting and, if enabled, sends
@@ -24,9 +24,7 @@ class NotifyDriverOnShiftChange implements ShouldQueue
     /**
      * Handle the event.
      *
-     * @param object $event  Either ScheduleItemCreated or ScheduleItemUpdated
-     *
-     * @return void
+     * @param object $event Either ScheduleItemCreated or ScheduleItemUpdated
      */
     public function handle($event): void
     {
@@ -50,7 +48,7 @@ class NotifyDriverOnShiftChange implements ShouldQueue
         }
 
         // Check the company-level scheduling setting
-        $settings = Setting::lookupFromCompany('fleet-ops.scheduling-settings', []);
+        $settings     = Setting::lookupFromCompany('fleet-ops.scheduling-settings', []);
         $shouldNotify = (bool) data_get($settings, 'notify_drivers_on_shift_change', false);
         if (!$shouldNotify) {
             return;

@@ -14,8 +14,7 @@ use Illuminate\Support\Facades\Schema;
  *   - time_window_start   Default shift start time (HH:MM)
  *   - time_window_end     Default shift end time (HH:MM)
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('drivers', function (Blueprint $table) {

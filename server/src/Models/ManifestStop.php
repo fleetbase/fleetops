@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * ManifestStop
+ * ManifestStop.
  *
  * Represents a single physical stop within a Manifest. Each stop links to:
  *   - The parent Manifest
@@ -63,10 +63,10 @@ class ManifestStop extends Model
      * Attribute casts.
      */
     protected $casts = [
-        'meta'               => Json::class,
-        'estimated_arrival'  => 'datetime',
-        'actual_arrival'     => 'datetime',
-        'sequence'           => 'integer',
+        'meta'                 => Json::class,
+        'estimated_arrival'    => 'datetime',
+        'actual_arrival'       => 'datetime',
+        'sequence'             => 'integer',
         'distance_from_prev_m' => 'integer',
         'duration_from_prev_s' => 'integer',
     ];
@@ -134,6 +134,7 @@ class ManifestStop extends Model
     public function markArrived(): self
     {
         $this->update(['status' => 'arrived', 'actual_arrival' => now()]);
+
         return $this;
     }
 
@@ -144,6 +145,7 @@ class ManifestStop extends Model
     {
         $this->update(['status' => 'completed']);
         $this->manifest?->checkAndAutoComplete();
+
         return $this;
     }
 
@@ -154,6 +156,7 @@ class ManifestStop extends Model
     {
         $this->update(['status' => 'skipped']);
         $this->manifest?->checkAndAutoComplete();
+
         return $this;
     }
 }

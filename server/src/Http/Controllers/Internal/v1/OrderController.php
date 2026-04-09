@@ -1061,7 +1061,7 @@ class OrderController extends FleetOpsController
 
         if ($driverId) {
             // Resolve by uuid or public_id
-            $driver = \Fleetbase\FleetOps\Models\Driver::where('uuid', $driverId)
+            $driver = Driver::where('uuid', $driverId)
                 ->orWhere('public_id', $driverId)
                 ->first();
             if ($driver) {

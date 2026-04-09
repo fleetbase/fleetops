@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * DriverSchedulingTrait
+ * DriverSchedulingTrait.
  *
  * Provides scheduling-related controller methods for the DriverController.
  * These methods expose the core-api scheduling relationships (ScheduleItem,
@@ -159,8 +159,6 @@ trait DriverSchedulingTrait
      * Cancelled shifts are excluded. All other statuses (scheduled, in_progress,
      * completed) are included — a shift that has started counts toward HOS
      * regardless of whether it has been formally marked completed.
-     *
-     * @param Driver $driver
      *
      * @return array{float, float} [dailyHours, weeklyHours]
      */

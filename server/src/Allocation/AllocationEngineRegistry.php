@@ -3,11 +3,9 @@
 namespace Fleetbase\FleetOps\Allocation;
 
 use Fleetbase\FleetOps\Allocation\Contracts\AllocationEngineInterface;
-use InvalidArgumentException;
-use RuntimeException;
 
 /**
- * AllocationEngineRegistry
+ * AllocationEngineRegistry.
  *
  * A simple service-locator for allocation engines. Engines register themselves
  * (typically from a service provider or instance initializer equivalent) and
@@ -35,14 +33,14 @@ class AllocationEngineRegistry
     /**
      * Register an allocation engine.
      *
-     * @throws InvalidArgumentException if an engine with the same identifier is already registered.
+     * @throws \InvalidArgumentException if an engine with the same identifier is already registered
      */
     public function register(AllocationEngineInterface $engine): void
     {
         $id = $engine->getIdentifier();
 
         if (isset($this->engines[$id])) {
-            throw new InvalidArgumentException("An allocation engine with identifier '{$id}' is already registered.");
+            throw new \InvalidArgumentException("An allocation engine with identifier '{$id}' is already registered.");
         }
 
         $this->engines[$id] = $engine;
@@ -51,15 +49,12 @@ class AllocationEngineRegistry
     /**
      * Resolve an engine by identifier.
      *
-     * @throws RuntimeException if no engine with the given identifier is registered.
+     * @throws \RuntimeException if no engine with the given identifier is registered
      */
     public function resolve(string $identifier): AllocationEngineInterface
     {
         if (!isset($this->engines[$identifier])) {
-            throw new RuntimeException(
-                "No allocation engine registered with identifier '{$identifier}'. " .
-                'Available engines: ' . implode(', ', array_keys($this->engines))
-            );
+            throw new \RuntimeException("No allocation engine registered with identifier '{$identifier}'. " . 'Available engines: ' . implode(', ', array_keys($this->engines)));
         }
 
         return $this->engines[$identifier];

@@ -18,8 +18,7 @@ use Illuminate\Support\Facades\Schema;
  *   - time_window_end     Default shift end time (HH:MM)
  *   - return_to_depot     Whether the vehicle must return to its start depot
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('vehicles', function (Blueprint $table) {

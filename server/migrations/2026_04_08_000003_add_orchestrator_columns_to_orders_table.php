@@ -13,8 +13,7 @@ use Illuminate\Support\Facades\Schema;
  *   - time_window_start       Earliest acceptable completion datetime
  *   - time_window_end         Latest acceptable completion datetime
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {

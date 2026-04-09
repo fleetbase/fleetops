@@ -8,7 +8,7 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Illuminate\Support\Collection;
 
 /**
- * DriverAssignmentEngine
+ * DriverAssignmentEngine.
  *
  * Greedy shift-aware engine for matching available drivers to vehicles that
  * have planned orders (vehicle_assigned_uuid set, driver_assigned_uuid null).
@@ -26,9 +26,10 @@ class DriverAssignmentEngine
     /**
      * Assign available drivers to vehicles with planned orders.
      *
-     * @param  Collection $orders   Orders with vehicle_assigned_uuid set but no driver
-     * @param  Collection $vehicles Vehicles to assign drivers to
-     * @param  array      $options  Options: require_active_shift (bool, default true)
+     * @param Collection $orders   Orders with vehicle_assigned_uuid set but no driver
+     * @param Collection $vehicles Vehicles to assign drivers to
+     * @param array      $options  Options: require_active_shift (bool, default true)
+     *
      * @return array{assignments: array, unassigned: array, summary: array}
      */
     public function assign(Collection $orders, Collection $vehicles, array $options = []): array
@@ -59,8 +60,8 @@ class DriverAssignmentEngine
             ];
         }
 
-        $assignments      = [];
-        $assignedDrivers  = [];
+        $assignments        = [];
+        $assignedDrivers    = [];
         $unassignedVehicles = [];
 
         // Group orders by vehicle to determine required skills per vehicle
@@ -119,7 +120,7 @@ class DriverAssignmentEngine
         Vehicle $vehicle,
         Collection $availableDrivers,
         array $requiredSkills,
-        bool $respectSkills
+        bool $respectSkills,
     ): ?Driver {
         if ($availableDrivers->isEmpty()) {
             return null;
@@ -129,7 +130,7 @@ class DriverAssignmentEngine
         $vehicleLng = $vehicle->location?->getLng();
 
         $scored = $availableDrivers->map(function (Driver $driver) use (
-            $vehicle, $requiredSkills, $respectSkills, $vehicleLat, $vehicleLng
+            $requiredSkills, $respectSkills, $vehicleLat, $vehicleLng
         ) {
             $score = 0;
 
@@ -180,9 +181,10 @@ class DriverAssignmentEngine
     protected function haversineDistance(float $lat1, float $lng1, float $lat2, float $lng2): float
     {
         $earthRadius = 6371000; // metres
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLng = deg2rad($lng2 - $lng1);
-        $a    = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+        $dLat        = deg2rad($lat2 - $lat1);
+        $dLng        = deg2rad($lng2 - $lng1);
+        $a           = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
         return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 }

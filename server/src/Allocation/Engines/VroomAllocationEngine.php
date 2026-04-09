@@ -7,10 +7,9 @@ use Fleetbase\FleetOps\Allocation\Support\AllocationPayloadBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 
 /**
- * VroomAllocationEngine
+ * VroomAllocationEngine.
  *
  * Implements AllocationEngineInterface using the VROOM open-source vehicle
  * routing engine (https://github.com/VROOM-Project/vroom).
@@ -45,11 +44,11 @@ class VroomAllocationEngine implements AllocationEngineInterface
      * maps the response back to the standard AllocationEngineInterface result
      * shape.
      *
-     * @throws RuntimeException if the VROOM API returns an error.
+     * @throws \RuntimeException if the VROOM API returns an error
      */
     public function allocate(Collection $orders, Collection $vehicles, array $options = []): array
     {
-        $jobs     = AllocationPayloadBuilder::buildJobs($orders);
+        $jobs          = AllocationPayloadBuilder::buildJobs($orders);
         $vroomVehicles = AllocationPayloadBuilder::buildVehicles($vehicles);
 
         if (empty($jobs)) {
@@ -74,6 +73,7 @@ class VroomAllocationEngine implements AllocationEngineInterface
                 if (isset($v['skills'])) {
                     $vehicle['skills'] = $v['skills'];
                 }
+
                 return $vehicle;
             }, $vroomVehicles),
             'options' => [
@@ -85,9 +85,9 @@ class VroomAllocationEngine implements AllocationEngineInterface
         $jobIdMap     = [];
         $jobIdReverse = [];
         foreach ($vroomPayload['jobs'] as &$job) {
-            $intId              = crc32($job['id']);
+            $intId                = crc32($job['id']);
             $jobIdReverse[$intId] = $job['id'];
-            $job['id']          = $intId;
+            $job['id']            = $intId;
             $jobIdMap[$job['id']] = true;
         }
         unset($job);
@@ -100,13 +100,11 @@ class VroomAllocationEngine implements AllocationEngineInterface
                 ->post("{$host}/", $vroomPayload);
         } catch (\Exception $e) {
             Log::error('[VroomAllocationEngine] HTTP request failed: ' . $e->getMessage());
-            throw new RuntimeException('VROOM allocation engine is unavailable: ' . $e->getMessage(), 0, $e);
+            throw new \RuntimeException('VROOM allocation engine is unavailable: ' . $e->getMessage(), 0, $e);
         }
 
         if (!$response->successful()) {
-            throw new RuntimeException(
-                'VROOM returned an error: ' . $response->status() . ' — ' . $response->body()
-            );
+            throw new \RuntimeException('VROOM returned an error: ' . $response->status() . ' — ' . $response->body());
         }
 
         $result = $response->json();
@@ -117,9 +115,7 @@ class VroomAllocationEngine implements AllocationEngineInterface
     /**
      * Map a VROOM API response to the standard AllocationEngineInterface shape.
      *
-     * @param  array $vroomResult
-     * @param  array $jobIdReverse  Map of VROOM integer job ID → order public_id
-     * @return array
+     * @param array $jobIdReverse Map of VROOM integer job ID → order public_id
      */
     protected function mapVroomResponse(array $vroomResult, array $jobIdReverse): array
     {

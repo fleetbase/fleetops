@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * an Orchestrator commit and replaces the previous approach of loosely
  * grouping orders by driver_assigned_uuid.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('manifests', function (Blueprint $table) {

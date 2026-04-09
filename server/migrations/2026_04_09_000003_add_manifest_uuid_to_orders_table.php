@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * commit. Nullable — orders that have not been through the orchestrator
  * (or were assigned manually) will have no manifest.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {

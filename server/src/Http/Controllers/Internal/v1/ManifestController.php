@@ -9,7 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * ManifestController
+ * ManifestController.
  *
  * Provides CRUD and status-transition endpoints for Manifests and their stops.
  *
@@ -32,7 +32,7 @@ class ManifestController extends Controller
     public function index(Request $request): JsonResponse
     {
         $companyUuid = session('company');
-        $query = Manifest::forCompany($companyUuid)
+        $query       = Manifest::forCompany($companyUuid)
             ->with(['driver', 'vehicle', 'stops.place', 'stops.order.trackingNumber']);
 
         if ($request->filled('status')) {
