@@ -1,0 +1,61 @@
+<div class="carrier-onboarding-panel space-y-4" ...attributes>
+    <div class="text-base font-semibold text-black dark:text-white">
+        {{t "carrier-onboarding.heading"}}
+    </div>
+    <p class="text-sm text-gray-600 dark:text-gray-300">
+        {{t "carrier-onboarding.description"}}
+    </p>
+
+    {{!-- Recommended: ParcelPath --}}
+    <div class="rounded-md border border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 p-4" data-test-onboarding-card="parcelpath">
+        <div class="flex items-start justify-between">
+            <div class="flex items-center">
+                <img src="/images/integrated-vendors/parcelpath.png" alt="ParcelPath" class="w-10 h-10 mr-3" />
+                <div>
+                    <div class="flex items-center">
+                        <h4 class="text-base font-semibold text-black dark:text-white">{{t "carrier-onboarding.parcelpath.title"}}</h4>
+                        <Badge @hideStatusDot={{true}} @status="success" class="ml-2">{{t "carrier-onboarding.recommended"}}</Badge>
+                    </div>
+                    <p class="text-xs text-gray-700 dark:text-gray-300 mt-1">
+                        {{t "carrier-onboarding.parcelpath.description"}}
+                    </p>
+                </div>
+            </div>
+            <Button
+                @type="primary"
+                @text={{t "carrier-onboarding.parcelpath.cta"}}
+                @onClick={{fn this.connectProvider "parcelpath"}}
+                data-test-connect="parcelpath"
+            />
+        </div>
+    </div>
+
+    {{!-- Alternative: direct carrier accounts --}}
+    <details class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4" data-test-onboarding-card="direct">
+        <summary class="text-sm font-medium text-black dark:text-white cursor-pointer">
+            {{t "carrier-onboarding.direct.summary"}}
+        </summary>
+        <p class="text-xs text-gray-600 dark:text-gray-300 mt-2">
+            {{t "carrier-onboarding.direct.description"}}
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <div class="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 p-3">
+                <div class="flex items-center">
+                    <img src="/images/integrated-vendors/ups.png" alt="UPS" class="w-8 h-8 mr-3" />
+                    <span class="text-sm">{{t "carrier-onboarding.direct.ups"}}</span>
+                </div>
+                <Button @text={{t "carrier-onboarding.direct.connect"}} @onClick={{fn this.connectProvider "ups"}} data-test-connect="ups" />
+            </div>
+            <div class="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 p-3">
+                <div class="flex items-center">
+                    <img src="/images/integrated-vendors/usps.png" alt="USPS" class="w-8 h-8 mr-3" />
+                    <span class="text-sm">{{t "carrier-onboarding.direct.usps"}}</span>
+                </div>
+                <Button @text={{t "carrier-onboarding.direct.connect"}} @onClick={{fn this.connectProvider "usps"}} data-test-connect="usps" />
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">
+            {{t "carrier-onboarding.direct.hybrid-note"}}
+        </p>
+    </details>
+</div>

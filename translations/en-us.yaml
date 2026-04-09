@@ -1716,3 +1716,18 @@ settings:
       button-continue: Continue
       button-start: Start onboard now
       button-in-progress: Onboard in progress
+carrier-onboarding:
+  heading: Connect a Small Parcel Carrier
+  description: Choose how you want to ship UPS and USPS labels from FleetOps. Most operators start with ParcelPath; bring your own carrier accounts only if you already have negotiated UPS/USPS contracts.
+  recommended: Recommended
+  parcelpath:
+    title: ParcelPath (UPS + USPS)
+    description: Instant access to discounted UPS and USPS rates (60–89% off retail). One API key — ParcelPath holds the carrier relationships, handles labels, tracking, and returns. Zero configuration.
+    cta: Connect ParcelPath
+  direct:
+    summary: Use your own carrier accounts
+    description: Already have UPS or USPS negotiated rates? Add direct integrations using your own credentials. Each direct account ships under your own contract.
+    ups: UPS Direct
+    usps: USPS Direct
+    connect: Connect
+    hybrid-note: Tip — you can run ParcelPath and direct accounts side by side. The order rate selector will show all matching rates and you pick the best one per shipment.
