@@ -2056,5 +2056,3 @@ orchestrator:
   no-vehicle-assigned: No vehicle assigned
   no-driver-assigned: No driver assigned
   created: Created
-  balance-workload: Balance Workload
-  import-orders: Import Orders
