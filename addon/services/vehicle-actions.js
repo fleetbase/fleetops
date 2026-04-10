@@ -1,13 +1,65 @@
-import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
+import ResourceActionService, { inject as service } from '@fleetbase/ember-core/services/resource-action';
 import leafletIcon from '@fleetbase/ember-core/utils/leaflet-icon';
 import config from 'ember-get-config';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { isArray } from '@ember/array';
+import { dasherize } from '@ember/string';
 
 export default class VehicleActionsService extends ResourceActionService {
+    @service('universe/menu-service') menuService;
     @service maintenanceScheduleActions;
     @service workOrderActions;
     @service maintenanceActions;
+    
+    get registeredTabs() {
+        const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:vehicle:details');
+        return (isArray(registeredTabs) ? registeredTabs : [])
+            .map((tab) => {
+                delete tab.route;
+                if (!tab.key) {
+                    tab.key = tab.id ?? dasherize(tab.label ?? tab.title);
+                }
+                return tab;
+            })
+            .filter((tab) => !tab.component);
+    }
+
+    get panelTabs() {
+        return [
+            {
+                key: 'overview',
+                label: 'Overview',
+                component: 'vehicle/details',
+            },
+            {
+                key: 'positions',
+                label: 'Positions',
+                component: 'positions-replay',
+            },
+            {
+                key: 'devices',
+                label: 'Devices',
+                component: 'device/manager',
+            },
+            {
+                key: 'schedules',
+                label: 'Schedules',
+                component: 'vehicle/details/schedules',
+
+            },
+            {
+                key: 'work-orders',
+                label: 'Work Orders',
+                component: 'vehicle/details/work-orders',
+            },
+            {
+                key: 'maintenance-history',
+                label: 'Maintenance',
+                component: 'vehicle/details/maintenance-history',
+            },
+            ...this.registeredTabs
+        ];
+    }
 
     constructor() {
         super(...arguments);
@@ -73,12 +125,7 @@ export default class VehicleActionsService extends ResourceActionService {
                         },
                     },
                 ],
-                tabs: [
-                    {
-                        label: this.intl.t('common.overview'),
-                        component: 'vehicle/details',
-                    },
-                ],
+                tabs: this.panelTabs,
                 ...options,
             });
         },
