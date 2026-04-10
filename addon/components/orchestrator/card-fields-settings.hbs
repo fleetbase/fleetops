@@ -3,8 +3,7 @@
     {{#if this.loadData.isRunning}}
         <div class="flex justify-center py-8"><Spinner /></div>
     {{else}}
-        <div class={{@wrapperClass}}>
-
+        <div class="card-fields-settings-container {{@wrapperClass}}">
             {{! Standard fields }}
             <ContentPanel @title={{t "orchestrator.standard-fields"}} @open={{true}} @wrapperClass="bordered-top">
                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{t "orchestrator.standard-fields-description"}}</p>
@@ -68,11 +67,10 @@
                     </div>
                 </ContentPanel>
             {{/if}}
-
-            {{! Save button }}
-            <div class="px-3 py-2 border-t dark:border-gray-700 flex-shrink-0 bg-gray-50 dark:bg-gray-800">
-                <Button @text={{t "orchestrator.save-card-fields"}} @type="primary" @size="sm" @isLoading={{this.saveSettings.isRunning}} @onClick={{perform this.saveSettings}} />
-            </div>
+        </div>
+        {{! Save button }}
+        <div class="px-3 py-2 border-t dark:border-gray-700 flex-shrink-0 bg-gray-50 dark:bg-gray-800">
+            <Button @text={{t "orchestrator.save-card-fields"}} @type="primary" @size="sm" @isLoading={{this.saveSettings.isRunning}} @onClick={{perform this.saveSettings}} />
         </div>
     {{/if}}
 </div>

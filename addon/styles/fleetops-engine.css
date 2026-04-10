@@ -2589,3 +2589,10 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
 .fleetops-route-active path {
     animation: fleetops-route-pulse 2s ease-in-out infinite;
 }
+
+.card-fields-settings .card-fields-settings-container {
+    height: 300px;
+    min-height: 300px;
+    max-height: 300px;
+    overflow-y: scroll;
+}
