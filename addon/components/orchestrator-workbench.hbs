@@ -151,8 +151,9 @@
                                     popupAnchor=(array 0 -20)
                                 }}
                                 @riseOnHover={{true}}
+                                as |marker|
                             >
-                                <layers.popup>
+                                <marker.popup>
                                     <div class="text-xs min-w-32">
                                         <div class="font-semibold mb-0.5">{{or order.tracking order.public_id}}</div>
                                         <div class="text-gray-500">{{stop.address}}</div>
@@ -160,10 +161,10 @@
                                             <div class="text-blue-500 mt-0.5">{{format-date order.scheduled_at "MMM d, HH:mm"}}</div>
                                         {{/if}}
                                     </div>
-                                </layers.popup>
-                                <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                </marker.popup>
+                                <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
                                     {{or order.tracking order.public_id}} — {{stop.address}}
-                                </layers.tooltip>
+                                </marker.tooltip>
                             </layers.marker>
                         {{/each}}
                     {{/each}}
@@ -183,8 +184,9 @@
                                     iconAnchor=(array 8 8)
                                 }}
                                 @riseOnHover={{true}}
+                                as |marker|
                             >
-                                <layers.popup>
+                                <marker.popup>
                                     <div class="text-xs min-w-36">
                                         <div class="font-semibold mb-0.5">{{driver.name}}</div>
                                         {{#if driver.vehicle}}
@@ -194,10 +196,10 @@
                                             {{if driver.online (t "common.online") (t "common.offline")}}
                                         </div>
                                     </div>
-                                </layers.popup>
-                                <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                </marker.popup>
+                                <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
                                     {{driver.name}}
-                                </layers.tooltip>
+                                </marker.tooltip>
                             </layers.marker>
                         {{/if}}
                     {{/each}}
@@ -219,15 +221,16 @@
                                         @lat={{stop.lat}}
                                         @lng={{stop.lng}}
                                         @icon={{div-icon
-                                            html=(this.waypointIconHtml item.sequence group.routeColor)
+                                            html=(this.waypointIconHtml stop.label group.routeColor)
                                             className="fleetops-waypoint-marker"
                                             iconSize=(array 32 32)
                                             iconAnchor=(array 16 32)
                                             popupAnchor=(array 0 -32)
                                         }}
                                         @riseOnHover={{true}}
+                                        as |marker|
                                     >
-                                        <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                        <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
                                             <div class="text-xs">
                                                 <div class="font-semibold">{{or item.order.tracking item.order.public_id}}</div>
                                                 <div class="text-gray-500">{{stop.address}}</div>
@@ -235,7 +238,7 @@
                                                     <div class="text-blue-400">{{this.formatUnixTime item.arrival}}</div>
                                                 {{/if}}
                                             </div>
-                                        </layers.tooltip>
+                                        </marker.tooltip>
                                     </layers.marker>
                                 {{/each}}
                             {{/each}}
