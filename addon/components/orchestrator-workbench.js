@@ -52,6 +52,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @tracked routeSummaries = {};
     @tracked unassignedAfterRun = [];
     @tracked orchestratorRunMessage = null;
+    @tracked runError = null;
     @tracked isCommitted = false;
     @tracked manualOverrides = {};
 
@@ -214,9 +215,9 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.isCommitted = false;
         this.manualOverrides = {};
         this.routeSummaries = {};
-        this.unassignedAfterRun = [];
+         this.unassignedAfterRun = [];
         this.orchestratorRunMessage = null;
-
+        this.runError = null;
         const phasesToRun = this.phases.length > 0 ? this.phases : [this._legacyPhase()];
 
         yield this._executePhases.perform(phasesToRun);
@@ -285,6 +286,16 @@ export default class OrchestratorWorkbenchComponent extends Component {
             this.unassignedAfterRun = result.unassigned ?? [];
             if (result.message) {
                 this.orchestratorRunMessage = result.message;
+            }
+            // If the run returned zero assignments, surface the error/message to
+            // the user immediately — otherwise the right panel stays blank with
+            // no feedback (PlanViewer is only rendered when hasProposedPlan).
+            if (!newAssignments.length) {
+                const errorMsg = result.message ?? this.intl.t('orchestrator.no-assignments-returned');
+                this.runError = errorMsg;
+                this.notifications.warning(errorMsg, { autoClear: true, clearDuration: 6000 });
+            } else {
+                this.runError = null;
             }
             // Fit the map to the full planned route bounds after the plan is set.
             // Deferred so planByVehicle getter has time to recompute first.
@@ -502,13 +513,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
         // can resolve it. Without this call, waitForMap() never resolves and
         // routing controls silently time out.
         this.leafletMapManager.setMap(map);
-        // eslint-disable-next-line no-console
-        console.log('[Orchestrator] onMapLoad: map mounted, current mapCenter =>', this.mapCenter, '| _mapCenteredOnOrders =>', this._mapCenteredOnOrders);
-        map.setView([this.mapCenter.lat, this.mapCenter.lng], this.mapZoom);
-        // If orders have already loaded before the map mounted, re-center now.
+        // If orders have already loaded before the map mounted, re-center now
+        // using the same fitBounds strategy as _centerMapOnOrders().
         if (this._mapCenteredOnOrders) {
-            // eslint-disable-next-line no-console
-            console.log('[Orchestrator] onMapLoad: orders already centered — re-applying center to newly mounted map');
+            this._centerMapOnOrders();
+        } else {
             map.setView([this.mapCenter.lat, this.mapCenter.lng], this.mapZoom);
         }
     }
@@ -566,29 +575,40 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     _centerMapOnOrders() {
         const orders = this.unassignedOrders;
-        // eslint-disable-next-line no-console
-        console.log('[Orchestrator] _centerMapOnOrders: orders count =>', orders.length);
         if (!orders.length) return;
         // Use _getOrderStops so multi-drop (waypoints) orders are included
         const allStops = orders.flatMap((o) => this._getOrderStops(o));
-        // eslint-disable-next-line no-console
-        console.log('[Orchestrator] _centerMapOnOrders: allStops =>', allStops);
         const lats = allStops.map((s) => s.lat).filter(Boolean);
         const lngs = allStops.map((s) => s.lng).filter(Boolean);
-        if (!lats.length) {
-            // eslint-disable-next-line no-console
-            console.log('[Orchestrator] _centerMapOnOrders: no valid stop coordinates found — cannot center map');
-            return;
-        }
-        const lat = lats.reduce((a, b) => a + b, 0) / lats.length;
-        const lng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
-        // eslint-disable-next-line no-console
-        console.log('[Orchestrator] _centerMapOnOrders: computed center =>', { lat, lng }, '| leafletMap available =>', !!this.leafletMap);
+        if (!lats.length) return;
         // Mark that we have centered on orders so getUserLocation() cannot override.
         this._mapCenteredOnOrders = true;
+        // Use fitBounds so the map zooms to show ALL markers regardless of how
+        // geographically spread they are. A raw centroid of stops in Sydney,
+        // Singapore and Mongolia would land in Brunei — fitBounds avoids this.
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLng = Math.min(...lngs);
+        const maxLng = Math.max(...lngs);
+        // Update mapCenter to the geographic centre of the bounding box so the
+        // LeafletMap @lat/@lng args stay in sync.
+        const lat = (minLat + maxLat) / 2;
+        const lng = (minLng + maxLng) / 2;
         this.mapCenter = { lat, lng };
-        if (this.leafletMap?.setView) {
-            this.leafletMap.setView([lat, lng], this.mapZoom);
+        if (this.leafletMap) {
+            if (lats.length === 1) {
+                // Single point — setView with a sensible zoom level.
+                this.leafletMap.setView([lat, lng], 14);
+            } else {
+                // Multiple points — fit the bounding box with padding.
+                this.leafletMap.fitBounds(
+                    [
+                        [minLat, minLng],
+                        [maxLat, maxLng],
+                    ],
+                    { padding: [40, 40], maxZoom: 14 }
+                );
+            }
         }
     }
 
