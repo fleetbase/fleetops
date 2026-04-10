@@ -481,6 +481,10 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     @action onMapLoad({ target: map }) {
         this.leafletMap = map;
+        // Register the map with the service so addRoutingControl / ensureInteractive
+        // can resolve it. Without this call, waitForMap() never resolves and
+        // routing controls silently time out.
+        this.leafletMapManager.setMap(map);
         map.setView([this.mapCenter.lat, this.mapCenter.lng], this.mapZoom);
     }
 

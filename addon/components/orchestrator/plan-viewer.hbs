@@ -160,7 +160,7 @@
          sequence number, tracking number, scheduled time, pickup -> dropoff address,
          and customer name. Colors match the route colors used on the map. }}
     {{#if (eq this.activeTab "timeline")}}
-        <div class="flex-1 overflow-hidden">
+        <div id="fleet-ops-orchestrator-plan-timeline" class="flex-1 overflow-hidden">
             {{#if this.calendarEvents.length}}
                 <EventCalendar
                     @view="resourceTimelineDay"
