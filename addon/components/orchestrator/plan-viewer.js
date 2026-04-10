@@ -1,6 +1,9 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
+import { addMinutes } from 'date-fns';
+import toCalendarDate from '../../utils/to-calendar-date';
 
 /**
  * Orchestrator::PlanViewer
@@ -11,7 +14,7 @@ import { action } from '@ember/object';
  *
  * Tabs:
  *   - Routes   — per-vehicle route cards with ordered stop list
- *   - Timeline — Gantt-style schedule aligned to the actual day
+ *   - Timeline — EventCalendar resourceTimelineDay view (same library as Scheduler)
  *
  * @arg planByVehicle         - Array of { vehicle, driver, orders, routeColor, summary }
  * @arg unassignedAfterRun    - Array of orders the engine could not assign
@@ -24,8 +27,13 @@ import { action } from '@ember/object';
  * @arg formatUnixTime        - Helper(unix) → string
  */
 export default class OrchestratorPlanViewerComponent extends Component {
+    @service currentUser;
+
     @tracked expandedCards = new Set();
     @tracked activeTab = 'routes'; // 'routes' | 'timeline'
+    @tracked _calendar = null;
+
+    // ── Tab / card actions ────────────────────────────────────────────────────
 
     @action setTab(tab) {
         this.activeTab = tab;
@@ -70,14 +78,203 @@ export default class OrchestratorPlanViewerComponent extends Component {
         return (this.args.planByVehicle ?? []).length;
     }
 
-    // ── Timeline helpers ──────────────────────────────────────────────────────
+    // ── EventCalendar ─────────────────────────────────────────────────────────
+
+    /**
+     * Returns the IANA timezone string for the current organisation.
+     * Falls back to the browser's local timezone.
+     */
+    get companyTimezone() {
+        return this.currentUser?.company?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+
+    /**
+     * Receives the EventCalendar instance once it is mounted.
+     */
+    @action setCalendarApi(calendar) {
+        this._calendar = calendar;
+    }
+
+    /**
+     * The date to display on the timeline — derived from the earliest scheduled
+     * order in the plan, so the calendar opens on the right day automatically.
+     */
+    get timelineDate() {
+        const plan = this.args.planByVehicle ?? [];
+        let earliest = null;
+        for (const group of plan) {
+            for (const item of group.orders ?? []) {
+                const t = this._resolveStopTime(item);
+                if (t !== null) {
+                    if (earliest === null || t < earliest) earliest = t;
+                }
+            }
+        }
+        if (earliest === null) return new Date();
+        // Convert the UTC unix timestamp to a wall-clock Date in the company timezone.
+        return toCalendarDate(new Date(earliest * 1000), this.companyTimezone);
+    }
+
+    /**
+     * Resources for EventCalendar — one row per vehicle/driver group.
+     * The resource label cell shows vehicle name, driver name, and stop count.
+     */
+    get calendarResources() {
+        return (this.args.planByVehicle ?? []).map((group) => ({
+            id: group.vehicle?.public_id ?? group.vehicle?.id ?? String(Math.random()),
+            title: group.vehicle?.display_name ?? group.vehicle?.name ?? 'Vehicle',
+            extendedProps: { group },
+        }));
+    }
+
+    /**
+     * Events for EventCalendar — one event per planned stop.
+     * Uses the vehicle's routeColor for consistent color coding.
+     */
+    get calendarEvents() {
+        const tz = this.companyTimezone;
+        const events = [];
+        const DURATION_MIN = 30; // default slot duration when no estimate available
+
+        for (const group of this.args.planByVehicle ?? []) {
+            const resourceId = group.vehicle?.public_id ?? group.vehicle?.id;
+            const color = group.routeColor ?? '#6366f1';
+
+            // Cursor used when no arrival time is known — starts at 08:00 on the plan date
+            let cursorMs = null;
+
+            for (const item of group.orders ?? []) {
+                const stopTimeSec = this._resolveStopTime(item);
+                let startMs;
+
+                if (stopTimeSec !== null) {
+                    startMs = stopTimeSec * 1000;
+                    cursorMs = startMs + DURATION_MIN * 60 * 1000;
+                } else {
+                    // No time known — use cursor or default to 08:00 today
+                    if (cursorMs === null) {
+                        const today = new Date();
+                        today.setHours(8, 0, 0, 0);
+                        cursorMs = today.getTime();
+                    }
+                    startMs = cursorMs;
+                    cursorMs = startMs + DURATION_MIN * 60 * 1000;
+                }
+
+                const startUtc = new Date(startMs);
+                const endUtc = addMinutes(startUtc, DURATION_MIN);
+
+                // Convert to "fake local" dates for EventCalendar timezone handling
+                const start = toCalendarDate(startUtc, tz);
+                const end = toCalendarDate(endUtc, tz);
+
+                const order = item.order;
+                const tracking = order?.tracking ?? order?.public_id ?? '—';
+                const customerName = order?.customer_name ?? null;
+                const pickupAddress = order?.payload?.pickup?.address ?? order?.pickup_name ?? null;
+                const dropoffAddress = order?.payload?.dropoff?.address ?? order?.dropoff_name ?? null;
+                const sequence = item.sequence ?? null;
+
+                events.push({
+                    id: `plan-${resourceId}-${order?.public_id ?? Math.random()}`,
+                    resourceId,
+                    title: tracking,
+                    start,
+                    end,
+                    display: 'block',
+                    backgroundColor: color,
+                    borderColor: color,
+                    textColor: '#ffffff',
+                    extendedProps: {
+                        order,
+                        tracking,
+                        sequence,
+                        customerName,
+                        pickupAddress,
+                        dropoffAddress,
+                        startUtc,
+                        endUtc,
+                    },
+                });
+            }
+        }
+
+        return events;
+    }
+
+    /**
+     * Renders the resource label cell for each vehicle row.
+     * Shows vehicle name, driver name (if any), and stop count.
+     */
+    @action renderResourceLabel({ resource }) {
+        const { group } = resource.extendedProps ?? {};
+        const vehicleName = group?.vehicle?.display_name ?? group?.vehicle?.name ?? resource.title ?? 'Vehicle';
+        const driverName = group?.driver?.name ?? '';
+        const stopCount = group?.orders?.length ?? 0;
+        const color = group?.routeColor ?? '#6366f1';
+
+        return {
+            html: `<div style="width:100%;box-sizing:border-box;padding:4px 8px;border-left:3px solid ${color};">
+                <div style="font-size:0.72rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;">${vehicleName}</div>
+                ${driverName ? `<div style="font-size:0.65rem;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${driverName}</div>` : ''}
+                <div style="font-size:0.62rem;color:#6b7280;margin-top:1px;">${stopCount} stop${stopCount !== 1 ? 's' : ''}</div>
+            </div>`,
+        };
+    }
+
+    /**
+     * Renders the event tile content inside the timeline.
+     * Shows: sequence + tracking number, scheduled time, pickup → dropoff address, customer.
+     */
+    @action renderEventContent({ event }) {
+        const { tracking, sequence, customerName, pickupAddress, dropoffAddress, startUtc, endUtc } = event.extendedProps ?? {};
+
+        const fmt = (d) => {
+            if (!d) return '';
+            return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+        };
+
+        const title = sequence != null ? `${sequence}. ${tracking}` : tracking;
+        const timeRange = startUtc ? `${fmt(startUtc)} – ${fmt(endUtc)}` : '';
+        const routeLine = [pickupAddress, dropoffAddress].filter(Boolean).join(' → ');
+
+        return {
+            html: `<div style="display:flex;flex-direction:column;gap:1px;padding:2px 0;overflow:hidden;height:100%;">
+                <div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;">
+                    <span style="width:7px;height:7px;border-radius:50%;background:#ffffff;opacity:0.9;flex-shrink:0;"></span>
+                    <span style="font-size:0.72rem;font-weight:700;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${title}</span>
+                </div>
+                ${timeRange ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.9);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">⏱ ${timeRange}</div>` : ''}
+                ${routeLine ? `<div style="font-size:0.62rem;color:rgba(255,255,255,0.75);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📍 ${routeLine}</div>` : ''}
+                ${customerName ? `<div style="font-size:0.62rem;color:rgba(255,255,255,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">👤 ${customerName}</div>` : ''}
+            </div>`,
+        };
+    }
+
+    /**
+     * Calendar display options — 24h time format, no header toolbar
+     * (navigation is not needed for a read-only plan review).
+     */
+    get calendarOptions() {
+        return {
+            slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+            eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+            dayHeaderFormat: { weekday: 'short', month: 'numeric', day: 'numeric' },
+        };
+    }
+
+    get calendarHeaderToolbar() {
+        return { start: '', center: 'title', end: '' };
+    }
+
+    // ── Internal helpers ──────────────────────────────────────────────────────
 
     /**
      * Resolve the best available Unix timestamp (seconds) for a stop item.
      *
      * Priority:
      *   1. VROOM arrival time (item.arrival — Unix seconds)
-     *   2. order.scheduled_at (JS Date object from Ember Data)
+     *   2. order.scheduled_at (JS Date object from Ember Data or ISO string from plain JSON)
      *   3. null — caller must use a fallback cursor
      */
     _resolveStopTime(item) {
@@ -98,151 +295,12 @@ export default class OrchestratorPlanViewerComponent extends Component {
     }
 
     /**
-     * Build timeline rows for the Gantt view.
-     *
-     * Each row represents one vehicle and contains a list of time-positioned
-     * blocks. Blocks are anchored to the actual scheduled day:
-     *
-     *   - When VROOM returns arrival times (Unix seconds) those are used directly.
-     *   - When orders have scheduled_at dates those are used as the anchor.
-     *   - When neither is available we fall back to a 30-minute slot per stop
-     *     starting from the beginning of today (not "now"), so the axis still
-     *     shows a meaningful date rather than the current wall-clock time.
-     */
-    get timelineRows() {
-        const plan = this.args.planByVehicle ?? [];
-        if (!plan.length) return [];
-
-        // Default anchor: start of today (midnight local time)
-        const todayMidnight = new Date();
-        todayMidnight.setHours(0, 0, 0, 0);
-        const todayMidnightSec = Math.floor(todayMidnight.getTime() / 1000);
-
-        const SLOT_SEC = 30 * 60; // 30-minute default slot
-
-        let axisStart = Infinity;
-        let axisEnd = -Infinity;
-
-        const rows = plan.map((group) => {
-            // Find the earliest real time in this group to use as the cursor start
-            let firstRealTime = null;
-            for (const item of group.orders ?? []) {
-                const t = this._resolveStopTime(item);
-                if (t !== null) {
-                    firstRealTime = t;
-                    break;
-                }
-            }
-            // Cursor starts at the first real time, or today midnight as fallback
-            let cursor = firstRealTime ?? todayMidnightSec + 8 * 3600; // 08:00 today
-
-            const blocks = (group.orders ?? []).map((item) => {
-                const resolved = this._resolveStopTime(item);
-                const start = resolved ?? cursor;
-                const end = start + SLOT_SEC;
-                cursor = end;
-
-                // Derive display info
-                const order = item.order;
-                const tracking = order?.tracking ?? order?.public_id ?? '—';
-                const customerName = order?.customer_name ?? null;
-                const pickupAddress = order?.payload?.pickup?.address ?? order?.pickup_name ?? null;
-                const dropoffAddress = order?.payload?.dropoff?.address ?? order?.dropoff_name ?? null;
-
-                // Format times for display
-                const startDate = new Date(start * 1000);
-                const endDate = new Date(end * 1000);
-                const fmt = (d) =>
-                    d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-                const fmtFull = (d) =>
-                    d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) +
-                    ' ' +
-                    fmt(d);
-
-                return {
-                    item,
-                    start,
-                    end,
-                    tracking,
-                    customerName,
-                    pickupAddress,
-                    dropoffAddress,
-                    startLabel: fmt(startDate),
-                    endLabel: fmt(endDate),
-                    startFull: fmtFull(startDate),
-                    endFull: fmtFull(endDate),
-                    dateLabel: startDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-                };
-            });
-
-            if (blocks.length) {
-                axisStart = Math.min(axisStart, blocks[0].start);
-                axisEnd = Math.max(axisEnd, blocks[blocks.length - 1].end);
-            }
-
-            return { group, blocks };
-        });
-
-        if (axisStart === Infinity) return [];
-
-        // Snap axis start back to the nearest hour boundary for clean alignment
-        const snappedStart = Math.floor(axisStart / 3600) * 3600;
-        // Pad end by at least one slot
-        const snappedEnd = Math.ceil((axisEnd + SLOT_SEC * 0.5) / 3600) * 3600;
-        const axisSpan = Math.max(snappedEnd - snappedStart, 3600);
-
-        return rows.map(({ group, blocks }) => ({
-            group,
-            blocks: blocks.map((b) => ({
-                ...b,
-                leftPct: (((b.start - snappedStart) / axisSpan) * 100).toFixed(2),
-                widthPct: Math.max((((b.end - b.start) / axisSpan) * 100), 1.5).toFixed(2),
-            })),
-            axisStart: snappedStart,
-            axisSpan,
-        }));
-    }
-
-    /**
-     * Hour tick marks for the timeline axis.
-     * Returns an array of { label, dateLabel, leftPct, isDateBoundary } for each
-     * hour boundary visible. Date boundaries (midnight) get a date label.
-     */
-    get timelineAxisTicks() {
-        const rows = this.timelineRows;
-        if (!rows.length) return [];
-        const { axisStart, axisSpan } = rows[0];
-        const ticks = [];
-        const firstHour = Math.ceil(axisStart / 3600) * 3600;
-        for (let t = firstHour; t < axisStart + axisSpan; t += 3600) {
-            const leftPct = (((t - axisStart) / axisSpan) * 100).toFixed(2);
-            const d = new Date(t * 1000);
-            const hour = d.getHours();
-            const isDateBoundary = hour === 0;
-            const timeLabel = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-            const dateLabel = isDateBoundary
-                ? d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-                : null;
-            ticks.push({ label: timeLabel, dateLabel, leftPct, isDateBoundary });
-        }
-        return ticks;
-    }
-
-    /**
-     * The date range covered by the timeline, formatted for the header.
-     * e.g. "Thu Apr 10, 2026" or "Thu Apr 10 – Fri Apr 11, 2026"
+     * The date range covered by the plan, formatted for the header.
+     * e.g. "Thu Apr 10, 2026"
      */
     get timelineDateRange() {
-        const rows = this.timelineRows;
-        if (!rows.length) return null;
-        const { axisStart, axisSpan } = rows[0];
-        const startDate = new Date(axisStart * 1000);
-        const endDate = new Date((axisStart + axisSpan) * 1000);
-        const opts = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
-        const startStr = startDate.toLocaleDateString('en-US', opts);
-        const endDay = endDate.toDateString();
-        const startDay = startDate.toDateString();
-        if (startDay === endDay) return startStr;
-        return `${startDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} – ${endDate.toLocaleDateString('en-US', opts)}`;
+        const date = this.timelineDate;
+        if (!date) return null;
+        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
     }
 }
