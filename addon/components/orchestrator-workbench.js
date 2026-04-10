@@ -476,8 +476,10 @@ export default class OrchestratorWorkbenchComponent extends Component {
     _centerMapOnOrders() {
         const orders = this.unassignedOrders;
         if (!orders.length) return;
-        const lats = orders.map((o) => o.payload?.dropoff?.location?.coordinates?.[1]).filter(Boolean);
-        const lngs = orders.map((o) => o.payload?.dropoff?.location?.coordinates?.[0]).filter(Boolean);
+        // Use _getOrderStops so multi-drop (waypoints) orders are included
+        const allStops = orders.flatMap((o) => this._getOrderStops(o));
+        const lats = allStops.map((s) => s.lat).filter(Boolean);
+        const lngs = allStops.map((s) => s.lng).filter(Boolean);
         if (!lats.length) return;
         const lat = lats.reduce((a, b) => a + b, 0) / lats.length;
         const lng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
@@ -555,16 +557,68 @@ export default class OrchestratorWorkbenchComponent extends Component {
             points.push([startLoc[1], startLoc[0]]);
         }
         for (const item of orders) {
-            const pickup = item.order?.payload?.pickup;
-            const dropoff = item.order?.payload?.dropoff;
-            if (pickup?.latitude && pickup?.longitude) {
-                points.push([parseFloat(pickup.latitude), parseFloat(pickup.longitude)]);
-            }
-            if (dropoff?.latitude && dropoff?.longitude) {
-                points.push([parseFloat(dropoff.latitude), parseFloat(dropoff.longitude)]);
+            const stops = this._getOrderStops(item.order);
+            for (const stop of stops) {
+                if (stop.lat && stop.lng) {
+                    points.push([stop.lat, stop.lng]);
+                }
             }
         }
         return points.length >= 2 ? points : null;
+    }
+
+    /**
+     * Normalise an order's stops into a flat array of { lat, lng, address, label }
+     * regardless of whether the order uses pickup/dropoff or a waypoints array.
+     *
+     * - Pickup/dropoff orders: returns [pickup, dropoff] (either may be absent)
+     * - Multi-drop orders (payload.waypoints): returns each waypoint's place in
+     *   sequence order, labelled by stop number (1, 2, 3…)
+     *
+     * @param {Object} order - Ember Data order record
+     * @returns {Array<{lat: number, lng: number, address: string, label: string}>}
+     */
+    _getOrderStops(order) {
+        const payload = order?.payload;
+        if (!payload) return [];
+
+        // Multi-drop: payload has waypoints but no pickup/dropoff
+        const waypoints = payload.waypoints;
+        if (payload.isMultiDrop && waypoints?.length) {
+            const sorted = [...waypoints].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+            return sorted
+                .map((wp, idx) => {
+                    const place = wp.place ?? wp;
+                    const lat = parseFloat(place.latitude);
+                    const lng = parseFloat(place.longitude);
+                    if (!lat || !lng) return null;
+                    return { lat, lng, address: place.address ?? '', label: String(idx + 1) };
+                })
+                .filter(Boolean);
+        }
+
+        // Standard pickup → dropoff order
+        const stops = [];
+        const pickup = payload.pickup;
+        const dropoff = payload.dropoff;
+        if (pickup?.latitude && pickup?.longitude) {
+            stops.push({ lat: parseFloat(pickup.latitude), lng: parseFloat(pickup.longitude), address: pickup.address ?? '', label: 'P' });
+        }
+        if (dropoff?.latitude && dropoff?.longitude) {
+            stops.push({ lat: parseFloat(dropoff.latitude), lng: parseFloat(dropoff.longitude), address: dropoff.address ?? '', label: 'D' });
+        }
+        return stops;
+    }
+
+    /**
+     * HBS-callable wrapper around _getOrderStops.
+     * Returns a normalised stop array for any order type.
+     *
+     * @param {Object} order
+     * @returns {Array<{lat, lng, address, label}>}
+     */
+    @action getOrderStops(order) {
+        return this._getOrderStops(order);
     }
 
     /**

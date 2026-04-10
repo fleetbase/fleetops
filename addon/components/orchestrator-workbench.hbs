@@ -133,37 +133,18 @@
                     <layers.tile @url={{this.tileSourceUrl}} />
 
                     {{! ── Unassigned order markers ──
-                         Uses ember-leaflet {{div-icon}} helper (not a plain hash)
-                         so Leaflet receives a proper L.DivIcon instance with
-                         createIcon(). Pickup = green "P", Dropoff = red "D"
-                         using the waypointIconHtml string from route-colors.
+                         Handles both standard pickup/dropoff orders and multi-drop
+                         orders (payload.waypoints). Uses getOrderStops() to normalise
+                         both shapes into a flat [{lat,lng,address,label}] array.
                          Hidden once a plan is proposed (replaced by numbered stop markers). }}
                     {{#unless this.hasProposedPlan}}
                     {{#each this.unassignedOrders as |order|}}
-                        {{#if order.payload.pickup.location}}
+                        {{#each (this.getOrderStops order) as |stop|}}
                             <layers.marker
-                                @lat={{order.payload.pickup.location.coordinates.[1]}}
-                                @lng={{order.payload.pickup.location.coordinates.[0]}}
+                                @lat={{stop.lat}}
+                                @lng={{stop.lng}}
                                 @icon={{div-icon
-                                    html=(this.waypointIconHtml "P" "#22C55E")
-                                    className="fleetops-waypoint-marker"
-                                    iconSize=(array 32 32)
-                                    iconAnchor=(array 16 16)
-                                    popupAnchor=(array 0 -20)
-                                }}
-                                @riseOnHover={{true}}
-                            >
-                                <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
-                                    {{t "orchestrator.pickup"}}: {{or order.payload.pickup.address order.tracking order.public_id}}
-                                </layers.tooltip>
-                            </layers.marker>
-                        {{/if}}
-                        {{#if order.payload.dropoff.location}}
-                            <layers.marker
-                                @lat={{order.payload.dropoff.location.coordinates.[1]}}
-                                @lng={{order.payload.dropoff.location.coordinates.[0]}}
-                                @icon={{div-icon
-                                    html=(this.waypointIconHtml "D" "#EF4444")
+                                    html=(this.waypointIconHtml stop.label (if (eq stop.label "P") "#22C55E" "#EF4444"))
                                     className="fleetops-waypoint-marker"
                                     iconSize=(array 32 32)
                                     iconAnchor=(array 16 16)
@@ -174,17 +155,17 @@
                                 <layers.popup>
                                     <div class="text-xs min-w-32">
                                         <div class="font-semibold mb-0.5">{{or order.tracking order.public_id}}</div>
-                                        <div class="text-gray-500">{{order.payload.dropoff.address}}</div>
+                                        <div class="text-gray-500">{{stop.address}}</div>
                                         {{#if order.scheduled_at}}
                                             <div class="text-blue-500 mt-0.5">{{format-date order.scheduled_at "MMM d, HH:mm"}}</div>
                                         {{/if}}
                                     </div>
                                 </layers.popup>
                                 <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
-                                    {{or order.tracking order.public_id}}
+                                    {{or order.tracking order.public_id}} — {{stop.address}}
                                 </layers.tooltip>
                             </layers.marker>
-                        {{/if}}
+                        {{/each}}
                     {{/each}}
                     {{/unless}}
 
@@ -241,12 +222,14 @@
                                     />
                                 {{/each}}
                             {{/if}}
-                            {{! Numbered stop markers }}
+                            {{! Numbered stop markers — one per stop per order.
+                                 getOrderStops() normalises both pickup/dropoff and
+                                 multi-drop (waypoints) orders into a flat stop list. }}
                             {{#each group.orders as |item|}}
-                                {{#if item.order.payload.dropoff.location}}
+                                {{#each (this.getOrderStops item.order) as |stop stopIdx|}}
                                     <layers.marker
-                                        @lat={{item.order.payload.dropoff.location.coordinates.[1]}}
-                                        @lng={{item.order.payload.dropoff.location.coordinates.[0]}}
+                                        @lat={{stop.lat}}
+                                        @lng={{stop.lng}}
                                         @icon={{div-icon
                                             html=(this.waypointIconHtml item.sequence group.routeColor)
                                             className="fleetops-waypoint-marker"
@@ -259,14 +242,14 @@
                                         <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
                                             <div class="text-xs">
                                                 <div class="font-semibold">{{or item.order.tracking item.order.public_id}}</div>
-                                                <div class="text-gray-500">{{item.order.payload.dropoff.address}}</div>
+                                                <div class="text-gray-500">{{stop.address}}</div>
                                                 {{#if item.arrival}}
                                                     <div class="text-blue-400">{{this.formatUnixTime item.arrival}}</div>
                                                 {{/if}}
                                             </div>
                                         </layers.tooltip>
                                     </layers.marker>
-                                {{/if}}
+                                {{/each}}
                             {{/each}}
                         {{/each}}
                     {{/if}}
