@@ -2123,4 +2123,5 @@ orchestrator:
   # Run error state
   run-failed-title: No assignments returned
   try-again: Try Again
+  change-resources: Change Resources
   no-assignments-returned: The orchestrator could not assign any orders. Check that vehicles have sufficient capacity and drivers are on shift.

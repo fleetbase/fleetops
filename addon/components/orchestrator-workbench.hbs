@@ -307,14 +307,22 @@
                     <FaIcon @icon="triangle-exclamation" class="text-amber-500 mb-3" @size="2x" />
                     <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">{{t "orchestrator.run-failed-title"}}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">{{this.runError}}</p>
-                    <Button
-                        @icon="redo"
-                        @text={{t "orchestrator.try-again"}}
-                        @type="default"
-                        @size="sm"
-                        class="mt-4"
-                        @onClick={{perform this.runOrchestration}}
-                    />
+                    <div class="flex items-center space-x-2 mt-4">
+                        <Button
+                            @icon="redo"
+                            @text={{t "orchestrator.try-again"}}
+                            @type="default"
+                            @size="sm"
+                            @onClick={{perform this.runOrchestration}}
+                        />
+                        <Button
+                            @icon="users"
+                            @text={{t "orchestrator.change-resources"}}
+                            @type="default"
+                            @size="sm"
+                            @onClick={{this.clearRunError}}
+                        />
+                    </div>
                 </div>
             {{else}}
                 {{! Pre-run: resource panel }}

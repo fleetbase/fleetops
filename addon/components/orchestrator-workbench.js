@@ -352,6 +352,12 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.routeSummaries = {};
         this.orchestratorRunMessage = null;
     }
+    @action clearRunError() {
+        this.runError = null;
+        this.proposedPlan = null;
+        this.unassignedAfterRun = [];
+        this.orchestratorRunMessage = null;
+    }
 
     // ── Phase management ──────────────────────────────────────────────────────
 
