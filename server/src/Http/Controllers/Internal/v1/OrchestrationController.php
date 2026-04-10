@@ -26,7 +26,7 @@ use Illuminate\Support\Str;
  *
  * Responsibilities:
  *   - Serving orders for the workbench (with custom field values)
- *   - Running orchestration phases (assign_vehicles, assign_drivers, optimize, allocate)
+ *   - Running orchestration phases (assign_vehicles, assign_drivers, optimize, optimize_routes, allocate)
  *   - Committing a proposed plan to Manifests and ManifestStops
  *   - Listing available orchestration engines
  *   - Providing order-config custom field definitions for card configuration
@@ -129,6 +129,9 @@ class OrchestrationController extends Controller
             $ordersQuery->whereNull('vehicle_assigned_uuid');
         } elseif ($mode === 'optimize') {
             $ordersQuery->whereNotNull('vehicle_assigned_uuid');
+        } elseif ($mode === 'optimize_routes') {
+            // optimize_routes: re-sequence stops for selected orders.
+            // No vehicle-assignment filter — the user picks the orders explicitly.
         } elseif ($mode === 'assign_drivers') {
             $ordersQuery->whereNotNull('vehicle_assigned_uuid')
                 ->whereNull('driver_assigned_uuid');
@@ -149,11 +152,12 @@ class OrchestrationController extends Controller
             $vehiclesQuery->whereHas('driver', fn ($q) => $q->whereIn('public_id', $driverIds));
         }
 
-        // assign_vehicles and assign_drivers include vehicles without online drivers
-        if ($mode === 'assign_vehicles' || $mode === 'assign_drivers') {
+        // assign_vehicles, assign_drivers and optimize_routes do not require an
+        // online/assigned driver — use all matching vehicles as-is.
+        if (in_array($mode, ['assign_vehicles', 'assign_drivers', 'optimize_routes'])) {
             $vehicles = $vehiclesQuery->get();
         } else {
-            // Legacy allocate mode requires an online driver
+            // Legacy allocate / optimize modes require a driver to be linked.
             $vehicles = $vehiclesQuery->get()->filter(fn ($v) => $v->driver !== null);
         }
 
