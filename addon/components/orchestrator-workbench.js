@@ -111,16 +111,21 @@ export default class OrchestratorWorkbenchComponent extends Component {
         if (lat != null && lng != null) {
             this.mapCenter = { lat, lng };
         }
+        // getUserLocation resolves to browser/IP geolocation — only use it as a
+        // fallback when no orders have been loaded yet. Once _centerMapOnOrders()
+        // runs it will override this with the actual order stop coordinates.
         this.location
             .getUserLocation()
             .then(({ latitude, longitude }) => {
-                this.mapCenter = { lat: latitude, lng: longitude };
-                if (this.leafletMap?.setView) {
-                    this.leafletMap.setView([latitude, longitude], this.mapZoom);
+                // Only apply if orders have not yet been loaded (no plan, no stops)
+                if (!this.unassignedOrders.length && !this.proposedPlan?.length) {
+                    this.mapCenter = { lat: latitude, lng: longitude };
+                    if (this.leafletMap?.setView) {
+                        this.leafletMap.setView([latitude, longitude], this.mapZoom);
+                    }
                 }
             })
             .catch(() => {});
-
         this.loadData.perform();
         this.loadEngines.perform();
         this.loadCardFields.perform();
@@ -509,9 +514,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
             if (!waypoints || waypoints.length < 2) continue;
             try {
                 const control = await this.leafletMapManager.addRoutingControl(waypoints, {
-                    // Suppress the default route summary panel — we show our own
-                    show: false,
-                    collapsible: false,
+                    // Suppress the routing control's default plain Leaflet markers.
+                    // The orchestrator renders its own custom numbered div-icon markers
+                    // via planByVehicle in the HBS, so the routing control markers
+                    // are redundant and visually incorrect.
+                    createMarker: () => null,
                 });
                 if (control) {
                     this._routingControls.push(control);
@@ -609,13 +616,10 @@ export default class OrchestratorWorkbenchComponent extends Component {
      */
     _buildRouteWaypoints(orders, vehicle) {
         const points = [];
-        // Optionally start at the vehicle/driver location
-        const driver = vehicle ? this.availableDrivers.find((d) => d.vehicle_id === vehicle.public_id) : null;
-        const startLoc = driver?.location?.coordinates ?? vehicle?.location?.coordinates;
-        if (startLoc) {
-            // GeoJSON is [lng, lat] — Leaflet needs [lat, lng]
-            points.push([startLoc[1], startLoc[0]]);
-        }
+        // Only include the actual order stop coordinates (pickup + dropoff / waypoints).
+        // Do NOT prepend the driver/vehicle current GPS location — that adds an extra
+        // OSRM waypoint that is not part of the selected orders and produces incorrect
+        // route geometry (e.g. 3 points for a 1-order plan with 2 stops).
         for (const item of orders) {
             const stops = this._getOrderStops(item.order);
             for (const stop of stops) {
@@ -697,11 +701,16 @@ export default class OrchestratorWorkbenchComponent extends Component {
         const dropoff = payload.dropoff;
         const pickupCoords = this._placeCoords(pickup);
         const dropoffCoords = this._placeCoords(dropoff);
+        // Address fallbacks: the orchestrator/orders endpoint may return an empty
+        // place.address string. Fall back to order-level pickup_name / dropoff_name
+        // fields which are always populated from the API resource.
         if (pickupCoords) {
-            stops.push({ ...pickupCoords, address: pickup.address ?? '', label: 'P' });
+            const addr = pickup?.address || order?.pickup_name || order?.payload?.pickup?.name || '';
+            stops.push({ ...pickupCoords, address: addr, label: 'P' });
         }
         if (dropoffCoords) {
-            stops.push({ ...dropoffCoords, address: dropoff.address ?? '', label: 'D' });
+            const addr = dropoff?.address || order?.dropoff_name || order?.payload?.dropoff?.name || '';
+            stops.push({ ...dropoffCoords, address: addr, label: 'D' });
         }
         return stops;
     }

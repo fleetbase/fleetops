@@ -239,14 +239,14 @@ export default class OrchestratorPlanViewerComponent extends Component {
         const routeLine = [pickupAddress, dropoffAddress].filter(Boolean).join(' > ');
 
         return {
-            html: `<div style="display:flex;flex-direction:column;gap:1px;padding:2px 0;overflow:hidden;height:100%;">
+            html: `<div style="display:flex;flex-direction:column;gap:2px;padding:3px 0;overflow:hidden;height:100%;">
                 <div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;">
                     <span style="width:7px;height:7px;border-radius:50%;background:#ffffff;opacity:0.9;flex-shrink:0;"></span>
                     <span style="font-size:0.72rem;font-weight:700;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${title}</span>
                 </div>
-                ${timeRange ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.9);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${timeRange}</div>` : ''}
-                ${routeLine ? `<div style="font-size:0.62rem;color:rgba(255,255,255,0.75);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${routeLine}</div>` : ''}
-                ${customerName ? `<div style="font-size:0.62rem;color:rgba(255,255,255,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${customerName}</div>` : ''}
+                ${timeRange ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.9);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">${timeRange}</div>` : ''}
+                ${routeLine ? `<div style="font-size:0.62rem;color:rgba(255,255,255,0.8);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3;word-break:break-word;">${routeLine}</div>` : ''}
+                ${customerName ? `<div style="font-size:0.62rem;color:rgba(255,255,255,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">${customerName}</div>` : ''}
             </div>`,
         };
     }

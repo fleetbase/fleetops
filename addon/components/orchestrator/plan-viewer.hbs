@@ -155,7 +155,7 @@
     {{/if}}
 
     {{! ── TIMELINE TAB ── }}
-    {{! Uses the same EventCalendar component as the Scheduler (resourceTimelineDay view).
+    {{! Uses the same EventCalendar component as the Scheduler (resourceTimelineWeek view).
          Each vehicle is a resource row; each planned stop is an event block showing
          sequence number, tracking number, scheduled time, pickup -> dropoff address,
          and customer name. Colors match the route colors used on the map. }}
@@ -163,14 +163,14 @@
         <div id="fleet-ops-orchestrator-plan-timeline" class="flex-1 overflow-hidden">
             {{#if this.calendarEvents.length}}
                 <EventCalendar
-                    @view="resourceTimelineDay"
+                    @view="resourceTimelineWeek"
                     @date={{this.timelineDate}}
                     @events={{this.calendarEvents}}
                     @resources={{this.calendarResources}}
                     @editable={{false}}
                     @slotMinTime="00:00:00"
                     @slotMaxTime="24:00:00"
-                    @slotWidth={{80}}
+                    @slotWidth={{120}}
                     @height="100%"
                     @headerToolbar={{this.calendarHeaderToolbar}}
                     @resourceLabelContent={{this.renderResourceLabel}}

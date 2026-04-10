@@ -233,11 +233,20 @@ export default class LeafletMapManagerService extends Service {
         const { router, formatter } = this.leafletRoutingControl.get(routingService);
         const tag = `routing:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
 
-        const routingControl = new RoutingControl({
+        // Allow callers to suppress the routing control's default waypoint markers
+        // by passing createMarker: () => null in options. This is used by the
+        // orchestrator which renders its own custom div-icon markers via ember-leaflet.
+        const routingControlOptions = {
             router,
             formatter,
             waypoints,
-            markerOptions: {
+            alternativeClassName: 'hidden',
+            addWaypoints: false,
+        };
+        if (typeof options.createMarker === 'function') {
+            routingControlOptions.createMarker = options.createMarker;
+        } else {
+            routingControlOptions.markerOptions = {
                 icon: L.icon({
                     iconUrl: '/assets/images/marker-icon.png',
                     iconRetinaUrl: '/assets/images/marker-icon-2x.png',
@@ -245,10 +254,9 @@ export default class LeafletMapManagerService extends Service {
                     iconSize: [25, 41],
                     iconAnchor: [12, 41],
                 }),
-            },
-            alternativeClassName: 'hidden',
-            addWaypoints: false,
-        }).addTo(map);
+            };
+        }
+        const routingControl = new RoutingControl(routingControlOptions).addTo(map);
 
         // Track routing control
         this.routingControl = routingControl;
