@@ -1956,6 +1956,7 @@ orchestrator:
   commit-plan: Commit Plan
   discard-plan: Discard
   committed: "Orchestration committed — {count} order(s) assigned."
+  committed-badge: Plan committed
   overridden: Overridden
   on-shift: On Shift
   empty-state-title: No orchestration plan yet
@@ -2101,6 +2102,7 @@ orchestrator:
   filter-available: Available
   filter-unplanned: Unplanned
   # Plan viewer
+  vehicle: Vehicle
   expand-all: Expand all
   tab-routes: Routes
   tab-timeline: Timeline

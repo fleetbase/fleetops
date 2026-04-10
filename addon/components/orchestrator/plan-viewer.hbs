@@ -14,6 +14,10 @@
                     <span class="text-gray-300 dark:text-gray-600">·</span>
                     <button type="button" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" {{on "click" this.collapseAll}}>{{t "orchestrator.collapse-all"}}</button>
                 </div>
+            {{else if (eq this.activeTab "timeline")}}
+                {{#if this.timelineDateRange}}
+                    <span class="text-xs text-gray-400 dark:text-gray-500">{{this.timelineDateRange}}</span>
+                {{/if}}
             {{/if}}
         </div>
         {{! Tab bar }}
@@ -64,7 +68,7 @@
     {{#if (eq this.activeTab "routes")}}
     <div class="flex-1 overflow-y-auto">
         {{#each @planByVehicle as |group|}}
-            {{! vehicle-route-card — matches original styling }}
+            {{! vehicle-route-card }}
             <div
                 class="vehicle-route-card mx-3 my-2 rounded border dark:border-gray-600 dark:bg-gray-800 overflow-hidden"
                 data-vehicle-id={{group.vehicle.public_id}}
@@ -94,7 +98,7 @@
                     </div>
                 </div>
 
-                {{! Expanded stop list — drag target for resequencing }}
+                {{! Expanded stop list }}
                 {{#if (this.isExpanded group.vehicle.public_id)}}
                     <div
                         class="vehicle-drop-zone px-2 py-1"
@@ -122,7 +126,6 @@
                                 {{/if}}
                             </div>
                         {{/each}}
-                        {{! Drop placeholder when empty }}
                         {{#unless group.orders.length}}
                             <div class="py-3 text-center text-xs text-gray-500">
                                 {{t "orchestrator.drop-orders-here"}}
@@ -155,51 +158,114 @@
     {{#if (eq this.activeTab "timeline")}}
         <div class="flex-1 overflow-auto">
             {{#if this.timelineRows.length}}
-                {{! Time axis header }}
-                <div class="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b dark:border-gray-700">
+                {{! Sticky axis header }}
+                <div class="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b dark:border-gray-700 select-none">
                     <div class="flex">
-                        <div class="flex-shrink-0 w-32 border-r dark:border-gray-700"></div>
-                        <div class="flex-1 relative h-7">
+                        {{! Vehicle label column spacer }}
+                        <div class="flex-shrink-0 w-36 border-r dark:border-gray-700 px-2 py-1">
+                            <span class="text-2xs text-gray-400 uppercase tracking-wide">{{t "orchestrator.vehicle"}}</span>
+                        </div>
+                        {{! Hour tick axis }}
+                        <div class="flex-1 relative" style="height: 36px; min-width: 0;">
                             {{#each this.timelineAxisTicks as |tick|}}
-                                <span
-                                    class="absolute top-1 text-2xs text-gray-400 dark:text-gray-500 -translate-x-1/2 select-none"
+                                {{! Vertical grid line }}
+                                <div
+                                    class="absolute top-0 bottom-0 {{if tick.isDateBoundary 'w-px bg-indigo-300 dark:bg-indigo-700' 'w-px bg-gray-100 dark:bg-gray-800'}}"
                                     style="left: {{tick.leftPct}}%"
+                                ></div>
+                                {{! Time label }}
+                                <span
+                                    class="absolute text-2xs -translate-x-1/2 select-none {{if tick.isDateBoundary 'text-indigo-500 dark:text-indigo-400 font-semibold' 'text-gray-400 dark:text-gray-500'}}"
+                                    style="left: {{tick.leftPct}}%; top: 2px;"
                                 >
                                     {{tick.label}}
                                 </span>
-                                <div
-                                    class="absolute top-0 bottom-0 w-px bg-gray-100 dark:bg-gray-800"
-                                    style="left: {{tick.leftPct}}%"
-                                ></div>
+                                {{! Date boundary label (midnight) }}
+                                {{#if tick.dateLabel}}
+                                    <span
+                                        class="absolute text-2xs text-indigo-500 dark:text-indigo-400 font-medium -translate-x-1/2 select-none"
+                                        style="left: {{tick.leftPct}}%; top: 18px;"
+                                    >
+                                        {{tick.dateLabel}}
+                                    </span>
+                                {{/if}}
                             {{/each}}
                         </div>
                     </div>
                 </div>
+
                 {{! Vehicle rows }}
                 {{#each this.timelineRows as |row|}}
-                    <div class="flex border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors" style="min-height: 40px;">
+                    <div class="flex border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors" style="min-height: 48px;">
                         {{! Vehicle label }}
                         <div
-                            class="flex-shrink-0 w-32 px-2 py-1.5 border-r dark:border-gray-700 flex flex-col justify-center"
+                            class="flex-shrink-0 w-36 px-2 py-2 border-r dark:border-gray-700 flex flex-col justify-center"
                             style="border-left: 3px solid {{row.group.routeColor}}"
                         >
                             <div class="text-xs font-medium dark:text-white truncate">{{row.group.vehicle.display_name}}</div>
                             {{#if row.group.driver}}
                                 <div class="text-2xs text-gray-400 truncate">{{row.group.driver.name}}</div>
                             {{/if}}
+                            <div class="text-2xs text-gray-500 mt-0.5">{{row.blocks.length}} {{t "orchestrator.stops"}}</div>
                         </div>
+
                         {{! Gantt track }}
-                        <div class="flex-1 relative py-1.5">
+                        <div class="flex-1 relative py-2" style="min-width: 0;">
                             {{#each row.blocks as |block|}}
+                                {{! Stop block — shows tracking + time, tooltip has full details }}
                                 <div
-                                    class="absolute top-1.5 bottom-1.5 rounded text-2xs flex items-center px-1 overflow-hidden cursor-default"
-                                    style="left: {{block.leftPct}}%; width: {{block.widthPct}}%; background-color: {{row.group.routeColor}}33; border: 1px solid {{row.group.routeColor}}88;"
-                                    title="{{or block.item.order.tracking block.item.order.public_id}} — {{block.item.order.payload.dropoff.address}}"
+                                    class="absolute top-2 bottom-2 rounded flex items-center px-1.5 overflow-hidden cursor-default group/block"
+                                    style="left: {{block.leftPct}}%; width: {{block.widthPct}}%; background-color: {{row.group.routeColor}}28; border: 1px solid {{row.group.routeColor}}88;"
                                 >
-                                    <span class="truncate text-gray-700 dark:text-gray-200 font-medium">
-                                        {{block.item.sequence}}. {{or block.item.order.tracking block.item.order.public_id}}
+                                    {{! Block label: sequence + tracking }}
+                                    <span class="text-2xs font-semibold truncate" style="color: {{row.group.routeColor}};">
+                                        {{block.item.sequence}}. {{block.tracking}}
                                     </span>
+
+                                    {{! Hover tooltip with full order details }}
+                                    <div class="hidden group-hover/block:block absolute z-20 bottom-full left-0 mb-1 w-52 rounded shadow-lg border dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-xs pointer-events-none">
+                                        {{! Tracking + time window }}
+                                        <div class="font-semibold dark:text-white mb-1">{{block.tracking}}</div>
+                                        <div class="flex items-center text-gray-500 dark:text-gray-400 mb-1">
+                                            <FaIcon @icon="clock" @size="xs" class="mr-1 flex-shrink-0" />
+                                            {{block.startLabel}} – {{block.endLabel}}
+                                        </div>
+                                        {{! Date }}
+                                        <div class="flex items-center text-gray-500 dark:text-gray-400 mb-1">
+                                            <FaIcon @icon="calendar" @size="xs" class="mr-1 flex-shrink-0" />
+                                            {{block.dateLabel}}
+                                        </div>
+                                        {{! Customer }}
+                                        {{#if block.customerName}}
+                                            <div class="flex items-center text-gray-500 dark:text-gray-400 mb-1">
+                                                <FaIcon @icon="user" @size="xs" class="mr-1 flex-shrink-0" />
+                                                {{block.customerName}}
+                                            </div>
+                                        {{/if}}
+                                        {{! Pickup address }}
+                                        {{#if block.pickupAddress}}
+                                            <div class="flex items-start text-gray-500 dark:text-gray-400 mb-0.5">
+                                                <FaIcon @icon="circle-dot" @size="xs" class="mr-1 mt-0.5 flex-shrink-0 text-green-500" />
+                                                <span class="truncate">{{block.pickupAddress}}</span>
+                                            </div>
+                                        {{/if}}
+                                        {{! Dropoff address }}
+                                        {{#if block.dropoffAddress}}
+                                            <div class="flex items-start text-gray-500 dark:text-gray-400">
+                                                <FaIcon @icon="location-dot" @size="xs" class="mr-1 mt-0.5 flex-shrink-0 text-red-500" />
+                                                <span class="truncate">{{block.dropoffAddress}}</span>
+                                            </div>
+                                        {{/if}}
+                                    </div>
                                 </div>
+                            {{/each}}
+
+                            {{! Vertical grid lines (background) }}
+                            {{#each this.timelineAxisTicks as |tick|}}
+                                <div
+                                    class="absolute top-0 bottom-0 {{if tick.isDateBoundary 'w-px bg-indigo-100 dark:bg-indigo-900/40' 'w-px bg-gray-50 dark:bg-gray-800/60'}}"
+                                    style="left: {{tick.leftPct}}%"
+                                ></div>
                             {{/each}}
                         </div>
                     </div>

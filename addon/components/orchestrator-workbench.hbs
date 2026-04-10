@@ -9,7 +9,7 @@
                 <Badge @status="info">{{t "orchestrator.plan-ready"}}</Badge>
             {{/if}}
             {{#if this.isCommitted}}
-                <Badge @status="success">{{t "orchestrator.committed"}}</Badge>
+                <Badge @status="success">{{t "orchestrator.committed-badge"}}</Badge>
             {{/if}}
             {{#if this.hasUnassigned}}
                 <Badge @status="warning">{{this.unassignedAfterRun.length}} {{t "orchestrator.unassigned"}}</Badge>

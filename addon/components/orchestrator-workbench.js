@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 import { colorForId, routeStyleForStatus, waypointIconHtml } from '../utils/route-colors';
 
@@ -262,6 +263,9 @@ export default class OrchestratorWorkbenchComponent extends Component {
             if (result.message) {
                 this.orchestratorRunMessage = result.message;
             }
+            // Fit the map to the full planned route bounds after the plan is set.
+            // Deferred so planByVehicle getter has time to recompute first.
+            later(this, this._fitMapToPlan, 200);
 
             // Update route summaries
             const summaries = { ...this.routeSummaries };
@@ -471,6 +475,32 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @action onMapLoad({ target: map }) {
         this.leafletMap = map;
         map.setView([this.mapCenter.lat, this.mapCenter.lng], this.mapZoom);
+    }
+
+    /**
+     * Fit the Leaflet map to the bounding box of all planned route polylines.
+     * Called automatically after a run completes.
+     */
+    _fitMapToPlan() {
+        if (!this.leafletMap) return;
+        const allPoints = this.planByVehicle.flatMap((g) => g.routePolyline ?? []);
+        if (allPoints.length < 2) return;
+        try {
+            // L.latLngBounds accepts [[lat,lng], ...]
+            const L = this.leafletMap.constructor;
+            const bounds = allPoints.reduce(
+                (b, p) => b.extend(p),
+                window.L.latLngBounds(allPoints[0], allPoints[0])
+            );
+            this.leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+        } catch {
+            // Fallback: centre on the mean of all points
+            const lats = allPoints.map((p) => p[0]);
+            const lngs = allPoints.map((p) => p[1]);
+            const lat = lats.reduce((a, b) => a + b, 0) / lats.length;
+            const lng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
+            this.leafletMap.setView([lat, lng], 12);
+        }
     }
 
     _centerMapOnOrders() {
