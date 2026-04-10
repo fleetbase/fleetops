@@ -101,6 +101,12 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             $schedule->job(new \Fleetbase\FleetOps\Jobs\PollParcelPathTrackingJob())
                 ->everyFifteenMinutes()
                 ->withoutOverlapping();
+            $schedule->job(new \Fleetbase\FleetOps\Jobs\PollUPSTrackingJob())
+                ->everyFifteenMinutes()
+                ->withoutOverlapping();
+            $schedule->job(new \Fleetbase\FleetOps\Jobs\PollUSPSTrackingJob())
+                ->everyFifteenMinutes()
+                ->withoutOverlapping();
         });
         $this->registerNotifications();
         $this->registerExpansionsFrom(__DIR__ . '/../Expansions');

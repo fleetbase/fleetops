@@ -576,6 +576,116 @@ class UPS
         return false;
     }
 
+    /**
+     * Map a UPS Tracking API activity type code to the corresponding
+     * Fleetbase TrackingStatus code. Per the integration spec §6.2.
+     *
+     * | UPS Code | Fleetbase Code      |
+     * |----------|---------------------|
+     * | I        | IN_TRANSIT          |
+     * | D        | DELIVERED           |
+     * | X        | EXCEPTION           |
+     * | P        | PICKED_UP           |
+     * | M        | MANIFESTED          |
+     * | O        | OUT_FOR_DELIVERY    |
+     * | RS       | RETURN_TO_SENDER    |
+     *
+     * Unknown codes pass through uppercased — the caller can decide how
+     * to handle them.
+     */
+    public static function upsActivityCodeToFleetbaseCode(string $code): string
+    {
+        if ($code === '') {
+            return '';
+        }
+
+        return match (strtoupper($code)) {
+            'I'  => 'IN_TRANSIT',
+            'D'  => 'DELIVERED',
+            'X'  => 'EXCEPTION',
+            'P'  => 'PICKED_UP',
+            'M'  => 'MANIFESTED',
+            'O'  => 'OUT_FOR_DELIVERY',
+            'RS' => 'RETURN_TO_SENDER',
+            default => strtoupper($code),
+        };
+    }
+
+    /**
+     * Normalize a UPS Tracking API v1 response
+     * (GET /api/track/v1/details/{trackingNumber}) into the Fleetbase
+     * tracking shape: {status, carrier, events[]}.
+     *
+     * UPS returns activity entries inside
+     * trackResponse.shipment[0].package[0].activity[]. Each entry has
+     * status.type (the activity code), date (YYYYMMDD), time (HHMMSS),
+     * and optionally location.address.{city, stateProvince}.
+     *
+     * Handles the UPS quirk where a single activity may be returned
+     * as an object rather than an array of one.
+     *
+     * Status is derived from the last event (UPS returns events in
+     * chronological order with the most recent last).
+     */
+    public static function normalizeTrackingResponse(array $response): array
+    {
+        $activities = $response['trackResponse']['shipment'][0]['package'][0]['activity'] ?? null;
+
+        if (!is_array($activities) || empty($activities)) {
+            return [
+                'status'  => 'UNKNOWN',
+                'carrier' => 'UPS',
+                'events'  => [],
+            ];
+        }
+
+        // Single activity may be an object not an array.
+        if (isset($activities['status']) || isset($activities['date'])) {
+            $activities = [$activities];
+        }
+
+        $events = [];
+        foreach ($activities as $activity) {
+            $rawCode = (string) ($activity['status']['type'] ?? '');
+            $code    = self::upsActivityCodeToFleetbaseCode($rawCode);
+
+            $city  = $activity['location']['address']['city'] ?? null;
+            $state = $activity['location']['address']['stateProvince'] ?? null;
+            $location = null;
+            if ($city !== null && $state !== null) {
+                $location = $city . ', ' . $state;
+            } elseif ($city !== null) {
+                $location = $city;
+            }
+
+            $dateStr = (string) ($activity['date'] ?? '');
+            $timeStr = (string) ($activity['time'] ?? '');
+            $timestamp = null;
+            if (strlen($dateStr) === 8) {
+                $timestamp = substr($dateStr, 0, 4) . '-' . substr($dateStr, 4, 2) . '-' . substr($dateStr, 6, 2);
+                if (strlen($timeStr) === 6) {
+                    $timestamp .= 'T' . substr($timeStr, 0, 2) . ':' . substr($timeStr, 2, 2) . ':' . substr($timeStr, 4, 2);
+                }
+            }
+
+            $events[] = [
+                'code'      => $code,
+                'status'    => (string) ($activity['status']['description'] ?? $code),
+                'timestamp' => $timestamp,
+                'location'  => $location,
+                'details'   => null,
+            ];
+        }
+
+        $finalCode = end($events)['code'] ?? 'UNKNOWN';
+
+        return [
+            'status'  => $finalCode,
+            'carrier' => 'UPS',
+            'events'  => $events,
+        ];
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     //  IMPURE RUNTIME WRAPPERS — compose pure helpers + HTTP + Eloquent.
     //  Not unit-tested in this phase; exercised via smoke test once the
@@ -654,6 +764,20 @@ class UPS
         }
 
         return $quotes;
+    }
+
+    /**
+     * Get tracking status from UPS Tracking API v1.
+     */
+    public function getTrackingStatus(string $trackingNumber): array
+    {
+        $response = $this->request(
+            'GET',
+            '/api/track/v1/details/' . rawurlencode($trackingNumber),
+            []
+        ) ?? [];
+
+        return static::normalizeTrackingResponse($response);
     }
 
     /**
