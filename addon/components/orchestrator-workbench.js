@@ -215,7 +215,8 @@ export default class OrchestratorWorkbenchComponent extends Component {
         const vehicleIdsFromDriverTab = [...this.selectedDriverIds]
             .map((driverId) => {
                 const driver = this.availableDrivers.find((d) => d.public_id === driverId);
-                return driver?.vehicle?.public_id ?? null;
+                // driver.vehicle is an async belongsTo proxy — use the scalar vehicle_id attr instead
+                return driver?.vehicle_id ?? null;
             })
             .filter(Boolean);
 
@@ -522,14 +523,48 @@ export default class OrchestratorWorkbenchComponent extends Component {
             // The status is taken from the first order in the group (all share a vehicle).
             const firstStatus = group.orders?.[0]?.order?.status ?? 'dispatched';
             const lineStyles = routeStyleForStatus(firstStatus, routeColor);
+            // Build a straight-line polyline through each stop's pickup → dropoff.
+            // VROOM may return encoded geometry in the future; for now we connect
+            // the waypoints in sequence using the order payload coordinates.
+            const routePolyline = this._buildRoutePolyline(group.orders, group.vehicle);
             return {
                 ...group,
                 routeColor,
                 lineStyles,
                 summary: this.routeSummaries[vehicleId] ?? {},
-                routePolyline: null,
+                routePolyline,
             };
         });
+    }
+    /**
+     * Build a [lat, lng] polyline array for a vehicle's ordered stop list.
+     * Starts at the vehicle/driver's current location (if known), then
+     * threads through each stop's pickup → dropoff in sequence order.
+     *
+     * @param {Array} orders  - Sorted stop items { order, sequence, arrival }
+     * @param {Object} vehicle - Ember Data vehicle record
+     * @returns {Array|null}   - [[lat,lng], ...] or null if no valid points
+     */
+    _buildRoutePolyline(orders, vehicle) {
+        const points = [];
+        // Optionally start at the vehicle/driver location
+        const driver = vehicle ? this.availableDrivers.find((d) => d.vehicle_id === vehicle.public_id) : null;
+        const startLoc = driver?.location?.coordinates ?? vehicle?.location?.coordinates;
+        if (startLoc) {
+            // GeoJSON is [lng, lat] — Leaflet needs [lat, lng]
+            points.push([startLoc[1], startLoc[0]]);
+        }
+        for (const item of orders) {
+            const pickup = item.order?.payload?.pickup;
+            const dropoff = item.order?.payload?.dropoff;
+            if (pickup?.latitude && pickup?.longitude) {
+                points.push([parseFloat(pickup.latitude), parseFloat(pickup.longitude)]);
+            }
+            if (dropoff?.latitude && dropoff?.longitude) {
+                points.push([parseFloat(dropoff.latitude), parseFloat(dropoff.longitude)]);
+            }
+        }
+        return points.length >= 2 ? points : null;
     }
 
     /**
@@ -552,7 +587,9 @@ export default class OrchestratorWorkbenchComponent extends Component {
             const { vehicle_id } = assignment;
             if (!groups[vehicle_id]) {
                 const vehicle = this.availableVehicles.find((v) => v.public_id === vehicle_id);
-                const driver = vehicle?.driver ?? this.availableDrivers.find((d) => d.public_id === assignment.driver_id);
+                // vehicle.driver is an async belongsTo proxy — resolve from availableDrivers by driver_id
+                const driver = this.availableDrivers.find((d) => d.public_id === assignment.driver_id)
+                    ?? this.availableDrivers.find((d) => d.vehicle_id === vehicle_id);
                 groups[vehicle_id] = { vehicle, driver, orders: [] };
             }
             const order = this.unassignedOrders.find((o) => o.public_id === assignment.order_id);

@@ -136,7 +136,9 @@
                          Uses ember-leaflet {{div-icon}} helper (not a plain hash)
                          so Leaflet receives a proper L.DivIcon instance with
                          createIcon(). Pickup = green "P", Dropoff = red "D"
-                         using the waypointIconHtml string from route-colors. }}
+                         using the waypointIconHtml string from route-colors.
+                         Hidden once a plan is proposed (replaced by numbered stop markers). }}
+                    {{#unless this.hasProposedPlan}}
                     {{#each this.unassignedOrders as |order|}}
                         {{#if order.payload.pickup.location}}
                             <layers.marker
@@ -184,6 +186,7 @@
                             </layers.marker>
                         {{/if}}
                     {{/each}}
+                    {{/unless}}
 
                     {{! ── Driver location markers ──
                          Green dot = online, red dot = offline. }}
@@ -218,12 +221,13 @@
                         {{/if}}
                     {{/each}}
 
-                    {{! ── Planned route polylines (post-run) ──
+                    {{! ── Planned route polylines + numbered stop markers (post-run) ──
                          Two-layer cased polyline: outer casing + inner colored line.
-                         lineStyles is an array of two style objects from
-                         routeStyleForStatus() in route-colors utility. }}
+                         Each stop also gets a numbered marker with a tooltip showing
+                         the tracking number, dropoff address, and estimated arrival. }}
                     {{#if this.hasProposedPlan}}
                         {{#each this.planByVehicle as |group|}}
+                            {{! Route polylines }}
                             {{#if group.routePolyline}}
                                 {{#each group.lineStyles as |style|}}
                                     <layers.polyline
@@ -237,6 +241,33 @@
                                     />
                                 {{/each}}
                             {{/if}}
+                            {{! Numbered stop markers }}
+                            {{#each group.orders as |item|}}
+                                {{#if item.order.payload.dropoff.location}}
+                                    <layers.marker
+                                        @lat={{item.order.payload.dropoff.location.coordinates.[1]}}
+                                        @lng={{item.order.payload.dropoff.location.coordinates.[0]}}
+                                        @icon={{div-icon
+                                            html=(this.waypointIconHtml item.sequence group.routeColor)
+                                            className="fleetops-waypoint-marker"
+                                            iconSize=(array 32 32)
+                                            iconAnchor=(array 16 32)
+                                            popupAnchor=(array 0 -32)
+                                        }}
+                                        @riseOnHover={{true}}
+                                    >
+                                        <layers.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                            <div class="text-xs">
+                                                <div class="font-semibold">{{or item.order.tracking item.order.public_id}}</div>
+                                                <div class="text-gray-500">{{item.order.payload.dropoff.address}}</div>
+                                                {{#if item.arrival}}
+                                                    <div class="text-blue-400">{{this.formatUnixTime item.arrival}}</div>
+                                                {{/if}}
+                                            </div>
+                                        </layers.tooltip>
+                                    </layers.marker>
+                                {{/if}}
+                            {{/each}}
                         {{/each}}
                     {{/if}}
                 </LeafletMap>

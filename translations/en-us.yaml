@@ -1959,7 +1959,7 @@ orchestrator:
   overridden: Overridden
   on-shift: On Shift
   empty-state-title: No orchestration plan yet
-  empty-state-body: Click "Run Orchestrator" to generate an optimised assignment plan for unassigned orders.
+  empty-state-body: Click "Run Orchestrator" to generate an optimized assignment plan for unassigned orders.
   unassigned-warning: Some orders could not be assigned — insufficient vehicle capacity or no drivers on shift.
   # Workbench toolbar & options
   run-orchestration: Run Orchestrator
@@ -2072,7 +2072,7 @@ orchestrator:
   # Allocation modes
   mode-assign-vehicles: Assign Vehicles
   mode-assign-drivers: Assign Drivers
-  mode-optimize-routes: Optimise Routes
+  mode-optimize-routes: Optimize Routes
   # Order statuses for phase filter
   status-created: Created
   status-dispatched: Dispatched
@@ -2102,6 +2102,8 @@ orchestrator:
   filter-unplanned: Unplanned
   # Plan viewer
   expand-all: Expand all
+  tab-routes: Routes
+  tab-timeline: Timeline
   collapse-all: Collapse all
   no-plan: Run the orchestrator to see the proposed plan.
   unassigned-description: These orders could not be assigned. They will remain in the queue for re-allocation.

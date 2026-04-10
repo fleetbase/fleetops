@@ -52,15 +52,14 @@
                 <div class="p-3 space-y-3">
 
                     {{! Phase label }}
-                    <div>
-                        <label class="block text-2xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{t "orchestrator.phase-label"}}</label>
-                        <input
-                            type="text"
+                    <InputGroup @name="phase-label" @label={{t "orchestrator.phase-label"}}>
+                        <Input
+                            @type="text"
+                            @value={{this.draftPhase.label}}
                             class="form-input form-input-sm w-full"
-                            value={{this.draftPhase.label}}
                             {{on "input" this.setDraftLabel}}
                         />
-                    </div>
+                    </InputGroup>
 
                     {{! Mode selection }}
                     <div>
@@ -89,7 +88,7 @@
                             {{#each this.orderStatusOptions as |opt|}}
                                 <button
                                     type="button"
-                                    class="px-2 py-0.5 rounded-full text-2xs border transition-colors
+                                    class="px-1.5 py-0.5 rounded text-xs border transition-colors
                                         {{if (includes opt.value this.draftPhase.orderStatuses)
                                             'bg-indigo-100 dark:bg-indigo-900/40 border-indigo-400 text-indigo-700 dark:text-indigo-300'
                                             'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400'}}"

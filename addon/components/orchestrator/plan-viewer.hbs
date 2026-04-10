@@ -1,16 +1,43 @@
-{{! Orchestrator::PlanViewer — Post-run route cards with stop sequences }}
+{{! Orchestrator::PlanViewer — Post-run route cards with stop sequences and timeline }}
 <div class="plan-viewer flex flex-col h-full overflow-hidden">
 
-    {{! Summary bar }}
-    <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-        <span class="text-xs font-medium uppercase tracking-wide dark:text-gray-400">
-            {{t "orchestrator.proposed-routes"}}
-            ({{@planByVehicle.length}})
-        </span>
-        <div class="flex items-center gap-2">
-            <button type="button" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" {{on "click" this.expandAll}}>{{t "orchestrator.expand-all"}}</button>
-            <span class="text-gray-300 dark:text-gray-600">·</span>
-            <button type="button" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" {{on "click" this.collapseAll}}>{{t "orchestrator.collapse-all"}}</button>
+    {{! ── Header: summary + tab switcher ── }}
+    <div class="px-3 py-2 border-b dark:border-gray-700 flex-shrink-0">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium uppercase tracking-wide dark:text-gray-400">
+                {{t "orchestrator.proposed-routes"}}
+                ({{@planByVehicle.length}})
+            </span>
+            {{#if (eq this.activeTab "routes")}}
+                <div class="flex items-center gap-2">
+                    <button type="button" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" {{on "click" this.expandAll}}>{{t "orchestrator.expand-all"}}</button>
+                    <span class="text-gray-300 dark:text-gray-600">·</span>
+                    <button type="button" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" {{on "click" this.collapseAll}}>{{t "orchestrator.collapse-all"}}</button>
+                </div>
+            {{/if}}
+        </div>
+        {{! Tab bar }}
+        <div class="flex gap-1">
+            <button
+                type="button"
+                class="px-2.5 py-1 rounded text-xs font-medium transition-colors
+                    {{if (eq this.activeTab 'routes')
+                        'bg-indigo-600 text-white'
+                        'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}}"
+                {{on "click" (fn this.setTab "routes")}}
+            >
+                <FaIcon @icon="route" @size="xs" class="mr-1" />{{t "orchestrator.tab-routes"}}
+            </button>
+            <button
+                type="button"
+                class="px-2.5 py-1 rounded text-xs font-medium transition-colors
+                    {{if (eq this.activeTab 'timeline')
+                        'bg-indigo-600 text-white'
+                        'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}}"
+                {{on "click" (fn this.setTab "timeline")}}
+            >
+                <FaIcon @icon="calendar-alt" @size="xs" class="mr-1" />{{t "orchestrator.tab-timeline"}}
+            </button>
         </div>
     </div>
 
@@ -33,7 +60,8 @@
         </div>
     {{/if}}
 
-    {{! Route cards — scrollable }}
+    {{! ── ROUTES TAB ── }}
+    {{#if (eq this.activeTab "routes")}}
     <div class="flex-1 overflow-y-auto">
         {{#each @planByVehicle as |group|}}
             {{! vehicle-route-card — matches original styling }}
@@ -121,4 +149,68 @@
             </div>
         {{/each}}
     </div>
+    {{/if}}
+
+    {{! ── TIMELINE TAB ── }}
+    {{#if (eq this.activeTab "timeline")}}
+        <div class="flex-1 overflow-auto">
+            {{#if this.timelineRows.length}}
+                {{! Time axis header }}
+                <div class="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b dark:border-gray-700">
+                    <div class="flex">
+                        <div class="flex-shrink-0 w-32 border-r dark:border-gray-700"></div>
+                        <div class="flex-1 relative h-7">
+                            {{#each this.timelineAxisTicks as |tick|}}
+                                <span
+                                    class="absolute top-1 text-2xs text-gray-400 dark:text-gray-500 -translate-x-1/2 select-none"
+                                    style="left: {{tick.leftPct}}%"
+                                >
+                                    {{tick.label}}
+                                </span>
+                                <div
+                                    class="absolute top-0 bottom-0 w-px bg-gray-100 dark:bg-gray-800"
+                                    style="left: {{tick.leftPct}}%"
+                                ></div>
+                            {{/each}}
+                        </div>
+                    </div>
+                </div>
+                {{! Vehicle rows }}
+                {{#each this.timelineRows as |row|}}
+                    <div class="flex border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors" style="min-height: 40px;">
+                        {{! Vehicle label }}
+                        <div
+                            class="flex-shrink-0 w-32 px-2 py-1.5 border-r dark:border-gray-700 flex flex-col justify-center"
+                            style="border-left: 3px solid {{row.group.routeColor}}"
+                        >
+                            <div class="text-xs font-medium dark:text-white truncate">{{row.group.vehicle.display_name}}</div>
+                            {{#if row.group.driver}}
+                                <div class="text-2xs text-gray-400 truncate">{{row.group.driver.name}}</div>
+                            {{/if}}
+                        </div>
+                        {{! Gantt track }}
+                        <div class="flex-1 relative py-1.5">
+                            {{#each row.blocks as |block|}}
+                                <div
+                                    class="absolute top-1.5 bottom-1.5 rounded text-2xs flex items-center px-1 overflow-hidden cursor-default"
+                                    style="left: {{block.leftPct}}%; width: {{block.widthPct}}%; background-color: {{row.group.routeColor}}33; border: 1px solid {{row.group.routeColor}}88;"
+                                    title="{{or block.item.order.tracking block.item.order.public_id}} — {{block.item.order.payload.dropoff.address}}"
+                                >
+                                    <span class="truncate text-gray-700 dark:text-gray-200 font-medium">
+                                        {{block.item.sequence}}. {{or block.item.order.tracking block.item.order.public_id}}
+                                    </span>
+                                </div>
+                            {{/each}}
+                        </div>
+                    </div>
+                {{/each}}
+            {{else}}
+                <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
+                    <FaIcon @icon="calendar-alt" @size="2x" class="mb-2 opacity-40" />
+                    {{t "orchestrator.no-plan"}}
+                </div>
+            {{/if}}
+        </div>
+    {{/if}}
+
 </div>
