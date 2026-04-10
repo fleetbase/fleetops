@@ -51,10 +51,9 @@ class OrchestrationController extends Controller
     {
         $companyUuid = session('company');
 
-        $query = Order::where('company_uuid', $companyUuid)
-            ->whereIn('status', ['created', 'dispatched', 'started']);
+        $query = Order::where('company_uuid', $companyUuid)->whereIn('status', ['created', 'dispatched', 'started']);
 
-        $query - whereHas('payload', function ($payloadQuery) {
+        $query->whereHas('payload', function ($payloadQuery) {
             $payloadQuery->where(function ($q) {
                 $q->whereHas('waypoints', function ($w) {
                     $w->whereNotNull('waypoints.uuid');
