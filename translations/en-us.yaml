@@ -944,6 +944,10 @@ integrated-vendor:
     host-help-text: Optionally provide a custom host that should be used for this integration.
     namespace: Custom Namespace
     namespace-help-text: Optionally provide a custom namespace or api version that should be used for the integration.
+    shipper-client: Shipper Client
+    shipper-client-label: Shipper Client (optional)
+    shipper-client-placeholder: Select a shipper client...
+    shipper-client-help-text: Scope this carrier credential to a specific shipper client. When set, the auto-resolver uses this record only for orders whose customer matches this vendor. Leave blank to create a catch-all record that handles any order without a client-specific credential.
 
 zone:
   fields:
