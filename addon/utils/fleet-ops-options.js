@@ -729,7 +729,7 @@ export const optimizationObjectives = [
     { label: 'Balance Workload', value: 'balance_workload', description: 'Distribute stops evenly across all available drivers.', icon: 'scale' },
     { label: 'Maximize On-Time Delivery', value: 'max_on_time', description: 'Prioritise serving stops within their time windows.', icon: 'check-circle' },
     { label: 'Minimize Overtime', value: 'min_overtime', description: 'Keep driver working hours within contracted limits.', icon: 'user-clock' },
-    { label: 'Minimize Fuel / Emissions', value: 'min_emissions', description: 'Optimise for lowest fuel consumption and CO₂ output.', icon: 'leaf' },
+    { label: 'Minimize Fuel / Emissions', value: 'min_emissions', description: 'Optimize for lowest fuel consumption and CO₂ output.', icon: 'leaf' },
 ];
 
 /**

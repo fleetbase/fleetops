@@ -8,7 +8,7 @@ import { inject as service } from '@ember/service';
  *
  * Allows dispatchers to compose a multi-phase orchestration run.
  * Each phase is a discrete step: a mode (Assign Vehicles, Assign Drivers,
- * Optimise Routes) with its own constraint options and resource/order filters.
+ * Optimize Routes) with its own constraint options and resource/order filters.
  *
  * Phases are executed in sequence. The dispatcher can run all phases at once
  * or step through them manually.
