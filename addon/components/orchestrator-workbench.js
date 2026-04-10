@@ -106,23 +106,35 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     constructor() {
         super(...arguments);
+        // ── Map center diagnostic ──────────────────────────────────────────────
+        // Track whether _centerMapOnOrders() has run so getUserLocation() cannot
+        // override it even if it resolves before loadOrders completes.
+        this._mapCenteredOnOrders = false;
+
         const lat = this.location.getLatitude();
         const lng = this.location.getLongitude();
+        // eslint-disable-next-line no-console
+        console.log('[Orchestrator] constructor: location service initial coords =>', { lat, lng });
         if (lat != null && lng != null) {
             this.mapCenter = { lat, lng };
         }
         // getUserLocation resolves to browser/IP geolocation — only use it as a
-        // fallback when no orders have been loaded yet. Once _centerMapOnOrders()
-        // runs it will override this with the actual order stop coordinates.
+        // fallback when _centerMapOnOrders() has not yet run (i.e. no orders loaded).
         this.location
             .getUserLocation()
             .then(({ latitude, longitude }) => {
-                // Only apply if orders have not yet been loaded (no plan, no stops)
-                if (!this.unassignedOrders.length && !this.proposedPlan?.length) {
+                // eslint-disable-next-line no-console
+                console.log('[Orchestrator] getUserLocation resolved =>', { latitude, longitude }, '| _mapCenteredOnOrders =', this._mapCenteredOnOrders);
+                if (!this._mapCenteredOnOrders) {
+                    // eslint-disable-next-line no-console
+                    console.log('[Orchestrator] applying geolocation as map center (no orders centered yet)');
                     this.mapCenter = { lat: latitude, lng: longitude };
                     if (this.leafletMap?.setView) {
                         this.leafletMap.setView([latitude, longitude], this.mapZoom);
                     }
+                } else {
+                    // eslint-disable-next-line no-console
+                    console.log('[Orchestrator] geolocation ignored — map already centered on orders');
                 }
             })
             .catch(() => {});
@@ -490,7 +502,15 @@ export default class OrchestratorWorkbenchComponent extends Component {
         // can resolve it. Without this call, waitForMap() never resolves and
         // routing controls silently time out.
         this.leafletMapManager.setMap(map);
+        // eslint-disable-next-line no-console
+        console.log('[Orchestrator] onMapLoad: map mounted, current mapCenter =>', this.mapCenter, '| _mapCenteredOnOrders =>', this._mapCenteredOnOrders);
         map.setView([this.mapCenter.lat, this.mapCenter.lng], this.mapZoom);
+        // If orders have already loaded before the map mounted, re-center now.
+        if (this._mapCenteredOnOrders) {
+            // eslint-disable-next-line no-console
+            console.log('[Orchestrator] onMapLoad: orders already centered — re-applying center to newly mounted map');
+            map.setView([this.mapCenter.lat, this.mapCenter.lng], this.mapZoom);
+        }
     }
 
     /**
@@ -546,14 +566,26 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     _centerMapOnOrders() {
         const orders = this.unassignedOrders;
+        // eslint-disable-next-line no-console
+        console.log('[Orchestrator] _centerMapOnOrders: orders count =>', orders.length);
         if (!orders.length) return;
         // Use _getOrderStops so multi-drop (waypoints) orders are included
         const allStops = orders.flatMap((o) => this._getOrderStops(o));
+        // eslint-disable-next-line no-console
+        console.log('[Orchestrator] _centerMapOnOrders: allStops =>', allStops);
         const lats = allStops.map((s) => s.lat).filter(Boolean);
         const lngs = allStops.map((s) => s.lng).filter(Boolean);
-        if (!lats.length) return;
+        if (!lats.length) {
+            // eslint-disable-next-line no-console
+            console.log('[Orchestrator] _centerMapOnOrders: no valid stop coordinates found — cannot center map');
+            return;
+        }
         const lat = lats.reduce((a, b) => a + b, 0) / lats.length;
         const lng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
+        // eslint-disable-next-line no-console
+        console.log('[Orchestrator] _centerMapOnOrders: computed center =>', { lat, lng }, '| leafletMap available =>', !!this.leafletMap);
+        // Mark that we have centered on orders so getUserLocation() cannot override.
+        this._mapCenteredOnOrders = true;
         this.mapCenter = { lat, lng };
         if (this.leafletMap?.setView) {
             this.leafletMap.setView([lat, lng], this.mapZoom);
