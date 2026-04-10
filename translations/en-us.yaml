@@ -1980,7 +1980,19 @@ orchestrator:
   filter-all: All
   filter-scheduled: Scheduled
   filter-urgent: Urgent
+  filter-today: Today
+  filter-unassigned: Unassigned
   filter-imported: Imported
+  advanced-filters: Advanced Filters
+  filter-country: Country
+  filter-type: Order Type
+  filter-status: Status
+  filter-date: Scheduled Date
+  filter-country-placeholder: All countries
+  filter-type-placeholder: All types
+  filter-status-placeholder: All statuses
+  filter-date-placeholder: Any date
+  clear-filters: Clear Filters
   no-address: No address
   selected: selected
   clear-selection: Clear
@@ -2100,7 +2112,6 @@ orchestrator:
   field-pickup: Pickup Address
   # Resource panel filters
   filter-available: Available
-  filter-unplanned: Unplanned
   # Plan viewer
   vehicle: Vehicle
   expand-all: Expand all

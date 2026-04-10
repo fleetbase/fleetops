@@ -20,7 +20,7 @@
         </span>
     </div>
 
-    {{! Filter chips — same px-2 py-0.5 rounded text-xs pattern as vehicle/driver panel }}
+    {{! Quick filter chips }}
     <div class="px-3 py-1.5 border-b dark:border-gray-700 flex items-center gap-1 overflow-x-auto flex-shrink-0">
         <button type="button"
             class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'all') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
@@ -29,15 +29,84 @@
             class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'scheduled') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
             {{on "click" (fn this.setFilter "scheduled")}}>{{t "orchestrator.filter-scheduled"}}</button>
         <button type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'today') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "today")}}>{{t "orchestrator.filter-today"}}</button>
+        <button type="button"
             class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'urgent') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
             {{on "click" (fn this.setFilter "urgent")}}>{{t "orchestrator.filter-urgent"}}</button>
         <button type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'unassigned') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "unassigned")}}>{{t "orchestrator.filter-unassigned"}}</button>
+        <button type="button"
             class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'imported') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
             {{on "click" (fn this.setFilter "imported")}}>{{t "orchestrator.filter-imported"}}</button>
+
+        {{! Advanced toggle }}
         <button type="button"
-            class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'unplanned') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
-            {{on "click" (fn this.setFilter "unplanned")}}>{{t "orchestrator.filter-unplanned"}}</button>
+            class="ml-auto px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1
+                {{if this.showAdvanced 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}
+                {{if this.hasAdvancedFilters 'ring-1 ring-indigo-400' ''}}"
+            {{on "click" this.toggleAdvanced}}>
+            <FaIcon @icon="sliders" @size="xs" />
+            {{t "orchestrator.advanced-filters"}}
+            {{#if this.hasAdvancedFilters}}
+                <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block"></span>
+            {{/if}}
+        </button>
     </div>
+
+    {{! Advanced filter panel }}
+    {{#if this.showAdvanced}}
+        <div class="px-3 py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex-shrink-0 space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+                {{! Country }}
+                <div class="input-group">
+                    <label class="input-label text-xs">{{t "orchestrator.filter-country"}}</label>
+                    <CountrySelect
+                        class="form-input form-input-sm w-full"
+                        @value={{this.advancedCountry}}
+                        @onChange={{this.setAdvancedCountry}}
+                        @placeholder={{t "orchestrator.filter-country-placeholder"}}
+                    />
+                </div>
+                {{! Order Type }}
+                <div class="input-group">
+                    <label class="input-label text-xs">{{t "orchestrator.filter-type"}}</label>
+                    <select class="form-select form-input-sm w-full" {{on "change" this.setAdvancedType}}>
+                        <option value="">{{t "orchestrator.filter-type-placeholder"}}</option>
+                        {{#each this.availableTypes as |type|}}
+                            <option value={{type}} selected={{eq type this.advancedType}}>{{type}}</option>
+                        {{/each}}
+                    </select>
+                </div>
+                {{! Status }}
+                <div class="input-group">
+                    <label class="input-label text-xs">{{t "orchestrator.filter-status"}}</label>
+                    <select class="form-select form-input-sm w-full" {{on "change" this.setAdvancedStatus}}>
+                        <option value="">{{t "orchestrator.filter-status-placeholder"}}</option>
+                        {{#each this.availableStatuses as |status|}}
+                            <option value={{status}} selected={{eq status this.advancedStatus}}>{{status}}</option>
+                        {{/each}}
+                    </select>
+                </div>
+                {{! Scheduled Date }}
+                <div class="input-group">
+                    <label class="input-label text-xs">{{t "orchestrator.filter-date"}}</label>
+                    <input
+                        type="date"
+                        class="form-input form-input-sm w-full"
+                        value={{this.advancedDate}}
+                        {{on "change" this.setAdvancedDate}}
+                    />
+                </div>
+            </div>
+            {{#if this.hasAdvancedFilters}}
+                <button type="button" class="text-xs text-indigo-400 hover:text-indigo-300" {{on "click" this.clearAdvancedFilters}}>
+                    <FaIcon @icon="xmark" @size="xs" class="mr-0.5" />{{t "orchestrator.clear-filters"}}
+                </button>
+            {{/if}}
+        </div>
+    {{/if}}
 
     {{! Order list }}
     <div class="flex-1 overflow-y-auto space-y-2">
@@ -45,11 +114,6 @@
             <div class="flex justify-center py-8"><Spinner /></div>
         {{else if this.filteredOrders.length}}
             {{#each this.filteredOrders as |order|}}
-                {{! ── Order Pool Card ──
-                     Clicking anywhere on the card toggles selection (outline highlight).
-                     The checkbox inside also toggles selection but stops propagation
-                     so it does not double-fire. Dragging the card to the map or
-                     resource panel triggers the drag-and-drop assignment flow. }}
                 <div
                     class="order-pool-card mx-2 my-1 rounded border overflow-hidden select-none
                         {{if (includes order.public_id this.selectedOrderIdsArray)
@@ -80,9 +144,7 @@
                         </div>
                     </div>
 
-                    {{! Card body — all fields driven by resolvedCardFields.
-                         Default set: pickup, dropoff, scheduled, customer,
-                         driver-assigned, vehicle-assigned, created. }}
+                    {{! Card body }}
                     <div class="bg-white dark:bg-gray-900 px-2 py-1.5">
                         <dl class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
                             {{#each (this.resolvedCardFields order) as |field|}}
@@ -97,7 +159,6 @@
                                 </dd>
                             {{/each}}
                         </dl>
-                        {{! Skills tags }}
                         {{#if order.required_skills.length}}
                             <div class="flex flex-wrap gap-0.5 mt-1">
                                 {{#each order.required_skills as |skill|}}

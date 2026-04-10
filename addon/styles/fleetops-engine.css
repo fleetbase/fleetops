@@ -2760,3 +2760,40 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-day {
 body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-scrollbar-thumb {
     background-color: #4b5563;
 }
+
+/* ── Orchestrator Import Modal: tab-style step indicator ── */
+.import-step-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px 8px 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #6b7280;
+    border-bottom: 2px solid transparent;
+    cursor: default;
+    user-select: none;
+    transition: color 0.15s, border-color 0.15s;
+}
+.import-step-tab--active {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+}
+.import-step-tab-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #374151;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #9ca3af;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+}
+.import-step-tab-num--active {
+    background: #1d4ed8;
+    color: #fff;
+}

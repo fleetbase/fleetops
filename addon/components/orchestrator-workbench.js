@@ -414,7 +414,8 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @action openImportModal() {
         this.modalsManager.show('modals/orchestrator-import', {
             title: this.intl.t('orchestrator.import-orders'),
-            acceptButtonText: this.intl.t('orchestrator.import-confirm'),
+            modalClass: 'flb--modal-xl',
+            hideAcceptButton: true,
             onImportComplete: () => this.loadOrders.perform(),
         });
     }

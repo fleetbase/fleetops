@@ -22,8 +22,6 @@ import { inject as service } from '@ember/service';
 
 /**
  * Default standard fields shown when no card-field settings have been saved.
- * Each entry includes icon and highlight metadata so the HBS can render them
- * with the same visual treatment as the original hardcoded block.
  */
 const DEFAULT_FIELDS = [
     { key: 'pickup',           icon: 'location-crosshairs', iconClass: 'text-green-400' },
@@ -54,8 +52,18 @@ const FIELD_META = {
 export default class OrchestratorOrderPoolComponent extends Component {
     @service intl;
 
-    @tracked orderSearch = '';
-    @tracked orderFilter = 'all';
+    // ── Quick filter chip ─────────────────────────────────────────────────────
+    @tracked orderSearch    = '';
+    @tracked orderFilter    = 'all';
+
+    // ── Advanced filter panel ─────────────────────────────────────────────────
+    @tracked showAdvanced       = false;
+    @tracked advancedCountry    = null;
+    @tracked advancedType       = null;
+    @tracked advancedStatus     = null;
+    @tracked advancedDate       = null;
+
+    // ── Quick filter ──────────────────────────────────────────────────────────
 
     @action onSearchInput(event) {
         this.orderSearch = event.target.value;
@@ -69,21 +77,124 @@ export default class OrchestratorOrderPoolComponent extends Component {
         event?.stopPropagation();
     }
 
+    // ── Advanced filter panel ─────────────────────────────────────────────────
+
+    @action toggleAdvanced() {
+        this.showAdvanced = !this.showAdvanced;
+    }
+
+    @action setAdvancedCountry(value) {
+        this.advancedCountry = value || null;
+    }
+
+    @action setAdvancedType(event) {
+        this.advancedType = event.target.value || null;
+    }
+
+    @action setAdvancedStatus(event) {
+        this.advancedStatus = event.target.value || null;
+    }
+
+    @action setAdvancedDate(event) {
+        this.advancedDate = event.target.value || null;
+    }
+
+    @action clearAdvancedFilters() {
+        this.advancedCountry = null;
+        this.advancedType    = null;
+        this.advancedStatus  = null;
+        this.advancedDate    = null;
+    }
+
+    get hasAdvancedFilters() {
+        return !!(this.advancedCountry || this.advancedType || this.advancedStatus || this.advancedDate);
+    }
+
+    /** Unique order types derived from the current order pool. */
+    get availableTypes() {
+        const orders = this.args.orders ?? [];
+        const types  = [...new Set(orders.map((o) => o.type).filter(Boolean))].sort();
+        return types;
+    }
+
+    /** Unique order statuses derived from the current order pool. */
+    get availableStatuses() {
+        const orders   = this.args.orders ?? [];
+        const statuses = [...new Set(orders.map((o) => o.status).filter(Boolean))].sort();
+        return statuses;
+    }
+
+    // ── Filtered orders ───────────────────────────────────────────────────────
+
+    get filteredOrders() {
+        let orders = this.args.orders ?? [];
+
+        // ── Text search ───────────────────────────────────────────────────────
+        if (this.orderSearch) {
+            const q = this.orderSearch.toLowerCase();
+            orders = orders.filter(
+                (o) =>
+                    o.tracking?.toLowerCase().includes(q) ||
+                    o.public_id?.toLowerCase().includes(q) ||
+                    o.payload?.dropoff?.address?.toLowerCase().includes(q) ||
+                    o.payload?.pickup?.address?.toLowerCase().includes(q)
+            );
+        }
+
+        // ── Quick filter chip ─────────────────────────────────────────────────
+        if (this.orderFilter === 'scheduled') {
+            orders = orders.filter((o) => !!o.scheduled_at);
+        } else if (this.orderFilter === 'urgent') {
+            orders = orders.filter((o) => (o.orchestrator_priority ?? 0) >= 75);
+        } else if (this.orderFilter === 'today') {
+            const today = new Date().toDateString();
+            orders = orders.filter((o) => o.scheduled_at && new Date(o.scheduled_at).toDateString() === today);
+        } else if (this.orderFilter === 'unassigned') {
+            orders = orders.filter((o) => !o.vehicle_assigned_uuid && !o.driver_assigned_uuid);
+        } else if (this.orderFilter === 'imported') {
+            orders = orders.filter((o) => o.meta?.imported_via_orchestrator);
+        }
+
+        // ── Advanced filters ──────────────────────────────────────────────────
+        if (this.advancedCountry) {
+            const country = this.advancedCountry.toLowerCase();
+            orders = orders.filter((o) => {
+                const pickupCountry  = (o.payload?.pickup?.country ?? '').toLowerCase();
+                const dropoffCountry = (o.payload?.dropoff?.country ?? '').toLowerCase();
+                const pickupAddr     = (o.payload?.pickup?.address ?? '').toLowerCase();
+                return pickupCountry === country || dropoffCountry === country || pickupAddr.includes(country);
+            });
+        }
+
+        if (this.advancedType) {
+            orders = orders.filter((o) => o.type === this.advancedType);
+        }
+
+        if (this.advancedStatus) {
+            orders = orders.filter((o) => o.status === this.advancedStatus);
+        }
+
+        if (this.advancedDate) {
+            const filterDate = new Date(this.advancedDate).toDateString();
+            orders = orders.filter((o) => o.scheduled_at && new Date(o.scheduled_at).toDateString() === filterDate);
+        }
+
+        return orders;
+    }
+
+    get selectedOrderIdsArray() {
+        return [...(this.args.selectedOrderIds ?? new Set())];
+    }
+
+    // ── Card field resolution ─────────────────────────────────────────────────
+
     /**
-     * resolvedCardFields — decorated as @action so Glimmer allows it to be
-     * invoked with arguments from HBS:
-     *   {{#each (this.resolvedCardFields order) as |field|}}
-     *
-     * Returns an array of { label, value, icon?, iconClass?, highlight? }.
-     *
-     * When no cardFields settings have been saved (@arg cardFields is null/undefined)
-     * it falls back to DEFAULT_FIELDS so the card always shows a useful set of
-     * information without requiring the dispatcher to configure anything first.
+     * resolvedCardFields — @action so Glimmer allows it to be invoked with
+     * arguments from HBS:  {{#each (this.resolvedCardFields order) as |field|}}
      */
     @action resolvedCardFields(order) {
         const cardFields = this.args.cardFields;
 
-        // ── Default fallback (no settings saved yet) ──────────────────────────
         if (!cardFields) {
             return DEFAULT_FIELDS
                 .map(({ key, icon, iconClass, highlight }) => {
@@ -96,7 +207,6 @@ export default class OrchestratorOrderPoolComponent extends Component {
 
         const fields = [];
 
-        // ── Standard fields (from settings) ───────────────────────────────────
         for (const key of cardFields.standard ?? []) {
             const { value, label } = this._resolveStandardFieldFull(order, key);
             if (!value) continue;
@@ -104,38 +214,18 @@ export default class OrchestratorOrderPoolComponent extends Component {
             fields.push({ label, value, ...meta });
         }
 
-        // ── Config-specific custom fields ──────────────────────────────────────
-        // The orders query sends with=customFieldValues.customField which causes
-        // the backend to eager-load the customFieldValues hasMany and each CFV's
-        // customField belongsTo. The Index/Order resource serialises this as a
-        // plain `custom_field_values` array, each entry containing:
-        //   { uuid, custom_field_uuid, value, value_type, custom_field: { name, label, ... } }
-        //
-        // The card-fields-settings component stores field.name (the machine key,
-        // e.g. "bl-number") as the fieldKey in byConfig. We match against
-        // custom_field.name first, then custom_field.label as a fallback.
-        //
-        // The `order` here is an Ember Data model instance. The custom_field_values
-        // hasMany is declared embedded:always in the serializer, so each CFV is
-        // pushed into the store as a custom-field-value record. We access the
-        // collection via order.custom_field_values (Ember Data proxy) or the
-        // raw array if it hasn't been fully hydrated yet.
         const configUuid = order.order_config_uuid;
         if (configUuid && cardFields.byConfig?.[configUuid]) {
             for (const fieldKey of cardFields.byConfig[configUuid]) {
                 let label = fieldKey;
                 let value = null;
 
-                // Scan the custom_field_values collection for a matching field.
-                // Each CFV carries a nested custom_field plain object with name+label.
                 const cfvCollection = order.custom_field_values ?? order.customFieldValues ?? [];
                 const cfvArray = typeof cfvCollection?.toArray === 'function'
                     ? cfvCollection.toArray()
                     : (Array.isArray(cfvCollection) ? cfvCollection : []);
 
                 for (const cfv of cfvArray) {
-                    // custom_field may be a plain object (from the serialised JSON)
-                    // or an Ember Data model proxy (if the relation was fully loaded).
                     const cf = cfv.custom_field
                         ?? (typeof cfv.customField?.get === 'function' ? cfv.customField : null)
                         ?? cfv.customField
@@ -144,14 +234,10 @@ export default class OrchestratorOrderPoolComponent extends Component {
                     const cfName  = cf?.name  ?? cf?.get?.('name')  ?? '';
                     const cfLabel = cf?.label ?? cf?.get?.('label') ?? '';
 
-                    // Match on machine key (name) first, then human label.
-                    if (cfName !== fieldKey && cfLabel !== fieldKey) {
-                        continue;
-                    }
+                    if (cfName !== fieldKey && cfLabel !== fieldKey) continue;
 
                     const rawVal = cfv.value ?? null;
                     if (rawVal !== null && rawVal !== undefined) {
-                        // Use the human label for display if available.
                         label = cfLabel || cfName || fieldKey;
                         value = typeof rawVal === 'object' ? JSON.stringify(rawVal) : String(rawVal);
                     }
@@ -164,7 +250,6 @@ export default class OrchestratorOrderPoolComponent extends Component {
             }
         }
 
-        // ── Meta fields ────────────────────────────────────────────────────────
         for (const key of cardFields.meta ?? []) {
             const val = order.meta?.[key];
             if (val !== undefined && val !== null) {
@@ -175,48 +260,12 @@ export default class OrchestratorOrderPoolComponent extends Component {
         return fields;
     }
 
-    /**
-     * priorityBadgeStatus — @action so it can be called with an argument from HBS.
-     * Returns a Badge @status string.
-     */
     @action priorityBadgeStatus(priority) {
         if (priority >= 75) return 'error';
         if (priority >= 50) return 'warning';
         return 'info';
     }
 
-    get filteredOrders() {
-        let orders = this.args.orders ?? [];
-        if (this.orderSearch) {
-            const q = this.orderSearch.toLowerCase();
-            orders = orders.filter(
-                (o) =>
-                    o.tracking?.toLowerCase().includes(q) ||
-                    o.public_id?.toLowerCase().includes(q) ||
-                    o.payload?.dropoff?.address?.toLowerCase().includes(q) ||
-                    o.payload?.pickup?.address?.toLowerCase().includes(q)
-            );
-        }
-        if (this.orderFilter === 'scheduled') {
-            orders = orders.filter((o) => o.scheduled_at);
-        } else if (this.orderFilter === 'urgent') {
-            orders = orders.filter((o) => (o.orchestrator_priority ?? 0) >= 75);
-        } else if (this.orderFilter === 'imported') {
-            orders = orders.filter((o) => o.meta?.imported_via_orchestrator);
-        } else if (this.orderFilter === 'unplanned') {
-            orders = orders.filter((o) => o.status === 'created' && !o.vehicle_assigned_uuid);
-        }
-        return orders;
-    }
-
-    get selectedOrderIdsArray() {
-        return [...(this.args.selectedOrderIds ?? new Set())];
-    }
-
-    /**
-     * Returns { label, value } for a standard field key.
-     * Labels are human-readable strings (not raw keys).
-     */
     _resolveStandardFieldFull(order, key) {
         const t = (k) => {
             try { return this.intl.t(`orchestrator.${k}`); } catch { return k; }
@@ -241,8 +290,6 @@ export default class OrchestratorOrderPoolComponent extends Component {
     _formatDate(date) {
         if (!date) return null;
         try {
-            // Use 'en-US' explicitly — passing undefined uses the browser/OS locale
-            // which may be Arabic or another non-Latin script on some deployments.
             return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(date));
         } catch {
             return String(date);

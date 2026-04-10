@@ -2,23 +2,21 @@
     <div class="modal-body-container">
         <div class="grid grid-cols-1 gap-4 text-xs dark:text-gray-100">
 
-            {{! ── Step indicator ── }}
-            <div class="flex items-center space-x-2 mb-2">
-                <div class="import-step {{if (eq this.step 'upload') 'active' ''}}">
-                    <span class="import-step-num">1</span>
+            {{! ── Tab-style step indicator ── }}
+            <nav class="flex border-b dark:border-gray-700 -mt-1 mb-1">
+                <div class="import-step-tab {{if (eq this.step 'upload') 'import-step-tab--active' ''}}">
+                    <span class="import-step-tab-num {{if (eq this.step 'upload') 'import-step-tab-num--active' ''}}">1</span>
                     <span>{{t "orchestrator.import-step-upload"}}</span>
                 </div>
-                <div class="import-step-divider"></div>
-                <div class="import-step {{if (eq this.step 'map') 'active' ''}}">
-                    <span class="import-step-num">2</span>
+                <div class="import-step-tab {{if (eq this.step 'map') 'import-step-tab--active' ''}}">
+                    <span class="import-step-tab-num {{if (eq this.step 'map') 'import-step-tab-num--active' ''}}">2</span>
                     <span>{{t "orchestrator.import-step-map"}}</span>
                 </div>
-                <div class="import-step-divider"></div>
-                <div class="import-step {{if (eq this.step 'preview') 'active' ''}}">
-                    <span class="import-step-num">3</span>
+                <div class="import-step-tab {{if (eq this.step 'preview') 'import-step-tab--active' ''}}">
+                    <span class="import-step-tab-num {{if (eq this.step 'preview') 'import-step-tab-num--active' ''}}">3</span>
                     <span>{{t "orchestrator.import-step-preview"}}</span>
                 </div>
-            </div>
+            </nav>
 
             {{! ── Step 1: Upload ── }}
             {{#if (eq this.step "upload")}}
@@ -41,12 +39,14 @@
                         <FaIcon @icon="cloud-upload-alt" @size="2x" class="text-gray-400 mb-2" />
                         <p class="text-sm dark:text-gray-300">{{t "orchestrator.drop-file-here"}}</p>
                         <p class="text-gray-500 mt-0.5">{{t "orchestrator.or"}}</p>
-                        <label class="mt-2 cursor-pointer">
-                            <span class="px-3 py-1.5 rounded border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:dark:bg-gray-600 text-xs">
-                                {{t "orchestrator.browse-file"}}
-                            </span>
-                            <input type="file" accept=".csv,.xlsx,.xls" class="hidden" {{on "change" this.onFileSelected}} />
-                        </label>
+                        <div class="mt-2">
+                            <label class="cursor-pointer inline-block">
+                                <span class="px-3 py-1.5 rounded border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:dark:bg-gray-600 text-xs">
+                                    {{t "orchestrator.browse-file"}}
+                                </span>
+                                <input type="file" accept=".csv,.xlsx,.xls" class="hidden" {{on "change" this.onFileSelected}} />
+                            </label>
+                        </div>
                         <p class="text-gray-500 mt-2 text-xs">{{t "orchestrator.accepted-formats"}}</p>
                     {{/if}}
                 </div>
@@ -145,7 +145,7 @@
                     <Button
                         @icon="arrow-right"
                         @iconPosition="right"
-                        @text={{t "orchestrator.preview-import"}}
+                        @text={{t "orchestrator.next"}}
                         @type="primary"
                         @size="sm"
                         @disabled={{not this.mappingIsValid}}
