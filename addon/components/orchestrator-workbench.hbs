@@ -202,26 +202,14 @@
                         {{/if}}
                     {{/each}}
 
-                    {{! ── Planned route polylines + numbered stop markers (post-run) ──
-                         Two-layer cased polyline: outer casing + inner colored line.
-                         Each stop also gets a numbered marker with a tooltip showing
+                    {{! ── Planned route numbered stop markers (post-run) ──
+                         Route polylines are drawn by the OSRM routing control
+                         (added imperatively via leafletMapManager.addRoutingControl)
+                         so no <layers.polyline> is needed here.
+                         Each stop gets a numbered marker with a tooltip showing
                          the tracking number, dropoff address, and estimated arrival. }}
                     {{#if this.hasProposedPlan}}
                         {{#each this.planByVehicle as |group|}}
-                            {{! Route polylines }}
-                            {{#if group.routePolyline}}
-                                {{#each group.lineStyles as |style|}}
-                                    <layers.polyline
-                                        @positions={{group.routePolyline}}
-                                        @color={{style.color}}
-                                        @weight={{style.weight}}
-                                        @opacity={{style.opacity}}
-                                        @dashArray={{style.dashArray}}
-                                        @lineCap={{style.lineCap}}
-                                        @lineJoin={{style.lineJoin}}
-                                    />
-                                {{/each}}
-                            {{/if}}
                             {{! Numbered stop markers — one per stop per order.
                                  getOrderStops() normalises both pickup/dropoff and
                                  multi-drop (waypoints) orders into a flat stop list. }}

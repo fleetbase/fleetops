@@ -81,12 +81,18 @@ export default class OrchestratorPlanViewerComponent extends Component {
      *   3. null — caller must use a fallback cursor
      */
     _resolveStopTime(item) {
+        // 1. VROOM arrival time (Unix seconds integer)
         if (item.arrival && typeof item.arrival === 'number') {
             return item.arrival;
         }
+        // 2. order.scheduled_at — may be a Date object (Ember Data) or an ISO
+        //    string (plain JSON from orchestrator/orders endpoint)
         const scheduledAt = item.order?.scheduled_at;
-        if (scheduledAt instanceof Date && !isNaN(scheduledAt)) {
-            return Math.floor(scheduledAt.getTime() / 1000);
+        if (scheduledAt) {
+            const d = scheduledAt instanceof Date ? scheduledAt : new Date(scheduledAt);
+            if (!isNaN(d.getTime())) {
+                return Math.floor(d.getTime() / 1000);
+            }
         }
         return null;
     }

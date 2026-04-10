@@ -33,7 +33,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @service intl;
     @service modalsManager;
     @service location;
+    @service leafletMapManager;
     @service('order-allocation') allocationService;
+
+    /** Routing controls added to the map for the current proposed plan. */
+    _routingControls = [];
 
     // ── Data ──────────────────────────────────────────────────────────────────
 
@@ -187,6 +191,8 @@ export default class OrchestratorWorkbenchComponent extends Component {
      * falls back to a single legacy 'allocate' run.
      */
     @task *runOrchestration() {
+        // Clear any routing controls from a previous run before starting a new one
+        this._clearRoutingControls();
         this.proposedPlan = null;
         this.isCommitted = false;
         this.manualOverrides = {};
@@ -265,7 +271,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
             }
             // Fit the map to the full planned route bounds after the plan is set.
             // Deferred so planByVehicle getter has time to recompute first.
-            later(this, this._fitMapToPlan, 200);
+            later(this, () => this._drawRoutingControls(), 200);
 
             // Update route summaries
             const summaries = { ...this.routeSummaries };
@@ -310,6 +316,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     @action discardPlan() {
+        this._clearRoutingControls();
         this.proposedPlan = null;
         this.unassignedAfterRun = [];
         this.manualOverrides = {};
@@ -478,29 +485,52 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     /**
-     * Fit the Leaflet map to the bounding box of all planned route polylines.
-     * Called automatically after a run completes.
+     * Draw one OSRM routing control per vehicle group onto the Leaflet map.
+     * Each routing control takes the ordered stop waypoints [[lat, lng], ...]
+     * and asks OSRM for the actual road path, drawing it as a coloured polyline.
+     *
+     * The leafletMapManager service handles OSRM router setup, map fitting, and
+     * routing control lifecycle — consistent with how the rest of the app works.
+     *
+     * Called automatically (deferred 200ms) after a run completes so that
+     * planByVehicle has time to recompute first.
      */
-    _fitMapToPlan() {
-        if (!this.leafletMap) return;
-        const allPoints = this.planByVehicle.flatMap((g) => g.routePolyline ?? []);
-        if (allPoints.length < 2) return;
-        try {
-            // L.latLngBounds accepts [[lat,lng], ...]
-            const L = this.leafletMap.constructor;
-            const bounds = allPoints.reduce(
-                (b, p) => b.extend(p),
-                window.L.latLngBounds(allPoints[0], allPoints[0])
-            );
-            this.leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
-        } catch {
-            // Fallback: centre on the mean of all points
-            const lats = allPoints.map((p) => p[0]);
-            const lngs = allPoints.map((p) => p[1]);
-            const lat = lats.reduce((a, b) => a + b, 0) / lats.length;
-            const lng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
-            this.leafletMap.setView([lat, lng], 12);
+    async _drawRoutingControls() {
+        await this._clearRoutingControls();
+        const groups = this.planByVehicle;
+        if (!groups.length) return;
+
+        for (const group of groups) {
+            const waypoints = group.routeWaypoints;
+            if (!waypoints || waypoints.length < 2) continue;
+            try {
+                const control = await this.leafletMapManager.addRoutingControl(waypoints, {
+                    // Suppress the default route summary panel — we show our own
+                    show: false,
+                    collapsible: false,
+                });
+                if (control) {
+                    this._routingControls.push(control);
+                }
+            } catch {
+                // Non-fatal: routing may fail for individual vehicles if OSRM
+                // cannot find a route (e.g. ferry-only legs, missing road data)
+            }
         }
+    }
+
+    /**
+     * Remove all routing controls that were added for the current plan.
+     */
+    async _clearRoutingControls() {
+        for (const control of this._routingControls) {
+            try {
+                await this.leafletMapManager.removeRoutingControl(control);
+            } catch {
+                // Ignore errors on removal
+            }
+        }
+        this._routingControls = [];
     }
 
     _centerMapOnOrders() {
@@ -551,33 +581,29 @@ export default class OrchestratorWorkbenchComponent extends Component {
             // Derive a deterministic color from the vehicle public_id so the same
             // vehicle always gets the same color across runs and page refreshes.
             const routeColor = colorForId(group.vehicle?.public_id ?? vehicleId);
-            // Build the two-layer cased polyline style array for this vehicle's route.
-            // The status is taken from the first order in the group (all share a vehicle).
-            const firstStatus = group.orders?.[0]?.order?.status ?? 'dispatched';
-            const lineStyles = routeStyleForStatus(firstStatus, routeColor);
-            // Build a straight-line polyline through each stop's pickup → dropoff.
-            // VROOM may return encoded geometry in the future; for now we connect
-            // the waypoints in sequence using the order payload coordinates.
-            const routePolyline = this._buildRoutePolyline(group.orders, group.vehicle);
+            // Build the ordered [[lat, lng], ...] waypoint array for the OSRM
+            // routing control. The routing control draws the actual road path.
+            const routeWaypoints = this._buildRouteWaypoints(group.orders, group.vehicle);
             return {
                 ...group,
                 routeColor,
-                lineStyles,
                 summary: this.routeSummaries[vehicleId] ?? {},
-                routePolyline,
+                routeWaypoints,
             };
         });
     }
     /**
-     * Build a [lat, lng] polyline array for a vehicle's ordered stop list.
-     * Starts at the vehicle/driver's current location (if known), then
-     * threads through each stop's pickup → dropoff in sequence order.
+     * Build an ordered [[lat, lng], ...] waypoint array for a vehicle's stop list.
+     * Starts at the vehicle/driver's current location (if known), then threads
+     * through each stop in sequence order. This array is passed directly to
+     * leafletMapManager.addRoutingControl() which calls OSRM to draw the actual
+     * road path on the map.
      *
-     * @param {Array} orders  - Sorted stop items { order, sequence, arrival }
-     * @param {Object} vehicle - Ember Data vehicle record
-     * @returns {Array|null}   - [[lat,lng], ...] or null if no valid points
+     * @param {Array}  orders  - Sorted stop items { order, sequence, arrival }
+     * @param {Object} vehicle - Vehicle record (plain JSON from orchestrator/orders)
+     * @returns {Array|null}   - [[lat,lng], ...] or null if fewer than 2 valid points
      */
-    _buildRoutePolyline(orders, vehicle) {
+    _buildRouteWaypoints(orders, vehicle) {
         const points = [];
         // Optionally start at the vehicle/driver location
         const driver = vehicle ? this.availableDrivers.find((d) => d.vehicle_id === vehicle.public_id) : null;
@@ -598,31 +624,65 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     /**
+     * Extract { lat, lng } from a place object.
+     *
+     * The orchestrator/orders endpoint returns places with a GeoJSON Point:
+     *   location: { type: 'Point', coordinates: [longitude, latitude] }
+     * Note: GeoJSON uses [lng, lat] order, not [lat, lng].
+     *
+     * Falls back to direct .latitude / .longitude properties for Ember Data records.
+     *
+     * @param {Object} place
+     * @returns {{ lat: number, lng: number } | null}
+     */
+    _placeCoords(place) {
+        if (!place) return null;
+        // GeoJSON Point (plain JSON from orchestrator/orders endpoint)
+        const loc = place.location;
+        if (loc?.type === 'Point' && Array.isArray(loc.coordinates) && loc.coordinates.length >= 2) {
+            const lng = parseFloat(loc.coordinates[0]);
+            const lat = parseFloat(loc.coordinates[1]);
+            if (lat && lng) return { lat, lng };
+        }
+        // Ember Data model with direct lat/lng attributes
+        const lat = parseFloat(place.latitude);
+        const lng = parseFloat(place.longitude);
+        if (lat && lng) return { lat, lng };
+        return null;
+    }
+
+    /**
      * Normalise an order's stops into a flat array of { lat, lng, address, label }
      * regardless of whether the order uses pickup/dropoff or a waypoints array.
+     *
+     * Works with both plain JSON objects (from orchestrator/orders endpoint) and
+     * Ember Data model records. Handles GeoJSON Point location format.
      *
      * - Pickup/dropoff orders: returns [pickup, dropoff] (either may be absent)
      * - Multi-drop orders (payload.waypoints): returns each waypoint's place in
      *   sequence order, labelled by stop number (1, 2, 3…)
      *
-     * @param {Object} order - Ember Data order record
+     * @param {Object} order
      * @returns {Array<{lat: number, lng: number, address: string, label: string}>}
      */
     _getOrderStops(order) {
         const payload = order?.payload;
         if (!payload) return [];
 
-        // Multi-drop: payload has waypoints but no pickup/dropoff
+        // Multi-drop: payload has a non-empty waypoints array and no pickup/dropoff.
+        // NOTE: isMultiDrop is an Ember Data computed property and won't exist on
+        // plain JSON objects returned by the orchestrator/orders endpoint.
         const waypoints = payload.waypoints;
-        if (payload.isMultiDrop && waypoints?.length) {
+        const hasWaypoints = Array.isArray(waypoints) && waypoints.length > 0;
+        const isMultiDrop = payload.isMultiDrop === true || (hasWaypoints && !payload.pickup && !payload.dropoff);
+        if (isMultiDrop && hasWaypoints) {
             const sorted = [...waypoints].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
             return sorted
                 .map((wp, idx) => {
                     const place = wp.place ?? wp;
-                    const lat = parseFloat(place.latitude);
-                    const lng = parseFloat(place.longitude);
-                    if (!lat || !lng) return null;
-                    return { lat, lng, address: place.address ?? '', label: String(idx + 1) };
+                    const coords = this._placeCoords(place);
+                    if (!coords) return null;
+                    return { ...coords, address: place.address ?? '', label: String(idx + 1) };
                 })
                 .filter(Boolean);
         }
@@ -631,11 +691,13 @@ export default class OrchestratorWorkbenchComponent extends Component {
         const stops = [];
         const pickup = payload.pickup;
         const dropoff = payload.dropoff;
-        if (pickup?.latitude && pickup?.longitude) {
-            stops.push({ lat: parseFloat(pickup.latitude), lng: parseFloat(pickup.longitude), address: pickup.address ?? '', label: 'P' });
+        const pickupCoords = this._placeCoords(pickup);
+        const dropoffCoords = this._placeCoords(dropoff);
+        if (pickupCoords) {
+            stops.push({ ...pickupCoords, address: pickup.address ?? '', label: 'P' });
         }
-        if (dropoff?.latitude && dropoff?.longitude) {
-            stops.push({ lat: parseFloat(dropoff.latitude), lng: parseFloat(dropoff.longitude), address: dropoff.address ?? '', label: 'D' });
+        if (dropoffCoords) {
+            stops.push({ ...dropoffCoords, address: dropoff.address ?? '', label: 'D' });
         }
         return stops;
     }
@@ -712,7 +774,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     formatUnixTime(unix) {
         if (!unix) return '';
-        return new Date(unix * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return new Date(unix * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
     }
 
     // ── Panel resize ──────────────────────────────────────────────────────────
