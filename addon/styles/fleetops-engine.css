@@ -2760,3 +2760,7 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-day {
 body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-scrollbar-thumb {
     background-color: #4b5563;
 }
+
+.orchestrator-map-container.next-map-container .leaflet-top {
+    top: 0;
+}

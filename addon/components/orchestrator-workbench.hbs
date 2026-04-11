@@ -122,7 +122,7 @@
 
         {{! ── CENTRE: Map ── }}
         <div class="map-panel flex-1 relative overflow-hidden">
-            <div class="fleetbase-leaflet-map-container next-map-container w-full h-full">
+            <div class="orchestrator-map-container fleetbase-leaflet-map-container next-map-container w-full h-full">
                 <LeafletMap
                     @lat={{this.mapCenter.lat}}
                     @lng={{this.mapCenter.lng}}
@@ -307,7 +307,7 @@
                     <FaIcon @icon="triangle-exclamation" class="text-amber-500 mb-3" @size="2x" />
                     <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">{{t "orchestrator.run-failed-title"}}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">{{this.runError}}</p>
-                    <div class="flex items-center space-x-2 mt-4">
+                    <div class="flex flex-col items-center space-y-2 mt-4">
                         <Button
                             @icon="redo"
                             @text={{t "orchestrator.try-again"}}
