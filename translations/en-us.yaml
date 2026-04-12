@@ -2048,6 +2048,7 @@ orchestrator:
   col-dropoff: Dropoff
   col-scheduled: Scheduled
   col-weight: Weight
+  col-customer: Customer
   col-status: Status
   error: Error
   valid: Valid
@@ -2057,7 +2058,7 @@ orchestrator:
   parse-error: Could not parse the file. Please check the format.
   read-error: Could not read the file.
   empty-file: The file appears to be empty.
-  missing-dropoff: Dropoff address is required.
+  missing-dropoff: Dropoff Street 1 is required.
   stops-count: "{count} stops"
   # Order card fields
   pickup: Pickup

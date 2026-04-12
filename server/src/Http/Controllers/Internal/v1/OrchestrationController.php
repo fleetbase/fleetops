@@ -3,12 +3,16 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Resources\v1\Orchestrator\Order as OrchestratorOrderResource;
+use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
+use Fleetbase\FleetOps\Models\Payload;
+use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Orchestration\Engines\DriverAssignmentEngine;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
 use Fleetbase\Http\Controllers\Controller;
@@ -422,31 +426,183 @@ class OrchestrationController extends Controller
         $created = [];
         $failed  = [];
 
-        foreach ($rows as $index => $row) {
-            try {
-                $orderData = [
-                    'company_uuid'          => $companyUuid,
-                    'status'                => 'created',
-                    'type'                  => $row['type'] ?? 'default',
-                    'notes'                 => $row['notes'] ?? null,
-                    'scheduled_at'          => $row['scheduled_at'] ?? null,
-                    'meta'                  => array_filter([
-                        'weight_kg' => $row['weight_kg'] ?? null,
-                        'volume_m3' => $row['volume_m3'] ?? null,
-                        'parcels'   => $row['parcels'] ?? null,
-                    ]),
-                    'time_window_start'     => $row['time_window_start'] ?? null,
-                    'time_window_end'       => $row['time_window_end'] ?? null,
-                    'required_skills'       => $row['required_skills'] ?? [],
-                    'orchestrator_priority' => $row['priority'] ?? 0,
-                    '_pickup_address'       => $row['pickup_address'] ?? null,
-                    '_dropoff_address'      => $row['dropoff_address'] ?? null,
-                ];
+        // ── Group multi-waypoint rows by order_ref ────────────────────────────
+        // Rows with order_type = 'multi_waypoint' and the same order_ref are
+        // collapsed into a single order where each row becomes one waypoint.
+        $groups = [];
+        foreach ($rows as $row) {
+            $orderType = strtolower(trim($row['order_type'] ?? 'pickup_dropoff'));
+            $orderRef  = trim($row['order_ref'] ?? '');
 
-                $order     = Order::create($orderData);
+            if ($orderType === 'multi_waypoint' && $orderRef !== '') {
+                $groups[$orderRef][] = $row;
+            } else {
+                // Each pickup/dropoff row is its own independent group.
+                $groups['__single_' . Str::uuid()][] = $row;
+            }
+        }
+
+        foreach ($groups as $groupKey => $groupRows) {
+            DB::beginTransaction();
+            try {
+                // Use the first row for order-level metadata.
+                $firstRow  = $groupRows[0];
+                $orderType = strtolower(trim($firstRow['order_type'] ?? 'pickup_dropoff'));
+                $isMulti   = $orderType === 'multi_waypoint';
+
+                // ── Resolve OrderConfig ───────────────────────────────────────
+                $orderConfigUuid = null;
+                if (!empty($firstRow['type'])) {
+                    $orderConfig = OrderConfig::resolveFromIdentifier($firstRow['type']);
+                    if ($orderConfig) {
+                        $orderConfigUuid = $orderConfig->uuid;
+                    }
+                }
+
+                // ── Resolve Customer ─────────────────────────────────────────
+                $customerUuid = null;
+                $customerType = null;
+                if (!empty($firstRow['customer_email']) || !empty($firstRow['customer_phone']) || !empty($firstRow['customer_name'])) {
+                    $customerEntityType = strtolower(trim($firstRow['customer_type'] ?? 'contact'));
+                    if ($customerEntityType === 'vendor') {
+                        $vendor = $this->resolveOrCreateVendor($firstRow, $companyUuid, 'customer');
+                        if ($vendor) {
+                            $customerUuid = $vendor->uuid;
+                            $customerType = 'Fleetbase\\FleetOps\\Models\\Vendor';
+                        }
+                    } else {
+                        $contact = $this->resolveOrCreateContact($firstRow, $companyUuid, 'customer');
+                        if ($contact) {
+                            $customerUuid = $contact->uuid;
+                            $customerType = 'Fleetbase\\FleetOps\\Models\\Contact';
+                        }
+                    }
+                }
+
+                // ── Resolve Facilitator ───────────────────────────────────────
+                $facilitatorUuid = null;
+                $facilitatorType = null;
+                if (!empty($firstRow['facilitator_email']) || !empty($firstRow['facilitator_phone']) || !empty($firstRow['facilitator_name'])) {
+                    $facilitatorEntityType = strtolower(trim($firstRow['facilitator_type'] ?? 'vendor'));
+                    if ($facilitatorEntityType === 'contact') {
+                        $contact = $this->resolveOrCreateContact($firstRow, $companyUuid, 'facilitator');
+                        if ($contact) {
+                            $facilitatorUuid = $contact->uuid;
+                            $facilitatorType = 'Fleetbase\\FleetOps\\Models\\Contact';
+                        }
+                    } else {
+                        $vendor = $this->resolveOrCreateVendor($firstRow, $companyUuid, 'facilitator');
+                        if ($vendor) {
+                            $facilitatorUuid = $vendor->uuid;
+                            $facilitatorType = 'Fleetbase\\FleetOps\\Models\\Vendor';
+                        }
+                    }
+                }
+
+                // ── Resolve Vehicle ───────────────────────────────────────────
+                $vehicleUuid = null;
+                if (!empty($firstRow['vehicle_plate'])) {
+                    $vehicle = Vehicle::where('company_uuid', $companyUuid)
+                        ->where('plate_number', $firstRow['vehicle_plate'])
+                        ->first();
+                    if ($vehicle) {
+                        $vehicleUuid = $vehicle->uuid;
+                    }
+                }
+
+                // ── Resolve Driver ────────────────────────────────────────────
+                $driverUuid = null;
+                $driverIdentifier = $firstRow['driver_email'] ?? $firstRow['driver_phone'] ?? $firstRow['driver_name'] ?? null;
+                if ($driverIdentifier) {
+                    $driver = Driver::findByIdentifier($driverIdentifier);
+                    if ($driver) {
+                        $driverUuid = $driver->uuid;
+                    }
+                }
+
+                // ── Build required_skills array ───────────────────────────────
+                $requiredSkills = [];
+                if (!empty($firstRow['required_skills'])) {
+                    $requiredSkills = array_filter(array_map('trim', explode(',', $firstRow['required_skills'])));
+                }
+
+                // ── Create the Order ─────────────────────────────────────────
+                $order = Order::create([
+                    'company_uuid'          => $companyUuid,
+                    'order_config_uuid'     => $orderConfigUuid,
+                    'customer_uuid'         => $customerUuid,
+                    'customer_type'         => $customerType,
+                    'facilitator_uuid'      => $facilitatorUuid,
+                    'facilitator_type'      => $facilitatorType,
+                    'vehicle_assigned_uuid' => $vehicleUuid,
+                    'driver_assigned_uuid'  => $driverUuid,
+                    'internal_id'           => $firstRow['internal_id'] ?? null,
+                    'status'                => $firstRow['status'] ?? 'created',
+                    'type'                  => $firstRow['type'] ?? 'default',
+                    'notes'                 => $firstRow['notes'] ?? null,
+                    'scheduled_at'          => !empty($firstRow['scheduled_at'])
+                        ? Carbon::parse($firstRow['scheduled_at'])
+                        : null,
+                    'time_window_start'     => $firstRow['time_window_start'] ?? null,
+                    'time_window_end'       => $firstRow['time_window_end'] ?? null,
+                    'required_skills'       => $requiredSkills,
+                    'orchestrator_priority' => (int) ($firstRow['priority'] ?? 0),
+                    'meta'                  => array_filter([
+                        'service_time_min' => $firstRow['service_time_min'] ?? null,
+                        'order_type'       => $orderType,
+                        'order_ref'        => $firstRow['order_ref'] ?? null,
+                    ]),
+                ]);
+
+                // ── Create Payload ────────────────────────────────────────────
+                $payload = Payload::create([
+                    'company_uuid'       => $companyUuid,
+                    'cod_amount'         => $firstRow['cod_amount'] ?? null,
+                    'cod_currency'       => $firstRow['cod_currency'] ?? null,
+                    'capacity_weight_kg' => $firstRow['weight_kg'] ?? null,
+                    'capacity_volume_m3' => $firstRow['volume_m3'] ?? null,
+                    'capacity_parcels'   => $firstRow['parcels'] ?? null,
+                ]);
+
+                $order->setPayload($payload);
+                $order->save();
+
+                // ── Attach Places ─────────────────────────────────────────────
+                if ($isMulti) {
+                    // Multi-waypoint: each row is a waypoint (no explicit pickup/dropoff).
+                    $waypoints = [];
+                    foreach ($groupRows as $wpRow) {
+                        $placeData = $this->buildPlaceData($wpRow, 'dropoff');
+                        if (!empty($placeData['street1'])) {
+                            $place = Place::createFromMixed($placeData, [], true);
+                            if ($place) {
+                                $waypoints[] = ['place_uuid' => $place->uuid, 'type' => 'dropoff'];
+                            }
+                        }
+                    }
+                    if (!empty($waypoints)) {
+                        $payload->setWaypoints($waypoints);
+                    }
+                } else {
+                    // Pickup / Dropoff order.
+                    $pickupData  = $this->buildPlaceData($firstRow, 'pickup');
+                    $dropoffData = $this->buildPlaceData($firstRow, 'dropoff');
+
+                    if (!empty($pickupData['street1'])) {
+                        $payload->setPickup($pickupData);
+                    }
+
+                    if (!empty($dropoffData['street1'])) {
+                        $payload->setDropoff($dropoffData);
+                    }
+                }
+
+                DB::commit();
                 $created[] = $order->public_id;
             } catch (\Exception $e) {
-                $failed[] = ['row' => $index + 1, 'error' => $e->getMessage()];
+                DB::rollBack();
+                $rowIndex = ($groupRows[0]['_rowIndex'] ?? '?');
+                $failed[] = ['row' => $rowIndex, 'error' => $e->getMessage()];
             }
         }
 
@@ -454,5 +610,135 @@ class OrchestrationController extends Controller
             'created' => $created,
             'failed'  => $failed,
         ]);
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Build a Place-compatible attributes array from a CSV row.
+     *
+     * @param array  $row    the mapped CSV row
+     * @param string $prefix 'pickup' or 'dropoff'
+     *
+     * @return array
+     */
+    private function buildPlaceData(array $row, string $prefix): array
+    {
+        return array_filter([
+            'name'        => $row["{$prefix}_name"]        ?? null,
+            'street1'     => $row["{$prefix}_street1"]     ?? null,
+            'street2'     => $row["{$prefix}_street2"]     ?? null,
+            'city'        => $row["{$prefix}_city"]        ?? null,
+            'province'    => $row["{$prefix}_state"]       ?? null,
+            'postal_code' => $row["{$prefix}_postal_code"] ?? null,
+            'country'     => $row["{$prefix}_country"]     ?? null,
+            'phone'       => $row["{$prefix}_phone"]       ?? null,
+            'location'    => $this->buildLocationPoint($row["{$prefix}_lat"] ?? null, $row["{$prefix}_lng"] ?? null),
+        ]);
+    }
+
+    /**
+     * Build a WKT point string from lat/lng strings, or null if not provided.
+     *
+     * @param string|null $lat
+     * @param string|null $lng
+     *
+     * @return string|null
+     */
+    private function buildLocationPoint(?string $lat, ?string $lng): ?string
+    {
+        if (empty($lat) || empty($lng)) {
+            return null;
+        }
+        $latF = (float) $lat;
+        $lngF = (float) $lng;
+        if ($latF === 0.0 && $lngF === 0.0) {
+            return null;
+        }
+        return "POINT({$lngF} {$latF})";
+    }
+
+    /**
+     * Resolve an existing Contact by email/phone, or create a new one.
+     *
+     * @param array  $row         the mapped CSV row
+     * @param string $companyUuid the company UUID
+     * @param string $prefix      'customer' or 'facilitator'
+     *
+     * @return Contact|null
+     */
+    private function resolveOrCreateContact(array $row, string $companyUuid, string $prefix): ?Contact
+    {
+        $email = $row["{$prefix}_email"] ?? null;
+        $phone = $row["{$prefix}_phone"] ?? null;
+        $name  = $row["{$prefix}_name"]  ?? null;
+
+        // Try to find by email first, then phone.
+        $contact = null;
+        if ($email) {
+            $contact = Contact::where('company_uuid', $companyUuid)->where('email', $email)->first();
+        }
+        if (!$contact && $phone) {
+            $contact = Contact::where('company_uuid', $companyUuid)->where('phone', $phone)->first();
+        }
+
+        if ($contact) {
+            return $contact;
+        }
+
+        // Create a new contact if we have at least a name or email.
+        if ($name || $email) {
+            return Contact::create(array_filter([
+                'company_uuid' => $companyUuid,
+                'name'         => $name,
+                'email'        => $email,
+                'phone'        => $phone,
+                'type'         => 'customer',
+            ]));
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve an existing Vendor by email/phone, or create a new one.
+     *
+     * @param array  $row         the mapped CSV row
+     * @param string $companyUuid the company UUID
+     * @param string $prefix      'customer' or 'facilitator'
+     *
+     * @return Vendor|null
+     */
+    private function resolveOrCreateVendor(array $row, string $companyUuid, string $prefix): ?Vendor
+    {
+        $email = $row["{$prefix}_email"] ?? null;
+        $phone = $row["{$prefix}_phone"] ?? null;
+        $name  = $row["{$prefix}_name"]  ?? null;
+
+        $vendor = null;
+        if ($email) {
+            $vendor = Vendor::where('company_uuid', $companyUuid)->where('email', $email)->first();
+        }
+        if (!$vendor && $phone) {
+            $vendor = Vendor::where('company_uuid', $companyUuid)->where('phone', $phone)->first();
+        }
+        if (!$vendor && $name) {
+            $vendor = Vendor::where('company_uuid', $companyUuid)->whereRaw('lower(name) = ?', [strtolower($name)])->first();
+        }
+
+        if ($vendor) {
+            return $vendor;
+        }
+
+        if ($name || $email) {
+            return Vendor::create(array_filter([
+                'company_uuid' => $companyUuid,
+                'name'         => $name,
+                'email'        => $email,
+                'phone'        => $phone,
+            ]));
+        }
+
+        return null;
     }
 }

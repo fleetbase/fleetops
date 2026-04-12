@@ -9,64 +9,334 @@ import { task } from 'ember-concurrency';
  *
  * Three-step import flow:
  *   1. Upload  — drag-and-drop or browse for CSV / Excel file
- *   2. Map     — map file columns to Fleetbase order fields
+ *   2. Map     — map file columns to Fleetbase order fields (grouped by section)
  *   3. Preview — validate rows, review errors, confirm import
+ *
+ * The import template supports two order types:
+ *   - pickup_dropoff  (default) — a single pickup and a single dropoff address
+ *   - multi_waypoint            — multiple waypoints identified by a shared order_ref
+ *
+ * Entity resolution (customer, facilitator, vehicle, driver) is performed
+ * server-side: existing records are found by email/phone/plate before creating new ones.
  */
 
-/** Required and optional target fields the user can map to. */
-const TARGET_FIELDS = [
-    { key: 'dropoff_address',  label: 'Dropoff Address',   required: true  },
-    { key: 'pickup_address',   label: 'Pickup Address',    required: false },
-    { key: 'scheduled_at',     label: 'Scheduled At',      required: false },
-    { key: 'customer_name',    label: 'Customer Name',     required: false },
-    { key: 'customer_phone',   label: 'Customer Phone',    required: false },
-    { key: 'notes',            label: 'Notes / Reference', required: false },
-    { key: 'weight_kg',        label: 'Weight (kg)',       required: false },
-    { key: 'volume_m3',        label: 'Volume (m³)',       required: false },
-    { key: 'required_skills',  label: 'Required Skills',   required: false },
-    { key: 'priority',         label: 'Priority (0-100)',  required: false },
-    { key: 'time_window_start',label: 'Time Window Start', required: false },
-    { key: 'time_window_end',  label: 'Time Window End',   required: false },
-    { key: 'service_time_min', label: 'Service Time (min)',required: false },
+// ── Field sections ─────────────────────────────────────────────────────────────
+const FIELD_SECTIONS = [
+    {
+        key:    'order',
+        label:  'Order',
+        fields: [
+            { key: 'order_type',        label: 'Order Type',         required: false, hint: 'pickup_dropoff or multi_waypoint' },
+            { key: 'order_ref',         label: 'Order Reference',    required: false, hint: 'Groups rows into one multi-waypoint order' },
+            { key: 'internal_id',       label: 'Internal ID',        required: false },
+            { key: 'type',              label: 'Order Config Slug',  required: false, hint: 'e.g. default, delivery, transfer' },
+            { key: 'status',            label: 'Status',             required: false },
+            { key: 'scheduled_at',      label: 'Scheduled At',       required: false, hint: 'YYYY-MM-DD HH:mm' },
+            { key: 'notes',             label: 'Notes',              required: false },
+            { key: 'priority',          label: 'Priority (0-100)',   required: false },
+            { key: 'time_window_start', label: 'Time Window Start',  required: false, hint: 'HH:mm' },
+            { key: 'time_window_end',   label: 'Time Window End',    required: false, hint: 'HH:mm' },
+            { key: 'service_time_min',  label: 'Service Time (min)', required: false },
+            { key: 'required_skills',   label: 'Required Skills',    required: false, hint: 'Comma-separated' },
+        ],
+    },
+    {
+        key:    'pickup',
+        label:  'Pickup / Origin',
+        fields: [
+            { key: 'pickup_name',        label: 'Pickup Name',        required: false },
+            { key: 'pickup_street1',     label: 'Pickup Street 1',    required: false },
+            { key: 'pickup_street2',     label: 'Pickup Street 2',    required: false },
+            { key: 'pickup_city',        label: 'Pickup City',        required: false },
+            { key: 'pickup_state',       label: 'Pickup State',       required: false },
+            { key: 'pickup_postal_code', label: 'Pickup Postal Code', required: false },
+            { key: 'pickup_country',     label: 'Pickup Country',     required: false, hint: 'ISO 3166-1 alpha-2' },
+            { key: 'pickup_phone',       label: 'Pickup Phone',       required: false },
+            { key: 'pickup_lat',         label: 'Pickup Latitude',    required: false },
+            { key: 'pickup_lng',         label: 'Pickup Longitude',   required: false },
+        ],
+    },
+    {
+        key:    'dropoff',
+        label:  'Dropoff / Destination',
+        fields: [
+            { key: 'dropoff_name',        label: 'Dropoff Name',        required: false },
+            { key: 'dropoff_street1',     label: 'Dropoff Street 1',    required: true  },
+            { key: 'dropoff_street2',     label: 'Dropoff Street 2',    required: false },
+            { key: 'dropoff_city',        label: 'Dropoff City',        required: false },
+            { key: 'dropoff_state',       label: 'Dropoff State',       required: false },
+            { key: 'dropoff_postal_code', label: 'Dropoff Postal Code', required: false },
+            { key: 'dropoff_country',     label: 'Dropoff Country',     required: false, hint: 'ISO 3166-1 alpha-2' },
+            { key: 'dropoff_phone',       label: 'Dropoff Phone',       required: false },
+            { key: 'dropoff_lat',         label: 'Dropoff Latitude',    required: false },
+            { key: 'dropoff_lng',         label: 'Dropoff Longitude',   required: false },
+        ],
+    },
+    {
+        key:    'payload',
+        label:  'Payload',
+        fields: [
+            { key: 'weight_kg',    label: 'Weight (kg)',  required: false },
+            { key: 'volume_m3',    label: 'Volume (m3)',  required: false },
+            { key: 'parcels',      label: 'Parcels',      required: false },
+            { key: 'cod_amount',   label: 'COD Amount',   required: false },
+            { key: 'cod_currency', label: 'COD Currency', required: false, hint: 'ISO 4217, e.g. USD' },
+        ],
+    },
+    {
+        key:    'customer',
+        label:  'Customer',
+        fields: [
+            { key: 'customer_name',  label: 'Customer Name',  required: false },
+            { key: 'customer_email', label: 'Customer Email', required: false, hint: 'Used to look up or create a contact' },
+            { key: 'customer_phone', label: 'Customer Phone', required: false },
+            { key: 'customer_type',  label: 'Customer Type',  required: false, hint: 'contact (default) or vendor' },
+        ],
+    },
+    {
+        key:    'facilitator',
+        label:  'Facilitator',
+        fields: [
+            { key: 'facilitator_name',  label: 'Facilitator Name',  required: false },
+            { key: 'facilitator_email', label: 'Facilitator Email', required: false, hint: 'Used to look up or create a vendor' },
+            { key: 'facilitator_phone', label: 'Facilitator Phone', required: false },
+            { key: 'facilitator_type',  label: 'Facilitator Type',  required: false, hint: 'contact or vendor (default)' },
+        ],
+    },
+    {
+        key:    'assignment',
+        label:  'Vehicle / Driver',
+        fields: [
+            { key: 'vehicle_plate', label: 'Vehicle Plate', required: false, hint: 'Looks up vehicle by plate number' },
+            { key: 'driver_name',   label: 'Driver Name',   required: false },
+            { key: 'driver_phone',  label: 'Driver Phone',  required: false, hint: 'Used to look up driver' },
+            { key: 'driver_email',  label: 'Driver Email',  required: false },
+        ],
+    },
 ];
+
+/** Flat list of all target fields (used for column-mapping state). */
+const TARGET_FIELDS = FIELD_SECTIONS.flatMap((s) => s.fields);
+
+/** Auto-mapping aliases: key => array of substrings to match against column names. */
+const ALIASES = {
+    order_type:          ['order type', 'order_type', 'type of order'],
+    order_ref:           ['order ref', 'order_ref', 'ref', 'group', 'batch'],
+    internal_id:         ['internal id', 'internal_id', 'internal ref'],
+    type:                ['order config', 'config slug', 'order slug'],
+    status:              ['status'],
+    scheduled_at:        ['scheduled', 'delivery date', 'date', 'delivery time'],
+    notes:               ['notes', 'instructions', 'remarks', 'reference'],
+    priority:            ['priority', 'urgency'],
+    time_window_start:   ['time window start', 'tw start', 'earliest', 'from time'],
+    time_window_end:     ['time window end', 'tw end', 'latest', 'to time'],
+    service_time_min:    ['service time', 'dwell time', 'stop time'],
+    required_skills:     ['skills', 'requirements', 'required skills'],
+    pickup_name:         ['pickup name', 'origin name', 'from name'],
+    pickup_street1:      ['pickup street', 'pickup address', 'from address', 'origin address', 'collection address', 'pick up'],
+    pickup_street2:      ['pickup street 2', 'pickup address 2'],
+    pickup_city:         ['pickup city', 'origin city', 'from city'],
+    pickup_state:        ['pickup state', 'origin state', 'from state'],
+    pickup_postal_code:  ['pickup postal', 'pickup zip', 'origin postal'],
+    pickup_country:      ['pickup country', 'origin country'],
+    pickup_phone:        ['pickup phone', 'origin phone'],
+    pickup_lat:          ['pickup lat', 'origin lat', 'from lat'],
+    pickup_lng:          ['pickup lng', 'pickup lon', 'origin lng', 'from lng'],
+    dropoff_name:        ['dropoff name', 'destination name', 'to name', 'delivery name'],
+    dropoff_street1:     ['dropoff street', 'dropoff address', 'to address', 'destination address', 'delivery address', 'drop off'],
+    dropoff_street2:     ['dropoff street 2', 'dropoff address 2'],
+    dropoff_city:        ['dropoff city', 'destination city', 'to city'],
+    dropoff_state:       ['dropoff state', 'destination state'],
+    dropoff_postal_code: ['dropoff postal', 'dropoff zip', 'destination postal'],
+    dropoff_country:     ['dropoff country', 'destination country'],
+    dropoff_phone:       ['dropoff phone', 'recipient phone'],
+    dropoff_lat:         ['dropoff lat', 'destination lat', 'to lat'],
+    dropoff_lng:         ['dropoff lng', 'dropoff lon', 'destination lng', 'to lng'],
+    weight_kg:           ['weight', 'kg', 'weight kg', 'gross weight'],
+    volume_m3:           ['volume', 'm3', 'cbm', 'cubic'],
+    parcels:             ['parcels', 'packages', 'pieces'],
+    cod_amount:          ['cod amount', 'cash on delivery', 'cod'],
+    cod_currency:        ['cod currency', 'currency'],
+    customer_name:       ['customer name', 'customer', 'recipient', 'consignee'],
+    customer_email:      ['customer email', 'recipient email'],
+    customer_phone:      ['customer phone', 'recipient phone', 'mobile'],
+    customer_type:       ['customer type'],
+    facilitator_name:    ['facilitator name', 'facilitator', 'vendor name', 'partner'],
+    facilitator_email:   ['facilitator email', 'vendor email'],
+    facilitator_phone:   ['facilitator phone', 'vendor phone'],
+    facilitator_type:    ['facilitator type', 'vendor type'],
+    vehicle_plate:       ['vehicle plate', 'plate number', 'plate', 'registration'],
+    driver_name:         ['driver name', 'driver'],
+    driver_phone:        ['driver phone', 'driver mobile'],
+    driver_email:        ['driver email'],
+};
+
+/** Sample row for the downloadable template. */
+const SAMPLE_ROW = {
+    order_type:          'pickup_dropoff',
+    order_ref:           'ORD-001',
+    internal_id:         'INT-001',
+    type:                'default',
+    status:              'created',
+    scheduled_at:        '2026-05-01 09:00',
+    notes:               'Leave at front door',
+    priority:            '50',
+    time_window_start:   '08:00',
+    time_window_end:     '12:00',
+    service_time_min:    '10',
+    required_skills:     '',
+    pickup_name:         'Warehouse A',
+    pickup_street1:      '123 Warehouse Rd',
+    pickup_street2:      '',
+    pickup_city:         'London',
+    pickup_state:        'England',
+    pickup_postal_code:  'E1 6RF',
+    pickup_country:      'GB',
+    pickup_phone:        '+44 20 7946 0000',
+    pickup_lat:          '',
+    pickup_lng:          '',
+    dropoff_name:        'John Smith',
+    dropoff_street1:     '456 High Street',
+    dropoff_street2:     'Apt 3B',
+    dropoff_city:        'London',
+    dropoff_state:       'England',
+    dropoff_postal_code: 'SW1A 1AA',
+    dropoff_country:     'GB',
+    dropoff_phone:       '+44 7700 900000',
+    dropoff_lat:         '',
+    dropoff_lng:         '',
+    weight_kg:           '5.2',
+    volume_m3:           '0.04',
+    parcels:             '1',
+    cod_amount:          '',
+    cod_currency:        '',
+    customer_name:       'John Smith',
+    customer_email:      'john.smith@example.com',
+    customer_phone:      '+44 7700 900000',
+    customer_type:       'contact',
+    facilitator_name:    '',
+    facilitator_email:   '',
+    facilitator_phone:   '',
+    facilitator_type:    'vendor',
+    vehicle_plate:       '',
+    driver_name:         '',
+    driver_phone:        '',
+    driver_email:        '',
+};
 
 export default class OrchestratorImportComponent extends Component {
     @service fetch;
     @service notifications;
+    @service modalsManager;
     @service intl;
 
     // ── Step state ────────────────────────────────────────────────────────────
-
     @tracked step = 'upload'; // 'upload' | 'map' | 'preview'
 
     // ── Upload step ───────────────────────────────────────────────────────────
-
-    @tracked selectedFile     = null;
-    @tracked isDraggingFile   = false;
-    @tracked parseError       = null;
-    @tracked fileColumns      = [];
-    @tracked rawRows          = [];
+    @tracked selectedFile   = null;
+    @tracked isDraggingFile = false;
+    @tracked parseError     = null;
+    @tracked fileColumns    = [];
+    @tracked rawRows        = [];
 
     // ── Mapping step ──────────────────────────────────────────────────────────
-
-    /** Array of { key, label, required, mappedColumn } objects. */
+    /** Array of { key, label, required, mappedColumn, hint? } objects. */
     @tracked columnMappings = TARGET_FIELDS.map((f) => ({ ...f, mappedColumn: null }));
 
     // ── Preview step ──────────────────────────────────────────────────────────
-
     @tracked mappedRows       = [];
     @tracked validationErrors = [];
 
-    // ── Upload handlers ───────────────────────────────────────────────────────
+    // ── Sections (for grouped column-mapping UI) ──────────────────────────────
+    get fieldSections() {
+        return FIELD_SECTIONS.map((section) => ({
+            ...section,
+            fields: this.columnMappings.filter((m) =>
+                section.fields.some((f) => f.key === m.key)
+            ),
+        }));
+    }
 
+    // ── Footer action buttons (injected into modal footer via modalsManager) ──
+    /**
+     * Returns the correct footer button array for the current step.
+     * Called whenever the step changes via _setStep().
+     */
+    get _footerButtons() {
+        const t = (key) => this.intl.t('orchestrator.' + key);
+
+        if (this.step === 'upload') {
+            return [
+                {
+                    type:         'primary',
+                    icon:         'arrow-right',
+                    iconPosition: 'right',
+                    text:         t('next'),
+                    disabled:     !this.selectedFile,
+                    isLoading:    this.parseFile.isRunning,
+                    perform:      this.parseFile,
+                },
+            ];
+        }
+
+        if (this.step === 'map') {
+            return [
+                {
+                    type:    'default',
+                    text:    t('back'),
+                    onClick: () => this._setStep('upload'),
+                },
+                {
+                    type:         'primary',
+                    icon:         'arrow-right',
+                    iconPosition: 'right',
+                    text:         t('next'),
+                    disabled:     !this.mappingIsValid,
+                    isLoading:    this.buildPreview.isRunning,
+                    perform:      this.buildPreview,
+                },
+            ];
+        }
+
+        if (this.step === 'preview') {
+            return [
+                {
+                    type:    'default',
+                    text:    t('back'),
+                    onClick: () => this._setStep('map'),
+                },
+                {
+                    type:      'success',
+                    icon:      'file-import',
+                    text:      t('import-confirm'),
+                    isLoading: this.submitImport.isRunning,
+                    perform:   this.submitImport,
+                },
+            ];
+        }
+
+        return [];
+    }
+
+    /** Update the modal footer buttons whenever the step changes. */
+    _syncFooterButtons() {
+        this.modalsManager.setOption('actionButtons', this._footerButtons);
+    }
+
+    /** Change step and sync footer buttons. */
+    _setStep(step) {
+        this.step = step;
+        this._syncFooterButtons();
+    }
+
+    // ── Upload handlers ───────────────────────────────────────────────────────
     /**
      * Called by ember-file-upload's FileDropzone / UploadButton when a file is
      * added to the queue. The `file` object is an ember-file-upload UploadFile
      * wrapper — we extract the underlying native File from `file.file`.
      */
     @action onFileQueued(file) {
-        // ember-file-upload wraps the native File in an UploadFile object.
-        // We only need the native File for our client-side CSV parser.
         const nativeFile = file?.file ?? file;
         if (nativeFile instanceof File) {
             this._setFile(nativeFile);
@@ -97,22 +367,27 @@ export default class OrchestratorImportComponent extends Component {
     }
 
     @action clearFile() {
-        this.selectedFile  = null;
-        this.parseError    = null;
-        this.fileColumns   = [];
-        this.rawRows       = [];
+        this.selectedFile = null;
+        this.parseError   = null;
+        this.fileColumns  = [];
+        this.rawRows      = [];
+        this._syncFooterButtons();
     }
 
     _setFile(file) {
-        const allowed = ['text/csv', 'application/vnd.ms-excel',
-                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
-        const ext     = file.name.split('.').pop()?.toLowerCase();
+        const allowed = [
+            'text/csv',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+        const ext = file.name.split('.').pop()?.toLowerCase();
         if (!allowed.includes(file.type) && !['csv', 'xlsx', 'xls'].includes(ext)) {
             this.parseError = this.intl.t('orchestrator.invalid-file-type');
             return;
         }
         this.selectedFile = file;
         this.parseError   = null;
+        this._syncFooterButtons();
     }
 
     get formattedFileSize() {
@@ -124,7 +399,6 @@ export default class OrchestratorImportComponent extends Component {
     }
 
     // ── Parse file ────────────────────────────────────────────────────────────
-
     @task *parseFile() {
         this.parseError = null;
         try {
@@ -132,11 +406,8 @@ export default class OrchestratorImportComponent extends Component {
             const { columns, rows } = this._parseCsv(text);
             this.fileColumns = columns;
             this.rawRows     = rows;
-
-            // Auto-map columns by fuzzy name match
             this._autoMapColumns(columns);
-
-            this.step = 'map';
+            this._setStep('map');
         } catch (error) {
             this.parseError = error.message ?? this.intl.t('orchestrator.parse-error');
         }
@@ -144,7 +415,7 @@ export default class OrchestratorImportComponent extends Component {
 
     _readFileAsText(file) {
         return new Promise((resolve, reject) => {
-            const reader = new FileReader();
+            const reader   = new FileReader();
             reader.onload  = (e) => resolve(e.target.result);
             reader.onerror = () => reject(new Error(this.intl.t('orchestrator.read-error')));
             reader.readAsText(file);
@@ -152,34 +423,42 @@ export default class OrchestratorImportComponent extends Component {
     }
 
     _parseCsv(text) {
-        const lines   = text.split(/\r?\n/).filter((l) => l.trim());
+        const lines = text.split(/\r?\n/).filter((l) => l.trim());
         if (!lines.length) throw new Error(this.intl.t('orchestrator.empty-file'));
-
-        const columns = lines[0].split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
+        const columns = this._parseCsvLine(lines[0]);
         const rows    = lines.slice(1, 4).map((line) => {
-            const vals = line.split(',').map((v) => v.trim().replace(/^"|"$/g, ''));
+            const vals = this._parseCsvLine(line);
             return Object.fromEntries(columns.map((col, i) => [col, vals[i] ?? '']));
         });
         return { columns, rows };
     }
 
-    _autoMapColumns(columns) {
-        const ALIASES = {
-            dropoff_address:   ['dropoff', 'delivery address', 'destination', 'to address', 'drop'],
-            pickup_address:    ['pickup', 'collection address', 'from address', 'origin', 'pick'],
-            scheduled_at:      ['scheduled', 'delivery date', 'date', 'delivery time', 'time'],
-            customer_name:     ['customer', 'name', 'recipient', 'consignee'],
-            customer_phone:    ['phone', 'mobile', 'contact', 'tel'],
-            notes:             ['notes', 'reference', 'ref', 'instructions', 'remarks'],
-            weight_kg:         ['weight', 'kg', 'weight kg', 'gross weight'],
-            volume_m3:         ['volume', 'm3', 'cbm', 'cubic'],
-            required_skills:   ['skills', 'requirements', 'required skills'],
-            priority:          ['priority', 'urgency'],
-            time_window_start: ['time window start', 'tw start', 'earliest'],
-            time_window_end:   ['time window end', 'tw end', 'latest'],
-            service_time_min:  ['service time', 'dwell time', 'stop time'],
-        };
+    /** Parse a single CSV line, respecting quoted fields. */
+    _parseCsvLine(line) {
+        const result = [];
+        let current  = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+                if (inQuotes && line[i + 1] === '"') {
+                    current += '"';
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (ch === ',' && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+            } else {
+                current += ch;
+            }
+        }
+        result.push(current.trim());
+        return result;
+    }
 
+    _autoMapColumns(columns) {
         this.columnMappings = this.columnMappings.map((mapping) => {
             const aliases = ALIASES[mapping.key] ?? [];
             const matched = columns.find((col) =>
@@ -190,10 +469,9 @@ export default class OrchestratorImportComponent extends Component {
     }
 
     // ── Column mapping helpers ────────────────────────────────────────────────
-
     get fileColumnOptions() {
         return [
-            { label: this.intl.t('orchestrator.skip-column'), value: null },
+            { label: this.intl.t('orchestrator.select-column'), value: null },
             ...this.fileColumns.map((col) => ({ label: col, value: col })),
         ];
     }
@@ -206,79 +484,68 @@ export default class OrchestratorImportComponent extends Component {
         this.columnMappings = this.columnMappings.map((m) =>
             m.key === mapping.key ? { ...m, mappedColumn: value } : m
         );
+        // Re-sync footer so "Next" disabled state is updated
+        this._syncFooterButtons();
     }
 
     get mappingIsValid() {
+        // At minimum, dropoff_street1 must be mapped
         return this.columnMappings
             .filter((m) => m.required)
             .every((m) => m.mappedColumn);
     }
 
     // ── Build preview ─────────────────────────────────────────────────────────
-
     @task *buildPreview() {
-        // For the preview we re-read the full file and map all rows
         try {
-            const text = yield this._readFileAsText(this.selectedFile);
-            const { columns, rows: allRows } = this._parseFullCsv(text);
+            const text    = yield this._readFileAsText(this.selectedFile);
+            const lines   = text.split(/\r?\n/).filter((l) => l.trim());
+            const columns = this._parseCsvLine(lines[0]);
+            const allRows = lines.slice(1).map((line) => {
+                const vals = this._parseCsvLine(line);
+                return Object.fromEntries(columns.map((col, i) => [col, vals[i] ?? '']));
+            });
 
             const mapped = allRows.map((row, idx) => {
-                const mapped = { _rowIndex: idx + 2 };
+                const result = { _rowIndex: idx + 2 };
                 for (const m of this.columnMappings) {
                     if (m.mappedColumn) {
-                        mapped[m.key] = row[m.mappedColumn] ?? '';
+                        result[m.key] = row[m.mappedColumn] ?? '';
                     }
                 }
-                // Validate required fields
-                if (!mapped.dropoff_address) {
-                    mapped._error = this.intl.t('orchestrator.missing-dropoff');
+                // Validate: need at least a dropoff street address
+                if (!result.dropoff_street1) {
+                    result._error = this.intl.t('orchestrator.missing-dropoff');
                 }
-                return mapped;
+                return result;
             });
 
             this.mappedRows       = mapped;
             this.validationErrors = mapped.filter((r) => r._error);
-            this.step             = 'preview';
+            this._setStep('preview');
         } catch (error) {
             this.notifications.serverError(error);
         }
     }
 
-    _parseFullCsv(text) {
-        const lines   = text.split(/\r?\n/).filter((l) => l.trim());
-        const columns = lines[0].split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
-        const rows    = lines.slice(1).map((line) => {
-            const vals = line.split(',').map((v) => v.trim().replace(/^"|"$/g, ''));
-            return Object.fromEntries(columns.map((col, i) => [col, vals[i] ?? '']));
-        });
-        return { columns, rows };
-    }
-
     // ── Submit import ─────────────────────────────────────────────────────────
-
     @task *submitImport() {
         const validRows = this.mappedRows.filter((r) => !r._error);
         if (!validRows.length) {
             this.notifications.warning(this.intl.t('orchestrator.no-valid-rows'));
             return;
         }
-
         try {
             yield this.fetch.post('fleet-ops/orchestrator/import-orders', {
                 rows:    validRows,
                 options: { mark_imported: true },
             });
-
             this.notifications.success(
                 this.intl.t('orchestrator.import-success', { count: validRows.length })
             );
-
-            // Notify the workbench to reload
             if (typeof this.args.options?.onImportComplete === 'function') {
                 this.args.options.onImportComplete();
             }
-
-            // Close the modal
             if (typeof this.args.onConfirm === 'function') {
                 this.args.onConfirm();
             }
@@ -288,36 +555,22 @@ export default class OrchestratorImportComponent extends Component {
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────
-
     @action goToUpload() {
-        this.step = 'upload';
+        this._setStep('upload');
     }
 
     @action goToMapping() {
-        this.step = 'map';
+        this._setStep('map');
     }
 
     // ── Template download ─────────────────────────────────────────────────────
-
     @action downloadTemplate() {
-        const header = TARGET_FIELDS.map((f) => f.label).join(',');
-        const sample = [
-            '"123 Main St, London"',
-            '"456 High St, London"',
-            '"2026-04-10 09:00"',
-            '"John Doe"',
-            '"+44 7700 900000"',
-            '"REF-001"',
-            '"5.2"',
-            '"0.04"',
-            '"refrigerated"',
-            '"50"',
-            '"08:00"',
-            '"12:00"',
-            '"10"',
-        ].join(',');
-
-        const csv  = `${header}\n${sample}\n`;
+        const headers = TARGET_FIELDS.map((f) => f.label);
+        const values  = TARGET_FIELDS.map((f) => {
+            const val = SAMPLE_ROW[f.key] ?? '';
+            return (val.includes(',') || val.includes(' ')) ? '"' + val + '"' : val;
+        });
+        const csv  = headers.join(',') + '\n' + values.join(',') + '\n';
         const blob = new Blob([csv], { type: 'text/csv' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
