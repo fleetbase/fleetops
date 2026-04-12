@@ -59,6 +59,22 @@ export default class OrchestratorImportComponent extends Component {
 
     // ── Upload handlers ───────────────────────────────────────────────────────
 
+    /**
+     * Called by ember-file-upload's FileDropzone / UploadButton when a file is
+     * added to the queue. The `file` object is an ember-file-upload UploadFile
+     * wrapper — we extract the underlying native File from `file.file`.
+     */
+    @action onFileQueued(file) {
+        // ember-file-upload wraps the native File in an UploadFile object.
+        // We only need the native File for our client-side CSV parser.
+        const nativeFile = file?.file ?? file;
+        if (nativeFile instanceof File) {
+            this._setFile(nativeFile);
+        }
+        // Remove from the upload queue — we handle the file ourselves (no server upload).
+        file?.queue?.remove(file);
+    }
+
     @action onFileDragOver(event) {
         event.preventDefault();
         this.isDraggingFile = true;
