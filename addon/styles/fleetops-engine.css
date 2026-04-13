@@ -3083,28 +3083,15 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-
     line-height: 1.2;
 }
 
-/* The select inside a mapping row — compact and borderless */
-.import-mapping-select select,
-.import-mapping-select .select-input {
-    font-size: 0.72rem;
-    padding: 3px 22px 3px 7px;
-    height: auto;
-    background: #1f2937;
-    border-color: #374151;
-    border-radius: 4px;
-    color: #d1d5db;
+/* The select inside a mapping row — full width, compact */
+select.import-mapping-select {
     width: 100%;
-}
-
-.import-mapping-select select:focus,
-.import-mapping-select .select-input:focus {
-    border-color: #3b82f6;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    font-size: 0.72rem !important;
+    padding-top: 3px !important;
+    padding-bottom: 3px !important;
 }
 
 /* Red border on required fields that are not yet mapped */
-.import-mapping-select--error select,
-.import-mapping-select--error .select-input {
-    border-color: #ef4444;
+select.import-mapping-select--error {
+    border-color: #ef4444 !important;
 }

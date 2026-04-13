@@ -567,17 +567,32 @@ class OrchestrationController extends Controller
                 $order->setPayload($payload);
                 $order->save();
 
-                // ── Attach Places ─────────────────────────────────────────────
+                // ── Attach Places ────────────────────────────────────────────────
+                $entities = [];
                 if ($isMulti) {
-                    // Multi-waypoint: each row is a waypoint (no explicit pickup/dropoff).
+                    // Multi-waypoint: each row is one waypoint stop.
+                    // We tag each waypoint with a stable _import_id so that
+                    // entities on the same row can be linked to it.
                     $waypoints = [];
-                    foreach ($groupRows as $wpRow) {
+                    foreach ($groupRows as $wpIndex => $wpRow) {
+                        $importId  = 'wp_' . $wpIndex;
                         $placeData = $this->buildPlaceData($wpRow, 'dropoff');
                         if (!empty($placeData['street1'])) {
                             $place = Place::createFromMixed($placeData, [], true);
                             if ($place) {
-                                $waypoints[] = ['place_uuid' => $place->uuid, 'type' => 'dropoff'];
+                                $waypoints[] = [
+                                    'place_uuid' => $place->uuid,
+                                    'type'       => 'dropoff',
+                                    '_import_id' => $importId,
+                                ];
                             }
+                        }
+                        // Collect entity for this waypoint row if any entity fields present
+                        $entityData = $this->buildEntityData($wpRow, $companyUuid);
+                        if ($entityData !== null) {
+                            // Link entity to this waypoint via _import_id
+                            $entityData['_import_id'] = $importId;
+                            $entities[] = $entityData;
                         }
                     }
                     if (!empty($waypoints)) {
@@ -595,6 +610,20 @@ class OrchestrationController extends Controller
                     if (!empty($dropoffData['street1'])) {
                         $payload->setDropoff($dropoffData);
                     }
+
+                    // Collect entity for this single row if entity fields present
+                    $entityData = $this->buildEntityData($firstRow, $companyUuid);
+                    if ($entityData !== null) {
+                        // Resolve destination: 'pickup', 'dropoff' (default), or a waypoint index
+                        $entityData['destination'] = $firstRow['entity_destination'] ?? 'dropoff';
+                        $entities[] = $entityData;
+                    }
+                }
+
+                // ── Attach Entities to Payload ──────────────────────────────
+                if (!empty($entities)) {
+                    $payload->load(['waypoints', 'pickup', 'dropoff']);
+                    $payload->setEntities($entities);
                 }
 
                 DB::commit();
@@ -652,6 +681,56 @@ class OrchestrationController extends Controller
             return null;
         }
         return "POINT({$lngF} {$latF})";
+    }
+
+    /**
+     * Build an Entity-compatible attributes array from a CSV row.
+     * Returns null when no entity fields are present in the row.
+     *
+     * @param array  $row         the mapped CSV row
+     * @param string $companyUuid the current company UUID
+     *
+     * @return array|null
+     */
+    private function buildEntityData(array $row, string $companyUuid): ?array
+    {
+        // Only build an entity if at least one entity field has a value
+        $hasEntity = !empty($row['entity_name'])
+            || !empty($row['entity_type'])
+            || !empty($row['entity_sku'])
+            || !empty($row['entity_barcode'])
+            || !empty($row['entity_description']);
+
+        if (!$hasEntity) {
+            return null;
+        }
+
+        return array_filter([
+            'company_uuid'     => $companyUuid,
+            'name'             => $row['entity_name']             ?? null,
+            'type'             => $row['entity_type']             ?? null,
+            'description'      => $row['entity_description']      ?? null,
+            'sku'              => $row['entity_sku']              ?? null,
+            'barcode'          => $row['entity_barcode']          ?? null,
+            'internal_id'      => $row['entity_internal_id']      ?? null,
+            'declared_value'   => isset($row['entity_declared_value']) && $row['entity_declared_value'] !== ''
+                                    ? (float) $row['entity_declared_value'] : null,
+            'currency'         => $row['entity_currency']         ?? null,
+            'price'            => isset($row['entity_price']) && $row['entity_price'] !== ''
+                                    ? (float) $row['entity_price'] : null,
+            'sale_price'       => isset($row['entity_sale_price']) && $row['entity_sale_price'] !== ''
+                                    ? (float) $row['entity_sale_price'] : null,
+            'weight'           => isset($row['entity_weight']) && $row['entity_weight'] !== ''
+                                    ? (float) $row['entity_weight'] : null,
+            'weight_unit'      => $row['entity_weight_unit']      ?? null,
+            'length'           => isset($row['entity_length']) && $row['entity_length'] !== ''
+                                    ? (float) $row['entity_length'] : null,
+            'width'            => isset($row['entity_width']) && $row['entity_width'] !== ''
+                                    ? (float) $row['entity_width'] : null,
+            'height'           => isset($row['entity_height']) && $row['entity_height'] !== ''
+                                    ? (float) $row['entity_height'] : null,
+            'dimensions_unit'  => $row['entity_dimensions_unit']  ?? null,
+        ], fn ($v) => $v !== null);
     }
 
     /**
