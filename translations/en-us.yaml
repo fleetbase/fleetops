@@ -2049,6 +2049,7 @@ orchestrator:
   all-rows-valid: All rows valid
   validation-warning: "{count} row(s) have errors and will be skipped."
   import-confirm: Confirm Import
+  importing: "Importing…"
   col-pickup: Pickup
   col-dropoff: Dropoff
   col-scheduled: Scheduled

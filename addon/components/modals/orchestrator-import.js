@@ -365,17 +365,20 @@ export default class OrchestratorImportComponent extends Component {
         }
 
         if (this.step === 'preview') {
+            const isRunning = this.submitImport.isRunning;
             return [
                 {
-                    type:    'default',
-                    text:    t('back'),
-                    onClick: () => this._setStep('map'),
+                    type:     'default',
+                    text:     t('back'),
+                    disabled: isRunning,
+                    onClick:  () => this._setStep('map'),
                 },
                 {
                     type:      'success',
-                    icon:      'file-import',
-                    text:      t('import-confirm'),
-                    isLoading: this.submitImport.isRunning,
+                    icon:      isRunning ? 'spinner' : 'file-import',
+                    text:      isRunning ? t('importing') : t('import-confirm'),
+                    disabled:  isRunning,
+                    isLoading: isRunning,
                     perform:   this.submitImport,
                 },
             ];
@@ -617,13 +620,16 @@ export default class OrchestratorImportComponent extends Component {
         }
     }
 
-    // ── Submit import ─────────────────────────────────────────────────────────
+    // ── Submit import ────────────────────────────────────────────────
     @task *submitImport() {
         const validRows = this.mappedRows.filter((r) => !r._error);
         if (!validRows.length) {
             this.notifications.warning(this.intl.t('orchestrator.no-valid-rows'));
             return;
         }
+        // Immediately push loading state to the footer button so the user
+        // gets instant visual feedback and cannot double-click.
+        this._syncFooterButtons();
         try {
             yield this.fetch.post('fleet-ops/orchestrator/import-orders', {
                 rows:    validRows,
@@ -640,6 +646,9 @@ export default class OrchestratorImportComponent extends Component {
             }
         } catch (error) {
             this.notifications.serverError(error);
+            // Restore the button to its normal state on error so the user
+            // can retry without having to navigate away.
+            this._syncFooterButtons();
         }
     }
 
