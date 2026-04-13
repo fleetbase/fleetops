@@ -59,6 +59,23 @@ export default class OrchestratorPlanViewerComponent extends Component {
     }
 
     /**
+     * Returns true when every vehicle card is expanded.
+     * Used to show the correct label on the single toggle button.
+     */
+    get allExpanded() {
+        const ids = (this.args.planByVehicle ?? []).map((g) => g.vehicle?.public_id).filter(Boolean);
+        return ids.length > 0 && ids.every((id) => this.expandedCards.has(id));
+    }
+
+    @action toggleExpandAll() {
+        if (this.allExpanded) {
+            this.collapseAll();
+        } else {
+            this.expandAll();
+        }
+    }
+
+    /**
      * isExpanded — decorated as @action so Glimmer allows it to be invoked
      * with an argument from HBS: (this.isExpanded vehicleId)
      */

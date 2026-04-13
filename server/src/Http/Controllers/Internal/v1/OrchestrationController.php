@@ -14,6 +14,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Orchestration\Engines\DriverAssignmentEngine;
+use Fleetbase\FleetOps\Orchestration\Engines\RouteSequencingEngine;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
@@ -190,6 +191,13 @@ class OrchestrationController extends Controller
             if ($mode === 'assign_drivers') {
                 $engine = new DriverAssignmentEngine();
                 $result = $engine->assign($orders, $vehicles, $options);
+            } elseif ($mode === 'optimize_routes') {
+                // optimize_routes sequences stops within each vehicle's already-assigned
+                // order group — it does NOT re-assign orders to different vehicles.
+                // Load vehicle relationships needed for sequencing.
+                $orders->load(['vehicle.driver.location', 'vehicle.location']);
+                $engine = new RouteSequencingEngine();
+                $result = $engine->sequence($orders, $options);
             } else {
                 $engine = $this->registry->resolve($engineId);
                 $result = $engine->allocate($orders, $vehicles, $options);

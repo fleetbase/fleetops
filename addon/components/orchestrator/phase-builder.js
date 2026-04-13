@@ -49,7 +49,7 @@ export default class OrchestratorPhaseBuilderComponent extends Component {
             id: crypto.randomUUID(),
             mode,
             label: this.intl.t(`orchestrator.mode-${mode.replace(/_/g, '-')}`),
-            engine: 'vroom',
+            engine: 'greedy',
             orderStatuses: ['created'],
             balanceWorkload: false,
             respectSkills: true,

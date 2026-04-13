@@ -800,6 +800,25 @@ export default class OrchestratorWorkbenchComponent extends Component {
         return waypointIconHtml(label, bgColor);
     }
 
+    /**
+     * Return a letter label (A, B, C, ...) for a stop at the given 0-based index.
+     * Matches the labels shown on the map markers so the user can cross-reference
+     * the route list with the map easily.
+     *
+     * @param {number} index - 0-based stop index
+     * @returns {string} e.g. 'A', 'B', 'C', ..., 'Z', 'AA', 'AB', ...
+     */
+    @action getStopLabel(index) {
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        let label = '';
+        let n = index;
+        do {
+            label = alphabet[n % 26] + label;
+            n = Math.floor(n / 26) - 1;
+        } while (n >= 0);
+        return label;
+    }
+
     _groupByVehicle(assignments) {
         const groups = {};
         for (const assignment of assignments) {

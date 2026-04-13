@@ -9,13 +9,13 @@
                 ({{@planByVehicle.length}})
             </span>
             {{#if (eq this.activeTab "routes")}}
-                <div class="flex items-center gap-2">
-                    <button type="button" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" {{on "click" this.expandAll}}>{{t "orchestrator.expand-all"}}</button>
-                    <span class="text-gray-300 dark:text-gray-600">·</span>
-                    <button type="button" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" {{on "click" this.collapseAll}}>{{t
-                            "orchestrator.collapse-all"
-                        }}</button>
-                </div>
+                <button
+                    type="button"
+                    class="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                    {{on "click" this.toggleExpandAll}}
+                >
+                    {{if this.allExpanded (t "orchestrator.collapse-all") (t "orchestrator.expand-all")}}
+                </button>
             {{else if (eq this.activeTab "timeline")}}
                 {{#if this.timelineDateRange}}
                     <span class="text-xs text-gray-400 dark:text-gray-500">{{this.timelineDateRange}}</span>
@@ -99,7 +99,7 @@
                     {{! Expanded stop list }}
                     {{#if (this.isExpanded group.vehicle.public_id)}}
                         <div class="vehicle-drop-zone px-2 py-1" data-vehicle-id={{group.vehicle.public_id}} data-driver-id={{group.driver.public_id}}>
-                            {{#each group.orders as |item|}}
+                            {{#each group.orders as |item idx|}}
                                 <div
                                     class="assigned-stop flex items-center px-2 py-1.5 my-0.5 rounded text-xs cursor-grab
                                         {{if item._overridden 'border border-dashed border-orange-500 bg-orange-900/20' 'dark:bg-gray-700'}}"
@@ -107,7 +107,11 @@
                                     data-order-id={{item.order.public_id}}
                                     {{on "dragstart" (fn @onAssignedOrderDragStart item.order)}}
                                 >
-                                    <span class="w-5 text-center text-gray-500 mr-2 flex-shrink-0 tabular-nums">{{item.sequence}}</span>
+                                    {{! Use letter labels (A, B, C...) matching the map markers }}
+                                    <span
+                                        class="w-5 h-5 rounded-full flex items-center justify-center text-white font-bold mr-2 flex-shrink-0"
+                                        style="font-size:0.6rem; background-color:{{group.routeColor}}"
+                                    >{{@getStopLabel idx}}</span>
                                     <div class="flex-1 min-w-0">
                                         <div class="dark:text-white truncate font-medium">{{or item.order.tracking item.order.public_id}}</div>
                                         <div class="text-gray-400 truncate">{{item.order.payload.dropoff.address}}</div>
