@@ -164,9 +164,10 @@ class OrchestrationController extends Controller
                 $ordersQuery->whereIn('public_id', $priorVehicleAssignedOrderIds)
                     ->whereNull('driver_assigned_uuid');
             } else {
-                // Fallback: use DB-committed assignments
-                $ordersQuery->whereNotNull('vehicle_assigned_uuid')
-                    ->whereNull('driver_assigned_uuid');
+                // Standalone assign_drivers (no prior vehicle phase):
+                // Use all selected orders regardless of vehicle assignment.
+                // The engine will assign both a vehicle and a driver together.
+                $ordersQuery->whereNull('driver_assigned_uuid');
             }
         }
 

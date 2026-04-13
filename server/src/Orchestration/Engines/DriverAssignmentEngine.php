@@ -34,20 +34,28 @@ class DriverAssignmentEngine
      */
     public function assign(Collection $orders, Collection $vehicles, array $options = []): array
     {
-        $requireActiveShift = $options['require_active_shift'] ?? true;
+        $requireActiveShift = $options['require_active_shift'] ?? false;
         $respectSkills      = $options['respect_skills'] ?? true;
 
-        // Collect available drivers (online, with a vehicle or without)
+        // Collect all company drivers — online status and vehicle linkage are
+        // treated as soft preferences (scored), not hard filters.
         $companyUuid      = $orders->first()?->company_uuid;
         $availableDrivers = Driver::where('company_uuid', $companyUuid)
-            ->where('online', true)
-            ->whereNull('vehicle_uuid') // Only unassigned drivers
-            ->with(['scheduleItems'])
+            ->with(['scheduleItems', 'location'])
             ->get();
 
-        // Filter to drivers on an active shift if required
+        // Shift-awareness: if require_active_shift is explicitly set, filter
+        // to drivers that have an active shift right now. Drivers with NO
+        // schedule items at all are treated as always available — only drivers
+        // with a schedule but no active shift are excluded.
         if ($requireActiveShift) {
             $availableDrivers = $availableDrivers->filter(function (Driver $driver) {
+                $hasSchedule = $driver->scheduleItems && $driver->scheduleItems->isNotEmpty();
+                // No schedule → always available
+                if (!$hasSchedule) {
+                    return true;
+                }
+                // Has a schedule → must have an active shift right now
                 return $driver->activeShiftFor(now()) !== null;
             });
         }
@@ -62,48 +70,108 @@ class DriverAssignmentEngine
 
         $assignments        = [];
         $assignedDrivers    = [];
-        $unassignedVehicles = [];
+        $assignedVehicles   = [];
+        $unassignedOrders   = [];
 
-        // Group orders by vehicle to determine required skills per vehicle
-        $ordersByVehicle = $orders->groupBy('vehicle_assigned_uuid');
+        // Determine if this is a standalone run (no prior vehicle assignment)
+        // or a post-vehicle-assignment run.
+        $hasVehicleAssignments = $orders->filter(fn ($o) => !empty($o->vehicle_assigned_uuid))->isNotEmpty();
 
-        foreach ($vehicles as $vehicle) {
-            // Determine required skills from the vehicle's planned orders
-            $vehicleOrders   = $ordersByVehicle->get($vehicle->uuid, collect());
-            $requiredSkills  = $this->aggregateRequiredSkills($vehicleOrders);
+        if ($hasVehicleAssignments) {
+            // ── Post-vehicle-assignment mode ──────────────────────────────────
+            // Orders already have a vehicle. Group by vehicle and find the
+            // best driver for each vehicle group.
+            $ordersByVehicle = $orders->groupBy('vehicle_assigned_uuid');
 
-            // Find the best available driver for this vehicle
-            $bestDriver = $this->findBestDriver(
-                $vehicle,
-                $availableDrivers->reject(fn ($d) => in_array($d->uuid, $assignedDrivers)),
-                $requiredSkills,
-                $respectSkills
-            );
+            foreach ($vehicles as $vehicle) {
+                $vehicleOrders  = $ordersByVehicle->get($vehicle->uuid, collect());
+                $requiredSkills = $this->aggregateRequiredSkills($vehicleOrders);
 
-            if (!$bestDriver) {
-                $unassignedVehicles[] = $vehicle->public_id;
-                continue;
+                $bestDriver = $this->findBestDriver(
+                    $vehicle,
+                    $availableDrivers->reject(fn ($d) => in_array($d->uuid, $assignedDrivers)),
+                    $requiredSkills,
+                    $respectSkills
+                );
+
+                if (!$bestDriver) {
+                    foreach ($vehicleOrders as $order) {
+                        $unassignedOrders[] = $order->public_id;
+                    }
+                    continue;
+                }
+
+                $assignedDrivers[] = $bestDriver->uuid;
+
+                foreach ($vehicleOrders as $order) {
+                    $assignments[] = [
+                        'order_id'   => $order->public_id,
+                        'vehicle_id' => $vehicle->public_id,
+                        'driver_id'  => $bestDriver->public_id,
+                        'sequence'   => null,
+                    ];
+                }
             }
+        } else {
+            // ── Standalone mode ───────────────────────────────────────────────
+            // No prior vehicle assignment. Assign each order to the nearest
+            // available vehicle + best matching driver pair.
+            $availableVehicles = $vehicles->values();
 
-            $assignedDrivers[] = $bestDriver->uuid;
+            foreach ($orders as $order) {
+                // Find the nearest unassigned vehicle
+                $pickupLat = $order->payload?->pickup?->location?->getLat();
+                $pickupLng = $order->payload?->pickup?->location?->getLng();
 
-            // Build one assignment entry per order on this vehicle
-            foreach ($vehicleOrders as $order) {
+                $bestVehicle = $availableVehicles
+                    ->reject(fn ($v) => in_array($v->uuid, $assignedVehicles))
+                    ->sortBy(function ($vehicle) use ($pickupLat, $pickupLng) {
+                        if (!$pickupLat || !$pickupLng || !$vehicle->location) {
+                            return PHP_INT_MAX;
+                        }
+                        return $this->haversineDistance(
+                            $pickupLat, $pickupLng,
+                            $vehicle->location->getLat(), $vehicle->location->getLng()
+                        );
+                    })
+                    ->first();
+
+                if (!$bestVehicle) {
+                    $unassignedOrders[] = $order->public_id;
+                    continue;
+                }
+
+                $requiredSkills = $order->required_skills ?? [];
+                $bestDriver = $this->findBestDriver(
+                    $bestVehicle,
+                    $availableDrivers->reject(fn ($d) => in_array($d->uuid, $assignedDrivers)),
+                    $requiredSkills,
+                    $respectSkills
+                );
+
+                if (!$bestDriver) {
+                    $unassignedOrders[] = $order->public_id;
+                    continue;
+                }
+
+                $assignedVehicles[] = $bestVehicle->uuid;
+                $assignedDrivers[]  = $bestDriver->uuid;
+
                 $assignments[] = [
                     'order_id'   => $order->public_id,
-                    'vehicle_id' => $vehicle->public_id,
+                    'vehicle_id' => $bestVehicle->public_id,
                     'driver_id'  => $bestDriver->public_id,
-                    'sequence'   => null, // Sequence already set from Phase 1
+                    'sequence'   => null,
                 ];
             }
         }
 
         return [
             'assignments' => $assignments,
-            'unassigned'  => $unassignedVehicles,
+            'unassigned'  => $unassignedOrders,
             'summary'     => [
                 'drivers_assigned'    => count($assignedDrivers),
-                'vehicles_unassigned' => count($unassignedVehicles),
+                'vehicles_assigned'   => count($assignedVehicles),
             ],
         ];
     }
@@ -145,8 +213,13 @@ class DriverAssignmentEngine
                 $score += $matchCount * 100;
             }
 
-            // Active shift bonus
-            if ($driver->activeShiftFor(now()) !== null) {
+            // Online bonus
+            if ($driver->online) {
+                $score += 30;
+            }
+            // Active shift bonus — only meaningful if the driver has a schedule
+            $hasSchedule = $driver->scheduleItems && $driver->scheduleItems->isNotEmpty();
+            if ($hasSchedule && $driver->activeShiftFor(now()) !== null) {
                 $score += 50;
             }
 
