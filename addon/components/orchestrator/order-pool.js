@@ -52,9 +52,12 @@ const FIELD_META = {
 export default class OrchestratorOrderPoolComponent extends Component {
     @service intl;
 
-    // ── Quick filter chip ─────────────────────────────────────────────────────
+      // ── Quick filter chip ─────────────────────────────────────────────────
     @tracked orderSearch    = '';
     @tracked orderFilter    = 'all';
+
+    // ── Waypoint collapse state ───────────────────────────────────────────
+    @tracked collapsedOrderIds = new Set();
 
     // ── Advanced filter panel ─────────────────────────────────────────────────
     @tracked showAdvanced       = false;
@@ -75,6 +78,32 @@ export default class OrchestratorOrderPoolComponent extends Component {
 
     @action stopPropagation(event) {
         event?.stopPropagation();
+    }
+
+    // ── Waypoint collapse actions ─────────────────────────────────────────
+
+    @action toggleWaypointCollapse(orderId, event) {
+        event?.stopPropagation();
+        const next = new Set(this.collapsedOrderIds);
+        if (next.has(orderId)) {
+            next.delete(orderId);
+        } else {
+            next.add(orderId);
+        }
+        this.collapsedOrderIds = next;
+    }
+
+    @action collapseAllWaypoints() {
+        const ids = (this.filteredOrders ?? []).map((o) => o.public_id).filter(Boolean);
+        this.collapsedOrderIds = new Set(ids);
+    }
+
+    @action expandAllWaypoints() {
+        this.collapsedOrderIds = new Set();
+    }
+
+    @action isWaypointCollapsed(orderId) {
+        return this.collapsedOrderIds.has(orderId);
     }
 
     // ── Advanced filter panel ─────────────────────────────────────────────────

@@ -2368,18 +2368,36 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
 }
 
 /* ── Order pool card ── */
+/* Light-mode base: white card with gray-200 border */
 .order-pool-card {
-    background: #1f2937;
-    border-color: #374151;
+    background: #ffffff;
+    border-color: #e5e7eb; /* gray-200 */
     transition:
         background 0.1s,
         border-color 0.1s;
 }
 .order-pool-card:hover {
+    background: #f9fafb;
+    border-color: #93c5fd; /* blue-300 */
+}
+.order-pool-card.selected {
+    background: #eff6ff; /* blue-50 */
+    border-color: #3b82f6;
+}
+
+/* Dark-mode overrides */
+body[data-theme='dark'] .order-pool-card,
+.dark .order-pool-card {
+    background: #1f2937;
+    border-color: #374151;
+}
+body[data-theme='dark'] .order-pool-card:hover,
+.dark .order-pool-card:hover {
     background: #263040;
     border-color: #4b5563;
 }
-.order-pool-card.selected {
+body[data-theme='dark'] .order-pool-card.selected,
+.dark .order-pool-card.selected {
     background: #1e3a5f;
     border-color: #3b82f6;
 }
@@ -2468,20 +2486,36 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
     align-items: center;
     justify-content: center;
     padding: 2rem;
-    border: 2px dashed #374151;
+    border: 2px dashed #d1d5db; /* gray-300 — works in both modes */
     border-radius: 0.5rem;
-    background: #1f2937;
+    background: #f9fafb; /* gray-50 — light mode default */
     text-align: center;
     cursor: pointer;
     transition:
         border-color 0.15s,
         background 0.15s;
 }
+
+/* Dark mode override */
+body[data-theme='dark'] .import-dropzone,
+.dark .import-dropzone {
+    border-color: #374151;
+    background: #1f2937;
+}
+
 .import-dropzone:hover,
 .import-dropzone.dragging {
     border-color: #3b82f6;
+    background: #eff6ff; /* blue-50 for light mode */
+}
+
+body[data-theme='dark'] .import-dropzone:hover,
+body[data-theme='dark'] .import-dropzone.dragging,
+.dark .import-dropzone:hover,
+.dark .import-dropzone.dragging {
     background: #1e3a5f;
 }
+
 .import-dropzone p {
     margin: 0;
 }
@@ -2946,6 +2980,11 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-
         border-color 0.15s;
 }
 
+/* Light mode: slightly darker inactive text */
+body[data-theme='light'] .import-step-tab {
+    color: #9ca3af;
+}
+
 .import-step-tab--active {
     color: #3b82f6;
     border-bottom-color: #3b82f6;
@@ -2958,14 +2997,21 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background: #374151;
+    background: #e5e7eb; /* gray-200 — light mode default */
     font-size: 0.7rem;
     font-weight: 700;
-    color: #9ca3af;
+    color: #6b7280;
     flex-shrink: 0;
     transition:
         background 0.15s,
         color 0.15s;
+}
+
+/* Dark mode step number badge */
+body[data-theme='dark'] .import-step-tab-num,
+.dark .import-step-tab-num {
+    background: #374151;
+    color: #9ca3af;
 }
 
 .import-step-tab-num--active {
@@ -2981,8 +3027,8 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-
     grid-template-columns: 1fr 28px 1fr;
     align-items: center;
     padding: 6px 16px;
-    background: #111827;
-    border-bottom: 1px solid #1f2937;
+    background: #f3f4f6; /* gray-100 — light mode */
+    border-bottom: 1px solid #e5e7eb;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -2990,6 +3036,13 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.07em;
+    color: #6b7280;
+}
+
+body[data-theme='dark'] .import-mapping-header,
+.dark .import-mapping-header {
+    background: #111827;
+    border-bottom-color: #1f2937;
     color: #4b5563;
 }
 
@@ -3004,17 +3057,25 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-
     display: flex;
     align-items: center;
     padding: 5px 16px;
-    background: #0f172a;
-    border-top: 1px solid #1f2937;
-    border-bottom: 1px solid #1f2937;
+    background: #e5e7eb; /* gray-200 — light mode */
+    border-top: 1px solid #d1d5db;
+    border-bottom: 1px solid #d1d5db;
     font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.09em;
-    color: #4b5563;
+    color: #6b7280;
     position: sticky;
     top: 0;
     z-index: 5;
+}
+
+body[data-theme='dark'] .import-mapping-group-header,
+.dark .import-mapping-group-header {
+    background: #0f172a;
+    border-top-color: #1f2937;
+    border-bottom-color: #1f2937;
+    color: #4b5563;
 }
 
 .import-mapping-group-header:first-child {
@@ -3027,8 +3088,13 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-
     grid-template-columns: 1fr 28px 1fr;
     align-items: center;
     padding: 5px 16px;
-    border-bottom: 1px solid #1f2937;
+    border-bottom: 1px solid #f3f4f6; /* gray-100 — light mode */
     transition: background 0.1s;
+}
+
+body[data-theme='dark'] .import-mapping-row,
+.dark .import-mapping-row {
+    border-bottom-color: #1f2937;
 }
 
 .import-mapping-row:last-child {
@@ -3036,16 +3102,21 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-
 }
 
 .import-mapping-row:hover {
+    background: rgba(0, 0, 0, 0.02); /* light mode hover */
+}
+
+body[data-theme='dark'] .import-mapping-row:hover,
+.dark .import-mapping-row:hover {
     background: rgba(255, 255, 255, 0.02);
 }
 
 /* Highlight rows that have a mapping applied */
 .import-mapping-row--mapped {
-    background: rgba(16, 185, 129, 0.04);
+    background: rgba(16, 185, 129, 0.05);
 }
 
 .import-mapping-row--mapped:hover {
-    background: rgba(16, 185, 129, 0.07);
+    background: rgba(16, 185, 129, 0.09);
 }
 
 /* Column sizing helpers */
@@ -3099,25 +3170,28 @@ select.import-mapping-select--error {
 /* ── Orchestrator Import Modal: header + tab nav background ── */
 
 /* The step tab nav bar and the modal header share the same background so they
-   visually merge into one unified header region. */
+   visually merge into one unified header region.
+   Using gray-800 (#1f2937) for dark mode as requested. */
 .flb--default-modal .flb--modal-header {
-    background: #111827; /* gray-900 */
-    border-bottom: 1px solid #1f2937;
+    background: #1f2937; /* gray-800 */
+    border-bottom: 1px solid #374151;
 }
 
 /* Light-mode equivalent */
 body[data-theme='light'] .flb--default-modal .flb--modal-header {
-    background: #f3f4f6; /* gray-100 */
+    background: #f9fafb; /* gray-50 */
     border-bottom: 1px solid #e5e7eb;
 }
 
 /* The step tab nav sits just below the modal title — give it the same bg */
 .flb--default-modal nav.flex {
-    background: #111827;
+    background: #1f2937; /* gray-800 */
+    border-bottom: 1px solid #374151;
 }
 
 body[data-theme='light'] .flb--default-modal nav.flex {
-    background: #f3f4f6;
+    background: #f9fafb; /* gray-50 */
+    border-bottom: 1px solid #e5e7eb;
 }
 
 /* ── Orchestrator Import Modal: minimum body height ── */

@@ -2133,6 +2133,8 @@ orchestrator:
   tab-routes: Routes
   tab-timeline: Timeline
   collapse-all: Collapse all
+  collapse-route: Collapse route
+  expand-route: Expand route
   no-plan: Run the orchestrator to see the proposed plan.
   unassigned-description: These orders could not be assigned. They will remain in the queue for re-allocation.
   unassigned: unassigned
