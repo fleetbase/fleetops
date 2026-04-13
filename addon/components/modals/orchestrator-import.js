@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
+import * as XLSX from 'xlsx';
 
 /**
  * Orchestrator Import Modal
@@ -549,8 +550,14 @@ export default class OrchestratorImportComponent extends Component {
     @task *parseFile() {
         this.parseError = null;
         try {
-            const text = yield this._readFileAsText(this.selectedFile);
-            const { columns, rows } = this._parseCsv(text);
+            const ext = this.selectedFile.name.split('.').pop()?.toLowerCase();
+            let columns, rows;
+            if (ext === 'xlsx' || ext === 'xls') {
+                ({ columns, rows } = yield this._parseXlsx(this.selectedFile));
+            } else {
+                const text = yield this._readFileAsText(this.selectedFile);
+                ({ columns, rows } = this._parseCsv(text));
+            }
             this.fileColumns = columns;
             this.rawRows = rows;
             this._autoMapColumns(columns);
@@ -567,6 +574,34 @@ export default class OrchestratorImportComponent extends Component {
             reader.onerror = () => reject(new Error(this.intl.t('orchestrator.read-error')));
             reader.readAsText(file);
         });
+    }
+
+    _readFileAsArrayBuffer(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = () => reject(new Error(this.intl.t('orchestrator.read-error')));
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    async _parseXlsx(file) {
+        const buffer = await this._readFileAsArrayBuffer(file);
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        // Use the first sheet
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        // Convert to array of arrays (header + data rows)
+        const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        if (!aoa.length) throw new Error(this.intl.t('orchestrator.empty-file'));
+        // First row is the header — strip leading/trailing spaces and any trailing asterisks
+        const rawHeaders = aoa[0];
+        const columns = rawHeaders.map((h) => String(h).trim().replace(/\s*\*$/, ''));
+        // Take up to 3 sample data rows
+        const rows = aoa.slice(1, 4).map((rowArr) => {
+            return Object.fromEntries(columns.map((col, i) => [col, rowArr[i] ?? '']));
+        });
+        return { columns, rows };
     }
 
     _parseCsv(text) {
@@ -663,13 +698,27 @@ export default class OrchestratorImportComponent extends Component {
     // ── Build preview ─────────────────────────────────────────────────────────
     @task *buildPreview() {
         try {
-            const text = yield this._readFileAsText(this.selectedFile);
-            const lines = text.split(/\r?\n/).filter((l) => l.trim());
-            const columns = this._parseCsvLine(lines[0]);
-            const allRows = lines.slice(1).map((line) => {
-                const vals = this._parseCsvLine(line);
-                return Object.fromEntries(columns.map((col, i) => [col, vals[i] ?? '']));
-            });
+            const ext = this.selectedFile.name.split('.').pop()?.toLowerCase();
+            let allRows;
+
+            if (ext === 'xlsx' || ext === 'xls') {
+                // Re-parse the full xlsx file (all rows, not just the 3-row sample)
+                const buffer = yield this._readFileAsArrayBuffer(this.selectedFile);
+                const workbook = XLSX.read(buffer, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                const rawHeaders = aoa[0];
+                const columns = rawHeaders.map((h) => String(h).trim().replace(/\s*\*$/, ''));
+                allRows = aoa.slice(1).map((rowArr) => Object.fromEntries(columns.map((col, i) => [col, rowArr[i] ?? ''])));
+            } else {
+                const text = yield this._readFileAsText(this.selectedFile);
+                const lines = text.split(/\r?\n/).filter((l) => l.trim());
+                const columns = this._parseCsvLine(lines[0]);
+                allRows = lines.slice(1).map((line) => {
+                    const vals = this._parseCsvLine(line);
+                    return Object.fromEntries(columns.map((col, i) => [col, vals[i] ?? '']));
+                });
+            }
 
             const mapped = allRows.map((row, idx) => {
                 const result = { _rowIndex: idx + 2 };

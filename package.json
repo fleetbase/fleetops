@@ -69,7 +69,8 @@
         "ember-tag-input": "^3.1.0",
         "ember-wormhole": "^0.6.0",
         "leaflet-contextmenu": "^1.4.0",
-        "leaflet-draw": "^1.0.4"
+        "leaflet-draw": "^1.0.4",
+        "xlsx": "^0.18.5"
     },
     "devDependencies": {
         "@babel/eslint-parser": "^7.22.15",
