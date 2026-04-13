@@ -2984,9 +2984,9 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-
         border-color 0.15s;
 }
 
-/* Light mode: slightly darker inactive text */
+/* Light mode: use gray-500 for inactive tabs on white background */
 body[data-theme='light'] .import-step-tab {
-    color: #9ca3af;
+    color: #6b7280; /* gray-500 — readable on white */
 }
 
 .import-step-tab--active {
@@ -3181,48 +3181,44 @@ select.import-mapping-select--error {
 
 /* ── Orchestrator Import Modal: header + tab nav background ── */
 
-/* Scoped to .fleetops-order-import so other modals are unaffected.
-   The step tab nav bar and the modal header share the same background so they
-   visually merge into one unified header region.
-   Dark mode: gray-800 (#1f2937); Light mode: gray-50 (#f9fafb). */
-.fleetops-order-import .flb--modal-header {
-    background: #1f2937; /* gray-800 */
-    border-bottom: none; /* no border — tabs sit flush below */
+/* ── Orchestrator Import Modal: unified header + step-tab region ──
+   Uses the same full-selector pattern as ember-ui's modal.css so specificity
+   is guaranteed to win over Tailwind utility classes.
+   Dark mode  : bg-gray-900 (#111827) — matches ember-ui's own modal header bg.
+   Light mode : bg-white  (#ffffff) — matches the default modal content bg. */
+
+/* ── Dark mode ── */
+body[data-theme='dark'] .flb--modal.flb--default-modal.fleetops-order-import
+    > .flb--modal-dialog > .flb--modal-content > .flb--modal-header {
+    background: #111827; /* gray-900 — same as ember-ui default */
+    border-bottom: none; /* no divider — tabs sit flush below */
 }
-body[data-theme='dark'] .fleetops-order-import .flb--modal-header,
-.dark .fleetops-order-import .flb--modal-header {
-    background: #1f2937;
-    border-bottom: none;
-}
-/* Light-mode equivalent */
-body[data-theme='light'] .fleetops-order-import .flb--modal-header,
-html:not(.dark) .fleetops-order-import .flb--modal-header {
-    background: #f9fafb; /* gray-50 */
-    border-bottom: none;
+body[data-theme='dark'] .flb--modal.flb--default-modal.fleetops-order-import
+    > .flb--modal-dialog > .flb--modal-content > .flb--modal-body > nav.import-step-tabs {
+    background: #111827; /* gray-900 — unified with header */
+    border-bottom: 1px solid #1f2937; /* gray-800 subtle separator */
 }
 
-/* The step tab nav sits just below the modal title — give it the same bg */
-.fleetops-order-import .import-step-tabs {
-    background: #1f2937; /* gray-800 */
-    border-top: none; /* flush with header above */
-    border-bottom: 1px solid #374151;
+/* ── Light mode ── */
+.flb--modal.flb--default-modal.fleetops-order-import
+    > .flb--modal-dialog > .flb--modal-content > .flb--modal-header {
+    background: #ffffff;
+    border-bottom: none;
 }
-body[data-theme='dark'] .fleetops-order-import .import-step-tabs,
-.dark .fleetops-order-import .import-step-tabs {
-    background: #1f2937;
-    border-bottom: 1px solid #374151;
-}
-body[data-theme='light'] .fleetops-order-import .import-step-tabs,
-html:not(.dark) .fleetops-order-import .import-step-tabs {
-    background: #f9fafb; /* gray-50 */
-    border-bottom: 1px solid #e5e7eb;
+.flb--modal.flb--default-modal.fleetops-order-import
+    > .flb--modal-dialog > .flb--modal-content > .flb--modal-body > nav.import-step-tabs {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb; /* gray-200 */
 }
 
 /* ── Orchestrator Import Modal: minimum body height ── */
 
 /* Keep the modal body at a consistent height across all three steps so the
    modal does not jump/resize as the user advances through the wizard. */
-.fleetops-order-import .flb--modal-body > div.text-xs {
+body[data-theme='dark'] .flb--modal.flb--default-modal.fleetops-order-import
+    > .flb--modal-dialog > .flb--modal-content > .flb--modal-body > div.text-xs,
+.flb--modal.flb--default-modal.fleetops-order-import
+    > .flb--modal-dialog > .flb--modal-content > .flb--modal-body > div.text-xs {
     min-height: 420px;
 }
 
