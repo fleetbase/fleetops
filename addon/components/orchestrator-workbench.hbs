@@ -159,8 +159,7 @@
                     {{#each this.availableDrivers as |driver|}}
                         {{#if driver.location}}
                             <layers.marker
-                                @lat={{driver.location.coordinates.1}}
-                                @lng={{driver.location.coordinates.0}}
+                                @location={{point-to-coordinates driver.location}}
                                 @icon={{icon iconUrl=driver.vehicle_avatar iconSize=(array 24 24)}}
                                 @riseOnHover={{true}}
                                 as |marker|
