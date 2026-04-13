@@ -754,7 +754,7 @@ export default class OrchestratorImportComponent extends Component {
             return this.args.options.onImportTemplate();
         }
         const a = document.createElement('a');
-        a.href = OrchestratorImportModal.TEMPLATE_URL;
+        a.href = OrchestratorImportComponent.TEMPLATE_URL;
         a.download = 'Fleetbase_Order_Import_Template.xlsx';
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
