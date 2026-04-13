@@ -15,6 +15,11 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     @tracked routePrefix = 'console.fleet-ops.';
     @tracked menuPanels = [];
     @tracked universeMenuItems = [];
+    @tracked universeOperationsMenuItems = [];
+    @tracked universeManagementMenuItems = [];
+    @tracked universeConnectivityMenuItems = [];
+    @tracked universeMaintenanceMenuItems = [];
+    @tracked universeAnalyticsMenuItems = [];
     @tracked universeSettingsMenuItems = [];
     @tracked universeMenuPanels = [];
 
@@ -26,8 +31,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
     createMenuItemsFromUniverseRegistry() {
         const registeredMenuItems = this.menuService.getMenuItems('engine:fleet-ops');
+        console.log('Registered menu items for engine:fleet-ops:', registeredMenuItems);
         this.universeMenuPanels = this.menuService.getMenuPanels('engine:fleet-ops');
         this.universeMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === undefined);
+        this.universeOperationsMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'operations');
+        this.universeManagementMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'management');
+        this.universeMaintenanceMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'maintenance');
+        this.universeConnectivityMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'connectivity');
+        this.universeAnalyticsMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'analytics');
         this.universeSettingsMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'settings');
     }
 
