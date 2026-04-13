@@ -3218,6 +3218,26 @@ body[data-theme='dark'] .fleetops-order-import nav.import-step-tabs {
     min-height: 420px;
 }
 
+/* ── Orchestrator Import Modal: download template card ── */
+/* Border-only card with shadow, pinned to the bottom of the upload step.
+   Sits outside the scrollable content area so it is always visible. */
+.import-template-download {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-top: 1px solid #e5e7eb;       /* gray-200 — light mode top separator */
+    border-radius: 0 0 8px 8px;          /* match modal bottom radius */
+    background: #ffffff;
+    box-shadow: 0 -2px 8px 0 rgb(0 0 0 / 0.04);
+    font-size: 0.75rem;
+}
+body[data-theme='dark'] .import-template-download {
+    border-top-color: #374151;           /* gray-700 — dark mode top separator */
+    background: #111827;                 /* gray-900 — dark mode */
+    box-shadow: 0 -2px 8px 0 rgb(0 0 0 / 0.25);
+}
+
 /* ── Button: trailing icon support (wrapperClass = btn-icon-right) ── */
 
 /* When a Button is given @wrapperClass="btn-icon-right" the icon wrapper

@@ -66,27 +66,27 @@
                     </FileDropzone>
                 {{/let}}
 
-                {{! Template download }}
-                <div class="flex items-center justify-between px-3 py-2 rounded dark:bg-gray-800 border dark:border-gray-700">
-                    <div>
-                        <p class="font-medium dark:text-gray-200">{{t "orchestrator.download-template"}}</p>
-                        <p class="text-gray-500">{{t "orchestrator.download-template-desc"}}</p>
-                    </div>
-                    <Button
-                        @icon="download"
-                        @text={{t "orchestrator.download"}}
-                        @type="default"
-                        @size="sm"
-                        {{on "click" this.downloadTemplate}}
-                    />
-                </div>
-
                 {{#if this.parseError}}
                     <div class="px-3 py-2 rounded bg-red-900/30 border border-red-700 text-red-400">
                         <FaIcon @icon="exclamation-circle" class="mr-1" />
                         {{this.parseError}}
                     </div>
                 {{/if}}
+            </div>
+
+            {{! Template download — border-only card pinned to the bottom of the upload step }}
+            <div class="import-template-download">
+                <div>
+                    <p class="font-medium dark:text-gray-200">{{t "orchestrator.download-template"}}</p>
+                    <p class="text-gray-500">{{t "orchestrator.download-template-desc"}}</p>
+                </div>
+                <Button
+                    @icon="download"
+                    @text={{t "orchestrator.download"}}
+                    @type="default"
+                    @size="sm"
+                    {{on "click" this.downloadTemplate}}
+                />
             </div>
         {{/if}}
 
