@@ -118,12 +118,16 @@ class OrchestrationController extends Controller
      */
     public function run(Request $request): JsonResponse
     {
-        $companyUuid = session('company');
-        $mode        = $request->input('mode', 'assign_vehicles');
-        $orderIds    = $request->input('order_ids', []);
-        $vehicleIds  = $request->input('vehicle_ids', []);
-        $driverIds   = $request->input('driver_ids', []);
-        $options     = $request->input('options', []);
+        $companyUuid       = session('company');
+        $mode              = $request->input('mode', 'assign_vehicles');
+        $orderIds          = $request->input('order_ids', []);
+        $vehicleIds        = $request->input('vehicle_ids', []);
+        $driverIds         = $request->input('driver_ids', []);
+        $options           = $request->input('options', []);
+        // prior_assignments: assignments from previous phases that have not yet
+        // been committed to the database. Keyed by order_id (public_id).
+        $priorAssignments  = collect($request->input('prior_assignments', []))
+            ->keyBy('order_id');
 
         // ── Resolve orders ────────────────────────────────────────────────────
         $ordersQuery = Order::where('company_uuid', $companyUuid)
@@ -131,21 +135,67 @@ class OrchestrationController extends Controller
             ->with(['payload.dropoff', 'payload.pickup', 'payload.waypoints', 'payload.waypointMarkers', 'payload.entities']);
 
         if ($mode === 'assign_vehicles' || $mode === 'allocate') {
+            // Exclude orders that already have a vehicle assigned in the DB
+            // OR in a prior uncommitted phase.
+            $priorVehicleAssignedOrderIds = $priorAssignments
+                ->filter(fn ($a) => !empty($a['vehicle_id']))
+                ->keys()
+                ->toArray();
             $ordersQuery->whereNull('vehicle_assigned_uuid');
+            if (!empty($priorVehicleAssignedOrderIds)) {
+                $ordersQuery->whereNotIn('public_id', $priorVehicleAssignedOrderIds);
+            }
         } elseif ($mode === 'optimize') {
             $ordersQuery->whereNotNull('vehicle_assigned_uuid');
         } elseif ($mode === 'optimize_routes') {
             // optimize_routes: re-sequence stops for selected orders.
             // No vehicle-assignment filter — the user picks the orders explicitly.
         } elseif ($mode === 'assign_drivers') {
-            $ordersQuery->whereNotNull('vehicle_assigned_uuid')
-                ->whereNull('driver_assigned_uuid');
+            // For assign_drivers we need orders that have a vehicle assigned
+            // (either committed to DB or from a prior phase) but no driver yet.
+            $priorVehicleAssignedOrderIds = $priorAssignments
+                ->filter(fn ($a) => !empty($a['vehicle_id']))
+                ->keys()
+                ->toArray();
+
+            if (!empty($priorVehicleAssignedOrderIds)) {
+                // Use the prior phase's vehicle assignments — fetch those orders
+                // regardless of their DB vehicle_assigned_uuid.
+                $ordersQuery->whereIn('public_id', $priorVehicleAssignedOrderIds)
+                    ->whereNull('driver_assigned_uuid');
+            } else {
+                // Fallback: use DB-committed assignments
+                $ordersQuery->whereNotNull('vehicle_assigned_uuid')
+                    ->whereNull('driver_assigned_uuid');
+            }
         }
 
         if (!empty($orderIds)) {
             $ordersQuery->whereIn('public_id', $orderIds);
         }
         $orders = $ordersQuery->get();
+
+        // Augment orders with prior-phase vehicle assignments so the engines
+        // can group by vehicle_id even before the plan is committed.
+        if ($priorAssignments->isNotEmpty()) {
+            foreach ($orders as $order) {
+                $prior = $priorAssignments->get($order->public_id);
+                if ($prior) {
+                    // Temporarily set the vehicle_assigned_uuid on the model
+                    // so engines that group by this field work correctly.
+                    if (!empty($prior['vehicle_id']) && !$order->vehicle_assigned_uuid) {
+                        // Resolve the Vehicle model and attach it
+                        $vehicle = Vehicle::where('public_id', $prior['vehicle_id'])
+                            ->with(['driver' => fn ($q) => $q->with(['location', 'scheduleItems'])])
+                            ->first();
+                        if ($vehicle) {
+                            $order->vehicle_assigned_uuid = $vehicle->uuid;
+                            $order->setRelation('vehicle', $vehicle);
+                        }
+                    }
+                }
+            }
+        }
 
         // ── Resolve vehicles ──────────────────────────────────────────────────
         $vehiclesQuery = Vehicle::where('company_uuid', $companyUuid)
@@ -174,7 +224,7 @@ class OrchestrationController extends Controller
             ], 200);
         }
 
-        if ($vehicles->isEmpty()) {
+        if ($vehicles->isEmpty() && $mode !== 'assign_drivers') {
             return response()->json([
                 'message'     => 'No available vehicles found.',
                 'assignments' => [],

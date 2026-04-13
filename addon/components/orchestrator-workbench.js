@@ -263,6 +263,10 @@ export default class OrchestratorWorkbenchComponent extends Component {
                     respect_capacity: phase.respectCapacity ?? true,
                     return_to_depot: phase.returnToDepot ?? false,
                 },
+                // Pass any assignments from prior phases so the server can use
+                // them for phase-aware order/vehicle resolution without requiring
+                // a DB commit between phases.
+                prior_assignments: this.proposedPlan?.length ? this.proposedPlan : [],
             };
             if (driverIds) {
                 payload.driver_ids = driverIds;
