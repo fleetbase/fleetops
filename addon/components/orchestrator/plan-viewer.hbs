@@ -122,7 +122,18 @@
                                     data-order-id={{item.order.public_id}}
                                     {{on "dragstart" (fn @onAssignedOrderDragStart item.order)}}
                                 >
-                                    {{! Per-stop rows — one row per _labelledStop }}
+                                    {{! Order reference header — tracking number + type badge }}
+                                    <div class="flex items-center gap-1.5 px-3 pt-2 pb-1 border-b dark:border-gray-700/60">
+                                        <FaIcon @icon="hashtag" @size="xs" class="text-gray-500 flex-shrink-0" />
+                                        <span class="text-xs font-mono font-semibold dark:text-gray-300 truncate">
+                                            {{or item.order.tracking item.order.public_id}}
+                                        </span>
+                                        {{#if item.order.type}}
+                                            <span class="ml-auto text-xs text-gray-500 capitalize truncate">{{item.order.type}}</span>
+                                        {{/if}}
+                                    </div>
+
+                                {{! Per-stop rows — one row per _labelledStop }}
                                     {{#if item._labelledStops.length}}
                                         {{#each item._labelledStops as |stop stopIdx|}}
                                             <div class="flex items-start gap-2 px-3 py-2
