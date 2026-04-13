@@ -2043,12 +2043,12 @@ orchestrator:
   mapped: mapped
   mapping-required-hint: "Dropoff Street 1 is required before you can continue."
   select-column: "— skip —"
-  data-preview: "First 3 rows preview:"
+  data-preview: "First 3 orders preview:"
   preview-import: Preview Import
-  preview-desc: "{count} rows ready to import"
+  preview-desc: "{count} orders ready to import"
   errors: errors
   all-rows-valid: All rows valid
-  validation-warning: "{count} row(s) have errors and will be skipped."
+  validation-warning: "{count} order(s) have errors and will be skipped."
   import-confirm: Confirm Import
   importing: "Importing…"
   col-pickup: Pickup
@@ -2068,7 +2068,7 @@ orchestrator:
   error: Error
   valid: Valid
   import-success: "{count} order(s) imported successfully."
-  no-valid-rows: No valid rows to import.
+  no-valid-rows: No valid orders to import.
   invalid-file-type: "Please upload a .csv, .xlsx or .xls file."
   parse-error: Could not parse the file. Please check the format.
   read-error: Could not read the file.
