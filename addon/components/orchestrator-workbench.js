@@ -868,16 +868,41 @@ export default class OrchestratorWorkbenchComponent extends Component {
         const dropoff = payload.dropoff;
         const pickupCoords = this._placeCoords(pickup);
         const dropoffCoords = this._placeCoords(dropoff);
+        // Shared order-level metadata attached to each stop so the template
+        // can render notes, time windows, and POD requirements without
+        // needing to traverse back up to the parent order.
+        const orderNotes = order?.notes || null;
+        const timeWindowStart = order?.time_window_start || order?.scheduled_at || null;
+        const timeWindowEnd = order?.time_window_end || null;
+        const requiresPod = !!(order?.require_pod ?? order?.meta?.require_pod);
         // Address fallbacks: the orchestrator/orders endpoint may return an empty
         // place.address string. Fall back to order-level pickup_name / dropoff_name
         // fields which are always populated from the API resource.
         if (pickupCoords) {
             const addr = pickup?.address || order?.pickup_name || order?.payload?.pickup?.name || '';
-            stops.push({ ...pickupCoords, address: addr, label: 'P' });
+            stops.push({
+                ...pickupCoords,
+                address: addr,
+                label: 'P',
+                stopType: 'pickup',
+                notes: orderNotes,
+                timeWindowStart,
+                timeWindowEnd,
+                requiresPod,
+            });
         }
         if (dropoffCoords) {
             const addr = dropoff?.address || order?.dropoff_name || order?.payload?.dropoff?.name || '';
-            stops.push({ ...dropoffCoords, address: addr, label: 'D' });
+            stops.push({
+                ...dropoffCoords,
+                address: addr,
+                label: 'D',
+                stopType: 'dropoff',
+                notes: orderNotes,
+                timeWindowStart,
+                timeWindowEnd,
+                requiresPod,
+            });
         }
         return stops;
     }
@@ -973,6 +998,35 @@ export default class OrchestratorWorkbenchComponent extends Component {
     formatUnixTime(unix) {
         if (!unix) return '';
         return new Date(unix * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+    /**
+     * Format an ISO 8601 datetime string as a short HH:MM time.
+     * Used to display time_window_start / time_window_end on stop rows.
+     *
+     * @param {string|null} iso - ISO 8601 string or null
+     * @returns {string}
+     */
+    @action formatIsoTime(iso) {
+        if (!iso) return '';
+        try {
+            return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+        } catch {
+            return '';
+        }
+    }
+    /**
+     * Build a compact time-window label from ISO start/end strings.
+     * Examples: "09:00", "09:00 – 11:00"
+     *
+     * @param {string|null} start
+     * @param {string|null} end
+     * @returns {string}
+     */
+    @action formatTimeWindow(start, end) {
+        const s = this.formatIsoTime(start);
+        const e = this.formatIsoTime(end);
+        if (s && e && s !== e) return `${s} – ${e}`;
+        return s || e || '';
     }
 
     // ── Panel resize ──────────────────────────────────────────────────────────

@@ -51,7 +51,7 @@ class Waypoint extends Model
      *
      * @var array
      */
-    protected $fillable = ['_key', '_import_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'type', 'order', 'time_window_start', 'time_window_end', 'service_time'];
+    protected $fillable = ['_key', '_import_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'type', 'order', 'time_window_start', 'time_window_end', 'service_time', 'notes', 'pod_method', 'pod_required'];
 
     /**
      * Dynamic attributes that are appended to object.
@@ -85,6 +85,8 @@ class Waypoint extends Model
         'time_window_start' => 'datetime',
         'time_window_end'   => 'datetime',
         'service_time'      => 'integer',
+        // Per-stop POD and notes (mirrors order-level fields)
+        'pod_required'      => 'boolean',
     ];
 
     /**

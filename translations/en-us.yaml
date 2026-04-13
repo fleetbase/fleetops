@@ -2154,3 +2154,8 @@ orchestrator:
   try-again: Try Again
   change-resources: Change Resources
   no-assignments-returned: The orchestrator could not assign any orders. Check that vehicles have sufficient capacity and drivers are on shift.
+  # Stop list labels
+  stop-type-pickup: Pickup
+  stop-type-dropoff: Dropoff
+  pod-required: POD
+  no-pod: No POD

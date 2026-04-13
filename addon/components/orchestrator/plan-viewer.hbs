@@ -112,59 +112,97 @@
 
                     {{! Expanded stop list }}
                     {{#if (this.isExpanded group.vehicle.public_id)}}
-                        <div class="vehicle-drop-zone px-2 py-1" data-vehicle-id={{group.vehicle.public_id}} data-driver-id={{group.driver.public_id}}>
+                        <div class="vehicle-drop-zone" data-vehicle-id={{group.vehicle.public_id}} data-driver-id={{group.driver.public_id}}>
                             {{#each group.orders as |item idx|}}
+                                {{! Order block — draggable unit }}
                                 <div
-                                    class="assigned-stop flex items-center px-2 py-1.5 my-0.5 rounded text-xs cursor-grab
-                                        {{if item._overridden 'border border-dashed border-orange-500 bg-orange-900/20' 'dark:bg-gray-700'}}"
+                                    class="assigned-stop cursor-grab
+                                        {{if item._overridden 'border-l-2 border-orange-500' ''}}"
                                     draggable="true"
                                     data-order-id={{item.order.public_id}}
                                     {{on "dragstart" (fn @onAssignedOrderDragStart item.order)}}
                                 >
-                                    {{! Use letter labels (A, B, C...) matching the map markers }}
-                                    <span
-                                        class="w-5 h-5 rounded-full flex items-center justify-center text-white font-bold mr-2 flex-shrink-0"
-                                        style="font-size:0.6rem; background-color:{{group.routeColor}}"
-                                    >{{@getStopLabel idx}}</span>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="dark:text-white truncate font-medium">{{or item.order.tracking item.order.public_id}}</div>
-                                        {{! Show the full stop address list derived from _labelledStops.
-                                             _labelledStops is built by _getOrderStops which handles all
-                                             coordinate/address formats (GeoJSON, Ember Data, plain JSON).
-                                             For pickup→dropoff orders: shows "pickup → dropoff".
-                                             For multi-drop orders: shows each waypoint address.
-                                             For delivery-only orders: shows just the dropoff address. }}
-                                        {{#if item._labelledStops.length}}
-                                            {{#if (gt item._labelledStops.length 1)}}
-                                                {{! Pickup → Dropoff (or multi-stop): use _firstStop/_lastStop
-                                                     to avoid needing a sub/minus template helper. }}
-                                                <div class="text-gray-400 truncate">
-                                                    <span class="text-blue-400">{{item._firstStop.address}}</span>
-                                                    <span class="mx-0.5">→</span>
-                                                    {{item._lastStop.address}}
+                                    {{! Per-stop rows — one row per _labelledStop }}
+                                    {{#if item._labelledStops.length}}
+                                        {{#each item._labelledStops as |stop stopIdx|}}
+                                            <div class="flex items-start gap-2 px-3 py-2
+                                                {{if (gt stopIdx 0) 'border-t dark:border-gray-700/60' ''}}
+                                                {{if item._overridden 'bg-orange-900/10' 'dark:bg-gray-800 hover:dark:bg-gray-750'}}">
+
+                                                {{! Letter badge }}
+                                                <span
+                                                    class="mt-0.5 w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold"
+                                                    style="font-size:0.6rem; background-color:{{group.routeColor}}"
+                                                >{{stop.label}}</span>
+
+                                                {{! Stop content }}
+                                                <div class="flex-1 min-w-0">
+                                                    {{! Address }}
+                                                    <div class="text-xs font-medium dark:text-white truncate">{{stop.address}}</div>
+
+                                                    {{! Tags row: Pickup/Dropoff, POD }}
+                                                    <div class="flex flex-wrap items-center gap-1 mt-0.5">
+                                                        {{#if (eq stop.stopType "pickup")}}
+                                                            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-blue-400 bg-blue-900/30 text-xs leading-none">
+                                                                <FaIcon @icon="arrow-up" @size="xs" />
+                                                                {{t "orchestrator.stop-type-pickup"}}
+                                                            </span>
+                                                        {{else if (eq stop.stopType "dropoff")}}
+                                                            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-green-400 bg-green-900/30 text-xs leading-none">
+                                                                <FaIcon @icon="arrow-down" @size="xs" />
+                                                                {{t "orchestrator.stop-type-dropoff"}}
+                                                            </span>
+                                                        {{/if}}
+                                                        {{#if stop.requiresPod}}
+                                                            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-purple-400 bg-purple-900/30 text-xs leading-none">
+                                                                <FaIcon @icon="file-signature" @size="xs" />
+                                                                {{t "orchestrator.pod-required"}}
+                                                            </span>
+                                                        {{else}}
+                                                            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-gray-500 bg-gray-700/40 text-xs leading-none">
+                                                                <FaIcon @icon="times" @size="xs" />
+                                                                {{t "orchestrator.no-pod"}}
+                                                            </span>
+                                                        {{/if}}
+                                                    </div>
+
+                                                    {{! Time window }}
+                                                    {{#if (or stop.timeWindowStart stop.timeWindowEnd)}}
+                                                        <div class="flex items-center gap-1 mt-0.5 text-xs text-gray-400">
+                                                            <FaIcon @icon="clock" @size="xs" class="flex-shrink-0" />
+                                                            <span class="tabular-nums">{{@formatTimeWindow stop.timeWindowStart stop.timeWindowEnd}}</span>
+                                                        </div>
+                                                    {{/if}}
+
+                                                    {{! Notes }}
+                                                    {{#if stop.notes}}
+                                                        <div class="flex items-start gap-1 mt-0.5 text-xs text-gray-400">
+                                                            <FaIcon @icon="sticky-note" @size="xs" class="flex-shrink-0 mt-0.5" />
+                                                            <span class="break-words">{{stop.notes}}</span>
+                                                        </div>
+                                                    {{/if}}
                                                 </div>
-                                            {{else}}
-                                                {{! Single stop (delivery-only) }}
-                                                <div class="text-gray-400 truncate">{{item._firstStop.address}}</div>
-                                            {{/if}}
-                                        {{else}}
-                                            {{! Fallback: _labelledStops not yet populated — use raw payload fields }}
-                                            {{#if item.order.payload.pickup.address}}
-                                                <div class="text-gray-400 truncate">
-                                                    <span class="text-blue-400">{{item.order.payload.pickup.address}}</span>
-                                                    <span class="mx-0.5">→</span>
-                                                    {{item.order.payload.dropoff.address}}
-                                                </div>
-                                            {{else}}
-                                                <div class="text-gray-400 truncate">{{item.order.payload.dropoff.address}}</div>
-                                            {{/if}}
-                                        {{/if}}
-                                    </div>
-                                    {{#if item.arrival}}
-                                        <span class="text-gray-500 text-xs flex-shrink-0 ml-1 tabular-nums">{{@formatUnixTime item.arrival}}</span>
-                                    {{/if}}
-                                    {{#if item._overridden}}
-                                        <FaIcon @icon="pen" @size="xs" class="text-orange-400 ml-1 flex-shrink-0" />
+
+                                                {{! Arrival time (OSRM-estimated) }}
+                                                {{#if item.arrival}}
+                                                    <span class="flex-shrink-0 text-xs text-gray-500 tabular-nums mt-0.5">{{@formatUnixTime item.arrival}}</span>
+                                                {{/if}}
+
+                                                {{! Override indicator }}
+                                                {{#if item._overridden}}
+                                                    <FaIcon @icon="pen" @size="xs" class="text-orange-400 flex-shrink-0 mt-0.5" />
+                                                {{/if}}
+                                            </div>
+                                        {{/each}}
+                                    {{else}}
+                                        {{! Fallback: no _labelledStops — show order tracking number only }}
+                                        <div class="flex items-center gap-2 px-3 py-2 dark:bg-gray-800">
+                                            <span
+                                                class="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold"
+                                                style="font-size:0.6rem; background-color:{{group.routeColor}}"
+                                            >{{@getStopLabel idx}}</span>
+                                            <span class="text-xs dark:text-white truncate">{{or item.order.tracking item.order.public_id}}</span>
+                                        </div>
                                     {{/if}}
                                 </div>
                             {{/each}}
