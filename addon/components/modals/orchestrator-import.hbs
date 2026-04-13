@@ -16,13 +16,14 @@
     </nav>
 
     {{! ── Step content ── }}
-    <div class="text-xs dark:text-gray-100">
+    {{! Outer wrapper is a flex column so the download block can be pushed to the bottom }}
+    <div class="import-step-content text-xs dark:text-gray-100">
 
         {{! ═══════════════════════════════════════════════════════════════════ }}
         {{! Step 1: Upload                                                      }}
         {{! ═══════════════════════════════════════════════════════════════════ }}
         {{#if (eq this.step "upload")}}
-            <div class="px-4 py-4 grid grid-cols-1 gap-3">
+            <div class="import-upload-content px-4 py-4 grid grid-cols-1 gap-3">
                 {{#let (file-queue name="orchestrator-import" onFileAdded=this.onFileQueued accept=".csv,.xlsx,.xls") as |queue|}}
                     <FileDropzone
                         @queue={{queue}}

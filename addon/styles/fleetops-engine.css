@@ -3211,23 +3211,36 @@ body[data-theme='dark'] .fleetops-order-import nav.import-step-tabs {
     border-bottom: 1px solid #374151; /* gray-700 subtle separator */
 }
 
-/* ── Orchestrator Import Modal: minimum body height ── */
-/* Keep the modal body at a consistent height across all three steps so the
-   modal does not jump/resize as the user advances through the wizard. */
-.fleetops-order-import .flb--modal-body > div.text-xs {
-    min-height: 420px;
+/* ── Orchestrator Import Modal: modal body + step content layout ── */
+/* The modal body is made flex so the step content div fills it, which in turn
+   allows the download block to be pushed to the very bottom with margin-top:auto. */
+.fleetops-order-import .flb--modal-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 480px;                   /* consistent height across all steps */
+}
+
+.fleetops-order-import .import-step-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;                             /* fill all available body space */
+}
+
+/* Upload step inner content — grows to fill available space above the download block */
+.fleetops-order-import .import-upload-content {
+    flex: 1;
 }
 
 /* ── Orchestrator Import Modal: download template card ── */
-/* Border-only card with shadow, pinned to the bottom of the upload step.
-   Sits outside the scrollable content area so it is always visible. */
+/* Border-only card with upward shadow, pinned to the bottom of the modal body.
+   margin-top:auto pushes it down regardless of how tall the upload content is. */
 .import-template-download {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 10px 16px;
+    margin-top: auto;                    /* push to bottom of flex column */
     border-top: 1px solid #e5e7eb;       /* gray-200 — light mode top separator */
-    border-radius: 0 0 8px 8px;          /* match modal bottom radius */
     background: #ffffff;
     box-shadow: 0 -2px 8px 0 rgb(0 0 0 / 0.04);
     font-size: 0.75rem;
