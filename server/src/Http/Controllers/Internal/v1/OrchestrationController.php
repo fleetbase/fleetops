@@ -633,7 +633,25 @@ class OrchestrationController extends Controller
             'postal_code' => $row["{$prefix}_postal_code"] ?? null,
             'country'     => $row["{$prefix}_country"]     ?? null,
             'phone'       => $row["{$prefix}_phone"]       ?? null,
+            'location'    => $this->buildLocationPoint($row["{$prefix}_lat"] ?? null, $row["{$prefix}_lng"] ?? null),
         ]);
+    }
+
+    /**
+     * Build a WKT POINT string from optional lat/lng strings.
+     * Returns null when either value is missing or both are zero.
+     */
+    private function buildLocationPoint(?string $lat, ?string $lng): ?string
+    {
+        if (empty($lat) || empty($lng)) {
+            return null;
+        }
+        $latF = (float) $lat;
+        $lngF = (float) $lng;
+        if ($latF === 0.0 && $lngF === 0.0) {
+            return null;
+        }
+        return "POINT({$lngF} {$latF})";
     }
 
     /**

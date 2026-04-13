@@ -149,25 +149,20 @@
                                 {{/if}}
                             </div>
 
-                            {{! Spreadsheet column selector }}
+                            {{! Spreadsheet column selector — native <select> to avoid component rendering issues }}
                             <div class="import-mapping-col-source">
-                                <Select
-                                    @options={{this.fileColumnOptions}}
-                                    @value={{if mapping.mappedColumn mapping.mappedColumn ""}}
-                                    @onSelect={{fn this.setColumnMapping mapping.key}}
-                                    @size="sm"
+                                <select
                                     class="import-mapping-select {{if (and mapping.required (not mapping.mappedColumn)) 'import-mapping-select--error' ''}}"
+                                    {{on "change" (fn this.setColumnMapping mapping.key)}}
                                 >
-                                    {{! Render each option: '' → "— skip —", otherwise the column name }}
-                                    {{#each this.fileColumnOptions as |col|}}
+                                    <option value="" selected={{not mapping.mappedColumn}}>— skip —</option>
+                                    {{#each this.fileColumns as |col|}}
                                         <option
                                             value={{col}}
-                                            selected={{eq col (if mapping.mappedColumn mapping.mappedColumn "")}}
-                                        >
-                                            {{#if col}}{{col}}{{else}}— skip —{{/if}}
-                                        </option>
+                                            selected={{eq col mapping.mappedColumn}}
+                                        >{{col}}</option>
                                     {{/each}}
-                                </Select>
+                                </select>
                             </div>
                         </div>
                     {{/each}}
