@@ -41,7 +41,7 @@ class DriverAssignmentEngine
         // treated as soft preferences (scored), not hard filters.
         $companyUuid      = $orders->first()?->company_uuid;
         $availableDrivers = Driver::where('company_uuid', $companyUuid)
-            ->with(['scheduleItems', 'location'])
+            ->with(['scheduleItems'])
             ->get();
 
         // Shift-awareness: if require_active_shift is explicitly set, filter
