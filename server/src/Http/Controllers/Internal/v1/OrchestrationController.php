@@ -640,11 +640,11 @@ class OrchestrationController extends Controller
                     $dropoffData = $this->buildPlaceData($firstRow, 'dropoff');
 
                     if (!empty($pickupData['street1'])) {
-                        $payload->setPickup($pickupData);
+                        $payload->setPickup($pickupData, ['save' => true]);
                     }
 
                     if (!empty($dropoffData['street1'])) {
-                        $payload->setDropoff($dropoffData);
+                        $payload->setDropoff($dropoffData, ['save' => true]);
                     }
 
                     // Collect entities from ALL rows in the group
