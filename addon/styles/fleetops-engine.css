@@ -2973,18 +2973,138 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-
     color: #fff;
 }
 
-/* ── Orchestrator Import Modal: column-mapping section grouping ── */
-.import-mapping-section {
-    border: 1px solid #374151;
-    border-radius: 6px;
-    padding: 12px 14px;
-}
+/* ── Orchestrator Import Modal: column-mapping table layout ── */
 
-.import-mapping-section-title {
-    font-size: 0.7rem;
+/* Sticky column header bar (Target field / Your spreadsheet) */
+.import-mapping-header {
+    display: grid;
+    grid-template-columns: 1fr 28px 1fr;
+    align-items: center;
+    padding: 6px 16px;
+    background: #111827;
+    border-bottom: 1px solid #1f2937;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    font-size: 0.68rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #6b7280;
-    margin-bottom: 8px;
+    letter-spacing: 0.07em;
+    color: #4b5563;
+}
+
+/* Scrollable body that holds all groups + rows */
+.import-mapping-body {
+    overflow-y: auto;
+    max-height: 420px;
+}
+
+/* Section group header (ORDER, PICKUP, DROPOFF, etc.) */
+.import-mapping-group-header {
+    display: flex;
+    align-items: center;
+    padding: 5px 16px;
+    background: #0f172a;
+    border-top: 1px solid #1f2937;
+    border-bottom: 1px solid #1f2937;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #4b5563;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.import-mapping-group-header:first-child {
+    border-top: none;
+}
+
+/* Individual mapping row */
+.import-mapping-row {
+    display: grid;
+    grid-template-columns: 1fr 28px 1fr;
+    align-items: center;
+    padding: 5px 16px;
+    border-bottom: 1px solid #1f2937;
+    transition: background 0.1s;
+}
+
+.import-mapping-row:last-child {
+    border-bottom: none;
+}
+
+.import-mapping-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Highlight rows that have a mapping applied */
+.import-mapping-row--mapped {
+    background: rgba(16, 185, 129, 0.04);
+}
+
+.import-mapping-row--mapped:hover {
+    background: rgba(16, 185, 129, 0.07);
+}
+
+/* Column sizing helpers */
+.import-mapping-col-target {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding-right: 8px;
+}
+
+.import-mapping-col-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    color: #374151;
+}
+
+.import-mapping-col-source {
+    padding-left: 8px;
+}
+
+/* Field name label */
+.import-mapping-field-name {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #d1d5db;
+    line-height: 1.3;
+}
+
+/* Optional hint text below field name */
+.import-mapping-field-hint {
+    font-size: 0.65rem;
+    color: #4b5563;
+    line-height: 1.2;
+}
+
+/* The select inside a mapping row — compact and borderless */
+.import-mapping-select select,
+.import-mapping-select .select-input {
+    font-size: 0.72rem;
+    padding: 3px 22px 3px 7px;
+    height: auto;
+    background: #1f2937;
+    border-color: #374151;
+    border-radius: 4px;
+    color: #d1d5db;
+    width: 100%;
+}
+
+.import-mapping-select select:focus,
+.import-mapping-select .select-input:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+/* Red border on required fields that are not yet mapped */
+.import-mapping-select--error select,
+.import-mapping-select--error .select-input {
+    border-color: #ef4444;
 }

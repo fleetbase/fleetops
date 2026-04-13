@@ -2035,7 +2035,12 @@ orchestrator:
   download: Download
   next: Next
   back: Back
+  map-columns-title: Map Columns
   map-columns-desc: "Map the columns in"
+  col-target-field: Target Field
+  col-your-spreadsheet: Your Spreadsheet
+  mapped: mapped
+  mapping-required-hint: "Dropoff Street 1 is required before you can continue."
   select-column: "— skip —"
   data-preview: "First 3 rows preview:"
   preview-import: Preview Import

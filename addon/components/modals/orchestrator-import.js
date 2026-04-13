@@ -52,8 +52,6 @@ const FIELD_SECTIONS = [
             { key: 'pickup_postal_code', label: 'Pickup Postal Code', required: false },
             { key: 'pickup_country',     label: 'Pickup Country',     required: false, hint: 'ISO 3166-1 alpha-2' },
             { key: 'pickup_phone',       label: 'Pickup Phone',       required: false },
-            { key: 'pickup_lat',         label: 'Pickup Latitude',    required: false },
-            { key: 'pickup_lng',         label: 'Pickup Longitude',   required: false },
         ],
     },
     {
@@ -68,8 +66,6 @@ const FIELD_SECTIONS = [
             { key: 'dropoff_postal_code', label: 'Dropoff Postal Code', required: false },
             { key: 'dropoff_country',     label: 'Dropoff Country',     required: false, hint: 'ISO 3166-1 alpha-2' },
             { key: 'dropoff_phone',       label: 'Dropoff Phone',       required: false },
-            { key: 'dropoff_lat',         label: 'Dropoff Latitude',    required: false },
-            { key: 'dropoff_lng',         label: 'Dropoff Longitude',   required: false },
         ],
     },
     {
@@ -140,8 +136,7 @@ const ALIASES = {
     pickup_postal_code:  ['pickup postal', 'pickup zip', 'origin postal'],
     pickup_country:      ['pickup country', 'origin country'],
     pickup_phone:        ['pickup phone', 'origin phone'],
-    pickup_lat:          ['pickup lat', 'origin lat', 'from lat'],
-    pickup_lng:          ['pickup lng', 'pickup lon', 'origin lng', 'from lng'],
+
     dropoff_name:        ['dropoff name', 'destination name', 'to name', 'delivery name'],
     dropoff_street1:     ['dropoff street', 'dropoff address', 'to address', 'destination address', 'delivery address', 'drop off'],
     dropoff_street2:     ['dropoff street 2', 'dropoff address 2'],
@@ -150,8 +145,7 @@ const ALIASES = {
     dropoff_postal_code: ['dropoff postal', 'dropoff zip', 'destination postal'],
     dropoff_country:     ['dropoff country', 'destination country'],
     dropoff_phone:       ['dropoff phone', 'recipient phone'],
-    dropoff_lat:         ['dropoff lat', 'destination lat', 'to lat'],
-    dropoff_lng:         ['dropoff lng', 'dropoff lon', 'destination lng', 'to lng'],
+
     weight_kg:           ['weight', 'kg', 'weight kg', 'gross weight'],
     volume_m3:           ['volume', 'm3', 'cbm', 'cubic'],
     parcels:             ['parcels', 'packages', 'pieces'],
@@ -193,8 +187,6 @@ const SAMPLE_ROW = {
     pickup_postal_code:  'E1 6RF',
     pickup_country:      'GB',
     pickup_phone:        '+44 20 7946 0000',
-    pickup_lat:          '',
-    pickup_lng:          '',
     dropoff_name:        'John Smith',
     dropoff_street1:     '456 High Street',
     dropoff_street2:     'Apt 3B',
@@ -203,8 +195,6 @@ const SAMPLE_ROW = {
     dropoff_postal_code: 'SW1A 1AA',
     dropoff_country:     'GB',
     dropoff_phone:       '+44 7700 900000',
-    dropoff_lat:         '',
-    dropoff_lng:         '',
     weight_kg:           '5.2',
     volume_m3:           '0.04',
     parcels:             '1',
@@ -469,23 +459,44 @@ export default class OrchestratorImportComponent extends Component {
     }
 
     // ── Column mapping helpers ────────────────────────────────────────────────
+
+    /**
+     * Plain string options for the column-mapping selects.
+     * The empty string '' is used as the "skip" sentinel — the <Select>
+     * component renders it as the placeholder / skip option.
+     */
     get fileColumnOptions() {
-        return [
-            { label: this.intl.t('orchestrator.select-column'), value: null },
-            ...this.fileColumns.map((col) => ({ label: col, value: col })),
-        ];
+        // Return plain strings; '' means "skip / not mapped"
+        return ['', ...this.fileColumns];
     }
 
     get previewRows() {
         return this.rawRows;
     }
 
-    @action setColumnMapping(mapping, value) {
+    /**
+     * Handle a column-mapping select change.
+     *
+     * The ember-ui <Select> component calls @onSelect(value) where value is
+     * the raw string from the <option> element.  An empty string means "skip".
+     */
+    @action setColumnMapping(fieldKey, value) {
+        const mapped = value === '' ? null : value;
         this.columnMappings = this.columnMappings.map((m) =>
-            m.key === mapping.key ? { ...m, mappedColumn: value } : m
+            m.key === fieldKey ? { ...m, mappedColumn: mapped } : m
         );
         // Re-sync footer so "Next" disabled state is updated
         this._syncFooterButtons();
+    }
+
+    /** Number of fields that have been mapped to a spreadsheet column. */
+    get mappedCount() {
+        return this.columnMappings.filter((m) => m.mappedColumn).length;
+    }
+
+    /** Total number of target fields. */
+    get totalFieldCount() {
+        return this.columnMappings.length;
     }
 
     get mappingIsValid() {
