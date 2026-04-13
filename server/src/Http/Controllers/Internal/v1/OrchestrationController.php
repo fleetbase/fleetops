@@ -187,7 +187,7 @@ class OrchestrationController extends Controller
                     if (!empty($prior['vehicle_id']) && !$order->vehicle_assigned_uuid) {
                         // Resolve the Vehicle model and attach it
                         $vehicle = Vehicle::where('public_id', $prior['vehicle_id'])
-                            ->with(['driver' => fn ($q) => $q->with(['location', 'scheduleItems'])])
+                            ->with(['driver' => fn ($q) => $q->with(['scheduleItems'])])
                             ->first();
                         if ($vehicle) {
                             $order->vehicle_assigned_uuid = $vehicle->uuid;
