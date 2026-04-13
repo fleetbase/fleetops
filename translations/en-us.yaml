@@ -2056,6 +2056,14 @@ orchestrator:
   col-weight: Weight
   col-customer: Customer
   col-status: Status
+  col-preview-ref: Ref / ID
+  col-preview-type: Type
+  col-preview-facilitator: Facilitator
+  col-preview-vehicle: Vehicle
+  col-preview-driver: Driver
+  col-preview-entities: Items
+  col-preview-multi-stop: "{count} stops"
+  col-preview-pickup-dropoff: Pickup & Dropoff
   error: Error
   valid: Valid
   import-success: "{count} order(s) imported successfully."

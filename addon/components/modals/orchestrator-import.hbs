@@ -182,11 +182,11 @@
         {{! Step 3: Preview & Confirm                                           }}
         {{! ═══════════════════════════════════════════════════════════════════ }}
         {{#if (eq this.step "preview")}}
-            <div class="px-4 py-4 grid grid-cols-1 gap-3">
-                <div class="flex items-center justify-between">
-                    <p class="text-gray-400">
-                        {{t "orchestrator.preview-desc" count=this.mappedRows.length}}
-                    </p>
+            <div class="import-preview-wrap">
+
+                {{! ── Summary bar ── }}
+                <div class="import-preview-summary">
+                    <span class="text-gray-400">{{t "orchestrator.preview-desc" count=this.previewGroups.length}}</span>
                     {{#if this.validationErrors.length}}
                         <Badge @status="error" @label={{concat this.validationErrors.length " " (t "orchestrator.errors")}} />
                     {{else}}
@@ -194,33 +194,144 @@
                     {{/if}}
                 </div>
 
-                <div class="overflow-y-auto max-h-72 rounded border dark:border-gray-700">
-                    <table class="w-full text-xs">
-                        <thead class="sticky top-0 dark:bg-gray-800">
+                {{! ── Preview table ── }}
+                <div class="import-preview-table-wrap">
+                    <table class="import-preview-table">
+                        <thead>
                             <tr>
-                                <th class="px-2 py-1.5 text-left text-gray-400 font-medium border-b dark:border-gray-700">#</th>
-                                <th class="px-2 py-1.5 text-left text-gray-400 font-medium border-b dark:border-gray-700">{{t "orchestrator.col-pickup"}}</th>
-                                <th class="px-2 py-1.5 text-left text-gray-400 font-medium border-b dark:border-gray-700">{{t "orchestrator.col-dropoff"}}</th>
-                                <th class="px-2 py-1.5 text-left text-gray-400 font-medium border-b dark:border-gray-700">{{t "orchestrator.col-scheduled"}}</th>
-                                <th class="px-2 py-1.5 text-left text-gray-400 font-medium border-b dark:border-gray-700">{{t "orchestrator.col-customer"}}</th>
-                                <th class="px-2 py-1.5 text-left text-gray-400 font-medium border-b dark:border-gray-700">{{t "orchestrator.col-status"}}</th>
+                                <th>#</th>
+                                <th>{{t "orchestrator.col-preview-ref"}}</th>
+                                <th>{{t "orchestrator.col-preview-type"}}</th>
+                                <th>{{t "orchestrator.col-pickup"}}</th>
+                                <th>{{t "orchestrator.col-dropoff"}}</th>
+                                <th>{{t "orchestrator.col-customer"}}</th>
+                                <th>{{t "orchestrator.col-preview-facilitator"}}</th>
+                                <th>{{t "orchestrator.col-preview-vehicle"}}</th>
+                                <th>{{t "orchestrator.col-preview-driver"}}</th>
+                                <th>{{t "orchestrator.col-preview-entities"}}</th>
+                                <th>{{t "orchestrator.col-scheduled"}}</th>
+                                <th>{{t "orchestrator.col-status"}}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {{#each this.mappedRows as |row index|}}
-                                <tr class="border-b dark:border-gray-700 last:border-0 {{if row._error 'bg-red-900/20' ''}}">
-                                    <td class="px-2 py-1.5 text-gray-500">{{add index 1}}</td>
-                                    <td class="px-2 py-1.5 dark:text-gray-300 truncate max-w-32">{{row.pickup_street1}}</td>
-                                    <td class="px-2 py-1.5 dark:text-gray-300 truncate max-w-32">{{row.dropoff_street1}}</td>
-                                    <td class="px-2 py-1.5 dark:text-gray-300">{{row.scheduled_at}}</td>
-                                    <td class="px-2 py-1.5 dark:text-gray-300 truncate max-w-24">{{or row.customer_name row.customer_email ""}}</td>
-                                    <td class="px-2 py-1.5">
-                                        {{#if row._error}}
-                                            <span class="text-red-400" title={{row._error}}>
+                            {{#each this.previewGroups as |group index|}}
+                                <tr class="{{if group.hasError 'import-preview-row--error' ''}}">
+                                    {{! Row number }}
+                                    <td class="text-gray-500">{{add index 1}}</td>
+
+                                    {{! Order ref / internal ID }}
+                                    <td>
+                                        {{#if group.order_ref}}
+                                            <span class="font-mono text-indigo-400">{{group.order_ref}}</span>
+                                        {{else if group.internal_id}}
+                                            <span class="font-mono text-gray-400">{{group.internal_id}}</span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Order type badge }}
+                                    <td>
+                                        {{#if (eq group.order_type "multi_waypoint")}}
+                                            <span class="import-preview-badge import-preview-badge--blue">
+                                                <FaIcon @icon="route" class="mr-0.5" />
+                                                {{t "orchestrator.col-preview-multi-stop" count=group.waypointCount}}
+                                            </span>
+                                        {{else}}
+                                            <span class="import-preview-badge import-preview-badge--gray">
+                                                <FaIcon @icon="exchange-alt" class="mr-0.5" />
+                                                {{t "orchestrator.col-preview-pickup-dropoff"}}
+                                            </span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Pickup }}
+                                    <td class="import-preview-addr">
+                                        {{#if group.pickup_street1}}
+                                            <span class="dark:text-gray-200">{{group.pickup_street1}}</span>
+                                            {{#if group.pickup_city}}<span class="text-gray-500">, {{group.pickup_city}}</span>{{/if}}
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Dropoff / stops }}
+                                    <td class="import-preview-addr">
+                                        {{#if (eq group.order_type "multi_waypoint")}}
+                                            <span class="text-gray-400 italic">{{t "orchestrator.stops-count" count=group.waypointCount}}</span>
+                                        {{else if group.dropoff_street1}}
+                                            <span class="dark:text-gray-200">{{group.dropoff_street1}}</span>
+                                            {{#if group.dropoff_city}}<span class="text-gray-500">, {{group.dropoff_city}}</span>{{/if}}
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Customer }}
+                                    <td class="truncate max-w-28">
+                                        {{#if (or group.customer_name group.customer_email)}}
+                                            <span class="dark:text-gray-200">{{or group.customer_name group.customer_email}}</span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Facilitator }}
+                                    <td class="truncate max-w-28">
+                                        {{#if (or group.facilitator_name group.facilitator_email)}}
+                                            <span class="dark:text-gray-200">{{or group.facilitator_name group.facilitator_email}}</span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Vehicle }}
+                                    <td>
+                                        {{#if group.vehicle_plate}}
+                                            <span class="font-mono dark:text-gray-200">{{group.vehicle_plate}}</span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Driver }}
+                                    <td class="truncate max-w-24">
+                                        {{#if (or group.driver_name group.driver_email)}}
+                                            <span class="dark:text-gray-200">{{or group.driver_name group.driver_email}}</span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Entities count }}
+                                    <td>
+                                        {{#if group.entityCount}}
+                                            <span class="import-preview-badge import-preview-badge--green">
+                                                <FaIcon @icon="box" class="mr-0.5" />
+                                                {{group.entityCount}}
+                                            </span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Scheduled at }}
+                                    <td class="whitespace-nowrap">
+                                        {{#if group.scheduled_at}}
+                                            <span class="dark:text-gray-300">{{group.scheduled_at}}</span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Row status }}
+                                    <td>
+                                        {{#if group.hasError}}
+                                            <span class="import-preview-status import-preview-status--error" title={{group.errorMessage}}>
                                                 <FaIcon @icon="exclamation-circle" class="mr-0.5" />{{t "orchestrator.error"}}
                                             </span>
                                         {{else}}
-                                            <span class="text-green-400">
+                                            <span class="import-preview-status import-preview-status--ok">
                                                 <FaIcon @icon="check-circle" class="mr-0.5" />{{t "orchestrator.valid"}}
                                             </span>
                                         {{/if}}
@@ -232,7 +343,7 @@
                 </div>
 
                 {{#if this.validationErrors.length}}
-                    <div class="px-3 py-2 rounded bg-yellow-900/30 border border-yellow-700 text-yellow-400">
+                    <div class="import-preview-warning">
                         <FaIcon @icon="exclamation-triangle" class="mr-1" />
                         {{t "orchestrator.validation-warning" count=this.validationErrors.length}}
                     </div>

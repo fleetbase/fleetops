@@ -323,6 +323,82 @@ export default class OrchestratorImportComponent extends Component {
         }));
     }
 
+    // ── Preview groups (grouped by order_ref for the preview table) ──────────
+    /**
+     * Collapses mappedRows into one entry per logical order (grouped by order_ref).
+     * Each group carries summary fields used by the preview table.
+     */
+    get previewGroups() {
+        const rows = this.mappedRows ?? [];
+        const groups = new Map();
+
+        rows.forEach((row) => {
+            const key = row.order_ref || row._rowIndex || String(Math.random());
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    // identity
+                    order_ref:    row.order_ref    || null,
+                    internal_id:  row.internal_id  || null,
+                    order_type:   row.order_type   || 'pickup_dropoff',
+                    // addresses
+                    pickup_street1:  row.pickup_street1  || null,
+                    pickup_city:     row.pickup_city     || null,
+                    dropoff_street1: row.dropoff_street1 || null,
+                    dropoff_city:    row.dropoff_city    || null,
+                    // parties
+                    customer_name:    row.customer_name    || null,
+                    customer_email:   row.customer_email   || null,
+                    facilitator_name:  row.facilitator_name  || null,
+                    facilitator_email: row.facilitator_email || null,
+                    vehicle_plate:    row.vehicle_plate    || null,
+                    driver_name:      row.driver_name      || null,
+                    driver_email:     row.driver_email     || null,
+                    // schedule
+                    scheduled_at: row.scheduled_at || null,
+                    // counters
+                    waypointCount: 0,
+                    entityCount:   0,
+                    // validation
+                    hasError:     false,
+                    errorMessage: null,
+                });
+            }
+            const g = groups.get(key);
+
+            // Count waypoint stops (rows with a dropoff address for multi_waypoint)
+            if (row.order_type === 'multi_waypoint' && row.dropoff_street1) {
+                g.waypointCount += 1;
+            }
+
+            // Count entities (rows with entity_name)
+            if (row.entity_name) {
+                g.entityCount += 1;
+            }
+
+            // Propagate errors
+            if (row._error) {
+                g.hasError     = true;
+                g.errorMessage = row._error;
+            }
+
+            // Fill in missing address/party fields from later rows in the group
+            if (!g.pickup_street1  && row.pickup_street1)  g.pickup_street1  = row.pickup_street1;
+            if (!g.pickup_city     && row.pickup_city)     g.pickup_city     = row.pickup_city;
+            if (!g.dropoff_street1 && row.dropoff_street1) g.dropoff_street1 = row.dropoff_street1;
+            if (!g.dropoff_city    && row.dropoff_city)    g.dropoff_city    = row.dropoff_city;
+            if (!g.customer_name   && row.customer_name)   g.customer_name   = row.customer_name;
+            if (!g.customer_email  && row.customer_email)  g.customer_email  = row.customer_email;
+            if (!g.facilitator_name  && row.facilitator_name)  g.facilitator_name  = row.facilitator_name;
+            if (!g.facilitator_email && row.facilitator_email) g.facilitator_email = row.facilitator_email;
+            if (!g.vehicle_plate   && row.vehicle_plate)   g.vehicle_plate   = row.vehicle_plate;
+            if (!g.driver_name     && row.driver_name)     g.driver_name     = row.driver_name;
+            if (!g.driver_email    && row.driver_email)    g.driver_email    = row.driver_email;
+            if (!g.scheduled_at    && row.scheduled_at)    g.scheduled_at    = row.scheduled_at;
+        });
+
+        return Array.from(groups.values());
+    }
+
     // ── Footer action buttons (injected into modal footer via modalsManager) ──
     /**
      * Returns the correct footer button array for the current step.
@@ -337,6 +413,7 @@ export default class OrchestratorImportComponent extends Component {
                     type:         'primary',
                     icon:         'arrow-right',
                     iconPosition: 'right',
+                    wrapperClass: 'btn-icon-right',
                     text:         t('next'),
                     disabled:     !this.selectedFile,
                     isLoading:    this.parseFile.isRunning,
@@ -348,14 +425,17 @@ export default class OrchestratorImportComponent extends Component {
         if (this.step === 'map') {
             return [
                 {
-                    type:    'default',
-                    text:    t('back'),
-                    onClick: () => this._setStep('upload'),
+                    type:         'default',
+                    icon:         'arrow-left',
+                    iconPosition: 'left',
+                    text:         t('back'),
+                    onClick:      () => this._setStep('upload'),
                 },
                 {
                     type:         'primary',
                     icon:         'arrow-right',
                     iconPosition: 'right',
+                    wrapperClass: 'btn-icon-right',
                     text:         t('next'),
                     disabled:     !this.mappingIsValid,
                     isLoading:    this.buildPreview.isRunning,
@@ -368,10 +448,12 @@ export default class OrchestratorImportComponent extends Component {
             const isRunning = this.submitImport.isRunning;
             return [
                 {
-                    type:     'default',
-                    text:     t('back'),
-                    disabled: isRunning,
-                    onClick:  () => this._setStep('map'),
+                    type:         'default',
+                    icon:         'arrow-left',
+                    iconPosition: 'left',
+                    text:         t('back'),
+                    disabled:     isRunning,
+                    onClick:      () => this._setStep('map'),
                 },
                 {
                     type:      'success',
