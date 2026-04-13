@@ -2354,7 +2354,11 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
 
 /* ── Workbench layout ── */
 .orchestrator-workbench {
-    background: var(--color-bg-surface, #111827);
+    background: #f9fafb; /* gray-50 — light mode default */
+}
+body[data-theme='dark'] .orchestrator-workbench,
+.dark .orchestrator-workbench {
+    background: #111827; /* gray-900 — dark mode */
 }
 
 /* ── Toolbar ── */
@@ -3143,15 +3147,23 @@ body[data-theme='dark'] .import-mapping-row:hover,
 .import-mapping-field-name {
     font-size: 0.75rem;
     font-weight: 500;
-    color: #d1d5db;
+    color: #374151; /* gray-700 — light mode */
     line-height: 1.3;
+}
+body[data-theme='dark'] .import-mapping-field-name,
+.dark .import-mapping-field-name {
+    color: #d1d5db; /* gray-300 — dark mode */
 }
 
 /* Optional hint text below field name */
 .import-mapping-field-hint {
     font-size: 0.65rem;
-    color: #4b5563;
+    color: #6b7280; /* gray-500 — light mode */
     line-height: 1.2;
+}
+body[data-theme='dark'] .import-mapping-field-hint,
+.dark .import-mapping-field-hint {
+    color: #4b5563; /* gray-600 — dark mode */
 }
 
 /* The select inside a mapping row — full width, compact */

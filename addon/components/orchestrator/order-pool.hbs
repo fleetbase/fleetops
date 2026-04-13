@@ -186,6 +186,40 @@
                                 </dd>
                             {{/each}}
                         </dl>
+
+                        {{! Inline route stop list }}
+                        {{#let (this.orderRouteStops order) as |stops|}}
+                            {{#if stops.length}}
+                                <div class="mt-1.5 border-t border-gray-100 dark:border-gray-700 pt-1">
+                                    {{! Route header with toggle }}
+                                    <button
+                                        type="button"
+                                        class="w-full flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+                                        {{on "click" (fn this.toggleRouteCollapse order.public_id)}}
+                                    >
+                                        <span class="flex items-center gap-1">
+                                            <FaIcon @icon="route" @size="xs" class="text-indigo-400" />
+                                            <span class="font-medium">{{t "orchestrator.route"}} &middot; {{stops.length}} {{t "orchestrator.stops"}}</span>
+                                        </span>
+                                        <FaIcon @icon={{if (this.isRouteCollapsed order.public_id) "chevron-down" "chevron-up"}} @size="xs" />
+                                    </button>
+                                    {{! Stop list }}
+                                    {{#unless (this.isRouteCollapsed order.public_id)}}
+                                        <ol class="mt-1 space-y-0.5">
+                                            {{#each stops as |stop|}}
+                                                <li class="flex items-start gap-1.5 text-xs">
+                                                    <span class="flex-shrink-0 w-4 h-4 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 text-[0.6rem] font-bold flex items-center justify-center leading-none">
+                                                        {{stop.label}}
+                                                    </span>
+                                                    <span class="truncate text-gray-600 dark:text-gray-300 leading-4">{{stop.address}}</span>
+                                                </li>
+                                            {{/each}}
+                                        </ol>
+                                    {{/unless}}
+                                </div>
+                            {{/if}}
+                        {{/let}}
+
                         {{#if order.required_skills.length}}
                             <div class="flex flex-wrap gap-0.5 mt-1">
                                 {{#each order.required_skills as |skill|}}

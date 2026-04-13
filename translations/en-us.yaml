@@ -2017,6 +2017,7 @@ orchestrator:
   filter-no-driver: No Driver
   proposed-routes: Proposed Routes
   stops: stops
+  route: Route
   drivers-selected: drivers selected
   vehicles-selected: vehicles selected
   drop-orders-here: Drop orders here

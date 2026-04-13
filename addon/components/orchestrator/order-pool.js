@@ -56,8 +56,10 @@ export default class OrchestratorOrderPoolComponent extends Component {
     @tracked orderSearch    = '';
     @tracked orderFilter    = 'all';
 
-    // ── Waypoint collapse state ───────────────────────────────────────────
+    // ── Card body collapse state (hides entire card body) ─────────────────
     @tracked collapsedOrderIds = new Set();
+    // ── Inline route collapse state (hides route stop list inside card) ───
+    @tracked collapsedRouteIds = new Set();
 
     // ── Advanced filter panel ─────────────────────────────────────────────────
     @tracked showAdvanced       = false;
@@ -104,6 +106,62 @@ export default class OrchestratorOrderPoolComponent extends Component {
 
     @action isWaypointCollapsed(orderId) {
         return this.collapsedOrderIds.has(orderId);
+    }
+
+    // ── Inline route collapse actions ────────────────────────────────────
+
+    @action toggleRouteCollapse(orderId, event) {
+        event?.stopPropagation();
+        const next = new Set(this.collapsedRouteIds);
+        if (next.has(orderId)) {
+            next.delete(orderId);
+        } else {
+            next.add(orderId);
+        }
+        this.collapsedRouteIds = next;
+    }
+
+    @action isRouteCollapsed(orderId) {
+        return this.collapsedRouteIds.has(orderId);
+    }
+
+    /**
+     * orderRouteStops — returns an array of { label, address } objects
+     * representing the ordered route stops for an order, using A/B/C labels.
+     */
+    @action orderRouteStops(order) {
+        const stops = [];
+        const payload = order.payload;
+
+        if (!payload) {
+            if (order.pickup_name) stops.push(order.pickup_name);
+            if (order.dropoff_name) stops.push(order.dropoff_name);
+            return stops.map((address, i) => ({ label: String.fromCharCode(65 + i), address }));
+        }
+
+        if (payload.pickup) {
+            stops.push(payload.pickup.address ?? payload.pickup.street1 ?? payload.pickup.name ?? '—');
+        }
+
+        const waypoints = typeof payload.waypoints?.toArray === 'function'
+            ? payload.waypoints.toArray()
+            : (Array.isArray(payload.waypoints) ? payload.waypoints : []);
+
+        for (const wp of waypoints) {
+            const place = wp.place ?? wp;
+            stops.push(place.address ?? place.street1 ?? place.name ?? '—');
+        }
+
+        if (payload.dropoff) {
+            stops.push(payload.dropoff.address ?? payload.dropoff.street1 ?? payload.dropoff.name ?? '—');
+        }
+
+        if (stops.length === 0) {
+            if (order.pickup_name) stops.push(order.pickup_name);
+            if (order.dropoff_name) stops.push(order.dropoff_name);
+        }
+
+        return stops.map((address, i) => ({ label: String.fromCharCode(65 + i), address }));
     }
 
     // ── Advanced filter panel ─────────────────────────────────────────────────
