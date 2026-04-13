@@ -246,7 +246,9 @@ class OrchestrationController extends Controller
                 // optimize_routes sequences stops within each vehicle's already-assigned
                 // order group — it does NOT re-assign orders to different vehicles.
                 // Load vehicle relationships needed for sequencing.
-                $orders->load(['vehicle.driver.location', 'vehicle.location']);
+                // NOTE: `location` is a spatial cast attribute on Vehicle and Driver,
+                // NOT a relationship — do not include it in ->load().
+                $orders->load(['vehicle', 'vehicle.driver']);
                 $engine = new RouteSequencingEngine();
                 $result = $engine->sequence($orders, $options);
             } else {
