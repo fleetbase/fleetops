@@ -125,6 +125,8 @@ class Order extends Model
         'required_skills',
         'time_window_start',
         'time_window_end',
+        // Manifest (set by orchestrator commit)
+        'manifest_uuid',
     ];
 
     /**

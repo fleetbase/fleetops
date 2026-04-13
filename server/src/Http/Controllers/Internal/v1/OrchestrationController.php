@@ -454,7 +454,12 @@ class OrchestrationController extends Controller
 
             DB::commit();
         } catch (\Exception $e) {
-            DB::rollBack();
+            // Only roll back if a transaction is still active.
+            // A PDOException from a missing table can cause MySQL to implicitly
+            // roll back the transaction before we reach this catch block.
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
 
             return response()->json(['error' => 'Commit failed: ' . $e->getMessage()], 500);
         }
