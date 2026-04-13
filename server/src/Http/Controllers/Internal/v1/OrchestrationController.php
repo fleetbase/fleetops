@@ -176,23 +176,63 @@ class OrchestrationController extends Controller
         }
         $orders = $ordersQuery->get();
 
-        // Augment orders with prior-phase vehicle assignments so the engines
-        // can group by vehicle_id even before the plan is committed.
+        // Augment orders with prior-phase vehicle AND driver assignments so the
+        // engines can group by vehicle_id and preserve driver_id even before the
+        // plan is committed to the database.
         if ($priorAssignments->isNotEmpty()) {
+            // Pre-load all drivers referenced in prior assignments so we can
+            // attach them to vehicles without N+1 queries.
+            $priorDriverIds = $priorAssignments
+                ->pluck('driver_id')
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+            $priorDriverMap = collect();
+            if (!empty($priorDriverIds)) {
+                $priorDriverMap = Driver::whereIn('public_id', $priorDriverIds)
+                    ->get()
+                    ->keyBy('public_id');
+            }
+
             foreach ($orders as $order) {
                 $prior = $priorAssignments->get($order->public_id);
-                if ($prior) {
-                    // Temporarily set the vehicle_assigned_uuid on the model
-                    // so engines that group by this field work correctly.
-                    if (!empty($prior['vehicle_id']) && !$order->vehicle_assigned_uuid) {
-                        // Resolve the Vehicle model and attach it
-                        $vehicle = Vehicle::where('public_id', $prior['vehicle_id'])
-                            ->with(['driver' => fn ($q) => $q->with(['scheduleItems'])])
-                            ->first();
-                        if ($vehicle) {
-                            $order->vehicle_assigned_uuid = $vehicle->uuid;
-                            $order->setRelation('vehicle', $vehicle);
+                if (!$prior) {
+                    continue;
+                }
+
+                // Temporarily set the vehicle_assigned_uuid on the model
+                // so engines that group by this field work correctly.
+                if (!empty($prior['vehicle_id']) && !$order->vehicle_assigned_uuid) {
+                    // Resolve the Vehicle model and attach it
+                    $vehicle = Vehicle::where('public_id', $prior['vehicle_id'])
+                        ->with(['driver' => fn ($q) => $q->with(['scheduleItems'])])
+                        ->first();
+                    if ($vehicle) {
+                        $order->vehicle_assigned_uuid = $vehicle->uuid;
+
+                        // If the prior phase assigned a driver that is not yet
+                        // linked to this vehicle in the DB, attach that driver
+                        // to the vehicle relation so RouteSequencingEngine (and
+                        // any other engine) can read $vehicle->driver correctly.
+                        if (!empty($prior['driver_id'])) {
+                            $priorDriver = $priorDriverMap->get($prior['driver_id']);
+                            if ($priorDriver && (!$vehicle->driver || $vehicle->driver->public_id !== $prior['driver_id'])) {
+                                $vehicle->setRelation('driver', $priorDriver);
+                            }
                         }
+
+                        $order->setRelation('vehicle', $vehicle);
+                    }
+                }
+
+                // Also temporarily set driver_assigned_uuid so engines that
+                // check this field (e.g. for deduplication) see the prior assignment.
+                if (!empty($prior['driver_id']) && !$order->driver_assigned_uuid) {
+                    $priorDriver = $priorDriverMap->get($prior['driver_id']);
+                    if ($priorDriver) {
+                        $order->driver_assigned_uuid = $priorDriver->uuid;
+                        $order->setRelation('driverAssigned', $priorDriver);
                     }
                 }
             }
@@ -245,10 +285,26 @@ class OrchestrationController extends Controller
             } elseif ($mode === 'optimize_routes') {
                 // optimize_routes sequences stops within each vehicle's already-assigned
                 // order group — it does NOT re-assign orders to different vehicles.
-                // Load vehicle relationships needed for sequencing.
-                // NOTE: `location` is a spatial cast attribute on Vehicle and Driver,
-                // NOT a relationship — do not include it in ->load().
-                $orders->load(['vehicle', 'vehicle.driver']);
+                //
+                // IMPORTANT: Do NOT call $orders->load(['vehicle', 'vehicle.driver']) here.
+                // The augmentation loop above already called setRelation('vehicle', $vehicle)
+                // with the prior-phase driver attached via setRelation('driver', $priorDriver).
+                // Calling ->load() would reload from the DB and OVERWRITE those in-memory
+                // relations, losing the uncommitted driver assignment from a prior phase.
+                //
+                // Instead, only load the vehicle relation for orders that have a
+                // vehicle_assigned_uuid in the DB but no in-memory relation set yet
+                // (i.e. standalone optimize_routes without a prior assign_drivers phase).
+                foreach ($orders as $order) {
+                    if (!$order->relationLoaded('vehicle') && $order->vehicle_assigned_uuid) {
+                        $vehicle = Vehicle::where('uuid', $order->vehicle_assigned_uuid)
+                            ->with(['driver'])
+                            ->first();
+                        if ($vehicle) {
+                            $order->setRelation('vehicle', $vehicle);
+                        }
+                    }
+                }
                 $engine = new RouteSequencingEngine();
                 $result = $engine->sequence($orders, $options);
             } else {

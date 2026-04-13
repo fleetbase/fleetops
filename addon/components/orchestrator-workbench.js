@@ -724,7 +724,14 @@ export default class OrchestratorWorkbenchComponent extends Component {
                     // Single-stop orders: use just the letter. Multi-stop: letter + number.
                     label: stops.length === 1 ? orderLabel : `${orderLabel}${stopIdx + 1}`,
                 }));
-                return { ...item, _labelledStops: labelledStops };
+                return {
+                    ...item,
+                    _labelledStops: labelledStops,
+                    // Convenience accessors for the template — avoids needing a
+                    // sub/minus helper to compute the last index.
+                    _firstStop: labelledStops[0] ?? null,
+                    _lastStop: labelledStops[labelledStops.length - 1] ?? null,
+                };
             });
             return {
                 ...group,
@@ -766,28 +773,56 @@ export default class OrchestratorWorkbenchComponent extends Component {
     /**
      * Extract { lat, lng } from a place object.
      *
-     * The orchestrator/orders endpoint returns places with a GeoJSON Point:
-     *   location: { type: 'Point', coordinates: [longitude, latitude] }
-     * Note: GeoJSON uses [lng, lat] order, not [lat, lng].
+     * Handles multiple serialization formats:
+     *   1. GeoJSON Point with type:    { type: 'Point', coordinates: [lng, lat] }
+     *   2. GeoJSON Point without type: { coordinates: [lng, lat] }
+     *      (LaravelMysqlSpatial SpatialExpression may omit the type field)
+     *   3. Ember Data model / plain object with latitude/longitude properties
+     *   4. Flat lat/lng on the location object itself
+     *   5. Numeric array [lat, lng] (some internal formats)
      *
-     * Falls back to direct .latitude / .longitude properties for Ember Data records.
+     * Note: GeoJSON uses [lng, lat] order, not [lat, lng].
      *
      * @param {Object} place
      * @returns {{ lat: number, lng: number } | null}
      */
     _placeCoords(place) {
         if (!place) return null;
-        // GeoJSON Point (plain JSON from orchestrator/orders endpoint)
         const loc = place.location;
-        if (loc?.type === 'Point' && Array.isArray(loc.coordinates) && loc.coordinates.length >= 2) {
-            const lng = parseFloat(loc.coordinates[0]);
-            const lat = parseFloat(loc.coordinates[1]);
-            if (lat && lng) return { lat, lng };
+        if (loc) {
+            // GeoJSON Point — with or without the type field.
+            // LaravelMysqlSpatial SpatialExpression may serialize without type.
+            if (Array.isArray(loc.coordinates) && loc.coordinates.length >= 2) {
+                const lng = parseFloat(loc.coordinates[0]);
+                const lat = parseFloat(loc.coordinates[1]);
+                // Use isFinite to accept 0 as a valid coordinate (not just truthy)
+                if (isFinite(lat) && isFinite(lng) && (lat !== 0 || lng !== 0)) {
+                    return { lat, lng };
+                }
+            }
+            // Flat lat/lng on the location object itself
+            if (loc.lat !== undefined && loc.lng !== undefined) {
+                const lat = parseFloat(loc.lat);
+                const lng = parseFloat(loc.lng);
+                if (isFinite(lat) && isFinite(lng) && (lat !== 0 || lng !== 0)) {
+                    return { lat, lng };
+                }
+            }
+            // Numeric array [lat, lng] (some internal formats)
+            if (Array.isArray(loc) && loc.length >= 2) {
+                const lat = parseFloat(loc[0]);
+                const lng = parseFloat(loc[1]);
+                if (isFinite(lat) && isFinite(lng) && (lat !== 0 || lng !== 0)) {
+                    return { lat, lng };
+                }
+            }
         }
-        // Ember Data model with direct lat/lng attributes
-        const lat = parseFloat(place.latitude);
-        const lng = parseFloat(place.longitude);
-        if (lat && lng) return { lat, lng };
+        // Direct latitude/longitude properties (Ember Data model or plain object)
+        const directLat = parseFloat(place.latitude ?? place.lat);
+        const directLng = parseFloat(place.longitude ?? place.lng);
+        if (isFinite(directLat) && isFinite(directLng) && (directLat !== 0 || directLng !== 0)) {
+            return { lat: directLat, lng: directLng };
+        }
         return null;
     }
 

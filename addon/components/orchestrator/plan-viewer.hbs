@@ -128,16 +128,36 @@
                                     >{{@getStopLabel idx}}</span>
                                     <div class="flex-1 min-w-0">
                                         <div class="dark:text-white truncate font-medium">{{or item.order.tracking item.order.public_id}}</div>
-                                        {{! Show pickup → dropoff so the dispatcher can see the full route for each order.
-                                             Falls back to just dropoff if there is no pickup (e.g. delivery-only orders). }}
-                                        {{#if item.order.payload.pickup.address}}
-                                            <div class="text-gray-400 truncate">
-                                                <span class="text-blue-400">{{item.order.payload.pickup.address}}</span>
-                                                <span class="mx-0.5">→</span>
-                                                {{item.order.payload.dropoff.address}}
-                                            </div>
+                                        {{! Show the full stop address list derived from _labelledStops.
+                                             _labelledStops is built by _getOrderStops which handles all
+                                             coordinate/address formats (GeoJSON, Ember Data, plain JSON).
+                                             For pickup→dropoff orders: shows "pickup → dropoff".
+                                             For multi-drop orders: shows each waypoint address.
+                                             For delivery-only orders: shows just the dropoff address. }}
+                                        {{#if item._labelledStops.length}}
+                                            {{#if (gt item._labelledStops.length 1)}}
+                                                {{! Pickup → Dropoff (or multi-stop): use _firstStop/_lastStop
+                                                     to avoid needing a sub/minus template helper. }}
+                                                <div class="text-gray-400 truncate">
+                                                    <span class="text-blue-400">{{item._firstStop.address}}</span>
+                                                    <span class="mx-0.5">→</span>
+                                                    {{item._lastStop.address}}
+                                                </div>
+                                            {{else}}
+                                                {{! Single stop (delivery-only) }}
+                                                <div class="text-gray-400 truncate">{{item._firstStop.address}}</div>
+                                            {{/if}}
                                         {{else}}
-                                            <div class="text-gray-400 truncate">{{item.order.payload.dropoff.address}}</div>
+                                            {{! Fallback: _labelledStops not yet populated — use raw payload fields }}
+                                            {{#if item.order.payload.pickup.address}}
+                                                <div class="text-gray-400 truncate">
+                                                    <span class="text-blue-400">{{item.order.payload.pickup.address}}</span>
+                                                    <span class="mx-0.5">→</span>
+                                                    {{item.order.payload.dropoff.address}}
+                                                </div>
+                                            {{else}}
+                                                <div class="text-gray-400 truncate">{{item.order.payload.dropoff.address}}</div>
+                                            {{/if}}
                                         {{/if}}
                                     </div>
                                     {{#if item.arrival}}
