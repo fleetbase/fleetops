@@ -570,36 +570,72 @@ class OrchestrationController extends Controller
                 // ── Attach Places ────────────────────────────────────────────────
                 $entities = [];
                 if ($isMulti) {
-                    // Multi-waypoint: each row is one waypoint stop.
-                    // We tag each waypoint with a stable _import_id so that
-                    // entities on the same row can be linked to it.
-                    $waypoints = [];
+                    // ── Multi-waypoint ───────────────────────────────────────
+                    // Each row with an address becomes a waypoint stop, tagged
+                    // with a stable _import_id ('wp_0', 'wp_1', …).
+                    //
+                    // Multiple entities per order are supported: any row in the
+                    // group that has entity fields will produce an entity.  If
+                    // the row also has an address it is linked to that waypoint
+                    // via _import_id; otherwise entity_destination is used to
+                    // resolve the target stop (index, 'pickup', or 'dropoff').
+                    $waypoints    = [];
+                    $wpImportIds  = []; // rowIndex => _import_id for address rows
+
                     foreach ($groupRows as $wpIndex => $wpRow) {
                         $importId  = 'wp_' . $wpIndex;
                         $placeData = $this->buildPlaceData($wpRow, 'dropoff');
                         if (!empty($placeData['street1'])) {
                             $place = Place::createFromMixed($placeData, [], true);
                             if ($place) {
-                                $waypoints[] = [
+                                $waypoints[]             = [
                                     'place_uuid' => $place->uuid,
                                     'type'       => 'dropoff',
                                     '_import_id' => $importId,
                                 ];
+                                $wpImportIds[$wpIndex] = $importId;
                             }
                         }
-                        // Collect entity for this waypoint row if any entity fields present
-                        $entityData = $this->buildEntityData($wpRow, $companyUuid);
-                        if ($entityData !== null) {
-                            // Link entity to this waypoint via _import_id
-                            $entityData['_import_id'] = $importId;
-                            $entities[] = $entityData;
-                        }
                     }
+
                     if (!empty($waypoints)) {
                         $payload->setWaypoints($waypoints);
                     }
+
+                    // Collect entities from ALL rows in the group
+                    foreach ($groupRows as $wpIndex => $wpRow) {
+                        $entityData = $this->buildEntityData($wpRow, $companyUuid);
+                        if ($entityData === null) {
+                            continue;
+                        }
+
+                        // Prefer the _import_id of this row's own waypoint;
+                        // fall back to entity_destination if the row has no address.
+                        if (isset($wpImportIds[$wpIndex])) {
+                            $entityData['_import_id'] = $wpImportIds[$wpIndex];
+                        } else {
+                            $dest = $wpRow['entity_destination'] ?? null;
+                            if ($dest !== null && $dest !== '') {
+                                // Numeric string → waypoint index; otherwise 'pickup'/'dropoff'
+                                if (is_numeric($dest)) {
+                                    $targetIndex = (int) $dest;
+                                    if (isset($wpImportIds[$targetIndex])) {
+                                        $entityData['_import_id'] = $wpImportIds[$targetIndex];
+                                    }
+                                } else {
+                                    $entityData['destination'] = $dest;
+                                }
+                            }
+                        }
+
+                        $entities[] = $entityData;
+                    }
                 } else {
-                    // Pickup / Dropoff order.
+                    // ── Pickup / Dropoff ─────────────────────────────────────
+                    // Address fields come from the first row only.
+                    // Entity rows: ALL rows in the group are scanned so that
+                    // multiple entities (one per row) can be attached to the
+                    // same order.  Only the first row is used for addresses.
                     $pickupData  = $this->buildPlaceData($firstRow, 'pickup');
                     $dropoffData = $this->buildPlaceData($firstRow, 'dropoff');
 
@@ -611,11 +647,16 @@ class OrchestrationController extends Controller
                         $payload->setDropoff($dropoffData);
                     }
 
-                    // Collect entity for this single row if entity fields present
-                    $entityData = $this->buildEntityData($firstRow, $companyUuid);
-                    if ($entityData !== null) {
-                        // Resolve destination: 'pickup', 'dropoff' (default), or a waypoint index
-                        $entityData['destination'] = $firstRow['entity_destination'] ?? 'dropoff';
+                    // Collect entities from ALL rows in the group
+                    foreach ($groupRows as $entityRow) {
+                        $entityData = $this->buildEntityData($entityRow, $companyUuid);
+                        if ($entityData === null) {
+                            continue;
+                        }
+                        // Resolve destination from each row's entity_destination
+                        // column; default to 'dropoff' when not set.
+                        $dest = $entityRow['entity_destination'] ?? 'dropoff';
+                        $entityData['destination'] = ($dest !== '') ? $dest : 'dropoff';
                         $entities[] = $entityData;
                     }
                 }

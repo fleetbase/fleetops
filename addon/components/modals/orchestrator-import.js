@@ -139,7 +139,7 @@ const FIELD_SECTIONS = [
             { key: 'entity_width',         label: 'Entity Width',         required: false },
             { key: 'entity_height',        label: 'Entity Height',        required: false },
             { key: 'entity_dimensions_unit',label: 'Dimensions Unit',     required: false, hint: 'cm, m, in, ft' },
-            { key: 'entity_destination',   label: 'Entity Destination',   required: false, hint: 'pickup, dropoff, or waypoint index (0,1,2…) for multi-stop' },
+            { key: 'entity_destination',   label: 'Entity Destination',   required: false, hint: 'pickup, dropoff, or waypoint index (0,1,2…). Add extra rows with the same order_ref to attach multiple entities to one order.' },
         ],
     },
 ];
@@ -654,17 +654,104 @@ export default class OrchestratorImportComponent extends Component {
 
     // ── Template download ─────────────────────────────────────────────────────
     @action downloadTemplate() {
-        const headers = TARGET_FIELDS.map((f) => f.label);
-        const values  = TARGET_FIELDS.map((f) => {
-            const val = SAMPLE_ROW[f.key] ?? '';
-            return (val.includes(',') || val.includes(' ')) ? '"' + val + '"' : val;
-        });
-        const csv  = headers.join(',') + '\n' + values.join(',') + '\n';
+        const escapeCell = (val) => {
+            const s = String(val ?? '');
+            return (s.includes(',') || s.includes('"') || s.includes('\n'))
+                ? '"' + s.replace(/"/g, '""') + '"'
+                : s;
+        };
+        const rowToCsv = (rowObj) =>
+            TARGET_FIELDS.map((f) => escapeCell(rowObj[f.key] ?? '')).join(',');
+
+        const headers = TARGET_FIELDS.map((f) => escapeCell(f.label)).join(',');
+
+        // ── Sample rows ──────────────────────────────────────────────────────
+        // Row 1: Simple pickup/dropoff order with one entity (Widget A)
+        const row1 = { ...SAMPLE_ROW };
+
+        // Row 2: Same order_ref — second entity row (no address fields needed)
+        //        Demonstrates multiple entities on one pickup/dropoff order.
+        const row2 = {
+            order_ref:           'ORD-001',
+            order_type:          'pickup_dropoff',
+            entity_name:         'Widget B',
+            entity_type:         'parcel',
+            entity_description:  '1x Widget B in box',
+            entity_sku:          'WGT-002',
+            entity_declared_value: '15.00',
+            entity_currency:     'USD',
+            entity_price:        '15.00',
+            entity_weight:       '0.3',
+            entity_weight_unit:  'kg',
+            entity_destination:  'dropoff',
+        };
+
+        // Row 3: Multi-waypoint order — stop 0 with its own entity
+        const row3 = {
+            order_ref:           'MULTI-001',
+            order_type:          'multi_waypoint',
+            internal_id:         'INT-002',
+            type:                'default',
+            status:              'created',
+            scheduled_at:        '2026-05-02 09:00',
+            notes:               'Multi-stop delivery',
+            priority:            '50',
+            dropoff_name:        'Stop 1 - Warehouse',
+            dropoff_street1:     '10 Industrial Ave',
+            dropoff_city:        'London',
+            dropoff_state:       'England',
+            dropoff_postal_code: 'E1 1AA',
+            dropoff_country:     'GB',
+            entity_name:         'Pallet A',
+            entity_type:         'pallet',
+            entity_weight:       '50',
+            entity_weight_unit:  'kg',
+            entity_destination:  '0',
+        };
+
+        // Row 4: Multi-waypoint order — stop 1 with its own entity
+        const row4 = {
+            order_ref:           'MULTI-001',
+            order_type:          'multi_waypoint',
+            dropoff_name:        'Stop 2 - Office',
+            dropoff_street1:     '20 Business Park',
+            dropoff_city:        'London',
+            dropoff_state:       'England',
+            dropoff_postal_code: 'EC1 2BB',
+            dropoff_country:     'GB',
+            entity_name:         'Pallet B',
+            entity_type:         'pallet',
+            entity_weight:       '30',
+            entity_weight_unit:  'kg',
+            entity_destination:  '1',
+        };
+
+        // Row 5: Multi-waypoint order — entity-only row (extra item for stop 0)
+        //        No address fields — entity_destination points to waypoint index 0.
+        const row5 = {
+            order_ref:           'MULTI-001',
+            order_type:          'multi_waypoint',
+            entity_name:         'Envelope C',
+            entity_type:         'document',
+            entity_weight:       '0.1',
+            entity_weight_unit:  'kg',
+            entity_destination:  '0',
+        };
+
+        const csv = [
+            headers,
+            rowToCsv(row1),
+            rowToCsv(row2),
+            rowToCsv(row3),
+            rowToCsv(row4),
+            rowToCsv(row5),
+        ].join('\n') + '\n';
+
         const blob = new Blob([csv], { type: 'text/csv' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href     = url;
-        a.download = 'orchestrator-import-template.csv';
+        a.download = 'FleetOpsOrderImportTemplate.csv';
         a.click();
         URL.revokeObjectURL(url);
     }
