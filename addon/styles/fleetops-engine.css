@@ -3231,24 +3231,11 @@ body[data-theme='dark'] .fleetops-order-import nav.import-step-tabs {
     flex: 1;
 }
 
-/* ── Orchestrator Import Modal: download template card ── */
-/* Border-only card with upward shadow, pinned to the bottom of the modal body.
-   margin-top:auto pushes it down regardless of how tall the upload content is. */
+/* ── Orchestrator Import Modal: download template InfoBlock ── */
+/* The InfoBlock is placed inside the flex column; margin-top:auto pushes it
+   to the bottom of the upload step regardless of the dropzone height. */
 .import-template-download {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 16px;
-    margin-top: auto;                    /* push to bottom of flex column */
-    border-top: 1px solid #e5e7eb;       /* gray-200 — light mode top separator */
-    background: #ffffff;
-    box-shadow: 0 -2px 8px 0 rgb(0 0 0 / 0.04);
-    font-size: 0.75rem;
-}
-body[data-theme='dark'] .import-template-download {
-    border-top-color: #374151;           /* gray-700 — dark mode top separator */
-    background: #111827;                 /* gray-900 — dark mode */
-    box-shadow: 0 -2px 8px 0 rgb(0 0 0 / 0.25);
+    margin-top: auto;
 }
 
 /* ── Button: trailing icon support (wrapperClass = btn-icon-right) ── */

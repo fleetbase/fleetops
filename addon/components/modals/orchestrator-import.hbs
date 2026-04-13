@@ -25,7 +25,11 @@
         {{#if (eq this.step "upload")}}
             <div class="import-upload-content px-4 py-4 grid grid-cols-1 gap-3">
                 {{#let (file-queue name="orchestrator-import" onFileAdded=this.onFileQueued accept=".csv,.xlsx,.xls") as |queue|}}
-                    <FileDropzone @queue={{queue}} class="import-dropzone {{if this.isDraggingFile 'dragging' ''}}" as |dropzone|>
+                    <FileDropzone
+                        @queue={{queue}}
+                        class="import-dropzone {{if this.isDraggingFile 'dragging' ''}}"
+                        as |dropzone|
+                    >
                         {{#if dropzone.active}}
                             {{#if dropzone.valid}}
                                 <FaIcon @icon="cloud-upload-alt" @size="2x" class="text-indigo-400 mb-2" />
@@ -71,14 +75,24 @@
                 {{/if}}
             </div>
 
-            {{! Template download — border-only card pinned to the bottom of the upload step }}
-            <div class="import-template-download">
+            {{! Template download — InfoBlock pinned to the bottom of the upload step }}
+            <InfoBlock
+                @icon="file-spreadsheet"
+                @size="sm"
+                class="import-template-download mx-4 mb-4"
+                @innerWrapperClass="items-center justify-between"
+            >
                 <div>
-                    <p class="font-medium dark:text-gray-200">{{t "orchestrator.download-template"}}</p>
-                    <p class="text-gray-500">{{t "orchestrator.download-template-desc"}}</p>
+                    <p class="font-semibold">{{t "orchestrator.download-template"}}</p>
+                    <p class="opacity-80 mt-0.5">{{t "orchestrator.download-template-desc"}}</p>
                 </div>
-                <Button @icon="download" @text={{t "orchestrator.download"}} @type="default" @size="sm" {{on "click" this.downloadTemplate}} />
-            </div>
+                <Button
+                    @icon="download"
+                    @text={{t "orchestrator.download"}}
+                    @size="xs"
+                    {{on "click" this.downloadTemplate}}
+                />
+            </InfoBlock>
         {{/if}}
 
         {{! ═══════════════════════════════════════════════════════════════════ }}
@@ -143,13 +157,15 @@
                             {{! Spreadsheet column selector — native <select> to avoid component rendering issues }}
                             <div class="import-mapping-col-source">
                                 <select
-                                    class="form-select form-input form-input-sm import-mapping-select
-                                        {{if (and mapping.required (not mapping.mappedColumn)) 'import-mapping-select--error' ''}}"
+                                    class="form-select form-input form-input-sm import-mapping-select {{if (and mapping.required (not mapping.mappedColumn)) 'import-mapping-select--error' ''}}"
                                     {{on "change" (fn this.setColumnMapping mapping.key)}}
                                 >
                                     <option value="" selected={{not mapping.mappedColumn}}>— skip —</option>
                                     {{#each this.fileColumns as |col|}}
-                                        <option value={{col}} selected={{eq col mapping.mappedColumn}}>{{col}}</option>
+                                        <option
+                                            value={{col}}
+                                            selected={{eq col mapping.mappedColumn}}
+                                        >{{col}}</option>
                                     {{/each}}
                                 </select>
                             </div>
