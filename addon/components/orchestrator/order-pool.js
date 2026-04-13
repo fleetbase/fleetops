@@ -95,6 +95,20 @@ export default class OrchestratorOrderPoolComponent extends Component {
         this.collapsedOrderIds = next;
     }
 
+    get allWaypointsCollapsed() {
+        const orders = this.filteredOrders ?? [];
+        return orders.length > 0 && orders.every((o) => this.collapsedOrderIds.has(o.public_id));
+    }
+
+    @action toggleAllWaypoints() {
+        if (this.allWaypointsCollapsed) {
+            this.collapsedOrderIds = new Set();
+        } else {
+            const ids = (this.filteredOrders ?? []).map((o) => o.public_id).filter(Boolean);
+            this.collapsedOrderIds = new Set(ids);
+        }
+    }
+
     @action collapseAllWaypoints() {
         const ids = (this.filteredOrders ?? []).map((o) => o.public_id).filter(Boolean);
         this.collapsedOrderIds = new Set(ids);

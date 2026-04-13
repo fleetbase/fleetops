@@ -21,7 +21,7 @@
     </div>
 
     {{! Quick filter chips }}
-    <div class="px-3 py-1.5 border-b dark:border-gray-700 flex items-center gap-1 overflow-x-auto flex-shrink-0">
+    <div class="px-3 py-1.5 border-b dark:border-gray-700 flex items-center gap-1 flex-wrap flex-shrink-0">
         <button type="button"
             class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.orderFilter 'all') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
             {{on "click" (fn this.setFilter "all")}}>{{t "orchestrator.filter-all"}}</button>
@@ -115,20 +115,13 @@
         {{#if @isLoading}}
             <div class="flex justify-center py-8"><Spinner /></div>
         {{else if this.filteredOrders.length}}
-            {{! Collapse-all / Expand-all controls }}
-            <div class="px-3 pt-1.5 pb-0.5 flex items-center gap-2 flex-shrink-0">
+            {{! Single collapse/expand-all toggle }}
+            <div class="px-3 pt-1.5 pb-0.5 flex items-center flex-shrink-0">
                 <button type="button"
-                    class="text-xs text-gray-400 hover:text-indigo-400 transition-colors"
-                    {{on "click" this.collapseAllWaypoints}}>
-                    <FaIcon @icon="chevron-up" @size="xs" class="mr-0.5" />
-                    {{t "orchestrator.collapse-all"}}
-                </button>
-                <span class="text-gray-600 dark:text-gray-600 text-xs">&middot;</span>
-                <button type="button"
-                    class="text-xs text-gray-400 hover:text-indigo-400 transition-colors"
-                    {{on "click" this.expandAllWaypoints}}>
-                    <FaIcon @icon="chevron-down" @size="xs" class="mr-0.5" />
-                    {{t "orchestrator.expand-all"}}
+                    class="text-xs text-gray-400 hover:text-indigo-400 transition-colors flex items-center gap-1"
+                    {{on "click" this.toggleAllWaypoints}}>
+                    <FaIcon @icon={{if this.allWaypointsCollapsed "chevron-down" "chevron-up"}} @size="xs" />
+                    {{if this.allWaypointsCollapsed (t "orchestrator.expand-all") (t "orchestrator.collapse-all")}}
                 </button>
             </div>
             {{#each this.filteredOrders as |order|}}
@@ -205,13 +198,13 @@
                                     </button>
                                     {{! Stop list }}
                                     {{#unless (this.isRouteCollapsed order.public_id)}}
-                                        <ol class="mt-1 space-y-0.5">
+                                        <ol class="mt-1 space-y-1.5">
                                             {{#each stops as |stop|}}
                                                 <li class="flex items-start gap-1.5 text-xs">
                                                     <span class="flex-shrink-0 w-4 h-4 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 text-[0.6rem] font-bold flex items-center justify-center leading-none">
                                                         {{stop.label}}
                                                     </span>
-                                                    <span class="truncate text-gray-600 dark:text-gray-300 leading-4">{{stop.address}}</span>
+                                                    <span class="text-gray-600 dark:text-gray-300 leading-4 line-clamp-2">{{stop.address}}</span>
                                                 </li>
                                             {{/each}}
                                         </ol>
