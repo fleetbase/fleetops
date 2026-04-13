@@ -3181,27 +3181,39 @@ select.import-mapping-select--error {
 
 /* ── Orchestrator Import Modal: header + tab nav background ── */
 
-/* The step tab nav bar and the modal header share the same background so they
+/* Scoped to .fleetops-order-import so other modals are unaffected.
+   The step tab nav bar and the modal header share the same background so they
    visually merge into one unified header region.
-   Using gray-800 (#1f2937) for dark mode as requested. */
-.flb--default-modal .flb--modal-header {
+   Dark mode: gray-800 (#1f2937); Light mode: gray-50 (#f9fafb). */
+.fleetops-order-import .flb--modal-header {
     background: #1f2937; /* gray-800 */
-    border-bottom: 1px solid #374151;
+    border-bottom: none; /* no border — tabs sit flush below */
 }
-
+body[data-theme='dark'] .fleetops-order-import .flb--modal-header,
+.dark .fleetops-order-import .flb--modal-header {
+    background: #1f2937;
+    border-bottom: none;
+}
 /* Light-mode equivalent */
-body[data-theme='light'] .flb--default-modal .flb--modal-header {
+body[data-theme='light'] .fleetops-order-import .flb--modal-header,
+html:not(.dark) .fleetops-order-import .flb--modal-header {
     background: #f9fafb; /* gray-50 */
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: none;
 }
 
 /* The step tab nav sits just below the modal title — give it the same bg */
-.flb--default-modal nav.flex {
+.fleetops-order-import .import-step-tabs {
     background: #1f2937; /* gray-800 */
+    border-top: none; /* flush with header above */
     border-bottom: 1px solid #374151;
 }
-
-body[data-theme='light'] .flb--default-modal nav.flex {
+body[data-theme='dark'] .fleetops-order-import .import-step-tabs,
+.dark .fleetops-order-import .import-step-tabs {
+    background: #1f2937;
+    border-bottom: 1px solid #374151;
+}
+body[data-theme='light'] .fleetops-order-import .import-step-tabs,
+html:not(.dark) .fleetops-order-import .import-step-tabs {
     background: #f9fafb; /* gray-50 */
     border-bottom: 1px solid #e5e7eb;
 }
@@ -3210,7 +3222,7 @@ body[data-theme='light'] .flb--default-modal nav.flex {
 
 /* Keep the modal body at a consistent height across all three steps so the
    modal does not jump/resize as the user advances through the wizard. */
-.flb--default-modal .flb--modal-body > div.text-xs {
+.fleetops-order-import .flb--modal-body > div.text-xs {
     min-height: 420px;
 }
 

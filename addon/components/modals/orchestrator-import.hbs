@@ -1,6 +1,6 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     {{! ── Step tab nav ── }}
-    <nav class="flex border-b dark:border-gray-700/60 bg-gray-900/20">
+    <nav class="import-step-tabs flex border-b dark:border-gray-700/60 bg-gray-900/20">
         <div class="import-step-tab {{if (eq this.step 'upload') 'import-step-tab--active' ''}}">
             <span class="import-step-tab-num {{if (eq this.step 'upload') 'import-step-tab-num--active' ''}}">1</span>
             <span>{{t "orchestrator.import-step-upload"}}</span>

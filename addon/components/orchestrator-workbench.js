@@ -414,7 +414,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @action openImportModal() {
         this.modalsManager.show('modals/orchestrator-import', {
             title: this.intl.t('orchestrator.import-orders'),
-            modalClass: 'modal-xl',
+            modalClass: 'modal-xl fleetops-order-import',
             hideAcceptButton: true,
             onImportComplete: () => this.loadOrders.perform(),
         });
