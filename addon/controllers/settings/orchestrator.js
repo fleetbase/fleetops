@@ -37,11 +37,11 @@ export default class SettingsOrchestratorController extends Controller {
         this.isLoading = true;
         try {
             const settings = yield this.fetch.get('fleet-ops/settings/orchestrator-settings');
-            this.allocationEngine           = settings.allocation_engine ?? 'vroom';
-            this.autoAllocateOnCreate       = settings.auto_allocate_on_create ?? false;
-            this.autoReallocateOnComplete   = settings.auto_reallocate_on_complete ?? false;
-            this.maxTravelTimeSeconds       = settings.max_travel_time_seconds ?? 3600;
-            this.balanceWorkload            = settings.balance_workload ?? false;
+            this.allocationEngine = settings.allocation_engine ?? 'vroom';
+            this.autoAllocateOnCreate = settings.auto_allocate_on_create ?? false;
+            this.autoReallocateOnComplete = settings.auto_reallocate_on_complete ?? false;
+            this.maxTravelTimeSeconds = settings.max_travel_time_seconds ?? 3600;
+            this.balanceWorkload = settings.balance_workload ?? false;
         } catch (error) {
             this.notifications.serverError(error);
         } finally {
@@ -52,11 +52,11 @@ export default class SettingsOrchestratorController extends Controller {
     @task *saveSettings() {
         try {
             yield this.fetch.post('fleet-ops/settings/orchestrator-settings', {
-                allocation_engine:           this.allocationEngine,
-                auto_allocate_on_create:     this.autoAllocateOnCreate,
+                allocation_engine: this.allocationEngine,
+                auto_allocate_on_create: this.autoAllocateOnCreate,
                 auto_reallocate_on_complete: this.autoReallocateOnComplete,
-                max_travel_time_seconds:     this.maxTravelTimeSeconds,
-                balance_workload:            this.balanceWorkload,
+                max_travel_time_seconds: this.maxTravelTimeSeconds,
+                balance_workload: this.balanceWorkload,
             });
             this.notifications.success(this.intl.t('orchestrator.settings-saved'));
         } catch (error) {

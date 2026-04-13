@@ -245,8 +245,16 @@ export default class OrchestratorPlanViewerComponent extends Component {
                     <span style="font-size:0.72rem;font-weight:700;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${title}</span>
                 </div>
                 ${timeRange ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.9);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">${timeRange}</div>` : ''}
-                ${routeLine ? `<div style="font-size:0.62rem;color:rgba(255,255,255,0.8);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3;word-break:break-word;">${routeLine}</div>` : ''}
-                ${customerName ? `<div style="font-size:0.62rem;color:rgba(255,255,255,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">${customerName}</div>` : ''}
+                ${
+                    routeLine
+                        ? `<div style="font-size:0.62rem;color:rgba(255,255,255,0.8);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3;word-break:break-word;">${routeLine}</div>`
+                        : ''
+                }
+                ${
+                    customerName
+                        ? `<div style="font-size:0.62rem;color:rgba(255,255,255,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">${customerName}</div>`
+                        : ''
+                }
             </div>`,
         };
     }

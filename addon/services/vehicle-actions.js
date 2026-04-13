@@ -10,7 +10,7 @@ export default class VehicleActionsService extends ResourceActionService {
     @service maintenanceScheduleActions;
     @service workOrderActions;
     @service maintenanceActions;
-    
+
     get registeredTabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:vehicle:details');
         return (isArray(registeredTabs) ? registeredTabs : [])
@@ -45,7 +45,6 @@ export default class VehicleActionsService extends ResourceActionService {
                 key: 'schedules',
                 label: 'Schedules',
                 component: 'vehicle/details/schedules',
-
             },
             {
                 key: 'work-orders',
@@ -57,7 +56,7 @@ export default class VehicleActionsService extends ResourceActionService {
                 label: 'Maintenance',
                 component: 'vehicle/details/maintenance-history',
             },
-            ...this.registeredTabs
+            ...this.registeredTabs,
         ];
     }
 

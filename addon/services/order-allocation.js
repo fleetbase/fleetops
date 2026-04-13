@@ -68,7 +68,7 @@ export default class OrderAllocationService extends Service {
         this.isRunning = true;
         try {
             const result = yield this.fetch.post('fleet-ops/orchestrator/run', {
-                order_ids:   orderIds,
+                order_ids: orderIds,
                 vehicle_ids: vehicleIds,
                 options,
             });
@@ -92,9 +92,7 @@ export default class OrderAllocationService extends Service {
     @task *commit(assignments) {
         try {
             const result = yield this.fetch.post('fleet-ops/orchestrator/commit', { assignments });
-            this.notifications.success(
-                this.intl.t('orchestrator.committed', { count: result.committed?.length ?? 0 })
-            );
+            this.notifications.success(this.intl.t('orchestrator.committed', { count: result.committed?.length ?? 0 }));
             this.currentPlan = null;
             return result;
         } catch (error) {

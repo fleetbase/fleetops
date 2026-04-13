@@ -30,32 +30,32 @@ export default class OrchestratorPhaseBuilderComponent extends Component {
     get modeOptions() {
         return [
             { value: 'assign_vehicles', label: this.intl.t('orchestrator.mode-assign-vehicles') },
-            { value: 'assign_drivers',  label: this.intl.t('orchestrator.mode-assign-drivers') },
+            { value: 'assign_drivers', label: this.intl.t('orchestrator.mode-assign-drivers') },
             { value: 'optimize_routes', label: this.intl.t('orchestrator.mode-optimize-routes') },
-            { value: 'allocate',        label: this.intl.t('orchestrator.mode-allocate') },
+            { value: 'allocate', label: this.intl.t('orchestrator.mode-allocate') },
         ];
     }
 
     get orderStatusOptions() {
         return [
-            { value: 'created',    label: this.intl.t('orchestrator.status-created') },
+            { value: 'created', label: this.intl.t('orchestrator.status-created') },
             { value: 'dispatched', label: this.intl.t('orchestrator.status-dispatched') },
-            { value: 'started',    label: this.intl.t('orchestrator.status-started') },
+            { value: 'started', label: this.intl.t('orchestrator.status-started') },
         ];
     }
 
     _defaultPhase(mode = 'assign_vehicles') {
         return {
-            id:              crypto.randomUUID(),
+            id: crypto.randomUUID(),
             mode,
-            label:           this.intl.t(`orchestrator.mode-${mode.replace(/_/g, '-')}`),
-            engine:          'vroom',
-            orderStatuses:   ['created'],
+            label: this.intl.t(`orchestrator.mode-${mode.replace(/_/g, '-')}`),
+            engine: 'vroom',
+            orderStatuses: ['created'],
             balanceWorkload: false,
-            respectSkills:   true,
+            respectSkills: true,
             respectCapacity: true,
-            returnToDepot:   false,
-            autoCommit:      false,
+            returnToDepot: false,
+            autoCommit: false,
         };
     }
 
@@ -130,9 +130,7 @@ export default class OrchestratorPhaseBuilderComponent extends Component {
 
     @action toggleDraftOrderStatus(status) {
         const current = this.draftPhase.orderStatuses ?? [];
-        const updated = current.includes(status)
-            ? current.filter((s) => s !== status)
-            : [...current, status];
+        const updated = current.includes(status) ? current.filter((s) => s !== status) : [...current, status];
         this.draftPhase = { ...this.draftPhase, orderStatuses: updated };
     }
 
@@ -155,9 +153,9 @@ export default class OrchestratorPhaseBuilderComponent extends Component {
     modeIcon(mode) {
         const icons = {
             assign_vehicles: 'truck',
-            assign_drivers:  'user',
+            assign_drivers: 'user',
             optimize_routes: 'route',
-            allocate:        'bolt',
+            allocate: 'bolt',
         };
         return icons[mode] ?? 'cog';
     }

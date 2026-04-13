@@ -59,33 +59,89 @@
         {{! Filter chips }}
         {{#if (eq this.activeTab "vehicles")}}
             <div class="flex gap-1 flex-wrap">
-                <button type="button"
-                    class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.vehicleFilter 'all') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
-                    {{on "click" (fn this.setVehicleFilter "all")}}>{{t "orchestrator.filter-all"}}</button>
-                <button type="button"
-                    class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.vehicleFilter 'active') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
-                    {{on "click" (fn this.setVehicleFilter "active")}}>{{t "orchestrator.filter-active"}}</button>
-                <button type="button"
-                    class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.vehicleFilter 'available') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
-                    {{on "click" (fn this.setVehicleFilter "available")}}>{{t "orchestrator.filter-available"}}</button>
-                <button type="button"
-                    class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.vehicleFilter 'no-driver') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
-                    {{on "click" (fn this.setVehicleFilter "no-driver")}}>{{t "orchestrator.filter-no-driver"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.vehicleFilter 'all')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setVehicleFilter "all")}}
+                >{{t "orchestrator.filter-all"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.vehicleFilter 'active')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setVehicleFilter "active")}}
+                >{{t "orchestrator.filter-active"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.vehicleFilter 'available')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setVehicleFilter "available")}}
+                >{{t "orchestrator.filter-available"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.vehicleFilter 'no-driver')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setVehicleFilter "no-driver")}}
+                >{{t "orchestrator.filter-no-driver"}}</button>
             </div>
         {{else}}
             <div class="flex gap-1 flex-wrap">
-                <button type="button"
-                    class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.driverFilter 'all') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
-                    {{on "click" (fn this.setDriverFilter "all")}}>{{t "orchestrator.filter-all"}}</button>
-                <button type="button"
-                    class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.driverFilter 'online') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
-                    {{on "click" (fn this.setDriverFilter "online")}}>{{t "orchestrator.filter-online"}}</button>
-                <button type="button"
-                    class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.driverFilter 'offline') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
-                    {{on "click" (fn this.setDriverFilter "offline")}}>{{t "orchestrator.filter-offline"}}</button>
-                <button type="button"
-                    class="px-2 py-0.5 rounded text-xs transition-colors {{if (eq this.driverFilter 'on-shift') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
-                    {{on "click" (fn this.setDriverFilter "on-shift")}}>{{t "orchestrator.filter-on-job"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.driverFilter 'all')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setDriverFilter "all")}}
+                >{{t "orchestrator.filter-all"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.driverFilter 'online')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setDriverFilter "online")}}
+                >{{t "orchestrator.filter-online"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.driverFilter 'offline')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setDriverFilter "offline")}}
+                >{{t "orchestrator.filter-offline"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.driverFilter 'on-shift')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setDriverFilter "on-shift")}}
+                >{{t "orchestrator.filter-on-job"}}</button>
             </div>
         {{/if}}
     </div>
@@ -95,7 +151,7 @@
         {{#if @isLoading}}
             <div class="flex justify-center py-8"><Spinner /></div>
 
-        {{! ── Vehicles tab ── }}
+            {{! ── Vehicles tab ── }}
         {{else if (eq this.activeTab "vehicles")}}
             {{#if this.filteredVehicles.length}}
                 {{#each this.filteredVehicles as |vehicle|}}
@@ -160,7 +216,7 @@
                 </div>
             {{/if}}
 
-        {{! ── Drivers tab ── }}
+            {{! ── Drivers tab ── }}
         {{else}}
             {{#if this.filteredDrivers.length}}
                 {{#each this.filteredDrivers as |driver|}}
@@ -183,8 +239,7 @@
                                 {{fallback-img-src (config "defaultValues.driverImage")}}
                             />
                             <span
-                                class="absolute top-0 left-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
-                                    {{if driver.online 'bg-green-500' 'bg-gray-400'}}"
+                                class="absolute top-0 left-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 {{if driver.online 'bg-green-500' 'bg-gray-400'}}"
                             ></span>
                         </div>
                         {{! All fields — always shown, "-" when absent }}
@@ -226,13 +281,15 @@
         <div class="px-3 py-2 border-t dark:border-gray-700 bg-indigo-900/20 flex items-center justify-between flex-shrink-0">
             <span class="text-xs text-indigo-400">
                 {{#if this.selectedVehicleIdsArray.length}}
-                    {{this.selectedVehicleIdsArray.length}} vehicles selected
+                    {{this.selectedVehicleIdsArray.length}}
+                    vehicles selected
                 {{/if}}
                 {{#if (and this.selectedVehicleIdsArray.length this.selectedDriverIdsArray.length)}}
                     ·
                 {{/if}}
                 {{#if this.selectedDriverIdsArray.length}}
-                    {{this.selectedDriverIdsArray.length}} {{t "orchestrator.drivers-selected"}}
+                    {{this.selectedDriverIdsArray.length}}
+                    {{t "orchestrator.drivers-selected"}}
                 {{/if}}
             </span>
             <button type="button" class="text-xs text-gray-400 hover:text-white" {{on "click" this.clearAllSelections}}>

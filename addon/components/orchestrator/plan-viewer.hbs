@@ -12,7 +12,9 @@
                 <div class="flex items-center gap-2">
                     <button type="button" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" {{on "click" this.expandAll}}>{{t "orchestrator.expand-all"}}</button>
                     <span class="text-gray-300 dark:text-gray-600">·</span>
-                    <button type="button" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" {{on "click" this.collapseAll}}>{{t "orchestrator.collapse-all"}}</button>
+                    <button type="button" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" {{on "click" this.collapseAll}}>{{t
+                            "orchestrator.collapse-all"
+                        }}</button>
                 </div>
             {{else if (eq this.activeTab "timeline")}}
                 {{#if this.timelineDateRange}}
@@ -25,9 +27,7 @@
             <button
                 type="button"
                 class="px-2.5 py-1 rounded text-xs font-medium transition-colors
-                    {{if (eq this.activeTab 'routes')
-                        'bg-indigo-600 text-white'
-                        'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}}"
+                    {{if (eq this.activeTab 'routes') 'bg-indigo-600 text-white' 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}}"
                 {{on "click" (fn this.setTab "routes")}}
             >
                 <FaIcon @icon="route" @size="xs" class="mr-1" />{{t "orchestrator.tab-routes"}}
@@ -35,9 +35,7 @@
             <button
                 type="button"
                 class="px-2.5 py-1 rounded text-xs font-medium transition-colors
-                    {{if (eq this.activeTab 'timeline')
-                        'bg-indigo-600 text-white'
-                        'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}}"
+                    {{if (eq this.activeTab 'timeline') 'bg-indigo-600 text-white' 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}}"
                 {{on "click" (fn this.setTab "timeline")}}
             >
                 <FaIcon @icon="calendar-alt" @size="xs" class="mr-1" />{{t "orchestrator.tab-timeline"}}
@@ -66,92 +64,88 @@
 
     {{! ── ROUTES TAB ── }}
     {{#if (eq this.activeTab "routes")}}
-    <div class="flex-1 overflow-y-auto">
-        {{#each @planByVehicle as |group|}}
-            {{! vehicle-route-card }}
-            <div
-                class="vehicle-route-card mx-3 my-2 rounded border dark:border-gray-600 dark:bg-gray-800 overflow-hidden"
-                data-vehicle-id={{group.vehicle.public_id}}
-                {{on "dragover" @onDragOver}}
-                {{on "drop" (fn @onDropOnVehicle group.vehicle.public_id group.driver.public_id)}}
-            >
-                {{! Vehicle / driver header — click to expand/collapse }}
+        <div class="flex-1 overflow-y-auto">
+            {{#each @planByVehicle as |group|}}
+                {{! vehicle-route-card }}
                 <div
-                    class="flex items-center px-3 py-2 border-b dark:border-gray-700 cursor-pointer"
-                    style="border-left: 3px solid {{group.routeColor}}"
-                    {{on "click" (fn this.toggleCard group.vehicle.public_id)}}
+                    class="vehicle-route-card mx-3 my-2 rounded border dark:border-gray-600 dark:bg-gray-800 overflow-hidden"
+                    data-vehicle-id={{group.vehicle.public_id}}
+                    {{on "dragover" @onDragOver}}
+                    {{on "drop" (fn @onDropOnVehicle group.vehicle.public_id group.driver.public_id)}}
                 >
-                    <FaIcon @icon="truck" class="mr-2 text-blue-400 flex-shrink-0" />
-                    <div class="flex-1 min-w-0">
-                        <div class="text-xs font-semibold dark:text-white truncate">{{group.vehicle.display_name}}</div>
-                        {{#if group.driver}}
-                            <div class="text-xs text-gray-400 truncate">{{group.driver.name}}</div>
-                        {{/if}}
-                    </div>
-                    <div class="flex items-center space-x-1 flex-shrink-0">
-                        <span class="text-xs text-gray-400">{{group.orders.length}} {{t "orchestrator.stops"}}</span>
-                        {{#if group.summary.duration}}
-                            <span class="text-xs text-gray-500">·</span>
-                            <span class="text-xs text-gray-400">{{@formatDuration group.summary.duration}}</span>
-                        {{/if}}
-                        <FaIcon @icon={{if (this.isExpanded group.vehicle.public_id) "chevron-up" "chevron-down"}} @size="xs" class="text-gray-500 ml-1" />
-                    </div>
-                </div>
-
-                {{! Expanded stop list }}
-                {{#if (this.isExpanded group.vehicle.public_id)}}
+                    {{! Vehicle / driver header — click to expand/collapse }}
                     <div
-                        class="vehicle-drop-zone px-2 py-1"
-                        data-vehicle-id={{group.vehicle.public_id}}
-                        data-driver-id={{group.driver.public_id}}
+                        class="flex items-center px-3 py-2 border-b dark:border-gray-700 cursor-pointer"
+                        style="border-left: 3px solid {{group.routeColor}}"
+                        {{on "click" (fn this.toggleCard group.vehicle.public_id)}}
                     >
-                        {{#each group.orders as |item|}}
-                            <div
-                                class="assigned-stop flex items-center px-2 py-1.5 my-0.5 rounded text-xs cursor-grab
-                                    {{if item._overridden 'border border-dashed border-orange-500 bg-orange-900/20' 'dark:bg-gray-700'}}"
-                                draggable="true"
-                                data-order-id={{item.order.public_id}}
-                                {{on "dragstart" (fn @onAssignedOrderDragStart item.order)}}
-                            >
-                                <span class="w-5 text-center text-gray-500 mr-2 flex-shrink-0 tabular-nums">{{item.sequence}}</span>
-                                <div class="flex-1 min-w-0">
-                                    <div class="dark:text-white truncate font-medium">{{or item.order.tracking item.order.public_id}}</div>
-                                    <div class="text-gray-400 truncate">{{item.order.payload.dropoff.address}}</div>
-                                </div>
-                                {{#if item.arrival}}
-                                    <span class="text-gray-500 text-xs flex-shrink-0 ml-1 tabular-nums">{{@formatUnixTime item.arrival}}</span>
-                                {{/if}}
-                                {{#if item._overridden}}
-                                    <FaIcon @icon="pen" @size="xs" class="text-orange-400 ml-1 flex-shrink-0" />
-                                {{/if}}
-                            </div>
-                        {{/each}}
-                        {{#unless group.orders.length}}
-                            <div class="py-3 text-center text-xs text-gray-500">
-                                {{t "orchestrator.drop-orders-here"}}
-                            </div>
-                        {{/unless}}
-                    </div>
-                    {{! Route summary footer }}
-                    {{#if (or group.summary.distance group.summary.duration)}}
-                        <div class="px-3 py-1.5 border-t dark:border-gray-700 flex items-center space-x-3 text-xs text-gray-500">
-                            {{#if group.summary.distance}}
-                                <span><FaIcon @icon="road" @size="xs" class="mr-0.5" />{{@formatDistance group.summary.distance}}</span>
-                            {{/if}}
-                            {{#if group.summary.duration}}
-                                <span><FaIcon @icon="clock" @size="xs" class="mr-0.5" />{{@formatDuration group.summary.duration}}</span>
+                        <FaIcon @icon="truck" class="mr-2 text-blue-400 flex-shrink-0" />
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs font-semibold dark:text-white truncate">{{group.vehicle.display_name}}</div>
+                            {{#if group.driver}}
+                                <div class="text-xs text-gray-400 truncate">{{group.driver.name}}</div>
                             {{/if}}
                         </div>
+                        <div class="flex items-center space-x-1 flex-shrink-0">
+                            <span class="text-xs text-gray-400">{{group.orders.length}} {{t "orchestrator.stops"}}</span>
+                            {{#if group.summary.duration}}
+                                <span class="text-xs text-gray-500">·</span>
+                                <span class="text-xs text-gray-400">{{@formatDuration group.summary.duration}}</span>
+                            {{/if}}
+                            <FaIcon @icon={{if (this.isExpanded group.vehicle.public_id) "chevron-up" "chevron-down"}} @size="xs" class="text-gray-500 ml-1" />
+                        </div>
+                    </div>
+
+                    {{! Expanded stop list }}
+                    {{#if (this.isExpanded group.vehicle.public_id)}}
+                        <div class="vehicle-drop-zone px-2 py-1" data-vehicle-id={{group.vehicle.public_id}} data-driver-id={{group.driver.public_id}}>
+                            {{#each group.orders as |item|}}
+                                <div
+                                    class="assigned-stop flex items-center px-2 py-1.5 my-0.5 rounded text-xs cursor-grab
+                                        {{if item._overridden 'border border-dashed border-orange-500 bg-orange-900/20' 'dark:bg-gray-700'}}"
+                                    draggable="true"
+                                    data-order-id={{item.order.public_id}}
+                                    {{on "dragstart" (fn @onAssignedOrderDragStart item.order)}}
+                                >
+                                    <span class="w-5 text-center text-gray-500 mr-2 flex-shrink-0 tabular-nums">{{item.sequence}}</span>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="dark:text-white truncate font-medium">{{or item.order.tracking item.order.public_id}}</div>
+                                        <div class="text-gray-400 truncate">{{item.order.payload.dropoff.address}}</div>
+                                    </div>
+                                    {{#if item.arrival}}
+                                        <span class="text-gray-500 text-xs flex-shrink-0 ml-1 tabular-nums">{{@formatUnixTime item.arrival}}</span>
+                                    {{/if}}
+                                    {{#if item._overridden}}
+                                        <FaIcon @icon="pen" @size="xs" class="text-orange-400 ml-1 flex-shrink-0" />
+                                    {{/if}}
+                                </div>
+                            {{/each}}
+                            {{#unless group.orders.length}}
+                                <div class="py-3 text-center text-xs text-gray-500">
+                                    {{t "orchestrator.drop-orders-here"}}
+                                </div>
+                            {{/unless}}
+                        </div>
+                        {{! Route summary footer }}
+                        {{#if (or group.summary.distance group.summary.duration)}}
+                            <div class="px-3 py-1.5 border-t dark:border-gray-700 flex items-center space-x-3 text-xs text-gray-500">
+                                {{#if group.summary.distance}}
+                                    <span><FaIcon @icon="road" @size="xs" class="mr-0.5" />{{@formatDistance group.summary.distance}}</span>
+                                {{/if}}
+                                {{#if group.summary.duration}}
+                                    <span><FaIcon @icon="clock" @size="xs" class="mr-0.5" />{{@formatDuration group.summary.duration}}</span>
+                                {{/if}}
+                            </div>
+                        {{/if}}
                     {{/if}}
-                {{/if}}
-            </div>
-        {{else}}
-            <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
-                <FaIcon @icon="route" @size="2x" class="mb-2 opacity-40" />
-                {{t "orchestrator.no-plan"}}
-            </div>
-        {{/each}}
-    </div>
+                </div>
+            {{else}}
+                <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
+                    <FaIcon @icon="route" @size="2x" class="mb-2 opacity-40" />
+                    {{t "orchestrator.no-plan"}}
+                </div>
+            {{/each}}
+        </div>
     {{/if}}
 
     {{! ── TIMELINE TAB ── }}

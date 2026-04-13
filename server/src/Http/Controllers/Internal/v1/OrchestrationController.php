@@ -511,7 +511,7 @@ class OrchestrationController extends Controller
                 }
 
                 // ── Resolve Driver ────────────────────────────────────────────
-                $driverUuid = null;
+                $driverUuid       = null;
                 $driverIdentifier = $firstRow['driver_email'] ?? $firstRow['driver_phone'] ?? $firstRow['driver_name'] ?? null;
                 if ($driverIdentifier) {
                     $driver = Driver::findByIdentifier($driverIdentifier);
@@ -655,9 +655,9 @@ class OrchestrationController extends Controller
                         }
                         // Resolve destination from each row's entity_destination
                         // column; default to 'dropoff' when not set.
-                        $dest = $entityRow['entity_destination'] ?? 'dropoff';
+                        $dest                      = $entityRow['entity_destination'] ?? 'dropoff';
                         $entityData['destination'] = ($dest !== '') ? $dest : 'dropoff';
-                        $entities[] = $entityData;
+                        $entities[]                = $entityData;
                     }
                 }
 
@@ -689,20 +689,18 @@ class OrchestrationController extends Controller
      *
      * @param array  $row    the mapped CSV row
      * @param string $prefix 'pickup' or 'dropoff'
-     *
-     * @return array
      */
     private function buildPlaceData(array $row, string $prefix): array
     {
         return array_filter([
-            'name'        => $row["{$prefix}_name"]        ?? null,
-            'street1'     => $row["{$prefix}_street1"]     ?? null,
-            'street2'     => $row["{$prefix}_street2"]     ?? null,
-            'city'        => $row["{$prefix}_city"]        ?? null,
-            'province'    => $row["{$prefix}_state"]       ?? null,
+            'name'        => $row["{$prefix}_name"] ?? null,
+            'street1'     => $row["{$prefix}_street1"] ?? null,
+            'street2'     => $row["{$prefix}_street2"] ?? null,
+            'city'        => $row["{$prefix}_city"] ?? null,
+            'province'    => $row["{$prefix}_state"] ?? null,
             'postal_code' => $row["{$prefix}_postal_code"] ?? null,
-            'country'     => $row["{$prefix}_country"]     ?? null,
-            'phone'       => $row["{$prefix}_phone"]       ?? null,
+            'country'     => $row["{$prefix}_country"] ?? null,
+            'phone'       => $row["{$prefix}_phone"] ?? null,
             'location'    => $this->buildLocationPoint($row["{$prefix}_lat"] ?? null, $row["{$prefix}_lng"] ?? null),
         ]);
     }
@@ -721,6 +719,7 @@ class OrchestrationController extends Controller
         if ($latF === 0.0 && $lngF === 0.0) {
             return null;
         }
+
         return "POINT({$lngF} {$latF})";
     }
 
@@ -730,8 +729,6 @@ class OrchestrationController extends Controller
      *
      * @param array  $row         the mapped CSV row
      * @param string $companyUuid the current company UUID
-     *
-     * @return array|null
      */
     private function buildEntityData(array $row, string $companyUuid): ?array
     {
@@ -748,29 +745,29 @@ class OrchestrationController extends Controller
 
         return array_filter([
             'company_uuid'     => $companyUuid,
-            'name'             => $row['entity_name']             ?? null,
-            'type'             => $row['entity_type']             ?? null,
-            'description'      => $row['entity_description']      ?? null,
-            'sku'              => $row['entity_sku']              ?? null,
-            'barcode'          => $row['entity_barcode']          ?? null,
-            'internal_id'      => $row['entity_internal_id']      ?? null,
+            'name'             => $row['entity_name'] ?? null,
+            'type'             => $row['entity_type'] ?? null,
+            'description'      => $row['entity_description'] ?? null,
+            'sku'              => $row['entity_sku'] ?? null,
+            'barcode'          => $row['entity_barcode'] ?? null,
+            'internal_id'      => $row['entity_internal_id'] ?? null,
             'declared_value'   => isset($row['entity_declared_value']) && $row['entity_declared_value'] !== ''
                                     ? (float) $row['entity_declared_value'] : null,
-            'currency'         => $row['entity_currency']         ?? null,
+            'currency'         => $row['entity_currency'] ?? null,
             'price'            => isset($row['entity_price']) && $row['entity_price'] !== ''
                                     ? (float) $row['entity_price'] : null,
             'sale_price'       => isset($row['entity_sale_price']) && $row['entity_sale_price'] !== ''
                                     ? (float) $row['entity_sale_price'] : null,
             'weight'           => isset($row['entity_weight']) && $row['entity_weight'] !== ''
                                     ? (float) $row['entity_weight'] : null,
-            'weight_unit'      => $row['entity_weight_unit']      ?? null,
+            'weight_unit'      => $row['entity_weight_unit'] ?? null,
             'length'           => isset($row['entity_length']) && $row['entity_length'] !== ''
                                     ? (float) $row['entity_length'] : null,
             'width'            => isset($row['entity_width']) && $row['entity_width'] !== ''
                                     ? (float) $row['entity_width'] : null,
             'height'           => isset($row['entity_height']) && $row['entity_height'] !== ''
                                     ? (float) $row['entity_height'] : null,
-            'dimensions_unit'  => $row['entity_dimensions_unit']  ?? null,
+            'dimensions_unit'  => $row['entity_dimensions_unit'] ?? null,
         ], fn ($v) => $v !== null);
     }
 
@@ -780,14 +777,12 @@ class OrchestrationController extends Controller
      * @param array  $row         the mapped CSV row
      * @param string $companyUuid the company UUID
      * @param string $prefix      'customer' or 'facilitator'
-     *
-     * @return Contact|null
      */
     private function resolveOrCreateContact(array $row, string $companyUuid, string $prefix): ?Contact
     {
         $email = $row["{$prefix}_email"] ?? null;
         $phone = $row["{$prefix}_phone"] ?? null;
-        $name  = $row["{$prefix}_name"]  ?? null;
+        $name  = $row["{$prefix}_name"] ?? null;
 
         // Try to find by email first, then phone.
         $contact = null;
@@ -822,14 +817,12 @@ class OrchestrationController extends Controller
      * @param array  $row         the mapped CSV row
      * @param string $companyUuid the company UUID
      * @param string $prefix      'customer' or 'facilitator'
-     *
-     * @return Vendor|null
      */
     private function resolveOrCreateVendor(array $row, string $companyUuid, string $prefix): ?Vendor
     {
         $email = $row["{$prefix}_email"] ?? null;
         $phone = $row["{$prefix}_phone"] ?? null;
-        $name  = $row["{$prefix}_name"]  ?? null;
+        $name  = $row["{$prefix}_name"] ?? null;
 
         $vendor = null;
         if ($email) {

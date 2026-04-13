@@ -215,7 +215,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.isCommitted = false;
         this.manualOverrides = {};
         this.routeSummaries = {};
-         this.unassignedAfterRun = [];
+        this.unassignedAfterRun = [];
         this.orchestratorRunMessage = null;
         this.runError = null;
         const phasesToRun = this.phases.length > 0 ? this.phases : [this._legacyPhase()];
@@ -807,8 +807,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
             if (!groups[vehicle_id]) {
                 const vehicle = this.availableVehicles.find((v) => v.public_id === vehicle_id);
                 // vehicle.driver is an async belongsTo proxy — resolve from availableDrivers by driver_id
-                const driver = this.availableDrivers.find((d) => d.public_id === assignment.driver_id)
-                    ?? this.availableDrivers.find((d) => d.vehicle_id === vehicle_id);
+                const driver = this.availableDrivers.find((d) => d.public_id === assignment.driver_id) ?? this.availableDrivers.find((d) => d.vehicle_id === vehicle_id);
                 groups[vehicle_id] = { vehicle, driver, orders: [] };
             }
             const order = this.unassignedOrders.find((o) => o.public_id === assignment.order_id);

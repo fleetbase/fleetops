@@ -24,37 +24,37 @@ import { inject as service } from '@ember/service';
  * Default standard fields shown when no card-field settings have been saved.
  */
 const DEFAULT_FIELDS = [
-    { key: 'pickup',           icon: 'location-crosshairs', iconClass: 'text-green-400' },
-    { key: 'dropoff',          icon: 'location-dot',        iconClass: 'text-red-400' },
-    { key: 'scheduled_at',     icon: 'clock',               highlight: 'text-blue-500 dark:text-blue-400' },
-    { key: 'customer',         icon: 'user' },
-    { key: 'driver_assigned',  icon: 'id-badge' },
+    { key: 'pickup', icon: 'location-crosshairs', iconClass: 'text-green-400' },
+    { key: 'dropoff', icon: 'location-dot', iconClass: 'text-red-400' },
+    { key: 'scheduled_at', icon: 'clock', highlight: 'text-blue-500 dark:text-blue-400' },
+    { key: 'customer', icon: 'user' },
+    { key: 'driver_assigned', icon: 'id-badge' },
     { key: 'vehicle_assigned', icon: 'truck' },
-    { key: 'created_at',       icon: 'calendar-plus',       highlight: 'text-gray-500 dark:text-gray-400' },
+    { key: 'created_at', icon: 'calendar-plus', highlight: 'text-gray-500 dark:text-gray-400' },
 ];
 
 /** Icon/highlight metadata for known standard field keys. */
 const FIELD_META = {
-    tracking:          { icon: 'hashtag' },
-    status:            { icon: 'circle-dot' },
-    scheduled_at:      { icon: 'clock',               highlight: 'text-blue-500 dark:text-blue-400' },
-    customer:          { icon: 'user' },
-    type:              { icon: 'tag' },
-    notes:             { icon: 'note-sticky' },
-    priority:          { icon: 'flag' },
-    dropoff:           { icon: 'location-dot',         iconClass: 'text-red-400' },
-    pickup:            { icon: 'location-crosshairs',  iconClass: 'text-green-400' },
-    driver_assigned:   { icon: 'id-badge' },
-    vehicle_assigned:  { icon: 'truck' },
-    created_at:        { icon: 'calendar-plus',        highlight: 'text-gray-500 dark:text-gray-400' },
+    tracking: { icon: 'hashtag' },
+    status: { icon: 'circle-dot' },
+    scheduled_at: { icon: 'clock', highlight: 'text-blue-500 dark:text-blue-400' },
+    customer: { icon: 'user' },
+    type: { icon: 'tag' },
+    notes: { icon: 'note-sticky' },
+    priority: { icon: 'flag' },
+    dropoff: { icon: 'location-dot', iconClass: 'text-red-400' },
+    pickup: { icon: 'location-crosshairs', iconClass: 'text-green-400' },
+    driver_assigned: { icon: 'id-badge' },
+    vehicle_assigned: { icon: 'truck' },
+    created_at: { icon: 'calendar-plus', highlight: 'text-gray-500 dark:text-gray-400' },
 };
 
 export default class OrchestratorOrderPoolComponent extends Component {
     @service intl;
 
-      // ── Quick filter chip ─────────────────────────────────────────────────
-    @tracked orderSearch    = '';
-    @tracked orderFilter    = 'all';
+    // ── Quick filter chip ─────────────────────────────────────────────────
+    @tracked orderSearch = '';
+    @tracked orderFilter = 'all';
 
     // ── Card body collapse state (hides entire card body) ─────────────────
     @tracked collapsedOrderIds = new Set();
@@ -62,11 +62,11 @@ export default class OrchestratorOrderPoolComponent extends Component {
     @tracked collapsedRouteIds = new Set();
 
     // ── Advanced filter panel ─────────────────────────────────────────────────
-    @tracked showAdvanced       = false;
-    @tracked advancedCountry    = null;
-    @tracked advancedType       = null;
-    @tracked advancedStatus     = null;
-    @tracked advancedDate       = null;
+    @tracked showAdvanced = false;
+    @tracked advancedCountry = null;
+    @tracked advancedType = null;
+    @tracked advancedStatus = null;
+    @tracked advancedDate = null;
 
     // ── Quick filter ──────────────────────────────────────────────────────────
 
@@ -157,9 +157,7 @@ export default class OrchestratorOrderPoolComponent extends Component {
             stops.push(payload.pickup.address ?? payload.pickup.street1 ?? payload.pickup.name ?? '—');
         }
 
-        const waypoints = typeof payload.waypoints?.toArray === 'function'
-            ? payload.waypoints.toArray()
-            : (Array.isArray(payload.waypoints) ? payload.waypoints : []);
+        const waypoints = typeof payload.waypoints?.toArray === 'function' ? payload.waypoints.toArray() : Array.isArray(payload.waypoints) ? payload.waypoints : [];
 
         for (const wp of waypoints) {
             const place = wp.place ?? wp;
@@ -202,9 +200,9 @@ export default class OrchestratorOrderPoolComponent extends Component {
 
     @action clearAdvancedFilters() {
         this.advancedCountry = null;
-        this.advancedType    = null;
-        this.advancedStatus  = null;
-        this.advancedDate    = null;
+        this.advancedType = null;
+        this.advancedStatus = null;
+        this.advancedDate = null;
     }
 
     get hasAdvancedFilters() {
@@ -214,13 +212,13 @@ export default class OrchestratorOrderPoolComponent extends Component {
     /** Unique order types derived from the current order pool. */
     get availableTypes() {
         const orders = this.args.orders ?? [];
-        const types  = [...new Set(orders.map((o) => o.type).filter(Boolean))].sort();
+        const types = [...new Set(orders.map((o) => o.type).filter(Boolean))].sort();
         return types;
     }
 
     /** Unique order statuses derived from the current order pool. */
     get availableStatuses() {
-        const orders   = this.args.orders ?? [];
+        const orders = this.args.orders ?? [];
         const statuses = [...new Set(orders.map((o) => o.status).filter(Boolean))].sort();
         return statuses;
     }
@@ -260,9 +258,9 @@ export default class OrchestratorOrderPoolComponent extends Component {
         if (this.advancedCountry) {
             const country = this.advancedCountry.toLowerCase();
             orders = orders.filter((o) => {
-                const pickupCountry  = (o.payload?.pickup?.country ?? '').toLowerCase();
+                const pickupCountry = (o.payload?.pickup?.country ?? '').toLowerCase();
                 const dropoffCountry = (o.payload?.dropoff?.country ?? '').toLowerCase();
-                const pickupAddr     = (o.payload?.pickup?.address ?? '').toLowerCase();
+                const pickupAddr = (o.payload?.pickup?.address ?? '').toLowerCase();
                 return pickupCountry === country || dropoffCountry === country || pickupAddr.includes(country);
             });
         }
@@ -297,13 +295,11 @@ export default class OrchestratorOrderPoolComponent extends Component {
         const cardFields = this.args.cardFields;
 
         if (!cardFields) {
-            return DEFAULT_FIELDS
-                .map(({ key, icon, iconClass, highlight }) => {
-                    const { value, label } = this._resolveStandardFieldFull(order, key);
-                    if (!value) return null;
-                    return { label, value, icon, iconClass, highlight };
-                })
-                .filter(Boolean);
+            return DEFAULT_FIELDS.map(({ key, icon, iconClass, highlight }) => {
+                const { value, label } = this._resolveStandardFieldFull(order, key);
+                if (!value) return null;
+                return { label, value, icon, iconClass, highlight };
+            }).filter(Boolean);
         }
 
         const fields = [];
@@ -322,17 +318,12 @@ export default class OrchestratorOrderPoolComponent extends Component {
                 let value = null;
 
                 const cfvCollection = order.custom_field_values ?? order.customFieldValues ?? [];
-                const cfvArray = typeof cfvCollection?.toArray === 'function'
-                    ? cfvCollection.toArray()
-                    : (Array.isArray(cfvCollection) ? cfvCollection : []);
+                const cfvArray = typeof cfvCollection?.toArray === 'function' ? cfvCollection.toArray() : Array.isArray(cfvCollection) ? cfvCollection : [];
 
                 for (const cfv of cfvArray) {
-                    const cf = cfv.custom_field
-                        ?? (typeof cfv.customField?.get === 'function' ? cfv.customField : null)
-                        ?? cfv.customField
-                        ?? null;
+                    const cf = cfv.custom_field ?? (typeof cfv.customField?.get === 'function' ? cfv.customField : null) ?? cfv.customField ?? null;
 
-                    const cfName  = cf?.name  ?? cf?.get?.('name')  ?? '';
+                    const cfName = cf?.name ?? cf?.get?.('name') ?? '';
                     const cfLabel = cf?.label ?? cf?.get?.('label') ?? '';
 
                     if (cfName !== fieldKey && cfLabel !== fieldKey) continue;
@@ -369,21 +360,25 @@ export default class OrchestratorOrderPoolComponent extends Component {
 
     _resolveStandardFieldFull(order, key) {
         const t = (k) => {
-            try { return this.intl.t(`orchestrator.${k}`); } catch { return k; }
+            try {
+                return this.intl.t(`orchestrator.${k}`);
+            } catch {
+                return k;
+            }
         };
         const map = {
-            tracking:          { label: t('field-tracking'),          value: order.tracking ?? order.public_id },
-            status:            { label: t('field-status'),            value: order.status },
-            scheduled_at:      { label: t('scheduled'),               value: order.scheduled_at ? this._formatDate(order.scheduled_at) : null },
-            customer:          { label: t('customer'),                value: order.customer?.name },
-            type:              { label: t('field-type'),              value: order.type },
-            notes:             { label: t('field-notes'),             value: order.notes },
-            priority:          { label: t('field-priority'),          value: order.orchestrator_priority != null ? String(order.orchestrator_priority) : null },
-            dropoff:           { label: t('dropoff'),                 value: order.payload?.dropoff?.address ?? order.dropoff_name },
-            pickup:            { label: t('pickup'),                  value: order.payload?.pickup?.address ?? order.pickup_name },
-            driver_assigned:   { label: t('driver-assigned'),        value: order.driver_assigned?.name },
-            vehicle_assigned:  { label: t('vehicle-assigned'),       value: order.vehicle_assigned?.display_name ?? order.vehicle_assigned?.name },
-            created_at:        { label: t('created'),                 value: order.created_at ? this._formatDate(order.created_at) : null },
+            tracking: { label: t('field-tracking'), value: order.tracking ?? order.public_id },
+            status: { label: t('field-status'), value: order.status },
+            scheduled_at: { label: t('scheduled'), value: order.scheduled_at ? this._formatDate(order.scheduled_at) : null },
+            customer: { label: t('customer'), value: order.customer?.name },
+            type: { label: t('field-type'), value: order.type },
+            notes: { label: t('field-notes'), value: order.notes },
+            priority: { label: t('field-priority'), value: order.orchestrator_priority != null ? String(order.orchestrator_priority) : null },
+            dropoff: { label: t('dropoff'), value: order.payload?.dropoff?.address ?? order.dropoff_name },
+            pickup: { label: t('pickup'), value: order.payload?.pickup?.address ?? order.pickup_name },
+            driver_assigned: { label: t('driver-assigned'), value: order.driver_assigned?.name },
+            vehicle_assigned: { label: t('vehicle-assigned'), value: order.vehicle_assigned?.display_name ?? order.vehicle_assigned?.name },
+            created_at: { label: t('created'), value: order.created_at ? this._formatDate(order.created_at) : null },
         };
         return map[key] ?? { label: key, value: order[key] != null ? String(order[key]) : null };
     }

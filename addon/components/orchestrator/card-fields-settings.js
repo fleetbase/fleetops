@@ -31,7 +31,7 @@ export default class OrchestratorCardFieldsSettingsComponent extends Component {
     @tracked settings = {
         standard: ['pickup', 'dropoff', 'scheduled_at', 'customer', 'driver_assigned', 'vehicle_assigned', 'created_at'],
         byConfig: {},
-        meta:     [],
+        meta: [],
     };
 
     @tracked isLoaded = false;
@@ -43,18 +43,18 @@ export default class OrchestratorCardFieldsSettingsComponent extends Component {
 
     get standardFieldOptions() {
         return [
-            { key: 'tracking',         label: this.intl.t('orchestrator.field-tracking') },
-            { key: 'status',           label: this.intl.t('orchestrator.field-status') },
-            { key: 'scheduled_at',     label: this.intl.t('orchestrator.field-scheduled-at') },
-            { key: 'customer',         label: this.intl.t('orchestrator.field-customer') },
-            { key: 'type',             label: this.intl.t('orchestrator.field-type') },
-            { key: 'notes',            label: this.intl.t('orchestrator.field-notes') },
-            { key: 'priority',         label: this.intl.t('orchestrator.field-priority') },
-            { key: 'dropoff',          label: this.intl.t('orchestrator.dropoff') },
-            { key: 'pickup',           label: this.intl.t('orchestrator.pickup') },
-            { key: 'driver_assigned',  label: this.intl.t('orchestrator.driver-assigned') },
+            { key: 'tracking', label: this.intl.t('orchestrator.field-tracking') },
+            { key: 'status', label: this.intl.t('orchestrator.field-status') },
+            { key: 'scheduled_at', label: this.intl.t('orchestrator.field-scheduled-at') },
+            { key: 'customer', label: this.intl.t('orchestrator.field-customer') },
+            { key: 'type', label: this.intl.t('orchestrator.field-type') },
+            { key: 'notes', label: this.intl.t('orchestrator.field-notes') },
+            { key: 'priority', label: this.intl.t('orchestrator.field-priority') },
+            { key: 'dropoff', label: this.intl.t('orchestrator.dropoff') },
+            { key: 'pickup', label: this.intl.t('orchestrator.pickup') },
+            { key: 'driver_assigned', label: this.intl.t('orchestrator.driver-assigned') },
             { key: 'vehicle_assigned', label: this.intl.t('orchestrator.vehicle-assigned') },
-            { key: 'created_at',       label: this.intl.t('orchestrator.created') },
+            { key: 'created_at', label: this.intl.t('orchestrator.created') },
         ];
     }
 
@@ -66,14 +66,14 @@ export default class OrchestratorCardFieldsSettingsComponent extends Component {
             ]);
 
             // Backend returns { configs: [...], meta_keys: [...] }
-            this.orderConfigs      = configsResult?.configs ?? [];
+            this.orderConfigs = configsResult?.configs ?? [];
             this.availableMetaKeys = configsResult?.meta_keys ?? [];
 
             if (settingsResult?.settings) {
                 this.settings = {
                     standard: settingsResult.settings.standard ?? this.settings.standard,
                     byConfig: settingsResult.settings.byConfig ?? {},
-                    meta:     settingsResult.settings.meta ?? [],
+                    meta: settingsResult.settings.meta ?? [],
                 };
             }
         } catch (error) {
@@ -97,27 +97,21 @@ export default class OrchestratorCardFieldsSettingsComponent extends Component {
 
     @action toggleStandardField(key) {
         const current = this.settings.standard ?? [];
-        const updated = current.includes(key)
-            ? current.filter((k) => k !== key)
-            : [...current, key];
+        const updated = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
         this.settings = { ...this.settings, standard: updated };
     }
 
     // configUuid here is the real UUID (not public_id) so it matches order.order_config_uuid
     @action toggleConfigField(configUuid, fieldKey) {
         const byConfig = { ...(this.settings.byConfig ?? {}) };
-        const current  = byConfig[configUuid] ?? [];
-        byConfig[configUuid] = current.includes(fieldKey)
-            ? current.filter((k) => k !== fieldKey)
-            : [...current, fieldKey];
+        const current = byConfig[configUuid] ?? [];
+        byConfig[configUuid] = current.includes(fieldKey) ? current.filter((k) => k !== fieldKey) : [...current, fieldKey];
         this.settings = { ...this.settings, byConfig };
     }
 
     @action toggleMetaKey(key) {
         const current = this.settings.meta ?? [];
-        const updated = current.includes(key)
-            ? current.filter((k) => k !== key)
-            : [...current, key];
+        const updated = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
         this.settings = { ...this.settings, meta: updated };
     }
 

@@ -14,7 +14,7 @@
  */
 export function initialize(appInstance) {
     const orchestrationEngine = appInstance.lookup('service:orchestration-engine');
-    const vroomEngine          = appInstance.lookup('service:vroom-allocation-engine');
+    const vroomEngine = appInstance.lookup('service:vroom-allocation-engine');
 
     if (orchestrationEngine && vroomEngine && !orchestrationEngine.has('vroom')) {
         orchestrationEngine.register('vroom', vroomEngine);

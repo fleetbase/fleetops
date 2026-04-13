@@ -50,11 +50,12 @@ export default class OrchestratorResourcePanelComponent extends Component {
 
         if (this.vehicleSearch) {
             const q = this.vehicleSearch.toLowerCase();
-            vehicles = vehicles.filter((v) =>
-                v.display_name?.toLowerCase().includes(q) ||
-                v.plate_number?.toLowerCase().includes(q) ||
-                v.call_sign?.toLowerCase().includes(q) ||
-                v.driver?.name?.toLowerCase().includes(q)
+            vehicles = vehicles.filter(
+                (v) =>
+                    v.display_name?.toLowerCase().includes(q) ||
+                    v.plate_number?.toLowerCase().includes(q) ||
+                    v.call_sign?.toLowerCase().includes(q) ||
+                    v.driver?.name?.toLowerCase().includes(q)
             );
         }
 
@@ -74,11 +75,8 @@ export default class OrchestratorResourcePanelComponent extends Component {
 
         if (this.driverSearch) {
             const q = this.driverSearch.toLowerCase();
-            drivers = drivers.filter((d) =>
-                d.name?.toLowerCase().includes(q) ||
-                d.phone?.toLowerCase().includes(q) ||
-                d.email?.toLowerCase().includes(q) ||
-                d.vehicle?.display_name?.toLowerCase().includes(q)
+            drivers = drivers.filter(
+                (d) => d.name?.toLowerCase().includes(q) || d.phone?.toLowerCase().includes(q) || d.email?.toLowerCase().includes(q) || d.vehicle?.display_name?.toLowerCase().includes(q)
             );
         }
 

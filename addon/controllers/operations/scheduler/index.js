@@ -112,9 +112,7 @@ export default class OperationsSchedulerIndexController extends Controller {
     @computed('allActiveOrders.@each.{scheduled_at,driver_assigned_uuid,status}', 'currentUser.company.timezone')
     get calendarEvents() {
         const tz = this.companyTimezone;
-        return this.allActiveOrders
-            .filter((o) => !isNone(o.scheduled_at) && isValidDate(new Date(o.scheduled_at)))
-            .map((o) => createFullCalendarEventFromOrder(o, tz));
+        return this.allActiveOrders.filter((o) => !isNone(o.scheduled_at) && isValidDate(new Date(o.scheduled_at))).map((o) => createFullCalendarEventFromOrder(o, tz));
     }
 
     @computed('drivers.[]', 'allActiveOrders.@each.{scheduled_at,driver_assigned_uuid}')
@@ -141,11 +139,13 @@ export default class OperationsSchedulerIndexController extends Controller {
         this.drivers.forEach((driver) => {
             const shift = driver.currentShift;
             if (shift) {
-                events.push(createFullCalendarEventFromScheduleItem(shift, driver, tz, {
-                    display: 'background',
-                    backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                    borderColor: 'rgba(99, 102, 241, 0.25)',
-                }));
+                events.push(
+                    createFullCalendarEventFromScheduleItem(shift, driver, tz, {
+                        display: 'background',
+                        backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                        borderColor: 'rgba(99, 102, 241, 0.25)',
+                    })
+                );
             }
         });
         return events;
@@ -264,13 +264,14 @@ export default class OperationsSchedulerIndexController extends Controller {
         const driverName = order?.driver_assigned?.name ?? order?.get?.('driver_assigned.name') ?? '';
         const destination = order?.pickupName ?? order?.get?.('pickupName') ?? '';
         const scheduledTime = order?.scheduledAtTime ?? order?.get?.('scheduledAtTime') ?? '';
-        const statusColour = {
-            created: '#6366f1',
-            dispatched: '#3b82f6',
-            active: '#10b981',
-            completed: '#6b7280',
-            cancelled: '#ef4444',
-        }[status] ?? '#6366f1';
+        const statusColour =
+            {
+                created: '#6366f1',
+                dispatched: '#3b82f6',
+                active: '#10b981',
+                completed: '#6b7280',
+                cancelled: '#ef4444',
+            }[status] ?? '#6366f1';
         const statusLabel = status ? status.charAt(0).toUpperCase() + status.slice(1) : '';
         const metaLine = [scheduledTime, driverName].filter(Boolean).join(' · ');
         return {
@@ -385,7 +386,7 @@ export default class OperationsSchedulerIndexController extends Controller {
             }
             const rect = ecMain.getBoundingClientRect();
             const scrollLeft = ecMain.scrollLeft;
-            cursor.style.left = (event.clientX - rect.left + scrollLeft) + 'px';
+            cursor.style.left = event.clientX - rect.left + scrollLeft + 'px';
         }
     }
 
@@ -893,8 +894,12 @@ export default class OperationsSchedulerIndexController extends Controller {
             const probe = new Date(`${wallClock}Z`);
             const parts = new Intl.DateTimeFormat('en-US', {
                 timeZone: timezone,
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
                 hour12: false,
             }).formatToParts(probe);
 

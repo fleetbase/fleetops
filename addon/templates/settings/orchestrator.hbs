@@ -31,11 +31,7 @@
                         />
                     </InputGroup>
                     <InputGroup @name={{t "orchestrator.auto-allocate-on-create"}}>
-                        <Toggle
-                            @isToggled={{this.autoAllocateOnCreate}}
-                            @onToggle={{fn (mut this.autoAllocateOnCreate)}}
-                            @label={{t "orchestrator.auto-allocate-on-create-label"}}
-                        />
+                        <Toggle @isToggled={{this.autoAllocateOnCreate}} @onToggle={{fn (mut this.autoAllocateOnCreate)}} @label={{t "orchestrator.auto-allocate-on-create-label"}} />
                     </InputGroup>
                     <InputGroup @name={{t "orchestrator.auto-reallocate-on-complete"}}>
                         <Toggle
@@ -48,20 +44,10 @@
                 {{! ── Allocation Constraints ─────────────────────────────────── }}
                 <ContentPanel @title={{t "orchestrator.constraint-settings"}} @open={{true}} @wrapperClass="bordered-classic">
                     <InputGroup @name={{t "orchestrator.max-travel-time"}} @helpText={{t "orchestrator.max-travel-time-help"}}>
-                        <Input
-                            @type="number"
-                            @value={{this.maxTravelTimeSeconds}}
-                            min="0"
-                            step="300"
-                            class="w-full form-input"
-                        />
+                        <Input @type="number" @value={{this.maxTravelTimeSeconds}} min="0" step="300" class="w-full form-input" />
                     </InputGroup>
                     <InputGroup @name={{t "orchestrator.balance-workload"}}>
-                        <Toggle
-                            @isToggled={{this.balanceWorkload}}
-                            @onToggle={{fn (mut this.balanceWorkload)}}
-                            @label={{t "orchestrator.balance-workload-label"}}
-                        />
+                        <Toggle @isToggled={{this.balanceWorkload}} @onToggle={{fn (mut this.balanceWorkload)}} @label={{t "orchestrator.balance-workload-label"}} />
                     </InputGroup>
                 </ContentPanel>
                 {{! ── Order Card Fields ───────────────────────────────────── }}

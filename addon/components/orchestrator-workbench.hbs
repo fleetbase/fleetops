@@ -23,13 +23,7 @@
             {{/if}}
 
             {{! Phase builder toggle }}
-            <Button
-                @icon="list-ol"
-                @text={{t "orchestrator.phases"}}
-                @type={{if this.showPhaseBuilder "primary" "default"}}
-                @size="sm"
-                @onClick={{this.togglePhaseBuilder}}
-            />
+            <Button @icon="list-ol" @text={{t "orchestrator.phases"}} @type={{if this.showPhaseBuilder "primary" "default"}} @size="sm" @onClick={{this.togglePhaseBuilder}} />
 
             {{! Card fields settings toggle }}
             <Button
@@ -65,12 +59,7 @@
     {{! ── Phase builder panel (collapsible, below toolbar) ── }}
     {{#if this.showPhaseBuilder}}
         <div class="workbench-phase-panel border-b dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0" style="height: 320px;">
-            <Orchestrator::PhaseBuilder
-                @phases={{this.phases}}
-                @availableEngines={{this.availableEngines}}
-                @onPhasesChange={{this.onPhasesChange}}
-                @onRunPhases={{this.onRunPhases}}
-            />
+            <Orchestrator::PhaseBuilder @phases={{this.phases}} @availableEngines={{this.availableEngines}} @onPhasesChange={{this.onPhasesChange}} @onRunPhases={{this.onRunPhases}} />
         </div>
     {{/if}}
 
@@ -86,8 +75,7 @@
 
         {{! ── LEFT PANEL: Order Pool ── }}
         <div
-            class="order-pool-panel flex flex-col border-r dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0
-                {{if this.leftPanelCollapsed 'w-0 overflow-hidden'}}"
+            class="order-pool-panel flex flex-col border-r dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 {{if this.leftPanelCollapsed 'w-0 overflow-hidden'}}"
             style={{if this.leftPanelCollapsed "" (concat "width:" this.leftPanelWidth "px;min-width:200px;max-width:480px;")}}
         >
             <Orchestrator::OrderPool
@@ -123,13 +111,7 @@
         {{! ── CENTRE: Map ── }}
         <div class="map-panel flex-1 relative overflow-hidden">
             <div class="orchestrator-map-container fleetbase-leaflet-map-container next-map-container w-full h-full">
-                <LeafletMap
-                    @lat={{this.mapCenter.lat}}
-                    @lng={{this.mapCenter.lng}}
-                    @zoom={{this.mapZoom}}
-                    @onLoad={{this.onMapLoad}}
-                    class="w-full h-full"
-                as |layers|>
+                <LeafletMap @lat={{this.mapCenter.lat}} @lng={{this.mapCenter.lng}} @zoom={{this.mapZoom}} @onLoad={{this.onMapLoad}} class="w-full h-full" as |layers|>
                     <layers.tile @url={{this.tileSourceUrl}} />
 
                     {{! ── Unassigned order markers ──
@@ -138,36 +120,38 @@
                          both shapes into a flat [{lat,lng,address,label}] array.
                          Hidden once a plan is proposed (replaced by numbered stop markers). }}
                     {{#unless this.hasProposedPlan}}
-                    {{#each this.unassignedOrders as |order|}}
-                        {{#each (this.getOrderStops order) as |stop|}}
-                            <layers.marker
-                                @lat={{stop.lat}}
-                                @lng={{stop.lng}}
-                                @icon={{div-icon
-                                    html=(this.waypointIconHtml stop.label (if (eq stop.label "P") "#22C55E" "#EF4444"))
-                                    className="fleetops-waypoint-marker"
-                                    iconSize=(array 32 32)
-                                    iconAnchor=(array 16 16)
-                                    popupAnchor=(array 0 -20)
-                                }}
-                                @riseOnHover={{true}}
-                                as |marker|
-                            >
-                                <marker.popup>
-                                    <div class="text-xs min-w-32">
-                                        <div class="font-semibold mb-0.5">{{or order.tracking order.public_id}}</div>
-                                        <div class="text-gray-500">{{stop.address}}</div>
-                                        {{#if order.scheduled_at}}
-                                            <div class="text-blue-500 mt-0.5">{{format-date order.scheduled_at "MMM d, HH:mm"}}</div>
-                                        {{/if}}
-                                    </div>
-                                </marker.popup>
-                                <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
-                                    {{or order.tracking order.public_id}} — {{stop.address}}
-                                </marker.tooltip>
-                            </layers.marker>
+                        {{#each this.unassignedOrders as |order|}}
+                            {{#each (this.getOrderStops order) as |stop|}}
+                                <layers.marker
+                                    @lat={{stop.lat}}
+                                    @lng={{stop.lng}}
+                                    @icon={{div-icon
+                                        html=(this.waypointIconHtml stop.label (if (eq stop.label "P") "#22C55E" "#EF4444"))
+                                        className="fleetops-waypoint-marker"
+                                        iconSize=(array 32 32)
+                                        iconAnchor=(array 16 16)
+                                        popupAnchor=(array 0 -20)
+                                    }}
+                                    @riseOnHover={{true}}
+                                    as |marker|
+                                >
+                                    <marker.popup>
+                                        <div class="text-xs min-w-32">
+                                            <div class="font-semibold mb-0.5">{{or order.tracking order.public_id}}</div>
+                                            <div class="text-gray-500">{{stop.address}}</div>
+                                            {{#if order.scheduled_at}}
+                                                <div class="text-blue-500 mt-0.5">{{format-date order.scheduled_at "MMM d, HH:mm"}}</div>
+                                            {{/if}}
+                                        </div>
+                                    </marker.popup>
+                                    <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                        {{or order.tracking order.public_id}}
+                                        —
+                                        {{stop.address}}
+                                    </marker.tooltip>
+                                </layers.marker>
+                            {{/each}}
                         {{/each}}
-                    {{/each}}
                     {{/unless}}
 
                     {{! ── Driver location markers ──
@@ -175,8 +159,8 @@
                     {{#each this.availableDrivers as |driver|}}
                         {{#if driver.location}}
                             <layers.marker
-                                @lat={{driver.location.coordinates.[1]}}
-                                @lng={{driver.location.coordinates.[0]}}
+                                @lat={{driver.location.coordinates.1}}
+                                @lng={{driver.location.coordinates.0}}
                                 @icon={{icon iconUrl=driver.vehicle_avatar iconSize=(array 24 24)}}
                                 @riseOnHover={{true}}
                                 as |marker|
@@ -282,8 +266,7 @@
 
         {{! ── RIGHT PANEL: Resources (pre-run) or Plan (post-run) ── }}
         <div
-            class="driver-panel flex flex-col border-l dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0
-                {{if this.rightPanelCollapsed 'w-0 overflow-hidden'}}"
+            class="driver-panel flex flex-col border-l dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 {{if this.rightPanelCollapsed 'w-0 overflow-hidden'}}"
             style={{if this.rightPanelCollapsed "" (concat "width:" this.rightPanelWidth "px;min-width:240px;max-width:560px;")}}
         >
 
@@ -308,20 +291,8 @@
                     <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">{{t "orchestrator.run-failed-title"}}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">{{this.runError}}</p>
                     <div class="flex flex-col items-center space-y-2 mt-4">
-                        <Button
-                            @icon="redo"
-                            @text={{t "orchestrator.try-again"}}
-                            @type="default"
-                            @size="sm"
-                            @onClick={{perform this.runOrchestration}}
-                        />
-                        <Button
-                            @icon="users"
-                            @text={{t "orchestrator.change-resources"}}
-                            @type="default"
-                            @size="sm"
-                            @onClick={{this.clearRunError}}
-                        />
+                        <Button @icon="redo" @text={{t "orchestrator.try-again"}} @type="default" @size="sm" @onClick={{perform this.runOrchestration}} />
+                        <Button @icon="users" @text={{t "orchestrator.change-resources"}} @type="default" @size="sm" @onClick={{this.clearRunError}} />
                     </div>
                 </div>
             {{else}}
