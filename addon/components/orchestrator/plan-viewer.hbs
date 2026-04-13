@@ -73,17 +73,31 @@
                     {{on "dragover" @onDragOver}}
                     {{on "drop" (fn @onDropOnVehicle group.vehicle.public_id group.driver.public_id)}}
                 >
-                    {{! Vehicle / driver header — click to expand/collapse }}
+                    {{! Vehicle / driver header — click to expand/collapse
+                         When a driver phase ran (@hasDriverPhase), show driver as the primary
+                         label with vehicle as the secondary sub-label. Otherwise show vehicle
+                         as primary with driver as sub-label (legacy behaviour). }}
                     <div
                         class="flex items-center px-3 py-2 border-b dark:border-gray-700 cursor-pointer"
                         style="border-left: 3px solid {{group.routeColor}}"
                         {{on "click" (fn this.toggleCard group.vehicle.public_id)}}
                     >
-                        <FaIcon @icon="truck" class="mr-2 text-blue-400 flex-shrink-0" />
+                        {{#if (and @hasDriverPhase group.driver)}}
+                            <FaIcon @icon="user" class="mr-2 text-green-400 flex-shrink-0" />
+                        {{else}}
+                            <FaIcon @icon="truck" class="mr-2 text-blue-400 flex-shrink-0" />
+                        {{/if}}
                         <div class="flex-1 min-w-0">
-                            <div class="text-xs font-semibold dark:text-white truncate">{{group.vehicle.display_name}}</div>
-                            {{#if group.driver}}
-                                <div class="text-xs text-gray-400 truncate">{{group.driver.name}}</div>
+                            {{#if (and @hasDriverPhase group.driver)}}
+                                {{! Driver-phase run: driver is primary, vehicle is secondary }}
+                                <div class="text-xs font-semibold dark:text-white truncate">{{group.driver.name}}</div>
+                                <div class="text-xs text-gray-400 truncate">{{group.vehicle.display_name}}</div>
+                            {{else}}
+                                {{! Vehicle-only run: vehicle is primary, driver (if any) is secondary }}
+                                <div class="text-xs font-semibold dark:text-white truncate">{{group.vehicle.display_name}}</div>
+                                {{#if group.driver}}
+                                    <div class="text-xs text-gray-400 truncate">{{group.driver.name}}</div>
+                                {{/if}}
                             {{/if}}
                         </div>
                         <div class="flex items-center space-x-1 flex-shrink-0">
@@ -114,7 +128,17 @@
                                     >{{@getStopLabel idx}}</span>
                                     <div class="flex-1 min-w-0">
                                         <div class="dark:text-white truncate font-medium">{{or item.order.tracking item.order.public_id}}</div>
-                                        <div class="text-gray-400 truncate">{{item.order.payload.dropoff.address}}</div>
+                                        {{! Show pickup → dropoff so the dispatcher can see the full route for each order.
+                                             Falls back to just dropoff if there is no pickup (e.g. delivery-only orders). }}
+                                        {{#if item.order.payload.pickup.address}}
+                                            <div class="text-gray-400 truncate">
+                                                <span class="text-blue-400">{{item.order.payload.pickup.address}}</span>
+                                                <span class="mx-0.5">→</span>
+                                                {{item.order.payload.dropoff.address}}
+                                            </div>
+                                        {{else}}
+                                            <div class="text-gray-400 truncate">{{item.order.payload.dropoff.address}}</div>
+                                        {{/if}}
                                     </div>
                                     {{#if item.arrival}}
                                         <span class="text-gray-500 text-xs flex-shrink-0 ml-1 tabular-nums">{{@formatUnixTime item.arrival}}</span>

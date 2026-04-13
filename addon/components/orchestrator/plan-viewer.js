@@ -134,14 +134,21 @@ export default class OrchestratorPlanViewerComponent extends Component {
 
     /**
      * Resources for EventCalendar — one row per vehicle/driver group.
-     * The resource label cell shows vehicle name, driver name, and stop count.
+     * When a driver phase ran (@hasDriverPhase), the row title uses the driver
+     * name as the primary identifier; otherwise the vehicle name is used.
      */
     get calendarResources() {
-        return (this.args.planByVehicle ?? []).map((group) => ({
-            id: group.vehicle?.public_id ?? group.vehicle?.id ?? String(Math.random()),
-            title: group.vehicle?.display_name ?? group.vehicle?.name ?? 'Vehicle',
-            extendedProps: { group },
-        }));
+        const hasDriverPhase = this.args.hasDriverPhase ?? false;
+        return (this.args.planByVehicle ?? []).map((group) => {
+            const primaryTitle = hasDriverPhase && group.driver
+                ? (group.driver.name ?? group.driver.display_name ?? 'Driver')
+                : (group.vehicle?.display_name ?? group.vehicle?.name ?? 'Vehicle');
+            return {
+                id: group.vehicle?.public_id ?? group.vehicle?.id ?? String(Math.random()),
+                title: primaryTitle,
+                extendedProps: { group, hasDriverPhase },
+            };
+        });
     }
 
     /**
@@ -220,20 +227,25 @@ export default class OrchestratorPlanViewerComponent extends Component {
     }
 
     /**
-     * Renders the resource label cell for each vehicle row.
-     * Shows vehicle name, driver name (if any), and stop count.
+     * Renders the resource label cell for each timeline row.
+     * When a driver phase ran (hasDriverPhase), the driver name is the primary
+     * label and the vehicle name is the secondary sub-label. Otherwise the
+     * vehicle name is primary and the driver name (if any) is secondary.
      */
     @action renderResourceLabel({ resource }) {
-        const { group } = resource.extendedProps ?? {};
-        const vehicleName = group?.vehicle?.display_name ?? group?.vehicle?.name ?? resource.title ?? 'Vehicle';
+        const { group, hasDriverPhase } = resource.extendedProps ?? {};
+        const vehicleName = group?.vehicle?.display_name ?? group?.vehicle?.name ?? 'Vehicle';
         const driverName = group?.driver?.name ?? '';
         const stopCount = group?.orders?.length ?? 0;
         const color = group?.routeColor ?? '#6366f1';
 
+        const primaryLabel = hasDriverPhase && driverName ? driverName : vehicleName;
+        const secondaryLabel = hasDriverPhase && driverName ? vehicleName : driverName;
+
         return {
             html: `<div style="width:100%;box-sizing:border-box;padding:4px 8px;border-left:3px solid ${color};">
-                <div style="font-size:0.72rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;">${vehicleName}</div>
-                ${driverName ? `<div style="font-size:0.65rem;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${driverName}</div>` : ''}
+                <div style="font-size:0.72rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;">${primaryLabel}</div>
+                ${secondaryLabel ? `<div style="font-size:0.65rem;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${secondaryLabel}</div>` : ''}
                 <div style="font-size:0.62rem;color:#6b7280;margin-top:1px;">${stopCount} stop${stopCount !== 1 ? 's' : ''}</div>
             </div>`,
         };

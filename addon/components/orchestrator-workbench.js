@@ -5,6 +5,8 @@ import { action } from '@ember/object';
 import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 import { colorForId, routeStyleForStatus, waypointIconHtml } from '../utils/route-colors';
+import polyline from '@fleetbase/ember-core/utils/polyline';
+import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 
 /**
  * OrchestratorWorkbenchComponent
@@ -55,6 +57,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @tracked runError = null;
     @tracked isCommitted = false;
     @tracked manualOverrides = {};
+    /**
+     * Set of phase mode strings that have been executed in the current run.
+     * Used to determine grouping/display mode (e.g. show driver when assign_drivers ran).
+     */
+    @tracked ranPhaseTypes = new Set();
 
     // ── Phase builder ─────────────────────────────────────────────────────────
 
@@ -288,6 +295,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
             }
             this.proposedPlan = merged;
             this.unassignedAfterRun = result.unassigned ?? [];
+            // Track which phase modes have been executed so the UI can adapt
+            // (e.g. group by driver when assign_drivers has run).
+            const ranTypes = new Set(this.ranPhaseTypes);
+            ranTypes.add(phase.mode);
+            this.ranPhaseTypes = ranTypes;
             if (result.message) {
                 this.orchestratorRunMessage = result.message;
             }
@@ -355,12 +367,14 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.isCommitted = false;
         this.routeSummaries = {};
         this.orchestratorRunMessage = null;
+        this.ranPhaseTypes = new Set();
     }
     @action clearRunError() {
         this.runError = null;
         this.proposedPlan = null;
         this.unassignedAfterRun = [];
         this.orchestratorRunMessage = null;
+        this.ranPhaseTypes = new Set();
     }
 
     // ── Phase management ──────────────────────────────────────────────────────
@@ -535,51 +549,80 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     /**
-     * Draw one OSRM routing control per vehicle group onto the Leaflet map.
-     * Each routing control takes the ordered stop waypoints [[lat, lng], ...]
-     * and asks OSRM for the actual road path, drawing it as a coloured polyline.
+     * Draw one OSRM road-snapped polyline per vehicle group onto the Leaflet map.
      *
-     * The leafletMapManager service handles OSRM router setup, map fitting, and
-     * routing control lifecycle — consistent with how the rest of the app works.
+     * Instead of using leaflet-routing-machine (which only supports a single
+     * routing control per map — see https://github.com/perliedman/leaflet-routing-machine/issues/219)
+     * we call the OSRM route/v1 HTTP API directly, decode the encoded polyline
+     * geometry, and draw each group's route as a plain L.polyline. This gives us
+     * one independent coloured polyline per vehicle group with no interference.
      *
      * Called automatically (deferred 200ms) after a run completes so that
      * planByVehicle has time to recompute first.
      */
     async _drawRoutingControls() {
-        await this._clearRoutingControls();
+        this._clearRoutingControls();
+        const map = this.leafletMap;
+        if (!map) return;
         const groups = this.planByVehicle;
         if (!groups.length) return;
+
+        const routingHost = getRoutingHost();
+        const allLatLngs = [];
 
         for (const group of groups) {
             const waypoints = group.routeWaypoints;
             if (!waypoints || waypoints.length < 2) continue;
             try {
-                const control = await this.leafletMapManager.addRoutingControl(waypoints, {
-                    // Suppress the routing control's default plain Leaflet markers.
-                    // The orchestrator renders its own custom numbered div-icon markers
-                    // via planByVehicle in the HBS, so the routing control markers
-                    // are redundant and visually incorrect.
-                    createMarker: () => null,
+                // OSRM route/v1 expects coordinates as lon,lat pairs joined by semicolons.
+                const coordStr = waypoints.map(([lat, lng]) => `${lng},${lat}`).join(';');
+                const url = `${routingHost}/route/v1/driving/${coordStr}?overview=full&geometries=polyline`;
+                const resp = await fetch(url);
+                if (!resp.ok) continue;
+                const data = await resp.json();
+                const geometry = data?.routes?.[0]?.geometry;
+                if (!geometry) continue;
+                // polyline.decode returns [[lat, lng], ...] — exactly what L.polyline expects.
+                const latlngs = polyline.decode(geometry);
+                if (!latlngs.length) continue;
+                const pl = L.polyline(latlngs, {
+                    color: group.routeColor,
+                    weight: 4,
+                    opacity: 0.85,
                 });
-                if (control) {
-                    this._routingControls.push(control);
-                }
+                pl.addTo(map);
+                this._routingControls.push(pl);
+                allLatLngs.push(...latlngs);
             } catch {
                 // Non-fatal: routing may fail for individual vehicles if OSRM
                 // cannot find a route (e.g. ferry-only legs, missing road data)
             }
         }
+
+        // Fit the map to show all drawn routes.
+        if (allLatLngs.length >= 2) {
+            try {
+                map.fitBounds(allLatLngs, { padding: [40, 40], maxZoom: 14 });
+            } catch {
+                // ignore fitBounds errors
+            }
+        }
     }
 
     /**
-     * Remove all routing controls that were added for the current plan.
+     * Remove all route polylines that were added for the current plan.
      */
-    async _clearRoutingControls() {
-        for (const control of this._routingControls) {
+    _clearRoutingControls() {
+        const map = this.leafletMap;
+        for (const layer of this._routingControls) {
             try {
-                await this.leafletMapManager.removeRoutingControl(control);
+                if (map) {
+                    map.removeLayer(layer);
+                } else {
+                    layer.remove?.();
+                }
             } catch {
-                // Ignore errors on removal
+                // ignore removal errors
             }
         }
         this._routingControls = [];
@@ -649,6 +692,15 @@ export default class OrchestratorWorkbenchComponent extends Component {
         return this.unassignedAfterRun.length > 0;
     }
 
+    /**
+     * True when an assign_drivers phase has been executed in the current run.
+     * Used by the plan viewer to show driver as the primary label on route cards
+     * and timeline rows instead of vehicle.
+     */
+    get hasDriverPhase() {
+        return this.ranPhaseTypes.has('assign_drivers');
+    }
+
     get planByVehicle() {
         if (!this.proposedPlan?.length) return [];
         const grouped = this._groupByVehicle(this.proposedPlan);
@@ -656,11 +708,27 @@ export default class OrchestratorWorkbenchComponent extends Component {
             // Derive a deterministic color from the vehicle public_id so the same
             // vehicle always gets the same color across runs and page refreshes.
             const routeColor = colorForId(group.vehicle?.public_id ?? vehicleId);
-            // Build the ordered [[lat, lng], ...] waypoint array for the OSRM
-            // routing control. The routing control draws the actual road path.
+            // Build the ordered [[lat, lng], ...] waypoint array for the OSRM route API.
             const routeWaypoints = this._buildRouteWaypoints(group.orders, group.vehicle);
+            // Annotate each order's stops with sequential letter labels that match
+            // the route list card labels (A, B, C…). The route list uses
+            // {{@getStopLabel idx}} where idx is the order's 0-based position in
+            // group.orders. Each stop within that order gets a sub-label:
+            //   - Single-stop orders: just the order letter (A, B, C…)
+            //   - Multi-stop orders: order letter + stop number (A1, A2, B1…)
+            const annotatedOrders = group.orders.map((item, orderIdx) => {
+                const orderLabel = this.getStopLabel(orderIdx);
+                const stops = this._getOrderStops(item.order);
+                const labelledStops = stops.map((stop, stopIdx) => ({
+                    ...stop,
+                    // Single-stop orders: use just the letter. Multi-stop: letter + number.
+                    label: stops.length === 1 ? orderLabel : `${orderLabel}${stopIdx + 1}`,
+                }));
+                return { ...item, _labelledStops: labelledStops };
+            });
             return {
                 ...group,
+                orders: annotatedOrders,
                 routeColor,
                 summary: this.routeSummaries[vehicleId] ?? {},
                 routeWaypoints,

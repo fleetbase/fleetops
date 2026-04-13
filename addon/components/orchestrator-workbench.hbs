@@ -202,10 +202,11 @@
                     {{#if this.hasProposedPlan}}
                         {{#each this.planByVehicle as |group|}}
                             {{! Numbered stop markers — one per stop per order.
-                                 getOrderStops() normalises both pickup/dropoff and
-                                 multi-drop (waypoints) orders into a flat stop list. }}
+                                 Uses _labelledStops (pre-computed in planByVehicle getter)
+                                 which carries sequential letter labels (A, B, C…) that
+                                 match the route list card labels exactly. }}
                             {{#each group.orders as |item|}}
-                                {{#each (this.getOrderStops item.order) as |stop stopIdx|}}
+                                {{#each item._labelledStops as |stop|}}
                                     <layers.marker
                                         @lat={{stop.lat}}
                                         @lng={{stop.lng}}
@@ -275,6 +276,7 @@
                     @planByVehicle={{this.planByVehicle}}
                     @unassignedAfterRun={{this.unassignedAfterRun}}
                     @runMessage={{this.orchestratorRunMessage}}
+                    @hasDriverPhase={{this.hasDriverPhase}}
                     @onDropOnVehicle={{this.onDropOnVehicle}}
                     @onDragOver={{this.onDragOver}}
                     @onAssignedOrderDragStart={{this.onAssignedOrderDragStart}}
