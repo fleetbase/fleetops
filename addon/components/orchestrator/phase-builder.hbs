@@ -155,7 +155,7 @@
     {{! Run all phases button }}
     {{#if @phases.length}}
         <div class="px-3 py-2 border-t dark:border-gray-700 flex-shrink-0 bg-gray-50 dark:bg-gray-800">
-            <Button @icon="bolt" @text={{t "orchestrator.run-phases" count=@phases.length}} @type="primary" @size="sm" class="w-full" @onClick={{fn @onRunPhases @phases}} />
+            <Button @icon="bolt" @text={{t "orchestrator.run-phases" count=@phases.length}} @type="primary" @size="sm" @onClick={{fn @onRunPhases @phases}} />
         </div>
     {{/if}}
 
