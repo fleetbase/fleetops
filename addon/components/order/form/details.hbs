@@ -244,11 +244,11 @@
         <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
             Delivery Window
         </div>
-        <InputGroup @name="Time Window Start" @helpText="Earliest acceptable arrival time at the delivery location.">
-            <DateTimeInput class="form-input" @value={{@resource.time_window_start}} @onUpdate={{fn (mut @resource.time_window_start)}} @disabled={{cannot-write @resource}} />
+        <InputGroup @name="Time Window Start" @helpText="Earliest acceptable arrival time at the delivery location. The date defaults to the order's scheduled date (or creation date if not yet scheduled).">
+            <DateTimeInput class="form-input" @value={{@resource.time_window_start}} @onUpdate={{fn this.setTimeWindow "time_window_start"}} @disabled={{cannot-write @resource}} />
         </InputGroup>
-        <InputGroup @name="Time Window End" @helpText="Latest acceptable arrival time at the delivery location.">
-            <DateTimeInput class="form-input" @value={{@resource.time_window_end}} @onUpdate={{fn (mut @resource.time_window_end)}} @disabled={{cannot-write @resource}} />
+        <InputGroup @name="Time Window End" @helpText="Latest acceptable arrival time at the delivery location. The date defaults to the order's scheduled date (or creation date if not yet scheduled).">
+            <DateTimeInput class="form-input" @value={{@resource.time_window_end}} @onUpdate={{fn this.setTimeWindow "time_window_end"}} @disabled={{cannot-write @resource}} />
         </InputGroup>
         <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
             Requirements & Priority
