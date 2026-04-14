@@ -9,11 +9,7 @@
                 ({{@planByVehicle.length}})
             </span>
             {{#if (eq this.activeTab "routes")}}
-                <button
-                    type="button"
-                    class="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                    {{on "click" this.toggleExpandAll}}
-                >
+                <button type="button" class="text-xs text-blue-400 hover:text-blue-300 transition-colors" {{on "click" this.toggleExpandAll}}>
                     {{if this.allExpanded (t "orchestrator.collapse-all") (t "orchestrator.expand-all")}}
                 </button>
             {{else if (eq this.activeTab "timeline")}}
@@ -116,8 +112,7 @@
                             {{#each group.orders as |item idx|}}
                                 {{! Order block — draggable unit }}
                                 <div
-                                    class="assigned-stop cursor-grab
-                                        {{if item._overridden 'border-l-2 border-orange-500' ''}}"
+                                    class="assigned-stop cursor-grab {{if item._overridden 'border-l-2 border-orange-500' ''}}"
                                     draggable="true"
                                     data-order-id={{item.order.public_id}}
                                     {{on "dragstart" (fn @onAssignedOrderDragStart item.order)}}
@@ -133,12 +128,14 @@
                                         {{/if}}
                                     </div>
 
-                                {{! Per-stop rows — one row per _labelledStop }}
+                                    {{! Per-stop rows — one row per _labelledStop }}
                                     {{#if item._labelledStops.length}}
                                         {{#each item._labelledStops as |stop stopIdx|}}
-                                            <div class="flex items-start gap-2 px-3 py-2
-                                                {{if (gt stopIdx 0) 'border-t dark:border-gray-700/60' ''}}
-                                                {{if item._overridden 'bg-orange-900/10' 'dark:bg-gray-800 hover:dark:bg-gray-750'}}">
+                                            <div
+                                                class="flex items-start gap-2 px-3 py-2
+                                                    {{if (gt stopIdx 0) 'border-t dark:border-gray-700/60' ''}}
+                                                    {{if item._overridden 'bg-orange-900/10' 'dark:bg-gray-800 hover:dark:bg-gray-750'}}"
+                                            >
 
                                                 {{! Letter badge }}
                                                 <span

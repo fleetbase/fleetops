@@ -28,9 +28,10 @@ class RouteSequencingEngine
     /**
      * Sequence stops for each vehicle group.
      *
-     * @param  Collection  $orders   Orders with payload.pickup, payload.dropoff, payload.waypoints loaded
-     * @param  array       $options  Engine options (currently unused, reserved for future use)
-     * @return array       Standard orchestration result: { assignments, unassigned, summary }
+     * @param Collection $orders  Orders with payload.pickup, payload.dropoff, payload.waypoints loaded
+     * @param array      $options Engine options (currently unused, reserved for future use)
+     *
+     * @return array Standard orchestration result: { assignments, unassigned, summary }
      */
     public function sequence(Collection $orders, array $options = []): array
     {
@@ -116,10 +117,11 @@ class RouteSequencingEngine
      *   - Each order's pickup must appear before its dropoff (precedence constraint).
      *   - Starts from the vehicle/driver's current location if known.
      *
-     * @param  array       $orders    Array of Order models
-     * @param  float|null  $startLat  Vehicle starting latitude
-     * @param  float|null  $startLng  Vehicle starting longitude
-     * @return array       Ordered array of stop records: { order_public_id, lat, lng, type }
+     * @param array      $orders   Array of Order models
+     * @param float|null $startLat Vehicle starting latitude
+     * @param float|null $startLng Vehicle starting longitude
+     *
+     * @return array Ordered array of stop records: { order_public_id, lat, lng, type }
      */
     protected function _sequenceOrdersForVehicle(array $orders, ?float $startLat, ?float $startLng): array
     {
@@ -127,9 +129,11 @@ class RouteSequencingEngine
         $pool = [];
         foreach ($orders as $order) {
             $payload = $order->payload;
-            if (!$payload) continue;
+            if (!$payload) {
+                continue;
+            }
 
-            $waypoints = $payload->waypoints;
+            $waypoints    = $payload->waypoints;
             $hasWaypoints = $waypoints && $waypoints->count() > 0;
             $isMultiDrop  = $hasWaypoints && !$payload->pickup_uuid && !$payload->dropoff_uuid;
 
@@ -138,7 +142,9 @@ class RouteSequencingEngine
                 $sorted = $waypoints->sortBy('order')->values();
                 foreach ($sorted as $idx => $wp) {
                     $place = $wp->place;
-                    if (!$place) continue;
+                    if (!$place) {
+                        continue;
+                    }
                     $pool[] = [
                         'order_public_id'  => $order->public_id,
                         'lat'              => (float) ($place->lat ?? 0),
@@ -196,11 +202,13 @@ class RouteSequencingEngine
             $bestDist = PHP_INT_MAX;
 
             foreach ($pool as $idx => $stop) {
-                if (in_array($idx, $visited)) continue;
+                if (in_array($idx, $visited)) {
+                    continue;
+                }
 
                 // Check precedence: if this stop requires another stop to come first
                 if (!empty($stop['precedence_after'])) {
-                    $prerequisiteId = $stop['precedence_after'];
+                    $prerequisiteId   = $stop['precedence_after'];
                     $prerequisiteDone = false;
                     foreach ($sequence as $done) {
                         if ($done['id'] === $prerequisiteId) {
@@ -208,7 +216,9 @@ class RouteSequencingEngine
                             break;
                         }
                     }
-                    if (!$prerequisiteDone) continue; // not yet eligible
+                    if (!$prerequisiteDone) {
+                        continue;
+                    } // not yet eligible
                 }
 
                 if ($curLat === null || $curLng === null) {

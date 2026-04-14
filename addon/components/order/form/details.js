@@ -109,10 +109,7 @@ export default class OrderFormDetailsComponent extends Component {
         // date of its own — i.e. when the date portion is the Unix epoch
         // (1970-01-01), which is what DateTimeInput emits when the user has only
         // touched the time picker and not the date picker.
-        const isEpochDate =
-            picked.getUTCFullYear() === 1970 &&
-            picked.getUTCMonth() === 0 &&
-            picked.getUTCDate() === 1;
+        const isEpochDate = picked.getUTCFullYear() === 1970 && picked.getUTCMonth() === 0 && picked.getUTCDate() === 1;
 
         if (isEpochDate) {
             const merged = new Date(ref);

@@ -55,6 +55,7 @@ class DriverAssignmentEngine
                 if (!$hasSchedule) {
                     return true;
                 }
+
                 // Has a schedule → must have an active shift right now
                 return $driver->activeShiftFor(now()) !== null;
             });
@@ -129,6 +130,7 @@ class DriverAssignmentEngine
                         if (!$pickupLat || !$pickupLng || !$vehicle->location) {
                             return PHP_INT_MAX;
                         }
+
                         return $this->haversineDistance(
                             $pickupLat, $pickupLng,
                             $vehicle->location->getLat(), $vehicle->location->getLng()
@@ -142,7 +144,7 @@ class DriverAssignmentEngine
                 }
 
                 $requiredSkills = $order->required_skills ?? [];
-                $bestDriver = $this->findBestDriver(
+                $bestDriver     = $this->findBestDriver(
                     $bestVehicle,
                     $availableDrivers->reject(fn ($d) => in_array($d->uuid, $assignedDrivers)),
                     $requiredSkills,

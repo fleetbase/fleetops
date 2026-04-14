@@ -193,10 +193,16 @@
             <div class="col-span-1 lg:col-span-2 text-xs text-gray-500 dark:text-gray-400 -mt-1">
                 Hard caps applied by the Orchestrator when building a single route. These are separate from the driver's shift schedule, which controls availability windows.
             </div>
-            <InputGroup @name="Max Driving Time (seconds)" @helpText="Maximum total driving time in seconds the Orchestrator may assign to this driver in a single route. Leave blank for no limit. Example: 28800 = 8 hours.">
+            <InputGroup
+                @name="Max Driving Time (seconds)"
+                @helpText="Maximum total driving time in seconds the Orchestrator may assign to this driver in a single route. Leave blank for no limit. Example: 28800 = 8 hours."
+            >
                 <Input @value={{@resource.max_travel_time}} @type="number" class="form-input w-full" placeholder="e.g. 28800 (8 h)" disabled={{cannot-write @resource}} />
             </InputGroup>
-            <InputGroup @name="Max Distance (metres)" @helpText="Maximum total route distance in metres the Orchestrator may assign to this driver in a single route. Leave blank for no limit.">
+            <InputGroup
+                @name="Max Distance (metres)"
+                @helpText="Maximum total route distance in metres the Orchestrator may assign to this driver in a single route. Leave blank for no limit."
+            >
                 <Input @value={{@resource.max_distance}} @type="number" class="form-input w-full" placeholder="e.g. 150000 (150 km)" disabled={{cannot-write @resource}} />
             </InputGroup>
         </div>

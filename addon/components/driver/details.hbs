@@ -59,28 +59,28 @@
 
     {{! ORCHESTRATOR CONSTRAINTS (read-only view) }}
     {{#if (or @resource.skills.length @resource.max_distance @resource.max_travel_time)}}
-    <ContentPanel @title="Orchestrator Constraints" @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
-            {{#if @resource.skills.length}}
-                <div class="field-info-container col-span-2">
-                    <div class="field-name">Skills & Certifications</div>
-                    <div class="field-value">{{join @resource.skills ", "}}</div>
-                </div>
-            {{/if}}
-            {{#if @resource.max_travel_time}}
-                <div class="field-info-container">
-                    <div class="field-name">Max Driving Time</div>
-                    <div class="field-value">{{@resource.max_travel_time}} s</div>
-                </div>
-            {{/if}}
-            {{#if @resource.max_distance}}
-                <div class="field-info-container">
-                    <div class="field-name">Max Distance</div>
-                    <div class="field-value">{{@resource.max_distance}} m</div>
-                </div>
-            {{/if}}
-        </div>
-    </ContentPanel>
+        <ContentPanel @title="Orchestrator Constraints" @open={{true}} @wrapperClass="bordered-top">
+            <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
+                {{#if @resource.skills.length}}
+                    <div class="field-info-container col-span-2">
+                        <div class="field-name">Skills & Certifications</div>
+                        <div class="field-value">{{join @resource.skills ", "}}</div>
+                    </div>
+                {{/if}}
+                {{#if @resource.max_travel_time}}
+                    <div class="field-info-container">
+                        <div class="field-name">Max Driving Time</div>
+                        <div class="field-value">{{@resource.max_travel_time}} s</div>
+                    </div>
+                {{/if}}
+                {{#if @resource.max_distance}}
+                    <div class="field-info-container">
+                        <div class="field-name">Max Distance</div>
+                        <div class="field-value">{{@resource.max_distance}} m</div>
+                    </div>
+                {{/if}}
+            </div>
+        </ContentPanel>
     {{/if}}
 
     <ContentPanel

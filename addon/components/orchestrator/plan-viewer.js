@@ -140,9 +140,8 @@ export default class OrchestratorPlanViewerComponent extends Component {
     get calendarResources() {
         const hasDriverPhase = this.args.hasDriverPhase ?? false;
         return (this.args.planByVehicle ?? []).map((group) => {
-            const primaryTitle = hasDriverPhase && group.driver
-                ? (group.driver.name ?? group.driver.display_name ?? 'Driver')
-                : (group.vehicle?.display_name ?? group.vehicle?.name ?? 'Vehicle');
+            const primaryTitle =
+                hasDriverPhase && group.driver ? group.driver.name ?? group.driver.display_name ?? 'Driver' : group.vehicle?.display_name ?? group.vehicle?.name ?? 'Vehicle';
             return {
                 id: group.vehicle?.public_id ?? group.vehicle?.id ?? String(Math.random()),
                 title: primaryTitle,

@@ -596,7 +596,11 @@ export default class OrchestratorImportComponent extends Component {
         if (!aoa.length) throw new Error(this.intl.t('orchestrator.empty-file'));
         // First row is the header — strip leading/trailing spaces and any trailing asterisks
         const rawHeaders = aoa[0];
-        const columns = rawHeaders.map((h) => String(h).trim().replace(/\s*\*$/, ''));
+        const columns = rawHeaders.map((h) =>
+            String(h)
+                .trim()
+                .replace(/\s*\*$/, '')
+        );
         // Take up to 3 sample data rows
         const rows = aoa.slice(1, 4).map((rowArr) => {
             return Object.fromEntries(columns.map((col, i) => [col, rowArr[i] ?? '']));
@@ -708,7 +712,11 @@ export default class OrchestratorImportComponent extends Component {
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
                 const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
                 const rawHeaders = aoa[0];
-                const columns = rawHeaders.map((h) => String(h).trim().replace(/\s*\*$/, ''));
+                const columns = rawHeaders.map((h) =>
+                    String(h)
+                        .trim()
+                        .replace(/\s*\*$/, '')
+                );
                 allRows = aoa.slice(1).map((rowArr) => Object.fromEntries(columns.map((col, i) => [col, rowArr[i] ?? ''])));
             } else {
                 const text = yield this._readFileAsText(this.selectedFile);

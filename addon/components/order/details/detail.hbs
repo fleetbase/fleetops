@@ -123,30 +123,30 @@
 
 {{! ORCHESTRATOR CONSTRAINTS (read-only view) }}
 {{#if (or @resource.time_window_start @resource.time_window_end @resource.required_skills.length @resource.orchestrator_priority)}}
-<ContentPanel @title="Orchestrator Constraints" @open={{true}} @isLoading={{@isLoading}} @wrapperClass="bordered-top">
-    <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
-        {{#if (or @resource.time_window_start @resource.time_window_end)}}
-            <div class="field-info-container">
-                <div class="field-name">Earliest Arrival</div>
-                <div class="field-value">{{n-a @resource.time_window_start}}</div>
-            </div>
-            <div class="field-info-container">
-                <div class="field-name">Latest Arrival</div>
-                <div class="field-value">{{n-a @resource.time_window_end}}</div>
-            </div>
-        {{/if}}
-        {{#if @resource.required_skills.length}}
-            <div class="field-info-container col-span-2">
-                <div class="field-name">Required Skills</div>
-                <div class="field-value">{{join @resource.required_skills ", "}}</div>
-            </div>
-        {{/if}}
-        {{#if @resource.orchestrator_priority}}
-            <div class="field-info-container">
-                <div class="field-name">Priority</div>
-                <div class="field-value">{{@resource.orchestrator_priority}}</div>
-            </div>
-        {{/if}}
-    </div>
-</ContentPanel>
+    <ContentPanel @title="Orchestrator Constraints" @open={{true}} @isLoading={{@isLoading}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            {{#if (or @resource.time_window_start @resource.time_window_end)}}
+                <div class="field-info-container">
+                    <div class="field-name">Earliest Arrival</div>
+                    <div class="field-value">{{n-a @resource.time_window_start}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Latest Arrival</div>
+                    <div class="field-value">{{n-a @resource.time_window_end}}</div>
+                </div>
+            {{/if}}
+            {{#if @resource.required_skills.length}}
+                <div class="field-info-container col-span-2">
+                    <div class="field-name">Required Skills</div>
+                    <div class="field-value">{{join @resource.required_skills ", "}}</div>
+                </div>
+            {{/if}}
+            {{#if @resource.orchestrator_priority}}
+                <div class="field-info-container">
+                    <div class="field-name">Priority</div>
+                    <div class="field-value">{{@resource.orchestrator_priority}}</div>
+                </div>
+            {{/if}}
+        </div>
+    </ContentPanel>
 {{/if}}

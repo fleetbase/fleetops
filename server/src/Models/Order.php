@@ -645,8 +645,6 @@ class Order extends Model
      * and finally to now().  If the value already carries a meaningful date it
      * is stored as-is, so callers that supply a full datetime are never
      * overridden.
-     *
-     * @param mixed $value
      */
     public function setTimeWindowStartAttribute($value): void
     {
@@ -657,8 +655,6 @@ class Order extends Model
      * Normalise the date portion of time_window_end on write.
      *
      * @see setTimeWindowStartAttribute()
-     *
-     * @param mixed $value
      */
     public function setTimeWindowEndAttribute($value): void
     {
@@ -670,8 +666,9 @@ class Order extends Model
      * order's reference date (scheduled_at ?? created_at ?? now) when the
      * supplied value has no meaningful date of its own.
      *
-     * @param  mixed       $value  Anything Carbon::parse() can accept, or null
-     * @return string|null         MySQL-formatted datetime string, or null
+     * @param mixed $value Anything Carbon::parse() can accept, or null
+     *
+     * @return string|null MySQL-formatted datetime string, or null
      */
     protected function normaliseTimeWindowValue($value): ?string
     {

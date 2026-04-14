@@ -3251,13 +3251,13 @@ body[data-theme='dark'] .fleetops-order-import nav.import-step-tabs {
 .fleetops-order-import .flb--modal-body {
     display: flex;
     flex-direction: column;
-    min-height: 480px;                   /* consistent height across all steps */
+    min-height: 480px; /* consistent height across all steps */
 }
 
 .fleetops-order-import .import-step-content {
     display: flex;
     flex-direction: column;
-    flex: 1;                             /* fill all available body space */
+    flex: 1; /* fill all available body space */
 }
 
 /* Upload step inner content — grows to fill available space above the download block */
