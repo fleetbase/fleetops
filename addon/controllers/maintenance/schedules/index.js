@@ -75,7 +75,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 })
                 .then((response) => {
                     // The API returns { events: [...] } — unwrap the array.
-                    const raw = Array.isArray(response) ? response : response?.events ?? [];
+                    const raw = Array.isArray(response) ? response : (response?.events ?? []);
                     const events = raw.map((event) => ({
                         id: event.id,
                         title: event.title,
@@ -116,6 +116,16 @@ export default class MaintenanceSchedulesIndexController extends Controller {
 
     // ─── Action buttons ───────────────────────────────────────────────────────
 
+    @action setLayoutList() {
+        this.layout = 'list';
+        this.appCache.set(CACHE_KEY, 'list');
+    }
+
+    @action setLayoutCalendar() {
+        this.layout = 'calendar';
+        this.appCache.set(CACHE_KEY, 'calendar');
+    }
+
     get actionButtons() {
         return [
             {
@@ -126,18 +136,12 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                     {
                         label: this.intl.t('common.table-view'),
                         icon: 'table-list',
-                        onClick: () => {
-                            this.layout = 'list';
-                            this.appCache.set(CACHE_KEY, 'list');
-                        },
+                        onClick: this.setLayoutList,
                     },
                     {
                         label: this.intl.t('common.calendar-view'),
                         icon: 'calendar',
-                        onClick: () => {
-                            this.layout = 'calendar';
-                            this.appCache.set(CACHE_KEY, 'calendar');
-                        },
+                        onClick: this.setLayoutCalendar,
                     },
                 ],
                 renderInPlace: true,
