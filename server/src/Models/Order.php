@@ -636,6 +636,67 @@ class Order extends Model
     }
 
     /**
+     * Normalise the date portion of time_window_start on write.
+     *
+     * If the incoming value has a Unix-epoch date (1970-01-01) — which happens
+     * when a caller supplies a time-only string such as "09:00:00" or when the
+     * client-side picker emits a time without a date — the date portion is
+     * replaced with the order's scheduled_at date, falling back to created_at,
+     * and finally to now().  If the value already carries a meaningful date it
+     * is stored as-is, so callers that supply a full datetime are never
+     * overridden.
+     *
+     * @param mixed $value
+     */
+    public function setTimeWindowStartAttribute($value): void
+    {
+        $this->attributes['time_window_start'] = $this->normaliseTimeWindowValue($value);
+    }
+
+    /**
+     * Normalise the date portion of time_window_end on write.
+     *
+     * @see setTimeWindowStartAttribute()
+     *
+     * @param mixed $value
+     */
+    public function setTimeWindowEndAttribute($value): void
+    {
+        $this->attributes['time_window_end'] = $this->normaliseTimeWindowValue($value);
+    }
+
+    /**
+     * Resolve a time-window value to a full datetime string, injecting the
+     * order's reference date (scheduled_at ?? created_at ?? now) when the
+     * supplied value has no meaningful date of its own.
+     *
+     * @param  mixed       $value  Anything Carbon::parse() can accept, or null
+     * @return string|null         MySQL-formatted datetime string, or null
+     */
+    protected function normaliseTimeWindowValue($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $parsed = Carbon::parse($value);
+
+        // When the date portion is the Unix epoch the caller sent a time-only
+        // value (e.g. "09:00:00").  Inject the order's reference date.
+        if ($parsed->year === 1970 && $parsed->month === 1 && $parsed->day === 1) {
+            $ref = isset($this->attributes['scheduled_at']) && $this->attributes['scheduled_at']
+                ? Carbon::parse($this->attributes['scheduled_at'])
+                : (isset($this->attributes['created_at']) && $this->attributes['created_at']
+                    ? Carbon::parse($this->attributes['created_at'])
+                    : Carbon::now());
+
+            $parsed->setDate($ref->year, $ref->month, $ref->day);
+        }
+
+        return $parsed->toDateTimeString();
+    }
+
+    /**
      * Checks if a driver is assigned to the order.
      *
      * @return bool returns true if a driver is assigned, false otherwise
