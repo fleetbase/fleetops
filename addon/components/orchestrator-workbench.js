@@ -750,10 +750,9 @@ export default class OrchestratorWorkbenchComponent extends Component {
      * road path on the map.
      *
      * @param {Array}  orders  - Sorted stop items { order, sequence, arrival }
-     * @param {Object} vehicle - Vehicle record (plain JSON from orchestrator/orders)
      * @returns {Array|null}   - [[lat,lng], ...] or null if fewer than 2 valid points
      */
-    _buildRouteWaypoints(orders, _vehicle) {
+    _buildRouteWaypoints(orders) {
         const points = [];
         // Only include the actual order stop coordinates (pickup + dropoff / waypoints).
         // Do NOT prepend the driver/vehicle current GPS location — that adds an extra
