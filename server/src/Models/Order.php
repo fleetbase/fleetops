@@ -214,10 +214,8 @@ class Order extends Model
         'started_at'       => 'datetime',
         // Orchestrator
         'required_skills'       => Json::class,
-        // time_window_start/end are stored as TIME (HH:MM:SS) — cast to string
-        // so they round-trip cleanly without Carbon wrapping a date-less time.
-        'time_window_start'     => 'string',
-        'time_window_end'       => 'string',
+        'time_window_start'     => 'datetime',
+        'time_window_end'       => 'datetime',
         'orchestrator_priority' => 'integer',
     ];
 

@@ -244,14 +244,11 @@
         <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
             Delivery Window
         </div>
-        <div class="col-span-1 lg:col-span-2 text-xs text-gray-500 dark:text-gray-400 -mt-1">
-            Set the earliest and latest acceptable arrival time for this order. The date is taken from the order's scheduled date.
-        </div>
-        <InputGroup @name="Earliest Arrival (HH:MM)" @helpText="Earliest time of day the driver may arrive at the delivery location. Uses the order's scheduled date.">
-            <Input @value={{@resource.time_window_start}} @type="time" class="form-input w-full" placeholder="HH:MM" disabled={{cannot-write @resource}} />
+        <InputGroup @name="Time Window Start" @helpText="Earliest acceptable arrival time at the delivery location.">
+            <DateTimeInput class="form-input" @value={{@resource.time_window_start}} @onUpdate={{fn (mut @resource.time_window_start)}} @disabled={{cannot-write @resource}} />
         </InputGroup>
-        <InputGroup @name="Latest Arrival (HH:MM)" @helpText="Latest time of day the driver must arrive at the delivery location. Uses the order's scheduled date.">
-            <Input @value={{@resource.time_window_end}} @type="time" class="form-input w-full" placeholder="HH:MM" disabled={{cannot-write @resource}} />
+        <InputGroup @name="Time Window End" @helpText="Latest acceptable arrival time at the delivery location.">
+            <DateTimeInput class="form-input" @value={{@resource.time_window_end}} @onUpdate={{fn (mut @resource.time_window_end)}} @disabled={{cannot-write @resource}} />
         </InputGroup>
         <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
             Requirements & Priority
