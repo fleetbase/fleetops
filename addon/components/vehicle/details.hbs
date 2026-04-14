@@ -613,6 +613,36 @@
     {{! CUSTOM FIELDS (view mode) }}
     <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
 
+    {{! ORCHESTRATOR CONSTRAINTS (read-only view) }}
+    {{#if (or @resource.skills.length @resource.time_window_start @resource.time_window_end @resource.max_tasks)}}
+    <ContentPanel @title="Orchestrator Constraints" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            {{#if @resource.skills.length}}
+                <div class="field-info-container col-span-2">
+                    <div class="field-name">Skills & Capabilities</div>
+                    <div class="field-value">{{join @resource.skills ", "}}</div>
+                </div>
+            {{/if}}
+            {{#if (or @resource.time_window_start @resource.time_window_end)}}
+                <div class="field-info-container">
+                    <div class="field-name">Available From</div>
+                    <div class="field-value">{{n-a @resource.time_window_start}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Available Until</div>
+                    <div class="field-value">{{n-a @resource.time_window_end}}</div>
+                </div>
+            {{/if}}
+            {{#if @resource.max_tasks}}
+                <div class="field-info-container">
+                    <div class="field-name">Max Tasks</div>
+                    <div class="field-value">{{@resource.max_tasks}}</div>
+                </div>
+            {{/if}}
+        </div>
+    </ContentPanel>
+    {{/if}}
+
     {{! AVATAR }}
     <ContentPanel @title={{t "common.avatar"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="flex px-1">
