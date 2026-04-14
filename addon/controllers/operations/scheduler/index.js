@@ -93,7 +93,7 @@ export default class OperationsSchedulerIndexController extends Controller {
         return this.store.peekAll('order').filter((order) => statuses.includes(order.status));
     }
 
-    @computed('allActiveOrders.@each.scheduled_at', 'searchQuery', 'activeFilters.[]')
+    @computed('allActiveOrders.@each.scheduled_at', 'searchQuery', 'searchQuery.length', 'activeFilters.[]')
     get unscheduledOrders() {
         let orders = this.allActiveOrders.filter((o) => isNone(o.scheduled_at) || !isValidDate(new Date(o.scheduled_at)));
         if (this.searchQuery && this.searchQuery.length >= 2) {
@@ -109,7 +109,7 @@ export default class OperationsSchedulerIndexController extends Controller {
         return orders;
     }
 
-    @computed('allActiveOrders.@each.{scheduled_at,driver_assigned_uuid,status}', 'currentUser.company.timezone')
+    @computed('allActiveOrders.@each.{scheduled_at,driver_assigned_uuid,status}', 'currentUser.company.timezone', 'companyTimezone')
     get calendarEvents() {
         const tz = this.companyTimezone;
         return this.allActiveOrders.filter((o) => !isNone(o.scheduled_at) && isValidDate(new Date(o.scheduled_at))).map((o) => createFullCalendarEventFromOrder(o, tz));
@@ -132,7 +132,7 @@ export default class OperationsSchedulerIndexController extends Controller {
         });
     }
 
-    @computed('drivers.@each.currentShift', 'currentUser.company.timezone')
+    @computed('drivers.@each.currentShift', 'currentUser.company.timezone', 'companyTimezone')
     get backgroundEvents() {
         const tz = this.companyTimezone;
         const events = [];
@@ -210,7 +210,7 @@ export default class OperationsSchedulerIndexController extends Controller {
      *
      * @returns {Date}
      */
-    @computed('currentUser.company.timezone')
+    @computed('currentUser.company.timezone', 'companyTimezone')
     get calendarNow() {
         return toCalendarDate(new Date(), this.companyTimezone);
     }
@@ -264,14 +264,6 @@ export default class OperationsSchedulerIndexController extends Controller {
         const driverName = order?.driver_assigned?.name ?? order?.get?.('driver_assigned.name') ?? '';
         const destination = order?.pickupName ?? order?.get?.('pickupName') ?? '';
         const scheduledTime = order?.scheduledAtTime ?? order?.get?.('scheduledAtTime') ?? '';
-        const statusColour =
-            {
-                created: '#6366f1',
-                dispatched: '#3b82f6',
-                active: '#10b981',
-                completed: '#6b7280',
-                cancelled: '#ef4444',
-            }[status] ?? '#6366f1';
         const statusLabel = status ? status.charAt(0).toUpperCase() + status.slice(1) : '';
         const metaLine = [scheduledTime, driverName].filter(Boolean).join(' · ');
         return {
@@ -745,7 +737,7 @@ export default class OperationsSchedulerIndexController extends Controller {
         }
     }
 
-    _handleOrderSocketEvent({ event, data } = {}) {
+    _handleOrderSocketEvent({ data } = {}) {
         if (!data?.id) return;
         try {
             this.store.pushPayload('order', { order: data });

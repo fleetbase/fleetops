@@ -1851,9 +1851,6 @@ body[data-theme='dark'] .positions-replay-component .metric-card:hover {
     height: 40px;
     flex-shrink: 0;
 }
-.test {
-    color: red;
-}
 
 /* Scheduling: Availability Type Toggle Buttons */
 .availability-type-btn {
@@ -1873,31 +1870,37 @@ body[data-theme='dark'] .positions-replay-component .metric-card:hover {
         border-color 0.15s;
     cursor: pointer;
 }
+
 .availability-type-btn.is-unselected {
-    background-color: #ffffff;
+    background-color: #fff;
     border-color: #d1d5db;
     color: #4b5563;
 }
+
 body[data-theme='dark'] .availability-type-btn.is-unselected {
     background-color: #1f2937;
     border-color: #4b5563;
     color: #9ca3af;
 }
+
 .availability-type-btn.is-selected-available {
     background-color: #f0fdf4;
     border-color: #22c55e;
     color: #15803d;
 }
+
 body[data-theme='dark'] .availability-type-btn.is-selected-available {
     background-color: #14532d;
     border-color: #4ade80;
     color: #bbf7d0;
 }
+
 .availability-type-btn.is-selected-unavailable {
     background-color: #fef2f2;
     border-color: #ef4444;
     color: #b91c1c;
 }
+
 body[data-theme='dark'] .availability-type-btn.is-selected-unavailable {
     background-color: #7f1d1d;
     border-color: #f87171;
@@ -1905,6 +1908,7 @@ body[data-theme='dark'] .availability-type-btn.is-selected-unavailable {
 }
 
 /* Scheduling: Shift Chip in Driver Calendar (ember-ui Badge info style) */
+
 .driver-schedule-shift-chip {
     display: flex;
     flex-direction: column;
@@ -1918,22 +1922,26 @@ body[data-theme='dark'] .availability-type-btn.is-selected-unavailable {
     background-color: #eff6ff;
     color: #1e40af;
 }
+
 body[data-theme='dark'] .driver-schedule-shift-chip {
     background-color: #1e3a5f;
     border-color: #3b82f6;
     color: #93c5fd;
 }
+
 .driver-schedule-shift-chip .shift-chip-time {
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
 .driver-schedule-shift-chip .shift-chip-actions {
     display: flex;
     gap: 0.125rem;
     margin-top: 0.125rem;
 }
+
 .driver-schedule-shift-chip .shift-chip-action-btn {
     padding: 0.125rem;
     border-radius: 0.25rem;
@@ -1944,37 +1952,46 @@ body[data-theme='dark'] .driver-schedule-shift-chip {
     opacity: 0.7;
     transition: opacity 0.15s;
 }
+
 .driver-schedule-shift-chip .shift-chip-action-btn:hover {
     opacity: 1;
 }
+
 .driver-schedule-shift-chip .shift-chip-action-btn.edit {
     color: #2563eb;
 }
+
 body[data-theme='dark'] .driver-schedule-shift-chip .shift-chip-action-btn.edit {
     color: #93c5fd;
 }
+
 .driver-schedule-shift-chip .shift-chip-action-btn.delete {
     color: #dc2626;
 }
+
 body[data-theme='dark'] .driver-schedule-shift-chip .shift-chip-action-btn.delete {
     color: #fca5a5;
 }
 
 /* Fleet Calendar FullCalendar Overrides */
+
 #fleet-ops-fleet-schedule-container .fc {
     font-size: 0.75rem;
     font-family: inherit;
 }
+
 #fleet-ops-fleet-schedule-container .fc-theme-standard td,
 #fleet-ops-fleet-schedule-container .fc-theme-standard th,
 #fleet-ops-fleet-schedule-container .fc-theme-standard .fc-scrollgrid {
     border-color: #e5e7eb;
 }
+
 body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-theme-standard td,
 body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-theme-standard th,
 body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-theme-standard .fc-scrollgrid {
     border-color: #374151;
 }
+
 #fleet-ops-fleet-schedule-container .fc-col-header-cell {
     background-color: #f9fafb;
     font-weight: 600;
@@ -1983,36 +2000,46 @@ body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-theme-standard .
     letter-spacing: 0.05em;
     color: #6b7280;
 }
+
 body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-col-header-cell {
     background-color: #111827;
     color: #9ca3af;
 }
+
 #fleet-ops-fleet-schedule-container .fc-resource-area .fc-cell-text {
     font-weight: 500;
     font-size: 0.75rem;
     color: #111827;
 }
+
 body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-resource-area .fc-cell-text {
     color: #f3f4f6;
 }
+
 #fleet-ops-fleet-schedule-container .fc-resource-area th {
     background-color: #f9fafb;
 }
+
 body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-resource-area th {
     background-color: #111827;
 }
+
 #fleet-ops-fleet-schedule-container .fc-timeline-lane {
-    background-color: #ffffff;
+    background-color: #fff;
 }
+
 body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-timeline-lane {
     background-color: #1f2937;
 }
+
 #fleet-ops-fleet-schedule-container .fc-timeline-slot.fc-day-today {
     background-color: #eff6ff;
 }
+
 body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-timeline-slot.fc-day-today {
     background-color: #1e3a5f;
 }
+
 #fleet-ops-fleet-schedule-container .fc-event {
     border-radius: 0.25rem;
     border: none;
@@ -2022,22 +2049,27 @@ body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-timeline-slot.fc
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
+
 #fleet-ops-fleet-schedule-container .fc-event:hover {
     filter: brightness(0.95);
 }
+
 #fleet-ops-fleet-schedule-container .fc-timeline-slot-label {
     font-size: 0.65rem;
     color: #9ca3af;
     padding: 0 0.25rem;
 }
+
 body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-timeline-slot-label {
     color: #6b7280;
 }
+
 #fleet-ops-fleet-schedule-container .fc-scrollgrid {
     border-radius: 0.5rem;
     overflow: hidden;
     border: 1px solid #e5e7eb;
 }
+
 body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-scrollgrid {
     border-color: #374151;
 }
