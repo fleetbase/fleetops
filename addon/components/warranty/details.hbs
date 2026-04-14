@@ -55,7 +55,8 @@
                     {{#if @resource.is_expired}}
                         <Badge @status="danger">Expired</Badge>
                     {{else if @resource.days_remaining}}
-                        {{@resource.days_remaining}} days
+                        {{@resource.days_remaining}}
+                        days
                         {{#if (lt @resource.days_remaining 30)}}
                             <Badge @status="warning">Expiring Soon</Badge>
                         {{/if}}

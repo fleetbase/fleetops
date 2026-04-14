@@ -46,11 +46,7 @@
                         <label>
                             {{t "common.country"}}
                         </label>
-                        <CountrySelect
-                            class="w-full form-input form-select form-datalist"
-                            @value={{@options.user.country}}
-                            @onChange={{fn (mut @options.user.country)}}
-                        />
+                        <CountrySelect class="w-full form-input form-select form-datalist" @value={{@options.user.country}} @onChange={{fn (mut @options.user.country)}} />
                     </div>
                 </div>
             </div>

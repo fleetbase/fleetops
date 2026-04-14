@@ -1,0 +1,264 @@
+{{! Orchestrator::OrderPool — left panel of the workbench }}
+<div class="order-pool flex flex-col h-full overflow-hidden">
+
+    {{! Search + count }}
+    <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center space-x-2 flex-shrink-0">
+        <div class="relative flex-1">
+            <span class="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none text-gray-400 w-8">
+                <FaIcon @icon="magnifying-glass" @size="xs" class="block align-baseline" />
+            </span>
+            <input type="text" class="form-input form-input-sm w-full pl-7i" placeholder={{t "orchestrator.search-orders"}} value={{this.orderSearch}} {{on "input" this.onSearchInput}} />
+        </div>
+        <span class="text-xs text-gray-400 flex-shrink-0 tabular-nums">
+            {{this.filteredOrders.length}}/{{@orders.length}}
+        </span>
+    </div>
+
+    {{! Quick filter chips }}
+    <div class="px-3 py-1.5 border-b dark:border-gray-700 flex items-center gap-1 flex-wrap flex-shrink-0">
+        <button
+            type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors
+                {{if (eq this.orderFilter 'all') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "all")}}
+        >{{t "orchestrator.filter-all"}}</button>
+        <button
+            type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors
+                {{if (eq this.orderFilter 'scheduled') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "scheduled")}}
+        >{{t "orchestrator.filter-scheduled"}}</button>
+        <button
+            type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors
+                {{if (eq this.orderFilter 'today') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "today")}}
+        >{{t "orchestrator.filter-today"}}</button>
+        <button
+            type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors
+                {{if (eq this.orderFilter 'urgent') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "urgent")}}
+        >{{t "orchestrator.filter-urgent"}}</button>
+        <button
+            type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors
+                {{if (eq this.orderFilter 'unassigned') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "unassigned")}}
+        >{{t "orchestrator.filter-unassigned"}}</button>
+        <button
+            type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors
+                {{if (eq this.orderFilter 'imported') 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}"
+            {{on "click" (fn this.setFilter "imported")}}
+        >{{t "orchestrator.filter-imported"}}</button>
+    </div>
+
+    {{! Advanced Filters toggle — on its own row }}
+    <div class="px-3 py-1 border-b dark:border-gray-700 flex items-center flex-shrink-0">
+        <button
+            type="button"
+            class="px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1
+                {{if this.showAdvanced 'bg-indigo-500 text-white' 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}}
+                {{if this.hasAdvancedFilters 'ring-1 ring-indigo-400' ''}}"
+            {{on "click" this.toggleAdvanced}}
+        >
+            <FaIcon @icon="sliders" @size="xs" />
+            {{t "orchestrator.advanced-filters"}}
+            {{#if this.hasAdvancedFilters}}
+                <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block"></span>
+            {{/if}}
+        </button>
+    </div>
+
+    {{! Advanced filter panel }}
+    {{#if this.showAdvanced}}
+        <div class="px-3 py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex-shrink-0 space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+                {{! Country }}
+                <div class="input-group">
+                    <label class="input-label text-xs">{{t "orchestrator.filter-country"}}</label>
+                    <CountrySelect
+                        class="form-input form-input-sm w-full"
+                        @value={{this.advancedCountry}}
+                        @onChange={{this.setAdvancedCountry}}
+                        @placeholder={{t "orchestrator.filter-country-placeholder"}}
+                    />
+                </div>
+                {{! Order Type }}
+                <div class="input-group">
+                    <label class="input-label text-xs">{{t "orchestrator.filter-type"}}</label>
+                    <select class="form-select form-input-sm w-full" {{on "change" this.setAdvancedType}}>
+                        <option value="">{{t "orchestrator.filter-type-placeholder"}}</option>
+                        {{#each this.availableTypes as |type|}}
+                            <option value={{type}} selected={{eq type this.advancedType}}>{{type}}</option>
+                        {{/each}}
+                    </select>
+                </div>
+                {{! Status }}
+                <div class="input-group">
+                    <label class="input-label text-xs">{{t "orchestrator.filter-status"}}</label>
+                    <select class="form-select form-input-sm w-full" {{on "change" this.setAdvancedStatus}}>
+                        <option value="">{{t "orchestrator.filter-status-placeholder"}}</option>
+                        {{#each this.availableStatuses as |status|}}
+                            <option value={{status}} selected={{eq status this.advancedStatus}}>{{status}}</option>
+                        {{/each}}
+                    </select>
+                </div>
+                {{! Scheduled Date }}
+                <div class="input-group">
+                    <label class="input-label text-xs">{{t "orchestrator.filter-date"}}</label>
+                    <input type="date" class="form-input form-input-sm w-full" value={{this.advancedDate}} {{on "change" this.setAdvancedDate}} />
+                </div>
+            </div>
+            {{#if this.hasAdvancedFilters}}
+                <button type="button" class="text-xs text-indigo-400 hover:text-indigo-300" {{on "click" this.clearAdvancedFilters}}>
+                    <FaIcon @icon="xmark" @size="xs" class="mr-0.5" />{{t "orchestrator.clear-filters"}}
+                </button>
+            {{/if}}
+        </div>
+    {{/if}}
+
+    {{! Order list }}
+    <div class="flex-1 overflow-y-auto space-y-2">
+        {{#if @isLoading}}
+            <div class="flex justify-center py-8"><Spinner /></div>
+        {{else if this.filteredOrders.length}}
+            {{! Single collapse/expand-all toggle }}
+            <div class="px-3 pt-1.5 pb-0.5 flex items-center flex-shrink-0">
+                <button type="button" class="text-xs text-gray-400 hover:text-indigo-400 transition-colors flex items-center gap-1" {{on "click" this.toggleAllWaypoints}}>
+                    <FaIcon @icon={{if this.allWaypointsCollapsed "chevron-down" "chevron-up"}} @size="xs" />
+                    {{if this.allWaypointsCollapsed (t "orchestrator.expand-all") (t "orchestrator.collapse-all")}}
+                </button>
+            </div>
+            {{#each this.filteredOrders as |order|}}
+                <div
+                    class="order-pool-card mx-2 my-1 rounded border overflow-hidden select-none
+                        {{if
+                            (includes order.public_id this.selectedOrderIdsArray)
+                            'ring-2 ring-indigo-500 border-indigo-400 dark:border-indigo-500 cursor-grab'
+                            'border-gray-200 dark:border-gray-700 cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-500 hover:ring-1 hover:ring-indigo-400'
+                        }}"
+                    draggable="true"
+                    data-order-id={{order.public_id}}
+                    {{on "dragstart" (fn @onDragStart order)}}
+                    {{on "click" (fn @onToggleSelection order)}}
+                >
+                    {{! Header: checkbox + tracking number + priority/status badges + collapse toggle }}
+                    <div class="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                        <input
+                            type="checkbox"
+                            class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600 border-gray-300 dark:border-gray-600 cursor-pointer flex-shrink-0"
+                            checked={{includes order.public_id this.selectedOrderIdsArray}}
+                            {{on "change" (fn @onToggleSelection order)}}
+                            {{on "click" this.stopPropagation}}
+                        />
+                        <span class="flex-1 min-w-0 truncate text-xs font-semibold text-gray-800 dark:text-gray-100">
+                            {{or order.tracking order.public_id}}
+                        </span>
+                        <div class="flex-shrink-0 flex items-center gap-1">
+                            {{#if order.orchestrator_priority}}
+                                <Badge @status={{this.priorityBadgeStatus order.orchestrator_priority}}>P{{order.orchestrator_priority}}</Badge>
+                            {{/if}}
+                            <Badge @status={{order.status}} />
+                            {{! Waypoint collapse toggle }}
+                            <button
+                                type="button"
+                                class="ml-0.5 w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-indigo-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+                                title={{if (this.isWaypointCollapsed order.public_id) (t "orchestrator.expand-route") (t "orchestrator.collapse-route")}}
+                                {{on "click" (fn this.toggleWaypointCollapse order.public_id)}}
+                            >
+                                <FaIcon @icon={{if (this.isWaypointCollapsed order.public_id) "chevron-down" "chevron-up"}} @size="xs" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {{! Card body — hidden when collapsed }}
+                    {{#unless (this.isWaypointCollapsed order.public_id)}}
+                        <div class="bg-white dark:bg-gray-900 px-2 py-1.5">
+                            <dl class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
+                                {{#each (this.resolvedCardFields order) as |field|}}
+                                    <dt class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        {{#if field.icon}}
+                                            <FaIcon @icon={{field.icon}} @size="xs" class="w-3 text-center {{if field.iconClass field.iconClass ''}}" />
+                                        {{/if}}
+                                        {{field.label}}
+                                    </dt>
+                                    <dd class="truncate text-right text-xs {{if field.highlight field.highlight 'text-gray-700 dark:text-gray-300'}}">
+                                        {{or field.value "-"}}
+                                    </dd>
+                                {{/each}}
+                            </dl>
+
+                            {{! Inline route stop list }}
+                            {{#let (this.orderRouteStops order) as |stops|}}
+                                {{#if stops.length}}
+                                    <div class="mt-1.5 border-t border-gray-100 dark:border-gray-700 pt-1">
+                                        {{! Route header with toggle }}
+                                        <button
+                                            type="button"
+                                            class="w-full flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+                                            {{on "click" (fn this.toggleRouteCollapse order.public_id)}}
+                                        >
+                                            <span class="flex items-center gap-1">
+                                                <FaIcon @icon="route" @size="xs" class="text-indigo-400" />
+                                                <span class="font-medium">{{t "orchestrator.route"}} &middot; {{stops.length}} {{t "orchestrator.stops"}}</span>
+                                            </span>
+                                            <FaIcon @icon={{if (this.isRouteCollapsed order.public_id) "chevron-down" "chevron-up"}} @size="xs" />
+                                        </button>
+                                        {{! Stop list }}
+                                        {{#unless (this.isRouteCollapsed order.public_id)}}
+                                            <ol class="mt-1 space-y-1.5">
+                                                {{#each stops as |stop|}}
+                                                    <li class="flex items-start gap-1.5 text-xs">
+                                                        <span
+                                                            class="flex-shrink-0 w-4 h-4 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 text-[0.6rem] font-bold flex items-center justify-center leading-none"
+                                                        >
+                                                            {{stop.label}}
+                                                        </span>
+                                                        <span class="text-gray-600 dark:text-gray-300 leading-4 line-clamp-2">{{stop.address}}</span>
+                                                    </li>
+                                                {{/each}}
+                                            </ol>
+                                        {{/unless}}
+                                    </div>
+                                {{/if}}
+                            {{/let}}
+
+                            {{#if order.required_skills.length}}
+                                <div class="flex flex-wrap gap-0.5 mt-1">
+                                    {{#each order.required_skills as |skill|}}
+                                        <span class="skill-tag">{{skill}}</span>
+                                    {{/each}}
+                                </div>
+                            {{/if}}
+                        </div>
+                    {{/unless}}
+                </div>
+            {{/each}}
+        {{else}}
+            <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
+                <FaIcon @icon="check-circle" @size="2x" class="mb-2 text-green-400" />
+                {{t "orchestrator.no-unassigned-orders"}}
+            </div>
+        {{/if}}
+        <Spacer @height="200px" />
+    </div>
+
+    {{! Bulk action bar + import }}
+    <div class="px-3 py-2 border-t dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+        <Button @icon="file-import" @text={{t "orchestrator.import-orders"}} @type="default" @size="xs" @onClick={{@onOpenImport}} />
+        {{#if this.selectedOrderIdsArray.length}}
+            <div class="flex items-center gap-1.5">
+                <span class="text-xs text-blue-400">
+                    {{this.selectedOrderIdsArray.length}}
+                    {{t "orchestrator.selected"}}
+                </span>
+                <button type="button" class="text-xs text-gray-400 hover:text-white" {{on "click" @onClearSelection}}>
+                    {{t "orchestrator.clear-selection"}}
+                </button>
+            </div>
+        {{/if}}
+    </div>
+
+</div>

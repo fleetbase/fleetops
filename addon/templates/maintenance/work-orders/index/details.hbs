@@ -1,7 +1,8 @@
 <Layout::Resource::Panel
     @resource={{@model}}
     @controller={{this}}
-    @headerTitle={{@model.name}}
+    @headerComponent={{component "work-order/panel-header" resource=@model}}
+    @headerTitle={{or @model.code @model.subject}}
     @actionButtons={{this.actionButtons}}
     @onPressCancel={{transition-to "maintenance.work-orders.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}

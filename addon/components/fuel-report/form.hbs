@@ -77,11 +77,7 @@
                     @disabled={{cannot-write @resource}}
                 />
             </InputGroup>
-            <InputGroup
-                @name={{t "fuel-report.fields.fuel-volume"}}
-                @helpText={{t "fuel-report.fields.select-volume-help-text"}}
-                @wrapperClass="w-full"
-            >
+            <InputGroup @name={{t "fuel-report.fields.fuel-volume"}} @helpText={{t "fuel-report.fields.select-volume-help-text"}} @wrapperClass="w-full">
                 <UnitInput
                     class="w-full"
                     @measurement="volume"

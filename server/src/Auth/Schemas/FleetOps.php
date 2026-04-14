@@ -114,6 +114,22 @@ class FleetOps
             'actions' => ['export', 'import'],
         ],
         [
+            'name'    => 'maintenance',
+            'actions' => ['export', 'import'],
+        ],
+        [
+            'name'    => 'work-order',
+            'actions' => ['export', 'import'],
+        ],
+        [
+            'name'    => 'equipment',
+            'actions' => ['export', 'import'],
+        ],
+        [
+            'name'    => 'part',
+            'actions' => ['export', 'import'],
+        ],
+        [
             'name'    => 'custom-field',
             'actions' => [],
         ],
@@ -265,6 +281,23 @@ class FleetOps
             ],
         ],
         [
+            'name'        => 'MaintenanceManager',
+            'description' => 'Policy for managing maintenance records, work orders, equipment, and parts.',
+            'permissions' => [
+                'see extension',
+                '* maintenance',
+                '* work-order',
+                '* equipment',
+                '* part',
+                'see vehicle',
+                'list vehicle',
+                'view vehicle',
+                'see driver',
+                'list driver',
+                'view driver',
+            ],
+        ],
+        [
             'name'        => 'OperationsAdmin',
             'description' => 'Policy for monitoring activities, issues, and fuel reports within the fleet operations.',
             'permissions' => [
@@ -276,6 +309,10 @@ class FleetOps
                 '* fuel-report',
                 '* issue',
                 '* place',
+                '* maintenance',
+                '* work-order',
+                '* equipment',
+                '* part',
             ],
         ],
         [
@@ -368,6 +405,13 @@ class FleetOps
             'description' => 'Role with complete administrative access to all operational aspects of Fleet-Ops.',
             'policies'    => [
                 'OperationsAdmin',
+            ],
+        ],
+        [
+            'name'        => 'Maintenance Technician',
+            'description' => 'Role for technicians responsible for managing maintenance records, work orders, equipment, and parts inventory.',
+            'policies'    => [
+                'MaintenanceManager',
             ],
         ],
         [

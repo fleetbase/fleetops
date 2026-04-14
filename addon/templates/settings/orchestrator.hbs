@@ -1,0 +1,65 @@
+<Layout::Section::Header @title={{t "orchestrator.settings-title"}}>
+    <Button
+        @type="primary"
+        @size="sm"
+        @icon="save"
+        @text={{t "common.save-changes"}}
+        @onClick={{perform this.saveSettings}}
+        @disabled={{this.saveSettings.isRunning}}
+        @isLoading={{or this.saveSettings.isRunning this.loadSettings.isRunning}}
+    />
+</Layout::Section::Header>
+<Layout::Section::Body class="overflow-y-scroll h-full">
+    <div class="container mx-auto h-screen">
+        <div class="max-w-3xl my-10 mx-auto space-y-6">
+            {{#if this.loadSettings.isRunning}}
+                <div class="flex items-center justify-center py-12">
+                    <Spinner />
+                </div>
+            {{else}}
+                {{! ── Allocation Engine ──────────────────────────────────────── }}
+                <ContentPanel @title={{t "orchestrator.engine-settings"}} @open={{true}} @wrapperClass="bordered-classic">
+                    <InputGroup @name={{t "orchestrator.active-engine"}} @helpText={{t "orchestrator.active-engine-help"}}>
+                        <Select
+                            @value={{this.allocationEngine}}
+                            @options={{this.engineOptions}}
+                            @optionLabel="name"
+                            @optionValue="id"
+                            @onSelect={{fn (mut this.allocationEngine)}}
+                            @placeholder={{t "orchestrator.active-engine"}}
+                            class="w-full"
+                        />
+                    </InputGroup>
+                    <InputGroup @name={{t "orchestrator.auto-allocate-on-create"}}>
+                        <Toggle @isToggled={{this.autoAllocateOnCreate}} @onToggle={{fn (mut this.autoAllocateOnCreate)}} @label={{t "orchestrator.auto-allocate-on-create-label"}} />
+                    </InputGroup>
+                    <InputGroup @name={{t "orchestrator.auto-reallocate-on-complete"}}>
+                        <Toggle
+                            @isToggled={{this.autoReallocateOnComplete}}
+                            @onToggle={{fn (mut this.autoReallocateOnComplete)}}
+                            @label={{t "orchestrator.auto-reallocate-on-complete-label"}}
+                        />
+                    </InputGroup>
+                </ContentPanel>
+                {{! ── Allocation Constraints ─────────────────────────────────── }}
+                <ContentPanel @title={{t "orchestrator.constraint-settings"}} @open={{true}} @wrapperClass="bordered-classic">
+                    <InputGroup @name={{t "orchestrator.max-travel-time"}} @helpText={{t "orchestrator.max-travel-time-help"}}>
+                        <Input @type="number" @value={{this.maxTravelTimeSeconds}} min="0" step="300" class="w-full form-input" />
+                    </InputGroup>
+                    <InputGroup @name={{t "orchestrator.balance-workload"}}>
+                        <Toggle @isToggled={{this.balanceWorkload}} @onToggle={{fn (mut this.balanceWorkload)}} @label={{t "orchestrator.balance-workload-label"}} />
+                    </InputGroup>
+                </ContentPanel>
+                {{! ── Order Card Fields ───────────────────────────────────── }}
+                <ContentPanel @title={{t "orchestrator.card-fields"}} @open={{true}} @wrapperClass="bordered-classic">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{t "orchestrator.card-fields-description"}}</p>
+                    <Orchestrator::CardFieldsSettings @wrapperClass="space-y-4" />
+                </ContentPanel>
+                <RegistryYield @registry="fleet-ops:template:settings:orchestrator" as |RegistryComponent|>
+                    <RegistryComponent @controller={{this}} />
+                </RegistryYield>
+            {{/if}}
+        </div>
+    </div>
+    <Spacer @height="600px" />
+</Layout::Section::Body>

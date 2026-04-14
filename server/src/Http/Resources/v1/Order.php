@@ -7,6 +7,7 @@ use Fleetbase\Http\Resources\Comment;
 use Fleetbase\Http\Resources\File;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Illuminate\Support\Str;
 
 class Order extends FleetbaseResource
 {
@@ -117,8 +118,9 @@ class Order extends FleetbaseResource
             return $resolved;
         }
 
-        data_set($resolved, 'type', 'customer');
-        data_set($resolved, 'customer_type', 'customer-' . Utils::toEmberResourceType($this->customer_type));
+        $bareSlug = Str::kebab(class_basename($this->customer_type ?? ''));
+        data_set($resolved, 'type', 'customer-' . $bareSlug);
+        data_set($resolved, 'customer_type', 'customer-' . $bareSlug);
 
         return $resolved;
     }
@@ -136,8 +138,9 @@ class Order extends FleetbaseResource
             return $resolved;
         }
 
-        data_set($resolved, 'type', 'facilitator');
-        data_set($resolved, 'facilitator_type', 'facilitator-' . Utils::toEmberResourceType($this->facilitator_type));
+        $bareSlug = Str::kebab(class_basename($this->facilitator_type ?? ''));
+        data_set($resolved, 'type', 'facilitator-' . $bareSlug);
+        data_set($resolved, 'facilitator_type', 'facilitator-' . $bareSlug);
 
         return $resolved;
     }

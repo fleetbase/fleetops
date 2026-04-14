@@ -20,13 +20,7 @@
                         @isLoading={{this.optimizeRoute.isRunning}}
                     />
                 {{/if}}
-                <Button
-                    @icon="map-marked-alt"
-                    @text={{t "modals.order-route-form.add"}}
-                    @size="sm"
-                    @onClick={{this.addWaypoint}}
-                    @helpText={{t "modals.order-route-form.add-text"}}
-                />
+                <Button @icon="map-marked-alt" @text={{t "modals.order-route-form.add"}} @size="sm" @onClick={{this.addWaypoint}} @helpText={{t "modals.order-route-form.add-text"}} />
             {{/if}}
         </div>
     </div>
@@ -82,12 +76,7 @@
                     <label class="mb-0i">{{t "modals.order-route-form.pickup"}}</label>
 
                     {{#if @resource.payload.pickup}}
-                        <Button
-                            @text={{t "modals.order-route-form.edit-address"}}
-                            @icon="edit"
-                            @size="xs"
-                            @onClick={{fn this.placeActions.modal.edit @resource.payload.pickup}}
-                        />
+                        <Button @text={{t "modals.order-route-form.edit-address"}} @icon="edit" @size="xs" @onClick={{fn this.placeActions.modal.edit @resource.payload.pickup}} />
                     {{/if}}
                 </div>
 
@@ -119,12 +108,7 @@
                     <label class="mb-0i">{{t "modals.order-route-form.dropoff"}}</label>
 
                     {{#if @resource.payload.dropoff}}
-                        <Button
-                            @text={{t "modals.order-route-form.edit-address"}}
-                            @icon="edit"
-                            @size="xs"
-                            @onClick={{fn this.placeActions.modal.edit @resource.payload.dropoff}}
-                        />
+                        <Button @text={{t "modals.order-route-form.edit-address"}} @icon="edit" @size="xs" @onClick={{fn this.placeActions.modal.edit @resource.payload.dropoff}} />
                     {{/if}}
                 </div>
 
@@ -156,12 +140,7 @@
                     <label class="mb-0i">{{t "modals.order-route-form.return"}}</label>
 
                     {{#if @resource.payload.return}}
-                        <Button
-                            @text={{t "modals.order-route-form.edit-address"}}
-                            @icon="edit"
-                            @size="xs"
-                            @onClick={{fn this.placeActions.modal.edit @resource.payload.return}}
-                        />
+                        <Button @text={{t "modals.order-route-form.edit-address"}} @icon="edit" @size="xs" @onClick={{fn this.placeActions.modal.edit @resource.payload.return}} />
                     {{/if}}
                 </div>
 

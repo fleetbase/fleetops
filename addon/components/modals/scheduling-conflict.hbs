@@ -1,0 +1,47 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="grid grid-cols-1 gap-4 text-xs dark:text-gray-100">
+
+            {{! ── Warning banner ─────────────────────────────────────────────── }}
+            <div class="flex items-start gap-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 px-3 py-3">
+                <FaIcon @icon="triangle-exclamation" class="text-yellow-500 mt-0.5 flex-shrink-0" />
+                <p class="text-yellow-800 dark:text-yellow-200 leading-relaxed">
+                    {{t "scheduler.conflict-description" driverName=@options.driver.name orderTracking=@options.order.tracking}}
+                </p>
+            </div>
+
+            {{! ── Conflicting events list ─────────────────────────────────────── }}
+            <div class="rounded-md border border-yellow-200 dark:border-yellow-700 overflow-hidden">
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 font-semibold text-yellow-800 dark:text-yellow-300 uppercase tracking-wide">
+                    {{t "scheduler.conflicting-orders"}}
+                </div>
+                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {{#each @options.conflicts as |conflict|}}
+                        <div class="flex items-center justify-between px-3 py-2">
+                            <div class="flex items-center gap-2">
+                                <FaIcon @icon="box" class="text-gray-400" />
+                                <span class="font-medium">{{conflict.tracking}}</span>
+                            </div>
+                            <span class="text-gray-500 dark:text-gray-400">
+                                {{conflict.scheduledAtTime}}
+                            </span>
+                        </div>
+                    {{/each}}
+                </div>
+            </div>
+
+            {{! ── Resolution prompt ───────────────────────────────────────────── }}
+            <p class="text-gray-600 dark:text-gray-400">
+                {{t "scheduler.conflict-resolution-prompt"}}
+            </p>
+
+            {{! ── Resolution buttons ──────────────────────────────────────────── }}
+            <div class="flex items-center gap-2 justify-end">
+                <Button @type="default" @text={{t "common.cancel"}} @icon="times" @size="sm" @onClick={{@onDecline}} />
+                <Button @type="default" @text={{t "scheduler.auto-adjust"}} @icon="wand-magic-sparkles" @size="sm" @isLoading={{@options.isLoading}} @onClick={{this.autoAdjust}} />
+                <Button @type="danger" @text={{t "scheduler.assign-anyway"}} @icon="triangle-exclamation" @size="sm" @isLoading={{@options.isLoading}} @onClick={{this.assignAnyway}} />
+            </div>
+
+        </div>
+    </div>
+</Modal::Default>

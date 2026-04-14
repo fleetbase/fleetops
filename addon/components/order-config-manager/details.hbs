@@ -1,15 +1,7 @@
 <div class="px-6 py-2 space-y-4">
     <ContentPanel @title={{t "order-config-manager.details.details"}} @open={{true}} @wrapperClass="bordered-classic">
-        <InputGroup
-            @name={{t "order-config-manager.details.name"}}
-            @value={{@config.name}}
-            @disabled={{or @config.core_service (cannot "fleet-ops update order-config")}}
-        />
-        <InputGroup
-            @name={{t "order-config-manager.details.description"}}
-            @value={{@config.description}}
-            @disabled={{or @config.core_service (cannot "fleet-ops update order-config")}}
-        />
+        <InputGroup @name={{t "order-config-manager.details.name"}} @value={{@config.name}} @disabled={{or @config.core_service (cannot "fleet-ops update order-config")}} />
+        <InputGroup @name={{t "order-config-manager.details.description"}} @value={{@config.description}} @disabled={{or @config.core_service (cannot "fleet-ops update order-config")}} />
         <InputGroup @name={{t "order-config-manager.details.tags"}}>
             {{#let (or @config.core_service (cannot "fleet-ops update order-config")) as |disabled|}}
                 <TagInput

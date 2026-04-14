@@ -1,0 +1,31 @@
+<div class="px-4 py-2">
+    <div class="flex flex-1 flex-row items-start justify-between">
+        <div class="flex flex-col">
+            <div class="flex flex-row items-center space-x-2">
+                <h1 class="text-gray-900 dark:text-white font-semibold text-lg">{{or @resource.code @resource.subject}}</h1>
+                <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
+            </div>
+            <div class="flex flex-row space-x-3 mt-1">
+                <div class="text-xs text-gray-400 dark:text-gray-500">{{smart-humanize @resource.type}}</div>
+                {{#if @resource.priority}}
+                    <div class="text-xs text-gray-400 dark:text-gray-500">{{t "column.priority"}}: {{smart-humanize @resource.priority}}</div>
+                {{/if}}
+                {{#if @resource.assignee_name}}
+                    <div class="text-xs text-gray-400 dark:text-gray-500">{{t "column.assignee"}}: {{@resource.assignee_name}}</div>
+                {{/if}}
+            </div>
+        </div>
+        <div class="next-view-header-right">
+            <Layout::Resource::Panel::HeaderActions
+                @resource={{@resource}}
+                @saveTask={{@saveTask}}
+                @saveOptions={{@saveOptions}}
+                @saveDisabled={{@saveDisabled}}
+                @pojoResource={{@pojoResource}}
+                @authSchema={{@authSchema}}
+                @actionButtons={{@actionButtons}}
+                @onPressCancel={{@onPressCancel}}
+            />
+        </div>
+    </div>
+</div>

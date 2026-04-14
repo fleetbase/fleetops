@@ -139,6 +139,7 @@ class Vehicle extends Model
         'type',
         'class',
         // Identifiers
+        'internal_id',
         'plate_number',
         'call_sign',
         'serial_number',
@@ -204,6 +205,16 @@ class Vehicle extends Model
         'slug',
         'purchased_at',
         'lease_expires_at',
+        // Orchestrator
+        'skills',
+        'capacity_weight_kg',
+        'capacity_volume_m3',
+        'capacity_pallets',
+        'capacity_parcels',
+        'max_tasks',
+        'time_window_start',
+        'time_window_end',
+        'return_to_depot',
     ];
 
     /**
@@ -295,6 +306,14 @@ class Vehicle extends Model
         'torque'              => 'decimal:2',
         'gvwr'                => 'decimal:2',
         'gcwr'                => 'decimal:2',
+        // Orchestrator
+        'skills'              => Json::class,
+        'capacity_weight_kg'  => 'decimal:2',
+        'capacity_volume_m3'  => 'decimal:3',
+        'capacity_pallets'    => 'integer',
+        'capacity_parcels'    => 'integer',
+        'max_tasks'           => 'integer',
+        'return_to_depot'     => 'boolean',
     ];
 
     public function photo(): BelongsTo
@@ -561,7 +580,7 @@ class Vehicle extends Model
             function ($option) {
                 $key = str_replace(['.svg', '.png'], '', $option);
 
-                return [$key => Utils::assetFromS3('static/vehicle-icons/' . $option)];
+                return [$key => Utils::assetFromFleetbase('static/vehicle-icons/' . $option)];
             }
         );
 

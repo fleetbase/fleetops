@@ -1,0 +1,155 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="grid grid-cols-1 gap-4 text-xs dark:text-gray-100">
+
+            {{! ── Driver selector (only in global scheduler context) ─────────────── }}
+            {{#if this.hasManyDrivers}}
+                <div class="input-group">
+                    <label>{{t "resource.driver"}}</label>
+                    <ModelSelect
+                        @modelName="driver"
+                        @selectedModel={{this.selectedDriver}}
+                        @placeholder={{t "scheduler.select-driver"}}
+                        @triggerClass="form-select form-input"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{true}}
+                        @onChange={{this.selectDriver}}
+                        as |driver|
+                    >
+                        {{driver.name}}
+                    </ModelSelect>
+                </div>
+            {{/if}}
+
+            {{! ── Mode toggle ─────────────────────────────────────────────────────── }}
+            <div class="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                <div>
+                    <p class="font-medium dark:text-gray-100">{{t "scheduler.one-off-shift"}}</p>
+                    <p class="text-gray-500 dark:text-gray-400 mt-0.5">{{t "scheduler.one-off-shift-help"}}</p>
+                </div>
+                <Toggle @isToggled={{this.isOneOff}} @onToggle={{this.toggleMode}} />
+            </div>
+
+            {{! ══════════════════════════════════════════════════════════════════════ }}
+            {{! SINGLE SHIFT MODE                                                      }}
+            {{! ══════════════════════════════════════════════════════════════════════ }}
+            {{#unless this.isRecurring}}
+
+                <div class="input-group">
+                    <label>{{t "scheduler.shift-title"}}</label>
+                    <Input @value={{@options.title}} @type="text" placeholder={{t "scheduler.shift-title-placeholder"}} class="w-full form-input" />
+                </div>
+
+                <div class="input-group">
+                    <label>{{t "scheduler.shift-start"}}</label>
+                    <DateTimeInput @value={{@options.startAt}} @onChange={{this.updateStartAt}} placeholder={{t "scheduler.select-start-datetime"}} class="w-full form-input" />
+                </div>
+
+                <div class="input-group">
+                    <label>{{t "scheduler.shift-end"}}</label>
+                    <DateTimeInput @value={{@options.endAt}} @onChange={{this.updateEndAt}} placeholder={{t "scheduler.select-end-datetime"}} class="w-full form-input" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="input-group">
+                        <label>{{t "scheduler.break-start"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
+                        <DateTimeInput @value={{@options.breakStartAt}} @onChange={{this.updateBreakStartAt}} placeholder={{t "scheduler.select-break-start"}} class="w-full form-input" />
+                    </div>
+                    <div class="input-group">
+                        <label>{{t "scheduler.break-end"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
+                        <DateTimeInput @value={{@options.breakEndAt}} @onChange={{this.updateBreakEndAt}} placeholder={{t "scheduler.select-break-end"}} class="w-full form-input" />
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>{{t "common.notes"}}</label>
+                    <Textarea @value={{@options.notes}} placeholder={{t "scheduler.shift-notes-placeholder"}} class="w-full form-input" rows="2" />
+                </div>
+
+            {{/unless}}
+
+            {{! ══════════════════════════════════════════════════════════════════════ }}
+            {{! RECURRING SCHEDULE MODE                                                }}
+            {{! ══════════════════════════════════════════════════════════════════════ }}
+            {{#if this.isRecurring}}
+
+                <div class="input-group">
+                    <label>{{t "scheduler.schedule-name"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
+                    <Input @value={{@options.templateName}} @type="text" placeholder={{t "scheduler.schedule-name-placeholder"}} class="w-full form-input" />
+                </div>
+
+                {{! Day-of-week selector }}
+                <div class="input-group">
+                    <label>{{t "scheduler.working-days"}}</label>
+                    <div class="flex gap-1.5 mt-1">
+                        {{#each this.dayOptions as |day|}}
+                            <button
+                                type="button"
+                                class="flex-1 py-2 rounded-md text-xs font-semibold border transition-colors
+                                    {{if
+                                        (this.isDaySelected day.code)
+                                        'bg-indigo-600 border-indigo-600 text-white'
+                                        'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-indigo-400'
+                                    }}"
+                                {{on "click" (fn this.toggleDay day.code)}}
+                            >
+                                {{day.label}}
+                            </button>
+                        {{/each}}
+                    </div>
+                </div>
+
+                {{! Shift time window }}
+                <div class="grid grid-cols-2 gap-4">
+                    <InputGroup @name={{t "scheduler.shift-start-time"}} @type="time" @value={{@options.shiftStartTime}} @onChange={{this.updateShiftStartTime}} />
+                    <InputGroup @name={{t "scheduler.shift-end-time"}} @type="time" @value={{@options.shiftEndTime}} @onChange={{this.updateShiftEndTime}} />
+                </div>
+
+                {{! Break window (optional) }}
+                <div class="grid grid-cols-2 gap-4">
+                    <InputGroup
+                        @name={{concat (t "scheduler.break-start") " (" (t "common.optional") ")"}}
+                        @type="time"
+                        @value={{@options.breakStartTime}}
+                        @onChange={{this.updateBreakStartTime}}
+                    />
+                    <InputGroup
+                        @name={{concat (t "scheduler.break-end") " (" (t "common.optional") ")"}}
+                        @type="time"
+                        @value={{@options.breakEndTime}}
+                        @onChange={{this.updateBreakEndTime}}
+                    />
+                </div>
+
+                {{! Optional date range }}
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="input-group">
+                        <label>{{t "scheduler.recurrence-start"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
+                        <DateTimeInput
+                            @value={{@options.recurrenceStartDate}}
+                            @onChange={{this.updateRecurrenceStartDate}}
+                            placeholder={{t "scheduler.select-date"}}
+                            class="w-full form-input"
+                        />
+                    </div>
+                    <div class="input-group">
+                        <label>{{t "scheduler.recurrence-end"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
+                        <DateTimeInput @value={{@options.recurrenceEndDate}} @onChange={{this.updateRecurrenceEndDate}} placeholder={{t "scheduler.select-date"}} class="w-full form-input" />
+                    </div>
+                </div>
+
+                {{! Live recurrence preview }}
+                {{#if this.recurrenceSummary}}
+                    <div class="rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 px-3 py-2">
+                        <p class="text-indigo-700 dark:text-indigo-300 font-medium">
+                            <FaIcon @icon="rotate" class="mr-1.5" />
+                            {{this.recurrenceSummary}}
+                        </p>
+                    </div>
+                {{/if}}
+
+            {{/if}}
+
+        </div>
+    </div>
+</Modal::Default>

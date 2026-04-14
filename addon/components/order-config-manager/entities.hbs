@@ -9,13 +9,7 @@
         />
     </div>
     {{#each this.customEntities as |customEntity index|}}
-        <ContentPanel
-            @title={{customEntity.name}}
-            @subtitle={{customEntity.description}}
-            @panelSubtitleInlineClass="text-xs"
-            @open={{true}}
-            @wrapperClass="bordered-classic"
-        >
+        <ContentPanel @title={{customEntity.name}} @subtitle={{customEntity.description}} @panelSubtitleInlineClass="text-xs" @open={{true}} @wrapperClass="bordered-classic">
             <div class="flex flex-row items-center py-2 space-x-2 mb-4">
                 <Button @type="default" @icon="pencil" @onClick={{fn this.editCustomEntity customEntity index}} @permission="fleet-ops update order-config" />
                 <Button @type="danger" @icon="trash" @onClick={{fn this.deleteCustomEntity customEntity index}} @permission="fleet-ops update order-config" />
