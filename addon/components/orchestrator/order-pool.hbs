@@ -4,8 +4,8 @@
     {{! Search + count }}
     <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center space-x-2 flex-shrink-0">
         <div class="relative flex-1">
-            <span class="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none text-gray-400" style="width:2rem;">
-                <FaIcon @icon="magnifying-glass" @size="xs" style="vertical-align:0;display:block;" />
+            <span class="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none text-gray-400 w-8">
+                <FaIcon @icon="magnifying-glass" @size="xs" class="block align-baseline" />
             </span>
             <input type="text" class="form-input form-input-sm w-full pl-7i" placeholder={{t "orchestrator.search-orders"}} value={{this.orderSearch}} {{on "input" this.onSearchInput}} />
         </div>

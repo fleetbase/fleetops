@@ -155,9 +155,9 @@
         {{else if (eq this.activeTab "vehicles")}}
             {{#if this.filteredVehicles.length}}
                 {{#each this.filteredVehicles as |vehicle|}}
-                    <div
-                        role="button"
-                        class="flex items-start gap-3 px-3 py-2.5 border-b dark:border-gray-700/60 cursor-pointer select-none transition-colors
+                    <button
+                        type="button"
+                        class="w-full text-left flex items-start gap-3 px-3 py-2.5 border-b dark:border-gray-700/60 cursor-pointer select-none transition-colors
                             {{if
                                 (includes vehicle.public_id this.selectedVehicleIdsArray)
                                 'bg-indigo-100 dark:bg-indigo-900/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60'
@@ -203,7 +203,7 @@
                                 <span class="truncate">{{or vehicle.call_sign "-"}}</span>
                             </div>
                         </div>
-                    </div>
+                    </button>
                 {{/each}}
             {{else}}
                 <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
@@ -220,9 +220,9 @@
         {{else}}
             {{#if this.filteredDrivers.length}}
                 {{#each this.filteredDrivers as |driver|}}
-                    <div
-                        role="button"
-                        class="flex items-start gap-3 px-3 py-2.5 border-b dark:border-gray-700/60 cursor-pointer select-none transition-colors
+                    <button
+                        type="button"
+                        class="w-full text-left flex items-start gap-3 px-3 py-2.5 border-b dark:border-gray-700/60 cursor-pointer select-none transition-colors
                             {{if
                                 (includes driver.public_id this.selectedDriverIdsArray)
                                 'bg-indigo-100 dark:bg-indigo-900/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60'
@@ -261,7 +261,7 @@
                                 <span class="truncate">{{or driver.email "-"}}</span>
                             </div>
                         </div>
-                    </div>
+                    </button>
                 {{/each}}
             {{else}}
                 <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">

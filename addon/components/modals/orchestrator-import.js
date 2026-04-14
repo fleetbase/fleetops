@@ -677,7 +677,7 @@ export default class OrchestratorImportComponent extends Component {
      * An empty string means "skip / not mapped".
      */
     @action setColumnMapping(fieldKey, event) {
-        const value = typeof event === 'string' ? event : event?.target?.value ?? '';
+        const value = typeof event === 'string' ? event : (event?.target?.value ?? '');
         const mapped = value === '' ? null : value;
         this.columnMappings = this.columnMappings.map((m) => (m.key === fieldKey ? { ...m, mappedColumn: mapped } : m));
         // Re-sync footer so "Next" disabled state is updated
@@ -790,22 +790,18 @@ export default class OrchestratorImportComponent extends Component {
     }
 
     // ── Template download ─────────────────────────────────────────────────────
-    // The template XLSX is hosted on S3. If the caller passes an onImportTemplate
-    // option (matching the ember-ui import-form pattern) we delegate to that;
-    // otherwise we trigger a direct browser download from the canonical S3 URL.
-    static TEMPLATE_URL = 'https://flb-assets.s3.ap-southeast-1.amazonaws.com/import-templates/Fleetbase_Order_Import_Template.xlsx';
-
     @action downloadTemplate() {
         if (typeof this.args.options?.onImportTemplate === 'function') {
             return this.args.options.onImportTemplate();
         }
-        const a = document.createElement('a');
-        a.href = OrchestratorImportComponent.TEMPLATE_URL;
-        a.download = 'Fleetbase_Order_Import_Template.xlsx';
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+
+        // Build a dynamic XLSX template from the current field list + a sample row
+        // so the template always stays in sync with the importer field definitions.
+        const headers = TARGET_FIELDS.map((f) => f.key);
+        const sampleValues = headers.map((k) => SAMPLE_ROW[k] ?? '');
+        const ws = XLSX.utils.aoa_to_sheet([headers, sampleValues]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+        XLSX.writeFile(wb, 'Fleetbase_Order_Import_Template.xlsx');
     }
 }

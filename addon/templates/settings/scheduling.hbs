@@ -54,7 +54,7 @@
                         {{#each this.scheduleTemplates as |template|}}
                             <div class="flex items-center justify-between py-2.5 px-1">
                                 <div class="flex items-center gap-2 min-w-0">
-                                    <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: {{template.color}}"></span>
+                                    <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{html-safe (concat "background-color: " template.color)}}></span>
                                     <span class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
                                         {{template.name}}
                                     </span>

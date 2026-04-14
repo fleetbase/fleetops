@@ -58,14 +58,14 @@
 
     {{! ── Phase builder panel (collapsible, below toolbar) ── }}
     {{#if this.showPhaseBuilder}}
-        <div class="workbench-phase-panel border-b dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0" style="height: 320px;">
+        <div class="workbench-phase-panel border-b dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 h-80">
             <Orchestrator::PhaseBuilder @phases={{this.phases}} @availableEngines={{this.availableEngines}} @onPhasesChange={{this.onPhasesChange}} @onRunPhases={{this.onRunPhases}} />
         </div>
     {{/if}}
 
     {{! ── Card fields settings panel (collapsible, below toolbar) ── }}
     {{#if this.showCardFieldsSettings}}
-        <div class="workbench-card-fields-panel border-b dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 overflow-y-auto" style="max-height: 400px;">
+        <div class="workbench-card-fields-panel border-b dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 overflow-y-auto max-h-96">
             <Orchestrator::CardFieldsSettings @onSaved={{this.onCardFieldsSaved}} />
         </div>
     {{/if}}

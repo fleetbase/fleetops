@@ -15,7 +15,7 @@
                 type="checkbox"
                 class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600 border-gray-300 dark:border-gray-600 cursor-pointer flex-shrink-0"
                 checked={{@selected}}
-                {{on "click" (fn @onSelect)}}
+                {{on "click" @onSelect}}
             />
         {{/if}}
         <a

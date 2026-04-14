@@ -4,7 +4,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency';
-import { colorForId, routeStyleForStatus, waypointIconHtml } from '../utils/route-colors';
+import { colorForId, waypointIconHtml } from '../utils/route-colors';
 import polyline from '@fleetbase/ember-core/utils/polyline';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 
@@ -753,7 +753,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
      * @param {Object} vehicle - Vehicle record (plain JSON from orchestrator/orders)
      * @returns {Array|null}   - [[lat,lng], ...] or null if fewer than 2 valid points
      */
-    _buildRouteWaypoints(orders, vehicle) {
+    _buildRouteWaypoints(orders, _vehicle) {
         const points = [];
         // Only include the actual order stop coordinates (pickup + dropoff / waypoints).
         // Do NOT prepend the driver/vehicle current GPS location — that adds an extra

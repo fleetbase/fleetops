@@ -75,7 +75,7 @@
                          as primary with driver as sub-label (legacy behaviour). }}
                     <div
                         class="flex items-center px-3 py-2 border-b dark:border-gray-700 cursor-pointer"
-                        style="border-left: 3px solid {{group.routeColor}}"
+                        style={{html-safe (concat "border-left: 3px solid " group.routeColor)}}
                         {{on "click" (fn this.toggleCard group.vehicle.public_id)}}
                     >
                         {{#if (and @hasDriverPhase group.driver)}}
@@ -140,7 +140,7 @@
                                                 {{! Letter badge }}
                                                 <span
                                                     class="mt-0.5 w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold"
-                                                    style="font-size:0.6rem; background-color:{{group.routeColor}}"
+                                                    style={{html-safe (concat "font-size:0.6rem; background-color:" group.routeColor)}}
                                                 >{{stop.label}}</span>
 
                                                 {{! Stop content }}
@@ -207,7 +207,7 @@
                                         <div class="flex items-center gap-2 px-3 py-2 dark:bg-gray-800">
                                             <span
                                                 class="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold"
-                                                style="font-size:0.6rem; background-color:{{group.routeColor}}"
+                                                style={{html-safe (concat "font-size:0.6rem; background-color:" group.routeColor)}}
                                             >{{@getStopLabel idx}}</span>
                                             <span class="text-xs dark:text-white truncate">{{or item.order.tracking item.order.public_id}}</span>
                                         </div>

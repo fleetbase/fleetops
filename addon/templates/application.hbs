@@ -7,6 +7,7 @@
     <GlobalSearch />
 </Layout::Section::Container>
 
+{{! template-lint-disable no-potential-path-strings }}
 <RegistryYield @registry="@fleetbase/fleetops-engine" as |RegistryComponent|>
     <RegistryComponent @controller={{this}} />
 </RegistryYield>
