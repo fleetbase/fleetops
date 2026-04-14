@@ -14,6 +14,7 @@ use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Models\Concerns\ScopedToCompanyContext;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\Transaction;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -54,6 +55,7 @@ class Order extends Model
     use LogsActivity;
     use HasTrackingNumber;
     use HasCustomFields;
+    use ScopedToCompanyContext;
 
     /**
      * The database table used by the model.
