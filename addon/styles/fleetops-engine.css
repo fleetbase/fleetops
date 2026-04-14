@@ -2366,7 +2366,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
 
 /* 1. Resource label: make the inner span (direct child of .ec-row-head)
       fill the full cell width so the workload bar stretches correctly. */
-#ec-row-head .ec-row-head > span,
+#fleet-ops-orchestrator-plan-timeline .ec-row-head > span,
 #fleet-ops-scheduler-timeline .ec-row-head > span {
     display: block;
     width: 100%;
@@ -2376,7 +2376,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
 /* 2. Event blocks: ensure a minimum width so the 3-line content is readable.
       The timeline slot width determines how wide each column is; we set a
       sensible min-width so the block never collapses to an unreadable sliver. */
-#ec-row-head .ec-event,
+#fleet-ops-orchestrator-plan-timeline .ec-event,
 #fleet-ops-scheduler-timeline .ec-event {
     min-width: 200px;
 }
