@@ -709,7 +709,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
             // vehicle always gets the same color across runs and page refreshes.
             const routeColor = colorForId(group.vehicle?.public_id ?? vehicleId);
             // Build the ordered [[lat, lng], ...] waypoint array for the OSRM route API.
-            const routeWaypoints = this._buildRouteWaypoints(group.orders, group.vehicle);
+            const routeWaypoints = this._buildRouteWaypoints(group.orders);
             // Annotate each order's stops with sequential letter labels that match
             // the route list card labels (A, B, C…). The route list uses
             // {{@getStopLabel idx}} where idx is the order's 0-based position in
