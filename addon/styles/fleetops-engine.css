@@ -2047,7 +2047,7 @@ body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-timeline-slot.fc
     font-weight: 500;
     padding: 0.1rem 0.35rem;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 8%);
 }
 
 #fleet-ops-fleet-schedule-container .fc-event:hover {
@@ -2085,22 +2085,23 @@ body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-scrollgrid {
     --ec-color-200: #e5e7eb;
     --ec-color-100: #f3f4f6;
     --ec-color-50: #f9fafb;
-    --ec-bg-color: #ffffff;
+    --ec-bg-color: #fff;
     --ec-text-color: #111827;
     --ec-border-color: #e5e7eb;
-    --ec-button-bg-color: #ffffff;
+    --ec-button-bg-color: #fff;
     --ec-button-border-color: #d1d5db;
     --ec-button-text-color: #374151;
     --ec-button-active-bg-color: #4f46e5;
     --ec-button-active-border-color: #4338ca;
-    --ec-button-active-text-color: #ffffff;
+    --ec-button-active-text-color: #fff;
     --ec-today-bg-color: #eff6ff;
     --ec-highlight-color: #e0e7ff;
     --ec-event-bg-color: #4f46e5;
-    --ec-event-text-color: #ffffff;
+    --ec-event-text-color: #fff;
     --ec-bg-event-color: #e5e7eb;
     --ec-bg-event-opacity: 0.4;
     --ec-now-indicator-color: #ef4444;
+
     font-size: 0.75rem;
     font-family: inherit;
 }
@@ -2120,11 +2121,11 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec {
     --ec-button-text-color: #d1d5db;
     --ec-button-active-bg-color: #4f46e5;
     --ec-button-active-border-color: #6366f1;
-    --ec-button-active-text-color: #ffffff;
+    --ec-button-active-text-color: #fff;
     --ec-today-bg-color: #1e3a5f;
     --ec-highlight-color: #312e81;
     --ec-event-bg-color: #6366f1;
-    --ec-event-text-color: #ffffff;
+    --ec-event-text-color: #fff;
     --ec-bg-event-color: #374151;
     --ec-bg-event-opacity: 0.5;
     --ec-now-indicator-color: #f87171;
@@ -2137,11 +2138,13 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec {
     border-bottom: none;
     background-color: var(--ec-bg-color);
 }
+
 #fleet-ops-scheduler-timeline .ec-title {
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--ec-text-color);
 }
+
 #fleet-ops-scheduler-timeline .ec-button {
     font-size: 0.75rem;
     padding: 0.25rem 0.625rem;
@@ -2151,10 +2154,12 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec {
         border-color 0.15s,
         color 0.15s;
 }
+
 #fleet-ops-scheduler-timeline .ec-button:not(:disabled):hover {
     background-color: var(--ec-color-100);
     border-color: var(--ec-color-300);
 }
+
 body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-button:not(:disabled):hover {
     background-color: var(--ec-color-200);
 }
@@ -2165,9 +2170,11 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-button:not(:disabled):
     border-inline-end-color: var(--ec-border-color);
     min-width: 180px;
 }
+
 body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-sidebar {
     background-color: var(--ec-color-100);
 }
+
 #fleet-ops-scheduler-timeline .ec-resource {
     font-size: 0.75rem;
     font-weight: 500;
@@ -2186,6 +2193,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-sidebar {
     color: #6b7280;
     border-color: var(--ec-border-color);
 }
+
 body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-col-head,
 body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-col-group {
     background-color: var(--ec-color-100);
@@ -2196,6 +2204,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-col-group {
 #fleet-ops-scheduler-timeline .ec-day {
     background-color: var(--ec-bg-color);
 }
+
 body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-day {
     background-color: #1f2937;
 }
@@ -2207,11 +2216,12 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-day {
     font-weight: 500;
     padding: 0.25rem 0.5rem;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 8%);
     border: none;
     min-height: 3.25rem;
     overflow: hidden;
 }
+
 #fleet-ops-scheduler-timeline .ec-event:hover {
     filter: brightness(0.92);
 }
@@ -2220,6 +2230,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-day {
 #fleet-ops-scheduler-timeline .ec-now-indicator {
     border-color: var(--ec-now-indicator-color);
 }
+
 #fleet-ops-scheduler-timeline .ec-now-indicator-arrow {
     border-top-color: var(--ec-now-indicator-color);
     border-bottom-color: var(--ec-now-indicator-color);
@@ -2227,11 +2238,13 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-day {
 
 /* Drag-over hover state */
 #fleet-ops-scheduler-timeline[data-dragging-over='true'] .ec-main {
-    background-color: rgba(99, 102, 241, 0.04);
+    background-color: rgba(99, 102, 241, 4%);
 }
+
 body[data-theme='dark'] #fleet-ops-scheduler-timeline[data-dragging-over='true'] .ec-main {
-    background-color: rgba(129, 140, 248, 0.06);
+    background-color: rgba(129, 140, 248, 6%);
 }
+
 /* Per-column drop cursor indicator */
 #fleet-ops-scheduler-timeline .ec-drop-cursor {
     position: absolute;
@@ -2242,12 +2255,13 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline[data-dragging-over='true']
     pointer-events: none;
     z-index: 10;
     border-radius: 1px;
-    box-shadow: 0 0 6px rgba(99, 102, 241, 0.7);
+    box-shadow: 0 0 6px rgba(99, 102, 241, 70%);
     transition: left 0.04s linear;
 }
+
 body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-drop-cursor {
     background-color: #818cf8;
-    box-shadow: 0 0 6px rgba(129, 140, 248, 0.7);
+    box-shadow: 0 0 6px rgba(129, 140, 248, 70%);
 }
 
 /* Full-height timeline */
@@ -2257,6 +2271,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-drop-cursor {
     height: 100%;
     overflow: hidden;
 }
+
 #fleet-ops-scheduler-timeline .fleetbase-event-calendar,
 #fleet-ops-scheduler-timeline .ec {
     flex: 1 1 0;
@@ -2265,6 +2280,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-drop-cursor {
     display: flex;
     flex-direction: column;
 }
+
 #fleet-ops-scheduler-timeline .ec-main {
     flex: 1 1 0;
     min-height: 0;
@@ -2277,10 +2293,12 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-drop-cursor {
     height: 6px;
     background-color: transparent;
 }
+
 #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollbar-thumb {
     background-color: #d1d5db;
     border-radius: 3px;
 }
+
 body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollbar-thumb {
     background-color: #4b5563;
 }
@@ -2390,6 +2408,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-main::-webkit-scrollba
 .orchestrator-workbench {
     background: #f9fafb; /* gray-50 — light mode default */
 }
+
 body[data-theme='dark'] .orchestrator-workbench,
 .dark .orchestrator-workbench {
     background: #111827; /* gray-900 — dark mode */
@@ -2406,18 +2425,21 @@ body[data-theme='dark'] .orchestrator-workbench,
 }
 
 /* ── Order pool card ── */
+
 /* Light-mode base: white card with gray-200 border */
 .order-pool-card {
-    background: #ffffff;
+    background: #fff;
     border-color: #e5e7eb; /* gray-200 */
     transition:
         background 0.1s,
         border-color 0.1s;
 }
+
 .order-pool-card:hover {
     background: #f9fafb;
     border-color: #93c5fd; /* blue-300 */
 }
+
 .order-pool-card.selected {
     background: #eff6ff; /* blue-50 */
     border-color: #3b82f6;
@@ -2429,11 +2451,13 @@ body[data-theme='dark'] .order-pool-card,
     background: #1f2937;
     border-color: #374151;
 }
+
 body[data-theme='dark'] .order-pool-card:hover,
 .dark .order-pool-card:hover {
     background: #263040;
     border-color: #4b5563;
 }
+
 body[data-theme='dark'] .order-pool-card.selected,
 .dark .order-pool-card.selected {
     background: #1e3a5f;
@@ -2456,10 +2480,12 @@ body[data-theme='dark'] .order-pool-card.selected,
         color 0.1s,
         border-color 0.1s;
 }
+
 .order-filter-chip:hover {
     background: #374151;
     color: #e5e7eb;
 }
+
 .order-filter-chip.active {
     background: #1d4ed8;
     border-color: #3b82f6;
@@ -2482,6 +2508,7 @@ body[data-theme='dark'] .order-pool-card.selected,
 .vehicle-route-card {
     transition: box-shadow 0.1s;
 }
+
 .vehicle-route-card:hover {
     box-shadow: 0 0 0 1px #3b82f6;
 }
@@ -2490,6 +2517,7 @@ body[data-theme='dark'] .order-pool-card.selected,
 .assigned-stop {
     transition: background 0.1s;
 }
+
 .assigned-stop:hover {
     background: #263040 !important;
 }
@@ -2501,6 +2529,7 @@ body[data-theme='dark'] .order-pool-card.selected,
         background 0.1s,
         border-color 0.1s;
 }
+
 .driver-card:hover {
     background: #263040;
     border-color: #4b5563;
@@ -2511,8 +2540,9 @@ body[data-theme='dark'] .order-pool-card.selected,
     min-height: 32px;
     transition: background 0.1s;
 }
+
 .vehicle-drop-zone.drag-over {
-    background: rgba(59, 130, 246, 0.1);
+    background: rgba(59, 130, 246, 10%);
     outline: 1px dashed #3b82f6;
     border-radius: 4px;
 }
@@ -2567,9 +2597,11 @@ body[data-theme='dark'] .import-dropzone.dragging,
     color: #6b7280;
     font-weight: 500;
 }
+
 .import-step.active {
     color: #3b82f6;
 }
+
 .import-step-num {
     display: inline-flex;
     align-items: center;
@@ -2582,10 +2614,12 @@ body[data-theme='dark'] .import-dropzone.dragging,
     font-weight: 700;
     color: #9ca3af;
 }
+
 .import-step.active .import-step-num {
     background: #1d4ed8;
     color: #fff;
 }
+
 .import-step-divider {
     flex: 1;
     height: 1px;
@@ -2600,6 +2634,7 @@ body[data-theme='dark'] .import-dropzone.dragging,
 }
 
 /* ── Orchestrator Workbench: Leaflet div-icon markers ── */
+
 /* The wrapper div produced by div-icon must have no default background/border */
 .orch-marker-wrapper {
     background: transparent !important;
@@ -2613,9 +2648,10 @@ body[data-theme='dark'] .import-dropzone.dragging,
     border-radius: 50%;
     background: #3b82f6;
     border: 2px solid #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 50%);
     transition: transform 0.1s;
 }
+
 .orch-marker-order.selected {
     background: #f59e0b;
     border-color: #fff;
@@ -2628,9 +2664,10 @@ body[data-theme='dark'] .import-dropzone.dragging,
     height: 16px;
     border-radius: 50%;
     border: 2px solid #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 50%);
     background: #ef4444; /* default: offline */
 }
+
 .orch-marker-driver.online {
     background: #10b981;
 }
@@ -2654,7 +2691,7 @@ body[data-theme='dark'] .import-dropzone.dragging,
  * Minimal padding, small font, semi-transparent dark background.
  */
 .fleetops-waypoint-tooltip {
-    background: rgba(15, 23, 42, 0.88) !important;
+    background: rgba(15, 23, 42, 88%) !important;
     border: none !important;
     border-radius: 4px !important;
     color: #f8fafc !important;
@@ -2662,11 +2699,11 @@ body[data-theme='dark'] .import-dropzone.dragging,
     font-weight: 600 !important;
     padding: 3px 7px !important;
     white-space: nowrap;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 35%) !important;
 }
 
 .fleetops-waypoint-tooltip::before {
-    border-top-color: rgba(15, 23, 42, 0.88) !important;
+    border-top-color: rgba(15, 23, 42, 88%) !important;
 }
 
 /* ============================================================
@@ -2678,7 +2715,7 @@ body[data-theme='dark'] .import-dropzone.dragging,
  */
 .fleetops-waypoint-popup-wrapper .leaflet-popup-content-wrapper {
     border-radius: 6px !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 20%) !important;
     padding: 0 !important;
     overflow: hidden;
 }
@@ -2765,10 +2802,10 @@ body[data-theme='dark'] .import-dropzone.dragging,
 }
 
 .fleetops-route-tooltip-wrapper .leaflet-tooltip {
-    background: rgba(15, 23, 42, 0.92) !important;
+    background: rgba(15, 23, 42, 92%) !important;
     border: none !important;
     border-radius: 5px !important;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 30%) !important;
     padding: 6px 10px !important;
     color: #f1f5f9 !important;
     font-size: 11px !important;
@@ -2776,7 +2813,7 @@ body[data-theme='dark'] .import-dropzone.dragging,
 }
 
 .fleetops-route-tooltip-wrapper .leaflet-tooltip::before {
-    border-top-color: rgba(15, 23, 42, 0.92) !important;
+    border-top-color: rgba(15, 23, 42, 92%) !important;
 }
 
 .fleetops-route-tooltip {
@@ -2810,9 +2847,11 @@ body[data-theme='dark'] .import-dropzone.dragging,
     0% {
         opacity: 1;
     }
+
     50% {
         opacity: 0.55;
     }
+
     100% {
         opacity: 1;
     }
@@ -2828,6 +2867,7 @@ body[data-theme='dark'] .import-dropzone.dragging,
     max-height: 300px;
     overflow-y: scroll;
 }
+
 /* ============================================================
    @event-calendar/core - Orchestrator Plan Timeline Overrides
    Mirrors the scheduler timeline styles, scoped to the
@@ -2839,25 +2879,27 @@ body[data-theme='dark'] .import-dropzone.dragging,
     --ec-color-200: #e5e7eb;
     --ec-color-100: #f3f4f6;
     --ec-color-50: #f9fafb;
-    --ec-bg-color: #ffffff;
+    --ec-bg-color: #fff;
     --ec-text-color: #111827;
     --ec-border-color: #e5e7eb;
-    --ec-button-bg-color: #ffffff;
+    --ec-button-bg-color: #fff;
     --ec-button-border-color: #d1d5db;
     --ec-button-text-color: #374151;
     --ec-button-active-bg-color: #4f46e5;
     --ec-button-active-border-color: #4338ca;
-    --ec-button-active-text-color: #ffffff;
+    --ec-button-active-text-color: #fff;
     --ec-today-bg-color: #eff6ff;
     --ec-highlight-color: #e0e7ff;
     --ec-event-bg-color: #4f46e5;
-    --ec-event-text-color: #ffffff;
+    --ec-event-text-color: #fff;
     --ec-bg-event-color: #e5e7eb;
     --ec-bg-event-opacity: 0.4;
     --ec-now-indicator-color: #ef4444;
+
     font-size: 0.75rem;
     font-family: inherit;
 }
+
 body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec {
     --ec-color-400: #4b5563;
     --ec-color-300: #374151;
@@ -2872,26 +2914,29 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec {
     --ec-button-text-color: #d1d5db;
     --ec-button-active-bg-color: #4f46e5;
     --ec-button-active-border-color: #6366f1;
-    --ec-button-active-text-color: #ffffff;
+    --ec-button-active-text-color: #fff;
     --ec-today-bg-color: #1e3a5f;
     --ec-highlight-color: #312e81;
     --ec-event-bg-color: #6366f1;
-    --ec-event-text-color: #ffffff;
+    --ec-event-text-color: #fff;
     --ec-bg-event-color: #374151;
     --ec-bg-event-opacity: 0.5;
     --ec-now-indicator-color: #f87171;
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-toolbar {
     padding: 0.5rem 0.75rem;
     margin-block-end: 0;
     border-bottom: none;
     background-color: var(--ec-bg-color);
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-title {
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--ec-text-color);
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-button {
     font-size: 0.75rem;
     padding: 0.25rem 0.625rem;
@@ -2901,27 +2946,33 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec {
         border-color 0.15s,
         color 0.15s;
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-button:not(:disabled):hover {
     background-color: var(--ec-color-100);
     border-color: var(--ec-color-300);
 }
+
 body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-button:not(:disabled):hover {
     background-color: var(--ec-color-200);
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-sidebar {
     background-color: var(--ec-color-50);
     border-inline-end-color: var(--ec-border-color);
     min-width: 160px;
 }
+
 body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-sidebar {
     background-color: var(--ec-color-100);
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-resource {
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--ec-text-color);
     padding: 0;
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-col-head,
 #fleet-ops-orchestrator-plan-timeline .ec-col-group {
     background-color: var(--ec-color-50);
@@ -2932,44 +2983,53 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-sidebar {
     color: #6b7280;
     border-color: var(--ec-border-color);
 }
+
 body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-col-head,
 body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-col-group {
     background-color: var(--ec-color-100);
     color: #9ca3af;
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-day {
     background-color: var(--ec-bg-color);
 }
+
 body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-day {
     background-color: #1f2937;
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-event {
     border-radius: 0.25rem;
     font-size: 0.7rem;
     font-weight: 500;
     padding: 0.25rem 0.5rem;
     cursor: default;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 8%);
     border: none;
     min-height: 3.25rem;
     overflow: hidden;
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-event:hover {
     filter: brightness(0.92);
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-now-indicator {
     border-color: var(--ec-now-indicator-color);
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-now-indicator-arrow {
     border-top-color: var(--ec-now-indicator-color);
     border-bottom-color: var(--ec-now-indicator-color);
 }
+
 #fleet-ops-orchestrator-plan-timeline {
     display: flex;
     flex-direction: column;
     height: 100%;
     overflow: hidden;
 }
+
 #fleet-ops-orchestrator-plan-timeline .fleetbase-event-calendar,
 #fleet-ops-orchestrator-plan-timeline .ec {
     flex: 1 1 0;
@@ -2978,20 +3038,24 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-day {
     display: flex;
     flex-direction: column;
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-main {
     flex: 1 1 0;
     min-height: 0;
     overflow: auto;
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-scrollbar {
     width: 6px;
     height: 6px;
     background-color: transparent;
 }
+
 #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-scrollbar-thumb {
     background-color: #d1d5db;
     border-radius: 3px;
 }
+
 body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-main::-webkit-scrollbar-thumb {
     background-color: #4b5563;
 }
@@ -3145,21 +3209,21 @@ body[data-theme='dark'] .import-mapping-row,
 }
 
 .import-mapping-row:hover {
-    background: rgba(0, 0, 0, 0.02); /* light mode hover */
+    background: rgba(0, 0, 0, 2%); /* light mode hover */
 }
 
 body[data-theme='dark'] .import-mapping-row:hover,
 .dark .import-mapping-row:hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 2%);
 }
 
 /* Highlight rows that have a mapping applied */
 .import-mapping-row--mapped {
-    background: rgba(16, 185, 129, 0.05);
+    background: rgba(16, 185, 129, 5%);
 }
 
 .import-mapping-row--mapped:hover {
-    background: rgba(16, 185, 129, 0.09);
+    background: rgba(16, 185, 129, 9%);
 }
 
 /* Column sizing helpers */
@@ -3189,6 +3253,7 @@ body[data-theme='dark'] .import-mapping-row:hover,
     color: #374151; /* gray-700 — light mode */
     line-height: 1.3;
 }
+
 body[data-theme='dark'] .import-mapping-field-name,
 .dark .import-mapping-field-name {
     color: #d1d5db; /* gray-300 — dark mode */
@@ -3200,6 +3265,7 @@ body[data-theme='dark'] .import-mapping-field-name,
     color: #6b7280; /* gray-500 — light mode */
     line-height: 1.2;
 }
+
 body[data-theme='dark'] .import-mapping-field-hint,
 .dark .import-mapping-field-hint {
     color: #4b5563; /* gray-600 — dark mode */
@@ -3230,6 +3296,7 @@ select.import-mapping-select--error {
     background: #f9fafb !important; /* gray-50 — light mode */
     border-bottom: none !important;
 }
+
 body[data-theme='dark'] .flb--modal-header.import-modal-header {
     background: #1f2937 !important; /* gray-800 — dark mode */
     border-bottom: none !important;
@@ -3240,12 +3307,14 @@ body[data-theme='dark'] .flb--modal-header.import-modal-header {
     background: #f9fafb; /* gray-50 — light mode */
     border-bottom: 1px solid #e5e7eb; /* gray-200 */
 }
+
 body[data-theme='dark'] .fleetops-order-import nav.import-step-tabs {
     background: #1f2937; /* gray-800 — dark mode */
     border-bottom: 1px solid #374151; /* gray-700 subtle separator */
 }
 
 /* ── Orchestrator Import Modal: modal body + step content layout ── */
+
 /* The modal body is made flex so the step content div fills it, which in turn
    allows the download block to be pushed to the very bottom with margin-top:auto. */
 .fleetops-order-import .flb--modal-body {
@@ -3266,6 +3335,7 @@ body[data-theme='dark'] .fleetops-order-import nav.import-step-tabs {
 }
 
 /* ── Orchestrator Import Modal: download template InfoBlock ── */
+
 /* The InfoBlock is placed inside the flex column; margin-top:auto pushes it
    to the bottom of the upload step regardless of the dropzone height. */
 .import-template-download {
@@ -3307,8 +3377,7 @@ body[data-theme='dark'] .fleetops-order-import nav.import-step-tabs {
 }
 
 .import-preview-table-wrap {
-    overflow-x: auto;
-    overflow-y: auto;
+    overflow: auto auto;
     max-height: 360px;
 }
 
@@ -3365,15 +3434,15 @@ body[data-theme='light'] .import-preview-table td {
 }
 
 .import-preview-table tbody tr:hover td {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 2%);
 }
 
 body[data-theme='light'] .import-preview-table tbody tr:hover td {
-    background: rgba(0, 0, 0, 0.02);
+    background: rgba(0, 0, 0, 2%);
 }
 
 .import-preview-row--error td {
-    background: rgba(239, 68, 68, 0.06) !important;
+    background: rgba(239, 68, 68, 6%) !important;
 }
 
 /* Address cell — allow wrapping for long addresses */
@@ -3397,17 +3466,17 @@ body[data-theme='light'] .import-preview-table tbody tr:hover td {
 }
 
 .import-preview-badge--blue {
-    background: rgba(59, 130, 246, 0.15);
+    background: rgba(59, 130, 246, 15%);
     color: #60a5fa;
 }
 
 .import-preview-badge--gray {
-    background: rgba(107, 114, 128, 0.15);
+    background: rgba(107, 114, 128, 15%);
     color: #9ca3af;
 }
 
 .import-preview-badge--green {
-    background: rgba(16, 185, 129, 0.15);
+    background: rgba(16, 185, 129, 15%);
     color: #34d399;
 }
 
@@ -3438,5 +3507,5 @@ body[data-theme='light'] .import-preview-table tbody tr:hover td {
     border-top: 1px solid #1f2937;
     font-size: 0.72rem;
     color: #fbbf24;
-    background: rgba(251, 191, 36, 0.06);
+    background: rgba(251, 191, 36, 6%);
 }
