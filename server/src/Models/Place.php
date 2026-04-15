@@ -92,6 +92,11 @@ class Place extends Model
         'location',
         'meta',
         'phone',
+        'location_type',
+        'appointment_required',
+        'contact_name',
+        'contact_phone',
+        'contact_email',
     ];
 
     /**
@@ -123,6 +128,7 @@ class Place extends Model
         'meta'          => Json::class,
         'location'      => Point::class,
         'owner_type'    => PolymorphicType::class,
+        'appointment_required' => 'boolean',
     ];
 
     /**
@@ -954,5 +960,80 @@ class Place extends Model
     public function getAddressAttribute()
     {
         return $this->getAddressString();
+    }
+
+    /**
+     * Operating hours live under meta.operating_hours. Expected shape:
+     *   ['mon' => ['open' => '06:00', 'close' => '18:00'], ...]
+     * Returns null if absent.
+     */
+    public function getOperatingHours(): ?array
+    {
+        $hours = $this->metaSubkey('operating_hours');
+        return is_array($hours) ? $hours : null;
+    }
+
+    public function setOperatingHours(?array $value): self
+    {
+        return $this->setMetaSubkey('operating_hours', $value);
+    }
+
+    /**
+     * Dock info lives under meta.dock_info. Expected shape:
+     *   ['dock_count' => 4, 'dock_height' => 48, 'notes' => '...']
+     */
+    public function getDockInfo(): ?array
+    {
+        $info = $this->metaSubkey('dock_info');
+        return is_array($info) ? $info : null;
+    }
+
+    public function setDockInfo(?array $value): self
+    {
+        return $this->setMetaSubkey('dock_info', $value);
+    }
+
+    /**
+     * Special instructions free-text, stored at meta.special_instructions.
+     */
+    public function getSpecialInstructions(): ?string
+    {
+        $text = $this->metaSubkey('special_instructions');
+        return is_string($text) && $text !== '' ? $text : null;
+    }
+
+    public function setSpecialInstructions(?string $value): self
+    {
+        $normalized = (is_string($value) && $value !== '') ? $value : null;
+        return $this->setMetaSubkey('special_instructions', $normalized);
+    }
+
+    /**
+     * Internal: read one sub-key out of the meta JSON column.
+     */
+    private function metaSubkey(string $key)
+    {
+        $meta = $this->meta;
+        if (!is_array($meta)) {
+            return null;
+        }
+        return $meta[$key] ?? null;
+    }
+
+    /**
+     * Internal: write one sub-key into the meta JSON column, preserving all
+     * other keys. Passing null removes the sub-key entirely (so the JSON
+     * doesn't accumulate stale `"key": null` entries).
+     */
+    private function setMetaSubkey(string $key, $value): self
+    {
+        $meta = is_array($this->meta) ? $this->meta : [];
+        if ($value === null) {
+            unset($meta[$key]);
+        } else {
+            $meta[$key] = $value;
+        }
+        $this->meta = $meta;
+        return $this;
     }
 }
