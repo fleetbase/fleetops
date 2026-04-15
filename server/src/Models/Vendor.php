@@ -77,6 +77,15 @@ class Vendor extends Model
         'notes',
         'type',
         'slug',
+        'scac_code',
+        'mc_number',
+        'dot_number',
+        'insurance_expiry',
+        'insurance_amount',
+        'payment_terms_days',
+        'default_payment_method',
+        'carrier_type',
+        'is_preferred',
     ];
 
     /**
@@ -108,6 +117,10 @@ class Vendor extends Model
     protected $casts = [
         'callbacks' => Json::class,
         'meta'      => Json::class,
+        'insurance_expiry'    => 'date',
+        'insurance_amount'    => 'decimal:2',
+        'payment_terms_days'  => 'integer',
+        'is_preferred'        => 'boolean',
     ];
 
     /**
