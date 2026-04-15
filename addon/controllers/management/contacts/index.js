@@ -1,6 +1,7 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import fleetOpsOptions from '../../../utils/fleet-ops-options';
 
 export default class ManagementContactsIndexController extends Controller {
     @service contactActions;
@@ -8,7 +9,7 @@ export default class ManagementContactsIndexController extends Controller {
     @service intl;
 
     /** query params */
-    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status', 'title', 'email', 'phone'];
+    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status', 'title', 'email', 'phone', 'type'];
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -18,6 +19,7 @@ export default class ManagementContactsIndexController extends Controller {
     @tracked email;
     @tracked phone;
     @tracked status;
+    @tracked type;
     @tracked table;
 
     /** action buttons */
@@ -123,6 +125,19 @@ export default class ManagementContactsIndexController extends Controller {
                 sortable: true,
                 filterable: true,
                 filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.type'),
+                valuePath: 'type',
+                cellComponent: 'cell/contact-type',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterParam: 'type',
+                filterComponent: 'filter/multi-option',
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
+                filterOptions: fleetOpsOptions('contactPersonTypes'),
             },
             {
                 label: this.intl.t('column.address'),

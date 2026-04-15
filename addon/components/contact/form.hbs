@@ -38,6 +38,25 @@
             <InputGroup @name={{t "common.internal-id"}}>
                 <Input @value={{@resource.internal_id}} @type="text" class="w-full form-input" placeholder={{t "common.internal-id"}} disabled={{cannot-write @resource}} />
             </InputGroup>
+            <InputGroup @name={{t "contact.fields.type"}} @helpText={{t "contact.fields.type-help-text"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "contactPersonTypes"}}
+                        @selected={{find-by "value" @resource.type (get-fleet-ops-options "contactPersonTypes")}}
+                        @onChange={{set-model-attr @resource "type"}}
+                        @placeholder={{t "contact.fields.select-type"}}
+                        @triggerClass="form-select form-input"
+                        @allowClear={{true}}
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{option.label}}</div>
+                            <div class="hide-from-trigger">{{option.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
             <InputGroup @wrapperClass="col-span-2">
                 <div class="flex items-center justify-between">
                     <label>

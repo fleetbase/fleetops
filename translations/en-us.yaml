@@ -359,6 +359,9 @@ contact:
   fields:
     contact-details: Contact Details
     upload-new-photo: Upload New Photo
+    type: Type
+    select-type: Select type
+    type-help-text: Classify this contact so it can be filtered in the directory.
 
 customer:
   fields:

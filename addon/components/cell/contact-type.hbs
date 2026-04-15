@@ -1,0 +1,9 @@
+{{#if @value}}
+    {{#let (find-by "value" @value (get-fleet-ops-options "contactPersonTypes")) as |option|}}
+        <Badge @hideStatusDot={{true}} @status="info">
+            {{if option option.label (smart-humanize @value)}}
+        </Badge>
+    {{/let}}
+{{else}}
+    <span class={{@column.cellClassNames}}>-</span>
+{{/if}}

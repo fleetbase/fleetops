@@ -136,6 +136,13 @@ export const contactTypes = [
     { label: 'Dispatcher', value: 'dispatcher', description: 'Scheduling and operations contact' },
 ];
 
+export const contactPersonTypes = [
+    { label: 'Internal', value: 'internal', description: 'Employee or member of this organization' },
+    { label: 'Vendor Representative', value: 'vendor_representative', description: 'Point of contact at a carrier or vendor' },
+    { label: 'Customer Contact', value: 'customer_contact', description: 'Contact at a customer account' },
+    { label: 'Other', value: 'other', description: 'Any other contact type' },
+];
+
 export const contactStatuses = [
     { label: 'Active', value: 'active', description: 'Contact is valid and in use' },
     { label: 'Inactive', value: 'inactive', description: 'Contact is no longer valid' },
@@ -595,6 +602,7 @@ export default function fleetOpsOptions(key) {
         fleetTypes,
         fleetStatuses,
         contactTypes,
+        contactPersonTypes,
         contactStatuses,
         fuelReportTypes,
         fuelReportStatuses,
