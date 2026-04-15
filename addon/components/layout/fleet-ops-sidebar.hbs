@@ -135,7 +135,7 @@
                 >{{if menuItem.intl (t menuItem.intl) menuItem.title}}</Layout::Sidebar::Item>
             {{/if}}
         {{/each}}
-        {{#let (array "operations" "management" "connectivity" "maintenance" "analytics" "settings") as |sectionsToRender|}}
+        {{!-- {{#let (array "operations" "management" "connectivity" "maintenance" "analytics" "settings") as |sectionsToRender|}}
             {{#each sectionsToRender as |section|}}
                 {{#if (eq menuPanel.routePrefix section)}}
                     {{#each (get this (concat "universe" (capitalize section) "MenuItems")) as |menuItem|}}
@@ -176,7 +176,7 @@
                     {{/each}}
                 {{/if}}
             {{/each}}
-        {{/let}}
+        {{/let}} --}}
     </Layout::Sidebar::Panel>
 {{/each}}
 {{#each this.universeMenuPanels as |menuPanel|}}
