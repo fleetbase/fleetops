@@ -48,6 +48,23 @@ class Contact extends Model
     use HasCustomFields;
 
     /**
+     * Supported contact types. Persisted as lowercase snake_case strings
+     * in the `contacts.type` column. Constants provide a type-safe surface
+     * for callers; the column itself has no DB-level enum constraint.
+     */
+    public const TYPE_INTERNAL              = 'internal';
+    public const TYPE_VENDOR_REPRESENTATIVE = 'vendor_representative';
+    public const TYPE_CUSTOMER_CONTACT      = 'customer_contact';
+    public const TYPE_OTHER                 = 'other';
+
+    public const VALID_TYPES = [
+        self::TYPE_INTERNAL,
+        self::TYPE_VENDOR_REPRESENTATIVE,
+        self::TYPE_CUSTOMER_CONTACT,
+        self::TYPE_OTHER,
+    ];
+
+    /**
      * The database table used by the model.
      *
      * @var string
@@ -522,5 +539,33 @@ class Contact extends Model
     public function doesntHaveUser(): bool
     {
         return !$this->hasUser();
+    }
+
+    /**
+     * Strict validator for contact type. Returns true only for the 4 canonical
+     * values; false for null, empty, or any unknown string. No normalization,
+     * no exceptions.
+     */
+    public static function isValidType(?string $type): bool
+    {
+        return $type !== null && in_array($type, self::VALID_TYPES, true);
+    }
+
+    /**
+     * Local scope: filter contacts by type. Fail-closed: an invalid or null
+     * type argument yields an empty result set rather than silently broadening
+     * the query. Matches the Phase 1 ScopedToCompanyContext discipline.
+     *
+     *   Contact::ofType(Contact::TYPE_INTERNAL)->get()   // only internals
+     *   Contact::ofType('garbage')->get()                // []
+     *   Contact::ofType(null)->get()                     // []
+     */
+    public function scopeOfType($query, ?string $type)
+    {
+        if (!self::isValidType($type)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where($this->getTable() . '.type', $type);
     }
 }
