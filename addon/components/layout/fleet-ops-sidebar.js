@@ -46,6 +46,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     createMenuPanels() {
         const operationsItems = [
             {
+                priority: 0,
                 intl: 'menu.dashboard',
                 title: this.intl.t('menu.dashboard'),
                 icon: 'home',
@@ -54,6 +55,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see order'),
             },
             {
+                priority: 1,
                 intl: 'menu.orchestrator',
                 title: this.intl.t('menu.orchestrator'),
                 icon: 'circle-nodes',
@@ -62,6 +64,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see order'),
             },
             {
+                priority: 2,
                 intl: 'menu.scheduler',
                 title: this.intl.t('menu.scheduler'),
                 icon: 'calendar-day',
@@ -70,6 +73,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see order'),
             },
             {
+                priority: 3,
                 intl: 'menu.order-config',
                 title: this.intl.t('menu.order-config'),
                 icon: 'diagram-project',
@@ -78,6 +82,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see order-config'),
             },
             {
+                priority: 4,
                 intl: 'menu.service-rates',
                 title: this.intl.t('menu.service-rates'),
                 icon: 'file-invoice-dollar',
@@ -90,6 +95,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
         const resourcesItems = [
             {
+                priority: 0,
                 intl: 'menu.drivers',
                 title: this.intl.t('menu.drivers'),
                 icon: 'id-card',
@@ -100,6 +106,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see driver'),
             },
             {
+                priority: 1,
                 intl: 'menu.vehicles',
                 title: this.intl.t('menu.vehicles'),
                 icon: 'truck',
@@ -108,6 +115,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see vehicle'),
             },
             {
+                priority: 2,
                 intl: 'menu.fleets',
                 title: this.intl.t('menu.fleets'),
                 icon: 'user-group',
@@ -118,6 +126,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see fleet'),
             },
             {
+                priority: 3,
                 intl: 'menu.vendors',
                 title: this.intl.t('menu.vendors'),
                 icon: 'warehouse',
@@ -126,6 +135,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see vendor'),
             },
             {
+                priority: 4,
                 intl: 'menu.contacts',
                 title: this.intl.t('menu.contacts'),
                 icon: 'address-book',
@@ -134,6 +144,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see contact'),
             },
             {
+                priority: 5,
                 intl: 'menu.places',
                 title: this.intl.t('menu.places'),
                 icon: 'location-dot',
@@ -142,6 +153,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see place'),
             },
             {
+                priority: 6,
                 intl: 'menu.fuel-reports',
                 title: this.intl.t('menu.fuel-reports'),
                 icon: 'gas-pump',
@@ -150,6 +162,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see fuel-report'),
             },
             {
+                priority: 7,
                 intl: 'menu.issues',
                 title: this.intl.t('menu.issues'),
                 icon: 'triangle-exclamation',
@@ -162,6 +175,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
         const connectivityItems = [
             {
+                priority: 0,
                 intl: 'menu.telematics',
                 title: this.intl.t('menu.telematics'),
                 icon: 'satellite-dish',
@@ -170,6 +184,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see telematic'),
             },
             {
+                priority: 1,
                 intl: 'menu.devices',
                 title: this.intl.t('menu.devices'),
                 icon: 'hard-drive',
@@ -178,6 +193,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see device'),
             },
             {
+                priority: 2,
                 intl: 'menu.sensors',
                 title: this.intl.t('menu.sensors'),
                 icon: 'temperature-full',
@@ -186,6 +202,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see sensor'),
             },
             {
+                priority: 3,
                 intl: 'menu.events',
                 title: this.intl.t('menu.events'),
                 icon: 'stream',
@@ -198,6 +215,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
         const maintenanceItems = [
             {
+                priority: 0,
                 intl: 'menu.schedules',
                 title: this.intl.t('menu.schedules'),
                 icon: 'calendar-alt',
@@ -206,6 +224,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see maintenance-schedule'),
             },
             {
+                priority: 1,
                 intl: 'menu.work-orders',
                 title: this.intl.t('menu.work-orders'),
                 icon: 'clipboard-list',
@@ -214,6 +233,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see work-order'),
             },
             {
+                priority: 2,
                 intl: 'menu.maintenances',
                 title: this.intl.t('menu.maintenances'),
                 icon: 'history',
@@ -222,6 +242,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see maintenance'),
             },
             {
+                priority: 3,
                 intl: 'menu.equipment',
                 title: this.intl.t('menu.equipment'),
                 icon: 'trailer',
@@ -230,6 +251,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see equipment'),
             },
             {
+                priority: 4,
                 intl: 'menu.parts',
                 title: this.intl.t('menu.parts'),
                 icon: 'cog',
@@ -242,6 +264,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
         const analyticsItems = [
             {
+                priority: 0,
                 intl: 'menu.reports',
                 title: this.intl.t('menu.reports'),
                 icon: 'file-import',
@@ -254,6 +277,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
         const settingsItems = [
             {
+                priority: 0,
                 intl: 'menu.navigator-app',
                 title: this.intl.t('menu.navigator-app'),
                 icon: 'location-arrow',
@@ -262,6 +286,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see navigator-settings'),
             },
             {
+                priority: 1,
                 intl: 'menu.payments',
                 title: this.intl.t('menu.payments'),
                 icon: 'cash-register',
@@ -270,6 +295,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see payments'),
             },
             {
+                priority: 2,
                 intl: 'menu.notifications',
                 title: this.intl.t('menu.notifications'),
                 icon: 'bell',
@@ -278,6 +304,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see notification-settings'),
             },
             {
+                priority: 3,
                 intl: 'menu.routing',
                 title: this.intl.t('menu.routing'),
                 icon: 'route',
@@ -286,6 +313,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see routing-settings'),
             },
             {
+                priority: 4,
                 intl: 'menu.orchestrator',
                 title: this.intl.t('menu.orchestrator'),
                 icon: 'circle-nodes',
@@ -294,6 +322,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see routing-settings'),
             },
             {
+                priority: 5,
                 intl: 'menu.scheduling',
                 title: this.intl.t('menu.scheduling'),
                 icon: 'calendar-days',
@@ -302,6 +331,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see scheduling-settings'),
             },
             {
+                priority: 6,
                 intl: 'menu.custom-fields',
                 title: this.intl.t('menu.custom-fields'),
                 icon: 'rectangle-list',
@@ -310,6 +340,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see custom-field'),
             },
             {
+                priority: 7,
                 intl: 'menu.avatars',
                 title: this.intl.t('menu.avatars'),
                 icon: 'icons',
