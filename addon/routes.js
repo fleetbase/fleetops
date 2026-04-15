@@ -14,7 +14,11 @@ export default buildRoutes(function () {
                 this.route('edit', { path: '/edit/:public_id' });
             });
         });
-        this.route('scheduler', function () {});
+        this.route('orchestrator', function () {});
+        this.route('scheduler', function () {
+            this.route('index', { path: '/' });
+            this.route('fleet-schedule');
+        });
         this.route('orders', { path: '/' }, function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');
@@ -80,6 +84,9 @@ export default buildRoutes(function () {
                     this.route('positions');
                     this.route('devices');
                     this.route('equipment');
+                    this.route('schedules');
+                    this.route('work-orders');
+                    this.route('maintenance-history');
                     this.route('virtual', { path: '/:slug' });
                 });
                 this.route('edit', { path: '/edit/:public_id' });
@@ -181,6 +188,27 @@ export default buildRoutes(function () {
         this.route('tracking');
     });
     this.route('maintenance', function () {
+        this.route('schedules', function () {
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                    this.route('work-orders');
+                });
+            });
+        });
+
+        this.route('maintenances', function () {
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                });
+            });
+        });
+
         this.route('work-orders', function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');
@@ -229,6 +257,8 @@ export default buildRoutes(function () {
         this.route('custom-fields');
         this.route('avatars');
         this.route('routing');
+        this.route('orchestrator');
+        this.route('scheduling');
         this.route('payments', function () {
             this.route('index', { path: '/' });
             this.route('onboard');

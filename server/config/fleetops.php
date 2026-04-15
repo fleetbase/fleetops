@@ -40,7 +40,26 @@ return [
         'host' => env('OSRM_HOST', 'https://router.project-osrm.org')
     ],
 
-     /*
+    /*
+    |--------------------------------------------------------------------------
+    | VROOM Route Optimisation Engine
+    |--------------------------------------------------------------------------
+    |
+    | FleetOps ships its own self-contained VROOM engine that does NOT require
+    | the optional `fleetbase/vroom` extension to be installed. When the
+    | extension IS installed its `vroom.base_uri` config key takes precedence.
+    |
+    | API key resolution order:
+    |   1. Company-level setting written by the fleetbase/vroom extension UI
+    |   2. VROOM_API_KEY environment variable
+    |   3. No key (for self-hosted VROOM instances that do not require auth)
+    |
+    | To use a different engine set ORCHESTRATOR_ENGINE=greedy (built-in,
+    | no external service required) or register a custom engine.
+    |
+    */
+
+    /*
     |--------------------------------------------------------------------------
     | Distance Matrix Calculator 
     | Options: "calculate", "google", "osrm"

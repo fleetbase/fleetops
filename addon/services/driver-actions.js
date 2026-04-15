@@ -1,9 +1,47 @@
-import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
+import ResourceActionService, { inject as service } from '@fleetbase/ember-core/services/resource-action';
 import leafletIcon from '@fleetbase/ember-core/utils/leaflet-icon';
 import config from 'ember-get-config';
 import { action } from '@ember/object';
+import { isArray } from '@ember/array';
+import { dasherize } from '@ember/string';
 
 export default class DriverActionsService extends ResourceActionService {
+    @service('universe/menu-service') menuService;
+
+    get registeredTabs() {
+        const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:driver:details');
+        return (isArray(registeredTabs) ? registeredTabs : [])
+            .map((tab) => {
+                delete tab.route;
+                if (!tab.key) {
+                    tab.key = tab.id ?? dasherize(tab.label ?? tab.title);
+                }
+                return tab;
+            })
+            .filter((tab) => !tab.component);
+    }
+
+    get panelTabs() {
+        return [
+            {
+                key: 'overview',
+                label: this.intl.t('common.overview'),
+                component: 'driver/details',
+            },
+            {
+                key: 'positions',
+                label: 'Positions',
+                component: 'positions-replay',
+            },
+            {
+                key: 'schedule',
+                label: this.intl.t('common.schedule'),
+                component: 'driver/schedule',
+            },
+            ...this.registeredTabs,
+        ];
+    }
+
     constructor() {
         super(...arguments);
         this.initialize('driver');
@@ -68,12 +106,7 @@ export default class DriverActionsService extends ResourceActionService {
                         },
                     },
                 ],
-                tabs: [
-                    {
-                        label: this.intl.t('common.overview'),
-                        component: 'driver/details',
-                    },
-                ],
+                tabs: this.panelTabs,
                 ...options,
             });
         },

@@ -60,6 +60,12 @@ export default {
                     icon: 'chart-bar',
                     route: 'console.fleet-ops.analytics.reports',
                 },
+                {
+                    title: 'Orchestrator',
+                    description: 'Intelligently allocate and dispatch orders to available drivers.',
+                    icon: 'diagram-project',
+                    route: 'console.fleet-ops.operations.orchestrator',
+                },
             ],
         });
 
@@ -153,6 +159,18 @@ export default {
             'fleet-ops:component:issue:form:details',
             'fleet-ops:component:fuel-report:form',
             'fleet-ops:component:fuel-report:form:details',
+            'fleet-ops:component:maintenance:form',
+            'fleet-ops:component:maintenance:form:details',
+            'fleet-ops:component:maintenance:details',
+            'fleet-ops:component:work-order:form',
+            'fleet-ops:component:work-order:form:details',
+            'fleet-ops:component:work-order:details',
+            'fleet-ops:component:equipment:form',
+            'fleet-ops:component:equipment:form:details',
+            'fleet-ops:component:equipment:details',
+            'fleet-ops:component:part:form',
+            'fleet-ops:component:part:form:details',
+            'fleet-ops:component:part:details',
             'fleet-ops:contextmenu:vehicle',
             'fleet-ops:contextmenu:driver',
             'fleet-ops:component:order:details',
@@ -160,6 +178,7 @@ export default {
             'fleet-ops:component:order:form:payload:entity',
             'fleet-ops:component:order:form:payload:entity:form',
             'fleet-ops:template:settings:routing',
+            'fleet-ops:template:settings:orchestrator',
         ]);
     },
 };

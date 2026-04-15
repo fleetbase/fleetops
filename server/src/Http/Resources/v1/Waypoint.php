@@ -61,6 +61,13 @@ class Waypoint extends FleetbaseResource
             'type'                   => $waypoint->type ?? $this->type,
             'meta'                   => data_get($this, 'meta', Utils::createObject()),
             'eta'                    => $this->eta,
+            // Per-stop POD and notes
+            'notes'                  => $waypoint->notes ?? null,
+            'pod_method'             => $waypoint->pod_method ?? null,
+            'pod_required'           => $waypoint->pod_required ?? false,
+            'time_window_start'      => $waypoint->time_window_start,
+            'time_window_end'        => $waypoint->time_window_end,
+            'service_time'           => $waypoint->service_time,
             'updated_at'             => $this->updated_at,
             'created_at'             => $this->created_at,
         ];

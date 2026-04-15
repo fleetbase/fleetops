@@ -1,0 +1,43 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="grid grid-cols-1 gap-4 text-xs dark:text-gray-100">
+
+            {{! Shift Title }}
+            <div class="input-group">
+                <label>{{t "scheduler.shift-title"}}</label>
+                <Input @value={{@options.title}} @type="text" placeholder={{t "scheduler.shift-title-placeholder"}} class="w-full form-input" />
+            </div>
+
+            {{! Start Date/Time }}
+            <div class="input-group">
+                <label>{{t "scheduler.shift-start"}}</label>
+                <DateTimeInput @value={{@options.startAt}} @onChange={{this.updateStartAt}} placeholder={{t "scheduler.select-start-datetime"}} class="w-full form-input" />
+            </div>
+
+            {{! End Date/Time }}
+            <div class="input-group">
+                <label>{{t "scheduler.shift-end"}}</label>
+                <DateTimeInput @value={{@options.endAt}} @onChange={{this.updateEndAt}} placeholder={{t "scheduler.select-end-datetime"}} class="w-full form-input" />
+            </div>
+
+            {{! Break Window (optional) }}
+            <div class="grid grid-cols-2 gap-4">
+                <div class="input-group">
+                    <label>{{t "scheduler.break-start"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
+                    <DateTimeInput @value={{@options.breakStartAt}} @onChange={{this.updateBreakStartAt}} placeholder={{t "scheduler.select-break-start"}} class="w-full form-input" />
+                </div>
+                <div class="input-group">
+                    <label>{{t "scheduler.break-end"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
+                    <DateTimeInput @value={{@options.breakEndAt}} @onChange={{this.updateBreakEndAt}} placeholder={{t "scheduler.select-break-end"}} class="w-full form-input" />
+                </div>
+            </div>
+
+            {{! Notes }}
+            <div class="input-group">
+                <label>{{t "common.notes"}}</label>
+                <Textarea @value={{@options.notes}} placeholder={{t "scheduler.shift-notes-placeholder"}} class="w-full form-input" rows="2" />
+            </div>
+
+        </div>
+    </div>
+</Modal::Default>

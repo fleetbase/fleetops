@@ -241,7 +241,7 @@ class Place extends Model
             function ($option) {
                 $key = str_replace(['.svg', '.png'], '', $option);
 
-                return [$key => Utils::assetFromS3('static/place-icons/' . $option)];
+                return [$key => Utils::assetFromFleetbase('static/place-icons/' . $option)];
             }
         );
 

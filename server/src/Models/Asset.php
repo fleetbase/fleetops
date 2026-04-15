@@ -210,12 +210,12 @@ class Asset extends Model
 
     public function assignedTo(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'assigned_to_type', 'assigned_to_uuid');
     }
 
     public function operator(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'operator_type', 'operator_uuid');
     }
 
     public function category(): BelongsTo

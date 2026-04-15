@@ -1,0 +1,76 @@
+{{! Orchestrator::CardFieldsSettings — Configure which fields show on order cards }}
+<div class="card-fields-settings" ...attributes>
+    {{#if this.loadData.isRunning}}
+        <div class="flex justify-center py-8"><Spinner /></div>
+    {{else}}
+        <div class="card-fields-settings-container {{@wrapperClass}}">
+            {{! Standard fields }}
+            <ContentPanel @title={{t "orchestrator.standard-fields"}} @open={{true}} @wrapperClass="bordered-top">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{t "orchestrator.standard-fields-description"}}</p>
+                <div class="grid grid-cols-2 gap-2">
+                    {{#each this.standardFieldOptions as |field|}}
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600"
+                                checked={{this.isStandardSelected field.key}}
+                                {{on "change" (fn this.toggleStandardField field.key)}}
+                            />
+                            <span class="text-xs text-gray-700 dark:text-gray-300">{{field.label}}</span>
+                        </label>
+                    {{/each}}
+                </div>
+            </ContentPanel>
+
+            {{! Per-order-config custom fields.
+                Backend returns { id, uuid, name, key, fields: [{key, label, type, required}] }
+                We use config.uuid as the settings key so it matches
+                order.order_config_uuid on the card renderer. }}
+            {{! Backend already excludes configs with no custom fields }}
+            {{#each this.orderConfigs as |config|}}
+                <ContentPanel @title={{config.name}} @open={{true}} @wrapperClass="bordered-top">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        {{t "orchestrator.config-fields-description" name=config.name}}
+                    </p>
+                    <div class="grid grid-cols-2 gap-2">
+                        {{#each config.fields as |field|}}
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600"
+                                    checked={{this.isConfigFieldSelected config.uuid field.key}}
+                                    {{on "change" (fn this.toggleConfigField config.uuid field.key)}}
+                                />
+                                <span class="text-xs text-gray-700 dark:text-gray-300" title={{field.key}}>{{field.label}}</span>
+                            </label>
+                        {{/each}}
+                    </div>
+                </ContentPanel>
+            {{/each}}
+
+            {{! Meta fields — only shown when the company has orders with meta keys }}
+            {{#if this.availableMetaKeys.length}}
+                <ContentPanel @title={{t "orchestrator.meta-fields"}} @open={{true}} @wrapperClass="bordered-top">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{t "orchestrator.meta-fields-description"}}</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        {{#each this.availableMetaKeys as |key|}}
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    class="form-checkbox h-3.5 w-3.5 rounded text-indigo-600"
+                                    checked={{this.isMetaKeySelected key}}
+                                    {{on "change" (fn this.toggleMetaKey key)}}
+                                />
+                                <span class="text-xs font-mono text-gray-600 dark:text-gray-400 truncate">{{key}}</span>
+                            </label>
+                        {{/each}}
+                    </div>
+                </ContentPanel>
+            {{/if}}
+        </div>
+        {{! Save button }}
+        <div class="px-3 py-2 border-t dark:border-gray-700 flex-shrink-0 bg-gray-50 dark:bg-gray-800">
+            <Button @text={{t "orchestrator.save-card-fields"}} @type="primary" @size="sm" @isLoading={{this.saveSettings.isRunning}} @onClick={{perform this.saveSettings}} />
+        </div>
+    {{/if}}
+</div>

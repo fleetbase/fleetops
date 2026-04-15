@@ -42,13 +42,7 @@
                                 {{activity.details}}
 
                                 {{#if (eq activity.code "dispatched")}}
-                                    <InfoBlock
-                                        @type="warning"
-                                        @size="xs"
-                                        @icon="exclamation-triangle"
-                                        @text={{t "modals.order-new-activity.dispatch"}}
-                                        class="mt-1"
-                                    />
+                                    <InfoBlock @type="warning" @size="xs" @icon="exclamation-triangle" @text={{t "modals.order-new-activity.dispatch"}} class="mt-1" />
                                 {{/if}}
                             </span>
                         </label>
@@ -72,10 +66,20 @@
                     <label for="activity_custom" class="ml-3 flex flex-col cursor-pointer w-full pr-5">
                         <div class="font-semibold text-sm mb-1">Add custom activity</div>
                         <span class="block text-sm font-medium">
-                            <Input @type="text" @value={{this.customActivity.status}} class="form-input form-input-sm w-full rounded-b-none" placeholder={{t "modals.order-new-activity.status"}} />
+                            <Input
+                                @type="text"
+                                @value={{this.customActivity.status}}
+                                class="form-input form-input-sm w-full rounded-b-none"
+                                placeholder={{t "modals.order-new-activity.status"}}
+                            />
                         </span>
                         <span class="block text-sm">
-                            <Input @type="text" @value={{this.customActivity.details}} class="form-input form-input-sm w-full rounded-t-none" placeholder={{t "modals.order-new-activity.details"}} />
+                            <Input
+                                @type="text"
+                                @value={{this.customActivity.details}}
+                                class="form-input form-input-sm w-full rounded-t-none"
+                                placeholder={{t "modals.order-new-activity.details"}}
+                            />
                         </span>
                     </label>
                     <div>

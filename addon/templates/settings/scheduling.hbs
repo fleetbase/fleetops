@@ -1,0 +1,82 @@
+<Layout::Section::Header @title={{t "settings.scheduling.scheduling-settings"}}>
+    <Button
+        @type="primary"
+        @size="sm"
+        @icon="save"
+        @text={{t "common.save-changes"}}
+        @onClick={{perform this.saveSettings}}
+        @disabled={{this.saveSettings.isRunning}}
+        @isLoading={{or this.saveSettings.isRunning this.getSettings.isRunning}}
+    />
+</Layout::Section::Header>
+<Layout::Section::Body class="overflow-y-scroll h-full">
+    <div class="container mx-auto h-screen">
+        <div class="max-w-3xl my-10 mx-auto space-y-6">
+
+            {{! ── Materialisation ──────────────────────────────────────────── }}
+            <ContentPanel @title={{t "settings.scheduling.materialisation"}} @open={{true}} @wrapperClass="bordered-classic">
+                <InputGroup @name={{t "settings.scheduling.horizon-days"}} @helpText={{t "settings.scheduling.horizon-days-help"}}>
+                    <Input @type="number" @value={{this.horizonDays}} min="7" max="365" class="w-full form-input" />
+                </InputGroup>
+                <InputGroup @name={{t "settings.scheduling.default-shift-duration"}} @helpText={{t "settings.scheduling.default-shift-duration-help"}}>
+                    <Input @type="number" @value={{this.defaultShiftDuration}} min="1" max="24" class="w-full form-input" />
+                </InputGroup>
+            </ContentPanel>
+
+            {{! ── Hours of Service Limits ──────────────────────────────────── }}
+            <ContentPanel @title={{t "settings.scheduling.hours-of-service"}} @open={{true}} @wrapperClass="bordered-classic">
+                <InputGroup @name={{t "settings.scheduling.hos-daily-limit"}} @helpText={{t "settings.scheduling.hos-daily-limit-help"}}>
+                    <Input @type="number" @value={{this.hosDailyLimit}} min="1" max="24" class="w-full form-input" />
+                </InputGroup>
+                <InputGroup @name={{t "settings.scheduling.hos-weekly-limit"}} @helpText={{t "settings.scheduling.hos-weekly-limit-help"}}>
+                    <Input @type="number" @value={{this.hosWeeklyLimit}} min="1" max="168" class="w-full form-input" />
+                </InputGroup>
+            </ContentPanel>
+
+            {{! ── Behaviour ────────────────────────────────────────────────── }}
+            <ContentPanel @title={{t "settings.scheduling.behaviour"}} @open={{true}} @wrapperClass="bordered-classic">
+                <InputGroup @name={{t "settings.scheduling.auto-activate-schedule"}} @helpText={{t "settings.scheduling.auto-activate-schedule-help"}}>
+                    <Toggle @isToggled={{this.autoActivateSchedule}} @onToggle={{fn (mut this.autoActivateSchedule)}} />
+                </InputGroup>
+                <InputGroup @name={{t "settings.scheduling.notify-drivers"}} @helpText={{t "settings.scheduling.notify-drivers-help"}}>
+                    <Toggle @isToggled={{this.notifyDriversOnShiftChange}} @onToggle={{fn (mut this.notifyDriversOnShiftChange)}} />
+                </InputGroup>
+            </ContentPanel>
+
+            {{! ── Reusable Schedule Templates ─────────────────────────────── }}
+            <ContentPanel @title={{t "settings.scheduling.schedule-templates"}} @open={{true}} @wrapperClass="bordered-classic" @actionButtons={{this.templateActionButtons}}>
+                {{#if this.loadTemplates.isRunning}}
+                    <div class="flex items-center justify-center py-8">
+                        <Spinner />
+                    </div>
+                {{else if this.scheduleTemplates.length}}
+                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                        {{#each this.scheduleTemplates as |template|}}
+                            <div class="flex items-center justify-between py-2.5 px-1">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{html-safe (concat "background-color: " template.color)}}></span>
+                                    <span class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                                        {{template.name}}
+                                    </span>
+                                    <span class="text-xs text-gray-400 dark:text-gray-500 truncate hidden sm:block">
+                                        {{template.rrule}}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-1 flex-shrink-0">
+                                    <Button @icon="pencil" @size="xs" @type="link" @onClick={{fn this.editTemplate template}} />
+                                    <Button @icon="trash" @size="xs" @type="link" class="text-red-400 hover:text-red-600" @onClick={{fn this.deleteTemplate template}} />
+                                </div>
+                            </div>
+                        {{/each}}
+                    </div>
+                {{else}}
+                    <div class="text-center py-8 text-sm text-gray-400 dark:text-gray-500">
+                        {{t "settings.scheduling.no-templates"}}
+                    </div>
+                {{/if}}
+            </ContentPanel>
+
+        </div>
+    </div>
+    <Spacer @height="600px" />
+</Layout::Section::Body>

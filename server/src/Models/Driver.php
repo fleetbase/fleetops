@@ -11,6 +11,9 @@ use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
+use Fleetbase\Models\Schedule;
+use Fleetbase\Models\ScheduleAvailability;
+use Fleetbase\Models\ScheduleItem;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasApiModelCache;
@@ -25,6 +28,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -105,6 +110,12 @@ class Driver extends Model
         'slug',
         'status',
         'meta,',
+        // Orchestrator
+        'skills',
+        'max_travel_time',
+        'max_distance',
+        'time_window_start',
+        'time_window_end',
     ];
 
     /**
@@ -127,9 +138,13 @@ class Driver extends Model
      * @var array
      */
     protected $casts = [
-        'location'   => Point::class,
-        'online'     => 'boolean',
-        'meta'       => Json::class,
+        'location'        => Point::class,
+        'online'          => 'boolean',
+        'meta'            => Json::class,
+        // Orchestrator
+        'skills'          => Json::class,
+        'max_travel_time' => 'integer',
+        'max_distance'    => 'integer',
     ];
 
     /**
@@ -301,6 +316,69 @@ class Driver extends Model
     }
 
     /**
+     * Get all schedules assigned to this driver.
+     * The driver acts as the polymorphic `subject` on the Schedule model.
+     */
+    public function schedules(): MorphMany
+    {
+        // Explicit FK columns required — Fleetbase uses *_uuid not *_id
+        return $this->morphMany(Schedule::class, 'subject', 'subject_type', 'subject_uuid');
+    }
+
+    /**
+     * Get all individual schedule items (shifts) assigned to this driver.
+     * The driver acts as the polymorphic `assignee` on the ScheduleItem model.
+     */
+    public function scheduleItems(): MorphMany
+    {
+        // Explicit FK columns required — Fleetbase uses *_uuid not *_id
+        return $this->morphMany(ScheduleItem::class, 'assignee', 'assignee_type', 'assignee_uuid');
+    }
+
+    /**
+     * The driver's current active shift — the ScheduleItem whose window
+     * contains the current timestamp and whose status is 'scheduled' or 'active'.
+     *
+     * Exposed as an eager-loadable MorphOne so the order scheduler route can
+     * request it via with: ['currentShift'] without triggering an N+1 query.
+     * The FullCalendar resource timeline uses this to render shift-window
+     * background events for each driver resource row.
+     */
+    public function currentShift(): MorphOne
+    {
+        return $this->morphOne(ScheduleItem::class, 'assignee', 'assignee_type', 'assignee_uuid')
+            ->whereIn('status', ['scheduled', 'active'])
+            ->where('start_at', '<=', now())
+            ->where('end_at', '>=', now())
+            ->latest('start_at');
+    }
+
+    /**
+     * Get the active schedule item (shift) for a given date.
+     * Used by OrchestrationPayloadBuilder to inject time_window constraints.
+     */
+    public function activeShiftFor(?\DateTimeInterface $date = null): ?ScheduleItem
+    {
+        $date = $date ?? now();
+
+        return $this->scheduleItems()
+            ->whereDate('start_at', $date)
+            ->whereIn('status', ['pending', 'active'])
+            ->orderBy('start_at')
+            ->first();
+    }
+
+    /**
+     * Get all availability records (time-off, preferred hours) for this driver.
+     * The driver acts as the polymorphic `subject` on the ScheduleAvailability model.
+     */
+    public function availabilities(): MorphMany
+    {
+        // Explicit FK columns required — Fleetbase uses *_uuid not *_id
+        return $this->morphMany(ScheduleAvailability::class, 'subject', 'subject_type', 'subject_uuid');
+    }
+
+    /**
      * Get avatar url.
      */
     public function getAvatarUrlAttribute($value): ?string
@@ -364,7 +442,7 @@ class Driver extends Model
             function ($option) {
                 $key = str_replace(['.svg', '.png'], '', $option);
 
-                return [$key => Utils::assetFromS3('static/driver-icons/' . $option)];
+                return [$key => Utils::assetFromFleetbase('static/driver-icons/' . $option)];
             }
         );
 

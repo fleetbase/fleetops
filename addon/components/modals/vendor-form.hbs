@@ -58,11 +58,7 @@
                         <InputGroup
                             @name={{smart-humanize param.key}}
                             @value={{mut (get @options.integratedVendor.credentials param.key)}}
-                            @helpText={{concat
-                                (t "modals.vendor-form.optionally")
-                                (smart-humanize param.key)
-                                (t "modals.vendor-form.configure-vendor")
-                            }}
+                            @helpText={{concat (t "modals.vendor-form.optionally") (smart-humanize param.key) (t "modals.vendor-form.configure-vendor")}}
                         />
                     {{/each}}
                 </div>
@@ -85,11 +81,7 @@
                             <InputGroup
                                 @name={{smart-humanize param.key}}
                                 @value={{mut (get @options.integratedVendor.options param.key)}}
-                                @helpText={{concat
-                                    (t "modals.vendor-form.optionally")
-                                    (smart-humanize param.key)
-                                    (t "modals.vendor-form.configure-vendor")
-                                }}
+                                @helpText={{concat (t "modals.vendor-form.optionally") (smart-humanize param.key) (t "modals.vendor-form.configure-vendor")}}
                             />
                         {{/if}}
                     {{/each}}
@@ -112,21 +104,9 @@
                         {{/if}}
                     </button>
                     {{#if @options.showAdvancedOptions}}
-                        <InputGroup
-                            @name={{t "modals.vendor-form.custom-host"}}
-                            @value={{@options.integratedVendor.host}}
-                            @helpText={{t "modals.vendor-form.host-text"}}
-                        />
-                        <InputGroup
-                            @name={{t "modals.vendor-form.custom-namespace"}}
-                            @value={{@options.integratedVendor.namespace}}
-                            @helpText={{t "modals.vendor-form.namespace-text"}}
-                        />
-                        <InputGroup
-                            @name={{t "modals.vendor-form.webhook"}}
-                            @value={{@options.integratedVendor.webhook_url}}
-                            @helpText={{t "modals.vendor-form.webhook-text"}}
-                        />
+                        <InputGroup @name={{t "modals.vendor-form.custom-host"}} @value={{@options.integratedVendor.host}} @helpText={{t "modals.vendor-form.host-text"}} />
+                        <InputGroup @name={{t "modals.vendor-form.custom-namespace"}} @value={{@options.integratedVendor.namespace}} @helpText={{t "modals.vendor-form.namespace-text"}} />
+                        <InputGroup @name={{t "modals.vendor-form.webhook"}} @value={{@options.integratedVendor.webhook_url}} @helpText={{t "modals.vendor-form.webhook-text"}} />
                     {{/if}}
                 </div>
             {{/if}}
@@ -147,21 +127,11 @@
                             <InputGroup
                                 @name={{smart-humanize param.key}}
                                 @value={{mut (get @options.vendor.credentials param.key)}}
-                                @helpText={{concat
-                                    (t "modals.vendor-form.optionally")
-                                    (smart-humanize param.key)
-                                    (t "modals.vendor-form.configure-vendor")
-                                }}
+                                @helpText={{concat (t "modals.vendor-form.optionally") (smart-humanize param.key) (t "modals.vendor-form.configure-vendor")}}
                             />
                         {{/each}}
                         <div class="my-4">
-                            <Button
-                                @text={{t "modals.vendor-form.cancel-credentials"}}
-                                @type="danger"
-                                @size="sm"
-                                @icon="times"
-                                @onClick={{@options.toggleCredentialsReset}}
-                            />
+                            <Button @text={{t "modals.vendor-form.cancel-credentials"}} @type="danger" @size="sm" @icon="times" @onClick={{@options.toggleCredentialsReset}} />
                         </div>
                     {{else}}
                         <div>
@@ -175,11 +145,7 @@
                                 @name={{smart-humanize param.key}}
                                 @value="*********"
                                 @disabled="true"
-                                @helpText={{concat
-                                    (t "modals.vendor-form.optionally")
-                                    (smart-humanize param.key)
-                                    (t "modals.vendor-form.configure-vendor")
-                                }}
+                                @helpText={{concat (t "modals.vendor-form.optionally") (smart-humanize param.key) (t "modals.vendor-form.configure-vendor")}}
                             />
                         {{/each}}
                     {{/if}}
@@ -203,11 +169,7 @@
                             <InputGroup
                                 @name={{smart-humanize param.key}}
                                 @value={{mut (get @options.vendor.options param.key)}}
-                                @helpText={{concat
-                                    (t "modals.vendor-form.optionally")
-                                    (smart-humanize param.key)
-                                    (t "modals.vendor-form.configure-vendor")
-                                }}
+                                @helpText={{concat (t "modals.vendor-form.optionally") (smart-humanize param.key) (t "modals.vendor-form.configure-vendor")}}
                             />
                         {{/if}}
                     {{/each}}
@@ -224,46 +186,17 @@
                         {{/if}}
                     </button>
                     {{#if @options.showAdvancedOptions}}
-                        <InputGroup
-                            @name={{t "modals.vendor-form.custom-host"}}
-                            @value={{@options.vendor.host}}
-                            @helpText={{t "modals.vendor-form.host-text"}}
-                        />
-                        <InputGroup
-                            @name={{t "modals.vendor-form.custom-namespace"}}
-                            @value={{@options.vendor.namespace}}
-                            @helpText={{t "modals.vendor-form.namespace-text"}}
-                        />
-                        <InputGroup
-                            @name={{t "modals.vendor-form.webhook"}}
-                            @value={{@options.vendor.webhook_url}}
-                            @helpText={{t "modals.vendor-form.webhook-text"}}
-                        />
+                        <InputGroup @name={{t "modals.vendor-form.custom-host"}} @value={{@options.vendor.host}} @helpText={{t "modals.vendor-form.host-text"}} />
+                        <InputGroup @name={{t "modals.vendor-form.custom-namespace"}} @value={{@options.vendor.namespace}} @helpText={{t "modals.vendor-form.namespace-text"}} />
+                        <InputGroup @name={{t "modals.vendor-form.webhook"}} @value={{@options.vendor.webhook_url}} @helpText={{t "modals.vendor-form.webhook-text"}} />
                     {{/if}}
                 </div>
             {{else}}
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-2 text-xs dark:text-gray-100">
                     <InputGroup @name={{t "common.name"}} @value={{@options.vendor.name}} @wrapperClass="mb-0" @helpText={{t "modals.vendor-form.name-text"}} />
-                    <InputGroup
-                        @name={{t "common.email"}}
-                        @type="email"
-                        @value={{@options.vendor.email}}
-                        @wrapperClass="mb-0"
-                        @helpText={{t "modals.vendor-form.email-text"}}
-                    />
-                    <InputGroup
-                        @name={{t "common.phone"}}
-                        @type="tel"
-                        @value={{@options.vendor.phone}}
-                        @wrapperClass="mb-0"
-                        @helpText={{t "modals.vendor-form.phone-text"}}
-                    />
-                    <InputGroup
-                        @name={{t "common.website"}}
-                        @value={{@options.vendor.website}}
-                        @wrapperClass="mb-0"
-                        @helpText={{t "modals.vendor-form.website-text"}}
-                    />
+                    <InputGroup @name={{t "common.email"}} @type="email" @value={{@options.vendor.email}} @wrapperClass="mb-0" @helpText={{t "modals.vendor-form.email-text"}} />
+                    <InputGroup @name={{t "common.phone"}} @type="tel" @value={{@options.vendor.phone}} @wrapperClass="mb-0" @helpText={{t "modals.vendor-form.phone-text"}} />
+                    <InputGroup @name={{t "common.website"}} @value={{@options.vendor.website}} @wrapperClass="mb-0" @helpText={{t "modals.vendor-form.website-text"}} />
                     <InputGroup @wrapperClass="mb-0 col-span-2">
                         <div class="flex items-start justify-between">
                             <label>

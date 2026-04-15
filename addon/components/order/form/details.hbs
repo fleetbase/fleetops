@@ -19,12 +19,7 @@
             </div>
         </InputGroup>
 
-        <InputGroup
-            @name={{t "order.fields.internal-id"}}
-            @value={{@resource.internal_id}}
-            @helpText={{t "order.fields.internal-id-help-text"}}
-            @disabled={{cannot-write @resource}}
-        />
+        <InputGroup @name={{t "order.fields.internal-id"}} @value={{@resource.internal_id}} @helpText={{t "order.fields.internal-id-help-text"}} @disabled={{cannot-write @resource}} />
 
         <InputGroup>
             <InputLabel @labelText={{t "order.fields.schedule"}} @helpText={{t "order.fields.schedule-help-text"}} />
@@ -92,10 +87,7 @@
         </InputGroup>
 
         {{#if (and @resource.facilitator.isIntegratedVendor @resource.facilitator.service_types.length)}}
-            <InputGroup
-                @name={{t "order.fields.service-type"}}
-                @helpText={{concat (t "order.fields.service-type-help-text") @resource.facilitator.name "."}}
-            >
+            <InputGroup @name={{t "order.fields.service-type"}} @helpText={{concat (t "order.fields.service-type-help-text") @resource.facilitator.name "."}}>
                 <Select
                     class="w-full"
                     @options={{@resource.facilitator.service_types}}
@@ -243,6 +235,48 @@
                 />
             </InputGroup>
         </div>
+    </div>
+</ContentPanel>
+
+{{! ORCHESTRATOR CONSTRAINTS }}
+<ContentPanel @title="Orchestrator Constraints" @open={{true}} @wrapperClass="bordered-top">
+    <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+        <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+            Delivery Window
+        </div>
+        <InputGroup
+            @name="Time Window Start"
+            @helpText="Earliest acceptable arrival time at the delivery location. The date defaults to the order's scheduled date (or creation date if not yet scheduled)."
+        >
+            <DateTimeInput class="form-input" @value={{@resource.time_window_start}} @onUpdate={{fn this.setTimeWindow "time_window_start"}} @disabled={{cannot-write @resource}} />
+        </InputGroup>
+        <InputGroup
+            @name="Time Window End"
+            @helpText="Latest acceptable arrival time at the delivery location. The date defaults to the order's scheduled date (or creation date if not yet scheduled)."
+        >
+            <DateTimeInput class="form-input" @value={{@resource.time_window_end}} @onUpdate={{fn this.setTimeWindow "time_window_end"}} @disabled={{cannot-write @resource}} />
+        </InputGroup>
+        <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+            Requirements & Priority
+        </div>
+        <div class="col-span-1 lg:col-span-2">
+            <InputGroup @name="Required Skills" @helpText="Skills the assigned driver and vehicle must have to fulfil this order.">
+                <MultiSelect
+                    @options={{get-fleet-ops-options "driverSkills"}}
+                    @selected={{@resource.required_skills}}
+                    @onChange={{fn (mut @resource.required_skills)}}
+                    @placeholder="Select required skills…"
+                    @triggerClass="form-select form-input"
+                    @disabled={{cannot-write @resource}}
+                    as |option|
+                >
+                    {{option.label}}
+                </MultiSelect>
+            </InputGroup>
+        </div>
+        <InputGroup @name="Orchestrator Priority" @helpText="Priority score 0–100. Higher values are scheduled first when capacity is constrained. Default is 0.">
+            <Input @value={{@resource.orchestrator_priority}} @type="number" class="form-input w-full" placeholder="0–100" disabled={{cannot-write @resource}} />
+        </InputGroup>
     </div>
 </ContentPanel>
 
