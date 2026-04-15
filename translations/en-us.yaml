@@ -187,6 +187,8 @@ column:
   carrier-type: Carrier Type
   is-preferred: Preferred
   insurance-expiry: Insurance Expiry
+  location-type: Location Type
+  appointment-required: Appt Required
   address: Address
   country: Country
   created-at: Created At
@@ -766,6 +768,25 @@ place:
     street-2: Street 2
     coordinates: Coordinates
     phone: Phone
+    contact-operational: Contact / Operational
+    operational-meta: Operational Details
+    location-type: Location Type
+    location-type-help-text: Classify this location so it can be filtered and routed correctly.
+    select-location-type: Select location type
+    appointment-required: Appointment required for pickup / delivery
+    contact-name: Contact Name
+    contact-phone: Contact Phone
+    contact-email: Contact Email
+    operating-hours: Operating Hours
+    operating-hours-help-text: 'JSON map of operating hours. Example: {"mon":{"open":"06:00","close":"18:00"}}'
+    operating-hours-placeholder: '{"mon":{"open":"06:00","close":"18:00"}}'
+    dock-info: Dock Info
+    dock-info-help-text: 'JSON with dock metadata. Example: {"dock_count":4,"notes":"north side"}'
+    dock-info-placeholder: '{"dock_count":4,"notes":""}'
+    special-instructions: Special Instructions
+    special-instructions-help-text: Free-form notes visible to drivers and dispatch.
+    special-instructions-placeholder: e.g., Buzz twice at the gate and ask for receiving.
+    invalid-json: Invalid JSON
   prompts:
     vendor-assigned-success: Vendor assigned {placeName} as new vendor location.
   actions:

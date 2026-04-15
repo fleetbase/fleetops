@@ -64,6 +64,72 @@
         </div>
     </ContentPanel>
 
+    <ContentPanel @title={{t "place.fields.contact-operational"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+            <div class="field-info-container">
+                <div class="field-name">{{t "place.fields.location-type"}}</div>
+                <div class="field-value">
+                    {{#if @resource.location_type}}
+                        <Badge @hideStatusDot={{true}} @status="info">{{smart-humanize @resource.location_type}}</Badge>
+                    {{else}}
+                        <span>-</span>
+                    {{/if}}
+                </div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "place.fields.appointment-required"}}</div>
+                <div class="field-value">
+                    {{#if @resource.appointment_required}}
+                        {{t "common.yes"}}
+                    {{else}}
+                        {{t "common.no"}}
+                    {{/if}}
+                </div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "place.fields.contact-name"}}</div>
+                <div class="field-value">{{n-a @resource.contact_name}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "place.fields.contact-phone"}}</div>
+                <div class="field-value">{{n-a @resource.contact_phone}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "place.fields.contact-email"}}</div>
+                <div class="field-value">{{n-a @resource.contact_email}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title={{t "place.fields.operational-meta"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2">
+            <div class="field-info-container">
+                <div class="field-name">{{t "place.fields.operating-hours"}}</div>
+                <div class="field-value">
+                    {{#if @resource.meta.operating_hours}}
+                        <pre class="text-xs font-mono whitespace-pre-wrap">{{json-stringify @resource.meta.operating_hours 2}}</pre>
+                    {{else}}
+                        <span>-</span>
+                    {{/if}}
+                </div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "place.fields.dock-info"}}</div>
+                <div class="field-value">
+                    {{#if @resource.meta.dock_info}}
+                        <pre class="text-xs font-mono whitespace-pre-wrap">{{json-stringify @resource.meta.dock_info 2}}</pre>
+                    {{else}}
+                        <span>-</span>
+                    {{/if}}
+                </div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "place.fields.special-instructions"}}</div>
+                <div class="field-value whitespace-pre-wrap">{{n-a @resource.meta.special_instructions}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
     <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
 
     <ContentPanel @title="Map" @open={{true}} @wrapperClass="bordered-top">

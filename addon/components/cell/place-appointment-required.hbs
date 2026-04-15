@@ -1,0 +1,8 @@
+{{#if @value}}
+    <span class="inline-flex items-center text-yellow-600" aria-label="Appointment required">
+        <FaIcon @icon="calendar-check" @size="sm" class="mr-1" />
+        <span class="text-xs font-semibold">Required</span>
+    </span>
+{{else}}
+    <span class={{@column.cellClassNames}}>-</span>
+{{/if}}

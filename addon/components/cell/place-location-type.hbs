@@ -1,0 +1,7 @@
+{{#if @value}}
+    <Badge @hideStatusDot={{true}} @status="info">
+        {{smart-humanize @value}}
+    </Badge>
+{{else}}
+    <span class={{@column.cellClassNames}}>-</span>
+{{/if}}

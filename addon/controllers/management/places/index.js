@@ -1,6 +1,7 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import fleetOpsOptions from '../../../utils/fleet-ops-options';
 
 export default class ManagementPlacesIndexController extends Controller {
     @service placeActions;
@@ -8,7 +9,23 @@ export default class ManagementPlacesIndexController extends Controller {
     @service intl;
 
     /** query params */
-    @tracked queryParams = ['name', 'page', 'limit', 'sort', 'query', 'public_id', 'country', 'phone', 'created_at', 'updated_at', 'city', 'neighborhood', 'state'];
+    @tracked queryParams = [
+        'name',
+        'page',
+        'limit',
+        'sort',
+        'query',
+        'public_id',
+        'country',
+        'phone',
+        'created_at',
+        'updated_at',
+        'city',
+        'neighborhood',
+        'state',
+        'location_type',
+        'appointment_required',
+    ];
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -20,6 +37,8 @@ export default class ManagementPlacesIndexController extends Controller {
     @tracked state;
     @tracked country;
     @tracked neighborhood;
+    @tracked location_type;
+    @tracked appointment_required;
 
     /** action buttons */
     get actionButtons() {
@@ -154,6 +173,29 @@ export default class ManagementPlacesIndexController extends Controller {
                 filterable: true,
                 filterComponent: 'filter/country',
                 filterParam: 'country',
+            },
+            {
+                label: this.intl.t('column.location-type'),
+                valuePath: 'location_type',
+                cellComponent: 'cell/place-location-type',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterParam: 'location_type',
+                filterComponent: 'filter/multi-option',
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
+                filterOptions: fleetOpsOptions('placeTypes'),
+            },
+            {
+                label: this.intl.t('column.appointment-required'),
+                valuePath: 'appointment_required',
+                cellComponent: 'cell/place-appointment-required',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterParam: 'appointment_required',
+                filterComponent: 'filter/checkbox',
             },
             {
                 label: this.intl.t('column.neighborhood'),

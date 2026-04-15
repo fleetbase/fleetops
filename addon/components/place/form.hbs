@@ -48,6 +48,105 @@
         </div>
     </ContentPanel>
 
+    <ContentPanel @title={{t "place.fields.contact-operational"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-3 gap-2 text-xs dark:text-gray-100 no-input-group-padding">
+            <InputGroup @name={{t "place.fields.location-type"}} @helpText={{t "place.fields.location-type-help-text"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "placeTypes"}}
+                        @selected={{find-by "value" @resource.location_type (get-fleet-ops-options "placeTypes")}}
+                        @onChange={{set-model-attr @resource "location_type"}}
+                        @placeholder={{t "place.fields.select-location-type"}}
+                        @triggerClass="form-select form-input"
+                        @allowClear={{true}}
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{option.label}}</div>
+                            <div class="hide-from-trigger">{{option.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+            <InputGroup
+                @name={{t "place.fields.contact-name"}}
+                @value={{@resource.contact_name}}
+                @autocomplete="nope"
+                @disabled={{cannot-write @resource}}
+            />
+            <InputGroup @name={{t "place.fields.contact-phone"}}>
+                <PhoneInput
+                    @value={{@resource.contact_phone}}
+                    @onInput={{fn (mut @resource.contact_phone)}}
+                    @autocomplete="nope"
+                    class="form-input w-full"
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+            <InputGroup @name={{t "place.fields.contact-email"}}>
+                <Input
+                    @value={{@resource.contact_email}}
+                    @type="email"
+                    class="w-full form-input"
+                    placeholder={{t "place.fields.contact-email"}}
+                    autocomplete="nope"
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+            <InputGroup @wrapperClass="mt-1 col-span-3">
+                <Checkbox
+                    @value={{@resource.appointment_required}}
+                    @label={{t "place.fields.appointment-required"}}
+                    @onToggle={{fn (mut @resource.appointment_required)}}
+                    @alignItems="center"
+                    @disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title={{t "place.fields.operational-meta"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 text-xs dark:text-gray-100 no-input-group-padding">
+            <InputGroup @name={{t "place.fields.operating-hours"}} @helpText={{t "place.fields.operating-hours-help-text"}}>
+                <textarea
+                    rows="5"
+                    class="form-input w-full font-mono"
+                    placeholder={{t "place.fields.operating-hours-placeholder"}}
+                    value={{this.operatingHoursRaw}}
+                    {{on "input" this.updateOperatingHours}}
+                    disabled={{cannot-write @resource}}
+                ></textarea>
+                {{#if this.operatingHoursError}}
+                    <div class="text-red-500 text-xs mt-1">{{t "place.fields.invalid-json"}}: {{this.operatingHoursError}}</div>
+                {{/if}}
+            </InputGroup>
+            <InputGroup @name={{t "place.fields.dock-info"}} @helpText={{t "place.fields.dock-info-help-text"}}>
+                <textarea
+                    rows="4"
+                    class="form-input w-full font-mono"
+                    placeholder={{t "place.fields.dock-info-placeholder"}}
+                    value={{this.dockInfoRaw}}
+                    {{on "input" this.updateDockInfo}}
+                    disabled={{cannot-write @resource}}
+                ></textarea>
+                {{#if this.dockInfoError}}
+                    <div class="text-red-500 text-xs mt-1">{{t "place.fields.invalid-json"}}: {{this.dockInfoError}}</div>
+                {{/if}}
+            </InputGroup>
+            <InputGroup @name={{t "place.fields.special-instructions"}} @helpText={{t "place.fields.special-instructions-help-text"}}>
+                <textarea
+                    rows="4"
+                    class="form-input w-full"
+                    placeholder={{t "place.fields.special-instructions-placeholder"}}
+                    value={{this.specialInstructions}}
+                    {{on "input" this.updateSpecialInstructions}}
+                    disabled={{cannot-write @resource}}
+                ></textarea>
+            </InputGroup>
+        </div>
+    </ContentPanel>
+
     <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
 
     <ContentPanel @title={{t "avatar-picker.avatar"}} @open={{true}} @wrapperClass="bordered-top">
