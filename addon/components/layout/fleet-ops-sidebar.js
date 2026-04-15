@@ -90,7 +90,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 permission: 'fleet-ops list service-rate',
                 visible: this.abilities.can('fleet-ops see service-rate'),
             },
-            ...(this.universeOperationsMenuItems ?? []),
+            ...(this.universeOperationsMenuItems ?? []).map((item) => ({ ...item, _virtual: true })),
         ].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
 
         const resourcesItems = [
@@ -170,7 +170,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 permission: 'fleet-ops list issue',
                 visible: this.abilities.can('fleet-ops see issue'),
             },
-            ...(this.universeManagementMenuItems ?? []),
+            ...(this.universeManagementMenuItems ?? []).map((item) => ({ ...item, _virtual: true })),
         ].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
 
         const connectivityItems = [
@@ -210,7 +210,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 permission: 'fleet-ops list device-event',
                 visible: this.abilities.can('fleet-ops see device-event'),
             },
-            ...(this.universeConnectivityMenuItems ?? []),
+            ...(this.universeConnectivityMenuItems ?? []).map((item) => ({ ...item, _virtual: true })),
         ].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
 
         const maintenanceItems = [
@@ -259,7 +259,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 permission: 'fleet-ops list part',
                 visible: this.abilities.can('fleet-ops see part'),
             },
-            ...(this.universeMaintenanceMenuItems ?? []),
+            ...(this.universeMaintenanceMenuItems ?? []).map((item) => ({ ...item, _virtual: true })),
         ].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
 
         const analyticsItems = [
@@ -272,7 +272,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 permission: 'iam list report',
                 visible: this.abilities.can('fleet-ops see report'),
             },
-            ...(this.universeAnalyticsMenuItems ?? []),
+            ...(this.universeAnalyticsMenuItems ?? []).map((item) => ({ ...item, _virtual: true })),
         ].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
 
         const settingsItems = [
@@ -348,7 +348,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 permission: 'fleet-ops view avatar',
                 visible: this.abilities.can('fleet-ops see avatar'),
             },
-            ...(this.universeSettingsMenuItems ?? []),
+            ...(this.universeSettingsMenuItems ?? []).map((item) => ({ ...item, _virtual: true })),
         ].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
 
         const createPanel = (intl, routePrefix, items = [], options = {}) => ({
