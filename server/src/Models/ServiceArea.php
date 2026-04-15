@@ -60,7 +60,7 @@ class ServiceArea extends Model
      *
      * @var array
      */
-    protected $fillable = ['_key', 'company_uuid', 'name', 'type', 'parent_uuid', 'border', 'color', 'stroke_color', 'status', 'country'];
+    protected $fillable = ['_key', 'company_uuid', 'name', 'type', 'parent_uuid', 'border', 'color', 'stroke_color', 'status', 'country', 'states_list', 'zip_ranges'];
 
     /**
      * The attributes that are spatial columns.
@@ -96,7 +96,9 @@ class ServiceArea extends Model
      * @var array
      */
     protected $casts = [
-        'border' => MultiPolygonCast::class,
+        'border'      => MultiPolygonCast::class,
+        'states_list' => 'array',
+        'zip_ranges'  => 'array',
     ];
 
     /**
