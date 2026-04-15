@@ -46,4 +46,32 @@
             </InputGroup>
         </div>
     </ContentPanel>
+
+    <ContentPanel @title={{t "service-area.fields.geographic-scoping"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-2">
+            <InputGroup @name={{t "service-area.fields.states-list"}} @helpText={{t "service-area.fields.states-list-help-text"}}>
+                <div class="fleetbase-power-select ember-power-select">
+                    <PowerSelectMultiple
+                        @options={{this.usStates}}
+                        @selected={{this.selectedStates}}
+                        @searchField="label"
+                        @onChange={{this.onStatesChange}}
+                        @placeholder={{t "service-area.fields.states-list-placeholder"}}
+                        @triggerClass="form-multiselect form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        <span class="text-sm">{{option.label}} <span class="text-gray-500">({{option.value}})</span></span>
+                    </PowerSelectMultiple>
+                </div>
+            </InputGroup>
+            <InputGroup @name={{t "service-area.fields.zip-ranges"}} @helpText={{t "service-area.fields.zip-ranges-help-text"}}>
+                <ServiceArea::ZipRangesEditor
+                    @value={{this.zipRangesDisplay}}
+                    @onChange={{this.onZipRangesChange}}
+                    @resource={{@resource}}
+                />
+            </InputGroup>
+        </div>
+    </ContentPanel>
 </div>

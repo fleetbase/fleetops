@@ -808,6 +808,15 @@ service-area:
     name-help-text: Set a display name for the service area.
     type: Type
     type-help-text: Select the type definition for this service area.
+    geographic-scoping: Geographic Scoping
+    states-list: States
+    states-list-help-text: Optional state-level scoping. Select one or more US states / territories. Empty means no state restriction.
+    states-list-placeholder: Select states...
+    zip-ranges: ZIP Ranges
+    zip-ranges-help-text: Optional ZIP-range scoping. Add one or more start/end ZIP pairs (strings preserve leading zeros). Empty means no ZIP restriction.
+    zip-range-start-placeholder: Start ZIP
+    zip-range-end-placeholder: End ZIP
+    zip-range-add: Add ZIP range
 
 service-rate:
   fields:

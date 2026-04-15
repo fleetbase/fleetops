@@ -1,0 +1,43 @@
+<div class="zip-ranges-editor flex flex-col gap-2" ...attributes>
+    {{#each this.ranges as |range index|}}
+        <div class="flex items-center gap-2" data-test-zip-row={{index}}>
+            <input
+                type="text"
+                value={{range.start}}
+                placeholder={{t "service-area.fields.zip-range-start-placeholder"}}
+                class="form-input flex-1"
+                disabled={{cannot-write @resource}}
+                {{on "input" (fn this.updateRange index "start")}}
+                data-test-zip-start={{index}}
+            />
+            <span class="text-gray-500">&ndash;</span>
+            <input
+                type="text"
+                value={{range.end}}
+                placeholder={{t "service-area.fields.zip-range-end-placeholder"}}
+                class="form-input flex-1"
+                disabled={{cannot-write @resource}}
+                {{on "input" (fn this.updateRange index "end")}}
+                data-test-zip-end={{index}}
+            />
+            <Button
+                @type="default"
+                @icon="trash"
+                @size="sm"
+                @onClick={{fn this.removeRange index}}
+                @disabled={{cannot-write @resource}}
+                data-test-zip-remove={{index}}
+            />
+        </div>
+    {{/each}}
+    <Button
+        @type="default"
+        @icon="plus"
+        @text={{t "service-area.fields.zip-range-add"}}
+        @size="sm"
+        @onClick={{this.addRange}}
+        @disabled={{cannot-write @resource}}
+        @wrapperClass="self-start"
+        data-test-zip-add
+    />
+</div>

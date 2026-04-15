@@ -18,6 +18,39 @@
         </div>
     </ContentPanel>
 
+    <ContentPanel @title={{t "service-area.fields.geographic-scoping"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <div class="field-info-container">
+                <div class="field-name">{{t "service-area.fields.states-list"}}</div>
+                <div class="field-value">
+                    {{#if @resource.states_list.length}}
+                        <div class="flex flex-wrap gap-1">
+                            {{#each @resource.states_list as |code|}}
+                                <span class="badge badge-info uppercase">{{code}}</span>
+                            {{/each}}
+                        </div>
+                    {{else}}
+                        <span class="text-gray-400">&mdash;</span>
+                    {{/if}}
+                </div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "service-area.fields.zip-ranges"}}</div>
+                <div class="field-value">
+                    {{#if @resource.zip_ranges.length}}
+                        <ul class="list-disc list-inside text-sm">
+                            {{#each @resource.zip_ranges as |range|}}
+                                <li>{{range.start}}&ndash;{{range.end}}</li>
+                            {{/each}}
+                        </ul>
+                    {{else}}
+                        <span class="text-gray-400">&mdash;</span>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </ContentPanel>
+
     <ContentPanel @title={{t "common.map"}} @open={{true}} @wrapperClass="bordered-top">
         <LeafletMap
             class="w-full h-48 rounded-md shadow-md border border-gray-200 dark:border-gray-700"
