@@ -1,0 +1,7 @@
+{{#if @value}}
+    <span class="{{insurance-expiry-class @value}} {{@column.cellClassNames}}">
+        {{or (format-date-fns @value "yyyy-MM-dd") @value}}
+    </span>
+{{else}}
+    <span class={{@column.cellClassNames}}>-</span>
+{{/if}}

@@ -1,0 +1,8 @@
+{{#if @value}}
+    <span class="inline-flex items-center text-yellow-500" aria-label="Preferred">
+        <FaIcon @icon="star" @size="sm" class="mr-1" />
+        <span class="text-xs font-semibold">Preferred</span>
+    </span>
+{{else}}
+    <span class={{@column.cellClassNames}}>-</span>
+{{/if}}

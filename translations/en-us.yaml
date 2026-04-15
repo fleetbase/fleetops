@@ -184,6 +184,9 @@ order-status:
   canceled: Canceled
 
 column:
+  carrier-type: Carrier Type
+  is-preferred: Preferred
+  insurance-expiry: Insurance Expiry
   address: Address
   country: Country
   created-at: Created At
@@ -922,6 +925,23 @@ vendor:
     title: Setup
     vendor-details: Vendor Details
     website-help-text: The vendor's website, optionally add the vendors website for reference.
+    freight-carrier-info: Freight / Carrier Info
+    scac-code: SCAC Code
+    scac-code-help-text: Standard Carrier Alpha Code — 2-4 letter carrier identifier (max 10 chars).
+    mc-number: MC Number
+    mc-number-help-text: FMCSA Motor Carrier number, typically formatted as MC-123456.
+    dot-number: USDOT Number
+    dot-number-help-text: US Department of Transportation number assigned to the carrier.
+    carrier-type: Carrier Type
+    select-carrier-type: Select carrier type
+    insurance-expiry: Insurance Expiry
+    insurance-amount: Insurance Amount
+    payment-terms-days: Payment Terms (Days)
+    payment-terms-days-help-text: "Net payment terms in days (leave blank to use company default)."
+    payment-terms-days-placeholder: Uses company default
+    default-payment-method: Default Payment Method
+    select-payment-method: Select payment method
+    is-preferred: Preferred Carrier
 
 integrated-vendor:
   fields:

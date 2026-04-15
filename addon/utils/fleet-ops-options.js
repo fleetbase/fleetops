@@ -94,6 +94,19 @@ export const vendorTypes = [
     { label: 'Charging Network', value: 'charging_network', description: 'EV charging infrastructure provider' },
 ];
 
+export const carrierTypes = [
+    { label: 'Asset', value: 'asset', description: 'Asset-based carrier operating its own equipment' },
+    { label: 'Broker', value: 'broker', description: 'Freight broker — arranges transport via third-party carriers' },
+    { label: 'Both', value: 'both', description: 'Operates own assets and brokers freight' },
+];
+
+export const vendorPaymentMethods = [
+    { label: 'ACH', value: 'ach', description: 'ACH / direct bank transfer' },
+    { label: 'Check', value: 'check', description: 'Paper check' },
+    { label: 'Wire', value: 'wire', description: 'Wire transfer' },
+    { label: 'Card', value: 'card', description: 'Credit or purchasing card' },
+];
+
 export const vendorStatuses = [
     { label: 'Active', value: 'active', description: 'Vendor is active and available' },
     { label: 'Inactive', value: 'inactive', description: 'Vendor is inactive or on hold' },
@@ -577,6 +590,8 @@ export default function fleetOpsOptions(key) {
         vehicleStatuses,
         vendorTypes,
         vendorStatuses,
+        carrierTypes,
+        vendorPaymentMethods,
         fleetTypes,
         fleetStatuses,
         contactTypes,

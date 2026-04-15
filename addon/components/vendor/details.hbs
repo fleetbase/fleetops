@@ -45,6 +45,76 @@
             </div>
         </ContentPanel>
 
+        <ContentPanel @title={{t "vendor.fields.freight-carrier-info"}} @open={{true}} @wrapperClass="bordered-top">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+                <div class="field-info-container">
+                    <div class="field-name">{{t "vendor.fields.scac-code"}}</div>
+                    <div class="field-value">{{n-a @resource.scac_code}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">{{t "vendor.fields.mc-number"}}</div>
+                    <div class="field-value">{{n-a @resource.mc_number}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">{{t "vendor.fields.dot-number"}}</div>
+                    <div class="field-value">{{n-a @resource.dot_number}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">{{t "vendor.fields.carrier-type"}}</div>
+                    <div class="field-value">
+                        {{#if @resource.carrier_type}}
+                            <Badge @hideStatusDot={{true}} @status="info">{{smart-humanize @resource.carrier_type}}</Badge>
+                        {{else}}
+                            <span>-</span>
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">{{t "vendor.fields.insurance-expiry"}}</div>
+                    <div class="field-value">
+                        {{#if @resource.insurance_expiry}}
+                            <span class={{insurance-expiry-class @resource.insurance_expiry}}>
+                                {{or (format-date-fns @resource.insurance_expiry "yyyy-MM-dd") @resource.insurance_expiry}}
+                            </span>
+                        {{else}}
+                            <span>-</span>
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">{{t "vendor.fields.insurance-amount"}}</div>
+                    <div class="field-value">{{n-a @resource.insurance_amount}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">{{t "vendor.fields.payment-terms-days"}}</div>
+                    <div class="field-value">{{n-a @resource.payment_terms_days}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">{{t "vendor.fields.default-payment-method"}}</div>
+                    <div class="field-value">
+                        {{#if @resource.default_payment_method}}
+                            {{smart-humanize @resource.default_payment_method}}
+                        {{else}}
+                            <span>-</span>
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">{{t "vendor.fields.is-preferred"}}</div>
+                    <div class="field-value">
+                        {{#if @resource.is_preferred}}
+                            <span class="inline-flex items-center text-yellow-500">
+                                <FaIcon @icon="star" @size="sm" class="mr-1" />
+                                <span>{{t "common.yes"}}</span>
+                            </span>
+                        {{else}}
+                            <span>{{t "common.no"}}</span>
+                        {{/if}}
+                    </div>
+                </div>
+            </div>
+        </ContentPanel>
+
         <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
     </div>
 {{/if}}

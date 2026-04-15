@@ -26,6 +26,9 @@ export default class ManagementVendorsIndexController extends Controller {
         'country',
         'address',
         'website_url',
+        'carrier_type',
+        'is_preferred',
+        'insurance_expiry',
     ];
     @tracked page = 1;
     @tracked limit;
@@ -39,6 +42,9 @@ export default class ManagementVendorsIndexController extends Controller {
     @tracked phone;
     @tracked email;
     @tracked country;
+    @tracked carrier_type;
+    @tracked is_preferred;
+    @tracked insurance_expiry;
     @tracked table;
 
     /** action buttons */
@@ -168,6 +174,40 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterable: true,
                 filterParam: 'type',
                 filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.carrier-type'),
+                valuePath: 'carrier_type',
+                cellComponent: 'cell/vendor-carrier-type',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterParam: 'carrier_type',
+                filterComponent: 'filter/multi-option',
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
+                filterOptions: fleetOpsOptions('carrierTypes'),
+            },
+            {
+                label: this.intl.t('column.is-preferred'),
+                valuePath: 'is_preferred',
+                cellComponent: 'cell/vendor-preferred',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterParam: 'is_preferred',
+                filterComponent: 'filter/checkbox',
+            },
+            {
+                label: this.intl.t('column.insurance-expiry'),
+                valuePath: 'insurance_expiry',
+                cellComponent: 'cell/vendor-insurance-expiry',
+                resizable: true,
+                sortable: true,
+                sortParam: 'insurance_expiry',
+                filterable: true,
+                filterParam: 'insurance_expiry',
+                filterComponent: 'filter/date',
             },
             {
                 label: this.intl.t('column.country'),
