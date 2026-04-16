@@ -408,6 +408,28 @@
             </div>
 
             <div class="field-info-container">
+                <div class="field-name">Payload Volume</div>
+                <div class="field-value">
+                    {{#if @resource.payload_capacity_volume}}
+                        {{@resource.payload_capacity_volume}}
+                        m³
+                    {{else}}
+                        {{n-a @resource.payload_capacity_volume}}
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Pallet Capacity</div>
+                <div class="field-value">{{n-a @resource.payload_capacity_pallets}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Parcel Capacity</div>
+                <div class="field-value">{{n-a @resource.payload_capacity_parcels}}</div>
+            </div>
+
+            <div class="field-info-container">
                 <div class="field-name">Passenger Volume</div>
                 <div class="field-value">
                     {{#if @resource.passenger_volume}}
@@ -614,7 +636,7 @@
     <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
 
     {{! ORCHESTRATOR CONSTRAINTS (read-only view) }}
-    {{#if (or @resource.skills.length @resource.time_window_start @resource.time_window_end @resource.max_tasks @resource.payload_capacity_volume @resource.payload_capacity_pallets @resource.payload_capacity_parcels)}}
+    {{#if (or @resource.skills.length @resource.time_window_start @resource.time_window_end @resource.max_tasks)}}
         <ContentPanel @title="Orchestrator Constraints" @open={{true}} @wrapperClass="bordered-top">
             <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
                 {{#if @resource.skills.length}}
@@ -637,24 +659,6 @@
                     <div class="field-info-container">
                         <div class="field-name">Max Tasks</div>
                         <div class="field-value">{{@resource.max_tasks}}</div>
-                    </div>
-                {{/if}}
-                {{#if @resource.payload_capacity_volume}}
-                    <div class="field-info-container">
-                        <div class="field-name">Payload Volume</div>
-                        <div class="field-value">{{@resource.payload_capacity_volume}} m³</div>
-                    </div>
-                {{/if}}
-                {{#if @resource.payload_capacity_pallets}}
-                    <div class="field-info-container">
-                        <div class="field-name">Pallet Capacity</div>
-                        <div class="field-value">{{@resource.payload_capacity_pallets}}</div>
-                    </div>
-                {{/if}}
-                {{#if @resource.payload_capacity_parcels}}
-                    <div class="field-info-container">
-                        <div class="field-name">Parcel Capacity</div>
-                        <div class="field-value">{{@resource.payload_capacity_parcels}}</div>
                     </div>
                 {{/if}}
             </div>
