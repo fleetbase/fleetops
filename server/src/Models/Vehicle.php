@@ -207,10 +207,9 @@ class Vehicle extends Model
         'lease_expires_at',
         // Orchestrator
         'skills',
-        'capacity_weight_kg',
-        'capacity_volume_m3',
-        'capacity_pallets',
-        'capacity_parcels',
+        'payload_capacity_volume',
+        'payload_capacity_pallets',
+        'payload_capacity_parcels',
         'max_tasks',
         'time_window_start',
         'time_window_end',
@@ -307,13 +306,12 @@ class Vehicle extends Model
         'gvwr'                => 'decimal:2',
         'gcwr'                => 'decimal:2',
         // Orchestrator
-        'skills'              => Json::class,
-        'capacity_weight_kg'  => 'decimal:2',
-        'capacity_volume_m3'  => 'decimal:3',
-        'capacity_pallets'    => 'integer',
-        'capacity_parcels'    => 'integer',
-        'max_tasks'           => 'integer',
-        'return_to_depot'     => 'boolean',
+        'skills'                    => Json::class,
+        'payload_capacity_volume'   => 'decimal:3',
+        'payload_capacity_pallets'  => 'integer',
+        'payload_capacity_parcels'  => 'integer',
+        'max_tasks'                 => 'integer',
+        'return_to_depot'           => 'boolean',
     ];
 
     public function photo(): BelongsTo

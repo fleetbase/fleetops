@@ -61,7 +61,7 @@ class Payload extends Model
      *
      * @var array
      */
-    protected $fillable = ['_key', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'meta', 'payment_method', 'cod_amount', 'cod_currency', 'cod_payment_method', 'type', 'capacity_weight_kg', 'capacity_volume_m3', 'capacity_pallets', 'capacity_parcels'];
+    protected $fillable = ['_key', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'meta', 'payment_method', 'cod_amount', 'cod_currency', 'cod_payment_method', 'type'];
 
     /**
      * The attributes that should be cast to native types.
@@ -69,12 +69,7 @@ class Payload extends Model
      * @var array
      */
     protected $casts = [
-        'meta'               => Json::class,
-        // Orchestrator
-        'capacity_weight_kg' => 'decimal:2',
-        'capacity_volume_m3' => 'decimal:3',
-        'capacity_pallets'   => 'integer',
-        'capacity_parcels'   => 'integer',
+        'meta' => Json::class,
     ];
 
     /**

@@ -1,9 +1,7 @@
 <?php
-
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-
 /**
  * Add Orchestrator capacity columns to the payloads table.
  *
@@ -26,7 +24,6 @@ return new class extends Migration {
             $table->unsignedInteger('capacity_parcels')->nullable()->after('capacity_pallets');
         });
     }
-
     public function down(): void
     {
         Schema::table('payloads', function (Blueprint $table) {
