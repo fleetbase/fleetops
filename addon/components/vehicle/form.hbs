@@ -403,6 +403,18 @@
                     <UnitInput class="w-full" @value={{@resource.cargo_volume}} @unit="L" @placeholder="Cargo Volume" />
                 </InputGroup>
 
+                <InputGroup @name="Payload Volume (m³)" @helpText="Maximum cargo volume capacity for Orchestrator allocation.">
+                    <Input @value={{@resource.payload_capacity_volume}} @type="number" class="form-input w-full" placeholder="e.g. 40" disabled={{cannot-write @resource}} />
+                </InputGroup>
+
+                <InputGroup @name="Pallet Capacity" @helpText="Maximum number of pallets for Orchestrator allocation.">
+                    <Input @value={{@resource.payload_capacity_pallets}} @type="number" class="form-input w-full" placeholder="e.g. 20" disabled={{cannot-write @resource}} />
+                </InputGroup>
+
+                <InputGroup @name="Parcel Capacity" @helpText="Maximum number of parcels for Orchestrator allocation.">
+                    <Input @value={{@resource.payload_capacity_parcels}} @type="number" class="form-input w-full" placeholder="e.g. 200" disabled={{cannot-write @resource}} />
+                </InputGroup>
+
                 <InputGroup @name="Passenger Volume">
                     <UnitInput class="w-full" @value={{@resource.passenger_volume}} @unit="L" @placeholder="Passenger Volume" />
                 </InputGroup>
