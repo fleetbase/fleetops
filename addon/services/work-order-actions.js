@@ -96,7 +96,6 @@ export default class WorkOrderActionsService extends ResourceActionService {
 
     @action sendEmail(workOrder, options = {}) {
         const assignee = workOrder.assignee;
-        console.log('Assignee:', assignee);
         const vendorName = assignee?.name ?? workOrder.assignee_name ?? null;
         const vendorEmail = assignee?.email ?? null;
         const vendorPhone = assignee?.phone ?? null;

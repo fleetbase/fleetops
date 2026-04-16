@@ -104,8 +104,9 @@
                 }}
             {{else}}
                 <Layout::Sidebar::Item
-                    @onClick={{menuItem.onClick}}
-                    @route={{concat this.routePrefix menuItem.route}}
+                    @onClick={{if menuItem._virtual (fn this.universe.transitionMenuItem (concat this.routePrefix "virtual") menuItem) menuItem.onClick}}
+                    @menuItem={{menuItem}}
+                    @route={{if menuItem._virtual null (concat this.routePrefix menuItem.route)}}
                     @icon={{menuItem.icon}}
                     @iconComponent={{menuItem.iconComponent}}
                     @iconComponentOptions={{menuItem.iconComponentOptions}}
