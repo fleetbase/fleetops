@@ -16,9 +16,12 @@ use Illuminate\Support\Collection;
  * adapter (e.g. VroomOrchestrationEngine) calls the builder and then maps the
  * normalized output to its own wire format.
  *
- * The builder now reads first-class orchestrator columns (skills, capacity_*,
- * time_window_*, service_time, orchestrator_priority) added by the 2026-04-08
- * migrations, falling back to custom fields and meta for backwards compatibility.
+ * Vehicle capacity is read from the existing first-class columns on the
+ * vehicles table (payload_capacity, payload_capacity_volume, etc.).
+ *
+ * Order/payload capacity demand is computed dynamically by aggregating the
+ * weight and dimensions of the payload's entities — no denormalised cache
+ * columns are needed or used on the payloads table.
  */
 class OrchestrationPayloadBuilder
 {
@@ -42,6 +45,102 @@ class OrchestrationPayloadBuilder
     }
 
     /**
+     * Compute the multi-dimensional capacity demand for a payload by aggregating
+     * its entities' weight and volume values.
+     *
+     * Returns a 4-element integer array matching the vehicle capacity array:
+     *   [weight_kg, volume_litres, pallets, parcels]
+     *
+     * Weight is normalised to kg from entity.weight_unit.
+     * Volume is derived from entity length × width × height (dimensions_unit normalised to metres)
+     * and expressed in litres (×1000) so it can be stored as an integer for VROOM.
+     *
+     * Falls back to order meta keys (weight_kg, volume_m3, pallets, parcels) for
+     * backwards compatibility with orders that were created before entity-level
+     * dimension data was captured.
+     */
+    protected static function computePayloadDemand(Order $order): array
+    {
+        $payload = $order->payload;
+
+        if ($payload && $payload->entities && $payload->entities->isNotEmpty()) {
+            $totalWeightKg  = 0.0;
+            $totalVolumeLit = 0.0;
+            $totalParcels   = 0;
+
+            foreach ($payload->entities as $entity) {
+                // --- Weight ---
+                $rawWeight = (float) ($entity->weight ?? 0);
+                $weightUnit = strtolower($entity->weight_unit ?? 'kg');
+                $weightKg = match ($weightUnit) {
+                    'g', 'gram', 'grams'              => $rawWeight / 1000,
+                    'lb', 'lbs', 'pound', 'pounds'    => $rawWeight * 0.453592,
+                    'oz', 'ounce', 'ounces'            => $rawWeight * 0.0283495,
+                    't', 'ton', 'tonne', 'tonnes'      => $rawWeight * 1000,
+                    default                            => $rawWeight, // kg assumed
+                };
+                $totalWeightKg += $weightKg;
+
+                // --- Volume (L × W × H → m³ → litres) ---
+                $l    = (float) ($entity->length ?? 0);
+                $w    = (float) ($entity->width ?? 0);
+                $h    = (float) ($entity->height ?? 0);
+                $unit = strtolower($entity->dimensions_unit ?? 'm');
+
+                if ($l > 0 && $w > 0 && $h > 0) {
+                    // Normalise to metres
+                    $factor = match ($unit) {
+                        'cm', 'centimeter', 'centimetre'   => 0.01,
+                        'mm', 'millimeter', 'millimetre'   => 0.001,
+                        'in', 'inch', 'inches'             => 0.0254,
+                        'ft', 'foot', 'feet'               => 0.3048,
+                        default                            => 1.0, // metres assumed
+                    };
+                    $volumeM3    = ($l * $factor) * ($w * $factor) * ($h * $factor);
+                    $totalVolumeLit += $volumeM3 * 1000; // m³ → litres
+                }
+
+                $totalParcels++;
+            }
+
+            return [
+                (int) round($totalWeightKg),
+                (int) round($totalVolumeLit),
+                0, // pallet count not tracked at entity level
+                $totalParcels,
+            ];
+        }
+
+        // Fallback: order meta keys for backwards compatibility
+        return [
+            (int) round((float) ($order->getMeta('weight_kg') ?? 0)),
+            (int) round((float) ($order->getMeta('volume_m3') ?? 0) * 1000),
+            (int) ($order->getMeta('pallets') ?? 0),
+            (int) ($order->getMeta('parcels') ?? 1),
+        ];
+    }
+
+    /**
+     * Build the vehicle capacity array from the vehicle's first-class columns.
+     *
+     * Returns a 4-element integer array:
+     *   [weight_kg, volume_litres, pallets, parcels]
+     *
+     * payload_capacity        — existing column, weight in kg
+     * payload_capacity_volume — new column, volume in m³ (stored as litres for VROOM)
+     * payload_capacity_pallets / payload_capacity_parcels — new columns
+     */
+    protected static function buildVehicleCapacity(Vehicle $vehicle): array
+    {
+        return [
+            (int) round((float) ($vehicle->payload_capacity ?? static::safeMeta($vehicle, 'max_weight_kg', 0))),
+            (int) round((float) ($vehicle->payload_capacity_volume ?? static::safeMeta($vehicle, 'max_volume_m3', 0)) * 1000),
+            (int) ($vehicle->payload_capacity_pallets ?? static::safeMeta($vehicle, 'max_pallets', 0)),
+            (int) ($vehicle->payload_capacity_parcels ?? static::safeMeta($vehicle, 'max_parcels', 100)),
+        ];
+    }
+
+    /**
      * Build the normalized job list from a collection of Orders.
      *
      * Each job contains:
@@ -51,7 +150,7 @@ class OrchestrationPayloadBuilder
      *   - service:       service time in seconds (waypoint.service_time → order meta → default 300)
      *   - time_windows:  [[earliest_unix, latest_unix]] from order.time_window_start/end or scheduled_at
      *   - skills:        integer skill codes from order.required_skills or custom fields
-     *   - amount:        multi-dimensional capacity demand [weight_kg, volume_m3, pallets, parcels]
+     *   - amount:        multi-dimensional capacity demand [weight_kg, volume_litres, pallets, parcels]
      *   - priority:      orchestrator_priority (0–100, higher = more important)
      *   - description:   human-readable label for debugging
      */
@@ -87,14 +186,9 @@ class OrchestrationPayloadBuilder
                 ?? 300
             );
 
-            // --- Capacity demand (multi-dimensional) ---
-            // [weight_kg, volume_m3, pallets, parcels] — must match vehicle capacity array
-            $job['amount'] = [
-                (int) round((float) ($payload?->capacity_weight_kg ?? $order->getMeta('weight_kg') ?? 0)),
-                (int) round((float) ($payload?->capacity_volume_m3 ?? $order->getMeta('volume_m3') ?? 0) * 1000), // store as litres for integer
-                (int) ($payload?->capacity_pallets ?? $order->getMeta('pallets') ?? 0),
-                (int) ($payload?->capacity_parcels ?? $order->getMeta('parcels') ?? 1),
-            ];
+            // --- Capacity demand ---
+            // Aggregated dynamically from payload entities; falls back to order meta.
+            $job['amount'] = static::computePayloadDemand($order);
 
             // --- Time windows ---
             // Prefer explicit orchestrator time_window columns, fall back to scheduled_at
@@ -148,12 +242,7 @@ class OrchestrationPayloadBuilder
             if ($vehicle->return_to_depot && $vehicle->location) {
                 $entry['end'] = [$vehicle->location->getLng(), $vehicle->location->getLat()];
             }
-            $entry['capacity'] = [
-                (int) round((float) ($vehicle->capacity_weight_kg ?? static::safeMeta($vehicle, 'max_weight_kg', 0))),
-                (int) round((float) ($vehicle->capacity_volume_m3 ?? static::safeMeta($vehicle, 'max_volume_m3', 0)) * 1000),
-                (int) ($vehicle->capacity_pallets ?? static::safeMeta($vehicle, 'max_pallets', 0)),
-                (int) ($vehicle->capacity_parcels ?? static::safeMeta($vehicle, 'max_parcels', 100)),
-            ];
+            $entry['capacity'] = static::buildVehicleCapacity($vehicle);
             if ($vehicle->max_tasks !== null && $vehicle->max_tasks > 0) {
                 $entry['max_tasks'] = (int) $vehicle->max_tasks;
             }
@@ -172,6 +261,13 @@ class OrchestrationPayloadBuilder
         })->filter()->values()->toArray();
     }
 
+    /**
+     * Build vehicles for driver+vehicle allocation mode.
+     *
+     * Uses driver.location as the start position, falling back to vehicle.location.
+     * Capacity is read from the vehicle. Time windows prefer the driver's explicit
+     * window, then the driver's active shift, then the vehicle's window.
+     */
     public static function buildVehicles(Collection $vehicles): array
     {
         return $vehicles->map(function (Vehicle $vehicle) {
@@ -193,13 +289,7 @@ class OrchestrationPayloadBuilder
             }
 
             // --- Multi-dimensional capacity ---
-            // [weight_kg, volume_l (×1000 from m3), pallets, parcels]
-            $entry['capacity'] = [
-                (int) round((float) ($vehicle->capacity_weight_kg ?? static::safeMeta($vehicle, 'max_weight_kg', 0))),
-                (int) round((float) ($vehicle->capacity_volume_m3 ?? static::safeMeta($vehicle, 'max_volume_m3', 0)) * 1000),
-                (int) ($vehicle->capacity_pallets ?? static::safeMeta($vehicle, 'max_pallets', 0)),
-                (int) ($vehicle->capacity_parcels ?? static::safeMeta($vehicle, 'max_parcels', 100)),
-            ];
+            $entry['capacity'] = static::buildVehicleCapacity($vehicle);
 
             // --- Max tasks ---
             if ($vehicle->max_tasks !== null && $vehicle->max_tasks > 0) {

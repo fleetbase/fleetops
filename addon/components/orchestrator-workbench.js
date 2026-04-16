@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { later } from '@ember/runloop';
+import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 import { colorForId, waypointIconHtml } from '../utils/route-colors';
 import polyline from '@fleetbase/ember-core/utils/polyline';
@@ -122,7 +123,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         const lat = this.location.getLatitude();
         const lng = this.location.getLongitude();
         // eslint-disable-next-line no-console
-        console.log('[Orchestrator] constructor: location service initial coords =>', { lat, lng });
+        debug(`[Orchestrator] constructor: location service initial coords => ${lat}, ${lng}`);
         if (lat != null && lng != null) {
             this.mapCenter = { lat, lng };
         }
@@ -132,17 +133,17 @@ export default class OrchestratorWorkbenchComponent extends Component {
             .getUserLocation()
             .then(({ latitude, longitude }) => {
                 // eslint-disable-next-line no-console
-                console.log('[Orchestrator] getUserLocation resolved =>', { latitude, longitude }, '| _mapCenteredOnOrders =', this._mapCenteredOnOrders);
+                debug(`[Orchestrator] getUserLocation resolved => ${latitude}, ${longitude} | _mapCenteredOnOrders = ${this._mapCenteredOnOrders}`);
                 if (!this._mapCenteredOnOrders) {
                     // eslint-disable-next-line no-console
-                    console.log('[Orchestrator] applying geolocation as map center (no orders centered yet)');
+                    debug('[Orchestrator] applying geolocation as map center (no orders centered yet)');
                     this.mapCenter = { lat: latitude, lng: longitude };
                     if (this.leafletMap?.setView) {
                         this.leafletMap.setView([latitude, longitude], this.mapZoom);
                     }
                 } else {
                     // eslint-disable-next-line no-console
-                    console.log('[Orchestrator] geolocation ignored — map already centered on orders');
+                    debug('[Orchestrator] geolocation ignored — map already centered on orders');
                 }
             })
             .catch(() => {});
