@@ -299,6 +299,12 @@ class OrderController extends Controller
             $input['adhoc'] = Utils::isTrue($input['adhoc']) ? 1 : 0;
         }
 
+        // Ensure orchestrator_priority is never null — the column is NOT NULL
+        // and the DB default is bypassed when Eloquent receives an explicit null.
+        if (!isset($input['orchestrator_priority']) || !is_numeric($input['orchestrator_priority'])) {
+            $input['orchestrator_priority'] = 50;
+        }
+
         if (!isset($input['payload_uuid'])) {
             return response()->apiError('Attempted to attach invalid payload to order.');
         }
@@ -525,6 +531,12 @@ class OrderController extends Controller
         // dispatch if flagged true
         if ($request->boolean('dispatch')) {
             $order->dispatch();
+        }
+
+        // Ensure orchestrator_priority is never null on update either —
+        // only apply the default when the key was explicitly sent as null/empty.
+        if (array_key_exists('orchestrator_priority', $input) && !is_numeric($input['orchestrator_priority'])) {
+            $input['orchestrator_priority'] = 50;
         }
 
         // update the order

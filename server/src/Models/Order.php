@@ -220,6 +220,20 @@ class Order extends Model
     ];
 
     /**
+     * The model's default attribute values.
+     *
+     * Ensures that `orchestrator_priority` is never persisted as NULL even when
+     * the caller omits the field entirely (e.g. the order/form component does
+     * not require the user to fill in orchestrator constraints).  The value
+     * mirrors the database column default defined in the migration.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'orchestrator_priority' => 50,
+    ];
+
+    /**
      * The attributes excluded from the model's JSON form.
      *
      * @var array
@@ -617,6 +631,18 @@ class Order extends Model
     public function getUpdatedByNameAttribute()
     {
         return data_get($this, 'updatedBy.name');
+    }
+
+    /**
+     * Set the orchestrator_priority attribute.
+     *
+     * Coerces null or non-numeric values to the default priority of 50 so that
+     * the NOT NULL database constraint is never violated when a user submits
+     * the order form without filling in the orchestrator constraints section.
+     */
+    public function setOrchestratorPriorityAttribute($value): void
+    {
+        $this->attributes['orchestrator_priority'] = is_numeric($value) ? (int) $value : 50;
     }
 
     /**
