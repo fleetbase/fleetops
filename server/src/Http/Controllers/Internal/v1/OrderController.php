@@ -126,6 +126,12 @@ class OrderController extends FleetOpsController
                             $input['order_config_uuid'] = $defaultOrderConfig->uuid;
                         }
                     }
+
+                    // Ensure orchestrator_priority is never null — the column is NOT NULL
+                    // and the DB default is bypassed when Eloquent receives an explicit null.
+                    if (!isset($input['orchestrator_priority']) || !is_numeric($input['orchestrator_priority'])) {
+                        $input['orchestrator_priority'] = 50;
+                    }
                 },
                 function (&$request, Order &$order, &$requestInput) {
                     $input                   = $request->input('order');
