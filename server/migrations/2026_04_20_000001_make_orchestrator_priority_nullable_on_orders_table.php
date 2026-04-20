@@ -1,8 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Make `orchestrator_priority` nullable on the orders table.
@@ -20,24 +19,32 @@ use Illuminate\Support\Facades\Schema;
  * application layer (Order model + controllers) already coerces null to 50,
  * so NULL values will not appear in practice; the nullable flag is a
  * belt-and-suspenders safety net for any code path that may have been missed.
+ *
+ * NOTE: We use raw DB::statement() instead of Blueprint::change() because
+ * ->change() relies on Doctrine DBAL to introspect the existing column type,
+ * and Doctrine does not recognise MySQL's TINYINT as a mapped type
+ * ("Unknown column type tinyinteger requested"), causing the migration to
+ * crash on deployment.  The raw ALTER TABLE statement is portable across all
+ * MySQL/MariaDB versions supported by Fleetbase and requires no extra
+ * dependencies.
  */
 return new class extends Migration {
     public function up(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->unsignedTinyInteger('orchestrator_priority')->default(50)->nullable()->change();
-        });
+        DB::statement(
+            'ALTER TABLE `orders` MODIFY COLUMN `orchestrator_priority` TINYINT UNSIGNED NULL DEFAULT 50'
+        );
     }
 
     public function down(): void
     {
-        // First back-fill any NULLs so the NOT NULL constraint can be restored.
-        \Illuminate\Support\Facades\DB::table('orders')
+        // Back-fill any NULLs before restoring the NOT NULL constraint.
+        DB::table('orders')
             ->whereNull('orchestrator_priority')
             ->update(['orchestrator_priority' => 50]);
 
-        Schema::table('orders', function (Blueprint $table) {
-            $table->unsignedTinyInteger('orchestrator_priority')->default(50)->nullable(false)->change();
-        });
+        DB::statement(
+            'ALTER TABLE `orders` MODIFY COLUMN `orchestrator_priority` TINYINT UNSIGNED NOT NULL DEFAULT 50'
+        );
     }
 };
