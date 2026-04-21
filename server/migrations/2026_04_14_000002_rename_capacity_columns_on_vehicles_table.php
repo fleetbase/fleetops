@@ -1,7 +1,9 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+
 /**
  * Correct orchestrator capacity column names on the vehicles table.
  *
