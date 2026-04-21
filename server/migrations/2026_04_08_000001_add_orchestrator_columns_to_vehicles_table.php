@@ -1,7 +1,9 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+
 /**
  * Add Orchestrator constraint columns to the vehicles table.
  *
@@ -34,6 +36,7 @@ return new class extends Migration {
             $table->boolean('return_to_depot')->default(true)->after('time_window_end');
         });
     }
+
     public function down(): void
     {
         Schema::table('vehicles', function (Blueprint $table) {
