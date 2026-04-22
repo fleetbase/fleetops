@@ -3,15 +3,20 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Events\DriverLocationChanged;
+use Fleetbase\FleetOps\Events\GeofenceEntered;
+use Fleetbase\FleetOps\Events\GeofenceExited;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
 use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest;
 use Fleetbase\FleetOps\Http\Requests\DriverSimulationRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateDriverRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Driver as DriverResource;
+use Fleetbase\FleetOps\Jobs\CheckGeofenceDwell;
 use Fleetbase\FleetOps\Jobs\SimulateDrivingRoute;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
@@ -373,6 +378,29 @@ class DriverController extends Controller
         }
 
         broadcast(new DriverLocationChanged($driver));
+
+        // ----------------------------------------------------------------
+        // Geofence intersection detection
+        //
+        // After broadcasting the location change, run the geofence engine
+        // asynchronously. We catch all exceptions so that a geofence error
+        // never prevents the location update response from being returned.
+        // ----------------------------------------------------------------
+        try {
+            $newLocation     = new Point($latitude, $longitude);
+            $geofenceService = app(GeofenceIntersectionService::class);
+            $this->processSubjectGeofenceCrossings($driver, $newLocation, 'driver_geofence_states', 'driver_uuid', $geofenceService->detectDriverCrossings($driver, $newLocation));
+
+            if ($vehicle) {
+                $vehicle->loadMissing('driver');
+                $this->processSubjectGeofenceCrossings($vehicle, $newLocation, 'vehicle_geofence_states', 'vehicle_uuid', $geofenceService->detectVehicleCrossings($vehicle, $newLocation));
+            }
+        } catch (\Throwable $geofenceException) {
+            // Log the error but never let geofence processing block the response
+            if (app()->bound('sentry')) {
+                app('sentry')->captureException($geofenceException);
+            }
+        }
 
         return new DriverResource($driver);
     }
@@ -916,5 +944,77 @@ class DriverController extends Controller
         }
 
         return $phone;
+    }
+
+    private function processSubjectGeofenceCrossings(Driver|Vehicle $subject, Point $newLocation, string $stateTable, string $subjectColumn, array $crossings): void
+    {
+        foreach ($crossings as $crossing) {
+            $geofence     = $crossing['geofence'];
+            $geofenceType = $crossing['geofence_type'];
+
+            if ($crossing['type'] === 'entered') {
+                if (!$geofence->trigger_on_entry && empty($geofence->dwell_threshold_minutes)) {
+                    continue;
+                }
+
+                DB::table($stateTable)->upsert(
+                    [
+                        $subjectColumn   => $subject->uuid,
+                        'geofence_uuid'  => $geofence->uuid,
+                        'geofence_type'  => $geofenceType,
+                        'is_inside'      => true,
+                        'entered_at'     => now(),
+                        'exited_at'      => null,
+                        'dwell_job_id'   => null,
+                        'created_at'     => now(),
+                        'updated_at'     => now(),
+                    ],
+                    [$subjectColumn, 'geofence_uuid'],
+                    ['is_inside', 'entered_at', 'exited_at', 'dwell_job_id', 'updated_at']
+                );
+
+                if ($geofence->trigger_on_entry) {
+                    event(new GeofenceEntered($subject, $geofence, $geofenceType, $newLocation));
+                }
+
+                if ($geofence->dwell_threshold_minutes > 0) {
+                    $dwellJob = CheckGeofenceDwell::dispatch(
+                        $subject->uuid,
+                        $geofence->uuid,
+                        $geofenceType,
+                        $subjectColumn === 'vehicle_uuid' ? 'vehicle' : 'driver'
+                    )->delay(now()->addMinutes($geofence->dwell_threshold_minutes));
+
+                    DB::table($stateTable)
+                        ->where($subjectColumn, $subject->uuid)
+                        ->where('geofence_uuid', $geofence->uuid)
+                        ->update(['dwell_job_id' => (string) $dwellJob]);
+                }
+            } elseif ($crossing['type'] === 'exited') {
+                $state = DB::table($stateTable)
+                    ->where($subjectColumn, $subject->uuid)
+                    ->where('geofence_uuid', $geofence->uuid)
+                    ->first();
+
+                $dwellMinutes = null;
+                if ($state && $state->entered_at) {
+                    $dwellMinutes = (int) Carbon::parse($state->entered_at)->diffInMinutes(now());
+                }
+
+                DB::table($stateTable)
+                    ->where($subjectColumn, $subject->uuid)
+                    ->where('geofence_uuid', $geofence->uuid)
+                    ->update([
+                        'is_inside'    => false,
+                        'exited_at'    => now(),
+                        'dwell_job_id' => null,
+                        'updated_at'   => now(),
+                    ]);
+
+                if ($geofence->trigger_on_exit) {
+                    event(new GeofenceExited($subject, $geofence, $geofenceType, $newLocation, $dwellMinutes));
+                }
+            }
+        }
     }
 }

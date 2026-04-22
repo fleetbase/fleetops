@@ -24,7 +24,7 @@ class ServiceAreaController extends Controller
     public function create(CreateServiceAreaRequest $request)
     {
         // get request input
-        $input = $request->only(['name', 'type', 'status']);
+        $input = $request->only(['name', 'type', 'status', 'country', 'color', 'stroke_color', 'trigger_on_entry', 'trigger_on_exit', 'dwell_threshold_minutes', 'speed_limit_kmh']);
 
         // get radius for creating service area border - default to 500 meters
         $radius = (int) $request->input('radius', 500);
@@ -98,7 +98,7 @@ class ServiceAreaController extends Controller
         }
 
         // get request input
-        $input = $request->only(['name', 'type', 'status']);
+        $input = $request->only(['name', 'type', 'status', 'country', 'color', 'stroke_color', 'trigger_on_entry', 'trigger_on_exit', 'dwell_threshold_minutes', 'speed_limit_kmh']);
 
         // get radius for creating service area border - default to 500 meters
         $radius = $request->input('radius', 500);

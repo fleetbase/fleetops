@@ -24,7 +24,7 @@ class ZoneController extends Controller
     public function create(CreateZoneRequest $request)
     {
         // get request input
-        $input = $request->only(['name', 'border', 'status', 'description', 'color', 'stroke_color']);
+        $input = $request->only(['name', 'border', 'status', 'description', 'color', 'stroke_color', 'trigger_on_entry', 'trigger_on_exit', 'dwell_threshold_minutes', 'speed_limit_kmh']);
 
         // get radius for creating zone border - default to 500 meters
         $radius = $request->input('radius', 500);
@@ -97,7 +97,7 @@ class ZoneController extends Controller
         }
 
         // get request input
-        $input = $request->only(['name', 'border', 'status', 'description', 'color', 'stroke_color']);
+        $input = $request->only(['name', 'border', 'status', 'description', 'color', 'stroke_color', 'trigger_on_entry', 'trigger_on_exit', 'dwell_threshold_minutes', 'speed_limit_kmh']);
 
         // get radius for creating zone border - default to 500 meters
         $radius = $request->input('radius', 500);

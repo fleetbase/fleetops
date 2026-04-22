@@ -46,10 +46,14 @@ class CreateServiceAreaRequest extends FleetbaseRequest
 
                 return false;
             })],
-            'parent'    => ['nullable', 'exists:service_areas,public_id'],
-            'location'  => ['nullable', new ResolvablePoint()],
-            'latitude'  => ['nullable', 'required_with:longitude'],
-            'longitude' => ['nullable', 'required_with:latitude'],
+            'parent'                  => ['nullable', 'exists:service_areas,public_id'],
+            'location'                => ['nullable', new ResolvablePoint()],
+            'latitude'                => ['nullable', 'required_with:longitude'],
+            'longitude'               => ['nullable', 'required_with:latitude'],
+            'trigger_on_entry'        => ['nullable', 'boolean'],
+            'trigger_on_exit'         => ['nullable', 'boolean'],
+            'dwell_threshold_minutes' => ['nullable', 'integer', 'min:1', 'max:10080'],
+            'speed_limit_kmh'         => ['nullable', 'integer', 'min:1', 'max:1000'],
         ];
     }
 }
