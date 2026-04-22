@@ -795,13 +795,7 @@ export default class OrchestratorImportComponent extends Component {
             return this.args.options.onImportTemplate();
         }
 
-        // Build a dynamic XLSX template from the current field list + a sample row
-        // so the template always stays in sync with the importer field definitions.
-        const headers = TARGET_FIELDS.map((f) => f.key);
-        const sampleValues = headers.map((k) => SAMPLE_ROW[k] ?? '');
-        const ws = XLSX.utils.aoa_to_sheet([headers, sampleValues]);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Orders');
-        XLSX.writeFile(wb, 'Fleetbase_Order_Import_Template.xlsx');
+        // Open the import template URL for download
+        window.open('https://flb-assets.s3.ap-southeast-1.amazonaws.com/import-templates/Fleetbase_Order_Import_Template.xlsx');
     }
 }
