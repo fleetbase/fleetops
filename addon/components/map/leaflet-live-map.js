@@ -69,9 +69,9 @@ export default class MapLeafletLiveMapComponent extends Component {
 
         // Subscribe to geofence events so the live map can react to boundary crossings
         this._geofenceEnteredHandler = this.#handleGeofenceEntered.bind(this);
-        this._geofenceExitedHandler  = this.#handleGeofenceExited.bind(this);
+        this._geofenceExitedHandler = this.#handleGeofenceExited.bind(this);
         this.universe.on('fleet-ops.geofence.entered', this._geofenceEnteredHandler);
-        this.universe.on('fleet-ops.geofence.exited',  this._geofenceExitedHandler);
+        this.universe.on('fleet-ops.geofence.exited', this._geofenceExitedHandler);
     }
 
     willDestroy() {
@@ -325,9 +325,9 @@ export default class MapLeafletLiveMapComponent extends Component {
             const model = layer._model;
             if (model && model.uuid === geofenceUuid && typeof layer.setStyle === 'function') {
                 const originalStyle = {
-                    color:   layer.options.color,
+                    color: layer.options.color,
                     fillColor: layer.options.fillColor,
-                    weight:  layer.options.weight,
+                    weight: layer.options.weight,
                 };
 
                 // Flash to the event colour

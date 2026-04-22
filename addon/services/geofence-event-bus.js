@@ -201,23 +201,23 @@ export default class GeofenceEventBusService extends Service {
         const subjectType = subject?.type ?? (raw.vehicle && !raw.driver ? 'vehicle' : 'driver');
         const subjectName = subject?.name ?? raw.driver?.name ?? raw.vehicle?.name ?? raw.vehicle?.plate ?? 'Unknown Subject';
         return {
-            id:           raw.id ?? raw.uuid ?? `${Date.now()}-${Math.random()}`,
+            id: raw.id ?? raw.uuid ?? `${Date.now()}-${Math.random()}`,
             eventType,
-            occurredAt:   raw.occurred_at ?? new Date().toISOString(),
+            occurredAt: raw.occurred_at ?? new Date().toISOString(),
             subjectType,
             subjectName,
-            driverName:   raw.driver?.name ?? null,
-            driverUuid:   raw.driver?.uuid ?? null,
-            vehicleName:  raw.vehicle?.name ?? null,
+            driverName: raw.driver?.name ?? null,
+            driverUuid: raw.driver?.uuid ?? null,
+            vehicleName: raw.vehicle?.name ?? null,
             vehiclePlate: raw.vehicle?.plate ?? null,
             geofenceName: raw.geofence?.name ?? 'Unknown Geofence',
             geofenceUuid: raw.geofence?.uuid ?? null,
             geofenceType: raw.geofence?.type ?? 'zone',
             orderPublicId: raw.order?.id ?? null,
-            latitude:     raw.location?.latitude ?? null,
-            longitude:    raw.location?.longitude ?? null,
+            latitude: raw.location?.latitude ?? null,
+            longitude: raw.location?.longitude ?? null,
             dwellMinutes: raw.dwell_duration_minutes ?? null,
-            isNew:        true,
+            isNew: true,
         };
     }
 }
