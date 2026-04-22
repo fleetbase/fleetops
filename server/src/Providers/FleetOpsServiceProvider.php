@@ -61,6 +61,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\PurgeUnpurchasedServiceQuotes::class,
         \Fleetbase\FleetOps\Console\Commands\SendDriverNotification::class,
         \Fleetbase\FleetOps\Console\Commands\ReplayVehicleLocations::class,
+        \Fleetbase\FleetOps\Console\Commands\SimulateGeofenceEvents::class,
         \Fleetbase\FleetOps\Console\Commands\TestEmail::class,
         \Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers::class,
         \Fleetbase\FleetOps\Console\Commands\SendMaintenanceReminders::class,
@@ -83,6 +84,14 @@ class FleetOpsServiceProvider extends CoreServiceProvider
     {
         $this->app->register(CoreServiceProvider::class);
         $this->app->register(ReportSchemaServiceProvider::class);
+
+        // Register the GeofenceIntersectionService as a singleton so that
+        // the same instance is reused across the request lifecycle, avoiding
+        // repeated instantiation on high-frequency location update calls.
+        $this->app->singleton(
+            \Fleetbase\FleetOps\Support\GeofenceIntersectionService::class,
+            fn () => new \Fleetbase\FleetOps\Support\GeofenceIntersectionService()
+        );
 
         // Register the OrchestrationEngineRegistry as a singleton so that engines
         // registered from any service provider share the same instance.
@@ -155,6 +164,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Notifications\OrderPing::class,
             \Fleetbase\FleetOps\Notifications\OrderFailed::class,
             \Fleetbase\FleetOps\Notifications\OrderCompleted::class,
+            \Fleetbase\FleetOps\Notifications\DriverArrivedAtGeofence::class,
         ]);
 
         // Register Notifiables
