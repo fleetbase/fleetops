@@ -79,7 +79,9 @@ export default class GeofenceEventBusService extends Service {
             const channelId = `company.${companyUuid}`;
 
             this.#channel = socketInstance.subscribe(channelId);
-            await this.#channel.listener('subscribe').once();
+            if (this.#channel.state !== 'subscribed') {
+                await this.#channel.subscribe();
+            }
 
             this.isSubscribed = true;
             debug(`[GeofenceEventBus] Subscribed to channel: ${channelId}`);
@@ -150,6 +152,11 @@ export default class GeofenceEventBusService extends Service {
         this.events = [];
     }
 
+    @action
+    seedEvents(events = []) {
+        this.events = Array.isArray(events) ? events.slice(0, this.MAX_EVENTS).map((event) => ({ ...event, isNew: false })) : [];
+    }
+
     /**
      * Process an incoming geofence event from the WebSocket channel.
      *
@@ -157,10 +164,14 @@ export default class GeofenceEventBusService extends Service {
      * @param {Object} data
      */
     #handleIncomingEvent(eventType, data) {
-        const normalised = this.#normaliseEvent(eventType, data);
+        const normalised = this.normalizeEvent(eventType, data);
 
         // Prepend and cap
         this.events = [normalised, ...this.events].slice(0, this.MAX_EVENTS);
+
+        setTimeout(() => {
+            this.events = this.events.map((event) => (event.id === normalised.id ? { ...event, isNew: false } : event));
+        }, 3000);
 
         debug(`[GeofenceEventBus] ${eventType} — driver: ${normalised.driverName}, geofence: ${normalised.geofenceName}`);
 
@@ -185,13 +196,19 @@ export default class GeofenceEventBusService extends Service {
      * @param {Object} raw
      * @returns {Object}
      */
-    #normaliseEvent(eventType, raw) {
+    normalizeEvent(eventType, raw) {
+        const subject = raw.subject ?? null;
+        const subjectType = subject?.type ?? (raw.vehicle && !raw.driver ? 'vehicle' : 'driver');
+        const subjectName = subject?.name ?? raw.driver?.name ?? raw.vehicle?.name ?? raw.vehicle?.plate ?? 'Unknown Subject';
         return {
             id:           raw.id ?? raw.uuid ?? `${Date.now()}-${Math.random()}`,
             eventType,
             occurredAt:   raw.occurred_at ?? new Date().toISOString(),
-            driverName:   raw.driver?.name ?? 'Unknown Driver',
+            subjectType,
+            subjectName,
+            driverName:   raw.driver?.name ?? null,
             driverUuid:   raw.driver?.uuid ?? null,
+            vehicleName:  raw.vehicle?.name ?? null,
             vehiclePlate: raw.vehicle?.plate ?? null,
             geofenceName: raw.geofence?.name ?? 'Unknown Geofence',
             geofenceUuid: raw.geofence?.uuid ?? null,

@@ -61,6 +61,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\PurgeUnpurchasedServiceQuotes::class,
         \Fleetbase\FleetOps\Console\Commands\SendDriverNotification::class,
         \Fleetbase\FleetOps\Console\Commands\ReplayVehicleLocations::class,
+        \Fleetbase\FleetOps\Console\Commands\SimulateGeofenceEvents::class,
         \Fleetbase\FleetOps\Console\Commands\TestEmail::class,
         \Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers::class,
         \Fleetbase\FleetOps\Console\Commands\SendMaintenanceReminders::class,

@@ -15,6 +15,7 @@ use Fleetbase\FleetOps\Jobs\CheckGeofenceDwell;
 use Fleetbase\FleetOps\Jobs\SimulateDrivingRoute;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\Utils;
@@ -388,83 +389,11 @@ class DriverController extends Controller
         try {
             $newLocation     = new Point($latitude, $longitude);
             $geofenceService = app(GeofenceIntersectionService::class);
-            $crossings       = $geofenceService->detectCrossings($driver, $newLocation);
+            $this->processSubjectGeofenceCrossings($driver, $newLocation, 'driver_geofence_states', 'driver_uuid', $geofenceService->detectDriverCrossings($driver, $newLocation));
 
-            foreach ($crossings as $crossing) {
-                $geofence     = $crossing['geofence'];
-                $geofenceType = $crossing['geofence_type'];
-
-                if ($crossing['type'] === 'entered') {
-                    // Only trigger if the geofence has entry triggers enabled
-                    if (!$geofence->trigger_on_entry) {
-                        continue;
-                    }
-
-                    // Upsert the state record to mark the driver as inside
-                    DB::table('driver_geofence_states')->upsert(
-                        [
-                            'driver_uuid'   => $driver->uuid,
-                            'geofence_uuid' => $geofence->uuid,
-                            'geofence_type' => $geofenceType,
-                            'is_inside'     => true,
-                            'entered_at'    => now(),
-                            'exited_at'     => null,
-                            'dwell_job_id'  => null,
-                            'created_at'    => now(),
-                            'updated_at'    => now(),
-                        ],
-                        ['driver_uuid', 'geofence_uuid'],
-                        ['is_inside', 'entered_at', 'exited_at', 'dwell_job_id', 'updated_at']
-                    );
-
-                    // Dispatch the GeofenceEntered event (handled by queued listeners)
-                    event(new GeofenceEntered($driver, $geofence, $geofenceType, $newLocation));
-
-                    // Schedule a dwell check if the geofence has a dwell threshold
-                    if ($geofence->dwell_threshold_minutes > 0) {
-                        $dwellJob = CheckGeofenceDwell::dispatch(
-                            $driver->uuid,
-                            $geofence->uuid,
-                            $geofenceType
-                        )->delay(now()->addMinutes($geofence->dwell_threshold_minutes));
-
-                        // Store the job ID so it can be identified if needed
-                        DB::table('driver_geofence_states')
-                            ->where('driver_uuid', $driver->uuid)
-                            ->where('geofence_uuid', $geofence->uuid)
-                            ->update(['dwell_job_id' => (string) $dwellJob]);
-                    }
-                } elseif ($crossing['type'] === 'exited') {
-                    // Only trigger if the geofence has exit triggers enabled
-                    if (!$geofence->trigger_on_exit) {
-                        continue;
-                    }
-
-                    // Calculate dwell duration from the state record
-                    $state = DB::table('driver_geofence_states')
-                        ->where('driver_uuid', $driver->uuid)
-                        ->where('geofence_uuid', $geofence->uuid)
-                        ->first();
-
-                    $dwellMinutes = null;
-                    if ($state && $state->entered_at) {
-                        $dwellMinutes = (int) \Carbon\Carbon::parse($state->entered_at)->diffInMinutes(now());
-                    }
-
-                    // Update the state record to mark the driver as outside
-                    DB::table('driver_geofence_states')
-                        ->where('driver_uuid', $driver->uuid)
-                        ->where('geofence_uuid', $geofence->uuid)
-                        ->update([
-                            'is_inside'    => false,
-                            'exited_at'    => now(),
-                            'dwell_job_id' => null,
-                            'updated_at'   => now(),
-                        ]);
-
-                    // Dispatch the GeofenceExited event
-                    event(new GeofenceExited($driver, $geofence, $geofenceType, $newLocation, $dwellMinutes));
-                }
+            if ($vehicle) {
+                $vehicle->loadMissing('driver');
+                $this->processSubjectGeofenceCrossings($vehicle, $newLocation, 'vehicle_geofence_states', 'vehicle_uuid', $geofenceService->detectVehicleCrossings($vehicle, $newLocation));
             }
         } catch (\Throwable $geofenceException) {
             // Log the error but never let geofence processing block the response
@@ -1015,5 +944,77 @@ class DriverController extends Controller
         }
 
         return $phone;
+    }
+
+    private function processSubjectGeofenceCrossings(Driver|Vehicle $subject, Point $newLocation, string $stateTable, string $subjectColumn, array $crossings): void
+    {
+        foreach ($crossings as $crossing) {
+            $geofence     = $crossing['geofence'];
+            $geofenceType = $crossing['geofence_type'];
+
+            if ($crossing['type'] === 'entered') {
+                if (!$geofence->trigger_on_entry && empty($geofence->dwell_threshold_minutes)) {
+                    continue;
+                }
+
+                DB::table($stateTable)->upsert(
+                    [
+                        $subjectColumn   => $subject->uuid,
+                        'geofence_uuid'  => $geofence->uuid,
+                        'geofence_type'  => $geofenceType,
+                        'is_inside'      => true,
+                        'entered_at'     => now(),
+                        'exited_at'      => null,
+                        'dwell_job_id'   => null,
+                        'created_at'     => now(),
+                        'updated_at'     => now(),
+                    ],
+                    [$subjectColumn, 'geofence_uuid'],
+                    ['is_inside', 'entered_at', 'exited_at', 'dwell_job_id', 'updated_at']
+                );
+
+                if ($geofence->trigger_on_entry) {
+                    event(new GeofenceEntered($subject, $geofence, $geofenceType, $newLocation));
+                }
+
+                if ($geofence->dwell_threshold_minutes > 0) {
+                    $dwellJob = CheckGeofenceDwell::dispatch(
+                        $subject->uuid,
+                        $geofence->uuid,
+                        $geofenceType,
+                        $subjectColumn === 'vehicle_uuid' ? 'vehicle' : 'driver'
+                    )->delay(now()->addMinutes($geofence->dwell_threshold_minutes));
+
+                    DB::table($stateTable)
+                        ->where($subjectColumn, $subject->uuid)
+                        ->where('geofence_uuid', $geofence->uuid)
+                        ->update(['dwell_job_id' => (string) $dwellJob]);
+                }
+            } elseif ($crossing['type'] === 'exited') {
+                $state = DB::table($stateTable)
+                    ->where($subjectColumn, $subject->uuid)
+                    ->where('geofence_uuid', $geofence->uuid)
+                    ->first();
+
+                $dwellMinutes = null;
+                if ($state && $state->entered_at) {
+                    $dwellMinutes = (int) Carbon::parse($state->entered_at)->diffInMinutes(now());
+                }
+
+                DB::table($stateTable)
+                    ->where($subjectColumn, $subject->uuid)
+                    ->where('geofence_uuid', $geofence->uuid)
+                    ->update([
+                        'is_inside'    => false,
+                        'exited_at'    => now(),
+                        'dwell_job_id' => null,
+                        'updated_at'   => now(),
+                    ]);
+
+                if ($geofence->trigger_on_exit) {
+                    event(new GeofenceExited($subject, $geofence, $geofenceType, $newLocation, $dwellMinutes));
+                }
+            }
+        }
     }
 }

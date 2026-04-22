@@ -36,6 +36,7 @@ class GeofenceController extends Controller
         $companyUuid = session('company');
 
         $query = GeofenceEventLog::where('company_uuid', $companyUuid)
+            ->with(['driver.vehicle', 'vehicle', 'order'])
             ->orderBy('occurred_at', 'desc');
 
         if ($request->filled('driver_uuid')) {
@@ -46,8 +47,16 @@ class GeofenceController extends Controller
             $query->where('geofence_uuid', $request->input('geofence_uuid'));
         }
 
+        if ($request->filled('vehicle_uuid')) {
+            $query->where('vehicle_uuid', $request->input('vehicle_uuid'));
+        }
+
+        if ($request->filled('subject_type')) {
+            $query->where('subject_type', $request->input('subject_type'));
+        }
+
         if ($request->filled('event_type')) {
-            $query->where('event_type', $request->input('event_type'));
+            $query->where('event_type', str_replace('geofence.', '', $request->input('event_type')));
         }
 
         if ($request->filled('from')) {
@@ -60,7 +69,10 @@ class GeofenceController extends Controller
 
         $perPage = min((int) $request->input('per_page', 50), 200);
 
-        return response()->json($query->paginate($perPage));
+        $events = $query->paginate($perPage);
+        $events->getCollection()->transform(fn (GeofenceEventLog $event) => $this->serializeEvent($event));
+
+        return response()->json($events);
     }
 
     /**
@@ -73,7 +85,7 @@ class GeofenceController extends Controller
     {
         $companyUuid = session('company');
 
-        $states = DB::table('driver_geofence_states as dgs')
+        $driverStates = DB::table('driver_geofence_states as dgs')
             ->join('drivers as d', 'd.uuid', '=', 'dgs.driver_uuid')
             ->leftJoin('zones as z', function ($join) {
                 $join->on('z.uuid', '=', 'dgs.geofence_uuid')
@@ -87,16 +99,49 @@ class GeofenceController extends Controller
             ->where('dgs.is_inside', true)
             ->whereNull('d.deleted_at')
             ->select([
+                DB::raw("'driver' as subject_type"),
+                'd.public_id as subject_id',
+                'd.uuid as subject_uuid',
+                'd.name as subject_name',
                 'dgs.driver_uuid',
                 'd.name as driver_name',
+                'dgs.entered_at',
                 'dgs.geofence_uuid',
                 DB::raw('COALESCE(z.name, sa.name) as geofence_name'),
                 'dgs.geofence_type',
-                'dgs.entered_at',
                 DB::raw('TIMESTAMPDIFF(MINUTE, dgs.entered_at, NOW()) as minutes_inside'),
             ])
-            ->orderBy('dgs.entered_at', 'asc')
             ->get();
+
+        $vehicleStates = DB::table('vehicle_geofence_states as vgs')
+            ->join('vehicles as v', 'v.uuid', '=', 'vgs.vehicle_uuid')
+            ->leftJoin('zones as z', function ($join) {
+                $join->on('z.uuid', '=', 'vgs.geofence_uuid')
+                    ->where('vgs.geofence_type', '=', 'zone');
+            })
+            ->leftJoin('service_areas as sa', function ($join) {
+                $join->on('sa.uuid', '=', 'vgs.geofence_uuid')
+                    ->where('vgs.geofence_type', '=', 'service_area');
+            })
+            ->where('v.company_uuid', $companyUuid)
+            ->where('vgs.is_inside', true)
+            ->whereNull('v.deleted_at')
+            ->select([
+                DB::raw("'vehicle' as subject_type"),
+                'v.public_id as subject_id',
+                'v.uuid as subject_uuid',
+                DB::raw('COALESCE(v.name, v.plate_number, v.public_id) as subject_name'),
+                DB::raw('NULL as driver_uuid'),
+                DB::raw('NULL as driver_name'),
+                'vgs.entered_at',
+                'vgs.geofence_uuid',
+                DB::raw('COALESCE(z.name, sa.name) as geofence_name'),
+                'vgs.geofence_type',
+                DB::raw('TIMESTAMPDIFF(MINUTE, vgs.entered_at, NOW()) as minutes_inside'),
+            ])
+            ->get();
+
+        $states = $driverStates->merge($vehicleStates)->sortBy('entered_at')->values();
 
         return response()->json([
             'data'  => $states,
@@ -160,9 +205,59 @@ class GeofenceController extends Controller
 
         $events = GeofenceEventLog::where('company_uuid', $companyUuid)
             ->where('driver_uuid', $driverUuid)
+            ->with(['driver.vehicle', 'vehicle', 'order'])
             ->orderBy('occurred_at', 'desc')
             ->paginate($perPage);
 
+        $events->getCollection()->transform(fn (GeofenceEventLog $event) => $this->serializeEvent($event));
+
         return response()->json($events);
+    }
+
+    protected function serializeEvent(GeofenceEventLog $event): array
+    {
+        $driver      = $event->driver;
+        $vehicle     = $event->vehicle ?? $driver?->vehicle;
+        $subjectType = $event->subject_type ?? ($driver ? 'driver' : 'vehicle');
+        $subject     = $subjectType === 'vehicle' ? $vehicle : $driver;
+
+        return [
+            'id'                     => $event->uuid,
+            'event_type'             => 'geofence.' . $event->event_type,
+            'occurred_at'            => optional($event->occurred_at)->toIso8601String(),
+            'dwell_duration_minutes' => $event->dwell_duration_minutes,
+            'subject'                => [
+                'type' => $subjectType,
+                'id'   => $subject?->public_id,
+                'uuid' => $event->subject_uuid ?? $subject?->uuid,
+                'name' => $event->subject_name ?? ($subjectType === 'vehicle' ? ($vehicle?->display_name ?? $vehicle?->plate_number) : $driver?->name),
+            ],
+            'driver' => $driver ? [
+                'id'    => $driver->public_id,
+                'uuid'  => $driver->uuid,
+                'name'  => $driver->name,
+                'phone' => $driver->phone,
+            ] : null,
+            'vehicle' => $vehicle ? [
+                'id'    => $vehicle->public_id,
+                'uuid'  => $vehicle->uuid,
+                'name'  => $vehicle->display_name ?? $vehicle->name,
+                'plate' => $vehicle->plate_number,
+            ] : null,
+            'geofence' => [
+                'uuid' => $event->geofence_uuid,
+                'name' => $event->geofence_name,
+                'type' => $event->geofence_type,
+            ],
+            'location' => [
+                'latitude'  => $event->latitude,
+                'longitude' => $event->longitude,
+            ],
+            'order' => $event->order ? [
+                'id'     => $event->order->public_id,
+                'uuid'   => $event->order->uuid,
+                'status' => $event->order->status,
+            ] : null,
+        ];
     }
 }

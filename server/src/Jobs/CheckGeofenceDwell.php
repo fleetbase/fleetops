@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Jobs;
 use Fleetbase\FleetOps\Events\GeofenceDwelled;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\ServiceArea;
+use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Zone;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -63,15 +64,21 @@ class CheckGeofenceDwell implements ShouldQueue
     protected string $geofenceType;
 
     /**
+     * The subject type for the dwell check: 'driver' or 'vehicle'.
+     */
+    protected string $subjectType;
+
+    /**
      * Create a new CheckGeofenceDwell job.
      *
      * @param string $geofenceType 'zone' | 'service_area'
      */
-    public function __construct(string $driverUuid, string $geofenceUuid, string $geofenceType)
+    public function __construct(string $subjectUuid, string $geofenceUuid, string $geofenceType, string $subjectType = 'driver')
     {
-        $this->driverUuid   = $driverUuid;
+        $this->driverUuid   = $subjectUuid;
         $this->geofenceUuid = $geofenceUuid;
         $this->geofenceType = $geofenceType;
+        $this->subjectType  = $subjectType;
         $this->onQueue('geofence');
     }
 
@@ -81,8 +88,11 @@ class CheckGeofenceDwell implements ShouldQueue
     public function handle(): void
     {
         // Check if the driver is still inside the geofence
-        $state = DB::table('driver_geofence_states')
-            ->where('driver_uuid', $this->driverUuid)
+        $stateTable    = $this->subjectType === 'vehicle' ? 'vehicle_geofence_states' : 'driver_geofence_states';
+        $subjectColumn = $this->subjectType === 'vehicle' ? 'vehicle_uuid' : 'driver_uuid';
+
+        $state = DB::table($stateTable)
+            ->where($subjectColumn, $this->driverUuid)
             ->where('geofence_uuid', $this->geofenceUuid)
             ->where('is_inside', true)
             ->first();
@@ -93,9 +103,15 @@ class CheckGeofenceDwell implements ShouldQueue
         }
 
         // Load the driver
-        $driver = Driver::where('uuid', $this->driverUuid)->withoutGlobalScopes()->first();
-        if (!$driver) {
-            Log::warning('CheckGeofenceDwell: Driver not found', ['driver_uuid' => $this->driverUuid]);
+        $subject = $this->subjectType === 'vehicle'
+            ? Vehicle::where('uuid', $this->driverUuid)->withoutGlobalScopes()->first()
+            : Driver::where('uuid', $this->driverUuid)->withoutGlobalScopes()->first();
+
+        if (!$subject) {
+            Log::warning('CheckGeofenceDwell: Subject not found', [
+                'subject_uuid' => $this->driverUuid,
+                'subject_type' => $this->subjectType,
+            ]);
 
             return;
         }
@@ -118,6 +134,6 @@ class CheckGeofenceDwell implements ShouldQueue
         $enteredAt = \Carbon\Carbon::parse($state->entered_at);
 
         // Fire the dwell event
-        event(new GeofenceDwelled($driver, $geofence, $this->geofenceType, $enteredAt));
+        event(new GeofenceDwelled($subject, $geofence, $this->geofenceType, $enteredAt));
     }
 }

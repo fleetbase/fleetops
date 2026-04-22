@@ -20,11 +20,6 @@ class HandleGeofenceExited implements ShouldQueue
     use InteractsWithQueue;
 
     /**
-     * The name of the queue the job should be sent to.
-     */
-    public string $queue = 'geofence';
-
-    /**
      * The number of times the job may be attempted.
      */
     public int $tries = 3;
@@ -34,15 +29,20 @@ class HandleGeofenceExited implements ShouldQueue
      */
     public function handle(GeofenceExited $event): void
     {
-        $driver = $event->driver;
-        $order  = $driver->getCurrentOrder();
+        $driver  = $event->driver;
+        $vehicle = $event->vehicle;
+        $order   = $driver?->getCurrentOrder();
+        $subject = $event->subjectType === 'vehicle' ? $vehicle : $driver;
 
         GeofenceEventLog::create([
             'uuid'                   => Str::uuid()->toString(),
-            'company_uuid'           => $driver->company_uuid,
-            'driver_uuid'            => $driver->uuid,
-            'vehicle_uuid'           => $driver->vehicle_uuid ?? null,
+            'company_uuid'           => $event->getCompanyUuid(),
+            'driver_uuid'            => $driver?->uuid,
+            'vehicle_uuid'           => $vehicle?->uuid,
             'order_uuid'             => $order?->uuid,
+            'subject_uuid'           => $subject?->uuid,
+            'subject_type'           => $event->subjectType,
+            'subject_name'           => $event->subjectType === 'vehicle' ? ($vehicle?->display_name ?? $vehicle?->plate_number) : $driver?->name,
             'geofence_uuid'          => $event->geofence->uuid,
             'geofence_type'          => $event->geofenceType,
             'geofence_name'          => $event->geofence->name,

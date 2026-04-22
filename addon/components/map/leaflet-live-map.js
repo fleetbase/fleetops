@@ -30,6 +30,7 @@ export default class MapLeafletLiveMapComponent extends Component {
     @service universe;
     @service('universe/menu-service') menuService;
     @service geofenceEventBus;
+    @service currentUser;
 
     /** properties */
     id = guidFor(this);
@@ -59,6 +60,13 @@ export default class MapLeafletLiveMapComponent extends Component {
         // Ensure we have valid coordinates on initialization
         this.#updateCoordinatesFromLocation();
 
+        if (this.currentUser.companyId) {
+            this.geofenceEventBus.subscribe(this.currentUser.companyId);
+        } else {
+            this._currentUserLoadedHandler = () => this.geofenceEventBus.subscribe(this.currentUser.companyId);
+            this.currentUser.on('user.loaded', this._currentUserLoadedHandler);
+        }
+
         // Subscribe to geofence events so the live map can react to boundary crossings
         this._geofenceEnteredHandler = this.#handleGeofenceEntered.bind(this);
         this._geofenceExitedHandler  = this.#handleGeofenceExited.bind(this);
@@ -73,6 +81,10 @@ export default class MapLeafletLiveMapComponent extends Component {
         if (this._locationUpdateHandler) {
             this.universe.off('user.located', this._locationUpdateHandler);
             this._locationUpdateHandler = null;
+        }
+        if (this._currentUserLoadedHandler) {
+            this.currentUser.off('user.loaded', this._currentUserLoadedHandler);
+            this._currentUserLoadedHandler = null;
         }
         if (this._geofenceEnteredHandler) {
             this.universe.off('fleet-ops.geofence.entered', this._geofenceEnteredHandler);

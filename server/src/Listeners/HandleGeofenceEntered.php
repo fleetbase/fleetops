@@ -25,11 +25,6 @@ class HandleGeofenceEntered implements ShouldQueue
     use InteractsWithQueue;
 
     /**
-     * The name of the queue the job should be sent to.
-     */
-    public string $queue = 'geofence';
-
-    /**
      * The number of times the job may be attempted.
      */
     public int $tries = 3;
@@ -40,22 +35,27 @@ class HandleGeofenceEntered implements ShouldQueue
     public function handle(GeofenceEntered $event): void
     {
         $driver   = $event->driver;
+        $vehicle  = $event->vehicle;
         $geofence = $event->geofence;
 
         // Set company session context for any subsequent queries
-        session(['company' => $driver->company_uuid]);
+        session(['company' => $event->getCompanyUuid()]);
 
         // ----------------------------------------------------------------
         // 1. Write to the geofence event log
         // ----------------------------------------------------------------
-        $order = $driver->getCurrentOrder();
+        $order   = $driver?->getCurrentOrder();
+        $subject = $event->subjectType === 'vehicle' ? $vehicle : $driver;
 
         GeofenceEventLog::create([
             'uuid'          => Str::uuid()->toString(),
-            'company_uuid'  => $driver->company_uuid,
-            'driver_uuid'   => $driver->uuid,
-            'vehicle_uuid'  => $driver->vehicle_uuid ?? null,
+            'company_uuid'  => $event->getCompanyUuid(),
+            'driver_uuid'   => $driver?->uuid,
+            'vehicle_uuid'  => $vehicle?->uuid,
             'order_uuid'    => $order?->uuid,
+            'subject_uuid'  => $subject?->uuid,
+            'subject_type'  => $event->subjectType,
+            'subject_name'  => $event->subjectType === 'vehicle' ? ($vehicle?->display_name ?? $vehicle?->plate_number) : $driver?->name,
             'geofence_uuid' => $geofence->uuid,
             'geofence_type' => $event->geofenceType,
             'geofence_name' => $geofence->name,
@@ -72,7 +72,7 @@ class HandleGeofenceEntered implements ShouldQueue
         //    proximity to the current destination waypoint, auto-transition
         //    the order to "arrived" status and notify the customer.
         // ----------------------------------------------------------------
-        if ($order) {
+        if ($driver && $order) {
             $this->handleOrderArrival($driver, $geofence, $order, $event);
         }
     }

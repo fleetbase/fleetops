@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\ServiceArea;
+use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Facades\DB;
@@ -34,10 +35,28 @@ class GeofenceIntersectionService
      *   - 'geofence':      Zone or ServiceArea model instance
      *   - 'geofence_type': 'zone' | 'service_area'
      */
-    public function detectCrossings(Driver $driver, Point $newLocation): array
+    public function detectCrossings(Driver|Vehicle $subject, Point $newLocation): array
+    {
+        if ($subject instanceof Driver) {
+            return $this->detectDriverCrossings($subject, $newLocation);
+        }
+
+        return $this->detectVehicleCrossings($subject, $newLocation);
+    }
+
+    public function detectDriverCrossings(Driver $driver, Point $newLocation): array
+    {
+        return $this->detectSubjectCrossings($driver->company_uuid, $newLocation, 'driver_geofence_states', 'driver_uuid', $driver->uuid);
+    }
+
+    public function detectVehicleCrossings(Vehicle $vehicle, Point $newLocation): array
+    {
+        return $this->detectSubjectCrossings($vehicle->company_uuid, $newLocation, 'vehicle_geofence_states', 'vehicle_uuid', $vehicle->uuid);
+    }
+
+    protected function detectSubjectCrossings(string $companyUuid, Point $newLocation, string $stateTable, string $subjectColumn, string $subjectUuid): array
     {
         $crossings   = [];
-        $companyUuid = $driver->company_uuid;
 
         // Build the WKT point string. MySQL ST_GeomFromText expects (lng lat) order.
         $wkt = sprintf('POINT(%s %s)', $newLocation->getLng(), $newLocation->getLat());
@@ -54,7 +73,9 @@ class GeofenceIntersectionService
         $insideZones = Zone::where('company_uuid', $companyUuid)
             ->whereNotNull('border')
             ->where(function ($q) {
-                $q->where('trigger_on_entry', true)->orWhere('trigger_on_exit', true);
+                $q->where('trigger_on_entry', true)
+                    ->orWhere('trigger_on_exit', true)
+                    ->orWhereNotNull('dwell_threshold_minutes');
             })
             ->whereRaw('MBRContains(`border`, ST_GeomFromText(?))', [$wkt])
             ->whereRaw('ST_Contains(`border`, ST_GeomFromText(?))', [$wkt])
@@ -69,7 +90,9 @@ class GeofenceIntersectionService
         $insideServiceAreas = ServiceArea::where('company_uuid', $companyUuid)
             ->whereNotNull('border')
             ->where(function ($q) {
-                $q->where('trigger_on_entry', true)->orWhere('trigger_on_exit', true);
+                $q->where('trigger_on_entry', true)
+                    ->orWhere('trigger_on_exit', true)
+                    ->orWhereNotNull('dwell_threshold_minutes');
             })
             ->whereRaw('MBRContains(`border`, ST_GeomFromText(?))', [$wkt])
             ->whereRaw('ST_Contains(`border`, ST_GeomFromText(?))', [$wkt])
@@ -85,8 +108,8 @@ class GeofenceIntersectionService
         // ----------------------------------------------------------------
         // 3. Load the driver's current geofence state records.
         // ----------------------------------------------------------------
-        $currentStates = DB::table('driver_geofence_states')
-            ->where('driver_uuid', $driver->uuid)
+        $currentStates = DB::table($stateTable)
+            ->where($subjectColumn, $subjectUuid)
             ->get()
             ->keyBy('geofence_uuid');
 
@@ -144,6 +167,15 @@ class GeofenceIntersectionService
             ->exists();
     }
 
+    public function isVehicleInsideGeofence(Vehicle $vehicle, $geofence): bool
+    {
+        return DB::table('vehicle_geofence_states')
+            ->where('vehicle_uuid', $vehicle->uuid)
+            ->where('geofence_uuid', $geofence->uuid)
+            ->where('is_inside', true)
+            ->exists();
+    }
+
     /**
      * Clear all geofence state records for a driver.
      * Called when a driver goes offline or completes a shift.
@@ -152,6 +184,18 @@ class GeofenceIntersectionService
     {
         DB::table('driver_geofence_states')
             ->where('driver_uuid', $driver->uuid)
+            ->update([
+                'is_inside'    => false,
+                'exited_at'    => now(),
+                'dwell_job_id' => null,
+                'updated_at'   => now(),
+            ]);
+    }
+
+    public function clearVehicleState(Vehicle $vehicle): void
+    {
+        DB::table('vehicle_geofence_states')
+            ->where('vehicle_uuid', $vehicle->uuid)
             ->update([
                 'is_inside'    => false,
                 'exited_at'    => now(),
