@@ -46,7 +46,7 @@ class OrderController extends Controller
     /**
      * Creates a new Fleetbase Order resource.
      *
-     * @param Request|\Fleetbase\Http\Requests\CreateOrderRequest $request
+     * @param Request|CreateOrderRequest $request
      *
      * @return \Fleetbase\Http\Resources\Order
      */
@@ -354,8 +354,7 @@ class OrderController extends Controller
     /**
      * Updates a Fleetbase Order resource.
      *
-     * @param string                                      $id
-     * @param \Fleetbase\Http\Requests\UpdateOrderRequest $request
+     * @param string $id
      *
      * @return \Fleetbase\Http\Resources\Order
      */
@@ -526,6 +525,12 @@ class OrderController extends Controller
                 $input['customer_uuid'] = Utils::get($customer, 'uuid');
                 $input['customer_type'] = Utils::getModelClassName(Utils::get($customer, 'table'));
             }
+        }
+
+        // If adding a service quote for a purchase
+        $serviceQuote = ServiceQuote::resolveFromRequest($request);
+        if ($serviceQuote) {
+            $order->purchaseServiceQuote($serviceQuote);
         }
 
         // dispatch if flagged true

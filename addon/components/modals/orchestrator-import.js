@@ -223,76 +223,6 @@ const ALIASES = {
     entity_destination: ['entity destination', 'item destination', 'deliver to', 'waypoint'],
 };
 
-/** Sample row for the downloadable template. */
-const SAMPLE_ROW = {
-    order_type: 'pickup_dropoff',
-    order_ref: 'ORD-001',
-    internal_id: 'INT-001',
-    type: 'default',
-    status: 'created',
-    scheduled_at: '2026-05-01 09:00',
-    notes: 'Leave at front door',
-    priority: '50',
-    time_window_start: '08:00',
-    time_window_end: '12:00',
-    service_time_min: '10',
-    required_skills: '',
-    pickup_name: 'Warehouse A',
-    pickup_street1: '123 Warehouse Rd',
-    pickup_street2: '',
-    pickup_city: 'London',
-    pickup_state: 'England',
-    pickup_postal_code: 'E1 6RF',
-    pickup_country: 'GB',
-    pickup_phone: '+44 20 7946 0000',
-    pickup_lat: '',
-    pickup_lng: '',
-    dropoff_name: 'John Smith',
-    dropoff_street1: '456 High Street',
-    dropoff_street2: 'Apt 3B',
-    dropoff_city: 'London',
-    dropoff_state: 'England',
-    dropoff_postal_code: 'SW1A 1AA',
-    dropoff_country: 'GB',
-    dropoff_phone: '+44 7700 900000',
-    dropoff_lat: '',
-    dropoff_lng: '',
-    weight_kg: '5.2',
-    volume_m3: '0.04',
-    parcels: '1',
-    cod_amount: '',
-    cod_currency: '',
-    customer_name: 'John Smith',
-    customer_email: 'john.smith@example.com',
-    customer_phone: '+44 7700 900000',
-    customer_type: 'contact',
-    facilitator_name: '',
-    facilitator_email: '',
-    facilitator_phone: '',
-    facilitator_type: 'vendor',
-    vehicle_plate: '',
-    driver_name: '',
-    driver_phone: '',
-    driver_email: '',
-    entity_name: 'Widget A',
-    entity_type: 'parcel',
-    entity_description: '1x Widget A in box',
-    entity_sku: 'WGT-001',
-    entity_barcode: '',
-    entity_internal_id: '',
-    entity_declared_value: '25.00',
-    entity_currency: 'USD',
-    entity_price: '25.00',
-    entity_sale_price: '',
-    entity_weight: '0.5',
-    entity_weight_unit: 'kg',
-    entity_length: '',
-    entity_width: '',
-    entity_height: '',
-    entity_dimensions_unit: 'cm',
-    entity_destination: 'dropoff',
-};
-
 export default class OrchestratorImportComponent extends Component {
     @service fetch;
     @service notifications;
@@ -795,13 +725,7 @@ export default class OrchestratorImportComponent extends Component {
             return this.args.options.onImportTemplate();
         }
 
-        // Build a dynamic XLSX template from the current field list + a sample row
-        // so the template always stays in sync with the importer field definitions.
-        const headers = TARGET_FIELDS.map((f) => f.key);
-        const sampleValues = headers.map((k) => SAMPLE_ROW[k] ?? '');
-        const ws = XLSX.utils.aoa_to_sheet([headers, sampleValues]);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Orders');
-        XLSX.writeFile(wb, 'Fleetbase_Order_Import_Template.xlsx');
+        // Open the import template URL for download
+        window.open('https://flb-assets.s3.ap-southeast-1.amazonaws.com/import-templates/Fleetbase_Order_Import_Template.xlsx');
     }
 }

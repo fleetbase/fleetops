@@ -3,6 +3,8 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
+use Fleetbase\FleetOps\Http\Requests\UpdateOrderRequest;
 use Fleetbase\FleetOps\Integrations\Lalamove\Lalamove;
 use Fleetbase\FleetOps\Support\Payment;
 use Fleetbase\FleetOps\Support\Utils;
@@ -136,7 +138,7 @@ class ServiceQuote extends Model
         return Lalamove::serviceQuoteFromQuotation($quotation);
     }
 
-    public static function resolveFromRequest(Request $request): ?ServiceQuote
+    public static function resolveFromRequest(Request|CreateOrderRequest|UpdateOrderRequest $request): ?ServiceQuote
     {
         $serviceQuote = $request->or(['order.service_quote_uuid', 'service_quote', 'service_quote_id', 'order.service_quote']);
 

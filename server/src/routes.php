@@ -145,6 +145,13 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 $router->put('{id}', 'ServiceAreaController@update');
                 $router->delete('{id}', 'ServiceAreaController@delete');
             });
+            // geofences routes
+            $router->group(['prefix' => 'geofences'], function () use ($router) {
+                $router->get('events', 'GeofenceController@events');
+                $router->get('inventory', 'GeofenceController@inventory');
+                $router->get('dwell-report', 'GeofenceController@dwellReport');
+                $router->get('driver/{driverUuid}/history', 'GeofenceController@driverHistory');
+            });
             // service-rates routes
             $router->group(['prefix' => 'service-rates'], function () use ($router) {
                 $router->post('/', 'ServiceRateController@create');
@@ -373,6 +380,15 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             function ($router, $controller) {
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
+                            }
+                        );
+                        $router->group(
+                            ['prefix' => 'geofences'],
+                            function () use ($router) {
+                                $router->get('events', 'GeofenceController@events');
+                                $router->get('inventory', 'GeofenceController@inventory');
+                                $router->get('dwell-report', 'GeofenceController@dwellReport');
+                                $router->get('driver/{driverUuid}/history', 'GeofenceController@driverHistory');
                             }
                         );
                         $router->fleetbaseRoutes('zones');
