@@ -50,6 +50,7 @@ class Driver extends FleetbaseResource
             'jobs'                          => $this->whenLoaded('jobs', fn () => $this->getJobs()),
             'vendor'                        => $this->whenLoaded('vendor', fn () => new Vendor($this->vendor)),
             'fleets'                        => $this->whenLoaded('fleets', fn () => Fleet::collection($this->fleets()->without('drivers')->get())),
+            'current_shift'                 => $this->whenLoaded('currentShift', fn () => $this->currentShift),
             'location'                      => $this->wasRecentlyCreated ? new Point(0, 0) : Utils::castPoint($this->location),
             'heading'                       => (int) data_get($this, 'heading', 0),
             'altitude'                      => (int) data_get($this, 'altitude', 0),

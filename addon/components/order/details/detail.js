@@ -36,7 +36,6 @@ export default class OrderDetailsDetailComponent extends Component {
     }
 
     @action focusOrderAssignedDriver(driver) {
-        console.log('[focusOrderAssignedDriver]', ...arguments);
         this.driverActions.panel.view(driver);
         this.leafletMapManager.map?.flyTo(driver.coordinates, 18);
     }

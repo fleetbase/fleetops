@@ -1,0 +1,260 @@
+<div class="next-content-panel-wrapper" ...attributes>
+
+    {{! ===== OVERVIEW ===== }}
+    <ContentPanel @title="Overview" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+
+            {{! — Identity — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Identity
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">ID</div>
+                <ClickToCopy @value={{@resource.public_id}} class="field-value font-mono">{{n-a @resource.public_id}}</ClickToCopy>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Name</div>
+                <div class="field-value">{{n-a @resource.name}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Type</div>
+                <div class="field-value">{{n-a (smart-humanize @resource.type)}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Status</div>
+                <div class="field-value">
+                    <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
+                </div>
+            </div>
+
+            {{! — Assignment — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Assignment
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Asset</div>
+                <div class="field-value">{{n-a (or @resource.subject.displayName @resource.subject.name @resource.subject_name)}}</div>
+            </div>
+            {{#if (or @resource.default_assignee.displayName @resource.default_assignee.name)}}
+                <div class="field-info-container">
+                    <div class="field-name">Default Assignee</div>
+                    <div class="field-value">{{n-a (or @resource.default_assignee.displayName @resource.default_assignee.name)}}</div>
+                </div>
+            {{/if}}
+            <div class="field-info-container">
+                <div class="field-name">Default Priority</div>
+                <div class="field-value">
+                    {{#if (eq @resource.default_priority "critical")}}
+                        <Badge @status="danger">Critical</Badge>
+                    {{else if (eq @resource.default_priority "high")}}
+                        <Badge @status="warning">High</Badge>
+                    {{else if (eq @resource.default_priority "medium")}}
+                        <Badge @status="info">Medium</Badge>
+                    {{else}}
+                        <Badge @status="default">Low</Badge>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    {{! ===== INTERVAL TRIGGERS ===== }}
+    <ContentPanel @title="Interval Triggers" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+
+            {{#if @resource.interval_value}}
+                <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                    Time-Based
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Repeat Every</div>
+                    <div class="field-value">{{@resource.interval_value}} {{@resource.interval_unit}}</div>
+                </div>
+            {{/if}}
+
+            {{#if @resource.interval_distance}}
+                <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                    Distance-Based
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Every (km)</div>
+                    <div class="field-value">{{@resource.interval_distance}} km</div>
+                </div>
+            {{/if}}
+
+            {{#if @resource.interval_engine_hours}}
+                <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                    Engine Hours-Based
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Every (hours)</div>
+                    <div class="field-value">{{@resource.interval_engine_hours}} hrs</div>
+                </div>
+            {{/if}}
+        </div>
+    </ContentPanel>
+
+    {{! ===== SERVICE HISTORY & NEXT DUE ===== }}
+    <ContentPanel @title="Service History & Next Due" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Last Service
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Last Service Date</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.last_service_date "dd MMM yyyy")}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Last Odometer</div>
+                <div class="field-value">
+                    {{#if @resource.last_service_odometer}}
+                        {{@resource.last_service_odometer}}
+                        km
+                    {{else}}
+                        —
+                    {{/if}}
+                </div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Last Engine Hours</div>
+                <div class="field-value">{{n-a @resource.last_service_engine_hours}}</div>
+            </div>
+
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Next Due
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Next Due Date</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.next_due_date "dd MMM yyyy")}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Next Due Odometer</div>
+                <div class="field-value">
+                    {{#if @resource.next_due_odometer}}
+                        {{@resource.next_due_odometer}}
+                        km
+                    {{else}}
+                        —
+                    {{/if}}
+                </div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Next Due Engine Hours</div>
+                <div class="field-value">{{n-a @resource.next_due_engine_hours}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    {{! ===== INSTRUCTIONS ===== }}
+    {{#if @resource.instructions}}
+        <ContentPanel @title="Instructions" @open={{false}} @wrapperClass="bordered-top">
+            <div class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                {{@resource.instructions}}
+            </div>
+        </ContentPanel>
+    {{/if}}
+
+    {{! ===== UPCOMING SCHEDULE CALENDAR (time-based only) ===== }}
+    {{#if this.isTimeBased}}
+        <ContentPanel @title="Upcoming Schedule" @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="px-0i">
+            {{! Calendar header }}
+            <div class="flex items-center justify-between px-6 pb-2">
+                <button type="button" class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" {{on "click" this.prevMonth}}>
+                    <FaIcon @icon="chevron-left" @size="xs" />
+                </button>
+                <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">{{this.calendarMonthName}}</span>
+                <button type="button" class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" {{on "click" this.nextMonth}}>
+                    <FaIcon @icon="chevron-right" @size="xs" />
+                </button>
+            </div>
+
+            {{! Day-of-week header row }}
+            <div class="grid grid-cols-7 text-center pb-1">
+                {{#each this.dayNames as |dayName|}}
+                    <div class="text-xs font-medium text-gray-400 dark:text-gray-500 py-1">{{dayName}}</div>
+                {{/each}}
+            </div>
+
+            {{! Calendar grid }}
+            <div class="pb-4">
+                {{#each this.calendarWeeks as |week|}}
+                    <div class="grid grid-cols-7 text-center">
+                        {{#each week as |cell|}}
+                            <div class="py-1">
+                                <span
+                                    class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs
+                                        {{if cell.isScheduled 'bg-blue-500 text-white font-semibold'}}
+                                        {{if cell.isToday (if cell.isScheduled 'ring-2 ring-offset-1 ring-blue-400' 'ring-2 ring-blue-400 text-blue-600 dark:text-blue-400 font-semibold')}}
+                                        {{unless cell.isCurrentMonth 'text-gray-300 dark:text-gray-600'}}
+                                        "
+                                >
+                                    {{cell.day}}
+                                </span>
+                            </div>
+                        {{/each}}
+                    </div>
+                {{/each}}
+            </div>
+
+            {{! Legend }}
+            <div class="flex items-center gap-4 px-3 py-2 border-t border-gray-100 dark:border-gray-700">
+                <div class="flex items-center gap-1.5">
+                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-xs">1</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">Scheduled service</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-full ring-2 ring-blue-400 text-xs text-blue-600">1</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">Today</span>
+                </div>
+            </div>
+
+            {{! Upcoming occurrences list }}
+            {{#if this.upcomingOccurrences.length}}
+                <div class="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-700">
+                    <div class="py-2">
+                        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Next occurrences</p>
+                    </div>
+                    <div class="space-y-1 pl-4">
+                        {{#each this.upcomingOccurrences as |occurrence index|}}
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 text-xs font-semibold flex-shrink-0"
+                                >
+                                    {{add index 1}}
+                                </span>
+                                <span class="text-xs text-gray-700 dark:text-gray-200">
+                                    {{format-date-fns occurrence "EEEE, MMMM d, yyyy"}}
+                                </span>
+                            </div>
+                        {{/each}}
+                    </div>
+                </div>
+            {{/if}}
+        </ContentPanel>
+    {{/if}}
+
+    {{! ===== REMINDER OFFSETS ===== }}
+    {{#if @resource.reminder_offsets.length}}
+        <ContentPanel @title="Reminder Emails" @open={{true}} @wrapperClass="bordered-top">
+            <div class="text-xs text-gray-700 dark:text-gray-300">
+                <p class="mb-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold">
+                    The default assignee will receive email reminders at:
+                </p>
+                <div class="flex flex-wrap gap-1">
+                    {{#each @resource.reminder_offsets as |offset|}}
+                        <span class="inline-flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-0.5 rounded">
+                            {{offset}}
+                            days before
+                        </span>
+                    {{/each}}
+                </div>
+            </div>
+        </ContentPanel>
+    {{/if}}
+
+    {{! ===== CUSTOM FIELDS ===== }}
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+
+    <Spacer @height="200px" />
+</div>

@@ -9,7 +9,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * GeofenceEntered
+ * GeofenceEntered.
  *
  * Fired when a driver's location update causes them to cross into a
  * geofence boundary (Zone or ServiceArea) for the first time.
@@ -20,12 +20,12 @@ use Illuminate\Queue\SerializesModels;
  */
 class GeofenceEntered
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
     /**
      * The driver who entered the geofence.
-     *
-     * @var Driver
      */
     public Driver $driver;
 
@@ -38,32 +38,24 @@ class GeofenceEntered
 
     /**
      * The type of geofence: 'zone' or 'service_area'.
-     *
-     * @var string
      */
     public string $geofenceType;
 
     /**
      * The driver's location at the time of entry.
-     *
-     * @var Point
      */
     public Point $location;
 
     /**
      * The timestamp when the entry was detected.
-     *
-     * @var \Carbon\Carbon
      */
     public \Carbon\Carbon $timestamp;
 
     /**
      * Create a new GeofenceEntered event.
      *
-     * @param Driver $driver
      * @param mixed  $geofence     Zone or ServiceArea
      * @param string $geofenceType 'zone' | 'service_area'
-     * @param Point  $location
      */
     public function __construct(Driver $driver, $geofence, string $geofenceType, Point $location)
     {
@@ -77,8 +69,6 @@ class GeofenceEntered
     /**
      * Returns the company UUID for this event.
      * Used by the webhook infrastructure to scope delivery.
-     *
-     * @return string
      */
     public function getCompanyUuid(): string
     {
@@ -87,8 +77,6 @@ class GeofenceEntered
 
     /**
      * Returns the standardised webhook payload for this event.
-     *
-     * @return array
      */
     public function broadcastWith(): array
     {

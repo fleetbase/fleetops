@@ -1,0 +1,39 @@
+<div class="schedule-work-orders-tab p-4">
+    {{#if @model.length}}
+        <div class="space-y-2">
+            {{#each @model as |workOrder|}}
+                <LinkTo
+                    @route="maintenance.work-orders.index.details"
+                    @model={{workOrder}}
+                    class="flex items-start justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-2 text-sm"
+                >
+                    <div class="flex items-center gap-3">
+                        <FaIcon @icon="wrench" class="text-gray-400" />
+                        <div>
+                            <div class="font-medium text-gray-900 dark:text-white">
+                                {{or workOrder.subject workOrder.code workOrder.public_id}}
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                {{workOrder.public_id}}
+                                {{#if workOrder.opened_at}}
+                                    &bull; Opened
+                                    {{format-date workOrder.opened_at "dd MMM yyyy"}}
+                                {{/if}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <Badge @status={{workOrder.status}} @label={{smart-humanize workOrder.status}} />
+                        <Badge @status={{workOrder.priority}} @label={{smart-humanize workOrder.priority}} />
+                    </div>
+                </LinkTo>
+            {{/each}}
+        </div>
+    {{else}}
+        <div class="flex flex-col items-center justify-center py-12 text-center text-gray-500 dark:text-gray-400">
+            <FaIcon @icon="clipboard-list" class="text-3xl mb-3 text-gray-300 dark:text-gray-600" />
+            <p class="text-sm font-medium">No work orders yet</p>
+            <p class="text-xs mt-1">Work orders will appear here when this schedule triggers.</p>
+        </div>
+    {{/if}}
+</div>

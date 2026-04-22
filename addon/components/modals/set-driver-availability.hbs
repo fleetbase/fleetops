@@ -1,0 +1,50 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="grid grid-cols-1 gap-4 text-xs dark:text-gray-100">
+
+            {{! Availability type selection }}
+            <div class="input-group">
+                <label>{{t "scheduler.availability-type"}}</label>
+                <div class="flex gap-3 mt-1">
+                    <button type="button" class="availability-type-btn {{if this.isAvailable 'is-selected-available' 'is-unselected'}}" {{on "click" (fn this.toggleAvailability true)}}>
+                        <FaIcon @icon="circle-check" />
+                        {{t "scheduler.available"}}
+                    </button>
+                    <button
+                        type="button"
+                        class="availability-type-btn {{unless this.isAvailable 'is-selected-unavailable' 'is-unselected'}}"
+                        {{on "click" (fn this.toggleAvailability false)}}
+                    >
+                        <FaIcon @icon="circle-xmark" />
+                        {{t "scheduler.unavailable-time-off"}}
+                    </button>
+                </div>
+            </div>
+
+            {{! Date range }}
+            <div class="grid grid-cols-2 gap-4">
+                <div class="input-group">
+                    <label>{{t "scheduler.start-date"}}</label>
+                    <DateTimeInput @value={{@options.startAt}} @onChange={{this.updateStartAt}} placeholder={{t "scheduler.select-start-date"}} class="w-full form-input" />
+                </div>
+                <div class="input-group">
+                    <label>{{t "scheduler.end-date"}}</label>
+                    <DateTimeInput @value={{@options.endAt}} @onChange={{this.updateEndAt}} placeholder={{t "scheduler.select-end-date"}} class="w-full form-input" />
+                </div>
+            </div>
+
+            {{! Reason }}
+            <div class="input-group">
+                <label>{{t "scheduler.reason"}} <span class="text-gray-400">({{t "common.optional"}})</span></label>
+                <Input @value={{@options.reason}} @type="text" placeholder={{t "scheduler.reason-placeholder"}} class="w-full form-input" />
+            </div>
+
+            {{! Notes }}
+            <div class="input-group">
+                <label>{{t "common.notes"}}</label>
+                <Textarea @value={{@options.notes}} placeholder={{t "scheduler.notes-placeholder"}} class="w-full form-input" rows="3" />
+            </div>
+
+        </div>
+    </div>
+</Modal::Default>

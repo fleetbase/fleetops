@@ -8,7 +8,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * GeofenceDwelled
+ * GeofenceDwelled.
  *
  * Fired by the CheckGeofenceDwell queue job when a driver has remained
  * inside a geofence for at least the configured dwell_threshold_minutes.
@@ -19,12 +19,12 @@ use Illuminate\Queue\SerializesModels;
  */
 class GeofenceDwelled
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
     /**
      * The driver who has been dwelling inside the geofence.
-     *
-     * @var Driver
      */
     public Driver $driver;
 
@@ -37,39 +37,29 @@ class GeofenceDwelled
 
     /**
      * The type of geofence: 'zone' or 'service_area'.
-     *
-     * @var string
      */
     public string $geofenceType;
 
     /**
      * The timestamp when the driver entered the geofence.
-     *
-     * @var \Carbon\Carbon
      */
     public \Carbon\Carbon $enteredAt;
 
     /**
      * The number of minutes the driver has been inside the geofence.
-     *
-     * @var int
      */
     public int $dwellDurationMinutes;
 
     /**
      * The timestamp when this dwell event was fired.
-     *
-     * @var \Carbon\Carbon
      */
     public \Carbon\Carbon $timestamp;
 
     /**
      * Create a new GeofenceDwelled event.
      *
-     * @param Driver          $driver
-     * @param mixed           $geofence     Zone or ServiceArea
-     * @param string          $geofenceType 'zone' | 'service_area'
-     * @param \Carbon\Carbon  $enteredAt
+     * @param mixed  $geofence     Zone or ServiceArea
+     * @param string $geofenceType 'zone' | 'service_area'
      */
     public function __construct(Driver $driver, $geofence, string $geofenceType, \Carbon\Carbon $enteredAt)
     {
@@ -83,8 +73,6 @@ class GeofenceDwelled
 
     /**
      * Returns the company UUID for this event.
-     *
-     * @return string
      */
     public function getCompanyUuid(): string
     {
@@ -93,8 +81,6 @@ class GeofenceDwelled
 
     /**
      * Returns the standardised webhook payload for this event.
-     *
-     * @return array
      */
     public function broadcastWith(): array
     {

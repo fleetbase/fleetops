@@ -15,7 +15,7 @@
                 >
                     <div class="space-x-2 text-sm">
                         <div class="inline-block align-top">
-                            <div class="hide-from-trigger h-1.5 w-full" />
+                            <div class="hide-from-trigger h-1.5 w-full"></div>
                             <Image src={{model.provider_descriptor.icon}} class="w-5 h-5" />
                         </div>
                         <div class="inline-block">
@@ -64,7 +64,7 @@
             <InputGroup @name="Serial Number" @value={{@resource.serial_number}} @wrapperClass="col-span-2" disabled={{cannot-write @resource}} />
             <InputGroup @name="Internal ID" @value={{@resource.internal_id}} disabled={{cannot-write @resource}} />
             <InputGroup @name="Unit" @value={{@resource.unit}} disabled={{cannot-write @resource}} />
-            <InputGroup @name="Type" @wrapperClass="col-span-2"> 
+            <InputGroup @name="Type" @wrapperClass="col-span-2">
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "sensorTypes"}}
@@ -149,7 +149,9 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.policy_number}} - {{model.provider}}
+                    {{model.policy_number}}
+                    -
+                    {{model.provider}}
                 </ModelSelect>
             </InputGroup>
         </div>

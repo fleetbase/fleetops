@@ -7,25 +7,25 @@ use Fleetbase\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * GeofenceEventLog
+ * GeofenceEventLog.
  *
  * Persistent audit log of all geofence events (entered, exited, dwelled).
  * Powers the reporting dashboard, dwell time analytics, and geofence
  * activity history views.
  *
- * @property string      $uuid
- * @property string      $company_uuid
- * @property string      $driver_uuid
- * @property string|null $vehicle_uuid
- * @property string|null $order_uuid
- * @property string      $geofence_uuid
- * @property string      $geofence_type
- * @property string|null $geofence_name
- * @property string      $event_type
- * @property float|null  $latitude
- * @property float|null  $longitude
- * @property float|null  $speed_kmh
- * @property int|null    $dwell_duration_minutes
+ * @property string         $uuid
+ * @property string         $company_uuid
+ * @property string         $driver_uuid
+ * @property string|null    $vehicle_uuid
+ * @property string|null    $order_uuid
+ * @property string         $geofence_uuid
+ * @property string         $geofence_type
+ * @property string|null    $geofence_name
+ * @property string         $event_type
+ * @property float|null     $latitude
+ * @property float|null     $longitude
+ * @property float|null     $speed_kmh
+ * @property int|null       $dwell_duration_minutes
  * @property \Carbon\Carbon $occurred_at
  */
 class GeofenceEventLog extends Model
@@ -83,8 +83,6 @@ class GeofenceEventLog extends Model
 
     /**
      * Get the driver associated with this event.
-     *
-     * @return BelongsTo
      */
     public function driver(): BelongsTo
     {
@@ -93,8 +91,6 @@ class GeofenceEventLog extends Model
 
     /**
      * Get the order associated with this event (if any).
-     *
-     * @return BelongsTo
      */
     public function order(): BelongsTo
     {
@@ -103,8 +99,6 @@ class GeofenceEventLog extends Model
 
     /**
      * Get the vehicle associated with this event (if any).
-     *
-     * @return BelongsTo
      */
     public function vehicle(): BelongsTo
     {
@@ -115,7 +109,6 @@ class GeofenceEventLog extends Model
      * Scope to filter by company.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string                                $companyUuid
      *
      * @return \Illuminate\Database\Eloquent\Builder
      */
@@ -128,7 +121,6 @@ class GeofenceEventLog extends Model
      * Scope to filter by event type.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string                                $type
      *
      * @return \Illuminate\Database\Eloquent\Builder
      */

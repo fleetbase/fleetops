@@ -483,6 +483,21 @@ export default class OrderActionsService extends ResourceActionService {
         }
     }
 
+    // ── Import orders ─────────────────────────────────────────────────────
+    // Opens the three-step orchestrator import modal. Accepts an optional
+    // onImportComplete callback that is called after a successful import.
+    @action importOrders(options = {}) {
+        return this.modalsManager.show('modals/orchestrator-import', {
+            title: this.intl.t('orchestrator.import-orders'),
+            modalClass: 'modal-xl fleetops-order-import',
+            modalHeaderClass: 'import-modal-header',
+            hideAcceptButton: true,
+            onImportComplete: options.onImportComplete ?? this.refresh,
+            onImportTemplate: options.onImportTemplate,
+            ...options,
+        });
+    }
+
     #serializeWaypoints(waypoints = []) {
         if (!waypoints) return [];
 

@@ -9,7 +9,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * GeofenceExited
+ * GeofenceExited.
  *
  * Fired when a driver's location update causes them to cross out of a
  * geofence boundary (Zone or ServiceArea) that they were previously inside.
@@ -20,12 +20,12 @@ use Illuminate\Queue\SerializesModels;
  */
 class GeofenceExited
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
     /**
      * The driver who exited the geofence.
-     *
-     * @var Driver
      */
     public Driver $driver;
 
@@ -38,41 +38,30 @@ class GeofenceExited
 
     /**
      * The type of geofence: 'zone' or 'service_area'.
-     *
-     * @var string
      */
     public string $geofenceType;
 
     /**
      * The driver's location at the time of exit.
-     *
-     * @var Point
      */
     public Point $location;
 
     /**
      * The timestamp when the exit was detected.
-     *
-     * @var \Carbon\Carbon
      */
     public \Carbon\Carbon $timestamp;
 
     /**
      * How many minutes the driver was inside the geofence before exiting.
      * Null if the entry time was not recorded.
-     *
-     * @var int|null
      */
     public ?int $dwellDurationMinutes;
 
     /**
      * Create a new GeofenceExited event.
      *
-     * @param Driver   $driver
-     * @param mixed    $geofence             Zone or ServiceArea
-     * @param string   $geofenceType         'zone' | 'service_area'
-     * @param Point    $location
-     * @param int|null $dwellDurationMinutes
+     * @param mixed  $geofence     Zone or ServiceArea
+     * @param string $geofenceType 'zone' | 'service_area'
      */
     public function __construct(Driver $driver, $geofence, string $geofenceType, Point $location, ?int $dwellDurationMinutes = null)
     {
@@ -86,8 +75,6 @@ class GeofenceExited
 
     /**
      * Returns the company UUID for this event.
-     *
-     * @return string
      */
     public function getCompanyUuid(): string
     {
@@ -96,8 +83,6 @@ class GeofenceExited
 
     /**
      * Returns the standardised webhook payload for this event.
-     *
-     * @return array
      */
     public function broadcastWith(): array
     {

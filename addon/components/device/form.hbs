@@ -15,7 +15,7 @@
                 >
                     <div class="space-x-2 text-sm">
                         <div class="inline-block align-top">
-                            <div class="hide-from-trigger h-1.5 w-full" />
+                            <div class="hide-from-trigger h-1.5 w-full"></div>
                             <Image src={{model.provider_descriptor.icon}} class="w-5 h-5" />
                         </div>
                         <div class="inline-block">
@@ -82,13 +82,7 @@
         </div>
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <InputGroup @name={{t "device.fields.device-name"}}>
-                <Input
-                    @value={{@resource.name}}
-                    @type="text"
-                    class="w-full form-input"
-                    placeholder={{t "device.fields.device-name-placeholder"}}
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder={{t "device.fields.device-name-placeholder"}} disabled={{cannot-write @resource}} />
             </InputGroup>
 
             <InputGroup @name={{t "device.fields.device-id"}}>
@@ -112,13 +106,7 @@
             </InputGroup>
 
             <InputGroup @name={{t "device.fields.device-model"}}>
-                <Input
-                    @value={{@resource.model}}
-                    @type="text"
-                    class="w-full form-input"
-                    placeholder={{t "device.fields.device-model-placeholder"}}
-                    disabled={{cannot-write @resource}}
-                />
+                <Input @value={{@resource.model}} @type="text" class="w-full form-input" placeholder={{t "device.fields.device-model-placeholder"}} disabled={{cannot-write @resource}} />
             </InputGroup>
 
             <InputGroup @name={{t "device.fields.manufacturer"}}>

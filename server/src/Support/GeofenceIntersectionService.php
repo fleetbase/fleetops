@@ -9,7 +9,7 @@ use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Facades\DB;
 
 /**
- * GeofenceIntersectionService
+ * GeofenceIntersectionService.
  *
  * The core spatial engine for the active geofencing system.
  *
@@ -33,11 +33,6 @@ class GeofenceIntersectionService
      *   - 'type':          'entered' | 'exited'
      *   - 'geofence':      Zone or ServiceArea model instance
      *   - 'geofence_type': 'zone' | 'service_area'
-     *
-     * @param Driver $driver
-     * @param Point  $newLocation
-     *
-     * @return array
      */
     public function detectCrossings(Driver $driver, Point $newLocation): array
     {
@@ -138,10 +133,7 @@ class GeofenceIntersectionService
     /**
      * Check if a driver is currently recorded as inside a specific geofence.
      *
-     * @param Driver $driver
-     * @param mixed  $geofence Zone or ServiceArea
-     *
-     * @return bool
+     * @param mixed $geofence Zone or ServiceArea
      */
     public function isDriverInsideGeofence(Driver $driver, $geofence): bool
     {
@@ -155,10 +147,6 @@ class GeofenceIntersectionService
     /**
      * Clear all geofence state records for a driver.
      * Called when a driver goes offline or completes a shift.
-     *
-     * @param Driver $driver
-     *
-     * @return void
      */
     public function clearDriverState(Driver $driver): void
     {

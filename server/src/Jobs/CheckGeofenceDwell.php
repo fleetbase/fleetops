@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * CheckGeofenceDwell
+ * CheckGeofenceDwell.
  *
  * A delayed queue job dispatched when a driver enters a geofence that has
  * a dwell_threshold_minutes configured. The job is delayed by that number
@@ -31,49 +31,40 @@ use Illuminate\Support\Facades\Log;
  */
 class CheckGeofenceDwell implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     /**
      * The number of times the job may be attempted.
      * Dwell checks are fire-and-forget; retrying would produce false events.
-     *
-     * @var int
      */
     public int $tries = 1;
 
     /**
      * The number of seconds the job can run before timing out.
-     *
-     * @var int
      */
     public int $timeout = 30;
 
     /**
      * The UUID of the driver to check.
-     *
-     * @var string
      */
     protected string $driverUuid;
 
     /**
      * The UUID of the geofence to check.
-     *
-     * @var string
      */
     protected string $geofenceUuid;
 
     /**
      * The type of geofence: 'zone' or 'service_area'.
-     *
-     * @var string
      */
     protected string $geofenceType;
 
     /**
      * Create a new CheckGeofenceDwell job.
      *
-     * @param string $driverUuid
-     * @param string $geofenceUuid
      * @param string $geofenceType 'zone' | 'service_area'
      */
     public function __construct(string $driverUuid, string $geofenceUuid, string $geofenceType)
@@ -86,8 +77,6 @@ class CheckGeofenceDwell implements ShouldQueue
 
     /**
      * Execute the job.
-     *
-     * @return void
      */
     public function handle(): void
     {
@@ -107,6 +96,7 @@ class CheckGeofenceDwell implements ShouldQueue
         $driver = Driver::where('uuid', $this->driverUuid)->withoutGlobalScopes()->first();
         if (!$driver) {
             Log::warning('CheckGeofenceDwell: Driver not found', ['driver_uuid' => $this->driverUuid]);
+
             return;
         }
 
@@ -120,6 +110,7 @@ class CheckGeofenceDwell implements ShouldQueue
                 'geofence_uuid' => $this->geofenceUuid,
                 'geofence_type' => $this->geofenceType,
             ]);
+
             return;
         }
 

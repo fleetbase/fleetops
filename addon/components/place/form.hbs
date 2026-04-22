@@ -17,13 +17,7 @@
                     {{result.address}}
                 </AutocompleteInput>
             </InputGroup>
-            <InputGroup
-                @name={{t "place.fields.street-2"}}
-                @autocomplete="nope"
-                @value={{@resource.street2}}
-                @wrapperClass="col-span-3"
-                @disabled={{cannot-write @resource}}
-            />
+            <InputGroup @name={{t "place.fields.street-2"}} @autocomplete="nope" @value={{@resource.street2}} @wrapperClass="col-span-3" @disabled={{cannot-write @resource}} />
             <InputGroup @name={{t "place.fields.neighborhood"}} @autocomplete="nope" @value={{@resource.neighborhood}} @disabled={{cannot-write @resource}} />
             <InputGroup @name={{t "place.fields.building"}} @autocomplete="nope" @value={{@resource.building}} @disabled={{cannot-write @resource}} />
             <InputGroup @name={{t "place.fields.security-access-code"}} @autocomplete="nope" @value={{@resource.security_access_code}} @disabled={{cannot-write @resource}} />

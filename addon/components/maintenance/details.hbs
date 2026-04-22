@@ -1,23 +1,27 @@
-<div class="details-wrapper" ...attributes>
-    <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
-            <div class="field-info-container col-span-3">
-                <div class="field-name">Summary</div>
-                <div class="field-value">{{n-a @resource.summary}}</div>
-            </div>
+<div class="next-content-panel-wrapper" ...attributes>
 
+    {{! ===== OVERVIEW ===== }}
+    <ContentPanel @title="Overview" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+
+            {{! — Identity & Classification — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Identity & Classification
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">ID</div>
+                <div class="field-value">{{n-a @resource.public_id}}</div>
+            </div>
             <div class="field-info-container">
                 <div class="field-name">Type</div>
-                <div class="field-value">{{smart-humanize @resource.type}}</div>
+                <div class="field-value">{{n-a (smart-humanize @resource.type)}}</div>
             </div>
-
             <div class="field-info-container">
                 <div class="field-name">Status</div>
                 <div class="field-value">
                     <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
                 </div>
             </div>
-
             <div class="field-info-container">
                 <div class="field-name">Priority</div>
                 <div class="field-value">
@@ -33,77 +37,45 @@
                 </div>
             </div>
 
-            <div class="field-info-container">
-                <div class="field-name">Work Order</div>
-                <div class="field-value">{{n-a @resource.work_order_subject}}</div>
+            {{! — Asset & Assignment — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Asset & Assignment
             </div>
-
             <div class="field-info-container">
-                <div class="field-name">Maintainable</div>
-                <div class="field-value">{{n-a @resource.maintainable_name}}</div>
+                <div class="field-name">Maintainable Asset</div>
+                <div class="field-value">{{n-a (or @resource.maintainable.displayName @resource.maintainable.name @resource.maintainable_name)}}</div>
             </div>
-
             <div class="field-info-container">
                 <div class="field-name">Performed By</div>
-                <div class="field-value">{{n-a @resource.performed_by_name}}</div>
+                <div class="field-value">{{n-a (or @resource.performed_by.displayName @resource.performed_by.name @resource.performed_by_name)}}</div>
             </div>
+            {{#if (or @resource.work_order_uuid @resource.work_order_subject)}}
+                <div class="field-info-container">
+                    <div class="field-name">Linked Work Order</div>
+                    <div class="field-value">{{n-a @resource.work_order_subject}}</div>
+                </div>
+            {{/if}}
 
+            {{! — Timeline — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Timeline
+            </div>
             <div class="field-info-container">
                 <div class="field-name">Scheduled At</div>
-                <div class="field-value">{{format-date @resource.scheduled_at}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.scheduled_at "dd MMM yyyy, HH:mm")}}</div>
             </div>
-
             <div class="field-info-container">
                 <div class="field-name">Started At</div>
-                <div class="field-value">{{format-date @resource.started_at}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.started_at "dd MMM yyyy, HH:mm")}}</div>
             </div>
-
             <div class="field-info-container">
                 <div class="field-name">Completed At</div>
-                <div class="field-value">{{format-date @resource.completed_at}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.completed_at "dd MMM yyyy, HH:mm")}}</div>
             </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Odometer</div>
-                <div class="field-value">{{n-a @resource.odometer}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Engine Hours</div>
-                <div class="field-value">{{n-a @resource.engine_hours}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Duration</div>
-                <div class="field-value">{{n-a @resource.duration_hours}} hours</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Labor Cost</div>
-                <div class="field-value">{{format-currency @resource.labor_cost}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Parts Cost</div>
-                <div class="field-value">{{format-currency @resource.parts_cost}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Tax</div>
-                <div class="field-value">{{format-currency @resource.tax}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Total Cost</div>
-                <div class="field-value"><strong>{{format-currency @resource.total_cost}}</strong></div>
-            </div>
-
             {{#if @resource.is_overdue}}
                 <div class="field-info-container">
-                    <div class="field-name">Overdue Status</div>
-                    <div class="field-value">
-                        <Badge @status="danger">Overdue</Badge>
-                    </div>
+                    <div class="field-name">Overdue</div>
+                    <div class="field-value"><Badge @status="danger">Overdue</Badge></div>
                 </div>
             {{else if @resource.days_until_due}}
                 <div class="field-info-container">
@@ -112,12 +84,103 @@
                 </div>
             {{/if}}
 
-            <div class="field-info-container col-span-3">
-                <div class="field-name">Notes</div>
-                <div class="field-value">{{n-a @resource.notes}}</div>
+            {{! — Readings — }}
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Readings
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Odometer</div>
+                <div class="field-value">{{n-a @resource.odometer}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Engine Hours</div>
+                <div class="field-value">{{n-a @resource.engine_hours}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Duration</div>
+                <div class="field-value">{{n-a @resource.duration_hours}} hrs</div>
+            </div>
+
+            {{! — Summary & Notes — }}
+            {{#if @resource.summary}}
+                <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                    Summary
+                </div>
+                <div class="field-info-container col-span-2">
+                    <div class="field-value whitespace-pre-wrap">{{@resource.summary}}</div>
+                </div>
+            {{/if}}
+            {{#if @resource.notes}}
+                <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                    Notes
+                </div>
+                <div class="field-info-container col-span-2">
+                    <div class="field-value whitespace-pre-wrap">{{@resource.notes}}</div>
+                </div>
+            {{/if}}
+        </div>
+    </ContentPanel>
+
+    {{! ===== PARTS & SERVICES (invoice-style line items + totals) ===== }}
+    <ContentPanel @title="Parts & Services" @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="px-0i">
+        {{#if @resource.line_items.length}}
+            <table class="w-full text-xs">
+                <colgroup>
+                    <col class="w-[45%]" />
+                    <col class="w-[10%]" />
+                    <col class="w-[20%]" />
+                    <col class="w-[25%]" />
+                </colgroup>
+                <thead>
+                    <tr class="border-b border-gray-200 dark:border-gray-700">
+                        <th class="text-left text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 font-semibold pb-1 px-4">Description</th>
+                        <th class="text-right text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 font-semibold pb-1 px-2">Qty</th>
+                        <th class="text-right text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 font-semibold pb-1 px-2">Unit Cost</th>
+                        <th class="text-right text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 font-semibold pb-1 px-4">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each @resource.line_items as |item|}}
+                        <tr class="border-b border-gray-100 dark:border-gray-800">
+                            <td class="py-1.5 px-4 text-gray-700 dark:text-gray-200">{{n-a item.description}}</td>
+                            <td class="py-1.5 px-2 text-right text-gray-500 dark:text-gray-400">{{n-a item.quantity}}</td>
+                            <td class="py-1.5 px-2 text-right text-gray-500 dark:text-gray-400">
+                                {{format-currency item.unit_cost (or item.currency @resource.currency)}}
+                            </td>
+                            <td class="py-1.5 px-4 text-right text-gray-700 dark:text-gray-200 font-medium">
+                                {{format-currency (mult item.quantity item.unit_cost) (or item.currency @resource.currency)}}
+                            </td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        {{else}}
+            <div class="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 italic">No line items recorded.</div>
+        {{/if}}
+
+        {{! Totals }}
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-2 mt-1 space-y-1 text-xs px-4 pb-3">
+            <div class="flex justify-between text-gray-500 dark:text-gray-400">
+                <span>Labour</span>
+                <span>{{format-currency @resource.labor_cost @resource.currency}}</span>
+            </div>
+            <div class="flex justify-between text-gray-500 dark:text-gray-400">
+                <span>Parts</span>
+                <span>{{format-currency @resource.parts_cost @resource.currency}}</span>
+            </div>
+            <div class="flex justify-between text-gray-500 dark:text-gray-400">
+                <span>Tax</span>
+                <span>{{format-currency @resource.tax @resource.currency}}</span>
+            </div>
+            <div class="flex justify-between font-semibold text-gray-800 dark:text-gray-100 border-t border-gray-200 dark:border-gray-700 pt-1 mt-1">
+                <span>Total</span>
+                <span>{{format-currency @resource.total_cost @resource.currency}}</span>
             </div>
         </div>
     </ContentPanel>
 
+    {{! ===== CUSTOM FIELDS ===== }}
     <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+
+    <Spacer @height="200px" />
 </div>

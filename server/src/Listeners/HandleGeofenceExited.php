@@ -9,7 +9,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Str;
 
 /**
- * HandleGeofenceExited
+ * HandleGeofenceExited.
  *
  * Handles the business logic triggered when a driver exits a geofence:
  *   1. Writes a record to the geofence_events_log table, including the
@@ -21,24 +21,16 @@ class HandleGeofenceExited implements ShouldQueue
 
     /**
      * The name of the queue the job should be sent to.
-     *
-     * @var string
      */
     public string $queue = 'geofence';
 
     /**
      * The number of times the job may be attempted.
-     *
-     * @var int
      */
     public int $tries = 3;
 
     /**
      * Handle the event.
-     *
-     * @param GeofenceExited $event
-     *
-     * @return void
      */
     public function handle(GeofenceExited $event): void
     {

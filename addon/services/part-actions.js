@@ -1,9 +1,19 @@
-import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
+import ResourceActionService, { inject as service } from '@fleetbase/ember-core/services/resource-action';
 
 export default class PartActionsService extends ResourceActionService {
+    @service currentUser;
+
     constructor() {
         super(...arguments);
-        this.initialize('part');
+        this.initialize('part', {
+            defaultAttributes: {
+                currency: this.defaultCurrency,
+            },
+        });
+    }
+
+    get defaultCurrency() {
+        return this.currentUser?.company?.currency || 'USD';
     }
 
     transition = {

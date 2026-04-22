@@ -23,21 +23,22 @@ class FleetOpsServiceProvider extends CoreServiceProvider
      * @var array
      */
     public $observers = [
-        \Fleetbase\FleetOps\Models\Order::class                => \Fleetbase\FleetOps\Observers\OrderObserver::class,
-        \Fleetbase\FleetOps\Models\Payload::class              => \Fleetbase\FleetOps\Observers\PayloadObserver::class,
-        \Fleetbase\FleetOps\Models\Place::class                => \Fleetbase\FleetOps\Observers\PlaceObserver::class,
-        \Fleetbase\FleetOps\Models\ServiceRate::class          => \Fleetbase\FleetOps\Observers\ServiceRateObserver::class,
-        \Fleetbase\FleetOps\Models\PurchaseRate::class         => \Fleetbase\FleetOps\Observers\PurchaseRateObserver::class,
-        \Fleetbase\FleetOps\Models\ServiceArea::class          => \Fleetbase\FleetOps\Observers\ServiceAreaObserver::class,
-        \Fleetbase\FleetOps\Models\TrackingNumber::class       => \Fleetbase\FleetOps\Observers\TrackingNumberObserver::class,
-        \Fleetbase\FleetOps\Models\Driver::class               => \Fleetbase\FleetOps\Observers\DriverObserver::class,
-        \Fleetbase\FleetOps\Models\Vehicle::class              => \Fleetbase\FleetOps\Observers\VehicleObserver::class,
-        \Fleetbase\FleetOps\Models\Fleet::class                => \Fleetbase\FleetOps\Observers\FleetObserver::class,
-        \Fleetbase\FleetOps\Models\Contact::class              => \Fleetbase\FleetOps\Observers\ContactObserver::class,
-        \Fleetbase\Models\User::class                          => \Fleetbase\FleetOps\Observers\UserObserver::class,
-        \Fleetbase\Models\Company::class                       => \Fleetbase\FleetOps\Observers\CompanyObserver::class,
-        \Fleetbase\Models\CompanyUser::class                   => \Fleetbase\FleetOps\Observers\CompanyUserObserver::class,
-        \Fleetbase\Models\Category::class                      => \Fleetbase\FleetOps\Observers\CategoryObserver::class,
+        \Fleetbase\FleetOps\Models\Order::class                  => \Fleetbase\FleetOps\Observers\OrderObserver::class,
+        \Fleetbase\FleetOps\Models\Payload::class                => \Fleetbase\FleetOps\Observers\PayloadObserver::class,
+        \Fleetbase\FleetOps\Models\Place::class                  => \Fleetbase\FleetOps\Observers\PlaceObserver::class,
+        \Fleetbase\FleetOps\Models\ServiceRate::class            => \Fleetbase\FleetOps\Observers\ServiceRateObserver::class,
+        \Fleetbase\FleetOps\Models\PurchaseRate::class           => \Fleetbase\FleetOps\Observers\PurchaseRateObserver::class,
+        \Fleetbase\FleetOps\Models\ServiceArea::class            => \Fleetbase\FleetOps\Observers\ServiceAreaObserver::class,
+        \Fleetbase\FleetOps\Models\TrackingNumber::class         => \Fleetbase\FleetOps\Observers\TrackingNumberObserver::class,
+        \Fleetbase\FleetOps\Models\Driver::class                 => \Fleetbase\FleetOps\Observers\DriverObserver::class,
+        \Fleetbase\FleetOps\Models\Vehicle::class                => \Fleetbase\FleetOps\Observers\VehicleObserver::class,
+        \Fleetbase\FleetOps\Models\Fleet::class                  => \Fleetbase\FleetOps\Observers\FleetObserver::class,
+        \Fleetbase\FleetOps\Models\Contact::class                => \Fleetbase\FleetOps\Observers\ContactObserver::class,
+        \Fleetbase\Models\User::class                            => \Fleetbase\FleetOps\Observers\UserObserver::class,
+        \Fleetbase\Models\Company::class                         => \Fleetbase\FleetOps\Observers\CompanyObserver::class,
+        \Fleetbase\Models\CompanyUser::class                     => \Fleetbase\FleetOps\Observers\CompanyUserObserver::class,
+        \Fleetbase\Models\Category::class                        => \Fleetbase\FleetOps\Observers\CategoryObserver::class,
+        \Fleetbase\FleetOps\Models\WorkOrder::class              => \Fleetbase\FleetOps\Observers\WorkOrderObserver::class,
     ];
 
     /**
@@ -61,6 +62,8 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\SendDriverNotification::class,
         \Fleetbase\FleetOps\Console\Commands\ReplayVehicleLocations::class,
         \Fleetbase\FleetOps\Console\Commands\TestEmail::class,
+        \Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers::class,
+        \Fleetbase\FleetOps\Console\Commands\SendMaintenanceReminders::class,
     ];
 
     /**
@@ -88,6 +91,13 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Support\GeofenceIntersectionService::class,
             fn () => new \Fleetbase\FleetOps\Support\GeofenceIntersectionService()
         );
+
+        // Register the OrchestrationEngineRegistry as a singleton so that engines
+        // registered from any service provider share the same instance.
+        $this->app->singleton(
+            \Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry::class,
+            fn () => new \Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry()
+        );
     }
 
     /**
@@ -106,9 +116,26 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             $schedule->command('fleetops:dispatch-adhoc')->everyMinute()->withoutOverlapping()->storeOutputInDb();
             $schedule->command('fleetops:update-estimations')->everyTenMinutes()->withoutOverlapping();
             $schedule->command('fleetops:purge-service-quotes')->daily()->withoutOverlapping();
+            $schedule->command('fleetops:process-maintenance-triggers')->daily()->withoutOverlapping()->storeOutputInDb();
+            $schedule->command('fleetops:send-maintenance-reminders')->daily()->withoutOverlapping()->storeOutputInDb();
         });
         $this->registerNotifications();
         $this->registerExpansionsFrom(__DIR__ . '/../Expansions');
+
+        // Register built-in orchestration engines.
+        // Third-party engines can register themselves by resolving the
+        // OrchestrationEngineRegistry singleton from their own service providers.
+        $this->app->resolving(
+            \Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry::class,
+            function (\Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry $registry) {
+                if (!$registry->has('vroom')) {
+                    $registry->register(new \Fleetbase\FleetOps\Orchestration\Engines\VroomOrchestrationEngine());
+                }
+                if (!$registry->has('greedy')) {
+                    $registry->register(new \Fleetbase\FleetOps\Orchestration\Engines\GreedyOrchestrationEngine());
+                }
+            }
+        );
         $this->loadRoutesFrom(__DIR__ . '/../routes.php');
         $this->loadMigrationsFrom(__DIR__ . '/../../migrations');
         $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'fleetops');

@@ -11,10 +11,7 @@
             </div>
         </InputGroup>
         {{#if this.driverOnboardSettings.enableDriverOnboardFromApp}}
-            <InputGroup
-                @name={{t "driver-onboard-settings.select-onboard-method"}}
-                @helpText={{t "driver-onboard-settings.select-onboard-method-help-text"}}
-            >
+            <InputGroup @name={{t "driver-onboard-settings.select-onboard-method"}} @helpText={{t "driver-onboard-settings.select-onboard-method-help-text"}}>
                 <Select
                     class="w-full flex-1"
                     @value={{this.driverOnboardSettings.driverOnboardAppMethod}}
@@ -41,10 +38,7 @@
                         @onDataChanged={{this.onOnboardDocumentsChanged}}
                         @addButtonText={{t "driver-onboard-settings.add-onboard-document"}}
                     >
-                        <InputLabel
-                            @labelText={{t "driver-onboard-settings.required-onboard-documents"}}
-                            @helpText={{t "driver-onboard-settings.required-onboard-documents-help-text"}}
-                        />
+                        <InputLabel @labelText={{t "driver-onboard-settings.required-onboard-documents"}} @helpText={{t "driver-onboard-settings.required-onboard-documents-help-text"}} />
                     </ArrayInput>
                 </InputGroup>
             {{/if}}

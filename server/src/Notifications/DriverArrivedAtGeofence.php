@@ -8,7 +8,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * DriverArrivedAtGeofence
+ * DriverArrivedAtGeofence.
  *
  * Sent to the order customer when a driver enters the geofence associated
  * with the order's current destination waypoint.
@@ -21,22 +21,17 @@ class DriverArrivedAtGeofence extends Notification
 
     /**
      * The order associated with the arrival.
-     *
-     * @var Order
      */
     protected Order $order;
 
     /**
      * The geofence that was entered (Zone or ServiceArea).
-     *
-     * @var mixed
      */
     protected $geofence;
 
     /**
      * Create a new DriverArrivedAtGeofence notification.
      *
-     * @param Order $order
      * @param mixed $geofence Zone or ServiceArea
      */
     public function __construct(Order $order, $geofence)
@@ -47,10 +42,6 @@ class DriverArrivedAtGeofence extends Notification
 
     /**
      * Get the notification's delivery channels.
-     *
-     * @param mixed $notifiable
-     *
-     * @return array
      */
     public function via($notifiable): array
     {
@@ -59,17 +50,13 @@ class DriverArrivedAtGeofence extends Notification
 
     /**
      * Get the mail representation of the notification.
-     *
-     * @param mixed $notifiable
-     *
-     * @return MailMessage
      */
     public function toMail($notifiable): MailMessage
     {
         $geofenceName = $this->geofence->name ?? 'your location';
         $orderId      = $this->order->public_id ?? $this->order->uuid;
 
-        return (new MailMessage)
+        return (new MailMessage())
             ->subject("Your driver has arrived — Order #{$orderId}")
             ->greeting('Good news!')
             ->line("Your driver has arrived at {$geofenceName} for order #{$orderId}.")
@@ -80,20 +67,16 @@ class DriverArrivedAtGeofence extends Notification
 
     /**
      * Get the array representation of the notification (database channel).
-     *
-     * @param mixed $notifiable
-     *
-     * @return array
      */
     public function toArray($notifiable): array
     {
         return [
-            'event'        => 'driver.arrived_at_geofence',
-            'order_id'     => $this->order->public_id,
-            'order_uuid'   => $this->order->uuid,
-            'geofence_id'  => $this->geofence->public_id ?? null,
+            'event'         => 'driver.arrived_at_geofence',
+            'order_id'      => $this->order->public_id,
+            'order_uuid'    => $this->order->uuid,
+            'geofence_id'   => $this->geofence->public_id ?? null,
             'geofence_name' => $this->geofence->name ?? null,
-            'message'      => sprintf(
+            'message'       => sprintf(
                 'Your driver has arrived at %s for order #%s.',
                 $this->geofence->name ?? 'your location',
                 $this->order->public_id

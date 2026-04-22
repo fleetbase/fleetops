@@ -1,12 +1,7 @@
 <div class="form-wrapper" ...attributes>
     <ContentPanel @title={{t "service-area.fields.details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="space-y-2">
-            <InputGroup
-                @value={{@resource.name}}
-                @name={{t "modals.service-area-form.name"}}
-                @helpText={{t "modals.service-area-form.name-text"}}
-                @required={{true}}
-            />
+            <InputGroup @value={{@resource.name}} @name={{t "modals.service-area-form.name"}} @helpText={{t "modals.service-area-form.name-text"}} @required={{true}} />
             <InputGroup @name={{t "modals.service-area-form.type"}} @helpText={{t "modals.service-area-form.type-text"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect

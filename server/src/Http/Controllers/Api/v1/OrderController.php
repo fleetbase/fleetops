@@ -55,7 +55,14 @@ class OrderController extends Controller
         set_time_limit(180);
 
         // get request input
-        $input = $request->only(['internal_id', 'payload', 'service_quote', 'purchase_rate', 'adhoc', 'adhoc_distance', 'pod_method', 'pod_required', 'scheduled_at', 'status', 'meta', 'notes']);
+        $input = $request->only([
+            'internal_id', 'payload', 'service_quote', 'purchase_rate',
+            'adhoc', 'adhoc_distance', 'pod_method', 'pod_required',
+            'scheduled_at', 'status', 'meta', 'notes',
+            // Orchestrator constraints
+            'time_window_start', 'time_window_end',
+            'required_skills', 'orchestrator_priority',
+        ]);
 
         // Get order config
         $orderConfig = OrderConfig::resolveFromIdentifier($request->only(['type', 'order_config']));
@@ -292,6 +299,12 @@ class OrderController extends Controller
             $input['adhoc'] = Utils::isTrue($input['adhoc']) ? 1 : 0;
         }
 
+        // Ensure orchestrator_priority is never null — the column is NOT NULL
+        // and the DB default is bypassed when Eloquent receives an explicit null.
+        if (!isset($input['orchestrator_priority']) || !is_numeric($input['orchestrator_priority'])) {
+            $input['orchestrator_priority'] = 50;
+        }
+
         if (!isset($input['payload_uuid'])) {
             return response()->apiError('Attempted to attach invalid payload to order.');
         }
@@ -363,7 +376,13 @@ class OrderController extends Controller
         }
 
         // get request input
-        $input = $request->only(['internal_id', 'payload', 'adhoc', 'adhoc_distance', 'pod_method', 'pod_required', 'scheduled_at', 'meta', 'type', 'status', 'notes']);
+        $input = $request->only([
+            'internal_id', 'payload', 'adhoc', 'adhoc_distance',
+            'pod_method', 'pod_required', 'scheduled_at', 'meta', 'type', 'status', 'notes',
+            // Orchestrator constraints
+            'time_window_start', 'time_window_end',
+            'required_skills', 'orchestrator_priority',
+        ]);
 
         // update payload if new input or change payload by id
         if ($request->isArray('payload')) {
@@ -512,6 +531,12 @@ class OrderController extends Controller
         // dispatch if flagged true
         if ($request->boolean('dispatch')) {
             $order->dispatch();
+        }
+
+        // Ensure orchestrator_priority is never null on update either —
+        // only apply the default when the key was explicitly sent as null/empty.
+        if (array_key_exists('orchestrator_priority', $input) && !is_numeric($input['orchestrator_priority'])) {
+            $input['orchestrator_priority'] = 50;
         }
 
         // update the order

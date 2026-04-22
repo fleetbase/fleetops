@@ -3,20 +3,19 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Events\DriverLocationChanged;
-use Fleetbase\FleetOps\Events\GeofenceDwelled;
 use Fleetbase\FleetOps\Events\GeofenceEntered;
 use Fleetbase\FleetOps\Events\GeofenceExited;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
-use Fleetbase\FleetOps\Jobs\CheckGeofenceDwell;
-use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest;
 use Fleetbase\FleetOps\Http\Requests\DriverSimulationRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateDriverRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Driver as DriverResource;
+use Fleetbase\FleetOps\Jobs\CheckGeofenceDwell;
 use Fleetbase\FleetOps\Jobs\SimulateDrivingRoute;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
@@ -387,9 +386,9 @@ class DriverController extends Controller
         // never prevents the location update response from being returned.
         // ----------------------------------------------------------------
         try {
-            $newLocation = new Point($latitude, $longitude);
+            $newLocation     = new Point($latitude, $longitude);
             $geofenceService = app(GeofenceIntersectionService::class);
-            $crossings = $geofenceService->detectCrossings($driver, $newLocation);
+            $crossings       = $geofenceService->detectCrossings($driver, $newLocation);
 
             foreach ($crossings as $crossing) {
                 $geofence     = $crossing['geofence'];

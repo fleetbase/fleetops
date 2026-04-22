@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * GeofenceController
+ * GeofenceController.
  *
  * Exposes read-only API endpoints for querying geofence event data:
  *   - Event log (paginated, filterable history of all geofence events)
@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 class GeofenceController extends Controller
 {
     /**
-     * GET /api/v1/geofences/events
+     * GET /api/v1/geofences/events.
      *
      * Returns a paginated log of geofence events for the authenticated company.
      *
@@ -30,10 +30,6 @@ class GeofenceController extends Controller
      *   - from          (string)  Filter events after this ISO 8601 datetime
      *   - to            (string)  Filter events before this ISO 8601 datetime
      *   - per_page      (int)     Number of results per page (default: 50, max: 200)
-     *
-     * @param Request $request
-     *
-     * @return JsonResponse
      */
     public function events(Request $request): JsonResponse
     {
@@ -68,12 +64,10 @@ class GeofenceController extends Controller
     }
 
     /**
-     * GET /api/v1/geofences/inventory
+     * GET /api/v1/geofences/inventory.
      *
      * Returns a real-time snapshot of which drivers are currently inside
      * which geofences for the authenticated company.
-     *
-     * @return JsonResponse
      */
     public function inventory(): JsonResponse
     {
@@ -111,7 +105,7 @@ class GeofenceController extends Controller
     }
 
     /**
-     * GET /api/v1/geofences/dwell-report
+     * GET /api/v1/geofences/dwell-report.
      *
      * Returns aggregated dwell time statistics per geofence for the
      * authenticated company.
@@ -119,10 +113,6 @@ class GeofenceController extends Controller
      * Query parameters:
      *   - from (string) Start of reporting period (ISO 8601)
      *   - to   (string) End of reporting period (ISO 8601)
-     *
-     * @param Request $request
-     *
-     * @return JsonResponse
      */
     public function dwellReport(Request $request): JsonResponse
     {
@@ -159,14 +149,9 @@ class GeofenceController extends Controller
     }
 
     /**
-     * GET /api/v1/geofences/driver/{driverUuid}/history
+     * GET /api/v1/geofences/driver/{driverUuid}/history.
      *
      * Returns the geofence event history for a specific driver.
-     *
-     * @param Request $request
-     * @param string  $driverUuid
-     *
-     * @return JsonResponse
      */
     public function driverHistory(Request $request, string $driverUuid): JsonResponse
     {

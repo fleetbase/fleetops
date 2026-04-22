@@ -1,100 +1,139 @@
 <div class="driver-schedule-container" ...attributes>
-    <ContentPanel @title="Hours of Service Status" @open={{true}} @isLoading={{this.loadHOSStatus.isRunning}} @wrapperClass="bordered-top">
-        {{#if this.hosStatus}}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                    <div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">Daily Driving Hours</div>
-                        <div class="text-2xl font-bold">{{this.hosStatus.daily_hours}}/11</div>
-                    </div>
-                    <div class="w-16 h-16">
-                        <CircularProgress @value={{this.hosStatus.daily_hours}} @max={{11}} />
-                    </div>
-                </div>
 
-                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                    <div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">Weekly Hours</div>
-                        <div class="text-2xl font-bold">{{this.hosStatus.weekly_hours}}/70</div>
-                    </div>
-                    <div class="w-16 h-16">
-                        <CircularProgress @value={{this.hosStatus.weekly_hours}} @max={{70}} />
-                    </div>
-                </div>
+    {{! ── Upcoming Shifts Panel ───────────────────────────────────────────── }}
+    <ContentPanel
+        @title={{t "scheduler.upcoming-shifts"}}
+        @open={{true}}
+        @isLoading={{this.loadDriverSchedule.isRunning}}
+        @actionButtons={{this.shiftActionButtons}}
+        @wrapperClass="bordered-top"
+    >
+        {{! Week navigation row }}
+        <div class="flex items-center justify-end space-x-1 mb-3">
+            <Button @icon="chevron-left" @size="xs" @type="link" {{on "click" this.prevWeek}} />
+            <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums">{{this.weekRangeLabel}}</span>
+            <Button @icon="chevron-right" @size="xs" @type="link" {{on "click" this.nextWeek}} />
+        </div>
 
-                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                    <div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">Compliance Status</div>
+        {{! 7-day compact calendar grid }}
+        <div class="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 rounded overflow-hidden text-xs">
+            {{#each this.weekDays as |day|}}
+                <div class="bg-white dark:bg-gray-800 p-1.5 min-h-16">
+                    {{! Single-line day header: "Mon 6" }}
+                    <div class="flex items-center space-x-0.5 mb-1.5">
+                        <span class="text-gray-400 dark:text-gray-500 uppercase tracking-wide text-[9px]">{{day.label}}</span>
                         <span
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{this.hosComplianceBadge.color}}-100 text-{{this.hosComplianceBadge.color}}-800"
-                        >
-                            {{this.hosComplianceBadge.text}}
-                        </span>
+                            class="{{if
+                                    day.isToday
+                                    'flex items-center justify-center w-4 h-4 rounded-full bg-indigo-600 text-white font-bold leading-none text-xs'
+                                    'text-gray-500 dark:text-gray-400'
+                                }}"
+                        >{{day.dayNum}}</span>
                     </div>
+                    {{! Shift chips — badge info style (light/dark via CSS) }}
+                    {{#each day.shifts as |shift|}}
+                        <div class="driver-schedule-shift-chip">
+                            <span class="shift-chip-time">
+                                {{format-date-fns shift.start_at "HH:mm"}}–{{format-date-fns shift.end_at "HH:mm"}}
+                            </span>
+                            <div class="shift-chip-actions">
+                                <button type="button" class="shift-chip-action-btn edit" title={{t "scheduler.edit-shift"}} {{on "click" (fn this.editShift shift)}}>
+                                    <FaIcon @icon="pencil" @size="xs" />
+                                </button>
+                                <button type="button" class="shift-chip-action-btn delete" title={{t "scheduler.delete-shift"}} {{on "click" (fn this.deleteShift shift)}}>
+                                    <FaIcon @icon="trash" @size="xs" />
+                                </button>
+                            </div>
+                        </div>
+                    {{/each}}
                 </div>
-            </div>
-        {{/if}}
-    </ContentPanel>
-    <ContentPanel @title="Schedule Calendar" @open={{true}} @isLoading={{this.loadDriverSchedule.isRunning}} @actionButtons={{this.scheduleActionButtons}} @wrapperClass="bordered-top">
-        <ScheduleCalendar @items={{this.scheduleItems}} @view="timeGridWeek" @onItemClick={{this.handleItemClick}}>
-            <:item as |ctx|>
-                <div class="schedule-item-content">
-                    <div class="font-medium">{{ctx.item.title}}</div>
-                    <div class="text-xs">{{ctx.item.duration}} min</div>
-                </div>
-            </:item>
-        </ScheduleCalendar>
+            {{/each}}
+        </div>
     </ContentPanel>
 
-    <ContentPanel @title="Upcoming Shifts" @open={{true}} @actionButtons={{this.shiftActionButtons}} @wrapperClass="bordered-top">
-        {{#if this.upcomingShifts.length}}
-            <div class="space-y-2">
-                {{#each this.upcomingShifts as |shift|}}
-                    <ScheduleItemCard @item={{shift}} @onClick={{this.handleItemClick}}>
-                        <:actions>
-                            <button type="button" class="text-blue-600 hover:text-blue-800 text-sm" {{on "click" (fn this.editScheduleItem shift)}}>
-                                Edit
-                            </button>
-                        </:actions>
-                    </ScheduleItemCard>
-                {{/each}}
+    {{! ── HOS Status Panel ────────────────────────────────────────────────── }}
+    <ContentPanel @title={{t "scheduler.hours-of-service"}} @open={{true}} @wrapperClass="bordered-top" @isLoading={{this.loadHOSStatus.isRunning}}>
+        <div class="grid grid-cols-3 gap-2 text-xs dark:text-gray-100">
+            <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.daily-driving-hours"}}</div>
+                <div class="text-lg font-bold">{{this.hosStatus.daily_hours}}<span class="text-gray-400 font-normal">/11h</span></div>
             </div>
-        {{else}}
-            <div class="text-center py-4 text-gray-500 dark:text-gray-400">
-                No upcoming shifts scheduled
+            <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.weekly-hours"}}</div>
+                <div class="text-lg font-bold">{{this.hosStatus.weekly_hours}}<span class="text-gray-400 font-normal">/70h</span></div>
             </div>
-        {{/if}}
+            <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                <div class="text-gray-500 dark:text-gray-400">{{t "scheduler.compliance-status"}}</div>
+                <span
+                    class="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-{{this.hosComplianceBadge.color}}-100 text-{{this.hosComplianceBadge.color}}-800 dark:bg-{{this.hosComplianceBadge.color}}-900 dark:text-{{this.hosComplianceBadge.color}}-200"
+                >
+                    {{this.hosComplianceBadge.label}}
+                </span>
+            </div>
+        </div>
     </ContentPanel>
 
-    <ContentPanel @title="Availability & Time Off" @open={{true}} @actionButtons={{this.availabilityActionButtons}} @wrapperClass="bordered-top">
-        {{#if this.availability.length}}
-            <div class="space-y-2">
-                {{#each this.availability as |avail|}}
-                    <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                        <div>
-                            <div class="font-medium">
-                                {{#if avail.is_available}}
-                                    <span class="text-green-600">Available</span>
-                                {{else}}
-                                    <span class="text-red-600">Unavailable</span>
-                                {{/if}}
+    {{! ── Time Off & Exceptions Panel ─────────────────────────────────────── }}
+    <ContentPanel
+        @title={{t "scheduler.time-off-exceptions"}}
+        @open={{true}}
+        @isLoading={{this.loadDriverSchedule.isRunning}}
+        @actionButtons={{this.exceptionActionButtons}}
+        @wrapperClass="bordered-top"
+    >
+        {{#if this.exceptions.length}}
+            <div class="space-y-1">
+                {{#each this.exceptions as |exception|}}
+                    <div class="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-xs dark:text-gray-100">
+                        <div class="flex items-center space-x-3">
+                            <div
+                                class="w-2 h-2 rounded-full flex-shrink-0
+                                    {{if (eq exception.status 'approved') 'bg-green-500' (if (eq exception.status 'rejected') 'bg-red-500' 'bg-yellow-500')}}"
+                            >
                             </div>
-                            <div class="text-sm text-gray-500">
-                                {{format-date-fns avail.start_at "MMM DD, YYYY"}}
-                                -
-                                {{format-date-fns avail.end_at "MMM DD, YYYY"}}
+                            <div>
+                                <div class="font-medium">
+                                    {{exception.typeLabel}}
+                                    {{#if exception.reason}}
+                                        <span class="text-gray-400 font-normal"> — {{exception.reason}}</span>
+                                    {{/if}}
+                                </div>
+                                <div class="text-gray-500 dark:text-gray-400">
+                                    {{format-date-fns exception.start_at "MMM d"}}
+                                    –
+                                    {{format-date-fns exception.end_at "MMM d, yyyy"}}
+                                </div>
                             </div>
-                            {{#if avail.reason}}
-                                <div class="text-xs text-gray-400">{{avail.reason}}</div>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <span
+                                class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium
+                                    {{if
+                                        (eq exception.status 'approved')
+                                        'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                        (if
+                                            (eq exception.status 'rejected')
+                                            'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                        )
+                                    }}"
+                            >
+                                {{exception.status}}
+                            </span>
+                            {{#if exception.isPending}}
+                                <Button @icon="check" @size="xs" @type="link" @scheme="success" {{on "click" (fn this.approveException exception)}} />
+                                <Button @icon="xmark" @size="xs" @type="link" @scheme="danger" {{on "click" (fn this.rejectException exception)}} />
                             {{/if}}
+                            <Button @icon="trash" @size="xs" @type="link" @scheme="danger" {{on "click" (fn this.deleteException exception)}} />
                         </div>
                     </div>
                 {{/each}}
             </div>
         {{else}}
-            <div class="text-center py-4 text-gray-500 dark:text-gray-400">
-                No availability restrictions set
+            <div class="text-center py-6 text-xs text-gray-500 dark:text-gray-400">
+                {{t "scheduler.no-exceptions"}}
             </div>
         {{/if}}
     </ContentPanel>
+
 </div>

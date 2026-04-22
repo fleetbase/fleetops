@@ -175,11 +175,14 @@ class OrderConfig extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * Get all custom fields defined for this order config.
+     * CustomField uses a polymorphic subject relationship (subject_uuid / subject_type).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany
      */
     public function customFields()
     {
-        return $this->belongsTo(\Fleetbase\Models\CustomField::class);
+        return $this->morphMany(\Fleetbase\Models\CustomField::class, 'subject', 'subject_type', 'subject_uuid');
     }
 
     /**

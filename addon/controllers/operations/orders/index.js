@@ -89,6 +89,12 @@ export default class OperationsOrdersIndexController extends Controller {
                 wrapperClass: 'hidden md:flex',
                 onClick: this.orderActions.export,
             },
+            {
+                text: this.intl.t('common.import'),
+                icon: 'file-import',
+                wrapperClass: 'hidden md:flex',
+                onClick: () => this.orderActions.importOrders({ onImportComplete: this.orderActions.refresh }),
+            },
         ];
     }
 

@@ -373,7 +373,6 @@ fleet-ops:
         modal-title: إنشاء مجموعة حقل مخصصة جديدة
         group-name: اسم المجموعة
       assign-driver:
-        select-driver: اختر السائق
         select-assign: اختر السائق لتعيينه
       clone-config-form:
         name: اسم التكوين
@@ -433,7 +432,6 @@ fleet-ops:
       fuel-report-details:
         fuel: الوقود/ الحجم
       fuel-report-form:
-        select-driver: اختر السائق
         select-vehicle: اختر المركبة
         volume: الحجم
         volume-text: اختر الوحدة المترية وحجم الوقود للإبلاغ عنه.
@@ -459,7 +457,6 @@ fleet-ops:
         select-reporter: اختر المُبلغ
         assigned: مُعين إلى
         select-assignee: اختر المُعين
-        select-driver: اختر السائق
         select-vehicle: اختر المركبة
         select-type: اختر النوع
         select-category: اختر الفئة
@@ -492,7 +489,6 @@ fleet-ops:
         tags: علامات التكوين
         add-tags: أضف علامات
       order-assign-driver:
-        select-driver: اختر السائق
         select-assign: اختر السائق لتعيينه
       order-config-new-status:
         new-status: حالة جديدة
@@ -511,7 +507,6 @@ fleet-ops:
         select-facilitator: اختر الميسر
         assign-driver: تعيين السائق
         assign-driver-text: قم بتعيين السائق الذي سيتم إرسال الطلب إليه.
-        select-driver: اختر السائق
         assign-vehicle: تعيين المركبة
         assign-vehicle-text: قم بتعيين المركبة التي سيتم تنفيذ الطلب بها.
         select-vehicle: اختر المركبة
@@ -634,7 +629,6 @@ fleet-ops:
         make: صنع المركبة
         model: طراز المركبة
         year: سنة المركبة
-        select-driver: اختر السائق
         body: نوع هيكل المركبة
         doors: عدد الأبواب
         type: نوع قيادة المركبة
@@ -722,7 +716,6 @@ fleet-ops:
         vehicle-assigned: المركبة
         no-driver: لا يوجد سائق
         no-vehicle: لا توجد مركبة
-        select-driver: اختر السائق
         select-vehicle: اختر المركبة
     widget:
       fleet-ops-quickstart:
@@ -839,7 +832,6 @@ fleet-ops:
       cancel-edit-fuel-report: إلغاء تحرير تقرير الوقود
       cancel-new-fuel-report: إلغاء تقرير الوقود الجديد
       select-reporter: اختر المراسل
-      select-driver: اختر السائق
       select-vehicle: اختر المركبة
       select-fuel-report: اختر حالة تقرير الوقود
       odometer: عداد المسافات
@@ -874,7 +866,6 @@ fleet-ops:
       assigned: تم التعيين إلى
       select-assign: اختر المعين
       select-reporter: اختر المراسل
-      select-driver: اختر السائق
       select-vehicle: اختر المركبة
       type: نوع المشكلة
       select-type: اختر نوع المشكلة
@@ -1070,7 +1061,6 @@ fleet-ops:
       vehicle-year: سنة المركبة
       driver-assigned: السائق المعين
       vehicle-assigned: المركبة المعينة
-      select-driver: اختر السائق
       select-vehicle: اختر المركبة
       avatar: الصورة الرمزية
       select-map-avatar: اختر الصورة الرمزية للخريطة
@@ -1353,7 +1343,6 @@ fleet-ops:
           no-service-info-text: لا توجد عروض خدمة.
           input-order-info-text: أدخل مسار الطلب لعرض عروض الخدمة.
           notes-title: ملاحظات
-          notes-placeholder: أدخل ملاحظات الطلب هنا....
           success-message: تم إنشاء الطلب الجديد {orderId}
           warning-message: لا توجد ملفات في قائمة الانتظار للتحميل!
           import-success: تم الاستيراد بنجاح.
@@ -1434,7 +1423,6 @@ fleet-ops:
           order-title: ملصق الطلب
           waypoint-title: ملصق نقطة التوقف
           proof-of-delivery: إثبات التسليم
-          notes-placeholder: أدخل ملاحظات الطلب هنا....
           save-order-note: حفظ ملاحظة الطلب
           order-notes-updated: تم تحديث ملاحظات الطلب.
         config:
@@ -1571,3 +1559,47 @@ fleet-ops:
   settings:
     navigator-app:
       navigator-app-settings: إعدادات تطبيق الملاحة
+
+scheduler:
+  add-shift: Add Shift
+  create-shift: Create Shift
+  edit-shift: Edit Shift
+  delete-shift: Delete Shift
+  delete-shift-confirm: Are you sure you want to delete this shift? This action cannot be undone.
+  shift-created: Shift created successfully.
+  shift-updated: Shift updated successfully.
+  shift-title: Shift Title
+  shift-title-placeholder: e.g. Morning Delivery Run
+  shift-start: Shift Start
+  shift-end: Shift End
+  shift-notes-placeholder: Optional notes about this shift
+  select-start-datetime: Select start date & time
+  select-end-datetime: Select end date & time
+  select-driver: Select Driver
+  upcoming-shifts: Upcoming Shifts
+  no-upcoming-shifts: No upcoming shifts scheduled.
+  hours-of-service: Hours of Service
+  daily-driving-hours: Daily Driving Hours
+  weekly-hours: Weekly Hours
+  compliance-status: Compliance Status
+  set-availability: Set Availability
+  availability-set: Availability saved successfully.
+  availability-time-off: Availability & Time Off
+  no-availability-restrictions: No availability restrictions set.
+  available: Available
+  unavailable: Unavailable
+  unavailable-time-off: Unavailable / Time Off
+  availability-type: Availability Type
+  request-time-off: Request Time Off
+  submit-request: Submit Request
+  time-off-requested: Time off request submitted.
+  delete-availability: Delete Availability
+  delete-availability-confirm: Are you sure you want to remove this availability record?
+  availability-deleted: Availability record removed.
+  start-date: Start Date
+  end-date: End Date
+  select-start-date: Select start date
+  select-end-date: Select end date
+  reason: Reason
+  reason-placeholder: e.g. Personal appointment
+  notes-placeholder: Optional additional notes

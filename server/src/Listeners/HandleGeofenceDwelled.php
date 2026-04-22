@@ -9,7 +9,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Str;
 
 /**
- * HandleGeofenceDwelled
+ * HandleGeofenceDwelled.
  *
  * Handles the business logic triggered when a driver has dwelled inside
  * a geofence for the configured threshold duration:
@@ -21,24 +21,16 @@ class HandleGeofenceDwelled implements ShouldQueue
 
     /**
      * The name of the queue the job should be sent to.
-     *
-     * @var string
      */
     public string $queue = 'geofence';
 
     /**
      * The number of times the job may be attempted.
-     *
-     * @var int
      */
     public int $tries = 3;
 
     /**
      * Handle the event.
-     *
-     * @param GeofenceDwelled $event
-     *
-     * @return void
      */
     public function handle(GeofenceDwelled $event): void
     {

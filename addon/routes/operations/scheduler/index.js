@@ -1,46 +1,68 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { isValid as isValidDate } from 'date-fns';
-import { isNone } from '@ember/utils';
-// import createFullCalendarEventFromOrder from '../../../utils/create-full-calendar-event-from-order';
 
-const getUnscheduledOrder = (order) => {
-    return isNone(order.scheduled_at);
-};
-
-const getScheduledOrder = (order) => {
-    return isValidDate(order.scheduled_at);
-};
-
+/**
+ * OperationsSchedulerIndexRoute
+ *
+ * Responsibilities:
+ *   1. Access control — redirect if the user cannot list orders.
+ *   2. Initial data loading — fetch active orders and drivers in parallel.
+ *   3. Socket subscription lifecycle — delegate to the controller.
+ *
+ * All post-load logic (filtering, event mapping, conflict detection) lives
+ * in the controller and the SchedulingService.
+ */
 export default class OperationsSchedulerIndexRoute extends Route {
     @service store;
-    @service notifications;
-    @service hostRouter;
     @service abilities;
-    @service intl;
+    @service hostRouter;
 
     beforeModel() {
         if (this.abilities.cannot('fleet-ops list order')) {
-            this.notifications.warning(this.intl.t('common.unauthorized-access'));
-            return this.hostRouter.transitionTo('console.fleet-ops');
+            return this.hostRouter.transitionTo('console.fleet-ops.index');
         }
     }
 
-    model() {
-        return this.store.query('order', { status: 'created', with: ['payload', 'driverAssigned.vehicle'] });
+    async model() {
+        // Load active orders (created, dispatched, active) alongside drivers.
+        // The broader status scope ensures dispatchers see each driver's full
+        // day — not just pre-dispatch orders — enabling accurate conflict
+        // detection and capacity visualisation.
+        const [orders, drivers] = await Promise.all([
+            this.store.query('order', {
+                status: ['created', 'dispatched', 'active'],
+                with: ['payload', 'driverAssigned.vehicle'],
+                limit: 500,
+            }),
+            this.store.query('driver', {
+                with: ['currentShift'],
+                limit: 200,
+            }),
+        ]);
+
+        return { orders, drivers };
     }
 
     setupController(controller, model) {
-        // get orders
-        const orders = model.toArray();
+        super.setupController(controller, model);
 
-        // set unscheduled orders
-        controller.unscheduledOrders = orders.filter(getUnscheduledOrder);
+        // Set drivers on the controller so the resource timeline can render them.
+        // Orders are read reactively from the Ember Data store via computed getters,
+        // so we do not need to set them explicitly here.
+        controller.set('drivers', model.drivers.toArray());
 
-        // set scheduled orders
-        controller.scheduledOrders = orders.filter(getScheduledOrder);
+        // Initialise viewDate to the current UTC instant.
+        // @event-calendar/core applies timezoneOffsetMins internally so the
+        // calendar opens on the correct company-local day automatically.
+        controller.set('viewDate', new Date());
 
-        // // create events from scheduledOrders
-        // controller.events = controller.scheduledOrders.map(createFullCalendarEventFromOrder);
+        // Open SocketCluster subscriptions for real-time calendar updates.
+        controller.subscribeToRealTimeUpdates();
+    }
+
+    resetController(controller) {
+        // Close all socket channels when the dispatcher navigates away
+        // to prevent memory leaks and stale event handlers.
+        controller.unsubscribeFromRealTimeUpdates();
     }
 }

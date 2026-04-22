@@ -120,6 +120,13 @@ class Order extends Model
         'notes',
         'type',
         'status',
+        // Orchestrator
+        'orchestrator_priority',
+        'required_skills',
+        'time_window_start',
+        'time_window_end',
+        // Manifest (set by orchestrator commit)
+        'manifest_uuid',
     ];
 
     /**
@@ -205,6 +212,25 @@ class Order extends Model
         'scheduled_at'     => 'datetime',
         'dispatched_at'    => 'datetime',
         'started_at'       => 'datetime',
+        // Orchestrator
+        'required_skills'       => Json::class,
+        'time_window_start'     => 'datetime',
+        'time_window_end'       => 'datetime',
+        'orchestrator_priority' => 'integer',
+    ];
+
+    /**
+     * The model's default attribute values.
+     *
+     * Ensures that `orchestrator_priority` is never persisted as NULL even when
+     * the caller omits the field entirely (e.g. the order/form component does
+     * not require the user to fill in orchestrator constraints).  The value
+     * mirrors the database column default defined in the migration.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'orchestrator_priority' => 50,
     ];
 
     /**
@@ -608,6 +634,18 @@ class Order extends Model
     }
 
     /**
+     * Set the orchestrator_priority attribute.
+     *
+     * Coerces null or non-numeric values to the default priority of 50 so that
+     * the NOT NULL database constraint is never violated when a user submits
+     * the order form without filling in the orchestrator constraints section.
+     */
+    public function setOrchestratorPriorityAttribute($value): void
+    {
+        $this->attributes['orchestrator_priority'] = is_numeric($value) ? (int) $value : 50;
+    }
+
+    /**
      * Set the order type attribute, which defaults to `default`.
      */
     public function setTypeAttribute(?string $type = null): void
@@ -621,6 +659,64 @@ class Order extends Model
     public function setStatusAttribute(?string $status = null): void
     {
         $this->attributes['status'] = is_string($status) ? Str::snake($status) : 'created';
+    }
+
+    /**
+     * Normalise the date portion of time_window_start on write.
+     *
+     * If the incoming value has a Unix-epoch date (1970-01-01) — which happens
+     * when a caller supplies a time-only string such as "09:00:00" or when the
+     * client-side picker emits a time without a date — the date portion is
+     * replaced with the order's scheduled_at date, falling back to created_at,
+     * and finally to now().  If the value already carries a meaningful date it
+     * is stored as-is, so callers that supply a full datetime are never
+     * overridden.
+     */
+    public function setTimeWindowStartAttribute($value): void
+    {
+        $this->attributes['time_window_start'] = $this->normaliseTimeWindowValue($value);
+    }
+
+    /**
+     * Normalise the date portion of time_window_end on write.
+     *
+     * @see setTimeWindowStartAttribute()
+     */
+    public function setTimeWindowEndAttribute($value): void
+    {
+        $this->attributes['time_window_end'] = $this->normaliseTimeWindowValue($value);
+    }
+
+    /**
+     * Resolve a time-window value to a full datetime string, injecting the
+     * order's reference date (scheduled_at ?? created_at ?? now) when the
+     * supplied value has no meaningful date of its own.
+     *
+     * @param mixed $value Anything Carbon::parse() can accept, or null
+     *
+     * @return string|null MySQL-formatted datetime string, or null
+     */
+    protected function normaliseTimeWindowValue($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $parsed = Carbon::parse($value);
+
+        // When the date portion is the Unix epoch the caller sent a time-only
+        // value (e.g. "09:00:00").  Inject the order's reference date.
+        if ($parsed->year === 1970 && $parsed->month === 1 && $parsed->day === 1) {
+            $ref = isset($this->attributes['scheduled_at']) && $this->attributes['scheduled_at']
+                ? Carbon::parse($this->attributes['scheduled_at'])
+                : (isset($this->attributes['created_at']) && $this->attributes['created_at']
+                    ? Carbon::parse($this->attributes['created_at'])
+                    : Carbon::now());
+
+            $parsed->setDate($ref->year, $ref->month, $ref->day);
+        }
+
+        return $parsed->toDateTimeString();
     }
 
     /**

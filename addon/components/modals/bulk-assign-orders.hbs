@@ -1,0 +1,67 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="grid grid-cols-1 gap-4 text-xs dark:text-gray-100">
+
+            {{! ── Order summary ─────────────────────────────────────────────── }}
+            <div class="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2">
+                <p class="font-medium dark:text-gray-100">
+                    <FaIcon @icon="list-check" class="mr-1.5 text-indigo-500" />
+                    {{t "scheduler.bulk-assign-order-count" count=@options.orders.length}}
+                </p>
+                <div class="mt-2 max-h-32 overflow-y-auto space-y-1">
+                    {{#each @options.orders as |order|}}
+                        <div class="flex items-center justify-between py-0.5">
+                            <span class="font-mono text-gray-600 dark:text-gray-400">{{order.public_id}}</span>
+                            {{#if order.payload.dropoff.address}}
+                                <span class="text-gray-500 dark:text-gray-400 truncate ml-2 max-w-xs">
+                                    {{order.payload.dropoff.address}}
+                                </span>
+                            {{/if}}
+                        </div>
+                    {{/each}}
+                </div>
+            </div>
+
+            {{! ── Driver selector ────────────────────────────────────────────── }}
+            <div class="input-group">
+                <label>{{t "resource.driver"}}</label>
+                <ModelSelect
+                    @modelName="driver"
+                    @selectedModel={{@options.driver}}
+                    @placeholder={{t "scheduler.select-driver"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @allowClear={{true}}
+                    @onChange={{fn (mut @options.driver)}}
+                    as |driver|
+                >
+                    <div class="flex items-center">
+                        <div class="w-7 flex-shrink-0">
+                            <FaIcon @icon="id-card-alt" />
+                        </div>
+                        <div class="flex-1 flex flex-row truncate">
+                            <span class="uppercase mr-2">{{driver.name}}</span>
+                            <span class="uppercase text-gray-400">{{driver.phone}}</span>
+                        </div>
+                    </div>
+                </ModelSelect>
+            </div>
+
+            {{! ── Start date/time ─────────────────────────────────────────────── }}
+            <div class="input-group">
+                <label>{{t "scheduler.bulk-assign-start-time"}}</label>
+                <DateTimeInput @value={{@options.date}} @onChange={{fn (mut @options.date)}} placeholder={{t "scheduler.select-start-datetime"}} class="w-full form-input" />
+            </div>
+
+            {{! ── Spacing hint ────────────────────────────────────────────────── }}
+            <div class="rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 px-3 py-2">
+                <p class="text-indigo-700 dark:text-indigo-300">
+                    <FaIcon @icon="circle-info" class="mr-1.5" />
+                    {{t "scheduler.bulk-assign-spacing-hint"}}
+                </p>
+            </div>
+
+        </div>
+    </div>
+</Modal::Default>

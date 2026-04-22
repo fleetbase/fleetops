@@ -1,0 +1,176 @@
+{{! ===== COST PANEL — invoice-style line items ===== }}
+<ContentPanel @title="Costs" @open={{true}} @wrapperClass="bordered-top">
+
+    {{! ── Currency selector (single, shared by all money fields) ── }}
+    <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs mb-2">
+        <InputGroup @name="Currency">
+            <CurrencySelect @currency={{@resource.currency}} @onCurrencyChange={{fn (mut @resource.currency)}} @triggerClass="w-full form-select" @disabled={{this.isDisabled}} />
+        </InputGroup>
+    </div>
+
+    {{! ── Labour & Tax inputs (always editable on the form) ── }}
+    <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs mb-4">
+        <InputGroup @name="Labour Cost">
+            <MoneyInput class="w-full" @value={{@resource.labor_cost}} @currency={{this.currency}} @onChange={{fn (mut @resource.labor_cost)}} @disabled={{this.isDisabled}} />
+        </InputGroup>
+        <InputGroup @name="Tax">
+            <MoneyInput class="w-full" @value={{@resource.tax}} @currency={{this.currency}} @onChange={{fn (mut @resource.tax)}} @disabled={{this.isDisabled}} />
+        </InputGroup>
+    </div>
+
+    {{! ── Line items table ── }}
+    <div class="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold mb-2">
+        Parts &amp; Services
+    </div>
+
+    <table class="w-full text-xs border-collapse mb-2 table-fixed">
+        <colgroup>
+            <col class="w-[45%]" />
+            <col class="w-[10%]" />
+            <col class="w-[20%]" />
+            <col class="w-[15%]" />
+            {{#unless this.isDisabled}}
+                <col class="w-[10%]" />
+            {{/unless}}
+        </colgroup>
+        <thead>
+            <tr class="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-left">
+                <th class="pb-1 pr-2 font-medium">Description</th>
+                <th class="pb-1 pr-2 font-medium text-right">Qty</th>
+                <th class="pb-1 pr-2 font-medium text-right">Unit Cost</th>
+                <th class="pb-1 pr-2 font-medium text-right">Total</th>
+                {{#unless this.isDisabled}}
+                    <th class="pb-1"></th>
+                {{/unless}}
+            </tr>
+        </thead>
+        <tbody>
+            {{#each this.lineItems as |item index|}}
+                {{#if (eq this.editingIndex index)}}
+                    {{! ── Inline edit row ── }}
+                    <tr class="border-b border-gray-100 dark:border-gray-800">
+                        <td class="py-1 pr-2">
+                            <Input @value={{this.draftDescription}} class="form-input w-full text-xs" placeholder="Description" />
+                        </td>
+                        <td class="py-1 pr-2">
+                            <Input @value={{this.draftQuantity}} @type="number" class="form-input w-full text-xs text-right" min="0" />
+                        </td>
+                        <td class="py-1 pr-2">
+                            <MoneyInput class="w-full" @value={{this.draftUnitCost}} @currency={{this.currency}} @onChange={{this.setDraftUnitCost}} />
+                        </td>
+                        <td class="py-1 pr-2 text-right text-gray-500 dark:text-gray-400">
+                            {{format-currency this.draftLineTotal this.currency}}
+                        </td>
+                        <td class="py-1">
+                            <div class="flex items-center space-x-1">
+                                <Button @size="xs" @type="primary" @onClick={{this.saveEdit}} class="px-2 py-0.5">
+                                    Save
+                                </Button>
+                                <Button @size="xs" @type="default" @onClick={{this.cancelEdit}} class="px-2 py-0.5">
+                                    Cancel
+                                </Button>
+                            </div>
+                        </td>
+                    </tr>
+                {{else}}
+                    {{! ── Read row ── }}
+                    <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40 group">
+                        <td class="py-1.5 pr-2 text-gray-800 dark:text-gray-200 truncate">{{item.description}}</td>
+                        <td class="py-1.5 pr-2 text-right text-gray-600 dark:text-gray-400">{{item.quantity}}</td>
+                        <td class="py-1.5 pr-2 text-right text-gray-600 dark:text-gray-400">
+                            {{format-currency (this._toCents item.unit_cost) this.currency}}
+                        </td>
+                        <td class="py-1.5 pr-2 text-right font-medium text-gray-800 dark:text-gray-200">
+                            {{format-currency (this.lineTotal item) this.currency}}
+                        </td>
+                        {{#unless this.isDisabled}}
+                            <td class="py-1.5">
+                                <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        type="button"
+                                        class="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                                        title="Edit"
+                                        {{on "click" (fn this.startEdit index)}}
+                                    >
+                                        <FaIcon @icon="pencil" @size="xs" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                        title="Remove"
+                                        {{on "click" (fn this.removeLineItem index)}}
+                                    >
+                                        <FaIcon @icon="trash" @size="xs" />
+                                    </button>
+                                </div>
+                            </td>
+                        {{/unless}}
+                    </tr>
+                {{/if}}
+            {{/each}}
+
+            {{! ── Add new item row ── }}
+            {{#if this.isAddingItem}}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-1 pr-2">
+                        <Input @value={{this.draftDescription}} class="form-input w-full text-xs" placeholder="Description" />
+                    </td>
+                    <td class="py-1 pr-2">
+                        <Input @value={{this.draftQuantity}} @type="number" class="form-input w-full text-xs text-right" min="0" />
+                    </td>
+                    <td class="py-1 pr-2">
+                        <MoneyInput class="w-full" @value={{this.draftUnitCost}} @currency={{this.currency}} @onChange={{this.setDraftUnitCost}} />
+                    </td>
+                    <td class="py-1 pr-2 text-right text-gray-500 dark:text-gray-400">
+                        {{format-currency this.draftLineTotal this.currency}}
+                    </td>
+                    <td class="py-1">
+                        <div class="flex items-center space-x-1">
+                            <Button @size="xs" @type="primary" @onClick={{this.addLineItem}} class="px-2 py-0.5">
+                                Add
+                            </Button>
+                            <Button @size="xs" @type="default" @onClick={{this.cancelAdd}} class="px-2 py-0.5">
+                                Cancel
+                            </Button>
+                        </div>
+                    </td>
+                </tr>
+            {{/if}}
+        </tbody>
+    </table>
+
+    {{! ── Add item button ── }}
+    {{#unless this.isDisabled}}
+        {{#unless this.isAddingItem}}
+            <button
+                type="button"
+                class="flex items-center space-x-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 font-medium mb-3 transition-colors"
+                {{on "click" this.showAddRow}}
+            >
+                <FaIcon @icon="plus" @size="xs" />
+                <span>Add line item</span>
+            </button>
+        {{/unless}}
+    {{/unless}}
+
+    {{! ── Totals summary ── }}
+    <div class="border-t border-gray-200 dark:border-gray-700 pt-2 mt-1 space-y-1 text-xs">
+        <div class="flex justify-between text-gray-500 dark:text-gray-400">
+            <span>Labour</span>
+            <span>{{format-currency this.laborCost this.currency}}</span>
+        </div>
+        <div class="flex justify-between text-gray-500 dark:text-gray-400">
+            <span>Parts</span>
+            <span>{{format-currency this.partsCost this.currency}}</span>
+        </div>
+        <div class="flex justify-between text-gray-500 dark:text-gray-400">
+            <span>Tax</span>
+            <span>{{format-currency this.tax this.currency}}</span>
+        </div>
+        <div class="flex justify-between font-semibold text-gray-800 dark:text-gray-100 border-t border-gray-200 dark:border-gray-700 pt-1 mt-1">
+            <span>Total</span>
+            <span>{{format-currency this.totalCost this.currency}}</span>
+        </div>
+    </div>
+
+</ContentPanel>

@@ -29,6 +29,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class DriverController extends FleetOpsController
 {
+    use Traits\DriverSchedulingTrait;
     /**
      * The resource to query.
      *

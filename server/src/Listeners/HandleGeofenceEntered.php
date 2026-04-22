@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * HandleGeofenceEntered
+ * HandleGeofenceEntered.
  *
  * Handles the business logic triggered when a driver enters a geofence:
  *   1. Writes a record to the geofence_events_log table.
@@ -26,24 +26,16 @@ class HandleGeofenceEntered implements ShouldQueue
 
     /**
      * The name of the queue the job should be sent to.
-     *
-     * @var string
      */
     public string $queue = 'geofence';
 
     /**
      * The number of times the job may be attempted.
-     *
-     * @var int
      */
     public int $tries = 3;
 
     /**
      * Handle the event.
-     *
-     * @param GeofenceEntered $event
-     *
-     * @return void
      */
     public function handle(GeofenceEntered $event): void
     {
@@ -88,13 +80,6 @@ class HandleGeofenceEntered implements ShouldQueue
     /**
      * Attempt to auto-transition an order to "arrived" status when the
      * driver enters a geofence near the order's current destination.
-     *
-     * @param mixed         $driver
-     * @param mixed         $geofence
-     * @param Order         $order
-     * @param GeofenceEntered $event
-     *
-     * @return void
      */
     private function handleOrderArrival($driver, $geofence, Order $order, GeofenceEntered $event): void
     {
@@ -113,6 +98,7 @@ class HandleGeofenceEntered implements ShouldQueue
                 'driver_uuid' => $driver->uuid,
                 'error'       => $e->getMessage(),
             ]);
+
             return;
         }
 
@@ -165,6 +151,7 @@ class HandleGeofenceEntered implements ShouldQueue
                 'order_uuid' => $order->uuid,
                 'error'      => $e->getMessage(),
             ]);
+
             return;
         }
 
@@ -184,11 +171,6 @@ class HandleGeofenceEntered implements ShouldQueue
 
     /**
      * Calculate the haversine distance in metres between two lat/lng points.
-     *
-     * @param float $lat1
-     * @param float $lng1
-     * @param float $lat2
-     * @param float $lng2
      *
      * @return float Distance in metres
      */
