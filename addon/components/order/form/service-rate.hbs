@@ -58,7 +58,7 @@
                                         @name="serviceQuote"
                                         @changed={{fn (mut @resource.service_quote_uuid)}}
                                     />
-                                    <label for={{serviceQuote.uuid}} class="ml-3 flex-1">{{serviceQuote.public_id}}</label>
+                                    <label for={{serviceQuote.uuid}} class="ml-3 flex-1 text-sm">{{serviceQuote.public_id}} ({{serviceQuote.service_rate_name}})</label>
                                     <Badge @hideStatusDot={{true}} @status="info">
                                         {{serviceQuote.request_id}}
                                     </Badge>

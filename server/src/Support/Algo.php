@@ -25,7 +25,7 @@ class Algo
         }
 
         $algorithm = static::evaluateFunctions($algorithm);
-        $result = $m->evaluate($algorithm);
+        $result    = $m->evaluate($algorithm);
 
         if ($result === false || $result === null || !is_numeric($result)) {
             return null;
@@ -45,8 +45,10 @@ class Algo
         return $result !== null && is_numeric($result);
     }
 
-    public static function normalizeVariables(array $variables = []): array
+    public static function normalizeVariables($variables = []): array
     {
+        $variables = collect($variables)->all();
+
         $distanceM = (float) ($variables['distance_m'] ?? $variables['distance'] ?? 0);
         $timeS     = (float) ($variables['time_s'] ?? $variables['time'] ?? 0);
 
@@ -85,9 +87,19 @@ class Algo
     {
         while (preg_match(static::FUNCTION_PATTERN, $algorithm)) {
             $algorithm = preg_replace_callback(static::FUNCTION_PATTERN, function ($matches) {
-                $function = $matches[1];
-                $args     = array_map('trim', explode(',', $matches[2]));
-                $numbers  = array_map(fn ($arg) => (float) $arg, $args);
+                $function           = $matches[1];
+                $args               = array_map('trim', explode(',', $matches[2]));
+                $m                  = new EvalMath();
+                $m->suppress_errors = true;
+                $numbers            = array_map(function ($arg) use ($m) {
+                    $result = $m->evaluate($arg);
+
+                    if ($result === false || $result === null || !is_numeric($result)) {
+                        return (float) $arg;
+                    }
+
+                    return (float) $result;
+                }, $args);
 
                 return match ($function) {
                     'max'   => (string) max($numbers[0] ?? 0, $numbers[1] ?? 0),

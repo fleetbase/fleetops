@@ -122,12 +122,13 @@ export default class ServiceRateActionsService extends ResourceActionService {
 
         const hasFacilitator = !isNone(order.facilitator);
         const facilitatorServiceType = order.facilitator?.get('service_types.firstObject.key') ?? order.type;
+        const routeSummary = order.route?.summary ?? order.route?.details?.summary ?? {};
 
         try {
             const serviceQuotes = yield this.fetch.post('service-quotes/preliminary', {
                 payload: serializePayload(order.payload),
-                distance: order.route.summary?.totalDistance,
-                time: order.route.summary?.totalTime,
+                distance: routeSummary.totalDistance,
+                time: routeSummary.totalTime,
                 service_type: hasFacilitator ? facilitatorServiceType : order.type,
                 facilitator: order.facilitator?.public_id,
                 scheduled_at: order.scheduled_at,

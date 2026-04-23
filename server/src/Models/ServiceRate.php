@@ -369,11 +369,37 @@ class ServiceRate extends Model
             return $this;
         }
 
+        // Normalize duplicate parcel rows by fee shape and keep the latest submitted value.
+        $serviceRateParcelFees = collect($serviceRateParcelFees)
+            ->filter(fn ($fee) => is_array($fee))
+            ->map(function ($fee) {
+                return collect($fee)->except(['created_at', 'updated_at'])->toArray();
+            })
+            ->keyBy(function ($fee) {
+                return implode(':', [
+                    data_get($fee, 'size'),
+                    data_get($fee, 'length'),
+                    data_get($fee, 'width'),
+                    data_get($fee, 'height'),
+                    data_get($fee, 'dimensions_unit'),
+                    data_get($fee, 'weight'),
+                    data_get($fee, 'weight_unit'),
+                ]);
+            })
+            ->values()
+            ->toArray();
+
+        $submittedUuids = collect($serviceRateParcelFees)
+            ->pluck('uuid')
+            ->filter()
+            ->values()
+            ->all();
+
         $iterate = count($serviceRateParcelFees);
 
         for ($i = 0; $i < $iterate; $i++) {
             // if already has uuid then we just update the record and remove from insert array
-            if (isset($serviceRateParcelFees[$i]['uuid'])) {
+            if (!empty($serviceRateParcelFees[$i]['uuid'])) {
                 $id                   = $serviceRateParcelFees[$i]['uuid'];
                 $updateableAttributes = collect($serviceRateParcelFees[$i])->except(['uuid', 'created_at', 'updated_at'])->toArray();
 
@@ -391,7 +417,18 @@ class ServiceRate extends Model
         }
 
         $serviceRateParcelFees = collect($serviceRateParcelFees)->filter()->values()->toArray();
-        ServiceRateParcelFee::bulkInsert($serviceRateParcelFees);
+
+        $existingParcelFeesQuery = ServiceRateParcelFee::where('service_rate_uuid', $this->uuid);
+
+        if (!empty($submittedUuids)) {
+            $existingParcelFeesQuery->whereNotIn('uuid', $submittedUuids)->delete();
+        } else {
+            $existingParcelFeesQuery->delete();
+        }
+
+        if (!empty($serviceRateParcelFees)) {
+            ServiceRateParcelFee::bulkInsert($serviceRateParcelFees);
+        }
 
         return $this;
     }
@@ -761,9 +798,10 @@ class ServiceRate extends Model
                 }
 
                 $subTotal += $serviceParcelFee->fee;
+                $parcelFeeName = ucwords(str_replace(['_', '-'], ' ', data_get($serviceParcelFee, 'size', 'parcel')));
 
                 $lines->push([
-                    'details'          => $serviceParcelFee->name . ' parcel fee',
+                    'details'          => $parcelFeeName . ' parcel fee',
                     'amount'           => Utils::numbersOnly($serviceParcelFee->fee),
                     'formatted_amount' => Utils::moneyFormat($serviceParcelFee->fee, $this->currency),
                     'currency'         => $this->currency,
@@ -948,9 +986,10 @@ class ServiceRate extends Model
                 }
 
                 $subTotal += $serviceParcelFee->fee;
+                $parcelFeeName = ucwords(str_replace(['_', '-'], ' ', data_get($serviceParcelFee, 'size', 'parcel')));
 
                 $lines->push([
-                    'details'          => $serviceParcelFee->name . ' parcel fee',
+                    'details'          => $parcelFeeName . ' parcel fee',
                     'amount'           => Utils::numbersOnly($serviceParcelFee->fee),
                     'formatted_amount' => Utils::moneyFormat($serviceParcelFee->fee, $this->currency),
                     'currency'         => $this->currency,
@@ -1004,10 +1043,10 @@ class ServiceRate extends Model
         $distanceInMeters = (float) ($distanceInMeters ?? 0);
 
         return match ($unit) {
-            'km' => $distanceInMeters / 1000,
-            'ft' => $distanceInMeters / 0.3048,
-            'yd' => $distanceInMeters / 0.9144,
-            'mi' => $distanceInMeters / 1609.344,
+            'km'    => $distanceInMeters / 1000,
+            'ft'    => $distanceInMeters / 0.3048,
+            'yd'    => $distanceInMeters / 0.9144,
+            'mi'    => $distanceInMeters / 1609.344,
             default => $distanceInMeters,
         };
     }

@@ -168,6 +168,13 @@ class Entity extends Model
         ])->render();
     }
 
+    public function setTypeAttribute(?string $type = null): void
+    {
+        $type = is_string($type) ? trim($type) : $type;
+
+        $this->attributes['type'] = filled($type) ? Str::snake($type) : null;
+    }
+
     /**
      * @var BelongsTo
      */

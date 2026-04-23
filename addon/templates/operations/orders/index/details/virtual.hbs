@@ -1,1 +1,7 @@
-{{component (lazy-engine-component @model.component) resource=this.resource order=this.resource params=@model.componentParams}}
+{{#if this.parent.routingCompleted}}
+    {{component (lazy-engine-component @model.component) resource=this.resource order=this.resource params=@model.componentParams}}
+{{else}}
+    <div class="flex items-center justify-center py-12">
+        <Spinner />
+    </div>
+{{/if}}

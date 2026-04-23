@@ -23,6 +23,30 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
                 <InputGroup @name={{t "common.name"}} @value={{@resource.name}} @helpText={{t "modals.entity-form.name-text"}} />
                 <InputGroup @name={{t "common.internal-id"}} @value={{@resource.internal_id}} @helpText={{t "modals.entity-form.id-text"}} />
+                <div class="space-y-2">
+                    <InputGroup @name={{t "common.type"}} @helpText="Choose a common entity type or switch to a custom value.">
+                        {{#if this.useCustomType}}
+                            <Input @value={{@resource.type}} @type="text" class="w-full form-input" placeholder="Enter custom entity type" />
+                        {{else}}
+                            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                                <PowerSelect
+                                    @options={{this.entityTypes}}
+                                    @selected={{this.selectedEntityType}}
+                                    @onChange={{this.selectEntityType}}
+                                    @placeholder="Select entity type"
+                                    @triggerClass="form-select"
+                                    as |type|
+                                >
+                                    <div class="text-sm">
+                                        <div class="font-semibold normalize-in-trigger">{{type.label}}</div>
+                                        <div class="hide-from-trigger">{{type.description}}</div>
+                                    </div>
+                                </PowerSelect>
+                            </div>
+                        {{/if}}
+                    </InputGroup>
+                    <Checkbox @value={{this.useCustomType}} @label="Use custom type" @onToggle={{this.toggleCustomType}} @alignItems="center" @labelClass="mb-0i" />
+                </div>
                 <InputGroup @name={{t "modals.entity-form.sku"}} @value={{@resource.sku}} @helpText={{t "modals.entity-form.sku-text"}} />
                 <div></div>
                 <InputGroup @name={{t "modals.entity-form.description"}} @helpText={{t "modals.entity-form.description-text"}} @wrapperClass="col-span-2">

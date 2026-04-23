@@ -270,6 +270,10 @@ export default class LeafletMapManagerService extends Service {
             this.route = routes[0];
         });
 
+        routingControl.on('routingerror', (event) => {
+            options?.onRoutingError?.(event);
+        });
+
         this.positionWaypoints(waypoints);
 
         return routingControl;
