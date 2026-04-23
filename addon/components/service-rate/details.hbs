@@ -110,7 +110,7 @@
                             <tr>
                                 <td>{{n-a rateFee.min}}</td>
                                 <td>{{n-a rateFee.max}}</td>
-                                <td>{{format-currency rateFee.fee @resource.currency}}</td>
+                                <td>{{format-currency (f-to-int rateFee.fee) @resource.currency}}</td>
                             </tr>
                         {{else}}
                             <tr>
@@ -158,7 +158,7 @@
             <div class="field-info-container">
                 <div class="field-name">Algorithm Code</div>
                 <div class="field-value">
-                    <pre class="bg-gray-100 dark:bg-gray-800 p-3 rounded text-xs overflow-x-auto"><code>{{n-a @resource.algorithm}}</code></pre>
+                    <pre class="bg-gray-100 dark:bg-gray-900 font-mono p-3 rounded text-xs overflow-x-auto"><code class="font-mono text-xs">{{n-a @resource.algorithm}}</code></pre>
                 </div>
             </div>
         </ContentPanel>
@@ -242,7 +242,7 @@
                                             {{t "service-rate.fields.additional-fee"}}
                                         </div>
                                         <div class="field-value">
-                                            {{n-a (format-currency parcelFee.fee @resource.currency)}}
+                                            {{n-a (format-currency (f-to-int parcelFee.fee) @resource.currency)}}
                                         </div>
                                     </div>
                                 </div>

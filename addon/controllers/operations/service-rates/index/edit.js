@@ -22,6 +22,7 @@ export default class OperationsServiceRatesIndexEditController extends Controlle
     @task *save(serviceRate) {
         try {
             yield serviceRate.save();
+            yield serviceRate.reload();
             this.events.trackResourceUpdated(serviceRate);
             this.overlay?.close();
 

@@ -1,7 +1,6 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import { task } from 'ember-concurrency';
 import { isNone } from '@ember/utils';
-import { next } from '@ember/runloop';
 import serializePayload from '../utils/serialize-payload';
 
 export default class ServiceRateActionsService extends ResourceActionService {
