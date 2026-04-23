@@ -287,7 +287,7 @@
     {{else if @resource.isParcelService}}
         <ContentPanel @title={{t "service-rate.fields.percel-fee-title"}} @open={{true}} @wrapperClass="bordered-top">
             <div class="space-y-2">
-                {{#each @resource.parcel_fees as |parcelFee|}}
+                {{#each @resource.parcelFees as |parcelFee|}}
                     <div class="dark:text-gray-100">
                         <div class="grid grid-cols-7">
                             <div class="flex flex-col items-start justify-start pt-3">
