@@ -1,10 +1,15 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import { task } from 'ember-concurrency';
 import { isNone } from '@ember/utils';
+import { next } from '@ember/runloop';
 import serializePayload from '../utils/serialize-payload';
 
 export default class ServiceRateActionsService extends ResourceActionService {
     modelNamePath = 'service_name';
+
+    get defaultCurrency() {
+        return this.currentUser?.company?.currency || this.currentUser.currency || 'USD';
+    }
 
     constructor() {
         super(...arguments);
@@ -12,7 +17,7 @@ export default class ServiceRateActionsService extends ResourceActionService {
             defaultAttributes: {
                 rate_calculation_method: 'per_meter',
                 per_meter_unit: 'm',
-                currency: this.currentUser.currency,
+                currency: this.defaultCurrency,
                 parcel_fees: this.#getDefaultParcelFees(),
             },
         });
