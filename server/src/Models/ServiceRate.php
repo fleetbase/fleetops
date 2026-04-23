@@ -704,7 +704,13 @@ class ServiceRate extends Model
         if ($this->isAlgorithm()) {
             $rateFee = Algo::exec(
                 $this->algorithm,
-                $this->buildAlgorithmVariables($entities, $waypoints, $totalDistance, $totalTime),
+                $this->buildAlgorithmVariables(
+                    $entities,
+                    $waypoints,
+                    $totalDistance,
+                    $totalTime,
+                    $this->inferEndpointCountFromStops($waypoints)
+                ),
                 true
             );
 
@@ -885,7 +891,13 @@ class ServiceRate extends Model
         if ($this->isAlgorithm()) {
             $rateFee = Algo::exec(
                 $this->algorithm,
-                $this->buildAlgorithmVariables($payload->entities->all(), $waypoints->all(), $totalDistance, $totalTime),
+                $this->buildAlgorithmVariables(
+                    $payload->entities->all(),
+                    $waypoints->all(),
+                    $totalDistance,
+                    $totalTime,
+                    (int) ($payload->pickup ? 1 : 0) + (int) ($payload->dropoff ? 1 : 0)
+                ),
                 true
             );
 
@@ -1000,20 +1012,33 @@ class ServiceRate extends Model
         };
     }
 
-    protected function buildAlgorithmVariables(array $entities = [], array $waypoints = [], ?int $totalDistance = 0, ?int $totalTime = 0): array
+    protected function buildAlgorithmVariables(array $entities = [], array $stops = [], ?int $totalDistance = 0, ?int $totalTime = 0, int $endpointCount = 0): array
     {
         $entityCollection = collect($entities)->filter();
-        $stopCount        = collect($waypoints)->filter()->count();
+        $stopCount        = collect($stops)->filter()->count();
+        $endpointCount    = max(0, min($endpointCount, $stopCount));
+        $waypointCount    = max($stopCount - $endpointCount, 0);
 
         return Algo::normalizeVariables([
             'distance_m' => $totalDistance ?? 0,
             'time_s'     => $totalTime ?? 0,
             'stops'      => $stopCount,
-            'waypoints'  => $stopCount,
+            'waypoints'  => $waypointCount,
             'parcels'    => $entityCollection->where('type', 'parcel')->count(),
             'entities'   => $entityCollection->count(),
             'base_fee'   => Utils::numbersOnly($this->base_fee ?? 0),
         ]);
+    }
+
+    protected function inferEndpointCountFromStops(array $stops = []): int
+    {
+        $stopCount = collect($stops)->filter()->count();
+
+        if ($stopCount <= 1) {
+            return $stopCount;
+        }
+
+        return 2;
     }
 
     /**
