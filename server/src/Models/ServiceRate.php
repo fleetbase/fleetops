@@ -689,12 +689,12 @@ class ServiceRate extends Model
 
         if ($this->isPerMeter()) {
             $perMeterDistance = $this->normalizeDistanceForUnit($totalDistance, $this->per_meter_unit);
-            $rateFee          = $perMeterDistance * $this->per_meter_flat_rate_fee;
+            $rateFee          = $this->normalizeCalculatedMoney($perMeterDistance * $this->per_meter_flat_rate_fee);
             $subTotal += $rateFee;
 
             $lines->push([
                 'details'          => 'Service Fee',
-                'amount'           => Utils::numbersOnly($rateFee),
+                'amount'           => $rateFee,
                 'formatted_amount' => Utils::moneyFormat($rateFee, $this->currency),
                 'currency'         => $this->currency,
                 'code'             => 'BASE_FEE',
@@ -702,7 +702,7 @@ class ServiceRate extends Model
         }
 
         if ($this->isAlgorithm()) {
-            $rateFee = Algo::exec(
+            $rateFee = $this->normalizeCalculatedMoney(Algo::exec(
                 $this->algorithm,
                 $this->buildAlgorithmVariables(
                     $entities,
@@ -712,13 +712,13 @@ class ServiceRate extends Model
                     $this->inferEndpointCountFromStops($waypoints)
                 ),
                 true
-            );
+            ));
 
-            $subTotal += Utils::numbersOnly($rateFee);
+            $subTotal += $rateFee;
 
             $lines->push([
                 'details'          => 'Service Fee',
-                'amount'           => Utils::numbersOnly($rateFee),
+                'amount'           => $rateFee,
                 'formatted_amount' => Utils::moneyFormat($rateFee, $this->currency),
                 'currency'         => $this->currency,
                 'code'             => 'BASE_FEE',
@@ -780,7 +780,7 @@ class ServiceRate extends Model
             if ($this->hasCodFlatFee()) {
                 $subTotal += $codFee = $this->cod_flat_fee;
             } elseif ($this->hasCodPercentageFee()) {
-                $subTotal += $codFee = Utils::calculatePercentage($this->cod_percent, $baseRate);
+                $subTotal += $codFee = $this->normalizeCalculatedMoney(Utils::calculatePercentage($this->cod_percent, $baseRate));
             }
 
             $lines->push([
@@ -797,7 +797,7 @@ class ServiceRate extends Model
             if ($this->hasPeakHoursFlatFee()) {
                 $subTotal += $peakHoursFee = $this->peak_hours_flat_fee;
             } elseif ($this->hasPeakHoursPercentageFee()) {
-                $subTotal += $peakHoursFee = Utils::calculatePercentage($this->peak_hours_percent, $baseRate);
+                $subTotal += $peakHoursFee = $this->normalizeCalculatedMoney(Utils::calculatePercentage($this->peak_hours_percent, $baseRate));
             }
 
             $lines->push([
@@ -876,12 +876,12 @@ class ServiceRate extends Model
 
         if ($this->isPerMeter()) {
             $perMeterDistance = $this->normalizeDistanceForUnit($totalDistance, $this->per_meter_unit);
-            $rateFee          = $perMeterDistance * $this->per_meter_flat_rate_fee;
+            $rateFee          = $this->normalizeCalculatedMoney($perMeterDistance * $this->per_meter_flat_rate_fee);
             $subTotal += $rateFee;
 
             $lines->push([
                 'details'          => 'Service Fee',
-                'amount'           => Utils::numbersOnly($rateFee),
+                'amount'           => $rateFee,
                 'formatted_amount' => Utils::moneyFormat($rateFee, $this->currency),
                 'currency'         => $this->currency,
                 'code'             => 'BASE_FEE',
@@ -889,7 +889,7 @@ class ServiceRate extends Model
         }
 
         if ($this->isAlgorithm()) {
-            $rateFee = Algo::exec(
+            $rateFee = $this->normalizeCalculatedMoney(Algo::exec(
                 $this->algorithm,
                 $this->buildAlgorithmVariables(
                     $payload->entities->all(),
@@ -899,13 +899,13 @@ class ServiceRate extends Model
                     (int) ($payload->pickup ? 1 : 0) + (int) ($payload->dropoff ? 1 : 0)
                 ),
                 true
-            );
+            ));
 
-            $subTotal += Utils::numbersOnly($rateFee);
+            $subTotal += $rateFee;
 
             $lines->push([
                 'details'          => 'Service Fee',
-                'amount'           => Utils::numbersOnly($rateFee),
+                'amount'           => $rateFee,
                 'formatted_amount' => Utils::moneyFormat($rateFee, $this->currency),
                 'currency'         => $this->currency,
                 'code'             => 'BASE_FEE',
@@ -967,7 +967,7 @@ class ServiceRate extends Model
             if ($this->hasCodFlatFee()) {
                 $subTotal += $codFee = $this->cod_flat_fee;
             } elseif ($this->hasCodPercentageFee()) {
-                $subTotal += $codFee = Utils::calculatePercentage($this->cod_percent, $baseRate);
+                $subTotal += $codFee = $this->normalizeCalculatedMoney(Utils::calculatePercentage($this->cod_percent, $baseRate));
             }
 
             $lines->push([
@@ -984,7 +984,7 @@ class ServiceRate extends Model
             if ($this->hasPeakHoursFlatFee()) {
                 $subTotal += $peakHoursFee = $this->peak_hours_flat_fee;
             } elseif ($this->hasPeakHoursPercentageFee()) {
-                $subTotal += $peakHoursFee = Utils::calculatePercentage($this->peak_hours_percent, $baseRate);
+                $subTotal += $peakHoursFee = $this->normalizeCalculatedMoney(Utils::calculatePercentage($this->peak_hours_percent, $baseRate));
             }
 
             $lines->push([
@@ -1012,7 +1012,12 @@ class ServiceRate extends Model
         };
     }
 
-    protected function buildAlgorithmVariables(array $entities = [], array $stops = [], ?int $totalDistance = 0, ?int $totalTime = 0, int $endpointCount = 0): array
+    protected function normalizeCalculatedMoney($amount = 0): int
+    {
+        return (int) round((float) ($amount ?? 0));
+    }
+
+    protected function buildAlgorithmVariables($entities = [], $stops = [], ?int $totalDistance = 0, ?int $totalTime = 0, int $endpointCount = 0): array
     {
         $entityCollection = collect($entities)->filter();
         $stopCount        = collect($stops)->filter()->count();
@@ -1030,7 +1035,7 @@ class ServiceRate extends Model
         ]);
     }
 
-    protected function inferEndpointCountFromStops(array $stops = []): int
+    protected function inferEndpointCountFromStops($stops = []): int
     {
         $stopCount = collect($stops)->filter()->count();
 
