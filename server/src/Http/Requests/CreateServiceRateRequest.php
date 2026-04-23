@@ -31,10 +31,10 @@ class CreateServiceRateRequest extends FleetbaseRequest
             'service_type'                  => [Rule::requiredIf($this->isMethod('POST')), 'string'],
             'service_area'                  => [Rule::exists('service_areas', 'public_id')->whereNull('deleted_at')],
             'zone'                          => [Rule::exists('zones', 'public_id')->whereNull('deleted_at')],
-            'rate_calculation_method'       => [Rule::requiredIf($this->isMethod('POST')), 'string', 'in:fixed_meter,fixed_rate,per_meter,per_drop,algo'],
+            'rate_calculation_method'       => [Rule::requiredIf($this->isMethod('POST')), 'string', 'in:fixed_meter,fixed_rate,per_meter,per_drop,algo,parcel'],
             'currency'                      => ['required', 'size:3'],
             'base_fee'                      => ['numeric'],
-            'per_meter_unit'                => ['required_if:rate_calculation_method,per_meter', 'string', 'in:km,m'],
+            'per_meter_unit'                => ['required_if:rate_calculation_method,per_meter', 'string', 'in:km,m,ft,yd,mi'],
             'per_meter_flat_rate_fee'       => ['required_if:rate_calculation_method,per_meter', 'numeric'],
             'meter_fees'                    => [Rule::requiredIf(function () {
                 return in_array($this->input('rate_calculation_method'), ['fixed_meter', 'fixed_rate']);

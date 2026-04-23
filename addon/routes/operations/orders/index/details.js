@@ -15,9 +15,12 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
     @action willTransition(transition) {
         const fromName = transition.from?.name;
         const toName = transition.to?.name;
+        const orderDetailsRoute = 'console.fleet-ops.operations.orders.index.details';
 
-        // only cleanup when actually leaving this route (not intra-route changes)
-        if (fromName && fromName !== toName) {
+        // only cleanup when leaving the order details route tree entirely
+        const isLeavingOrderDetails = fromName?.startsWith(orderDetailsRoute) && !toName?.startsWith(orderDetailsRoute);
+
+        if (isLeavingOrderDetails) {
             const controller = this.controllerFor('operations.orders.index.details');
             const rc = controller.routingControl;
 
@@ -55,7 +58,20 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
         return this.store.queryRecord('order', {
             public_id,
             single: true,
-            with: ['payload', 'driverAssigned', 'orderConfig', 'customer', 'facilitator', 'trackingStatuses', 'trackingNumber', 'purchaseRate', 'comments', 'files'],
+            with: [
+                'payload',
+                'driverAssigned',
+                'orderConfig',
+                'customer',
+                'facilitator',
+                'trackingStatuses',
+                'trackingNumber',
+                'purchaseRate',
+                'purchaseRate.serviceQuote',
+                'purchaseRate.serviceQuote.items',
+                'comments',
+                'files',
+            ],
         });
     }
 

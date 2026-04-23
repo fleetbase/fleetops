@@ -1055,9 +1055,7 @@ class Order extends Model
             'meta'               => $meta,
         ]);
 
-        $this->purchase_rate_uuid = $purchasedRate->uuid;
-
-        return $this->save();
+        return $this->attachPurchaseRate($purchasedRate);
     }
 
     /**
@@ -1096,12 +1094,46 @@ class Order extends Model
                 'meta'               => $meta,
             ]);
 
-            return $this->updateQuietly([
-                'purchase_rate_uuid' => $purchasedRate->uuid,
-            ]);
+            return $this->attachPurchaseRate($purchasedRate);
         }
 
         return false;
+    }
+
+    /**
+     * Attach a purchase rate to the order and void any superseded transaction.
+     */
+    public function attachPurchaseRate(PurchaseRate $purchaseRate): bool
+    {
+        $oldTransaction = $this->transaction_uuid
+            ? Transaction::where('uuid', $this->transaction_uuid)->first()
+            : null;
+
+        $attached = (bool) $this->updateQuietly([
+            'purchase_rate_uuid' => $purchaseRate->uuid,
+            'transaction_uuid'   => $purchaseRate->transaction_uuid,
+        ]);
+
+        if ($attached) {
+            $this->setRelation('purchaseRate', $purchaseRate);
+
+            if ($purchaseRate->transaction_uuid) {
+                $this->setRelation('transaction', Transaction::where('uuid', $purchaseRate->transaction_uuid)->first());
+            }
+
+            if (
+                $oldTransaction instanceof Transaction
+                && $oldTransaction->uuid !== $purchaseRate->transaction_uuid
+                && !$oldTransaction->trashed()
+            ) {
+                $oldTransaction->update([
+                    'status'    => Transaction::STATUS_VOIDED,
+                    'voided_at' => now(),
+                ]);
+            }
+        }
+
+        return $attached;
     }
 
     /**

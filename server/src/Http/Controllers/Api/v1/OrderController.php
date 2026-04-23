@@ -321,7 +321,7 @@ class OrderController extends Controller
         }
 
         // load required relations
-        $order->load(['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate', 'customer', 'facilitator']);
+        $order->load(['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
 
         // Determine if order should be dispatched on creation
         $shouldDispatch = $request->boolean('dispatch') && $integratedVendorOrder === null;
@@ -364,7 +364,7 @@ class OrderController extends Controller
 
         // find for the order
         try {
-            $order = Order::findRecordOrFail($id, ['trackingNumber', 'driverAssigned', 'purchaseRate', 'customer', 'facilitator']);
+            $order = Order::findRecordOrFail($id, ['trackingNumber', 'driverAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -549,7 +549,7 @@ class OrderController extends Controller
         $order->flushAttributesCache();
 
         // load required relations
-        $order->load(['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate', 'customer', 'facilitator']);
+        $order->load(['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
 
         // response the order resource
         return new OrderResource($order);
@@ -759,7 +759,7 @@ class OrderController extends Controller
     {
         // find for the order
         try {
-            $order = Order::findRecordOrFail($id, ['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate', 'customer', 'facilitator']);
+            $order = Order::findRecordOrFail($id, ['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -839,7 +839,7 @@ class OrderController extends Controller
     public function dispatchOrder(string $id)
     {
         try {
-            $order = Order::findRecordOrFail($id, ['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate', 'customer', 'facilitator']);
+            $order = Order::findRecordOrFail($id, ['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [

@@ -45,7 +45,6 @@ class Order extends FleetbaseResource
             'tracking_number_uuid' => $this->when($isInternal, $this->tracking_number_uuid),
             'driver_assigned_uuid' => $this->when($isInternal, $this->driver_assigned_uuid),
             'vehicle_assigned_uuid'=> $this->when($isInternal, $this->vehicle_assigned_uuid),
-            'service_quote_uuid'   => $this->when($isInternal, $this->service_quote_uuid),
             'has_driver_assigned'  => $this->when($isInternal, $this->has_driver_assigned),
             'is_scheduled'         => $this->when($isInternal, $this->is_scheduled),
             'order_config_uuid'    => $this->when($isInternal, $this->order_config_uuid),

@@ -688,7 +688,7 @@ class ServiceRate extends Model
         }
 
         if ($this->isPerMeter()) {
-            $perMeterDistance = $this->per_meter_unit === 'km' ? round($totalDistance / 1000) : $totalDistance;
+            $perMeterDistance = $this->normalizeDistanceForUnit($totalDistance, $this->per_meter_unit);
             $rateFee          = $perMeterDistance * $this->per_meter_flat_rate_fee;
             $subTotal += $rateFee;
 
@@ -704,10 +704,7 @@ class ServiceRate extends Model
         if ($this->isAlgorithm()) {
             $rateFee = Algo::exec(
                 $this->algorithm,
-                [
-                    'distance' => $totalDistance,
-                    'time'     => $totalTime,
-                ],
+                $this->buildAlgorithmVariables($entities, $waypoints, $totalDistance, $totalTime),
                 true
             );
 
@@ -872,7 +869,7 @@ class ServiceRate extends Model
         }
 
         if ($this->isPerMeter()) {
-            $perMeterDistance = $this->per_meter_unit === 'km' ? round($totalDistance / 1000) : $totalDistance;
+            $perMeterDistance = $this->normalizeDistanceForUnit($totalDistance, $this->per_meter_unit);
             $rateFee          = $perMeterDistance * $this->per_meter_flat_rate_fee;
             $subTotal += $rateFee;
 
@@ -888,10 +885,7 @@ class ServiceRate extends Model
         if ($this->isAlgorithm()) {
             $rateFee = Algo::exec(
                 $this->algorithm,
-                [
-                    'distance' => $totalDistance,
-                    'time'     => $totalTime,
-                ],
+                $this->buildAlgorithmVariables($payload->entities->all(), $waypoints->all(), $totalDistance, $totalTime),
                 true
             );
 
@@ -991,6 +985,35 @@ class ServiceRate extends Model
         }
 
         return [$subTotal, $lines];
+    }
+
+    protected function normalizeDistanceForUnit(?int $distanceInMeters = 0, ?string $unit = 'm'): float|int
+    {
+        $distanceInMeters = (float) ($distanceInMeters ?? 0);
+
+        return match ($unit) {
+            'km' => $distanceInMeters / 1000,
+            'ft' => $distanceInMeters / 0.3048,
+            'yd' => $distanceInMeters / 0.9144,
+            'mi' => $distanceInMeters / 1609.344,
+            default => $distanceInMeters,
+        };
+    }
+
+    protected function buildAlgorithmVariables(array $entities = [], array $waypoints = [], ?int $totalDistance = 0, ?int $totalTime = 0): array
+    {
+        $entityCollection = collect($entities)->filter();
+        $stopCount        = collect($waypoints)->filter()->count();
+
+        return Algo::normalizeVariables([
+            'distance_m' => $totalDistance ?? 0,
+            'time_s'     => $totalTime ?? 0,
+            'stops'      => $stopCount,
+            'waypoints'  => $stopCount,
+            'parcels'    => $entityCollection->where('type', 'parcel')->count(),
+            'entities'   => $entityCollection->count(),
+            'base_fee'   => Utils::numbersOnly($this->base_fee ?? 0),
+        ]);
     }
 
     /**
