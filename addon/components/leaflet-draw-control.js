@@ -27,7 +27,7 @@ export default class LeafletDrawControl extends BaseLayer {
     leafletOptions = ['draw', 'edit', 'remove', 'poly', 'position'];
 
     @computed('leafletEvents.[]', 'args') get usedLeafletEvents() {
-        const leafletEvents = [...this.leafletEvents, ...Object.values(L.Draw.Event)];
+        const leafletEvents = [...this.leafletEvents, ...Object.values(L.Draw?.Event ?? {})];
         return leafletEvents.filter((eventName) => {
             eventName = camelize(eventName.replace(':', ' '));
             let methodName = `_${eventName}`;

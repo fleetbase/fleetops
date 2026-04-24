@@ -369,11 +369,37 @@ class ServiceRate extends Model
             return $this;
         }
 
+        // Normalize duplicate parcel rows by fee shape and keep the latest submitted value.
+        $serviceRateParcelFees = collect($serviceRateParcelFees)
+            ->filter(fn ($fee) => is_array($fee))
+            ->map(function ($fee) {
+                return collect($fee)->except(['created_at', 'updated_at'])->toArray();
+            })
+            ->keyBy(function ($fee) {
+                return implode(':', [
+                    data_get($fee, 'size'),
+                    data_get($fee, 'length'),
+                    data_get($fee, 'width'),
+                    data_get($fee, 'height'),
+                    data_get($fee, 'dimensions_unit'),
+                    data_get($fee, 'weight'),
+                    data_get($fee, 'weight_unit'),
+                ]);
+            })
+            ->values()
+            ->toArray();
+
+        $submittedUuids = collect($serviceRateParcelFees)
+            ->pluck('uuid')
+            ->filter()
+            ->values()
+            ->all();
+
         $iterate = count($serviceRateParcelFees);
 
         for ($i = 0; $i < $iterate; $i++) {
             // if already has uuid then we just update the record and remove from insert array
-            if (isset($serviceRateParcelFees[$i]['uuid'])) {
+            if (!empty($serviceRateParcelFees[$i]['uuid'])) {
                 $id                   = $serviceRateParcelFees[$i]['uuid'];
                 $updateableAttributes = collect($serviceRateParcelFees[$i])->except(['uuid', 'created_at', 'updated_at'])->toArray();
 
@@ -391,7 +417,18 @@ class ServiceRate extends Model
         }
 
         $serviceRateParcelFees = collect($serviceRateParcelFees)->filter()->values()->toArray();
-        ServiceRateParcelFee::bulkInsert($serviceRateParcelFees);
+
+        $existingParcelFeesQuery = ServiceRateParcelFee::where('service_rate_uuid', $this->uuid);
+
+        if (!empty($submittedUuids)) {
+            $existingParcelFeesQuery->whereNotIn('uuid', $submittedUuids)->delete();
+        } else {
+            $existingParcelFeesQuery->delete();
+        }
+
+        if (!empty($serviceRateParcelFees)) {
+            ServiceRateParcelFee::bulkInsert($serviceRateParcelFees);
+        }
 
         return $this;
     }
@@ -688,13 +725,13 @@ class ServiceRate extends Model
         }
 
         if ($this->isPerMeter()) {
-            $perMeterDistance = $this->per_meter_unit === 'km' ? round($totalDistance / 1000) : $totalDistance;
-            $rateFee          = $perMeterDistance * $this->per_meter_flat_rate_fee;
+            $perMeterDistance = $this->normalizeDistanceForUnit($totalDistance, $this->per_meter_unit);
+            $rateFee          = $this->normalizeCalculatedMoney($perMeterDistance * $this->per_meter_flat_rate_fee);
             $subTotal += $rateFee;
 
             $lines->push([
                 'details'          => 'Service Fee',
-                'amount'           => Utils::numbersOnly($rateFee),
+                'amount'           => $rateFee,
                 'formatted_amount' => Utils::moneyFormat($rateFee, $this->currency),
                 'currency'         => $this->currency,
                 'code'             => 'BASE_FEE',
@@ -702,20 +739,23 @@ class ServiceRate extends Model
         }
 
         if ($this->isAlgorithm()) {
-            $rateFee = Algo::exec(
+            $rateFee = $this->normalizeCalculatedMoney(Algo::exec(
                 $this->algorithm,
-                [
-                    'distance' => $totalDistance,
-                    'time'     => $totalTime,
-                ],
+                $this->buildAlgorithmVariables(
+                    $entities,
+                    $waypoints,
+                    $totalDistance,
+                    $totalTime,
+                    $this->inferEndpointCountFromStops($waypoints)
+                ),
                 true
-            );
+            ));
 
-            $subTotal += Utils::numbersOnly($rateFee);
+            $subTotal += $rateFee;
 
             $lines->push([
                 'details'          => 'Service Fee',
-                'amount'           => Utils::numbersOnly($rateFee),
+                'amount'           => $rateFee,
                 'formatted_amount' => Utils::moneyFormat($rateFee, $this->currency),
                 'currency'         => $this->currency,
                 'code'             => 'BASE_FEE',
@@ -758,9 +798,10 @@ class ServiceRate extends Model
                 }
 
                 $subTotal += $serviceParcelFee->fee;
+                $parcelFeeName = ucwords(str_replace(['_', '-'], ' ', data_get($serviceParcelFee, 'size', 'parcel')));
 
                 $lines->push([
-                    'details'          => $serviceParcelFee->name . ' parcel fee',
+                    'details'          => $parcelFeeName . ' parcel fee',
                     'amount'           => Utils::numbersOnly($serviceParcelFee->fee),
                     'formatted_amount' => Utils::moneyFormat($serviceParcelFee->fee, $this->currency),
                     'currency'         => $this->currency,
@@ -777,7 +818,7 @@ class ServiceRate extends Model
             if ($this->hasCodFlatFee()) {
                 $subTotal += $codFee = $this->cod_flat_fee;
             } elseif ($this->hasCodPercentageFee()) {
-                $subTotal += $codFee = Utils::calculatePercentage($this->cod_percent, $baseRate);
+                $subTotal += $codFee = $this->normalizeCalculatedMoney(Utils::calculatePercentage($this->cod_percent, $baseRate));
             }
 
             $lines->push([
@@ -794,7 +835,7 @@ class ServiceRate extends Model
             if ($this->hasPeakHoursFlatFee()) {
                 $subTotal += $peakHoursFee = $this->peak_hours_flat_fee;
             } elseif ($this->hasPeakHoursPercentageFee()) {
-                $subTotal += $peakHoursFee = Utils::calculatePercentage($this->peak_hours_percent, $baseRate);
+                $subTotal += $peakHoursFee = $this->normalizeCalculatedMoney(Utils::calculatePercentage($this->peak_hours_percent, $baseRate));
             }
 
             $lines->push([
@@ -872,13 +913,13 @@ class ServiceRate extends Model
         }
 
         if ($this->isPerMeter()) {
-            $perMeterDistance = $this->per_meter_unit === 'km' ? round($totalDistance / 1000) : $totalDistance;
-            $rateFee          = $perMeterDistance * $this->per_meter_flat_rate_fee;
+            $perMeterDistance = $this->normalizeDistanceForUnit($totalDistance, $this->per_meter_unit);
+            $rateFee          = $this->normalizeCalculatedMoney($perMeterDistance * $this->per_meter_flat_rate_fee);
             $subTotal += $rateFee;
 
             $lines->push([
                 'details'          => 'Service Fee',
-                'amount'           => Utils::numbersOnly($rateFee),
+                'amount'           => $rateFee,
                 'formatted_amount' => Utils::moneyFormat($rateFee, $this->currency),
                 'currency'         => $this->currency,
                 'code'             => 'BASE_FEE',
@@ -886,20 +927,23 @@ class ServiceRate extends Model
         }
 
         if ($this->isAlgorithm()) {
-            $rateFee = Algo::exec(
+            $rateFee = $this->normalizeCalculatedMoney(Algo::exec(
                 $this->algorithm,
-                [
-                    'distance' => $totalDistance,
-                    'time'     => $totalTime,
-                ],
+                $this->buildAlgorithmVariables(
+                    $payload->entities->all(),
+                    $waypoints->all(),
+                    $totalDistance,
+                    $totalTime,
+                    (int) ($payload->pickup ? 1 : 0) + (int) ($payload->dropoff ? 1 : 0)
+                ),
                 true
-            );
+            ));
 
-            $subTotal += Utils::numbersOnly($rateFee);
+            $subTotal += $rateFee;
 
             $lines->push([
                 'details'          => 'Service Fee',
-                'amount'           => Utils::numbersOnly($rateFee),
+                'amount'           => $rateFee,
                 'formatted_amount' => Utils::moneyFormat($rateFee, $this->currency),
                 'currency'         => $this->currency,
                 'code'             => 'BASE_FEE',
@@ -942,9 +986,10 @@ class ServiceRate extends Model
                 }
 
                 $subTotal += $serviceParcelFee->fee;
+                $parcelFeeName = ucwords(str_replace(['_', '-'], ' ', data_get($serviceParcelFee, 'size', 'parcel')));
 
                 $lines->push([
-                    'details'          => $serviceParcelFee->name . ' parcel fee',
+                    'details'          => $parcelFeeName . ' parcel fee',
                     'amount'           => Utils::numbersOnly($serviceParcelFee->fee),
                     'formatted_amount' => Utils::moneyFormat($serviceParcelFee->fee, $this->currency),
                     'currency'         => $this->currency,
@@ -961,7 +1006,7 @@ class ServiceRate extends Model
             if ($this->hasCodFlatFee()) {
                 $subTotal += $codFee = $this->cod_flat_fee;
             } elseif ($this->hasCodPercentageFee()) {
-                $subTotal += $codFee = Utils::calculatePercentage($this->cod_percent, $baseRate);
+                $subTotal += $codFee = $this->normalizeCalculatedMoney(Utils::calculatePercentage($this->cod_percent, $baseRate));
             }
 
             $lines->push([
@@ -978,7 +1023,7 @@ class ServiceRate extends Model
             if ($this->hasPeakHoursFlatFee()) {
                 $subTotal += $peakHoursFee = $this->peak_hours_flat_fee;
             } elseif ($this->hasPeakHoursPercentageFee()) {
-                $subTotal += $peakHoursFee = Utils::calculatePercentage($this->peak_hours_percent, $baseRate);
+                $subTotal += $peakHoursFee = $this->normalizeCalculatedMoney(Utils::calculatePercentage($this->peak_hours_percent, $baseRate));
             }
 
             $lines->push([
@@ -991,6 +1036,53 @@ class ServiceRate extends Model
         }
 
         return [$subTotal, $lines];
+    }
+
+    protected function normalizeDistanceForUnit(?int $distanceInMeters = 0, ?string $unit = 'm'): float|int
+    {
+        $distanceInMeters = (float) ($distanceInMeters ?? 0);
+
+        return match ($unit) {
+            'km'    => $distanceInMeters / 1000,
+            'ft'    => $distanceInMeters / 0.3048,
+            'yd'    => $distanceInMeters / 0.9144,
+            'mi'    => $distanceInMeters / 1609.344,
+            default => $distanceInMeters,
+        };
+    }
+
+    protected function normalizeCalculatedMoney($amount = 0): int
+    {
+        return (int) round((float) ($amount ?? 0));
+    }
+
+    protected function buildAlgorithmVariables($entities = [], $stops = [], ?int $totalDistance = 0, ?int $totalTime = 0, int $endpointCount = 0): array
+    {
+        $entityCollection = collect($entities)->filter();
+        $stopCount        = collect($stops)->filter()->count();
+        $endpointCount    = max(0, min($endpointCount, $stopCount));
+        $waypointCount    = max($stopCount - $endpointCount, 0);
+
+        return Algo::normalizeVariables([
+            'distance_m' => $totalDistance ?? 0,
+            'time_s'     => $totalTime ?? 0,
+            'stops'      => $stopCount,
+            'waypoints'  => $waypointCount,
+            'parcels'    => $entityCollection->where('type', 'parcel')->count(),
+            'entities'   => $entityCollection->count(),
+            'base_fee'   => Utils::numbersOnly($this->base_fee ?? 0),
+        ]);
+    }
+
+    protected function inferEndpointCountFromStops($stops = []): int
+    {
+        $stopCount = collect($stops)->filter()->count();
+
+        if ($stopCount <= 1) {
+            return $stopCount;
+        }
+
+        return 2;
     }
 
     /**

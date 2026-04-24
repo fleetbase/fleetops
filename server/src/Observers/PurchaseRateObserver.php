@@ -2,7 +2,6 @@
 
 namespace Fleetbase\FleetOps\Observers;
 
-use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Company;
@@ -25,7 +24,8 @@ class PurchaseRateObserver
         $company = Company::where('uuid', session('company', $purchaseRate->company_uuid))->first();
 
         // get currency to use
-        $currency = data_get($purchaseRate, 'serviceQuote.currency', $company->country ? Utils::getCurrenyFromCountryCode($company->country) : 'SGD');
+        $currency = data_get($purchaseRate, 'serviceQuote.currency')
+            ?: Utils::getCompanyTransactionCurrency($company ?? $purchaseRate->company_uuid);
 
         // create transaction and transaction items
         $transaction = Transaction::create([
@@ -41,9 +41,6 @@ class PurchaseRateObserver
             'status'                 => 'success',
         ]);
 
-        // Update order with transaction id
-        Order::where('payload_uuid', $purchaseRate->payload_uuid)->update(['transaction_uuid' => $transaction->uuid]);
-
         if (isset($purchaseRate->serviceQuote)) {
             $purchaseRate->serviceQuote->items->each(function ($serviceQuoteItem) use ($transaction, $currency) {
                 TransactionItem::create([
@@ -57,5 +54,6 @@ class PurchaseRateObserver
         }
 
         $purchaseRate->transaction_uuid = $transaction->uuid;
+        $purchaseRate->status           = $purchaseRate->status ?: Transaction::STATUS_SUCCESS;
     }
 }

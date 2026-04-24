@@ -19,5 +19,6 @@ export default class OperationsOrdersIndexDetailsVirtualRoute extends Route {
     setupController(controller) {
         super.setupController(...arguments);
         controller.resource = this.modelFor('operations.orders.index.details');
+        controller.detailsController = this.controllerFor('operations.orders.index.details');
     }
 }

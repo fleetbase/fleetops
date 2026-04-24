@@ -16,9 +16,7 @@ class ComputableAlgo implements Rule
      */
     public function passes($attribute, $value)
     {
-        $distanceAndTime = Algo::calculateDrivingDistanceAndTime('1.3506853', '103.87199110000006', '1.3621663', '103.88450490000002');
-
-        return Algo::exec($value, $distanceAndTime) > 0;
+        return Algo::isComputable($value);
     }
 
     /**

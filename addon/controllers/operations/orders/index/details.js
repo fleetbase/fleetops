@@ -16,6 +16,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     @service universe;
     @service sidebar;
     @tracked routingControl;
+    @tracked routingCompleted = false;
 
     get tabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:order:details');
@@ -109,7 +110,19 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     @action async setup() {
         // Change to map layout and display order route
         this.index.changeLayout('map');
-        this.routingControl = await this.leafletMapManager.addRoutingControl(this.model.routeWaypoints);
+        this.routingCompleted = false;
+        this.routingControl = await this.leafletMapManager.addRoutingControl(this.model.routeWaypoints, {
+            onRouteFound: () => {
+                this.routingCompleted = true;
+            },
+            onRoutingError: () => {
+                this.routingCompleted = true;
+            },
+        });
+
+        if (!this.routingControl) {
+            this.routingCompleted = true;
+        }
 
         // Hide sidebar
         this.sidebar.hideNow();
@@ -125,7 +138,19 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
             async (_msg, { reloadable }) => {
                 if (reloadable) {
                     await this.hostRouter.refresh();
-                    this.leafletMapManager.replaceRoutingControl(this.model.routeWaypoints, this.routingControl);
+                    this.routingCompleted = false;
+                    this.routingControl = await this.leafletMapManager.replaceRoutingControl(this.model.routeWaypoints, this.routingControl, {
+                        onRouteFound: () => {
+                            this.routingCompleted = true;
+                        },
+                        onRoutingError: () => {
+                            this.routingCompleted = true;
+                        },
+                    });
+
+                    if (!this.routingControl) {
+                        this.routingCompleted = true;
+                    }
                 }
             },
             { debounceMs: 250 }

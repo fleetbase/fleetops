@@ -41,10 +41,19 @@ class PurchaseRateController extends Controller
 
         // order assignment
         if ($request->has('order')) {
-            $input['order_uuid'] = Utils::getUuid('orders', [
+            $orderUuid = Utils::getUuid('orders', [
                 'public_id'    => $request->input('order'),
                 'company_uuid' => session('company'),
             ]);
+
+            $order = Order::where('uuid', $orderUuid)->first();
+
+            if ($order instanceof Order) {
+                $input['payload_uuid']   = $order->payload_uuid;
+                $input['customer_uuid']  = $order->customer_uuid;
+                $input['customer_type']  = $order->customer_type;
+                $input['company_uuid']   = $order->company_uuid ?? $input['company_uuid'];
+            }
         } elseif ($createOrder) {
             // create order from service quote
             $serviceQuote = ServiceQuote::where('uuid', $input['service_quote_uuid'])->orWhere('public_id', $request->input('service_quote'))->first();
@@ -70,9 +79,8 @@ class PurchaseRateController extends Controller
         // create the purchaseRate
         $purchaseRate = PurchaseRate::create($input);
 
-        // set purchase rate to order
         if ($order instanceof Order) {
-            $order->update(['purchase_rate_uuid' => $purchaseRate->uuid]);
+            $order->attachPurchaseRate($purchaseRate);
         }
 
         // response the driver resource

@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { next } from '@ember/runloop';
 
 export default class MapDrawerGeofenceEventListingComponent extends Component {
     @service fetch;
@@ -12,8 +13,10 @@ export default class MapDrawerGeofenceEventListingComponent extends Component {
 
     constructor() {
         super(...arguments);
-        this.geofenceEventBus.subscribe(this.currentUser.companyId);
-        this.loadRecentEvents();
+        next(() => {
+            this.geofenceEventBus.subscribe(this.currentUser.companyId);
+            this.loadRecentEvents();
+        });
     }
 
     get events() {

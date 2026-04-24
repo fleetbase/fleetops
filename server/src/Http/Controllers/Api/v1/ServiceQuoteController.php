@@ -98,6 +98,7 @@ class ServiceQuoteController extends Controller
                     'amount'            => $subTotal,
                     'currency'          => $serviceRate->currency,
                 ]);
+                $quote->setRelation('serviceRate', $serviceRate);
 
                 $items = $lines->map(function ($line) use ($quote) {
                     return ServiceQuoteItem::create([
@@ -143,6 +144,7 @@ class ServiceQuoteController extends Controller
                 'amount'            => $subTotal,
                 'currency'          => $serviceRate->currency,
             ]);
+            $quote->setRelation('serviceRate', $serviceRate);
 
             $items = $lines->map(function ($line) use ($quote) {
                 return ServiceQuoteItem::create([
@@ -288,6 +290,7 @@ class ServiceQuoteController extends Controller
                     'amount'            => $subTotal,
                     'currency'          => $serviceRate->currency,
                 ]);
+                $quote->setRelation('serviceRate', $serviceRate);
 
                 // set preliminary data to meta
                 $quote->updateMeta('preliminary_data', $preliminaryData);
@@ -335,6 +338,7 @@ class ServiceQuoteController extends Controller
                 'amount'            => $subTotal,
                 'currency'          => $serviceRate->currency,
             ]);
+            $quote->setRelation('serviceRate', $serviceRate);
 
             // set preliminary data to meta
             $quote->updateMeta('preliminary_data', $preliminaryData);
