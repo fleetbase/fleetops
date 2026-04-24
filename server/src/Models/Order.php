@@ -1154,7 +1154,7 @@ class Order extends Model
                 'gateway_transaction_id' => Transaction::generateNumber(),
                 'gateway'                => 'internal',
                 'amount'                 => 0,
-                'currency'               => data_get($this->company, 'country') ? Utils::getCurrenyFromCountryCode(data_get($this->company, 'country')) : 'SGD',
+                'currency'               => Utils::getCompanyTransactionCurrency($this->company ?? $this->company_uuid),
                 'description'            => 'Dispatch order',
                 'type'                   => 'dispatch',
                 'status'                 => 'success',

@@ -24,7 +24,8 @@ class PurchaseRateObserver
         $company = Company::where('uuid', session('company', $purchaseRate->company_uuid))->first();
 
         // get currency to use
-        $currency = data_get($purchaseRate, 'serviceQuote.currency', $company->country ? Utils::getCurrenyFromCountryCode($company->country) : 'SGD');
+        $currency = data_get($purchaseRate, 'serviceQuote.currency')
+            ?: Utils::getCompanyTransactionCurrency($company ?? $purchaseRate->company_uuid);
 
         // create transaction and transaction items
         $transaction = Transaction::create([
